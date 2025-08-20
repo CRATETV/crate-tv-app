@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Movie, Category, Actor } from './types';
 import MovieEditor from './components/MovieEditor';

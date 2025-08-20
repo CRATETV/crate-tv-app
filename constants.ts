@@ -1,4 +1,3 @@
-
 import { Movie, Category } from './types';
 
 export const moviesData: Record<string, Movie> = {
