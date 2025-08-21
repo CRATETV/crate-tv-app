@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Actor } from '../types';
-import { generateActorFact } from '../services/geminiService';
+import { generateActorFact, findImdbUrl } from '../services/geminiService';
 
 interface ActorBioModalProps {
   actor: Actor;
@@ -11,6 +11,7 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
   const [fact, setFact] = useState<string | null>(null);
   const [isLoadingFact, setIsLoadingFact] = useState<boolean>(true);
   const [factError, setFactError] = useState<string | null>(null);
+  const [imdbUrl, setImdbUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
@@ -27,8 +28,10 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
     setIsLoadingFact(true);
     setFact(null);
     setFactError(null);
+    setImdbUrl(null);
 
-    const fetchFact = async () => {
+    const fetchActorData = async () => {
+      // Fetch fact
       try {
         const generatedFact = await generateActorFact(actor.name, actor.bio);
         setFact(generatedFact);
@@ -37,9 +40,14 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
       } finally {
         setIsLoadingFact(false);
       }
+      
+      // Fetch IMDb URL non-critically. If it fails, we just don't show the link.
+      findImdbUrl(actor.name).then(url => {
+          setImdbUrl(url);
+      });
     };
 
-    fetchFact();
+    fetchActorData();
   }, [actor]);
 
   return (
@@ -56,7 +64,20 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
                  <img src={actor.highResPhoto} alt={actor.name} className="w-48 h-48 rounded-full object-cover shadow-lg border-4 border-gray-700"/>
             </div>
             <div className="md:col-span-2 p-6 md:pl-0 flex flex-col justify-center">
-                <h2 className="text-3xl font-bold text-white mb-2">{actor.name}</h2>
+                <div className="flex items-center gap-4 mb-2">
+                    <h2 className="text-3xl font-bold text-white">{actor.name}</h2>
+                    {imdbUrl && (
+                        <a
+                            href={imdbUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-[#f5c518] text-black font-bold text-sm px-3 py-1 rounded-md hover:bg-yellow-400 transition-colors self-center"
+                            aria-label={`Visit ${actor.name}'s IMDb page`}
+                        >
+                            IMDb
+                        </a>
+                    )}
+                </div>
                 <div className="text-gray-300 text-base leading-relaxed mb-6">
                     <p>{actor.bio}</p>
                 </div>

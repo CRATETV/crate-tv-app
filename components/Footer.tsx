@@ -12,7 +12,7 @@ const Footer: React.FC = () => {
 
   return (
     <footer className="bg-black/80 text-center p-6 mt-8 border-t border-gray-800">
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-center justify-center">
         {links.map((link, index) => (
           <React.Fragment key={link.name}>
             <a
