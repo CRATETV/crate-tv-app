@@ -274,7 +274,7 @@ export const moviesData: Record<string, Movie> = {
     "director": "Joshua Daniel",
     "trailer": "https://cratetelevision.s3.amazonaws.com/YouVsThemTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/youVs+Them.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/you+vs+them+poster+.png",
+    "poster": "https://cratetelevision.s3.amazonaws.com/you+vs+them+poster+.png",
     "likes": 0
   },
   "autumn": {
@@ -559,7 +559,8 @@ export const categoriesData: Record<string, Category> = {
       "juniper",
       "drive",
       "crossroads",
-      "fatherdaughterdance"
+      "fatherdaughterdance",
+      "youvsthem"
     ]
   },
   "comedy": {
@@ -568,7 +569,6 @@ export const categoriesData: Record<string, Category> = {
       "foodiecalldirectorscut",
       "foodiecalltheatricalcut",
       "eharmonycs",
-      "youvsthem",
       "wrapitup"
     ]
   },
