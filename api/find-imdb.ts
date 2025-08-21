@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
     // Extract URL using a regex to be safe
     const imdbUrlRegex = /(https?:\/\/www\.imdb\.com\/name\/nm\d+\/?)/;
-    const match = text.match(imdbUrlRegex);
+    const match = text ? text.match(imdbUrlRegex) : null;
 
     if (match && match[0]) {
         return new Response(JSON.stringify({ imdbUrl: match[0] }), {
