@@ -188,7 +188,7 @@ export const moviesData: Record<string, Movie> = {
     { name: "Julianne Lea", photo:"https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Julianne+Lea.jpg", bio: "Julianne Lea is a talented actress with a passion for storytelling. She has a diverse portfolio, including roles in acting producing and set design.", highResPhoto: "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Julianne+Lea.jpg"},
    ],
    director: "Pratigya Paudel",
-   trailer: "https://cratetelevision.s3.amazonaws.com/SilentLoveTrailer.mp4",
+   trailer: "",
    fullMovie: "https://cratetelevision.s3.us-east-1.amazonaws.com/Juniper+.mp4",
    poster: "https://cratetelevision.s3.us-east-1.amazonaws.com/Juniper.png",
    likes: 0
@@ -203,7 +203,7 @@ export const moviesData: Record<string, Movie> = {
     {name: "Ed Aristone", photo:"https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Ed+Aristone+.webp", bio: "Ed Aristone, an award-winning actor and Playhouse West-Philadelphia associate teacher, with extensive film and stage experience alongside directing and producing, emphasizes dedicated role research and collaborative passion, driven by a belief in acting as a gift to inspire humanity.", highResPhoto: "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Ed+Aristone+.webp"},
    ],
     director: "Shamira Womack",
-   trailer: "https://cratetelevision.s3.amazonaws.com/SilentLoveTrailer.mp4",
+   trailer: "",
    fullMovie: "https://cratetelevision.s3.us-east-1.amazonaws.com/Drive+(2).mp4",
    poster: "https://cratetelevision.s3.us-east-1.amazonaws.com/Drive+Poster.jpeg",
    likes: 15
@@ -218,7 +218,7 @@ export const moviesData: Record<string, Movie> = {
     {name: "Jordan Fox", photo:"https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png", bio: "Jordan Fox is a dynamic force in the film industry, seamlessly transitioning between captivating on-screen performances and visionary directorial roles.", highResPhoto: "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"},
    ],
     director: "Jordan Fox, Darrah Lashley ",
-   trailer: "https://",
+   trailer: "",
    fullMovie: "https://cratetelevision.s3.us-east-1.amazonaws.com/Wrap+it+up+.mp4",
    poster: "https://cratetelevision.s3.us-east-1.amazonaws.com/Wrap+it+up.png",
    likes: 12
@@ -232,7 +232,7 @@ export const moviesData: Record<string, Movie> = {
     { name: "Lam Wonkeryor", photo: "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png", bio: " Information regarding this actor is currently unavailable", highResPhoto: "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"},
    ],
     director: "Akil Logan Haye",
-   trailer: "https://",
+   trailer: "",
    fullMovie: "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads.mp4",
    poster: "https://cratetelevision.s3.us-east-1.amazonaws.com/crossroads(Mobile+Video).jpg",
    likes: 12
@@ -273,7 +273,7 @@ export const moviesData: Record<string, Movie> = {
      {name: "Vigneshwar Raju", photo: "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Vingneshwar+Raju.JPG", bio: "Driven by experimental cinema, Vigneshwar Raju, an actor-director, seeks to dissolve the lines between reality and imagination. His work delves into the depths of human experience through innovative visual storytelling.", highResPhoto: "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Vingneshwar+Raju.JPG" },
     ],
     director: "Vigneshwar Raju",
-    trailer: "https://",
+    trailer: "",
     fullMovie: "https://cratetelevision.s3.us-east-1.amazonaws.com/smirk.mp4",
     poster: "https://cratetelevision.s3.us-east-1.amazonaws.com/smirk+poster+.png",
     likes: 10
