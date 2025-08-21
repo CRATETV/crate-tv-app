@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Movie, Actor, Category } from '../types';
+import { Movie, Actor, Category } from '../types.ts';
 
 interface MovieDetailsModalProps {
   movie: Movie;

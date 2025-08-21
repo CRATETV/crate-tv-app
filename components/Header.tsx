@@ -17,7 +17,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch }) => {
 
   return (
     <header className="absolute top-0 left-0 w-full z-40 p-4 flex justify-end items-center bg-gradient-to-b from-black/80 to-transparent">
-      <form onSubmit={handleSearchSubmit} className="relative w-full max-w-xs">
+      <form onSubmit={handleSearchSubmit} className="relative w-full max-w-[200px] sm:max-w-xs">
         <input
           type="text"
           name="search"

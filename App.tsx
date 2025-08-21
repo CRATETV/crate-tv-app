@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { moviesData, categoriesData } from './constants';
-import { Movie, Actor } from './types';
-import Intro from './components/Intro';
-import Header from './components/Header';
-import Hero from './components/Hero';
-import MovieCarousel from './components/MovieCarousel';
-import Footer from './components/Footer';
-import MovieDetailsModal from './components/MovieDetailsModal';
-import ActorBioModal from './components/ActorBioModal';
-import BackToTopButton from './components/BackToTopButton';
-import LoadingSpinner from './components/LoadingSpinner';
-import FeatureModal from './components/FeatureModal';
+import { moviesData, categoriesData } from './constants.ts';
+import { Movie, Actor } from './types.ts';
+import Intro from './components/Intro.tsx';
+import Header from './components/Header.tsx';
+import Hero from './components/Hero.tsx';
+import MovieCarousel from './components/MovieCarousel.tsx';
+import Footer from './components/Footer.tsx';
+import BackToTopButton from './components/BackToTopButton.tsx';
+import LoadingSpinner from './components/LoadingSpinner.tsx';
+import MovieDetailsModal from './components/MovieDetailsModal.tsx';
+import ActorBioModal from './components/ActorBioModal.tsx';
+import FeatureModal from './components/FeatureModal.tsx';
+
 
 // Helper to safely update URL without crashing in sandboxed environments
 const safePushState = (path: string) => {
@@ -254,24 +255,26 @@ const App: React.FC = () => {
       <Footer />
       <BackToTopButton />
 
-      {selectedMovie && (
-        <MovieDetailsModal 
-          movie={selectedMovie} 
-          onClose={closeModal} 
-          onSelectActor={handleSelectActor}
-          startWithFullMovie={startWithFullMovie}
-          allMovies={movies}
-          allCategories={categoriesData}
-          onSelectRecommendedMovie={handleSelectRecommendedMovie}
-        />
-      )}
-      {selectedActor && (
-        <ActorBioModal
-          actor={selectedActor}
-          onClose={closeActorModal}
-        />
-      )}
-      {showFeatureModal && <FeatureModal onClose={handleCloseFeatureModal} />}
+      <>
+        {selectedMovie && (
+          <MovieDetailsModal 
+            movie={selectedMovie} 
+            onClose={closeModal} 
+            onSelectActor={handleSelectActor}
+            startWithFullMovie={startWithFullMovie}
+            allMovies={movies}
+            allCategories={categoriesData}
+            onSelectRecommendedMovie={handleSelectRecommendedMovie}
+          />
+        )}
+        {selectedActor && (
+          <ActorBioModal
+            actor={selectedActor}
+            onClose={closeActorModal}
+          />
+        )}
+        {showFeatureModal && <FeatureModal onClose={handleCloseFeatureModal} />}
+      </>
     </div>
   );
 };

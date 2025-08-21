@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { Movie, Category, Actor } from './types';
-import MovieEditor from './components/MovieEditor';
+import { Movie, Category, Actor } from './types.ts';
+import MovieEditor from './components/MovieEditor.tsx';
 
 const AdminPage: React.FC = () => {
   const [rawCode, setRawCode] = useState('');

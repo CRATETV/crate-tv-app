@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Movie, Actor } from '../types';
+import { Movie, Actor } from '../types.ts';
 
 interface MovieEditorProps {
   movie: Movie;

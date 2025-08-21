@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Movie } from '../types';
+import { Movie } from '../types.ts';
 
 interface MovieCardProps {
   movie: Movie;
@@ -26,14 +26,8 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isLiked, onSelectMovie, on
       className="group relative flex-shrink-0 w-40 h-64 sm:w-48 sm:h-72 md:w-56 md:h-80 rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 hover:z-10 shadow-lg hover:shadow-red-500/30"
       onClick={() => onSelectMovie(movie)}
     >
-      <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-50" />
+      <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-50" loading="lazy" />
       
-      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white/80" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-        </svg>
-      </div>
-
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 sm:p-4 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
         <h3 className="text-white text-base sm:text-lg font-bold truncate">{movie.title}</h3>
         <div className="flex justify-between items-center mt-2">

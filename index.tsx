@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
-import AdminPage from './AdminPage';
+import App from './App.tsx';
+import AdminPage from './AdminPage.tsx';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
