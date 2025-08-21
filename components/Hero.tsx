@@ -1,27 +1,30 @@
-
 import React from 'react';
 import { Movie } from '../types';
 
 interface HeroProps {
-  movie: Movie;
+  movies: Movie[];
+  currentIndex: number;
+  onSetCurrentIndex: (index: number) => void;
   onSelectMovie: (movie: Movie) => void;
   onPlayMovie: (movie: Movie) => void;
 }
 
-const Hero: React.FC<HeroProps> = ({ movie, onSelectMovie, onPlayMovie }) => {
+const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, onSelectMovie, onPlayMovie }) => {
+  const movie = movies[currentIndex];
+
   if (!movie) {
     return <div className="h-[56.25vw] max-h-[80vh] w-full bg-black" />;
   }
 
   return (
     <div 
-      className="relative h-[56.25vw] max-h-[80vh] w-full bg-cover bg-center"
+      className="relative h-[56.25vw] max-h-[80vh] w-full bg-cover bg-center transition-all duration-1000"
       style={{ backgroundImage: `url(${movie.poster})` }}
       aria-labelledby="hero-movie-title"
     >
       <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent"></div>
       <div className="absolute inset-0 flex flex-col justify-center p-4 md:p-12 lg:p-24">
-        <div className="max-w-xl">
+        <div key={movie.key} className="max-w-xl animate-fadeInHeroContent">
           <h1 id="hero-movie-title" className="text-4xl md:text-6xl font-bold text-white shadow-lg">
             {movie.title}
           </h1>
@@ -51,6 +54,18 @@ const Hero: React.FC<HeroProps> = ({ movie, onSelectMovie, onPlayMovie }) => {
             </button>
           </div>
         </div>
+      </div>
+       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex space-x-3">
+        {movies.map((_, index) => (
+          <button
+            key={index}
+            aria-label={`Go to featured movie ${index + 1}`}
+            onClick={() => onSetCurrentIndex(index)}
+            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              currentIndex === index ? 'bg-white scale-125' : 'bg-white/50 hover:bg-white/75'
+            }`}
+          />
+        ))}
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { moviesData, categoriesData } from './constants';
 import { Movie, Actor } from './types';
@@ -11,6 +10,7 @@ import MovieDetailsModal from './components/MovieDetailsModal';
 import ActorBioModal from './components/ActorBioModal';
 import BackToTopButton from './components/BackToTopButton';
 import LoadingSpinner from './components/LoadingSpinner';
+import FeatureModal from './components/FeatureModal';
 
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -21,6 +21,8 @@ const App: React.FC = () => {
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
   const [startWithFullMovie, setStartWithFullMovie] = useState(false);
+  const [showFeatureModal, setShowFeatureModal] = useState(false);
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
 
   useEffect(() => {
     const initApp = () => {
@@ -44,6 +46,13 @@ const App: React.FC = () => {
         handleSelectMovie(moviesData[movieKey]);
       }
       setIsLoading(false);
+
+      const shouldShowIntro = !sessionStorage.getItem('introPlayed');
+      if (!shouldShowIntro) {
+        if (!localStorage.getItem('featureModalShown')) {
+          setShowFeatureModal(true);
+        }
+      }
     };
 
     // Simulate a short loading time for a better UX
@@ -54,6 +63,15 @@ const App: React.FC = () => {
   const handleIntroEnd = () => {
     sessionStorage.setItem('introPlayed', 'true');
     setShowIntro(false);
+
+    if (!localStorage.getItem('featureModalShown')) {
+      setShowFeatureModal(true);
+    }
+  };
+
+  const handleCloseFeatureModal = () => {
+    setShowFeatureModal(false);
+    localStorage.setItem('featureModalShown', 'true');
   };
 
   const toggleLikeMovie = useCallback((movieKey: string) => {
@@ -134,7 +152,25 @@ const App: React.FC = () => {
     });
   }, [searchQuery, movies]);
 
-  const heroMovie = useMemo(() => movies['futureEchoes'], [movies]);
+  const featuredMovies = useMemo(() => {
+    if (!categoriesData.featured || Object.keys(movies).length === 0) return [];
+    return categoriesData.featured.movieKeys
+        .map(key => movies[key])
+        .filter(Boolean);
+  }, [movies]);
+
+  useEffect(() => {
+    if (featuredMovies.length > 1) {
+        const timer = setInterval(() => {
+            setCurrentHeroIndex(prevIndex => (prevIndex + 1) % featuredMovies.length);
+        }, 7000);
+        return () => clearInterval(timer);
+    }
+  }, [featuredMovies.length]);
+
+  const handleSetCurrentHeroIndex = useCallback((index: number) => {
+      setCurrentHeroIndex(index);
+  }, []);
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -151,7 +187,12 @@ const App: React.FC = () => {
       <Header searchQuery={searchQuery} onSearch={setSearchQuery} />
       
       <main className="flex-grow">
-        {heroMovie && <Hero movie={heroMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} />}
+        {featuredMovies.length > 0 && <Hero 
+            movies={featuredMovies} 
+            currentIndex={currentHeroIndex}
+            onSetCurrentIndex={handleSetCurrentHeroIndex}
+            onSelectMovie={handleSelectMovie} 
+            onPlayMovie={handlePlayMovie} />}
         <div className="relative px-4 md:px-12 pb-8 -mt-16 md:-mt-24 pt-8">
           {filteredMovies ? (
             <div>
@@ -222,6 +263,7 @@ const App: React.FC = () => {
           onClose={closeActorModal}
         />
       )}
+      {showFeatureModal && <FeatureModal onClose={handleCloseFeatureModal} />}
     </div>
   );
 };

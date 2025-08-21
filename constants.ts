@@ -302,8 +302,8 @@ export const categoriesData: Record<string, Category> = {
     movieKeys: ['smirk', 'crossroads', 'wrapitup', 'itsinyou', 'drive', 'fatherdaughterdance']
   },
   phillyFilmFest2025: {
-    title: "Playhouse West-Philadelphia 2025 Film Festival Selections",
-    movieKeys: ['futureEchoes', 'neonHeartbeat']
+    title: "Selections from the 12th Annual PWFF - Coming Soon",
+    movieKeys: []
   },
   documentary: {
     title: "Documentaries",

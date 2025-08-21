@@ -1,14 +1,7 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 
 const Footer: React.FC = () => {
-  const [isSubscribed, setIsSubscribed] = useState(false);
-
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubscribed(true);
-  };
-
   const links = [
     { name: 'Instagram', href: 'https://www.instagram.com/cratetv.philly?igsh=dXJrYTdlMHVhbXcw' },
     { name: 'More About Us', href: 'https://aboutus.cratetv.net' },
@@ -19,28 +12,6 @@ const Footer: React.FC = () => {
 
   return (
     <footer className="bg-black/80 text-center p-6 mt-8 border-t border-gray-800">
-      <div className="max-w-md mx-auto mb-6">
-        <h3 className="text-lg font-bold text-white mb-3">Join Our Mailing List</h3>
-        {isSubscribed ? (
-          <p className="text-green-400">Thank you for subscribing!</p>
-        ) : (
-          <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              required
-              className="flex-grow py-2 px-4 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
-            />
-            <button
-              type="submit"
-              className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-md transition-colors"
-            >
-              Subscribe
-            </button>
-          </form>
-        )}
-      </div>
-
       <div className="mb-4">
         {links.map((link, index) => (
           <React.Fragment key={link.name}>
