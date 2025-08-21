@@ -26,7 +26,7 @@ export async function POST(request: Request) {
         contents: prompt,
     });
     
-    const fact = response.text;
+    const fact = response.text || "Could not generate a fun fact at this time.";
 
     return new Response(JSON.stringify({ fact }), {
       status: 200,
