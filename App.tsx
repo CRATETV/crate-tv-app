@@ -12,6 +12,15 @@ import BackToTopButton from './components/BackToTopButton';
 import LoadingSpinner from './components/LoadingSpinner';
 import FeatureModal from './components/FeatureModal';
 
+// Helper to safely update URL without crashing in sandboxed environments
+const safePushState = (path: string) => {
+  try {
+    window.history.pushState(null, '', path);
+  } catch (error) {
+    console.warn("Could not update URL with pushState. This is expected in some sandboxed environments.", error);
+  }
+};
+
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showIntro, setShowIntro] = useState(!sessionStorage.getItem('introPlayed'));
@@ -102,13 +111,13 @@ const App: React.FC = () => {
   const handleSelectMovie = useCallback((movie: Movie) => {
     setStartWithFullMovie(false);
     setSelectedMovie(movie);
-    window.history.pushState(null, '', `?movie=${movie.key}`);
+    safePushState(`?movie=${movie.key}`);
   }, []);
   
   const handlePlayMovie = useCallback((movie: Movie) => {
     setStartWithFullMovie(true);
     setSelectedMovie(movie);
-    window.history.pushState(null, '', `?movie=${movie.key}`);
+    safePushState(`?movie=${movie.key}`);
   }, []);
 
   const handleSelectRecommendedMovie = useCallback((movie: Movie) => {
@@ -126,7 +135,7 @@ const App: React.FC = () => {
     setSelectedMovie(null);
     setStartWithFullMovie(false);
     if (clearUrl) {
-      window.history.pushState(null, '', window.location.pathname);
+      safePushState(window.location.pathname);
     }
   };
   

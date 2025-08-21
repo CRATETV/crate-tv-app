@@ -23,12 +23,14 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const [isPlayingFullMovie, setIsPlayingFullMovie] = useState(startWithFullMovie);
   const videoRef = useRef<HTMLVideoElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
 
   // State for custom video controls
   const [isPlaying, setIsPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(1);
   const [duration, setDuration] = useState(0);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
@@ -50,6 +52,18 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     setProgress(0);
     setIsPlaying(true);
   }, [startWithFullMovie, movie.key]);
+
+  useEffect(() => {
+    const handleFullScreenChange = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullScreenChange);
+    
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullScreenChange);
+    };
+  }, []);
 
   const recommendedMovies = useMemo(() => {
     const recommendedKeys = new Set<string>();
@@ -130,6 +144,21 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     setIsPlaying(false);
     setProgress(100);
   };
+
+  const toggleFullScreen = () => {
+    const container = videoContainerRef.current;
+    if (!container) return;
+
+    if (!document.fullscreenElement) {
+      container.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
   
   const hasTrailer = movie.trailer && movie.trailer.length > 5;
   const shouldPlayFullMovie = isPlayingFullMovie && movie.fullMovie;
@@ -144,7 +173,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
           </svg>
         </button>
         
-        <div className="relative w-full aspect-video bg-black group/video">
+        <div ref={videoContainerRef} className="relative w-full aspect-video bg-black group/video">
             {hasTrailer || movie.fullMovie ? (
               <video
                   ref={videoRef}
@@ -218,8 +247,21 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                     />
                   </div>
                 </div>
-                <div className="text-white text-sm">
-                  <span>{formatTime(videoRef.current?.currentTime ?? 0)}</span> / <span>{formatTime(duration)}</span>
+                <div className="flex items-center space-x-4">
+                  <div className="text-white text-sm">
+                    <span>{formatTime(videoRef.current?.currentTime ?? 0)}</span> / <span>{formatTime(duration)}</span>
+                  </div>
+                  <button onClick={toggleFullScreen} className="text-white" aria-label={isFullScreen ? 'Exit full screen' : 'Enter full screen'}>
+                    {isFullScreen ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9V4.5M15 9h4.5M15 9l5.25-5.25M15 15v4.5M15 15h4.5M15 15l5.25 5.25" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75v4.5m0-4.5h-4.5m4.5 0L15 9m5.25 11.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
