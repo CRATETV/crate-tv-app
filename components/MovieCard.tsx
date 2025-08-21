@@ -23,7 +23,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isLiked, onSelectMovie, on
 
   return (
     <div
-      className="group relative flex-shrink-0 w-48 h-72 md:w-56 md:h-80 rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 hover:z-10 shadow-lg hover:shadow-red-500/30"
+      className="group relative flex-shrink-0 w-40 h-64 sm:w-48 sm:h-72 md:w-56 md:h-80 rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 hover:z-10 shadow-lg hover:shadow-red-500/30"
       onClick={() => onSelectMovie(movie)}
     >
       <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-50" />
@@ -34,8 +34,8 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isLiked, onSelectMovie, on
         </svg>
       </div>
 
-      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
-        <h3 className="text-white text-lg font-bold truncate">{movie.title}</h3>
+      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 sm:p-4 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+        <h3 className="text-white text-base sm:text-lg font-bold truncate">{movie.title}</h3>
         <div className="flex justify-between items-center mt-2">
             <button onClick={handleLikeClick} className="flex items-center space-x-1 text-white hover:text-red-500 transition-colors" aria-label={`Like ${movie.title}`}>
                 <svg xmlns="http://www.w3.org/2000/svg" 

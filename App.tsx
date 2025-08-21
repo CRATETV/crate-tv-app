@@ -64,9 +64,8 @@ const App: React.FC = () => {
       }
     };
 
-    // Simulate a short loading time for a better UX
-    const timer = setTimeout(initApp, 500);
-    return () => clearTimeout(timer);
+    // Initialize the app without an artificial delay
+    initApp();
   }, []);
 
   const handleIntroEnd = () => {

@@ -12,7 +12,7 @@ const Footer: React.FC = () => {
 
   return (
     <footer className="bg-black/80 text-center p-6 mt-8 border-t border-gray-800">
-      <div className="mb-4 flex flex-wrap items-center justify-center">
+      <div className="mb-4 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-y-2 gap-x-0">
         {links.map((link, index) => (
           <React.Fragment key={link.name}>
             <a
@@ -26,7 +26,7 @@ const Footer: React.FC = () => {
             >
               {link.name}
             </a>
-            {index < links.length - 1 && <span className="mx-2 text-gray-600">|</span>}
+            {index < links.length - 1 && <span className="mx-2 text-gray-600 hidden sm:inline">|</span>}
           </React.Fragment>
         ))}
       </div>

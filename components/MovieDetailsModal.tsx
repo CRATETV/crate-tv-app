@@ -267,8 +267,8 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
             </div>
         </div>
 
-        <div className="p-6 md:p-8">
-            <h2 className="text-3xl font-bold mb-2">{movie.title}</h2>
+        <div className="p-4 sm:p-6 md:p-8">
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">{movie.title}</h2>
             <p className="text-gray-300 mb-6" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></p>
             
             <div className="bg-gradient-to-r from-red-500/20 to-blue-500/20 p-3 rounded-lg text-center mb-4 border border-gray-700">

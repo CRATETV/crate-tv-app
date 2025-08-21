@@ -60,12 +60,12 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
         </button>
         
         <div className="grid grid-cols-1 md:grid-cols-3">
-            <div className="md:col-span-1 p-6 flex flex-col items-center justify-center">
-                 <img src={actor.highResPhoto} alt={actor.name} className="w-48 h-48 rounded-full object-cover shadow-lg border-4 border-gray-700"/>
+            <div className="md:col-span-1 p-4 sm:p-6 flex flex-col items-center justify-center">
+                 <img src={actor.highResPhoto} alt={actor.name} className="w-32 h-32 sm:w-48 sm:h-48 rounded-full object-cover shadow-lg border-4 border-gray-700"/>
             </div>
-            <div className="md:col-span-2 p-6 md:pl-0 flex flex-col justify-center">
-                <div className="flex items-center gap-4 mb-2">
-                    <h2 className="text-3xl font-bold text-white">{actor.name}</h2>
+            <div className="md:col-span-2 p-4 sm:p-6 md:pl-0 flex flex-col justify-center">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-2">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-white">{actor.name}</h2>
                     {imdbUrl && (
                         <a
                             href={imdbUrl}

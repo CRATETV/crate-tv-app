@@ -7,7 +7,7 @@ interface IntroProps {
 
 const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
   return (
-    <div className="relative w-screen h-screen">
+    <div className="relative w-screen h-screen bg-black">
       <video
         id="intro-video"
         className="absolute top-0 left-0 w-full h-full object-cover"
@@ -15,6 +15,7 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
         autoPlay
         playsInline
         onEnded={onIntroEnd}
+        poster="https://cratetelevision.s3.us-east-1.amazonaws.com/intro-poster.jpg"
       >
         <source src="https://cratetelevision.s3.us-east-1.amazonaws.com/intro+video.mp4" type="video/mp4" />
         Your browser does not support the video tag.
