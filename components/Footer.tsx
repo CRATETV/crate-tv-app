@@ -13,7 +13,7 @@ const Footer: React.FC = () => {
     { name: 'Instagram', href: 'https://www.instagram.com/cratetv.philly?igsh=dXJrYTdlMHVhbXcw' },
     { name: 'More About Us', href: 'https://aboutus.cratetv.net' },
     { name: 'Playhouse West-Philadelphia', href: 'https://www.playhousewest.com/philadelphia' },
-    { name: 'Contact Us', href: 'mailto:contact@cratetiv@gmail.com' },
+    { name: 'Contact Us', href: 'mailto:contact@cratetv.net' },
     { name: 'Got a Film?', href: 'https://www.dropbox.com/request/20cg1HZAjFhj9OatP2Ja', special: true },
   ];
 
