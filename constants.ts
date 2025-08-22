@@ -262,8 +262,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+trailer.mov",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Its+In+You.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+poster+jpeg",
-    "likes": 1,
-    "releaseDate": "2099-12-31"
+    "likes": 1
   },
   "smirk": {
     "key": "smirk",

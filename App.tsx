@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { categoriesData, moviesData } from './constants.ts';
-import { Movie, Actor } from './types.ts';
+import { Movie } from './types.ts';
 import Intro from './components/Intro.tsx';
 import Header from './components/Header.tsx';
 import Hero from './components/Hero.tsx';
@@ -8,19 +8,8 @@ import MovieCarousel from './components/MovieCarousel.tsx';
 import Footer from './components/Footer.tsx';
 import BackToTopButton from './components/BackToTopButton.tsx';
 import LoadingSpinner from './components/LoadingSpinner.tsx';
-import MovieDetailsModal from './components/MovieDetailsModal.tsx';
-import ActorBioModal from './components/ActorBioModal.tsx';
 import FeatureModal from './components/FeatureModal.tsx';
 
-
-// Helper to safely update URL without crashing in sandboxed environments
-const safePushState = (path: string) => {
-  try {
-    window.history.pushState(null, '', path);
-  } catch (error) {
-    console.warn("Could not update URL with pushState. This is expected in some sandboxed environments.", error);
-  }
-};
 
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -28,9 +17,6 @@ const App: React.FC = () => {
   const [movies, setMovies] = useState<Record<string, Movie>>({});
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
-  const [startWithFullMovie, setStartWithFullMovie] = useState(false);
   const [showFeatureModal, setShowFeatureModal] = useState(false);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
 
@@ -55,11 +41,11 @@ const App: React.FC = () => {
           setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
         }
 
-        // Handle deep linking from URL
+        // Handle search query from URL
         const params = new URLSearchParams(window.location.search);
-        const movieKey = params.get('movie');
-        if (movieKey && moviesData[movieKey]) {
-          handleSelectMovie(moviesData[movieKey]);
+        const urlSearchQuery = params.get('search');
+        if (urlSearchQuery) {
+          setSearchQuery(urlSearchQuery);
         }
 
         // Handle intro and feature modal logic
@@ -138,39 +124,12 @@ const App: React.FC = () => {
   }, [likedMovies]);
 
   const handleSelectMovie = useCallback((movie: Movie) => {
-    setStartWithFullMovie(false);
-    setSelectedMovie(movie);
-    safePushState(`?movie=${movie.key}`);
+    window.location.href = `/movie/${movie.key}`;
   }, []);
   
   const handlePlayMovie = useCallback((movie: Movie) => {
-    setStartWithFullMovie(true);
-    setSelectedMovie(movie);
-    safePushState(`?movie=${movie.key}`);
+    window.location.href = `/movie/${movie.key}?play=true`;
   }, []);
-
-  const handleSelectRecommendedMovie = useCallback((movie: Movie) => {
-      closeModal(false); // Close without clearing URL
-      setTimeout(() => {
-          handleSelectMovie(movie);
-      }, 300); // Allow time for close animation
-  }, [handleSelectMovie]);
-
-  const handleSelectActor = useCallback((actor: Actor) => {
-    setSelectedActor(actor);
-  }, []);
-
-  const closeModal = (clearUrl = true) => {
-    setSelectedMovie(null);
-    setStartWithFullMovie(false);
-    if (clearUrl) {
-      safePushState(window.location.pathname);
-    }
-  };
-  
-  const closeActorModal = () => {
-    setSelectedActor(null);
-  };
 
   const handleClearSearch = () => {
     setSearchQuery('');
@@ -301,26 +260,7 @@ const App: React.FC = () => {
       <Footer />
       <BackToTopButton />
 
-      <>
-        {selectedMovie && (
-          <MovieDetailsModal 
-            movie={selectedMovie} 
-            onClose={closeModal} 
-            onSelectActor={handleSelectActor}
-            startWithFullMovie={startWithFullMovie}
-            allMovies={movies}
-            allCategories={categoriesData}
-            onSelectRecommendedMovie={handleSelectRecommendedMovie}
-          />
-        )}
-        {selectedActor && (
-          <ActorBioModal
-            actor={selectedActor}
-            onClose={closeActorModal}
-          />
-        )}
-        {showFeatureModal && <FeatureModal onClose={handleCloseFeatureModal} />}
-      </>
+      {showFeatureModal && <FeatureModal onClose={handleCloseFeatureModal} />}
     </div>
   );
 };
