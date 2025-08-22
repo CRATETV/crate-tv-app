@@ -1,62 +1,27 @@
-import React, { useState, useCallback } from 'react';
-import { Movie, Category, Actor } from './types.ts';
+import React, { useState, useMemo } from 'react';
+import { moviesData } from './constants.ts';
+import { Movie } from './types.ts';
 import MovieEditor from './components/MovieEditor.tsx';
 
 const AdminPage: React.FC = () => {
-  const [rawCode, setRawCode] = useState('');
-  const [movies, setMovies] = useState<Record<string, Movie>>({});
-  const [categories, setCategories] = useState<Record<string, Category>>({});
+  const [movies, setMovies] = useState<Movie[]>(Object.values(moviesData));
+  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [isNewMovie, setIsNewMovie] = useState(false);
   const [generatedCode, setGeneratedCode] = useState('');
-  const [editingMovie, setEditingMovie] = useState<Movie | null>(null);
 
-  const parseDataFromCode = useCallback(() => {
-    try {
-      const script = rawCode
-        .replace(/import.*?from '.*?';/gs, '')
-        .replace(/export const moviesData:.*?=/, 'const moviesData =')
-        .replace(/export const categoriesData:.*?=/, 'const categoriesData =')
-        + '; return { moviesData, categoriesData };';
-      
-      const func = new Function(script);
-      const data = func();
+  const sortedMovies = useMemo(() => {
+    return [...movies].sort((a, b) => a.title.localeCompare(b.title));
+  }, [movies]);
 
-      if (!data.moviesData || !data.categoriesData) {
-        throw new Error("Could not find moviesData or categoriesData objects.");
-      }
-
-      setMovies(data.moviesData);
-      setCategories(data.categoriesData);
-      alert('Data loaded successfully!');
-    } catch (e) {
-      console.error("Parsing error:", e);
-      alert("Failed to parse the code. Please check the console for errors and make sure the format is correct.");
-    }
-  }, [rawCode]);
-
-  const generateCode = useCallback(() => {
-    const moviesString = JSON.stringify(movies, null, 2);
-    const categoriesString = JSON.stringify(categories, null, 2);
-
-    const code = `import { Movie, Category } from './types';
-
-export const moviesData: Record<string, Movie> = ${moviesString};
-
-export const categoriesData: Record<string, Category> = ${categoriesString};
-`;
-    setGeneratedCode(code);
-  }, [movies, categories]);
-  
-  const handleSaveMovie = (movieToSave: Movie) => {
-    setMovies(prevMovies => ({
-      ...prevMovies,
-      [movieToSave.key]: movieToSave
-    }));
-    setEditingMovie(null);
+  const handleSelectMovie = (movie: Movie) => {
+    setSelectedMovie(movie);
+    setIsNewMovie(false);
   };
 
   const handleAddNewMovie = () => {
+    const newKey = `newmovie${Date.now()}`;
     const newMovie: Movie = {
-      key: `newMovie${Date.now()}`,
+      key: newKey,
       title: 'New Movie',
       synopsis: '',
       cast: [],
@@ -65,109 +30,120 @@ export const categoriesData: Record<string, Category> = ${categoriesString};
       fullMovie: '',
       poster: '',
       likes: 0,
-      releaseDate: ''
+      releaseDate: '',
     };
-    setEditingMovie(newMovie);
+    setSelectedMovie(newMovie);
+    setIsNewMovie(true);
   };
-  
+
+  const handleSaveMovie = (updatedMovie: Movie) => {
+    if (isNewMovie) {
+      setMovies(prev => [...prev, updatedMovie]);
+    } else {
+      setMovies(prev => prev.map(m => m.key === updatedMovie.key ? updatedMovie : m));
+    }
+    setSelectedMovie(null);
+    setIsNewMovie(false);
+  };
+
   const handleDeleteMovie = (movieKey: string) => {
-    if (window.confirm(`Are you sure you want to delete movie: ${movies[movieKey].title}? This cannot be undone.`)) {
-        // This is a complex operation as it also requires removing the key from categories
-        const newMovies = { ...movies };
-        delete newMovies[movieKey];
-        setMovies(newMovies);
-
-        const newCategories = { ...categories };
-        Object.keys(newCategories).forEach(catKey => {
-            newCategories[catKey].movieKeys = newCategories[catKey].movieKeys.filter(key => key !== movieKey);
-        });
-        setCategories(newCategories);
-
-        alert(`Movie "${movieKey}" deleted. Remember to also remove it from any categories if needed.`);
+    if(window.confirm("Are you sure you want to delete this movie? This cannot be undone.")) {
+        setMovies(prev => prev.filter(m => m.key !== movieKey));
+        if (selectedMovie && selectedMovie.key === movieKey) {
+            setSelectedMovie(null);
+        }
     }
   };
 
+  const handleGenerateCode = () => {
+    const moviesDataObject = movies.reduce((acc, movie) => {
+        // Clean up empty strings for releaseDate
+        const movieToProcess = { ...movie };
+        if (movieToProcess.releaseDate === '') {
+            delete movieToProcess.releaseDate;
+        }
+
+        acc[movie.key] = movieToProcess;
+        return acc;
+    }, {} as Record<string, Movie>);
+    
+    const codeString = `import { Category, Movie } from './types.ts';\n\nexport const moviesData: Record<string, Movie> = ${JSON.stringify(moviesDataObject, null, 2)};`;
+    setGeneratedCode(codeString);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8 font-sans">
-        <div className="fixed top-0 left-0 w-full h-2.5 bg-gradient-to-r from-red-500 via-blue-500 to-green-500 bg-[length:300%_100%] animate-colorChange z-50"></div>
-        <div className="max-w-7xl mx-auto">
-            <h1 className="text-4xl font-bold mb-2 text-red-500">Crate TV Content Manager</h1>
-            <p className="text-gray-400 mb-8">A tool to update movie and category data without manually editing code.</p>
+    <div className="bg-gray-800 text-white min-h-screen p-8 font-sans">
+      <div className="max-w-7xl mx-auto">
+        <header className="mb-8">
+          <h1 className="text-4xl font-bold text-red-500">Crate TV Admin Panel</h1>
+          <p className="text-gray-400">Manage your movie catalog here.</p>
+        </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Step 1 & 4 */}
-                <div>
-                    <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
-                        <h2 className="text-2xl font-semibold mb-3">Step 1: Load Your Data</h2>
-                        <p className="text-gray-400 mb-4 text-sm">Paste the entire content of your <code className="bg-gray-700 p-1 rounded">constants.ts</code> file below and click "Load Data".</p>
-                        <textarea
-                            className="w-full h-48 bg-gray-900 border border-gray-600 rounded-md p-3 text-sm font-mono focus:ring-2 focus:ring-red-500 focus:outline-none"
-                            value={rawCode}
-                            onChange={(e) => setRawCode(e.target.value)}
-                            placeholder="Paste constants.ts content here..."
-                        />
-                        <button onClick={parseDataFromCode} className="mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
-                            Load Data
-                        </button>
-                    </div>
-
-                    <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                        <h2 className="text-2xl font-semibold mb-3">Step 4: Generate New Code</h2>
-                        <p className="text-gray-400 mb-4 text-sm">After making your changes, click the button below to generate the new code. Copy the output and replace the content of your <code className="bg-gray-700 p-1 rounded">constants.ts</code> file.</p>
-                         <button onClick={generateCode} className="mb-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
-                            Generate Output Code
-                        </button>
-                        <textarea
-                            readOnly
-                            className="w-full h-48 bg-gray-900 border border-gray-600 rounded-md p-3 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            value={generatedCode}
-                            placeholder="Generated code will appear here..."
-                        />
-                    </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-1 bg-gray-900 p-6 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">Movie List</h2>
+            <button
+              onClick={handleAddNewMovie}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition mb-4"
+            >
+              + Add New Movie
+            </button>
+            <div className="max-h-[60vh] overflow-y-auto">
+              {sortedMovies.map(movie => (
+                <div 
+                  key={movie.key} 
+                  onClick={() => handleSelectMovie(movie)}
+                  className={`p-3 rounded-md cursor-pointer transition mb-2 ${selectedMovie?.key === movie.key ? 'bg-red-500 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}
+                >
+                  <p className="font-semibold">{movie.title}</p>
+                  <p className="text-xs text-gray-400">{movie.releaseDate ? `Releases: ${movie.releaseDate}` : 'Released'}</p>
                 </div>
-
-                {/* Step 2 & 3 */}
-                <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                    <h2 className="text-2xl font-semibold mb-3">Step 2 & 3: Manage Movies</h2>
-                     <button onClick={handleAddNewMovie} className="mb-4 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
-                        Add New Movie
-                    </button>
-                    <p className="text-gray-400 mb-4 text-sm">Edit or delete existing movies. Changes to categories must be done manually in the generated code for now.</p>
-                    <div className="max-h-[80vh] overflow-y-auto pr-2">
-                      {Object.values(movies).map(movie => (
-                        <div key={movie.key} className="flex items-center justify-between bg-gray-700 p-3 rounded-md mb-3">
-                          <div className="flex items-center">
-                            <img src={movie.poster} alt={movie.title} className="w-12 h-16 object-cover rounded-sm mr-4"/>
-                            <div>
-                                <p className="font-bold">{movie.title}</p>
-                                <p className="text-xs text-gray-400">{movie.key}</p>
-                                {movie.releaseDate && (
-                                  <div className="flex items-center text-xs text-yellow-400 mt-1">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                                    </svg>
-                                    <span>Releases: {movie.releaseDate}</span>
-                                  </div>
-                                )}
-                            </div>
-                          </div>
-                          <div className="flex space-x-2">
-                            <button onClick={() => setEditingMovie(movie)} className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded-md text-sm transition-colors">Edit</button>
-                            <button onClick={() => handleDeleteMovie(movie.key)} className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-md text-sm transition-colors">Delete</button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                </div>
+              ))}
             </div>
-            {editingMovie && (
-                <MovieEditor 
-                    movie={editingMovie}
-                    onSave={handleSaveMovie}
-                    onClose={() => setEditingMovie(null)}
-                />
+          </div>
+
+          <div className="md:col-span-2 bg-gray-900 p-6 rounded-lg shadow-lg">
+            {selectedMovie ? (
+              <MovieEditor
+                movie={selectedMovie}
+                onSave={handleSaveMovie}
+                onCancel={() => setSelectedMovie(null)}
+                onDelete={handleDeleteMovie}
+              />
+            ) : (
+              <div className="text-center text-gray-400">
+                <p>Select a movie to edit or add a new one.</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="mt-8 bg-gray-900 p-6 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-semibold mb-4">Generate Code</h2>
+            <p className="text-gray-400 mb-4">After making all your changes, click this button to generate the code for your `constants.ts` file. Copy the entire output and replace the `moviesData` object in the file.</p>
+            <button 
+                onClick={handleGenerateCode}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-md transition"
+            >
+                Generate `moviesData` Object
+            </button>
+            {generatedCode && (
+                <div className="mt-4">
+                    <textarea 
+                        readOnly 
+                        value={generatedCode}
+                        className="w-full h-64 bg-gray-800 border border-gray-700 rounded-md p-4 text-sm font-mono text-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                    <button
+                        onClick={() => navigator.clipboard.writeText(generatedCode)}
+                        className="mt-2 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md transition"
+                    >
+                        Copy to Clipboard
+                    </button>
+                </div>
             )}
         </div>
+      </div>
     </div>
   );
 };

@@ -4,10 +4,11 @@ import { Movie, Actor } from '../types.ts';
 interface MovieEditorProps {
   movie: Movie;
   onSave: (movie: Movie) => void;
-  onClose: () => void;
+  onCancel: () => void;
+  onDelete: (movieKey: string) => void;
 }
 
-const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onClose }) => {
+const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDelete }) => {
   const [formData, setFormData] = useState<Movie>(movie);
 
   useEffect(() => {
@@ -19,20 +20,24 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onClose }) => 
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleCastChange = (index: number, e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    const newCast = [...formData.cast];
-    newCast[index] = { ...newCast[index], [name]: value };
-    setFormData(prev => ({ ...prev, cast: newCast }));
+  const handleCastChange = (index: number, field: keyof Actor, value: string) => {
+    const updatedCast = [...formData.cast];
+    updatedCast[index] = { ...updatedCast[index], [field]: value };
+    setFormData(prev => ({ ...prev, cast: updatedCast }));
   };
 
   const addCastMember = () => {
-    const newActor: Actor = { name: '', photo: '', bio: '', highResPhoto: ''};
-    setFormData(prev => ({...prev, cast: [...prev.cast, newActor]}));
+    setFormData(prev => ({
+      ...prev,
+      cast: [...prev.cast, { name: '', photo: '', bio: '', highResPhoto: '' }]
+    }));
   };
-  
+
   const removeCastMember = (index: number) => {
-    setFormData(prev => ({...prev, cast: prev.cast.filter((_, i) => i !== index)}));
+    setFormData(prev => ({
+      ...prev,
+      cast: prev.cast.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -41,57 +46,88 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onClose }) => 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] relative border border-gray-700">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white z-10">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-        </button>
-        <div className="overflow-y-auto max-h-[90vh] p-8">
-          <h2 className="text-3xl font-bold mb-6 text-white">{movie.key.startsWith('new') ? 'Add New Movie' : `Editing: ${movie.title}`}</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Main Details Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div><label className="block text-sm font-medium text-gray-300">Key</label><input type="text" name="key" value={formData.key} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" required /></div>
-                <div><label className="block text-sm font-medium text-gray-300">Title</label><input type="text" name="title" value={formData.title} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" required /></div>
-                <div><label className="block text-sm font-medium text-gray-300">Director</label><input type="text" name="director" value={formData.director} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" /></div>
-                <div><label className="block text-sm font-medium text-gray-300">Release Date (Optional)</label><input type="date" name="releaseDate" value={formData.releaseDate || ''} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" /></div>
-                <div><label className="block text-sm font-medium text-gray-300">Poster URL</label><input type="text" name="poster" value={formData.poster} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" /></div>
-                <div><label className="block text-sm font-medium text-gray-300">Trailer URL</label><input type="text" name="trailer" value={formData.trailer} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" /></div>
-                <div><label className="block text-sm font-medium text-gray-300">Full Movie URL</label><input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" /></div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300">Synopsis</label>
-                <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={12} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"></textarea>
-              </div>
-            </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <h2 className="text-3xl font-bold text-red-400 mb-6">{movie.key.startsWith('newmovie') ? 'Add New Movie' : `Editing: ${movie.title}`}</h2>
 
-            {/* Cast Details */}
-            <div className="pt-4 border-t border-gray-700">
-                <h3 className="text-xl font-semibold mb-3">Cast</h3>
-                <div className="space-y-4 max-h-60 overflow-y-auto p-2 bg-gray-900/50 rounded-md">
-                    {formData.cast.map((actor, index) => (
-                        <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-gray-700 rounded-md relative">
-                            <button type="button" onClick={() => removeCastMember(index)} className="absolute top-2 right-2 text-red-400 hover:text-red-200 text-xs">Remove</button>
-                            <input type="text" name="name" placeholder="Actor Name" value={actor.name} onChange={(e) => handleCastChange(index, e)} className="bg-gray-600 rounded p-2" />
-                            <input type="text" name="photo" placeholder="Photo URL" value={actor.photo} onChange={(e) => handleCastChange(index, e)} className="bg-gray-600 rounded p-2" />
-                            <input type="text" name="highResPhoto" placeholder="High-Res Photo URL" value={actor.highResPhoto} onChange={(e) => handleCastChange(index, e)} className="bg-gray-600 rounded p-2" />
-                             <textarea name="bio" placeholder="Bio" value={actor.bio} onChange={(e) => handleCastChange(index, e)} className="md:col-span-3 bg-gray-600 rounded p-2" rows={2}></textarea>
-                        </div>
-                    ))}
-                </div>
-                <button type="button" onClick={addCastMember} className="mt-3 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md text-sm">Add Cast Member</button>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-end space-x-4 pt-6">
-                <button type="button" onClick={onClose} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-md transition-colors">Cancel</button>
-                <button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-md transition-colors">Save Movie</button>
-            </div>
-          </form>
+      {/* Basic Info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="key" className="block text-sm font-medium text-gray-300">Key (Unique ID)</label>
+          <input type="text" name="key" value={formData.key} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" required />
+        </div>
+        <div>
+          <label htmlFor="title" className="block text-sm font-medium text-gray-300">Title</label>
+          <input type="text" name="title" value={formData.title} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" required />
         </div>
       </div>
-    </div>
+      <div>
+        <label htmlFor="synopsis" className="block text-sm font-medium text-gray-300">Synopsis (HTML allowed)</label>
+        <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={4} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+      </div>
+      
+      {/* Release Date */}
+      <div>
+        <label htmlFor="releaseDate" className="block text-sm font-medium text-gray-300">Release Date (Optional: YYYY-MM-DD)</label>
+        <input type="date" name="releaseDate" value={formData.releaseDate || ''} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+        <p className="text-xs text-gray-500 mt-1">Leave blank to release immediately. Set a future date to hide the movie until then.</p>
+      </div>
+      
+      {/* URLs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="poster" className="block text-sm font-medium text-gray-300">Poster URL</label>
+          <input type="text" name="poster" value={formData.poster} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+        </div>
+        <div>
+          <label htmlFor="director" className="block text-sm font-medium text-gray-300">Director</label>
+          <input type="text" name="director" value={formData.director} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+        </div>
+        <div>
+          <label htmlFor="trailer" className="block text-sm font-medium text-gray-300">Trailer URL</label>
+          <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+        </div>
+        <div>
+          <label htmlFor="fullMovie" className="block text-sm font-medium text-gray-300">Full Movie URL</label>
+          <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+        </div>
+      </div>
+
+      {/* Cast */}
+      <div>
+        <h3 className="text-xl font-semibold mb-3">Cast Members</h3>
+        <div className="space-y-4">
+          {formData.cast.map((actor, index) => (
+            <div key={index} className="bg-gray-800 p-4 rounded-lg border border-gray-700 relative">
+              <button type="button" onClick={() => removeCastMember(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-400">&times;</button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="text" placeholder="Actor Name" value={actor.name} onChange={e => handleCastChange(index, 'name', e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white" />
+                <input type="text" placeholder="Photo URL (small)" value={actor.photo} onChange={e => handleCastChange(index, 'photo', e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white" />
+                <input type="text" placeholder="High-Res Photo URL" value={actor.highResPhoto} onChange={e => handleCastChange(index, 'highResPhoto', e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white" />
+                 <textarea placeholder="Bio" value={actor.bio} onChange={e => handleCastChange(index, 'bio', e.target.value)} className="md:col-span-2 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white" rows={2}/>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button type="button" onClick={addCastMember} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">+ Add Cast Member</button>
+      </div>
+      
+      {/* Actions */}
+      <div className="flex items-center justify-between pt-6 border-t border-gray-700">
+        <div>
+            <button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-md transition">Save</button>
+            <button type="button" onClick={onCancel} className="ml-4 text-gray-400 hover:text-white transition">Cancel</button>
+        </div>
+        {!movie.key.startsWith('newmovie') && (
+            <button
+              type="button"
+              onClick={() => onDelete(movie.key)}
+              className="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-md transition text-sm"
+            >
+              Delete Movie
+            </button>
+        )}
+      </div>
+    </form>
   );
 };
 

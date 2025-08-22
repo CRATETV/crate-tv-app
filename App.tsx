@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { moviesData, categoriesData } from './constants.ts';
+import { categoriesData, moviesData } from './constants.ts';
 import { Movie, Actor } from './types.ts';
 import Intro from './components/Intro.tsx';
 import Header from './components/Header.tsx';
@@ -36,36 +36,46 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const initApp = () => {
-      const newMoviesState = { ...moviesData };
-      Object.keys(newMoviesState).forEach(key => {
-        const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
-        if (storedLikes) {
-          newMoviesState[key].likes = parseInt(storedLikes, 10);
+      try {
+        // Initialize likes from local storage
+        const newMoviesState = { ...moviesData };
+        Object.keys(newMoviesState).forEach(key => {
+          const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
+          if (storedLikes) {
+            newMoviesState[key].likes = parseInt(storedLikes, 10);
+          } else {
+            // Ensure likes property exists even if not in storage
+            newMoviesState[key].likes = newMoviesState[key].likes || 0;
+          }
+        });
+        setMovies(newMoviesState);
+
+        const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
+        if (storedLikedMovies) {
+          setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
         }
-      });
-      setMovies(newMoviesState);
 
-      const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
-      if (storedLikedMovies) {
-        setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
-      }
-
-      const params = new URLSearchParams(window.location.search);
-      const movieKey = params.get('movie');
-      if (movieKey && moviesData[movieKey]) {
-        handleSelectMovie(moviesData[movieKey]);
-      }
-      setIsLoading(false);
-
-      const shouldShowIntro = !sessionStorage.getItem('introPlayed');
-      if (!shouldShowIntro) {
-        if (!localStorage.getItem('featureModalShown')) {
-          setShowFeatureModal(true);
+        // Handle deep linking from URL
+        const params = new URLSearchParams(window.location.search);
+        const movieKey = params.get('movie');
+        if (movieKey && moviesData[movieKey]) {
+          handleSelectMovie(moviesData[movieKey]);
         }
+
+        // Handle intro and feature modal logic
+        const shouldShowIntro = !sessionStorage.getItem('introPlayed');
+        if (!shouldShowIntro) {
+          if (!localStorage.getItem('featureModalShown')) {
+            setShowFeatureModal(true);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to initialize app:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    // Initialize the app without an artificial delay
     initApp();
   }, []);
 
@@ -120,7 +130,7 @@ const App: React.FC = () => {
     setMovies(prevMovies => {
       const updatedMovie = { 
         ...prevMovies[movieKey], 
-        likes: Math.max(0, prevMovies[movieKey].likes + likesChange) 
+        likes: Math.max(0, (prevMovies[movieKey].likes || 0) + likesChange) 
       };
       localStorage.setItem(`cratetv-${movieKey}-likes`, updatedMovie.likes.toString());
       return { ...prevMovies, [movieKey]: updatedMovie };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import AdminPage from './AdminPage.tsx';
@@ -8,24 +8,15 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
+const root = ReactDOM.createRoot(rootElement);
+
 const AppRouter: React.FC = () => {
-  const [route, setRoute] = useState(window.location.pathname);
-
-  useEffect(() => {
-    const onNavigate = () => {
-      setRoute(window.location.pathname);
-    };
-    window.addEventListener('popstate', onNavigate);
-    return () => window.removeEventListener('popstate', onNavigate);
-  }, []);
-
-  if (route.startsWith('/admin')) {
+  if (window.location.pathname.startsWith('/admin')) {
     return <AdminPage />;
   }
   return <App />;
 };
 
-const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <AppRouter />
