@@ -74,9 +74,21 @@ const App: React.FC = () => {
       if (!movie.releaseDate) {
         visibleKeys.add(movie.key);
       } else {
-        const releaseDate = new Date(movie.releaseDate);
-        if (releaseDate <= today) {
-          visibleKeys.add(movie.key);
+        // Robustly parse 'YYYY-MM-DD' to avoid cross-browser timezone inconsistencies (especially with Safari).
+        // `new Date(string)` is unreliable; `new Date(year, monthIndex, day)` is better.
+        const parts = movie.releaseDate.split('-');
+        if (parts.length === 3) {
+          const year = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
+          const day = parseInt(parts[2], 10);
+          const releaseDate = new Date(year, month, day);
+
+          if (!isNaN(releaseDate.getTime()) && releaseDate <= today) {
+            visibleKeys.add(movie.key);
+          }
+        } else {
+            // If date format is unexpected, default to showing the movie to be safe.
+            visibleKeys.add(movie.key);
         }
       }
     });
