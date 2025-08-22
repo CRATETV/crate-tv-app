@@ -15,6 +15,7 @@ export interface Movie {
   fullMovie: string;
   poster: string;
   likes: number;
+  releaseDate?: string; // YYYY-MM-DD format
 }
 
 export interface Category {

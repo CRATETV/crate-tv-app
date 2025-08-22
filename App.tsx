@@ -69,6 +69,25 @@ const App: React.FC = () => {
     initApp();
   }, []);
 
+  const visibleMovieKeys = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to the beginning of the day
+
+    const visibleKeys = new Set<string>();
+    Object.values(movies).forEach(movie => {
+      if (!movie.releaseDate) {
+        visibleKeys.add(movie.key);
+      } else {
+        const releaseDate = new Date(movie.releaseDate);
+        if (releaseDate <= today) {
+          visibleKeys.add(movie.key);
+        }
+      }
+    });
+    return visibleKeys;
+  }, [movies]);
+
+
   const handleIntroEnd = () => {
     sessionStorage.setItem('introPlayed', 'true');
     setShowIntro(false);
@@ -154,19 +173,22 @@ const App: React.FC = () => {
     const allMovies = Object.values(movies);
     if (allMovies.length === 0) return [];
     
-    return allMovies.filter(movie => {
-      const titleMatch = movie.title.toLowerCase().includes(lowercasedQuery);
-      const actorMatch = movie.cast.some(actor => actor.name.toLowerCase().includes(lowercasedQuery));
-      return titleMatch || actorMatch;
+    return allMovies
+      .filter(movie => visibleMovieKeys.has(movie.key)) // Filter by visible keys
+      .filter(movie => {
+        const titleMatch = movie.title.toLowerCase().includes(lowercasedQuery);
+        const actorMatch = movie.cast.some(actor => actor.name.toLowerCase().includes(lowercasedQuery));
+        return titleMatch || actorMatch;
     });
-  }, [searchQuery, movies]);
+  }, [searchQuery, movies, visibleMovieKeys]);
 
   const featuredMovies = useMemo(() => {
     if (!categoriesData.featured || Object.keys(movies).length === 0) return [];
     return categoriesData.featured.movieKeys
+        .filter(key => visibleMovieKeys.has(key)) // Filter by visible keys
         .map(key => movies[key])
         .filter(Boolean);
-  }, [movies]);
+  }, [movies, visibleMovieKeys]);
 
   useEffect(() => {
     if (featuredMovies.length > 1) {
@@ -233,7 +255,21 @@ const App: React.FC = () => {
           ) : (
             <>
               {Object.entries(categoriesData).map(([key, value]) => {
-                const categoryMovies = value.movieKeys.map(movieKey => movies[movieKey]).filter(Boolean);
+                const categoryMovies = value.movieKeys
+                    .filter(movieKey => visibleMovieKeys.has(movieKey)) // Filter by visible keys
+                    .map(movieKey => movies[movieKey])
+                    .filter(Boolean);
+                
+                if(categoryMovies.length === 0 && key === 'phillyFilmFest2025') {
+                    return (
+                        <div key={key} className="mb-12">
+                             <h2 className="text-2xl font-bold mb-4 text-white hover:text-red-500 transition-colors cursor-pointer whitespace-nowrap">{value.title}</h2>
+                        </div>
+                    )
+                }
+                
+                if(categoryMovies.length === 0) return null;
+
                 const sortedMovies = [...categoryMovies].sort((a, b) => b.likes - a.likes);
 
                 return (
