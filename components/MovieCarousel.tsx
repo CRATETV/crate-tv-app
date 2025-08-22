@@ -71,7 +71,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
       <div 
         ref={scrollContainerRef}
         onScroll={checkScrollPosition}
-        className="flex overflow-x-auto space-x-4 pb-4 -mx-4 px-4 scrollbar-hide touch-pan-x overscroll-x-contain"
+        className="flex overflow-x-auto space-x-4 pb-4 -mx-4 px-4 scrollbar-hide touch-pan-x overscroll-y-contain"
       >
         {movies.map((movie) => (
           <MovieCard
