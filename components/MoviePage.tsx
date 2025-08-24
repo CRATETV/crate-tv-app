@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types.ts';
 import { moviesData, categoriesData } from '../constants.ts';
 import ActorBioModal from './ActorBioModal.tsx';
@@ -19,6 +19,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
 
+  // Like state
+  const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
+  const [isAnimatingLike, setIsAnimatingLike] = useState(false);
+
   // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
   const [isPlaying, setIsPlaying] = useState(false);
@@ -28,9 +32,22 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
   
   useEffect(() => {
-    const movieData = moviesData[movieKey];
+    const movieData = { ...moviesData[movieKey] };
     if (movieData) {
+      // Initialize likes from local storage for this specific movie
+      const storedLikes = localStorage.getItem(`cratetv-${movieKey}-likes`);
+      if (storedLikes) {
+        movieData.likes = parseInt(storedLikes, 10);
+      }
       setMovie(movieData);
+
+      // Initialize liked set from local storage
+      const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
+      if (storedLikedMovies) {
+        setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
+      }
+
+      // Handle play from URL
       const params = new URLSearchParams(window.location.search);
       const shouldPlay = params.get('play') === 'true';
       if (shouldPlay && movieData.fullMovie) {
@@ -49,6 +66,34 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     document.addEventListener('fullscreenchange', handleFullScreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
   }, []);
+
+  const toggleLikeMovie = useCallback((key: string) => {
+    if (!movie) return;
+
+    const newLikedMovies = new Set(likedMovies);
+    let likesChange = 0;
+
+    if (newLikedMovies.has(key)) {
+      newLikedMovies.delete(key);
+      likesChange = -1;
+    } else {
+      newLikedMovies.add(key);
+      likesChange = 1;
+      // Animate
+      setIsAnimatingLike(true);
+      setTimeout(() => setIsAnimatingLike(false), 500);
+    }
+
+    setLikedMovies(newLikedMovies);
+    localStorage.setItem('cratetv-likedMovies', JSON.stringify(Array.from(newLikedMovies)));
+
+    const updatedMovie = { 
+      ...movie, 
+      likes: Math.max(0, (movie.likes || 0) + likesChange) 
+    };
+    setMovie(updatedMovie);
+    localStorage.setItem(`cratetv-${key}-likes`, updatedMovie.likes.toString());
+  }, [likedMovies, movie]);
 
   const handleSelectActor = (actor: Actor) => {
     setSelectedActor(actor);
@@ -161,11 +206,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     return <LoadingSpinner />;
   }
   
+  const isLiked = likedMovies.has(movie.key);
   const videoSource = playerMode === 'full' ? movie.fullMovie : movie.trailer;
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-900 text-white">
-        <div className="fixed top-0 left-0 w-full h-2.5 bg-gradient-to-r from-red-500 via-blue-500 via-purple-500 via-orange-500 via-green-500 to-red-500 bg-[length:300%_100%] animate-[colorChange_10s_linear_infinite] z-50"></div>
+        <div className="fixed top-0 left-0 w-full h-2.5 bg-gradient-to-r from-red-500 via-blue-500 via-purple-500 via-orange-500 via-green-500 to-red-500 bg-[length:300%_100%] animate-colorChange z-50"></div>
         <Header searchQuery="" onSearch={handleSearch} />
 
         <main className="flex-grow pt-16">
@@ -226,7 +272,22 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 </div>
                 <div className="p-4 sm:p-6 md:p-8">
                     <a href="/" className="text-red-400 hover:text-red-300 mb-4 inline-block">&larr; Back to Home</a>
-                    <h1 className="text-3xl md:text-4xl font-bold mb-2">{movie.title}</h1>
+                    <div className="flex justify-between items-start mb-2">
+                        <h1 className="text-3xl md:text-4xl font-bold">{movie.title}</h1>
+                        <div className="flex items-center space-x-2 text-white flex-shrink-0 ml-4">
+                            <button onClick={() => toggleLikeMovie(movie.key)} className="flex items-center space-x-1 hover:text-red-500 transition-colors" aria-label={`Like ${movie.title}`}>
+                                <svg xmlns="http://www.w3.org/2000/svg" 
+                                    className={`h-8 w-8 transition-colors ${isLiked ? 'text-red-500' : 'text-gray-400'} ${isAnimatingLike ? 'animate-heartbeat' : ''}`}
+                                    fill={isLiked ? 'currentColor' : 'none'}
+                                    viewBox="0 0 24 24" 
+                                    stroke="currentColor" 
+                                    strokeWidth="2">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                </svg>
+                            </button>
+                            <span className="text-lg font-semibold">{movie.likes}</span>
+                        </div>
+                    </div>
                     <p className="text-gray-300 mb-6" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></p>
                     
                     <div className="bg-gradient-to-r from-red-500/20 to-blue-500/20 p-3 rounded-lg text-center mb-4 border border-gray-700">

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { categoriesData, moviesData } from './constants.ts';
-import { Movie } from './types.ts';
+import { Movie, Actor } from './types.ts';
 import Intro from './components/Intro.tsx';
 import Header from './components/Header.tsx';
 import Hero from './components/Hero.tsx';
@@ -9,6 +9,8 @@ import Footer from './components/Footer.tsx';
 import BackToTopButton from './components/BackToTopButton.tsx';
 import LoadingSpinner from './components/LoadingSpinner.tsx';
 import FeatureModal from './components/FeatureModal.tsx';
+import MovieDetailsModal from './components/MovieDetailsModal.tsx';
+import ActorBioModal from './components/ActorBioModal.tsx';
 
 
 const App: React.FC = () => {
@@ -19,6 +21,12 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFeatureModal, setShowFeatureModal] = useState(false);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
+  const [detailsMovie, setDetailsMovie] = useState<{ movie: Movie; startWithFullMovie: boolean; openedBy: 'click' | 'hover' } | null>(null);
+  const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
+
+  const openModalTimeout = useRef<number | null>(null);
+  const closeModalTimeout = useRef<number | null>(null);
+
 
   useEffect(() => {
     const initApp = () => {
@@ -74,21 +82,11 @@ const App: React.FC = () => {
       if (!movie.releaseDate) {
         visibleKeys.add(movie.key);
       } else {
-        // Robustly parse 'YYYY-MM-DD' to avoid cross-browser timezone inconsistencies (especially with Safari).
-        // `new Date(string)` is unreliable; `new Date(year, monthIndex, day)` is better.
-        const parts = movie.releaseDate.split('-');
-        if (parts.length === 3) {
-          const year = parseInt(parts[0], 10);
-          const month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
-          const day = parseInt(parts[2], 10);
-          const releaseDate = new Date(year, month, day);
-
-          if (!isNaN(releaseDate.getTime()) && releaseDate <= today) {
-            visibleKeys.add(movie.key);
-          }
-        } else {
-            // If date format is unexpected, default to showing the movie to be safe.
-            visibleKeys.add(movie.key);
+        // Fix for Safari date parsing: 'YYYY-MM-DD' can be unreliable.
+        // Replacing hyphens with slashes makes it more compatible.
+        const releaseDate = new Date(movie.releaseDate.replace(/-/g, '/'));
+        if (releaseDate <= today) {
+          visibleKeys.add(movie.key);
         }
       }
     });
@@ -135,13 +133,56 @@ const App: React.FC = () => {
     });
   }, [likedMovies]);
 
-  const handleSelectMovie = useCallback((movie: Movie) => {
-    window.location.href = `/movie/${movie.key}`;
+  const handleSelectMovie = useCallback((movie: Movie, startWithFullMovie = false) => {
+    if (openModalTimeout.current) clearTimeout(openModalTimeout.current);
+    if (closeModalTimeout.current) clearTimeout(closeModalTimeout.current);
+    setDetailsMovie({ movie, startWithFullMovie, openedBy: 'click' });
   }, []);
   
-  const handlePlayMovie = useCallback((movie: Movie) => {
-    window.location.href = `/movie/${movie.key}?play=true`;
+  const handleCloseDetailsModal = useCallback(() => {
+    setDetailsMovie(null);
   }, []);
+  
+  const handleOpenHoverModal = (movie: Movie) => {
+    // Only open a hover modal if there isn't a click-opened modal already.
+    if (!detailsMovie || detailsMovie.openedBy === 'hover') {
+        setDetailsMovie({ movie, startWithFullMovie: false, openedBy: 'hover' });
+    }
+  };
+
+  const handleCloseHoverModal = () => {
+    if (detailsMovie?.openedBy === 'hover') {
+        setDetailsMovie(null);
+    }
+  };
+
+  const handleMouseEnterMovie = useCallback((movie: Movie) => {
+    if (closeModalTimeout.current) clearTimeout(closeModalTimeout.current);
+    if (openModalTimeout.current) clearTimeout(openModalTimeout.current);
+
+    openModalTimeout.current = window.setTimeout(() => handleOpenHoverModal(movie), 500);
+  }, [detailsMovie]);
+
+  const handleMouseLeaveMovie = useCallback(() => {
+    if (openModalTimeout.current) clearTimeout(openModalTimeout.current);
+    closeModalTimeout.current = window.setTimeout(() => handleCloseHoverModal(), 300);
+  }, [detailsMovie]);
+
+  const handleMouseEnterModal = useCallback(() => {
+    if (closeModalTimeout.current) clearTimeout(closeModalTimeout.current);
+  }, []);
+
+  const handleMouseLeaveModal = useCallback(() => {
+    closeModalTimeout.current = window.setTimeout(() => handleCloseHoverModal(), 300);
+  }, [detailsMovie]);
+
+  const handleSelectActor = (actor: Actor) => {
+    setSelectedActor(actor);
+  };
+  
+  const handleCloseActorModal = () => {
+    setSelectedActor(null);
+  };
 
   const handleClearSearch = () => {
     setSearchQuery('');
@@ -194,7 +235,7 @@ const App: React.FC = () => {
   
   return (
     <div className="flex flex-col min-h-screen bg-black text-white">
-      <div className="fixed top-0 left-0 w-full h-2.5 bg-gradient-to-r from-red-500 via-blue-500 via-purple-500 via-orange-500 via-green-500 to-red-500 bg-[length:300%_100%] animate-[colorChange_10s_linear_infinite] z-50"></div>
+      <div className="fixed top-0 left-0 w-full h-2.5 bg-gradient-to-r from-red-500 via-blue-500 via-purple-500 via-orange-500 via-green-500 to-red-500 bg-[length:300%_100%] animate-colorChange z-50"></div>
       
       <Header searchQuery={searchQuery} onSearch={setSearchQuery} />
       
@@ -204,7 +245,7 @@ const App: React.FC = () => {
             currentIndex={currentHeroIndex}
             onSetCurrentIndex={handleSetCurrentHeroIndex}
             onSelectMovie={handleSelectMovie} 
-            onPlayMovie={handlePlayMovie} />}
+            onPlayMovie={(movie) => handleSelectMovie(movie, true)} />}
         <div className="relative px-4 md:px-12 pb-8 -mt-16 md:-mt-24 pt-8">
           {filteredMovies ? (
             <div>
@@ -225,6 +266,8 @@ const App: React.FC = () => {
                   onSelectMovie={handleSelectMovie}
                   likedMovies={likedMovies}
                   onToggleLike={toggleLikeMovie}
+                  onMouseEnterMovie={handleMouseEnterMovie}
+                  onMouseLeaveMovie={handleMouseLeaveMovie}
                 />
               ) : (
                 <div className="text-center py-16 px-4">
@@ -261,6 +304,8 @@ const App: React.FC = () => {
                     onSelectMovie={handleSelectMovie}
                     likedMovies={likedMovies}
                     onToggleLike={toggleLikeMovie}
+                    onMouseEnterMovie={handleMouseEnterMovie}
+                    onMouseLeaveMovie={handleMouseLeaveMovie}
                   />
                 );
               })}
@@ -273,6 +318,24 @@ const App: React.FC = () => {
       <BackToTopButton />
 
       {showFeatureModal && <FeatureModal onClose={handleCloseFeatureModal} />}
+      {detailsMovie && (
+        <MovieDetailsModal
+            movie={movies[detailsMovie.movie.key] || detailsMovie.movie}
+            isLiked={likedMovies.has(detailsMovie.movie.key)}
+            onToggleLike={toggleLikeMovie}
+            onClose={handleCloseDetailsModal}
+            onSelectActor={handleSelectActor}
+            startWithFullMovie={detailsMovie.startWithFullMovie}
+            allMovies={movies}
+            allCategories={categoriesData}
+            onSelectRecommendedMovie={(movie) => handleSelectMovie(movie)}
+            onMouseEnter={handleMouseEnterModal}
+            onMouseLeave={handleMouseLeaveModal}
+        />
+      )}
+      {selectedActor && (
+          <ActorBioModal actor={selectedActor} onClose={handleCloseActorModal} />
+      )}
     </div>
   );
 };

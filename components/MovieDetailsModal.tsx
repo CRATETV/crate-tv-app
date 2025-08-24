@@ -3,22 +3,30 @@ import { Movie, Actor, Category } from '../types.ts';
 
 interface MovieDetailsModalProps {
   movie: Movie;
+  isLiked: boolean;
+  onToggleLike: (movieKey: string) => void;
   onClose: (clearUrl?: boolean) => void;
   onSelectActor: (actor: Actor) => void;
   startWithFullMovie?: boolean;
   allMovies: Record<string, Movie>;
   allCategories: Record<string, Category>;
   onSelectRecommendedMovie: (movie: Movie) => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }
 
 const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({ 
   movie, 
+  isLiked,
+  onToggleLike,
   onClose, 
   onSelectActor, 
   startWithFullMovie = false,
   allMovies,
   allCategories,
-  onSelectRecommendedMovie
+  onSelectRecommendedMovie,
+  onMouseEnter,
+  onMouseLeave
 }) => {
   const [isPlayingFullMovie, setIsPlayingFullMovie] = useState(startWithFullMovie);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -31,6 +39,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const [volume, setVolume] = useState(1);
   const [duration, setDuration] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isAnimatingLike, setIsAnimatingLike] = useState(false);
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
@@ -159,6 +168,14 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
       }
     }
   };
+
+  const handleLikeClick = () => {
+    onToggleLike(movie.key);
+    if (!isLiked) {
+      setIsAnimatingLike(true);
+      setTimeout(() => setIsAnimatingLike(false), 500);
+    }
+  };
   
   const hasTrailer = movie.trailer && movie.trailer.length > 5;
   const shouldPlayFullMovie = isPlayingFullMovie && movie.fullMovie;
@@ -166,7 +183,12 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
   return (
     <div ref={modalRef} className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.3s_ease-out]" onClick={() => onClose(true)}>
-      <div className="bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative scrollbar-hide" onClick={(e) => e.stopPropagation()}>
+      <div 
+        className="bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative scrollbar-hide" 
+        onClick={(e) => e.stopPropagation()}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+      >
         <button onClick={() => onClose(true)} className="absolute top-3 right-3 text-gray-400 hover:text-white z-20">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -268,7 +290,22 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
         </div>
 
         <div className="p-4 sm:p-6 md:p-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">{movie.title}</h2>
+            <div className="flex justify-between items-start mb-2">
+                <h2 className="text-2xl md:text-3xl font-bold">{movie.title}</h2>
+                <div className="flex items-center space-x-2 text-white flex-shrink-0 ml-4">
+                    <button onClick={handleLikeClick} className="flex items-center space-x-1 hover:text-red-500 transition-colors" aria-label={`Like ${movie.title}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" 
+                            className={`h-8 w-8 transition-colors ${isLiked ? 'text-red-500' : 'text-gray-400'} ${isAnimatingLike ? 'animate-heartbeat' : ''}`}
+                            fill={isLiked ? 'currentColor' : 'none'}
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor" 
+                            strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                    </button>
+                    <span className="text-lg font-semibold">{movie.likes}</span>
+                </div>
+            </div>
             <p className="text-gray-300 mb-6" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></p>
             
             <div className="bg-gradient-to-r from-red-500/20 to-blue-500/20 p-3 rounded-lg text-center mb-4 border border-gray-700">

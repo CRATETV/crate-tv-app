@@ -1,4 +1,5 @@
 
+
 import React, { useRef, useState, useEffect } from 'react';
 import { Movie } from '../types.ts';
 import MovieCard from './MovieCard.tsx';
@@ -9,9 +10,11 @@ interface MovieCarouselProps {
   onSelectMovie: (movie: Movie) => void;
   likedMovies: Set<string>;
   onToggleLike: (movieKey: string) => void;
+  onMouseEnterMovie: (movie: Movie) => void;
+  onMouseLeaveMovie: () => void;
 }
 
-const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, likedMovies, onToggleLike }) => {
+const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, likedMovies, onToggleLike, onMouseEnterMovie, onMouseLeaveMovie }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isAtStart, setIsAtStart] = useState(true);
   const [isAtEnd, setIsAtEnd] = useState(false);
@@ -71,7 +74,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
       <div 
         ref={scrollContainerRef}
         onScroll={checkScrollPosition}
-        className="flex overflow-x-auto space-x-4 pb-4 -mx-4 px-4 scrollbar-hide touch-pan-x overscroll-y-contain"
+        className="flex overflow-x-auto space-x-4 pb-4 -mx-4 px-4 scrollbar-hide"
       >
         {movies.map((movie) => (
           <MovieCard
@@ -80,6 +83,8 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
             onSelectMovie={onSelectMovie}
             isLiked={likedMovies.has(movie.key)}
             onToggleLike={onToggleLike}
+            onMouseEnterMovie={onMouseEnterMovie}
+            onMouseLeaveMovie={onMouseLeaveMovie}
           />
         ))}
       </div>

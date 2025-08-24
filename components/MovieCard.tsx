@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Movie } from '../types.ts';
 
@@ -7,9 +8,11 @@ interface MovieCardProps {
   isLiked: boolean;
   onSelectMovie: (movie: Movie) => void;
   onToggleLike: (movieKey: string) => void;
+  onMouseEnterMovie: (movie: Movie) => void;
+  onMouseLeaveMovie: () => void;
 }
 
-const MovieCard: React.FC<MovieCardProps> = ({ movie, isLiked, onSelectMovie, onToggleLike }) => {
+const MovieCard: React.FC<MovieCardProps> = ({ movie, isLiked, onSelectMovie, onToggleLike, onMouseEnterMovie, onMouseLeaveMovie }) => {
   const [isAnimating, setIsAnimating] = useState(false);
 
   const handleLikeClick = (e: React.MouseEvent) => {
@@ -21,14 +24,14 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isLiked, onSelectMovie, on
     }
   };
 
-  // Truncate synopsis and clean up HTML tags for the preview
-  const truncatedSynopsis = movie.synopsis.replace(/<br\s*\/?>/gi, ' ').substring(0, 120);
   const mainCast = movie.cast.slice(0, 3).map(actor => actor.name).join(', ');
 
   return (
     <div
       className="group relative flex-shrink-0 w-40 h-64 sm:w-48 sm:h-72 md:w-56 md:h-80 rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 hover:z-10 shadow-lg hover:shadow-red-500/30"
       onClick={() => onSelectMovie(movie)}
+      onMouseEnter={() => onMouseEnterMovie(movie)}
+      onMouseLeave={onMouseLeaveMovie}
     >
       {/* Poster Image */}
       <img 
@@ -43,11 +46,8 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isLiked, onSelectMovie, on
         
         <div className="text-white overflow-hidden">
           <h3 className="text-lg font-bold text-white drop-shadow-md mb-2 truncate">{movie.title}</h3>
-          <p className="text-sm text-gray-200 line-clamp-4 mb-3">
-            {truncatedSynopsis}{truncatedSynopsis.length === 120 && '...'}
-          </p>
           {mainCast && (
-            <p className="text-xs text-gray-300 truncate">
+            <p className="text-xs text-gray-300 truncate mb-3">
               <span className="font-semibold">Starring:</span> {mainCast}
             </p>
           )}
