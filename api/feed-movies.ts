@@ -1,6 +1,6 @@
 // api/feed-movies.ts
 
-// This is a Vercel Serverless Function
+// This is a Vercel Serverless Function using the Node.js runtime.
 // It will be accessible at the path /api/feed-movies
 
 // --- DATA (EMBEDDED TO PREVENT BUILD ERRORS) ---
@@ -364,16 +364,17 @@ export const categoriesData: Record<string, Category> = {
 // --- END OF EMBEDDED DATA ---
 
 
-// Helper to determine genre from categories
+// Helper to determine genre from categories based on the Direct Publisher specification.
 const getGenres = (movieKey: string, allCategories: Record<string, Category>): string[] => {
     const genres = new Set<string>();
+    // Valid genres from the DP spec.
     if (allCategories.drama?.movieKeys.includes(movieKey)) genres.add('drama');
     if (allCategories.comedy?.movieKeys.includes(movieKey)) genres.add('comedy');
     if (allCategories.documentary?.movieKeys.includes(movieKey)) genres.add('documentary');
     
-    // Fallback genre if none of the main ones match
+    // Fallback genre if none of the main ones match. 'special_interest' is a valid genre.
     if (genres.size === 0) {
-        genres.add('short');
+        genres.add('special_interest');
     }
 
     return Array.from(genres);
@@ -396,7 +397,6 @@ export default function handler(req: any, res: any) {
             
             const credits = movie.cast.map(actor => ({ name: actor.name, role: 'actor' }));
             
-            // Handle single or multiple directors
             if (movie.director) {
               const directors = movie.director.split(',').map(d => d.trim());
               directors.forEach(director => {
@@ -432,25 +432,24 @@ export default function handler(req: any, res: any) {
             };
         });
 
-        const moviesMap = new Map(allMovieFeedObjects.map(m => [m.id, m]));
-
         const categories = Object.values(categoriesData)
             .filter(cat => cat.movieKeys.length > 0)
             .map(cat => ({
                 name: cat.title,
-                playlist: cat.movieKeys
-                    .map(key => moviesMap.get(key))
-                    .filter(Boolean) // Filter out any potential undefined movies
+                 // The playlist should contain the IDs of the content items
+                playlist: cat.movieKeys.filter(key => moviesData[key]),
             }));
 
         const feed = {
             providerName: "Crate TV",
             lastUpdated: new Date().toISOString(),
             language: "en-US",
-            movies: allMovieFeedObjects, // Keep the flat list for search/lookup
+            // The content type key MUST be 'shortFormVideos' for short films.
+            shortFormVideos: allMovieFeedObjects, 
             categories
         };
-
+        
+        res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate'); // Cache for 1 hour
         res.status(200).json(feed);
 
     } catch (error) {
