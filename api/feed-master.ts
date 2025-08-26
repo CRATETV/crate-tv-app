@@ -4,10 +4,18 @@
 // It will be accessible at the path /api/feed/master
 
 export async function GET(request: Request) {
-    // We need to construct the full URL for the movies feed.
-    // The TV app will need an absolute URL.
-    const requestUrl = new URL(request.url);
-    const moviesFeedUrl = `${requestUrl.protocol}//${requestUrl.host}/api/feed-movies`;
+    // Reliably construct the base URL from headers.
+    const protocol = request.headers.get('x-forwarded-proto') || 'https';
+    const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+
+    if (!host) {
+        return new Response(JSON.stringify({ error: "Could not determine host from request headers." }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
+    
+    const moviesFeedUrl = `${protocol}://${host}/api/feed-movies`;
 
     const masterFeed = {
         providerName: "Crate TV",

@@ -3,8 +3,7 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/feed-movies
 
-import { moviesData, categoriesData } from '../constants.ts';
-import { Movie, Category } from '../types.ts';
+import { moviesData, categoriesData, Category } from './_lib/data.ts';
 
 // Helper to determine genre from categories
 const getGenres = (movieKey: string, allCategories: Record<string, Category>): string[] => {

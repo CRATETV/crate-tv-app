@@ -4,8 +4,7 @@
 // It will be accessible at the path /api/feed-mrss
 // It generates a Media RSS (MRSS) feed for TV platforms.
 
-import { moviesData, categoriesData } from '../constants.ts';
-import { Movie } from '../types.ts';
+import { moviesData, categoriesData, Movie } from './_lib/data.ts';
 
 // Helper function to escape characters for XML
 const escapeXml = (unsafe: string): string => {
@@ -28,7 +27,8 @@ const stripHtml = (html: string) => html ? html.replace(/<br\s*\/?>/gi, ' ').rep
 // Helper to create a valid date object, falling back to now()
 const getValidDate = (dateString?: string): Date => {
     if (!dateString) return new Date();
-    const date = new Date(dateString);
+    // Replace hyphens with slashes for better cross-browser compatibility before parsing
+    const date = new Date(dateString.replace(/-/g, '/'));
     if (isNaN(date.getTime())) {
         console.warn(`Invalid releaseDate format found: "${dateString}". Falling back to current date.`);
         return new Date();
