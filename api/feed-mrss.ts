@@ -25,10 +25,29 @@ const escapeXml = (unsafe: string): string => {
 // Helper to strip HTML from synopsis
 const stripHtml = (html: string) => html ? html.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>?/gm, '') : '';
 
+// Helper to create a valid date object, falling back to now()
+const getValidDate = (dateString?: string): Date => {
+    if (!dateString) return new Date();
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        console.warn(`Invalid releaseDate format found: "${dateString}". Falling back to current date.`);
+        return new Date();
+    }
+    return date;
+};
+
+
 export async function GET(request: Request) {
     try {
-        const requestUrl = new URL(request.url);
-        const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
+        // Reliably construct the base URL from headers, as request.url can be relative.
+        const protocol = request.headers.get('x-forwarded-proto') || 'https';
+        const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+        
+        if (!host) {
+            throw new Error("Could not determine the host from request headers.");
+        }
+        
+        const baseUrl = `${protocol}://${host}`;
 
         let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
@@ -45,7 +64,7 @@ export async function GET(request: Request) {
         for (const movie of allMovies) {
             const movieUrl = `${baseUrl}/movie/${movie.key}`;
             const synopsis = stripHtml(movie.synopsis);
-            const pubDate = new Date(movie.releaseDate || Date.now()).toUTCString();
+            const pubDate = getValidDate(movie.releaseDate).toUTCString();
 
             const tags = Object.values(categoriesData)
                 .filter(cat => cat.movieKeys.includes(movie.key))
