@@ -386,10 +386,13 @@ export default function handler(req: any, res: any) {
         const stripHtml = (html: string) => html ? html.replace(/<[^>]*>?/gm, ' ') : '';
 
         const allMovieFeedObjects = Object.values(moviesData).map(movie => {
-            const longDescription = stripHtml(movie.synopsis);
-            const shortDescription = longDescription.length > 200 
-                ? longDescription.substring(0, 197) + '...' 
-                : longDescription;
+            const synopsisText = stripHtml(movie.synopsis);
+            const shortDescription = synopsisText.length > 200 
+                ? synopsisText.substring(0, 197) + '...' 
+                : synopsisText;
+            
+            // Defensively truncate long description to a max of 1400 chars.
+            const longDescription = synopsisText.substring(0, 1400);
 
             const tags = Object.values(categoriesData)
                 .filter(cat => cat.movieKeys.includes(movie.key))
@@ -432,7 +435,8 @@ export default function handler(req: any, res: any) {
             };
         });
 
-        const categories = Object.values(categoriesData)
+        // The key MUST be 'playlists' according to the Direct Publisher Spec.
+        const playlists = Object.values(categoriesData)
             .filter(cat => cat.movieKeys.length > 0)
             .map(cat => ({
                 name: cat.title,
@@ -446,7 +450,7 @@ export default function handler(req: any, res: any) {
             language: "en-US",
             // The content type key MUST be 'shortFormVideos' for short films.
             shortFormVideos: allMovieFeedObjects, 
-            categories
+            playlists // This key was 'categories' and is now corrected to 'playlists'.
         };
         
         res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate'); // Cache for 1 hour
