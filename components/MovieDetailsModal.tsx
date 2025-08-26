@@ -15,6 +15,8 @@ interface MovieDetailsModalProps {
   onMouseLeave: () => void;
 }
 
+type PlayerMode = 'poster' | 'trailer' | 'full';
+
 const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({ 
   movie, 
   isLiked,
@@ -28,18 +30,21 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   onMouseEnter,
   onMouseLeave
 }) => {
-  const [isPlayingFullMovie, setIsPlayingFullMovie] = useState(startWithFullMovie);
   const videoRef = useRef<HTMLVideoElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
 
   // State for custom video controls
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(1);
   const [duration, setDuration] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
+
+  const hasTrailer = useMemo(() => movie.trailer && movie.trailer.length > 5, [movie.trailer]);
+
+  const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
@@ -56,11 +61,18 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   }, [onClose]);
 
   useEffect(() => {
-    setIsPlayingFullMovie(startWithFullMovie);
-    // Reset video state when movie changes
+    let initialMode: PlayerMode = 'poster';
+    if (startWithFullMovie && movie.fullMovie) {
+        initialMode = 'full';
+    } else if (hasTrailer) {
+        initialMode = 'trailer';
+    }
+    setPlayerMode(initialMode);
+    
     setProgress(0);
-    setIsPlaying(true);
-  }, [startWithFullMovie, movie.key]);
+    setIsPlaying(initialMode !== 'poster'); 
+  }, [startWithFullMovie, movie.key, hasTrailer, movie.fullMovie]);
+
 
   useEffect(() => {
     const handleFullScreenChange = () => {
@@ -91,13 +103,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
       .filter(Boolean)
       .slice(0, 6); // Limit to 6 recommendations
   }, [movie, allMovies, allCategories]);
-
-  const playFullMovie = () => {
-    if (movie.fullMovie) {
-        setIsPlayingFullMovie(true);
-        setIsPlaying(true);
-    }
-  };
 
   const togglePlayPause = () => {
     if (videoRef.current) {
@@ -147,11 +152,9 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   };
 
   const handleVideoEnded = () => {
-    if (isPlayingFullMovie) {
-      setIsPlayingFullMovie(false);
-    }
+    setPlayerMode('poster');
     setIsPlaying(false);
-    setProgress(100);
+    setProgress(0);
   };
 
   const toggleFullScreen = () => {
@@ -177,9 +180,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     }
   };
   
-  const hasTrailer = movie.trailer && movie.trailer.length > 5;
-  const shouldPlayFullMovie = isPlayingFullMovie && movie.fullMovie;
-  const videoSource = shouldPlayFullMovie ? movie.fullMovie : movie.trailer;
+  const videoSource = playerMode === 'full' ? movie.fullMovie : movie.trailer;
 
   return (
     <div ref={modalRef} className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.3s_ease-out]" onClick={() => onClose(true)}>
@@ -196,97 +197,118 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
         </button>
         
         <div ref={videoContainerRef} className="relative w-full aspect-video bg-black group/video">
-            {hasTrailer || movie.fullMovie ? (
-              <video
-                  ref={videoRef}
-                  key={videoSource}
-                  className="w-full h-full"
-                  autoPlay
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                  onTimeUpdate={handleTimeUpdate}
-                  onLoadedMetadata={handleLoadedMetadata}
-                  onEnded={handleVideoEnded}
-                  onClick={togglePlayPause}
-              >
-                  <source src={videoSource} type="video/mp4" />
-                  Your browser does not support the video tag.
-              </video>
-            ) : (
-              <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain" />
-            )}
-
-            {!shouldPlayFullMovie && hasTrailer && (
-                <button 
-                    onClick={playFullMovie} 
-                    className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover/video:opacity-100 transition-opacity duration-300"
-                >
-                    <div className="bg-white/20 rounded-full p-4 hover:bg-red-500/80 transition-all duration-300 transform hover:scale-110">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                        </svg>
+            {playerMode === 'poster' ? (
+                <div className="relative w-full h-full">
+                    <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain" />
+                    <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-4 p-4">
+                        {hasTrailer && (
+                            <button onClick={() => setPlayerMode('trailer')} className="flex items-center justify-center px-6 py-3 bg-white/80 text-black font-bold rounded-md hover:bg-white transition-colors text-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                                Play Trailer
+                            </button>
+                        )}
+                        {movie.fullMovie && (
+                            <button onClick={() => setPlayerMode('full')} className="flex items-center justify-center px-6 py-3 bg-red-600 text-white font-bold rounded-md hover:bg-red-700 transition-colors text-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                                Play Full Movie
+                            </button>
+                        )}
+                         {!hasTrailer && !movie.fullMovie && (
+                            <p className="text-white text-lg font-semibold">No video available</p>
+                        )}
                     </div>
-                    <span className="absolute bottom-12 text-white font-bold text-lg">Play Full Movie</span>
-                </button>
-            )}
+                </div>
+            ) : (
+              <>
+                <video
+                    ref={videoRef}
+                    key={videoSource}
+                    className="w-full h-full"
+                    autoPlay
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    onTimeUpdate={handleTimeUpdate}
+                    onLoadedMetadata={handleLoadedMetadata}
+                    onEnded={handleVideoEnded}
+                    onClick={togglePlayPause}
+                >
+                    <source src={videoSource} type="video/mp4" />
+                    Your browser does not support the video tag.
+                </video>
 
-            {/* Custom Controls */}
-            <div className="absolute bottom-0 left-0 w-full p-2 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover/video:opacity-100 transition-opacity duration-300">
-              {/* Progress Bar */}
-              <input 
-                type="range" 
-                min="0" 
-                max="100" 
-                value={progress} 
-                onChange={handleProgressChange}
-                className="w-full h-1 bg-gray-500/50 rounded-lg appearance-none cursor-pointer range-sm"
-                style={{
-                    background: `linear-gradient(to right, #ef4444 ${progress}%, #6b7280 ${progress}%)`
-                }}
-              />
-              <div className="flex items-center justify-between mt-1">
-                <div className="flex items-center space-x-4">
-                  <button onClick={togglePlayPause} className="text-white">
-                    {isPlaying ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                    )}
-                  </button>
-                  <div className="flex items-center space-x-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor"><path d="M5.071 8.043a.5.5 0 01.023.634l-1.334 1.524A5.002 5.002 0 0012 15a.5.5 0 010 1A6.002 6.002 0 015 10.334a.5.5 0 01.071-.291zM14.929 8.334a.5.5 0 01.29.922A6.002 6.002 0 0115 16.334a.5.5 0 11-1-.001A5.002 5.002 0 006 11.858l-1.334-1.524a.5.5 0 01.657-.657l1.334 1.524A4.982 4.982 0 0010 11c.883 0 1.705-.233 2.429-.642l1.5 1.714a.5.5 0 11.7-.7l-1.5-1.714A4.982 4.982 0 0014.929 8.334zM10 4a.5.5 0 01.5.5v2.071a.5.5 0 01-1 0V4.5A.5.5 0 0110 4z" /></svg>
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max="1" 
-                      step="0.05" 
-                      value={volume} 
-                      onChange={handleVolumeChange} 
-                      className="w-20 h-1 bg-gray-500/50 rounded-lg appearance-none cursor-pointer range-sm"
-                      style={{
-                          background: `linear-gradient(to right, #ffffff ${volume * 100}%, #6b7280 ${volume * 100}%)`
-                      }}
-                    />
+                {playerMode === 'trailer' && movie.fullMovie && (
+                    <button 
+                        onClick={() => setPlayerMode('full')} 
+                        className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover/video:opacity-100 transition-opacity duration-300"
+                    >
+                        <div className="bg-white/20 rounded-full p-4 hover:bg-red-500/80 transition-all duration-300 transform hover:scale-110">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <span className="absolute bottom-12 text-white font-bold text-lg">Play Full Movie</span>
+                    </button>
+                )}
+
+                {/* Custom Controls */}
+                <div className="absolute bottom-0 left-0 w-full p-2 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover/video:opacity-100 transition-opacity duration-300">
+                  {/* Progress Bar */}
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    value={progress} 
+                    onChange={handleProgressChange}
+                    className="w-full h-1 bg-gray-500/50 rounded-lg appearance-none cursor-pointer range-sm"
+                    style={{
+                        background: `linear-gradient(to right, #ef4444 ${progress}%, #6b7280 ${progress}%)`
+                    }}
+                  />
+                  <div className="flex items-center justify-between mt-1">
+                    <div className="flex items-center space-x-4">
+                      <button onClick={togglePlayPause} className="text-white">
+                        {isPlaying ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                        )}
+                      </button>
+                      <div className="flex items-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor"><path d="M5.071 8.043a.5.5 0 01.023.634l-1.334 1.524A5.002 5.002 0 0012 15a.5.5 0 010 1A6.002 6.002 0 015 10.334a.5.5 0 01.071-.291zM14.929 8.334a.5.5 0 01.29.922A6.002 6.002 0 0115 16.334a.5.5 0 11-1-.001A5.002 5.002 0 006 11.858l-1.334-1.524a.5.5 0 01.657-.657l1.334 1.524A4.982 4.982 0 0010 11c.883 0 1.705-.233 2.429-.642l1.5 1.714a.5.5 0 11.7-.7l-1.5-1.714A4.982 4.982 0 0014.929 8.334zM10 4a.5.5 0 01.5.5v2.071a.5.5 0 01-1 0V4.5A.5.5 0 0110 4z" /></svg>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="1" 
+                          step="0.05" 
+                          value={volume} 
+                          onChange={handleVolumeChange} 
+                          className="w-20 h-1 bg-gray-500/50 rounded-lg appearance-none cursor-pointer range-sm"
+                          style={{
+                              background: `linear-gradient(to right, #ffffff ${volume * 100}%, #6b7280 ${volume * 100}%)`
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-white text-sm">
+                        <span>{formatTime(videoRef.current?.currentTime ?? 0)}</span> / <span>{formatTime(duration)}</span>
+                      </div>
+                      <button onClick={toggleFullScreen} className="text-white" aria-label={isFullScreen ? 'Exit full screen' : 'Enter full screen'}>
+                        {isFullScreen ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9V4.5M15 9h4.5M15 9l5.25-5.25M15 15v4.5M15 15h4.5M15 15l5.25 5.25" />
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75v4.5m0-4.5h-4.5m4.5 0L15 9m5.25 11.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <div className="text-white text-sm">
-                    <span>{formatTime(videoRef.current?.currentTime ?? 0)}</span> / <span>{formatTime(duration)}</span>
-                  </div>
-                  <button onClick={toggleFullScreen} className="text-white" aria-label={isFullScreen ? 'Exit full screen' : 'Enter full screen'}>
-                    {isFullScreen ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9V4.5M15 9h4.5M15 9l5.25-5.25M15 15v4.5M15 15h4.5M15 15l5.25 5.25" />
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75v4.5m0-4.5h-4.5m4.5 0L15 9m5.25 11.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
+              </>
+            )}
         </div>
 
         <div className="p-4 sm:p-6 md:p-8">

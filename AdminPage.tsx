@@ -88,15 +88,23 @@ const AdminPage: React.FC = () => {
             >
               + Add New Movie
             </button>
-            <div className="max-h-[60vh] overflow-y-auto">
+            <div className="max-h-[60vh] overflow-y-auto pr-2">
               {sortedMovies.map(movie => (
                 <div 
-                  key={movie.key} 
-                  onClick={() => handleSelectMovie(movie)}
-                  className={`p-3 rounded-md cursor-pointer transition mb-2 ${selectedMovie?.key === movie.key ? 'bg-red-500 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}
+                  key={movie.key}
+                  className={`p-3 rounded-md transition mb-2 flex justify-between items-center ${selectedMovie?.key === movie.key ? 'bg-red-900/50' : 'bg-gray-700'}`}
                 >
-                  <p className="font-semibold">{movie.title}</p>
-                  <p className="text-xs text-gray-400">{movie.releaseDate ? `Releases: ${movie.releaseDate}` : 'Released'}</p>
+                  <div>
+                    <p className="font-semibold">{movie.title}</p>
+                    <p className="text-xs text-gray-400">{movie.releaseDate ? `Releases: ${movie.releaseDate}` : 'Released'}</p>
+                  </div>
+                  <button
+                    onClick={() => handleSelectMovie(movie)}
+                    className={`flex-shrink-0 ml-4 px-4 py-1.5 text-sm font-bold rounded-md transition-colors ${selectedMovie?.key === movie.key ? 'bg-red-500 text-white cursor-default' : 'bg-gray-600 hover:bg-red-500 text-white'}`}
+                    aria-label={`Edit ${movie.title}`}
+                  >
+                    Edit
+                  </button>
                 </div>
               ))}
             </div>
@@ -111,8 +119,10 @@ const AdminPage: React.FC = () => {
                 onDelete={handleDeleteMovie}
               />
             ) : (
-              <div className="text-center text-gray-400">
-                <p>Select a movie to edit or add a new one.</p>
+              <div className="text-center text-gray-400 py-16">
+                <p className="text-lg">Select a movie to edit</p>
+                <p className="mt-2">or</p>
+                <p className="mt-2 text-lg">Add a new one</p>
               </div>
             )}
           </div>
