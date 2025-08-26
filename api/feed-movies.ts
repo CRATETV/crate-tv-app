@@ -78,7 +78,7 @@ export async function GET(request: Request) {
             .filter(cat => cat.movieKeys.length > 0)
             .map(cat => ({
                 name: cat.title,
-                playlistName: cat.title
+                playlist: cat.movieKeys
             }));
 
         const feed = {
