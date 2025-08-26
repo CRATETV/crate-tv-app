@@ -396,11 +396,11 @@ const getValidDate = (dateString?: string): Date => {
 };
 
 
-export async function GET(request: Request) {
+export default function handler(req: any, res: any) {
     try {
-        // Reliably construct the base URL from headers, as request.url can be relative.
-        const protocol = request.headers.get('x-forwarded-proto') || 'https';
-        const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+        // Reliably construct the base URL from headers.
+        const protocol = req.headers['x-forwarded-proto'] || 'https';
+        const host = req.headers['x-forwarded-host'] || req.headers['host'];
         
         if (!host) {
             throw new Error("Could not determine the host from request headers.");
@@ -474,20 +474,16 @@ export async function GET(request: Request) {
         xml += `  </channel>
 </rss>`;
 
-        return new Response(xml, {
-            status: 200,
-            headers: { 
-                'Content-Type': 'application/rss+xml; charset=utf-8',
-                'Cache-Control': 's-maxage=3600, stale-while-revalidate' // Cache for 1 hour
-            },
-        });
+        res.status(200)
+            .setHeader('Content-Type', 'application/rss+xml; charset=utf-8')
+            .setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate') // Cache for 1 hour
+            .send(xml);
 
     } catch (error) {
         console.error('Error generating MRSS feed:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        return new Response(`<error>${escapeXml(errorMessage)}</error>`, {
-            status: 500,
-            headers: { 'Content-Type': 'application/xml' },
-        });
+        res.status(500)
+            .setHeader('Content-Type', 'application/xml')
+            .send(`<error>${escapeXml(errorMessage)}</error>`);
     }
 }

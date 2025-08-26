@@ -380,7 +380,7 @@ const getGenres = (movieKey: string, allCategories: Record<string, Category>): s
 }
 
 
-export async function GET(request: Request) {
+export default function handler(req: any, res: any) {
     try {
         const stripHtml = (html: string) => html ? html.replace(/<[^>]*>?/gm, ' ') : '';
 
@@ -451,17 +451,11 @@ export async function GET(request: Request) {
             categories
         };
 
-        return new Response(JSON.stringify(feed, null, 2), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        res.status(200).json(feed);
 
     } catch (error) {
         console.error('Error generating movies feed:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        return new Response(JSON.stringify({ error: `Failed to generate feed: ${errorMessage}` }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        res.status(500).json({ error: `Failed to generate feed: ${errorMessage}` });
     }
 }
