@@ -43,7 +43,7 @@ export const moviesData: Record<string, Movie> = {
       { "name": "Akil Logan Haye", "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil+Logan+Haye.png", "bio": "Akil Logan Haye is a stage and film actor and the driving force behind Pursuit of Excellence, a production company where he serves as CEO. His creative vision informs both his performances and his leadership.", "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil+Logan+Haye.png" }
     ],
     "director": "Michael Dwayne Paylor",
-    "trailer": "https://cratetelevision.s3.amazonaws.com/FoodiesTrailer.mp4",
+    "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Paycut.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Director's+cut+poster+.jpg",
     "likes": 0
@@ -60,7 +60,7 @@ export const moviesData: Record<string, Movie> = {
       { "name": "Akil Logan Haye", "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil+Logan+Haye.png", "bio": "Akil Logan Haye is a stage and film actor and the driving force behind Pursuit of Excellence, a production company where he serves as CEO. His creative vision informs both his performances and his leadership.", "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil+Logan+Haye.png" }
     ],
     "director": "Michael Dwayne Paylor",
-    "trailer": "https://cratetelevision.s3.amazonaws.com/FoodiesTrailer.mp4",
+    "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Lasley+cut.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
     "likes": 0
@@ -74,7 +74,7 @@ export const moviesData: Record<string, Movie> = {
       { "name": "Cathrine Tillotson", "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Defaultpic.png", "bio": "Cathrine Tillotson is a driven actor with a passion for performing. They possess a strong stage presence and a natural connection with audiences. Eager to learn and grow, they strive to bring compelling characters to life.", "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Defaultpic.png" }
     ],
     "director": "Sarah Morrison-Cleary",
-    "trailer": "https://cratetelevision.s3.amazonaws.com/FinallyCaughtTrailer.mp4",
+    "trailer": "",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/(Copy)+Finally+Caught_FC3.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/finally+caught+poster+.png",
     "likes": 0
@@ -90,7 +90,7 @@ export const moviesData: Record<string, Movie> = {
       { "name": "Isabelle Dessalines", "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Defaultpic.png", "bio": "Isabelle Dessalines, an aspiring actor, brings a captivating blend of mystery and innocence to her characters through her quiet and thoughtful performances on stage and screen.", "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Defaultpic.png" }
     ],
     "director": "Anh Nguyen",
-    "trailer": "https://cratetelevision.s3.amazonaws.com/IloveyouBlackTrailer.mp4",
+    "trailer": "",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/I+Loveyou+in+black+Theatrical+cut.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/I+love+You-Black.png",
     "likes": 0
@@ -132,7 +132,7 @@ export const moviesData: Record<string, Movie> = {
       { "name": "Darrah Lashley", "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+head+shot.png", "bio": "Darrah Lashley is a talented and versatile actress known for her captivating performances. Darrah has received several accolades due to her exceptional talent and dedication to work in independent films and theater productions, showcasing her range and depth.", "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+bio+picjpg.jpg" }
     ],
     "director": "Joshua Daniel",
-    "trailer": "https://cratetelevision.s3.amazonaws.com/YouVsThemTrailer.mp4",
+    "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/youVs+Them.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/you+vs+them+poster+.png",
     "likes": 0
@@ -160,7 +160,7 @@ export const moviesData: Record<string, Movie> = {
       { "name": "Ashley Harrison", "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png", "bio": "Information regarding this actor is currently unavailable", "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png" }
     ],
     "director": "Andrew W Trimble",
-    "trailer": "https://cratetelevision.s3.amazonaws.com/StreetEatsTheBootTrailer.mp4",
+    "trailer": "",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/Street+Eats+THE+BOOT-A+Louisiana+Food+Truck+Journey.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/street+eats+the+boot+remake+.png",
     "likes": 0
@@ -246,7 +246,7 @@ export const moviesData: Record<string, Movie> = {
       { "name": "Sylvette Mikel", "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png", "bio": " Information regarding this actor is currently unavailable", "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png" }
     ],
     "director": "Charles Ellis Washington",
-    "trailer": "https://cratetelevision.s3.amazonaws.com/SilentLoveTrailer.mp4",
+    "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/father+daughter+dance.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Father+Daughter+Dance+.png",
     "likes": 12

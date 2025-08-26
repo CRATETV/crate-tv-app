@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     try {
         const stripHtml = (html: string) => html ? html.replace(/<[^>]*>?/gm, ' ') : '';
 
-        const movies = Object.values(moviesData).map(movie => {
+        const allMovieFeedObjects = Object.values(moviesData).map(movie => {
             const longDescription = stripHtml(movie.synopsis);
             const shortDescription = longDescription.length > 200 
                 ? longDescription.substring(0, 197) + '...' 
@@ -74,18 +74,22 @@ export async function GET(request: Request) {
             };
         });
 
+        const moviesMap = new Map(allMovieFeedObjects.map(m => [m.id, m]));
+
         const categories = Object.values(categoriesData)
             .filter(cat => cat.movieKeys.length > 0)
             .map(cat => ({
                 name: cat.title,
                 playlist: cat.movieKeys
+                    .map(key => moviesMap.get(key))
+                    .filter(Boolean) // Filter out any potential undefined movies
             }));
 
         const feed = {
             providerName: "Crate TV",
             lastUpdated: new Date().toISOString(),
             language: "en-US",
-            movies,
+            movies: allMovieFeedObjects, // Keep the flat list for search/lookup
             categories
         };
 
