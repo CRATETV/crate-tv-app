@@ -560,3 +560,38 @@ export const moviesData: Record<string, Movie> = {
     "likes": 0
   }
 };
+
+export const categoriesData: Record<string, Category> = {
+  featured: {
+    title: "Our Featured Films",
+    movieKeys: ['lifeless', 'foodiecalldirectorscut', 'iloveyoublack', 'hair', 'juniper', 'silentlove']
+  },
+  explore: {
+    title: "Explore These Titles",
+    movieKeys: ['smirk', 'intrusivethoughts']
+  },
+  awardWinners: {
+    title: "Award Winners & Nominees",
+    movieKeys: ['foodiecalldirectorscut', 'hair', 'iloveyoublack', 'juniper', 'lifeless']
+  },
+  drama: {
+    title: "Drama",
+    movieKeys: ['lifeless', 'almasvows', 'finallycaught', 'iloveyoublack', 'autumn', 'silentlove', 'juniper', 'drive', 'crossroads', 'fatherdaughterdance', 'youvsthem', 'intrusivethoughts']
+  },
+  comedy: {
+    title: "Comedy",
+    movieKeys: ['foodiecalldirectorscut', 'foodiecalltheatricalcut', 'eharmonycs', 'youvsthem', 'wrapitup']
+  },
+  newReleases: {
+    title: "New Releases",
+    movieKeys: ['crossroads', 'wrapitup', 'itsinyou', 'drive', 'fatherdaughterdance', 'intrusivethoughts']
+  },
+  phillyFilmFest2025: {
+    title: "Selections from the 12th Annual PWFF - Coming Soon",
+    movieKeys: []
+  },
+  documentary: {
+    title: "Documentaries",
+    movieKeys: ['streeteatstheboot']
+  }
+};
