@@ -75,8 +75,13 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
       {/* URLs */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="poster" className="block text-sm font-medium text-gray-300">Poster URL</label>
-          <input type="text" name="poster" value={formData.poster} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+            <label htmlFor="poster" className="block text-sm font-medium text-gray-300">Poster URL (for Web App)</label>
+            <input type="text" name="poster" value={formData.poster} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+        </div>
+        <div>
+            <label htmlFor="tvPoster" className="block text-sm font-medium text-gray-300">TV Poster URL (Portrait 2:3)</label>
+            <input type="text" name="tvPoster" value={formData.tvPoster || ''} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+            <p className="text-xs text-gray-500 mt-1">For TV apps like Instant TV.</p>
         </div>
         <div>
           <label htmlFor="director" className="block text-sm font-medium text-gray-300">Director</label>
@@ -86,7 +91,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
           <label htmlFor="trailer" className="block text-sm font-medium text-gray-300">Trailer URL</label>
           <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
         </div>
-        <div>
+        <div className="md:col-span-2">
           <label htmlFor="fullMovie" className="block text-sm font-medium text-gray-300">Full Movie URL</label>
           <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
         </div>

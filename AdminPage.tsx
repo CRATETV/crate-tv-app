@@ -29,6 +29,7 @@ const AdminPage: React.FC = () => {
       trailer: '',
       fullMovie: '',
       poster: '',
+      tvPoster: '',
       likes: 0,
       releaseDate: '',
     };
@@ -57,10 +58,13 @@ const AdminPage: React.FC = () => {
 
   const handleGenerateCode = () => {
     const moviesDataObject = movies.reduce((acc, movie) => {
-        // Clean up empty strings for releaseDate
+        // Clean up empty strings for releaseDate and tvPoster
         const movieToProcess = { ...movie };
         if (movieToProcess.releaseDate === '') {
             delete movieToProcess.releaseDate;
+        }
+        if (movieToProcess.tvPoster === '') {
+            delete movieToProcess.tvPoster;
         }
 
         acc[movie.key] = movieToProcess;

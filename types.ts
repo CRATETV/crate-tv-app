@@ -14,6 +14,7 @@ export interface Movie {
   trailer: string;
   fullMovie: string;
   poster: string;
+  tvPoster?: string; // Optional: URL for TV-optimized portrait poster (2:3 aspect ratio)
   likes: number;
   releaseDate?: string; // YYYY-MM-DD format
 }

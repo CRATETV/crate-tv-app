@@ -21,6 +21,7 @@ export interface Movie {
   trailer: string;
   fullMovie: string;
   poster: string;
+  tvPoster?: string;
   likes: number;
   releaseDate?: string; // YYYY-MM-DD format
 }
@@ -59,6 +60,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "https://cratetelevision.s3.amazonaws.com/LifelessTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/LIFELESS.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/Lifeless+poster+remake+.jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Lifeless.png",
     "likes": 0
   },
   "almasvows": {
@@ -89,6 +91,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "https://cratetelevision.s3.amazonaws.com/Almas+vow+cut+trailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/Almas+Vows+-+Alana+Hill.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/Alma%27s+vows+poster+remake+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/AlmasVows.png",
     "likes": 0
   },
   "foodiecalldirectorscut": {
@@ -131,6 +134,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Paycut.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Director's+cut+poster+.jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
     "likes": 0
   },
   "foodiecalltheatricalcut": {
@@ -173,6 +177,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Lasley+cut.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
     "likes": 0
   },
   "finallycaught": {
@@ -197,6 +202,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/(Copy)+Finally+Caught_FC3.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/finally+caught+poster+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/FinallyCaught.png",
     "likes": 0
   },
   "iloveyoublack": {
@@ -233,6 +239,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/I+Loveyou+in+black+Theatrical+cut.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/I+love+You-Black.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/I+love+You-Black.png",
     "likes": 0
   },
   "hair": {
@@ -257,6 +264,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/Hair+TrailerMP4.MP4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/HAIR.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/Hair+poster+209+X+209++(2).jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Hair.png",
     "likes": 0
   },
   "eharmonycs": {
@@ -281,6 +289,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "https://cratetelevision.s3.amazonaws.com/eHarmonycsTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/EHARMONYCS.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/eHarmonics+poster+remake++(1).png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/eHarmonycs.png",
     "likes": 0
   },
   "youvsthem": {
@@ -305,6 +314,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/youVs+Them.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/you+vs+them+poster+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/YouVsThem.png",
     "likes": 0
   },
   "autumn": {
@@ -329,6 +339,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "https://cratetelevision.s3.amazonaws.com/AutumnTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn+-+Alana+Hill.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/Autumn+poster+remake+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Autumn.png",
     "likes": 0
   },
   "streeteatstheboot": {
@@ -353,6 +364,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/Street+Eats+THE+BOOT-A+Louisiana+Food+Truck+Journey.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/street+eats+the+boot+remake+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/StreetEats.png",
     "likes": 0
   },
   "silentlove": {
@@ -377,6 +389,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "https://cratetelevision.s3.amazonaws.com/SilentLoveTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/SilentLove+Movie+05.14.2024-1+2.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/silent+Love++poster+remake+.jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/SilentLove.png",
     "likes": 0
   },
   "juniper": {
@@ -401,6 +414,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Juniper+.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Juniper.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Juniper.png",
     "likes": 0
   },
   "drive": {
@@ -431,6 +445,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Drive+(2).mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Drive+Poster.jpeg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Drive+Poster.jpeg",
     "likes": 15
   },
   "wrapitup": {
@@ -461,6 +476,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Wrap+it+up+.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Wrap+it+up.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Wrap+it+up.png",
     "likes": 12
   },
   "crossroads": {
@@ -485,6 +501,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/CROSSROADS-OFFICIAL-FILM_360p.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/crossroads(Mobile+Video).jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Crossroads.png",
     "likes": 12
   },
   "fatherdaughterdance": {
@@ -509,6 +526,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/father+daughter+dance.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Father+Daughter+Dance+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Father+Daughter+Dance+.png",
     "likes": 12
   },
   "itsinyou": {
@@ -527,6 +545,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+trailer.mov",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Its+In+You.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+poster+jpeg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/ItsInYou.png",
     "likes": 1
   },
   "smirk": {
@@ -551,6 +570,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/smirk.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/smirk+poster+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/smirk+poster+.png",
     "likes": 10
   },
   "intrusivethoughts": {
@@ -587,6 +607,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Intrusive+Thoughts+Final+.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/intrusive+thoughts+poster.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/intrusive+thoughts+poster.JPG",
     "likes": 0
   }
 };
@@ -683,7 +704,7 @@ export default function handler(req: any, res: any) {
                 title: movie.title,
                 shortDescription,
                 longDescription,
-                thumbnail: movie.poster,
+                thumbnail: movie.tvPoster || movie.poster,
                 releaseDate: movie.releaseDate || '2024-01-01',
                 genres: getGenres(movie.key, categoriesData),
                 tags,
