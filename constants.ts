@@ -63,7 +63,7 @@ export const moviesData: Record<string, Movie> = {
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/AlmasVows.png",
     "likes": 0
   },
-  "foodiecalldirector's cut": {
+  "foodiecalldirectorscut": {
     "key": "foodiecalldirectorscut",
     "title": "Foodie Call Director's Cut",
     "synopsis": "Maya is both financially and physically famished. Her desperation has led her to develop a rather unconventional habit: dating solely for free meals. It's a risky game, but it's the only one she knows.<br/><br/>Trivia: Foodie Call was awarded Best Comedy at the 2024 Playhouse West-Philadelphia Film Festival.",
