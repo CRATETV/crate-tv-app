@@ -264,8 +264,8 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Akil Logan Haye",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/crossroads(Mobile+Video).jpg",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/crossroads(Mobile+Video).mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/crossroads+poster.jpg",
     "likes": 12
   },
   "fatherdaughterdance": {
@@ -365,125 +365,101 @@ export const categoriesData: Record<string, Category> = {
 // --- END OF EMBEDDED DATA ---
 
 
-// Helper function to escape characters for XML
-const escapeXml = (unsafe: string): string => {
-    if (!unsafe) return '';
-    return unsafe.replace(/[<>&'"]/g, (c) => {
-        switch (c) {
-            case '<': return '&lt;';
-            case '>': return '&gt;';
-            case '&': return '&amp;';
-            case '\'': return '&apos;';
-            case '"': return '&quot;';
-        }
-        return c;
-    });
-};
-
-// Helper to strip HTML from synopsis
-const stripHtml = (html: string) => html ? html.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>?/gm, '') : '';
-
-// Helper to create a valid date object, falling back to now()
-const getValidDate = (dateString?: string): Date => {
-    if (!dateString) return new Date();
-    // Replace hyphens with slashes for better cross-browser compatibility before parsing
-    const date = new Date(dateString.replace(/-/g, '/'));
-    if (isNaN(date.getTime())) {
-        console.warn(`Invalid releaseDate format found: "${dateString}". Falling back to current date.`);
-        return new Date();
+// Helper to determine genre from categories based on the Direct Publisher specification.
+const getGenres = (movieKey: string, allCategories: Record<string, Category>): string[] => {
+    const genres = new Set<string>();
+    // Valid genres from the DP spec.
+    if (allCategories.drama?.movieKeys.includes(movieKey)) genres.add('drama');
+    if (allCategories.comedy?.movieKeys.includes(movieKey)) genres.add('comedy');
+    if (allCategories.documentary?.movieKeys.includes(movieKey)) genres.add('documentary');
+    
+    // Fallback genre if none of the main ones match. 'special_interest' is a valid genre.
+    if (genres.size === 0) {
+        genres.add('special_interest');
     }
-    return date;
-};
+
+    return Array.from(genres);
+}
 
 
 export default function handler(req: any, res: any) {
     try {
-        // Reliably construct the base URL from headers.
-        const protocol = req.headers['x-forwarded-proto'] || 'https';
-        const host = req.headers['x-forwarded-host'] || req.headers['host'];
-        
-        if (!host) {
-            throw new Error("Could not determine the host from request headers.");
-        }
-        
-        const baseUrl = `${protocol}://${host}`;
+        const stripHtml = (html: string) => html ? html.replace(/<[^>]*>?/gm, ' ') : '';
 
-        let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
-  <channel>
-    <title>Crate TV</title>
-    <link>${baseUrl}</link>
-    <description>A sleek and professional streaming web application for discovering and watching independent films.</description>
-    <language>en-US</language>
-    <pubDate>${new Date().toUTCString()}</pubDate>
-`;
-
-        const allMovies: Movie[] = Object.values(moviesData);
-
-        for (const movie of allMovies) {
-            const movieUrl = `${baseUrl}/movie/${movie.key}`;
-            const synopsis = stripHtml(movie.synopsis);
-            const pubDate = getValidDate(movie.releaseDate).toUTCString();
+        const allMovieFeedObjects = Object.values(moviesData).map(movie => {
+            const synopsisText = stripHtml(movie.synopsis);
+            const shortDescription = synopsisText.length > 200 
+                ? synopsisText.substring(0, 197) + '...' 
+                : synopsisText;
+            
+            // Defensively truncate long description to a max of 1400 chars.
+            const longDescription = synopsisText.substring(0, 1400);
 
             const tags = Object.values(categoriesData)
                 .filter(cat => cat.movieKeys.includes(movie.key))
-                .map(cat => cat.title)
-                .join(', ');
-
-            // Default duration to 10 minutes (600 seconds) unless specified
-            let duration = 600; 
-            if (movie.key === 'streeteatstheboot') {
-                duration = 3240;
-            }
-
-            xml += `
-    <item>
-      <title>${escapeXml(movie.title)}</title>
-      <link>${escapeXml(movieUrl)}</link>
-      <guid isPermaLink="false">${escapeXml(movie.key)}</guid>
-      <pubDate>${pubDate}</pubDate>
-      <description>${escapeXml(synopsis)}</description>
-      <media:content 
-        url="${escapeXml(movie.fullMovie)}" 
-        type="video/mp4" 
-        medium="video" 
-        duration="${duration}" 
-        isDefault="true" />
-      <media:title>${escapeXml(movie.title)}</media:title>
-      <media:description type="plain">${escapeXml(synopsis)}</media:description>
-      <media:thumbnail url="${escapeXml(movie.poster)}" />
-      <media:keywords>${escapeXml(tags)}</media:keywords>
-`;
-            // Add director(s)
+                .map(cat => cat.title);
+            
+            const credits = movie.cast.map(actor => ({ name: actor.name, role: 'actor' }));
+            
             if (movie.director) {
-                const directors = movie.director.split(',').map(d => d.trim());
-                directors.forEach(d => {
-                    if (d) xml += `      <media:credit role="director">${escapeXml(d)}</media:credit>\n`;
-                });
+              const directors = movie.director.split(',').map(d => d.trim());
+              directors.forEach(director => {
+                  if(director) credits.push({ name: director, role: 'director' });
+              });
+            }
+            
+            let duration = 600; // Default 10 mins
+            if (movie.key === 'streeteatstheboot') {
+                duration = 3240; // Specific duration for this documentary
             }
 
-            // Add cast
-            movie.cast.forEach(actor => {
-                xml += `      <media:credit role="actor">${escapeXml(actor.name)}</media:credit>\n`;
-            });
+            return {
+                id: movie.key,
+                title: movie.title,
+                shortDescription,
+                longDescription,
+                thumbnail: movie.poster,
+                releaseDate: movie.releaseDate || '2024-01-01',
+                genres: getGenres(movie.key, categoriesData),
+                tags,
+                credits,
+                content: {
+                    dateAdded: `${movie.releaseDate || '2024-01-01'}T00:00:00Z`,
+                    videos: [{ 
+                        url: movie.fullMovie, 
+                        quality: "HD", 
+                        videoType: "MP4" 
+                    }],
+                    duration: duration,
+                    language: "en-US"
+                }
+            };
+        });
 
-            xml += `    </item>
-`;
-        }
+        // The key MUST be 'playlists' according to the Direct Publisher Spec.
+        const playlists = Object.values(categoriesData)
+            .filter(cat => cat.movieKeys.length > 0)
+            .map(cat => ({
+                name: cat.title,
+                 // The playlist should contain the IDs of the content items
+                playlist: cat.movieKeys.filter(key => moviesData[key]),
+            }));
 
-        xml += `  </channel>
-</rss>`;
-
-        res.status(200)
-            .setHeader('Content-Type', 'application/rss+xml; charset=utf-8')
-            .setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate') // Cache for 1 hour
-            .send(xml);
+        const feed = {
+            providerName: "Crate TV",
+            lastUpdated: new Date().toISOString(),
+            language: "en-US",
+            // The content type key MUST be 'shortFormVideos' for short films.
+            shortFormVideos: allMovieFeedObjects, 
+            playlists // This key was 'categories' and is now corrected to 'playlists'.
+        };
+        
+        res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate'); // Cache for 1 hour
+        res.status(200).json(feed);
 
     } catch (error) {
-        console.error('Error generating MRSS feed:', error);
+        console.error('Error generating movies feed:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        res.status(500)
-            .setHeader('Content-Type', 'application/xml')
-            .send(`<error>${escapeXml(errorMessage)}</error>`);
+        res.status(500).json({ error: `Failed to generate feed: ${errorMessage}` });
     }
 }

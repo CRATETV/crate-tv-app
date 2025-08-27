@@ -263,8 +263,8 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Akil Logan Haye",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/crossroads(Mobile+Video).jpg",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/crossroads(Mobile+Video).mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/crossroads+poster.jpg",
     "likes": 12
   },
   "fatherdaughterdance": {
