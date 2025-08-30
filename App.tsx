@@ -266,7 +266,7 @@ const App: React.FC = () => {
             </div>
           ) : (
             <>
-              {Object.entries(categoriesData).map(([key, value]) => {
+              {Object.entries(categoriesData).filter(([key]) => key !== 'featured').map(([key, value]) => {
                 const categoryMovies = value.movieKeys
                     .filter(movieKey => visibleMovieKeys.has(movieKey))
                     .map(movieKey => movies[movieKey])
