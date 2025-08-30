@@ -233,7 +233,7 @@ const App: React.FC = () => {
             onSetCurrentIndex={handleSetCurrentHeroIndex}
             onSelectMovie={handleSelectMovie} />}
 
-        <div className={`relative px-4 md:px-12 pb-8 ${searchQuery.length > 0 ? 'pt-24' : '-mt-12 md:-mt-24'}`}>
+        <div className={`relative px-4 md:px-12 pb-8 ${searchQuery.length > 0 ? 'pt-24' : '-mt-8 md:-mt-24'}`}>
           {filteredMovies ? (
             <div>
               <div className="flex items-baseline justify-between mb-4">
