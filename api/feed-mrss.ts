@@ -364,7 +364,7 @@ export const moviesData: Record<string, Movie> = {
     "director": "Andrew W Trimble",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/Street+Eats+THE+BOOT-A+Louisiana+Food+Truck+Journey.mp4",
-    "poster": "https://cratetelevision.s3.amazonaws.com/street+eats+the+boot+remake+.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/street+Eats+the+Boot+trailer+overlay++(1).jpeg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/StreetEats.png",
     "likes": 0
   },
@@ -432,7 +432,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Bubacarr Sarge",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
-        "bio": "Bubacarr Sarge is a true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
@@ -607,12 +607,205 @@ export const moviesData: Record<string, Movie> = {
     "director": "Akil Logan-Haye",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Intrusive+Thoughts+Final+.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/intrusive+thoughts+poster.JPG",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/intrusive+thoughts+poster.JPG",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/Intrusive+Thoughts+for+instant+tv+Channel++(1920+x+1080+px)+(1080+x+1620+px).png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/Intrusive+Thoughts+for+instant+tv+Channel++(1920+x+1080+px)+(1080+x+1620+px).png",
+    "likes": 0
+  },
+  "newmovie1756485973547": {
+    "key": "newmovie1756485973547",
+    "title": "Burst ",
+    "synopsis": "When two people with anger issues meet to do their community service, they pick up more than trash.",
+    "cast": [
+      {
+        "name": "Catherine Tillotson",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Dave Piccinett",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Bubacarr Sarge",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Gina Hendricks",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Shamira Womack",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Sarah Morrison-Cleary",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/BURST+Sarah+Morrison-Cleary.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/Burst.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/Burst.png",
+    "likes": 0
+  },
+  "newmovie1756486933392": {
+    "key": "newmovie1756486933392",
+    "title": "Power Trip ",
+    "synopsis": "A Traffic stop goes terribly bad.",
+    "cast": [
+      {
+        "name": "Bubacarr Sarge",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
+        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
+      },
+      {
+        "name": "Joe Henderson",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Brian Campbell",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Abbie Allen",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Joshua Daniel",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Power+Trip+Bubacarr+Sarge.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/powertrip.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/Power+Trip.png",
+    "likes": 0
+  },
+  "newmovie1756487215116": {
+    "key": "newmovie1756487215116",
+    "title": "Fling ",
+    "synopsis": "When a casual hookup between two strangers unexpectedly turns into dinner, what begins as flirtation spirals into something deeper.",
+    "cast": [
+      {
+        "name": "Rachel Poletick",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Amos Quoi",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Jason V. Henderson",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fling+Jason+V+Henderson.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/fling+webapp.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/fling+Instant+tv+poster.png",
+    "likes": 0
+  },
+  "newmovie1756487390550": {
+    "key": "newmovie1756487390550",
+    "title": "I Still Love Her ",
+    "synopsis": "A boyfriend and his girlfriend quibble about the girlfriend’s boneheaded mistake.",
+    "cast": [
+      {
+        "name": "Patrick Thomas Kasey",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Savannah Sakaguchi",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Vigneshwar Raju",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/IStillLoveHer+Patrick+Thomas+Kasey.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/I+still+Love+Her.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/I+still+love+her+poster+.png",
+    "likes": 0
+  },
+  "newmovie1756487626529": {
+    "key": "newmovie1756487626529",
+    "title": "Strange Encounters ",
+    "synopsis": " A black man experiences some strange encounters on his daily jog.",
+    "cast": [
+      {
+        "name": "Bubacarr Sarge",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
+        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
+      },
+      {
+        "name": "Sarah Morrison-Cleary",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Christian Valentin",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Bubacarr Sarge",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/STRANGE+ENCOUNTERS+Bubacarr+Sarge.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/Strange+ENcounters.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/strange+Encounters+instant+tv.+poster.png",
+    "likes": 0
+  },
+  "newmovie1756501125076": {
+    "key": "newmovie1756501125076",
+    "title": "of Bees and Boobs",
+    "synopsis": "An attractive landscaper comes to help a woman in a sexless marriage.",
+    "cast": [
+      {
+        "name": "Maya Orli Cohen",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Christian Valentin",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Eric Eisenstein",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Myra Adrian Nelson",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Of+Bees+of+Boobs+Screener.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/of+bees+and+boobs+webapp+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/of+bees+and+boobs+instant+tv+.JPG",
     "likes": 0
   }
 };
 
+// Category Data
 export const categoriesData: Record<string, Category> = {
   featured: {
     title: "Our Featured Films",
@@ -628,7 +821,7 @@ export const categoriesData: Record<string, Category> = {
   },
   drama: {
     title: "Drama",
-    movieKeys: ['lifeless', 'almasvows', 'finallycaught', 'iloveyoublack', 'autumn', 'silentlove', 'juniper', 'drive', 'crossroads', 'fatherdaughterdance', 'youvsthem', 'intrusivethoughts']
+    movieKeys: ['lifeless', 'almasvows', 'finallycaught', 'iloveyoublack', 'autumn', 'silentlove', 'juniper', 'drive', 'crossroads', 'fatherdaughterdance', 'youvsthem', 'intrusivethoughts', 'newmovie1756485973547', 'newmovie1756486933392', 'newmovie1756487215116', 'newmovie1756487390550', 'newmovie1756487626529', 'newmovie1756501125076']
   },
   comedy: {
     title: "Comedy",
@@ -639,20 +832,25 @@ export const categoriesData: Record<string, Category> = {
     movieKeys: ['crossroads', 'wrapitup', 'itsinyou', 'drive', 'fatherdaughterdance', 'intrusivethoughts']
   },
   phillyFilmFest2025: {
-    title: "Selections from the 12th Annual PWFF - Coming Soon",
-    movieKeys: []
+    title: "Selections From the 12th Annual Playhouse West- Philadelphia Film Festival",
+    movieKeys: [
+        'newmovie1756485973547', 
+        'newmovie1756486933392', 
+        'newmovie1756487215116', 
+        'newmovie1756487390550', 
+        'newmovie1756487626529',
+        'newmovie1756501125076'
+    ]
   },
   documentary: {
     title: "Documentaries",
     movieKeys: ['streeteatstheboot']
   }
 };
+
 // --- END OF EMBEDDED DATA ---
 
-
-// Helper function to escape characters for XML
 const escapeXml = (unsafe: string): string => {
-    if (!unsafe) return '';
     return unsafe.replace(/[<>&'"]/g, (c) => {
         switch (c) {
             case '<': return '&lt;';
@@ -660,112 +858,58 @@ const escapeXml = (unsafe: string): string => {
             case '&': return '&amp;';
             case '\'': return '&apos;';
             case '"': return '&quot;';
+            default: return c;
         }
-        return c;
     });
-};
-
-// Helper to strip HTML from synopsis
-const stripHtml = (html: string) => html ? html.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>?/gm, '') : '';
-
-// Helper to create a valid date object, falling back to now()
-const getValidDate = (dateString?: string): Date => {
-    if (!dateString) return new Date();
-    // Replace hyphens with slashes for better cross-browser compatibility before parsing
-    const date = new Date(dateString.replace(/-/g, '/'));
-    if (isNaN(date.getTime())) {
-        console.warn(`Invalid releaseDate format found: "${dateString}". Falling back to current date.`);
-        return new Date();
-    }
-    return date;
 };
 
 export default function handler(req: any, res: any) {
     try {
-        // Reliably construct the base URL from headers, as request.url can be relative.
-        const protocol = req.headers['x-forwarded-proto'] || 'https';
-        const host = req.headers['x-forwarded-host'] || req.headers['host'];
-        
-        if (!host) {
-            throw new Error("Could not determine the host from request headers.");
-        }
-        
-        const baseUrl = `${protocol}://${host}`;
+        const stripHtml = (html: string) => html ? html.replace(/<[^>]*>?/gm, ' ') : '';
+        const baseUrl = `https://${req.headers.host}`;
 
         let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:dcterms="http://purl.org/dc/terms/">
   <channel>
     <title>Crate TV</title>
     <link>${baseUrl}</link>
-    <description>A sleek and professional streaming web application for discovering and watching independent films.</description>
-    <language>en-US</language>
+    <description>A collection of independent short films from Crate TV.</description>
     <pubDate>${new Date().toUTCString()}</pubDate>
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
 `;
 
-        const allMovies: Movie[] = Object.values(moviesData);
+        for (const movie of Object.values(moviesData)) {
+            const synopsisText = stripHtml(movie.synopsis);
+            const pubDate = movie.releaseDate ? new Date(movie.releaseDate).toUTCString() : new Date().toUTCString();
 
-        for (const movie of allMovies) {
-            const movieUrl = `${baseUrl}/movie/${movie.key}`;
-            const synopsis = stripHtml(movie.synopsis);
-            const pubDate = getValidDate(movie.releaseDate).toUTCString();
-
-            const tags = Object.values(categoriesData)
-                .filter(cat => cat.movieKeys.includes(movie.key))
-                .map(cat => cat.title)
-                .join(', ');
-
-            // Default duration to 10 minutes (600 seconds) unless specified
-            let duration = 600; 
-            if (movie.key === 'streeteatstheboot') {
-                duration = 3240;
-            }
+            const directors = movie.director.split(',').map(d => d.trim()).filter(Boolean);
 
             xml += `
     <item>
       <title>${escapeXml(movie.title)}</title>
-      <link>${escapeXml(movieUrl)}</link>
-      <guid isPermaLink="false">${escapeXml(movie.key)}</guid>
+      <link>${baseUrl}/movie/${movie.key}</link>
+      <guid isPermaLink="true">${baseUrl}/movie/${movie.key}</guid>
       <pubDate>${pubDate}</pubDate>
-      <description>${escapeXml(synopsis)}</description>
-      <media:content 
-        url="${escapeXml(movie.fullMovie)}" 
-        type="video/mp4" 
-        medium="video" 
-        duration="${duration}" 
-        isDefault="true" />
-      <media:title>${escapeXml(movie.title)}</media:title>
-      <media:description type="plain">${escapeXml(synopsis)}</media:description>
+      <description>${escapeXml(synopsisText)}</description>
+      <media:content url="${escapeXml(movie.fullMovie)}" type="video/mp4" medium="video" isDefault="true" expression="full" duration="600" />
+      <media:description type="plain">${escapeXml(synopsisText)}</media:description>
       <media:thumbnail url="${escapeXml(movie.tvPoster || movie.poster)}" />
-      <media:keywords>${escapeXml(tags)}</media:keywords>
-`;
-            // Add director(s)
-            if (movie.director) {
-                const directors = movie.director.split(',').map(d => d.trim());
-                directors.forEach(d => {
-                    if (d) xml += `      <media:credit role="director">${escapeXml(d)}</media:credit>\n`;
-                });
-            }
-
-            // Add cast
-            movie.cast.forEach(actor => {
-                xml += `      <media:credit role="actor">${escapeXml(actor.name)}</media:credit>\n`;
-            });
-
-            xml += `    </item>
-`;
+      ${movie.cast.map(actor => `<media:credit role="actor" scheme="urn:ebu">${escapeXml(actor.name)}</media:credit>`).join('\n      ')}
+      ${directors.map(director => `<media:credit role="director" scheme="urn:ebu">${escapeXml(director)}</media:credit>`).join('\n      ')}
+    </item>`;
         }
 
-        xml += `  </channel>
+        xml += `
+  </channel>
 </rss>`;
 
+        res.setHeader('Content-Type', 'application/rss+xml');
         res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate'); // Cache for 1 hour
-        res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
         res.status(200).send(xml);
 
     } catch (error) {
         console.error('Error generating MRSS feed:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        res.setHeader('Content-Type', 'application/xml');
-        res.status(500).send(`<error>${escapeXml(errorMessage)}</error>`);
+        res.status(500).json({ error: `Failed to generate feed: ${errorMessage}` });
     }
 }
