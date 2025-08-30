@@ -803,3 +803,43 @@ export const moviesData: Record<string, Movie> = {
 
 // Category Data
 export const categoriesData: Record<string, Category> = {
+  featured: {
+    title: "Our Featured Films",
+    movieKeys: ['lifeless', 'foodiecalldirectorscut', 'iloveyoublack', 'hair', 'juniper', 'silentlove']
+  },
+  newReleases: {
+    title: "New Releases",
+    movieKeys: ['crossroads', 'wrapitup', 'itsinyou', 'drive', 'fatherdaughterdance', 'intrusivethoughts']
+  },
+   explore: {
+    title: "Explore These Titles",
+    movieKeys: ['smirk', 'intrusivethoughts']
+  },
+  awardWinners: {
+    title: "Award Winners & Nominees",
+    movieKeys: ['foodiecalldirectorscut', 'hair', 'iloveyoublack', 'juniper', 'lifeless']
+  },
+  drama: {
+    title: "Drama",
+    movieKeys: ['lifeless', 'almasvows', 'finallycaught', 'iloveyoublack', 'autumn', 'silentlove', 'juniper', 'drive', 'crossroads', 'fatherdaughterdance', 'youvsthem', 'intrusivethoughts']
+  },
+  comedy: {
+    title: "Comedy",
+    movieKeys: ['foodiecalldirectorscut', 'foodiecalltheatricalcut', 'eharmonycs', 'youvsthem', 'wrapitup']
+  },
+  phillyFilmFest2025: {
+    title: "Selections From the 12th Annual Playhouse West- Philadelphia Film Festival",
+    movieKeys: [
+        'newmovie1756485973547', 
+        'newmovie1756486933392', 
+        'newmovie1756487215116', 
+        'newmovie1756487390550', 
+        'newmovie1756487626529',
+        'newmovie1756501125076'
+    ]
+  },
+  documentary: {
+    title: "Documentaries",
+    movieKeys: ['streeteatstheboot']
+  }
+};

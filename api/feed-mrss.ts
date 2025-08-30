@@ -811,7 +811,11 @@ export const categoriesData: Record<string, Category> = {
     title: "Our Featured Films",
     movieKeys: ['lifeless', 'foodiecalldirectorscut', 'iloveyoublack', 'hair', 'juniper', 'silentlove']
   },
-  explore: {
+  newReleases: {
+    title: "New Releases",
+    movieKeys: ['crossroads', 'wrapitup', 'itsinyou', 'drive', 'fatherdaughterdance', 'intrusivethoughts']
+  },
+   explore: {
     title: "Explore These Titles",
     movieKeys: ['smirk', 'intrusivethoughts']
   },
@@ -821,15 +825,11 @@ export const categoriesData: Record<string, Category> = {
   },
   drama: {
     title: "Drama",
-    movieKeys: ['lifeless', 'almasvows', 'finallycaught', 'iloveyoublack', 'autumn', 'silentlove', 'juniper', 'drive', 'crossroads', 'fatherdaughterdance', 'youvsthem', 'intrusivethoughts', 'newmovie1756485973547', 'newmovie1756486933392', 'newmovie1756487215116', 'newmovie1756487390550', 'newmovie1756487626529', 'newmovie1756501125076']
+    movieKeys: ['lifeless', 'almasvows', 'finallycaught', 'iloveyoublack', 'autumn', 'silentlove', 'juniper', 'drive', 'crossroads', 'fatherdaughterdance', 'youvsthem', 'intrusivethoughts']
   },
   comedy: {
     title: "Comedy",
     movieKeys: ['foodiecalldirectorscut', 'foodiecalltheatricalcut', 'eharmonycs', 'youvsthem', 'wrapitup']
-  },
-  newReleases: {
-    title: "New Releases",
-    movieKeys: ['crossroads', 'wrapitup', 'itsinyou', 'drive', 'fatherdaughterdance', 'intrusivethoughts']
   },
   phillyFilmFest2025: {
     title: "Selections From the 12th Annual Playhouse West- Philadelphia Film Festival",
@@ -847,6 +847,7 @@ export const categoriesData: Record<string, Category> = {
     movieKeys: ['streeteatstheboot']
   }
 };
+
 
 // --- END OF EMBEDDED DATA ---
 
