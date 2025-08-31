@@ -6,7 +6,6 @@ import Header from './Header.tsx';
 import Footer from './Footer.tsx';
 import LoadingSpinner from './LoadingSpinner.tsx';
 import BackToTopButton from './BackToTopButton.tsx';
-// FIX: Import SearchOverlay component
 import SearchOverlay from './SearchOverlay.tsx';
 
 interface MoviePageProps {
@@ -14,6 +13,37 @@ interface MoviePageProps {
 }
 
 type PlayerMode = 'poster' | 'trailer' | 'full';
+
+// Helper function to create/update meta tags
+const setMetaTag = (attr: 'name' | 'property', value: string, content: string) => {
+  let element = document.querySelector(`meta[${attr}="${value}"]`);
+  if (!element) {
+    element = document.createElement('meta');
+    element.setAttribute(attr, value);
+    document.head.appendChild(element);
+  }
+  element.setAttribute('content', content);
+};
+
+// A self-contained component for displaying a recommended movie with a loading placeholder.
+const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
+    const [isLoaded, setIsLoaded] = useState(false);
+    return (
+        <a
+            href={`/movie/${movie.key}`}
+            className="group relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 bg-gray-800"
+        >
+            <img 
+                src={movie.poster} 
+                alt={movie.title} 
+                className={`w-full h-full object-cover transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                loading="lazy"
+                onLoad={() => setIsLoaded(true)}
+            />
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        </a>
+    );
+}
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [movie, setMovie] = useState<Movie | null>(null);
@@ -34,9 +64,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isWidescreen, setIsWidescreen] = useState(false);
   
-  // FIX: Add state for mobile search overlay
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const [mobileSearchQuery, setMobileSearchQuery] = useState('');
 
   useEffect(() => {
     const movieData = { ...moviesData[movieKey] };
@@ -65,6 +95,72 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       window.location.href = '/';
     }
   }, [movieKey]);
+
+  // SEO Effect
+  useEffect(() => {
+    if (movie) {
+      document.title = `${movie.title} | Crate TV`;
+
+      const synopsisText = movie.synopsis.replace(/<br\s*\/?>/gi, ' ').trim();
+      const pageUrl = `https://cratetv.net/movie/${movie.key}`;
+
+      // Standard meta tags
+      setMetaTag('name', 'description', synopsisText);
+      setMetaTag('name', 'keywords', `crate tv, ${movie.title}, ${movie.director}, ${movie.cast.map(a => a.name).join(', ')}, independent film, short film, Philadelphia film, netflix, prime video, hulu, tubi, peacock, indie streaming`);
+
+      // Open Graph
+      setMetaTag('property', 'og:title', `${movie.title} | Crate TV`);
+      setMetaTag('property', 'og:description', synopsisText);
+      setMetaTag('property', 'og:url', pageUrl);
+      setMetaTag('property', 'og:image', movie.poster);
+      setMetaTag('property', 'og:type', 'video.movie');
+
+      // Twitter Card
+      setMetaTag('name', 'twitter:card', 'summary_large_image');
+      setMetaTag('name', 'twitter:title', `${movie.title} | Crate TV`);
+      setMetaTag('name', 'twitter:description', synopsisText);
+      setMetaTag('name', 'twitter:image', movie.poster);
+
+      // Add JSON-LD schema
+      const oldSchema = document.getElementById('movie-schema');
+      if (oldSchema) {
+        oldSchema.remove();
+      }
+      
+      const schema = {
+        "@context": "https://schema.org",
+        "@type": "Movie",
+        "name": movie.title,
+        "description": synopsisText,
+        "image": movie.poster,
+        "url": pageUrl,
+        "director": movie.director.split(',').map(d => ({ "@type": "Person", "name": d.trim() })),
+        "actor": movie.cast.map(actor => ({
+            "@type": "Person",
+            "name": actor.name
+        })),
+        "provider": {
+            "@type": "Organization",
+            "name": "Crate TV",
+            "url": "https://cratetv.net"
+        }
+      };
+
+      const schemaScript = document.createElement('script');
+      schemaScript.id = 'movie-schema';
+      schemaScript.type = 'application/ld+json';
+      schemaScript.text = JSON.stringify(schema);
+      document.head.appendChild(schemaScript);
+    }
+
+    return () => {
+        document.title = 'Crate TV | Home for Independent Films';
+        const schemaScript = document.getElementById('movie-schema');
+        if (schemaScript) {
+            schemaScript.remove();
+        }
+    };
+  }, [movie]);
 
   useEffect(() => {
     const onFullscreenChange = () => {
@@ -245,7 +341,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     setPlayerMode('poster');
   };
   
-  const handleSearch = (query: string) => {
+  const handleSearchSubmit = (query: string) => {
     if (query) {
       window.location.href = `/?search=${encodeURIComponent(query)}`;
     }
@@ -261,8 +357,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-900 text-white">
         <div className="fixed top-0 left-0 w-full h-2.5 bg-gradient-to-r from-red-500 via-blue-500 via-purple-500 via-orange-500 via-green-500 to-red-500 bg-[length:300%_100%] animate-colorChange z-50"></div>
-        {/* FIX: Add onMobileSearchClick prop to Header to handle mobile search icon clicks. */}
-        <Header searchQuery="" onSearch={handleSearch} isScrolled={true} onMobileSearchClick={() => setIsMobileSearchOpen(true)} />
+        <Header 
+            searchQuery={searchQuery} 
+            onSearch={setSearchQuery} 
+            isScrolled={true} 
+            onMobileSearchClick={() => setIsMobileSearchOpen(true)}
+            onSearchSubmit={handleSearchSubmit}
+        />
 
         <main className="flex-grow pt-16">
             <div 
@@ -405,15 +506,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     <h3 className="text-xl font-semibold mb-4">You Might Also Like</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                       {recommendedMovies.map(recMovie => (
-                        <a
-                          key={recMovie.key}
-                          href={`/movie/${recMovie.key}`}
-                          className="group relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105"
-                        >
-                          <img src={recMovie.poster} alt={recMovie.title} className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                          </div>
-                        </a>
+                        <RecommendedMovieLink key={recMovie.key} movie={recMovie} />
                       ))}
                     </div>
                   </div>
@@ -430,14 +523,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             onClose={handleCloseActorModal}
           />
         )}
-        {/* FIX: Render SearchOverlay for mobile search */}
         {isMobileSearchOpen && (
           <SearchOverlay 
-            searchQuery={mobileSearchQuery}
-            onSearch={(query) => {
-              setMobileSearchQuery(query);
-              handleSearch(query);
-            }}
+            searchQuery={searchQuery}
+            onSearch={setSearchQuery}
+            onSubmit={handleSearchSubmit}
             onClose={() => setIsMobileSearchOpen(false)}
           />
         )}

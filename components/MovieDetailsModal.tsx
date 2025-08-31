@@ -14,6 +14,28 @@ interface MovieDetailsModalProps {
 
 type PlayerMode = 'poster' | 'trailer' | 'full';
 
+const RecommendedMovieCard: React.FC<{ movie: Movie; onClick: (movie: Movie) => void; }> = ({ movie, onClick }) => {
+    const [isLoaded, setIsLoaded] = useState(false);
+    return (
+        <div
+            className="group cursor-pointer rounded-md overflow-hidden"
+            onClick={() => onClick(movie)}
+        >
+            <div className="relative aspect-[3/4] bg-gray-800">
+                <img
+                    src={movie.poster}
+                    alt={movie.title}
+                    className={`w-full h-full object-cover transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    loading="lazy"
+                    onLoad={() => setIsLoaded(true)}
+                />
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            </div>
+        </div>
+    );
+};
+
+
 const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({ 
   movie, 
   isLiked,
@@ -281,16 +303,11 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                 <h3 className="text-2xl font-bold mb-4">More Like This</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {recommendedMovies.map(recMovie => (
-                    <div
-                      key={recMovie.key}
-                      className="group cursor-pointer rounded-md overflow-hidden"
-                      onClick={() => onSelectRecommendedMovie(recMovie)}
-                    >
-                      <div className="relative aspect-[3/4] bg-gray-800">
-                        <img src={recMovie.poster} alt={recMovie.title} className="w-full h-full object-cover" />
-                         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                      </div>
-                    </div>
+                    <RecommendedMovieCard 
+                        key={recMovie.key} 
+                        movie={recMovie} 
+                        onClick={onSelectRecommendedMovie} 
+                    />
                   ))}
                 </div>
               </div>

@@ -4,9 +4,10 @@ interface SearchOverlayProps {
   searchQuery: string;
   onSearch: (query: string) => void;
   onClose: () => void;
+  onSubmit?: (query: string) => void;
 }
 
-const SearchOverlay: React.FC<SearchOverlayProps> = ({ searchQuery, onSearch, onClose }) => {
+const SearchOverlay: React.FC<SearchOverlayProps> = ({ searchQuery, onSearch, onClose, onSubmit }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -21,6 +22,13 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ searchQuery, onSearch, on
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(event.target.value);
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (onSubmit) {
+      onSubmit(searchQuery);
+    }
   };
 
   return (
@@ -41,7 +49,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ searchQuery, onSearch, on
           </svg>
         </button>
       </div>
-      <div className="relative">
+      <form onSubmit={handleSubmit} className="relative">
         <input
           ref={inputRef}
           type="text"
@@ -55,7 +63,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ searchQuery, onSearch, on
             <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
           </svg>
         </div>
-      </div>
+      </form>
        {/* The search results will be visible on the main page underneath this overlay */}
     </div>
   );

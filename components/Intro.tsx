@@ -1,21 +1,22 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface IntroProps {
   onIntroEnd: () => void;
 }
 
 const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  
+  // FIX: Corrected the S3 URL for the desktop video. The old URL used an incorrect
+  // 's3-us-east-1' format instead of 's3.us-east-1'.
   const desktopSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/intro%20red%20.mp4";
-  // This is the new 9:16 aspect ratio video for mobile devices.
   const mobileSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/intro+for+cellphone1080p.mp4"; 
 
   const getInitialVideoSrc = () => {
-    // Check window object to prevent errors in non-browser environments
     if (typeof window !== 'undefined') {
       return window.matchMedia("(max-width: 768px)").matches ? mobileSrc : desktopSrc;
     }
-    // Default to desktop for SSR or other environments
     return desktopSrc;
   };
 
@@ -23,33 +24,44 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 768px)");
-
     const handleResize = (e: MediaQueryListEvent) => {
       setVideoSrc(e.matches ? mobileSrc : desktopSrc);
     };
-
-    // Listen for changes in screen size
     mediaQuery.addEventListener('change', handleResize);
-
-    // Cleanup listener on component unmount
     return () => {
       mediaQuery.removeEventListener('change', handleResize);
     };
   }, [desktopSrc, mobileSrc]);
 
+  // Effect to programmatically play the video to improve autoplay reliability
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (videoElement) {
+      const playPromise = videoElement.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error("Autoplay was prevented:", error);
+          // This catch is to prevent unhandled promise rejection errors.
+          // The video element's `autoplay` and `muted` attributes handle most cases.
+        });
+      }
+    }
+  }, [videoSrc]);
+
   return (
     <div className="relative w-screen h-screen bg-black">
       <video
+        ref={videoRef}
         id="intro-video"
-        key={videoSrc} // Using key to force re-mount on src change, ensuring the new video loads reliably
+        key={videoSrc} // Using key forces a re-mount on src change, ensuring the new video loads
         className="absolute top-0 left-0 w-full h-full object-cover"
         muted
         autoPlay
         playsInline
         onEnded={onIntroEnd}
         poster="https://cratetelevision.s3.us-east-1.amazonaws.com/intro-poster.jpg"
+        src={videoSrc} // Use src attribute for single source
       >
-        <source src={videoSrc} type="video/mp4" />
         Your browser does not support the video tag.
       </video>
       <div className="absolute top-0 left-0 w-full h-full bg-black/50 flex items-center justify-center">

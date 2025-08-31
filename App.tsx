@@ -11,7 +11,6 @@ import LoadingSpinner from './components/LoadingSpinner.tsx';
 import FeatureModal from './components/FeatureModal.tsx';
 import MovieDetailsModal from './components/MovieDetailsModal.tsx';
 import ActorBioModal from './components/ActorBioModal.tsx';
-// FIX: Import the MovieCard component.
 import MovieCard from './components/MovieCard.tsx';
 import SearchOverlay from './components/SearchOverlay.tsx';
 
@@ -163,6 +162,14 @@ const App: React.FC = () => {
     setSelectedActor(null);
   };
 
+  const handleSearchSubmit = (query: string) => {
+      if (query) {
+        window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
+      } else {
+        window.history.pushState({}, '', window.location.pathname);
+      }
+  };
+
   const handleClearSearch = () => {
     setSearchQuery('');
     window.history.pushState({}, '', window.location.pathname);
@@ -223,7 +230,8 @@ const App: React.FC = () => {
         searchQuery={searchQuery} 
         onSearch={setSearchQuery} 
         isScrolled={isScrolled}
-        onMobileSearchClick={() => setIsMobileSearchOpen(true)} 
+        onMobileSearchClick={() => setIsMobileSearchOpen(true)}
+        onSearchSubmit={handleSearchSubmit}
       />
       
       <main className="flex-grow overflow-x-hidden">
@@ -275,7 +283,7 @@ const App: React.FC = () => {
                 if(categoryMovies.length === 0 && key === 'phillyFilmFest2025') {
                     return (
                         <div key={key} className="mb-12">
-                             <h2 className="text-xl md:text-2xl font-bold mb-4 text-white hover:text-gray-300 transition-colors cursor-pointer">{value.title}</h2>
+                             <h2 className="text-lg md:text-2xl font-bold mb-4 text-white hover:text-gray-300 transition-colors cursor-pointer">{value.title}</h2>
                         </div>
                     )
                 }
@@ -322,6 +330,10 @@ const App: React.FC = () => {
           searchQuery={searchQuery}
           onSearch={setSearchQuery}
           onClose={() => setIsMobileSearchOpen(false)}
+          onSubmit={(query) => {
+            handleSearchSubmit(query);
+            setIsMobileSearchOpen(false);
+          }}
         />
       )}
     </div>

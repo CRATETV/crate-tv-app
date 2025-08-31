@@ -5,15 +5,19 @@ interface HeaderProps {
   onSearch: (query: string) => void;
   isScrolled: boolean;
   onMobileSearchClick: () => void;
+  onSearchSubmit?: (query: string) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick }) => {
+const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit }) => {
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(event.target.value);
   };
   
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (onSearchSubmit) {
+      onSearchSubmit(searchQuery);
+    }
   };
 
   return (
