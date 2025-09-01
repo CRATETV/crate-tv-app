@@ -26,6 +26,17 @@ for (const movieKey in moviesData) {
     movieToGenresMap.set(movieKey, movieGenres);
 }
 
+// Utility function to preload images in the background
+const preloadImages = (urls: string[]) => {
+  urls.forEach(url => {
+    if (url) {
+      const img = new Image();
+      img.src = url;
+    }
+  });
+};
+
+
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showIntro, setShowIntro] = useState(!sessionStorage.getItem('introPlayed'));
@@ -87,6 +98,35 @@ const App: React.FC = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Preload critical images while the intro is playing
+  useEffect(() => {
+    if (showIntro) {
+      const imagesToPreload: string[] = [];
+
+      // Get all featured movie posters
+      const featuredKeys = categoriesData.featured?.movieKeys || [];
+      featuredKeys.forEach(key => {
+        const movie = moviesData[key];
+        if (movie?.poster) {
+          imagesToPreload.push(movie.poster);
+        }
+      });
+
+      // Get the first poster from other main categories
+      Object.entries(categoriesData).forEach(([key, category]) => {
+        if (key !== 'featured' && category.movieKeys.length > 0) {
+          const firstMovieKey = category.movieKeys[0];
+          const movie = moviesData[firstMovieKey];
+          if (movie?.poster) {
+            imagesToPreload.push(movie.poster);
+          }
+        }
+      });
+
+      preloadImages(Array.from(new Set(imagesToPreload))); // Use Set to avoid duplicates
+    }
+  }, [showIntro]);
 
   const visibleMovieKeys = useMemo(() => {
     const today = new Date();

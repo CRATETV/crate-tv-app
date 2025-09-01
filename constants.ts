@@ -1,5 +1,71 @@
 import { Category, Movie } from './types.ts';
 
+export const categoriesData: Record<string, Category> = {
+  featured: {
+    title: 'Featured Films',
+    movieKeys: ['newmovie1756741314485', 'lifeless', 'foodiecalldirectorscut', 'juniper']
+  },
+  newReleases: {
+    title: 'New Releases',
+    movieKeys: [
+        'newmovie1756741314485', // What If
+        'newmovie1756501125076', // of Bees and Boobs
+        'newmovie1756487626529', // Strange Encounters
+        'newmovie1756487390550', // I Still Love Her
+        'newmovie1756487215116', // Fling
+        'newmovie1756486933392', // Power Trip
+        'newmovie1756485973547', // Burst
+    ]
+  },
+  awardWinners: {
+    title: 'Award-Winning Films',
+    movieKeys: ['lifeless', 'foodiecalldirectorscut', 'iloveyoublack', 'hair', 'juniper']
+  },
+  comedy: {
+    title: 'Comedies',
+    movieKeys: [
+      'foodiecalldirectorscut',
+      'foodiecalltheatricalcut',
+      'eharmonycs',
+      'youvsthem',
+      'wrapitup',
+      'newmovie1756485973547',
+      'newmovie1756487215116',
+      'newmovie1756487390550',
+      'newmovie1756501125076',
+      'newmovie1756741314485'
+    ]
+  },
+  drama: {
+    title: 'Dramas',
+    movieKeys: [
+      'lifeless',
+      'almasvows',
+      'finallycaught',
+      'iloveyoublack',
+      'hair',
+      'autumn',
+      'silentlove',
+      'juniper',
+      'drive',
+      'crossroads',
+      'fatherdaughterdance',
+      'smirk',
+      'intrusivethoughts',
+      'newmovie1756486933392',
+      'newmovie1756487626529'
+    ]
+  },
+  documentary: {
+    title: 'Documentaries',
+    movieKeys: ['streeteatstheboot']
+  },
+  phillyFilmFest2025: {
+      title: 'Philly Film Fest 2025',
+      movieKeys: []
+  }
+};
+
 export const moviesData: Record<string, Movie> = {
   "lifeless": {
     "key": "lifeless",
@@ -740,7 +806,7 @@ export const moviesData: Record<string, Movie> = {
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/strange+Encounters+instant+tv.+poster.png",
     "likes": 0
   },
-   "newmovie1756501125076": {
+  "newmovie1756501125076": {
     "key": "newmovie1756501125076",
     "title": "of Bees and Boobs",
     "synopsis": "An attractive landscaper comes to help a woman in a sexless marriage.",
@@ -770,49 +836,48 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/of+bees+and+boobs+webapp+.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/of+bees+and+boobs+instant+tv+.JPG",
     "likes": 0
-  }
-};
-
-
-// FIX: Export categoriesData to make it available to other modules.
-export const categoriesData: Record<string, Category> = {
-  featured: {
-    title: "Our Featured Films",
-    movieKeys: ['lifeless', 'foodiecalldirectorscut', 'iloveyoublack', 'hair', 'juniper', 'silentlove']
   },
-  newReleases: {
-    title: "New Releases",
-    movieKeys: ['crossroads', 'wrapitup', 'itsinyou', 'drive', 'fatherdaughterdance', 'intrusivethoughts']
-  },
-   explore: {
-    title: "Explore These Titles",
-    movieKeys: ['smirk', 'intrusivethoughts']
-  },
-  awardWinners: {
-    title: "Award Winners & Nominees",
-    movieKeys: ['foodiecalldirectorscut', 'hair', 'iloveyoublack', 'juniper', 'lifeless']
-  },
-  drama: {
-    title: "Drama",
-    movieKeys: ['lifeless', 'almasvows', 'finallycaught', 'iloveyoublack', 'autumn', 'silentlove', 'juniper', 'drive', 'crossroads', 'fatherdaughterdance', 'youvsthem', 'intrusivethoughts']
-  },
-  comedy: {
-    title: "Comedy",
-    movieKeys: ['foodiecalldirectorscut', 'foodiecalltheatricalcut', 'eharmonycs', 'youvsthem', 'wrapitup']
-  },
-  phillyFilmFest2025: {
-    title: "Selections From the 12th Annual Playhouse West- Philadelphia Film Festival",
-    movieKeys: [
-        'newmovie1756485973547', 
-        'newmovie1756486933392', 
-        'newmovie1756487215116', 
-        'newmovie1756487390550', 
-        'newmovie1756487626529',
-        'newmovie1756501125076'
-    ]
-  },
-  documentary: {
-    title: "Documentaries",
-    movieKeys: ['streeteatstheboot']
+  "newmovie1756741314485": {
+    "key": "newmovie1756741314485",
+    "title": "What If ",
+    "synopsis": "Desperately seeking love and a date for her cousin's wedding, Sophia bypasses the usual suspects and takes a wild chance on a psychic medium.",
+    "cast": [
+      {
+        "name": "Salome Denoon",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png",
+        "bio": "Salome Denoon is a versatile artist whose creative pursuits span performance, writing, editing, and digital media. As an actress, she has graced both stage and screen. She also brings her talents to the digital realm as the developer of Crate TV.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
+      },
+      {
+        "name": "Joshua Daniel",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png",
+        "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation.",
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png"
+      },
+      {
+        "name": "Bubacarr Sarge",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
+        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
+      },
+      {
+        "name": "Michelle Reale-Opalesky",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg",
+        "bio": "Michelle Reale-Opalesky is a captivating actor with a remarkable range. She effortlessly inhabits diverse roles and seamlessly transitions between drama and comedy.",
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg"
+      },
+      {
+        "name": "Kayla McFarlane",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Jalina Wayser ",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/What+If++The+Movie.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/I+love+you+black.+poster+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/what+If+poster+for+instant+tv+(1920+x+1080+px)+(1925+x+1085+px)+(1920+x+1080+px).png",
+    "likes": 0
   }
 };
