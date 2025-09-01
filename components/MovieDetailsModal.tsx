@@ -48,6 +48,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
 
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
   
@@ -57,6 +58,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(true); // Start muted for autoplay compatibility
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const hasTrailer = useMemo(() => movie.trailer && movie.trailer.length > 5, [movie.trailer]);
 
@@ -73,6 +75,30 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
       document.body.style.overflow = 'unset';
     };
   }, [onClose]);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      const isFs = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isFs);
+    };
+
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    document.addEventListener('mozfullscreenchange', onFullscreenChange);
+    document.addEventListener('MSFullscreenChange', onFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', onFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', onFullscreenChange);
+    };
+  }, []);
 
   // Reset player state when movie changes
   useEffect(() => {
@@ -176,6 +202,39 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
       setIsMuted(!isMuted);
   }
 
+  const toggleFullScreen = () => {
+    const el = videoContainerRef.current;
+    if (!el) return;
+
+    const isCurrentlyFullscreen = 
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement;
+
+    if (!isCurrentlyFullscreen) {
+        if (el.requestFullscreen) {
+            el.requestFullscreen();
+        } else if ((el as any).mozRequestFullScreen) { // Firefox
+            (el as any).mozRequestFullScreen();
+        } else if ((el as any).webkitRequestFullscreen) { // Chrome, Safari, Opera
+            (el as any).webkitRequestFullscreen();
+        } else if ((el as any).msRequestFullscreen) { // IE/Edge
+            (el as any).msRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if ((document as any).mozCancelFullScreen) { // Firefox
+            (document as any).mozCancelFullScreen();
+        } else if ((document as any).webkitExitFullscreen) { // Chrome, Safari and Opera
+            (document as any).webkitExitFullscreen();
+        } else if ((document as any).msExitFullscreen) { // IE/Edge
+            (document as any).msExitFullscreen();
+        }
+    }
+  };
+
   const videoSource = playerMode === 'full' ? movie.fullMovie : movie.trailer;
 
   return (
@@ -190,7 +249,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
           </svg>
         </button>
         
-        <div className="relative w-full aspect-video bg-black group/video">
+        <div ref={videoContainerRef} className="relative w-full aspect-video bg-black group/video">
             {playerMode === 'poster' ? (
                 <div className="relative w-full h-full">
                     <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />
@@ -270,6 +329,13 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                           <div className="text-white text-sm">
                             <span>{formatTime(videoRef.current?.currentTime ?? 0)}</span> / <span>{formatTime(duration)}</span>
                           </div>
+                          <button onClick={toggleFullScreen} className="text-white p-2" aria-label="Toggle fullscreen">
+                            {isFullscreen ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14L4 20m0 0h6m-6 0v-6m10-4l6-6m0 0h-6m6 0v6" /></svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1v4m0 0h-4m4 0l-5-5M4 16v4m0 0h4m-4 0l5-5m11 1v-4m0 0h-4m4 0l-5 5" /></svg>
+                            )}
+                          </button>
                         </div>
                     </div>
                 </div>
