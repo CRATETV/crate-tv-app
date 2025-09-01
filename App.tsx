@@ -320,14 +320,6 @@ const App: React.FC = () => {
                     .map(movieKey => movies[movieKey])
                     .filter(Boolean);
                 
-                if(categoryMovies.length === 0 && key === 'phillyFilmFest2025') {
-                    return (
-                        <div key={key} className="mb-12">
-                             <h2 className="text-lg md:text-2xl font-bold mb-4 text-white hover:text-gray-300 transition-colors cursor-pointer">{value.title}</h2>
-                        </div>
-                    )
-                }
-                
                 if(categoryMovies.length === 0) return null;
 
                 const sortedMovies = [...categoryMovies].sort((a, b) => b.likes - a.likes);
