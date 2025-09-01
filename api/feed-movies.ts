@@ -2,8 +2,8 @@
 
 // This is a Vercel Serverless Function using the Node.js runtime.
 // It will be accessible at the path /api/feed-movies
-import { moviesData, categoriesData } from '../constants.ts';
-import type { Category } from '../types.ts';
+import { moviesData, categoriesData } from '../../constants.ts';
+import type { Category } from '../../types.ts';
 
 // Helper to determine genre from categories based on the Direct Publisher specification.
 const getGenres = (movieKey: string, allCategories: Record<string, Category>): string[] => {

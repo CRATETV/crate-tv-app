@@ -3,7 +3,7 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/feed-mrss
 // It generates a Media RSS (MRSS) feed for TV platforms.
-import { moviesData } from '../constants.ts';
+import { moviesData } from '../../constants.ts';
 
 const escapeXml = (unsafe: string): string => {
     return unsafe.replace(/[<>&'"]/g, (c) => {
