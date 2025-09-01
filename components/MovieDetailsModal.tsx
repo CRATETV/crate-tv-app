@@ -12,7 +12,7 @@ interface MovieDetailsModalProps {
   onSelectRecommendedMovie: (movie: Movie) => void;
 }
 
-type PlayerMode = 'poster' | 'trailer' | 'full';
+type PlayerMode = 'poster' | 'full';
 
 const RecommendedMovieCard: React.FC<{ movie: Movie; onClick: (movie: Movie) => void; }> = ({ movie, onClick }) => {
     const [isLoaded, setIsLoaded] = useState(false);
@@ -21,12 +21,13 @@ const RecommendedMovieCard: React.FC<{ movie: Movie; onClick: (movie: Movie) => 
             className="group cursor-pointer rounded-md overflow-hidden"
             onClick={() => onClick(movie)}
         >
-            <div className="relative aspect-[3/4] bg-gray-800">
+            <div className="relative aspect-[3/4] bg-gray-800 overflow-hidden">
                 <img
                     src={movie.poster}
                     alt={movie.title}
-                    className={`w-full h-full object-cover transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    className={`w-full h-full object-cover transition-all duration-500 ease-in-out ${isLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-50 scale-110 blur-md'}`}
                     loading="lazy"
+                    decoding="async"
                     onLoad={() => setIsLoaded(true)}
                 />
                 <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -51,6 +52,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const videoContainerRef = useRef<HTMLDivElement>(null);
 
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
+  const [isPosterLoaded, setIsPosterLoaded] = useState(false);
   
   // Player State
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
@@ -59,8 +61,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(true); // Start muted for autoplay compatibility
   const [isFullscreen, setIsFullscreen] = useState(false);
-
-  const hasTrailer = useMemo(() => movie.trailer && movie.trailer.length > 5, [movie.trailer]);
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
@@ -106,6 +106,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     setProgress(0);
     setIsPlaying(false);
     setDuration(0);
+    setIsPosterLoaded(false);
   }, [movie.key]);
 
   // Programmatic playback effect
@@ -149,8 +150,8 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     }
   };
   
-  const handlePlay = (mode: 'trailer' | 'full') => {
-    setPlayerMode(mode);
+  const handlePlayMovie = () => {
+    setPlayerMode('full');
     setIsMuted(false); // Unmute on explicit play
   };
 
@@ -235,7 +236,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     }
   };
 
-  const videoSource = playerMode === 'full' ? movie.fullMovie : movie.trailer;
+  const videoSource = movie.fullMovie;
 
   return (
     <div ref={modalRef} className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-0 md:p-4 animate-[fadeIn_0.3s_ease-out]" onClick={() => onClose(true)}>
@@ -251,8 +252,14 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
         
         <div ref={videoContainerRef} className="relative w-full aspect-video bg-black group/video">
             {playerMode === 'poster' ? (
-                <div className="relative w-full h-full">
-                    <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />
+                <div className="relative w-full h-full overflow-hidden">
+                    <img
+                        src={movie.poster}
+                        alt={movie.title}
+                        className={`w-full h-full object-cover transition-all duration-500 ease-in-out ${isPosterLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-50 scale-110 blur-md'}`}
+                        decoding="async"
+                        onLoad={() => setIsPosterLoaded(true)}
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-transparent to-transparent"></div>
                 </div>
             ) : (
@@ -279,15 +286,9 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                     <h2 className="text-2xl md:text-5xl font-bold drop-shadow-lg">{movie.title}</h2>
                     <div className="flex flex-wrap items-center gap-3 mt-4">
                         {movie.fullMovie && (
-                             <button onClick={() => handlePlay('full')} className="flex items-center justify-center px-6 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
+                             <button onClick={handlePlayMovie} className="flex items-center justify-center px-6 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                                 Play Movie
-                            </button>
-                        )}
-                        {hasTrailer && (
-                             <button onClick={() => handlePlay('trailer')} className="flex items-center justify-center px-6 py-2 bg-gray-500/70 text-white font-bold rounded-md hover:bg-gray-500/50 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                                Play Trailer
                             </button>
                         )}
                         <button onClick={handleLikeClick} className="h-10 w-10 flex items-center justify-center rounded-full border-2 border-gray-400 text-white hover:border-white transition" aria-label="Like">

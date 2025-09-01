@@ -17,8 +17,9 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie }) => {
         <img 
           src={movie.poster} 
           alt={movie.title} 
-          className={`w-full h-full object-cover transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`} 
-          loading="lazy" 
+          className={`w-full h-full object-cover transition-all duration-500 ease-in-out ${isLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-50 scale-110 blur-md'}`}
+          loading="lazy"
+          decoding="async"
           onLoad={() => setIsLoaded(true)}
         />
     </div>
