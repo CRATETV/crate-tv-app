@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import AdminPage from './AdminPage.tsx';
 import MoviePage from './components/MoviePage.tsx';
+import SubmitPage from './components/SubmitPage.tsx';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -17,6 +18,10 @@ const AppRouter: React.FC = () => {
   if (pathname.startsWith('/admin')) {
     return <AdminPage />;
   }
+  
+  if (pathname.startsWith('/submit')) {
+    return <SubmitPage />;
+  }
 
   if (pathname.startsWith('/movie/')) {
     const movieKey = pathname.split('/')[2];
@@ -28,6 +33,7 @@ const AppRouter: React.FC = () => {
     return null;
   }
 
+  // Default to the main app
   return <App />;
 };
 

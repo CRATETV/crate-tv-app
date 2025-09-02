@@ -32,20 +32,19 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
       mediaQuery.removeEventListener('change', handleResize);
     };
   }, [desktopSrc, mobileSrc]);
-
+  
+  // Attempt to autoplay the video
   useEffect(() => {
     const videoElement = videoRef.current;
     if (videoElement) {
-      setShowPlayButton(false);
-      const playPromise = videoElement.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.error("Autoplay was prevented:", error);
-          setShowPlayButton(true);
-        });
-      }
+      // Muted autoplay is generally allowed
+      videoElement.play().catch(error => {
+        // Autoplay was prevented.
+        console.warn("Autoplay was prevented by the browser. Showing play button as a fallback.", error);
+        setShowPlayButton(true);
+      });
     }
-  }, [videoSrc]);
+  }, [videoSrc]); // Rerun when video source changes
 
   const handleManualPlay = () => {
     const videoElement = videoRef.current;
@@ -63,7 +62,6 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
         key={videoSrc}
         className="absolute top-0 left-0 w-full h-full object-cover"
         muted
-        autoPlay
         playsInline
         onEnded={onIntroEnd}
         onPlay={() => setIsPlaying(true)}
