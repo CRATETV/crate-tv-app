@@ -800,21 +800,11 @@ export const moviesData: Record<string, Movie> = {
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
-        "name": "Vince DeVision",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Information regarding this actor is currently unavailable.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-      },
-      {
-        "name": "Daniel Colon",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Information regarding this actor is currently unavailable.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-      }
+        
     ],
     "director": "Bubacarr Sarge",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Strange+Encounters+Bubacarr+Sarge.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/STRANGE+ENCOUNTERS+Bubacarr+Sarge.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/strange+encounters.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/Strange+Encounters+Instant+TV.png",
     "likes": 0
@@ -822,16 +812,16 @@ export const moviesData: Record<string, Movie> = {
   "newmovie1756501125076": {
     "key": "newmovie1756501125076",
     "title": "Of Bees and Boobs",
-    "synopsis": "On a scorching summer afternoon, a young woman's innocent sunbathing session takes a bizarre turn when she's interrupted by a bee with an unusual fixation.",
+    "synopsis": "An attractive landscaper comes to help a woman in a sexless marriage.",
     "cast": [
       {
-        "name": "Sarah Morrison-Cleary",
+        "name": "Maya Orli Cohen",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
         "bio": "Information regarding this actor is currently unavailable.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
-    "director": "Sarah Morrison-Cleary",
+    "director": "Myra Adrian Nelson",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/of+Bees+and+Boobs+Sarah+Morrison-Cleary.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Of+bees+and+boobs.png",
@@ -850,15 +840,15 @@ export const moviesData: Record<string, Movie> = {
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png"
       },
       {
-        "name": "Darrah Lashley",
+        "name": "Salome Denoon",
         "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+head+shot.png",
         "bio": "Darrah Lashley is a talented and versatile actress known for her captivating performances. Darrah has received several accolades due to her exceptional talent and dedication to work in independent films and theater productions, showcasing her range and depth.",
         "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
       }
     ],
-    "director": "Joshua Daniel",
+    "director": "Jalina Wayser",
     "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/What+If+Trailer+.mp4",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/What+If+Full+Movie+.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/What+If++The+Movie.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/What+If.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/What+If+instant+TV.png",
     "likes": 0
