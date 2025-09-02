@@ -1,5 +1,6 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/send-submission
+import { Resend } from 'resend';
 
 // Helper function to create the HTML email body
 const createEmailBody = (data: Record<string, string>): string => {
@@ -68,6 +69,10 @@ export async function POST(request: Request) {
   try {
     const data = await request.json();
 
+    if (!process.env.RESEND_API_KEY) {
+        throw new Error("RESEND_API_KEY environment variable is not set. Email cannot be sent.");
+    }
+
     // Basic validation
     if (!data.filmTitle || !data.directorName || !data.email) {
       return new Response(JSON.stringify({ error: 'Missing required fields.' }), {
@@ -79,37 +84,18 @@ export async function POST(request: Request) {
     const emailHtml = createEmailBody(data);
     const emailSubject = `New Film Submission: "${data.filmTitle}"`;
     const recipientEmail = "cratetiv@gmail.com";
-
-    // --- EMAIL SENDING LOGIC ---
-    // In a real application, you would use an email service like SendGrid, Resend, or AWS SES.
-    // This requires an API key which should be stored as a secret environment variable.
-    // Since we don't have an API key, we will simulate the email sending process.
-
-    // ** SIMULATION START **
-    console.log("--- SIMULATING EMAIL ---");
-    console.log(`TO: ${recipientEmail}`);
-    console.log(`SUBJECT: ${emailSubject}`);
-    console.log("BODY (HTML):");
-    console.log(emailHtml);
-    console.log("--- END SIMULATION ---");
-    // ** SIMULATION END **
     
-    /*
-    // EXAMPLE: How to send an email with Resend (https://resend.com)
-    // 1. Install Resend: `npm install resend`
-    // 2. Get an API key from resend.com
-    // 3. Add RESEND_API_KEY to your environment variables.
-    
-    import { Resend } from 'resend';
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     await resend.emails.send({
-      from: 'Crate TV Submissions <noreply@yourdomain.com>',
+      // IMPORTANT: To prevent emails from going to spam, you should verify a domain with Resend
+      // and use an address like 'submissions@yourdomain.com'.
+      from: 'Crate TV Submissions <noreply@cratetv.net>',
       to: recipientEmail,
+      reply_to: data.email, // Set the filmmaker's email as the reply-to address
       subject: emailSubject,
       html: emailHtml,
     });
-    */
 
     return new Response(JSON.stringify({ message: 'Submission received successfully.' }), {
       status: 200,

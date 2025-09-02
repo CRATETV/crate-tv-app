@@ -7,7 +7,6 @@ interface IntroProps {
 
 const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [showPlayButton, setShowPlayButton] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
 
   const desktopSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/mobile+intro+that+matches+webapp.mp4";
@@ -33,26 +32,19 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
     };
   }, [desktopSrc, mobileSrc]);
   
-  // Attempt to autoplay the video
+  // Attempt to autoplay the video. If it fails, skip the intro.
   useEffect(() => {
     const videoElement = videoRef.current;
     if (videoElement) {
-      // Muted autoplay is generally allowed
+      // Muted autoplay is generally allowed, but some browsers/modes (like iOS Low Power Mode) can block it.
       videoElement.play().catch(error => {
-        // Autoplay was prevented.
-        console.warn("Autoplay was prevented by the browser. Showing play button as a fallback.", error);
-        setShowPlayButton(true);
+        // Autoplay was prevented by the browser.
+        console.warn("Autoplay was prevented, bypassing intro video as requested.", error);
+        // Instead of showing a play button, we skip the intro directly to improve UX.
+        onIntroEnd();
       });
     }
-  }, [videoSrc]); // Rerun when video source changes
-
-  const handleManualPlay = () => {
-    const videoElement = videoRef.current;
-    if (videoElement) {
-        videoElement.play();
-        setShowPlayButton(false);
-    }
-  };
+  }, [videoSrc, onIntroEnd]); // Rerun when video source changes
 
   return (
     <div className="relative w-screen h-screen bg-black">
@@ -71,20 +63,6 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
       >
         Your browser does not support the video tag.
       </video>
-
-      {showPlayButton && (
-        <div className="absolute inset-0 bg-black/60 flex items-center justify-center animate-[fadeIn_0.5s_ease-out]">
-            <button
-                onClick={handleManualPlay}
-                className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center text-white backdrop-blur-sm border border-white/30 hover:bg-white/30 transition-colors"
-                aria-label="Play intro video"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 ml-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                </svg>
-            </button>
-        </div>
-      )}
 
       {/* Show Skip Intro button only when video is successfully playing */}
       {isPlaying && (
