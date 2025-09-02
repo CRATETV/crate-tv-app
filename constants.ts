@@ -17,20 +17,20 @@ export const categoriesData: Record<string, Category> = {
         'newmovie1756485973547', // Burst
     ]
   },
-  pwff12thAnnual: {
-    title: 'PWFF- 12th annual selections',
-    movieKeys: [
-      'newmovie1756485973547', // Burst
-      'newmovie1756487390550', // I Still Love Her
-      'newmovie1756486933392', // Power Trip
-      'newmovie1756501125076', // of Bees and Boobs
-      'newmovie1756487215116', // Fling
-      'newmovie1756487626529'  // Strange Encounters
-    ]
-  },
   awardWinners: {
     title: 'Award-Winning Films',
     movieKeys: ['lifeless', 'foodiecalldirectorscut', 'iloveyoublack', 'hair', 'juniper']
+  },
+  pwff12thAnnual: {
+    title: 'PWFF-12th Annual Selections',
+    movieKeys: [
+      'newmovie1756487626529', // Strange Encounters
+      'newmovie1756501125076', // of Bees and Boobs
+      'newmovie1756487215116', // Fling
+      'newmovie1756487390550', // I Still Love Her
+      'newmovie1756485973547',  // Burst
+      'newmovie1756486933392' // Power Trip
+    ]
   },
   comedy: {
     title: 'Comedies',
@@ -69,13 +69,9 @@ export const categoriesData: Record<string, Category> = {
     title: 'Documentaries',
     movieKeys: ['streeteatstheboot']
   },
-  exploreTheseTitles: {
+  exploreTitles: {
     title: 'Explore These Titles',
     movieKeys: ['smirk', 'intrusivethoughts']
-  },
-  phillyFilmFest2025: {
-      title: 'Philly Film Fest 2025',
-      movieKeys: []
   }
 };
 
@@ -660,7 +656,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756485973547": {
     "key": "newmovie1756485973547",
-    "title": "Burst",
+    "title": "Burst ",
     "synopsis": "When two people with anger issues meet to do their community service, they pick up more than trash.",
     "cast": [
       {
@@ -703,7 +699,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756486933392": {
     "key": "newmovie1756486933392",
-    "title": "Power Trip",
+    "title": "Power Trip ",
     "synopsis": "A Traffic stop goes terribly bad.",
     "cast": [
       {
@@ -740,7 +736,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756487215116": {
     "key": "newmovie1756487215116",
-    "title": "Fling",
+    "title": "Fling ",
     "synopsis": "When a casual hookup between two strangers unexpectedly turns into dinner, what begins as flirtation spirals into something deeper.",
     "cast": [
       {
@@ -765,7 +761,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756487390550": {
     "key": "newmovie1756487390550",
-    "title": "I Still Love Her",
+    "title": "I Still Love Her ",
     "synopsis": "A boyfriend and his girlfriend quibble about the girlfriend’s boneheaded mistake.",
     "cast": [
       {
@@ -790,8 +786,8 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756487626529": {
     "key": "newmovie1756487626529",
-    "title": "Strange Encounters",
-    "synopsis": "A black man experiences some strange encounters on his daily jog.",
+    "title": "Strange Encounters ",
+    "synopsis": " A black man experiences some strange encounters on his daily jog.",
     "cast": [
       {
         "name": "Bubacarr Sarge",
@@ -800,18 +796,28 @@ export const moviesData: Record<string, Movie> = {
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
-        
+        "name": "Sarah Morrison-Cleary",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Christian Valentin",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
     ],
     "director": "Bubacarr Sarge",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/STRANGE+ENCOUNTERS+Bubacarr+Sarge.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/strange+encounters.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/Strange+Encounters+Instant+TV.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/Strange+ENcounters.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/strange+Encounters+instant+tv.+poster.png",
     "likes": 0
   },
   "newmovie1756501125076": {
     "key": "newmovie1756501125076",
-    "title": "Of Bees and Boobs",
+    "title": "of Bees and Boobs",
     "synopsis": "An attractive landscaper comes to help a woman in a sexless marriage.",
     "cast": [
       {
@@ -819,38 +825,68 @@ export const moviesData: Record<string, Movie> = {
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
         "bio": "Information regarding this actor is currently unavailable.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Christian Valentin",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Eric Eisenstein",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
     "director": "Myra Adrian Nelson",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/of+Bees+and+Boobs+Sarah+Morrison-Cleary.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Of+bees+and+boobs.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/Of+Bees+and+Boobs+instant+tv.png",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Of+Bees+of+Boobs+Screener.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/of+bees+and+boobs+webapp+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/of+bees+and+boobs+instant+tv+.JPG",
     "likes": 0
   },
   "newmovie1756741314485": {
     "key": "newmovie1756741314485",
-    "title": "What If",
+    "title": "What If ",
     "synopsis": "Desperately seeking love and a date for her cousin's wedding, Sophia bypasses the usual suspects and takes a wild chance on a psychic medium.",
     "cast": [
       {
-        "name": "Joshua Daniel",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png",
-        "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png"
+        "name": "Salome Denoon",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png",
+        "bio": "Salome Denoon is a versatile artist whose creative pursuits span performance, writing, editing, and digital media. As an actress, she has graced both stage and screen. She also brings her talents to the digital realm as the developer of Crate TV.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
       },
       {
-        "name": "Salome Denoon",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+head+shot.png",
-        "bio": "Darrah Lashley is a talented and versatile actress known for her captivating performances. Darrah has received several accolades due to her exceptional talent and dedication to work in independent films and theater productions, showcasing her range and depth.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
+        "name": "Joshua Daniel",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png",
+        "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation.",
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png"
+      },
+      {
+        "name": "Bubacarr Sarge",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
+        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
+      },
+      {
+        "name": "Michelle Reale-Opalesky",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg",
+        "bio": "Michelle Reale-Opalesky is a captivating actor with a remarkable range. She effortlessly inhabits diverse roles and seamlessly transitions between drama and comedy.",
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg"
+      },
+      {
+        "name": "Kayla McFarlane",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
-    "director": "Jalina Wayser",
-    "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/What+If+Trailer+.mp4",
+    "director": "Jalina Wayser ",
+    "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/What+If++The+Movie.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/What+If.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/What+If+instant+TV.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/I+love+you+black.+poster+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/what+If+poster+for+instant+tv+(1920+x+1080+px)+(1925+x+1085+px)+(1920+x+1080+px).png",
     "likes": 0
   }
 };
