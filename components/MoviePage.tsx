@@ -154,16 +154,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       setTitleOpacity(1);
 
       if (movie.key === 'unchienandalou') {
-          // Fix: Changed NodeJS.Timeout to number for browser compatibility.
           const timers: number[] = [];
           
-          timers.push(setTimeout(() => setTitleOpacity(0), 1000));
-          timers.push(setTimeout(() => {
+          timers.push(window.setTimeout(() => setTitleOpacity(0), 1000));
+          timers.push(window.setTimeout(() => {
               setDisplayTitle('An Andalusian Dog');
               setTitleOpacity(1);
           }, 1500));
-          timers.push(setTimeout(() => setTitleOpacity(0), 3500));
-          timers.push(setTimeout(() => {
+          timers.push(window.setTimeout(() => setTitleOpacity(0), 3500));
+          timers.push(window.setTimeout(() => {
               setDisplayTitle('Un Chien Andalou');
               setTitleOpacity(1);
           }, 4000));

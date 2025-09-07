@@ -119,23 +119,22 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     setTitleOpacity(1);
 
     if (movie.key === 'unchienandalou') {
-        // Fix: Changed NodeJS.Timeout to number for browser compatibility.
         const timers: number[] = [];
         
         // 1. Fade out French
-        timers.push(setTimeout(() => setTitleOpacity(0), 1000));
+        timers.push(window.setTimeout(() => setTitleOpacity(0), 1000));
 
         // 2. Change text and fade in English
-        timers.push(setTimeout(() => {
+        timers.push(window.setTimeout(() => {
             setDisplayTitle('An Andalusian Dog');
             setTitleOpacity(1);
         }, 1500));
 
         // 3. Fade out English
-        timers.push(setTimeout(() => setTitleOpacity(0), 3500));
+        timers.push(window.setTimeout(() => setTitleOpacity(0), 3500));
 
         // 4. Change text and fade in French
-        timers.push(setTimeout(() => {
+        timers.push(window.setTimeout(() => {
             setDisplayTitle('Un Chien Andalou');
             setTitleOpacity(1);
         }, 4000));
