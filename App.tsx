@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { categoriesData, moviesData } from './constants.ts';
 import { Movie, Actor } from './types.ts';
-import Intro from './components/Intro.tsx';
 import Header from './components/Header.tsx';
 import Hero from './components/Hero.tsx';
 import MovieCarousel from './components/MovieCarousel.tsx';
@@ -40,7 +39,6 @@ const preloadImages = (urls: string[]) => {
 
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [showIntro, setShowIntro] = useState(!sessionStorage.getItem('introPlayed'));
   const [movies, setMovies] = useState<Record<string, Movie>>({});
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -88,8 +86,9 @@ const App: React.FC = () => {
           setSearchQuery(urlSearchQuery);
         }
 
-        const shouldShowIntro = !sessionStorage.getItem('introPlayed');
-        if (!shouldShowIntro) {
+        // Show feature modal only if intro has already been played
+        const introHasPlayed = sessionStorage.getItem('introPlayed');
+        if (introHasPlayed) {
           if (!localStorage.getItem('featureModalShown')) {
             setShowFeatureModal(true);
           }
@@ -110,34 +109,32 @@ const App: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Preload critical images while the intro is playing
+  // Preload critical images while the app is initializing
   useEffect(() => {
-    if (showIntro) {
-      const imagesToPreload: string[] = [];
+    const imagesToPreload: string[] = [];
 
-      // Get all featured movie posters
-      const featuredKeys = categoriesData.featured?.movieKeys || [];
-      featuredKeys.forEach(key => {
-        const movie = moviesData[key];
+    // Get all featured movie posters
+    const featuredKeys = categoriesData.featured?.movieKeys || [];
+    featuredKeys.forEach(key => {
+      const movie = moviesData[key];
+      if (movie?.poster) {
+        imagesToPreload.push(movie.poster);
+      }
+    });
+
+    // Get the first poster from other main categories
+    Object.entries(categoriesData).forEach(([key, category]) => {
+      if (key !== 'featured' && category.movieKeys.length > 0) {
+        const firstMovieKey = category.movieKeys[0];
+        const movie = moviesData[firstMovieKey];
         if (movie?.poster) {
           imagesToPreload.push(movie.poster);
         }
-      });
+      }
+    });
 
-      // Get the first poster from other main categories
-      Object.entries(categoriesData).forEach(([key, category]) => {
-        if (key !== 'featured' && category.movieKeys.length > 0) {
-          const firstMovieKey = category.movieKeys[0];
-          const movie = moviesData[firstMovieKey];
-          if (movie?.poster) {
-            imagesToPreload.push(movie.poster);
-          }
-        }
-      });
-
-      preloadImages(Array.from(new Set(imagesToPreload))); // Use Set to avoid duplicates
-    }
-  }, [showIntro]);
+    preloadImages(Array.from(new Set(imagesToPreload))); // Use Set to avoid duplicates
+  }, []);
 
   const visibleMovieKeys = useMemo(() => {
     if (isStaging) {
@@ -161,16 +158,6 @@ const App: React.FC = () => {
     });
     return visibleKeys;
   }, [movies, isStaging]);
-
-
-  const handleIntroEnd = () => {
-    sessionStorage.setItem('introPlayed', 'true');
-    setShowIntro(false);
-
-    if (!localStorage.getItem('featureModalShown')) {
-      setShowFeatureModal(true);
-    }
-  };
 
   const handleCloseFeatureModal = () => {
     setShowFeatureModal(false);
@@ -281,10 +268,6 @@ const App: React.FC = () => {
 
   if (isLoading) {
     return <LoadingSpinner />;
-  }
-  
-  if (showIntro) {
-    return <Intro onIntroEnd={handleIntroEnd} />;
   }
   
   return (

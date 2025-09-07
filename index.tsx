@@ -7,6 +7,7 @@ import SubmitPage from './components/SubmitPage.tsx';
 import ClassicsPage from './components/ClassicsPage.tsx';
 import MerchPage from './components/MerchPage.tsx';
 import PublishingGuidePage from './components/RokuGuidePage.tsx';
+import Intro from './components/Intro.tsx';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -17,6 +18,7 @@ const root = ReactDOM.createRoot(rootElement);
 
 const AppRouter: React.FC = () => {
   const [pathname, setPathname] = useState(window.location.pathname);
+  const [showIntro, setShowIntro] = useState(!sessionStorage.getItem('introPlayed'));
 
   useEffect(() => {
     const handleLocationChange = () => {
@@ -46,6 +48,14 @@ const AppRouter: React.FC = () => {
     };
   }, []);
 
+  const handleIntroEnd = () => {
+    sessionStorage.setItem('introPlayed', 'true');
+    setShowIntro(false);
+  };
+
+  if (showIntro) {
+    return <Intro onIntroEnd={handleIntroEnd} />;
+  }
 
   if (pathname.startsWith('/admin')) {
     return <AdminPage />;

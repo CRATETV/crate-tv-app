@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types.ts';
 import { moviesData, categoriesData } from '../constants.ts';
@@ -154,15 +155,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       setTitleOpacity(1);
 
       if (movie.key === 'unchienandalou') {
-          const timers: number[] = [];
+          const timers: ReturnType<typeof setTimeout>[] = [];
           
-          timers.push(window.setTimeout(() => setTitleOpacity(0), 1000));
-          timers.push(window.setTimeout(() => {
+          timers.push(setTimeout(() => setTitleOpacity(0), 1000));
+          timers.push(setTimeout(() => {
               setDisplayTitle('An Andalusian Dog');
               setTitleOpacity(1);
           }, 1500));
-          timers.push(window.setTimeout(() => setTitleOpacity(0), 3500));
-          timers.push(window.setTimeout(() => {
+          timers.push(setTimeout(() => setTitleOpacity(0), 3500));
+          timers.push(setTimeout(() => {
               setDisplayTitle('Un Chien Andalou');
               setTitleOpacity(1);
           }, 4000));

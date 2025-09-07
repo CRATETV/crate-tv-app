@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 
 interface IntroProps {
@@ -32,17 +33,30 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
     };
   }, [desktopSrc, mobileSrc]);
   
-  // Attempt to autoplay the video. If it fails, skip the intro.
+  // A more robust effect to handle video playback
   useEffect(() => {
     const videoElement = videoRef.current;
     if (videoElement) {
-      // Muted autoplay is generally allowed, but some browsers/modes (like iOS Low Power Mode) can block it.
-      videoElement.play().catch(error => {
-        // Autoplay was prevented by the browser.
-        console.warn("Autoplay was prevented, bypassing intro video as requested.", error);
-        // Instead of showing a play button, we skip the intro directly to improve UX.
-        onIntroEnd();
-      });
+      const attemptPlay = () => {
+        // Attempt to play the video
+        videoElement.play().catch(error => {
+          // Autoplay was prevented by the browser (e.g., low power mode).
+          console.warn("Autoplay was prevented, bypassing intro video.", error);
+          // Skip the intro directly to improve UX if autoplay fails.
+          onIntroEnd();
+        });
+      };
+
+      // Listen for the 'canplay' event which signals the video is ready to start.
+      videoElement.addEventListener('canplay', attemptPlay);
+      
+      // Explicitly tell the browser to load the video data.
+      videoElement.load();
+
+      // Cleanup function to remove the event listener.
+      return () => {
+        videoElement.removeEventListener('canplay', attemptPlay);
+      };
     }
   }, [videoSrc, onIntroEnd]); // Rerun when video source changes
 
@@ -55,6 +69,7 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
         className="absolute top-0 left-0 w-full h-full object-cover"
         muted
         playsInline
+        preload="auto"
         onEnded={onIntroEnd}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
