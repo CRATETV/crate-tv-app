@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category } from '../types.ts';
+import DirectorCreditsModal from './DirectorCreditsModal.tsx';
 
 interface MovieDetailsModalProps {
   movie: Movie;
@@ -53,7 +54,12 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
   const [isPosterLoaded, setIsPosterLoaded] = useState(false);
+  const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
   
+  // Title animation state
+  const [displayTitle, setDisplayTitle] = useState(movie.title);
+  const [titleOpacity, setTitleOpacity] = useState(1);
+
   // Player State
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
   const [isPlaying, setIsPlaying] = useState(false);
@@ -100,14 +106,45 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     };
   }, []);
 
-  // Reset player state when movie changes
+  // Reset player state and manage title animation when movie changes
   useEffect(() => {
     setPlayerMode('poster');
     setProgress(0);
     setIsPlaying(false);
     setDuration(0);
     setIsPosterLoaded(false);
-  }, [movie.key]);
+
+    // Title animation logic
+    setDisplayTitle(movie.title);
+    setTitleOpacity(1);
+
+    if (movie.key === 'unchienandalou') {
+        // Fix: Changed NodeJS.Timeout to number for browser compatibility.
+        const timers: number[] = [];
+        
+        // 1. Fade out French
+        timers.push(setTimeout(() => setTitleOpacity(0), 1000));
+
+        // 2. Change text and fade in English
+        timers.push(setTimeout(() => {
+            setDisplayTitle('An Andalusian Dog');
+            setTitleOpacity(1);
+        }, 1500));
+
+        // 3. Fade out English
+        timers.push(setTimeout(() => setTitleOpacity(0), 3500));
+
+        // 4. Change text and fade in French
+        timers.push(setTimeout(() => {
+            setDisplayTitle('Un Chien Andalou');
+            setTitleOpacity(1);
+        }, 4000));
+
+        return () => {
+            timers.forEach(clearTimeout);
+        };
+    }
+  }, [movie.key, movie.title]);
 
   // Programmatic playback effect
   useEffect(() => {
@@ -236,6 +273,11 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     }
   };
 
+  const handleSelectMovieFromDirector = (selectedMovie: Movie) => {
+    onSelectRecommendedMovie(selectedMovie);
+    setSelectedDirector(null);
+  };
+
   const videoSource = movie.fullMovie;
 
   return (
@@ -283,7 +325,12 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
             {/* Poster Overlay Controls */}
             {playerMode === 'poster' && (
                 <div className="absolute bottom-10 left-8 md:left-12 text-white z-10 w-1/2">
-                    <h2 className="text-2xl md:text-5xl font-bold drop-shadow-lg">{movie.title}</h2>
+                    <h2 
+                        className="text-2xl md:text-5xl font-bold drop-shadow-lg transition-opacity duration-500"
+                        style={{ opacity: titleOpacity }}
+                    >
+                        {displayTitle}
+                    </h2>
                     <div className="flex flex-wrap items-center gap-3 mt-4">
                         {movie.fullMovie && (
                              <button onClick={handlePlayMovie} className="flex items-center justify-center px-6 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
@@ -361,7 +408,13 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                         ))}
                     </div>
                     <h3 className="text-lg font-semibold text-gray-400 mt-4 mb-2">Director</h3>
-                    <p className="text-white">{movie.director}</p>
+                    <div className="space-y-2 text-white">
+                        {movie.director.split(',').map(name => name.trim()).filter(Boolean).map(directorName => (
+                            <p key={directorName} className="group cursor-pointer" onClick={() => setSelectedDirector(directorName)}>
+                                <span className="group-hover:text-red-400 transition">{directorName}</span>
+                            </p>
+                        ))}
+                    </div>
                  </div>
             </div>
 
@@ -381,6 +434,14 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
             )}
         </div>
       </div>
+      {selectedDirector && (
+        <DirectorCreditsModal
+            directorName={selectedDirector}
+            onClose={() => setSelectedDirector(null)}
+            allMovies={allMovies}
+            onSelectMovie={handleSelectMovieFromDirector}
+        />
+      )}
     </div>
   );
 };

@@ -13,6 +13,7 @@ import MovieDetailsModal from './components/MovieDetailsModal.tsx';
 import ActorBioModal from './components/ActorBioModal.tsx';
 import MovieCard from './components/MovieCard.tsx';
 import SearchOverlay from './components/SearchOverlay.tsx';
+import StagingBanner from './components/StagingBanner.tsx';
 
 // Pre-compute a map of movie keys to their genre titles for efficient searching.
 const movieToGenresMap = new Map<string, string[]>();
@@ -49,8 +50,19 @@ const App: React.FC = () => {
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [isStaging, setIsStaging] = useState(false);
 
   useEffect(() => {
+    // Check for staging environment
+    const params = new URLSearchParams(window.location.search);
+    const env = params.get('env');
+    if (env === 'staging') {
+      sessionStorage.setItem('crateTvStaging', 'true');
+      setIsStaging(true);
+    } else if (sessionStorage.getItem('crateTvStaging') === 'true') {
+      setIsStaging(true);
+    }
+
     const initApp = () => {
       try {
         // Initialize likes from local storage
@@ -71,7 +83,6 @@ const App: React.FC = () => {
         }
 
         // Handle search query from URL
-        const params = new URLSearchParams(window.location.search);
         const urlSearchQuery = params.get('search');
         if (urlSearchQuery) {
           setSearchQuery(urlSearchQuery);
@@ -129,6 +140,11 @@ const App: React.FC = () => {
   }, [showIntro]);
 
   const visibleMovieKeys = useMemo(() => {
+    if (isStaging) {
+        // In staging, all movies are visible
+        return new Set<string>(Object.keys(movies));
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -144,7 +160,7 @@ const App: React.FC = () => {
       }
     });
     return visibleKeys;
-  }, [movies]);
+  }, [movies, isStaging]);
 
 
   const handleIntroEnd = () => {
@@ -159,6 +175,13 @@ const App: React.FC = () => {
   const handleCloseFeatureModal = () => {
     setShowFeatureModal(false);
     localStorage.setItem('featureModalShown', 'true');
+  };
+
+  const exitStaging = () => {
+    sessionStorage.removeItem('crateTvStaging');
+    const params = new URLSearchParams(window.location.search);
+    params.delete('env');
+    window.location.search = params.toString();
   };
 
   const toggleLikeMovie = useCallback((movieKey: string) => {
@@ -266,12 +289,14 @@ const App: React.FC = () => {
   
   return (
     <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+      {isStaging && <StagingBanner onExit={exitStaging} />}
       <Header 
         searchQuery={searchQuery} 
         onSearch={setSearchQuery} 
         isScrolled={isScrolled}
         onMobileSearchClick={() => setIsMobileSearchOpen(true)}
         onSearchSubmit={handleSearchSubmit}
+        isStaging={isStaging}
       />
       
       <main className="flex-grow overflow-x-hidden">
@@ -314,7 +339,7 @@ const App: React.FC = () => {
             </div>
           ) : (
             <>
-              {Object.entries(categoriesData).filter(([key]) => key !== 'featured').map(([key, value]) => {
+              {Object.entries(categoriesData).filter(([key]) => key !== 'featured' && key !== 'publicDomainIndie').map(([key, value]) => {
                 const categoryMovies = value.movieKeys
                     .filter(movieKey => visibleMovieKeys.has(movieKey))
                     .map(movieKey => movies[movieKey])

@@ -1,0 +1,96 @@
+// This is a Vercel Serverless Function that generates a feed for Instant TV Channel.
+// It will be accessible at the path /api/instant-tv-feed
+
+import { moviesData, categoriesData } from '../constants.ts';
+import { Movie } from '../types.ts';
+
+// Helper function to get movies that are currently released
+const getVisibleMovies = (): Record<string, Movie> => {
+    const visibleMovies: Record<string, Movie> = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    Object.values(moviesData).forEach(movie => {
+      // A movie is visible if it has no release date or the release date is in the past.
+      if (!movie.releaseDate || new Date(movie.releaseDate.replace(/-/g, '/')) <= today) {
+        visibleMovies[movie.key] = movie;
+      }
+    });
+    return visibleMovies;
+};
+
+// Main function to handle the GET request
+export async function GET(request: Request) {
+  try {
+    const visibleMovies = getVisibleMovies();
+    const visibleMovieKeys = new Set(Object.keys(visibleMovies));
+
+    // Transform categories and their movies into the Instant TV Channel format
+    const categories = Object.entries(categoriesData)
+      .filter(([key]) => key !== 'featured') // Exclude the web-only 'featured' category
+      .map(([key, categoryData]) => {
+        
+        const playlist = categoryData.movieKeys
+          .filter(movieKey => visibleMovieKeys.has(movieKey))
+          .map(movieKey => {
+            const movie = visibleMovies[movieKey];
+            const genres = Object.values(categoriesData)
+                .filter(cat => cat.movieKeys.includes(movie.key))
+                .map(cat => cat.title);
+
+            return {
+              title: movie.title,
+              // Instant TV requires both short and long descriptions
+              shortdescription: movie.synopsis.replace(/<br\s*\/?>/gi, ' ').substring(0, 200).trim(),
+              longdescription: movie.synopsis.replace(/<br\s*\/?>/gi, '\n').trim(),
+              thumbnail: movie.tvPoster || movie.poster, // Prioritize TV-specific portrait poster
+              // Instant TV uses a 'stream' object for video URLs
+              stream: {
+                url: movie.fullMovie,
+                bitrate: 1500, // Example bitrate, can be adjusted
+                quality: "HD"
+              },
+              streamformat: "mp4",
+              genres: genres,
+              credits: [
+                { name: movie.director, role: "director" },
+                ...movie.cast.map(c => ({ name: c.name, role: "actor" }))
+              ]
+            };
+          });
+
+        // Only include the category in the final feed if it has visible movies
+        if (playlist.length > 0) {
+          return {
+            name: categoryData.title,
+            playlist: playlist,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean); // Filter out any empty categories
+
+    // Assemble the final feed object
+    const feed = {
+      providerName: "Crate TV",
+      lastUpdated: new Date().toISOString(),
+      language: "en-US",
+      categories: categories,
+    };
+
+    return new Response(JSON.stringify(feed, null, 2), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 's-maxage=3600, stale-while-revalidate', // Cache for 1 hour
+      },
+    });
+  } catch (error) {
+    console.error('Error generating Instant TV feed:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+    return new Response(JSON.stringify({ error: `Failed to generate feed: ${errorMessage}` }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}

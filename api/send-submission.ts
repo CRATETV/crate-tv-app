@@ -92,7 +92,8 @@ export async function POST(request: Request) {
       // and use an address like 'submissions@yourdomain.com'.
       from: 'Crate TV Submissions <noreply@cratetv.net>',
       to: recipientEmail,
-      reply_to: data.email, // Set the filmmaker's email as the reply-to address
+      // Fix: Corrected property name from reply_to to replyTo.
+      replyTo: data.email, // Set the filmmaker's email as the reply-to address
       subject: emailSubject,
       html: emailHtml,
     });

@@ -7,6 +7,8 @@ import Footer from './Footer.tsx';
 import LoadingSpinner from './LoadingSpinner.tsx';
 import BackToTopButton from './BackToTopButton.tsx';
 import SearchOverlay from './SearchOverlay.tsx';
+import StagingBanner from './StagingBanner.tsx';
+import DirectorCreditsModal from './DirectorCreditsModal.tsx';
 
 interface MoviePageProps {
   movieKey: string;
@@ -28,9 +30,20 @@ const setMetaTag = (attr: 'name' | 'property', value: string, content: string) =
 // A self-contained component for displaying a recommended movie with a loading placeholder.
 const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
     const [isLoaded, setIsLoaded] = useState(false);
+
+    const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+        e.preventDefault();
+        // Construct a URL within the current origin to avoid cross-origin errors in sandboxed environments.
+        const newUrl = new URL(path, window.location.href);
+        window.history.pushState({}, '', newUrl.pathname + newUrl.search + newUrl.hash);
+        window.dispatchEvent(new Event('pushstate'));
+        window.scrollTo(0, 0); // Scroll to top for a new page feel
+    };
+
     return (
         <a
             href={`/movie/${movie.key}`}
+            onClick={(e) => handleNavigate(e, `/movie/${movie.key}`)}
             className="group relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 bg-gray-800"
         >
             <img 
@@ -46,16 +59,20 @@ const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
     );
 }
 
-// FIX: Added return with JSX and default export. This component was incomplete, causing it to implicitly return `void` which is not a valid ReactNode. It also lacked an export.
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [movie, setMovie] = useState<Movie | null>(null);
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
+  const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
 
   // Like state
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
+  
+  // Title animation state
+  const [displayTitle, setDisplayTitle] = useState('');
+  const [titleOpacity, setTitleOpacity] = useState(1);
 
   // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
@@ -70,10 +87,36 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  
+  // Staging state
+  const [isStaging, setIsStaging] = useState(false);
 
   useEffect(() => {
-    const movieData = { ...moviesData[movieKey] };
-    if (movieData) {
+    // Check for staging environment on mount
+    const params = new URLSearchParams(window.location.search);
+    const env = params.get('env');
+    const stagingSession = sessionStorage.getItem('crateTvStaging');
+    const stagingActive = env === 'staging' || stagingSession === 'true';
+
+    if (stagingActive) {
+      setIsStaging(true);
+    }
+    
+    const sourceMovie = moviesData[movieKey];
+    if (sourceMovie) {
+      const movieData = { ...sourceMovie };
+       // Check if movie should be visible
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const releaseDate = movieData.releaseDate ? new Date(movieData.releaseDate.replace(/-/g, '/')) : null;
+      const isReleased = !releaseDate || releaseDate <= today;
+
+      if (!isReleased && !stagingActive) {
+        // Movie not found or not released, and we are not in staging
+        window.location.href = '/';
+        return; // Stop processing
+      }
+
       // Initialize likes from local storage for this specific movie
       const storedLikes = localStorage.getItem(`cratetv-${movieKey}-likes`);
       if (storedLikes) {
@@ -82,6 +125,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         movieData.likes = movieData.likes || 0;
       }
       setMovie(movieData);
+      setDisplayTitle(movieData.title); // Initialize display title
 
       // Initialize liked set from local storage
       const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
@@ -90,9 +134,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       }
 
       // Handle play from URL
-      const params = new URLSearchParams(window.location.search);
-      const playMode = params.get('play');
-      if (playMode === 'true' && movieData.fullMovie) {
+      if (params.get('play') === 'true' && movieData.fullMovie) {
         setPlayerMode('full');
         setIsMuted(false);
       }
@@ -102,69 +144,70 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
   }, [movieKey]);
 
-  // SEO Effect
+  // SEO and Title Animation Effect
   useEffect(() => {
     if (movie) {
       document.title = `${movie.title} | Crate TV`;
 
-      const synopsisText = movie.synopsis.replace(/<br\s*\/?>/gi, ' ').trim();
-      const pageUrl = `https://cratetv.net/movie/${movie.key}`;
+      // Title animation logic
+      setDisplayTitle(movie.title);
+      setTitleOpacity(1);
 
-      // Standard meta tags
-      setMetaTag('name', 'description', synopsisText);
-      setMetaTag('name', 'keywords', `crate tv, ${movie.title}, ${movie.director}, ${movie.cast.map(a => a.name).join(', ')}, independent film, short film, Philadelphia film, netflix, prime video, hulu, tubi, peacock, indie streaming`);
+      if (movie.key === 'unchienandalou') {
+          // Fix: Changed NodeJS.Timeout to number for browser compatibility.
+          const timers: number[] = [];
+          
+          timers.push(setTimeout(() => setTitleOpacity(0), 1000));
+          timers.push(setTimeout(() => {
+              setDisplayTitle('An Andalusian Dog');
+              setTitleOpacity(1);
+          }, 1500));
+          timers.push(setTimeout(() => setTitleOpacity(0), 3500));
+          timers.push(setTimeout(() => {
+              setDisplayTitle('Un Chien Andalou');
+              setTitleOpacity(1);
+          }, 4000));
 
-      // Open Graph
-      setMetaTag('property', 'og:title', `${movie.title} | Crate TV`);
-      setMetaTag('property', 'og:description', synopsisText);
-      setMetaTag('property', 'og:url', pageUrl);
-      setMetaTag('property', 'og:image', movie.poster);
-      setMetaTag('property', 'og:type', 'video.movie');
+          const cleanupTimers = () => timers.forEach(clearTimeout);
+          
+          // SEO update logic
+          const synopsisText = movie.synopsis.replace(/<br\s*\/?>/gi, ' ').trim();
+          const pageUrl = `https://cratetv.net/movie/${movie.key}`;
 
-      // Twitter Card
-      setMetaTag('name', 'twitter:card', 'summary_large_image');
-      setMetaTag('name', 'twitter:title', `${movie.title} | Crate TV`);
-      setMetaTag('name', 'twitter:description', synopsisText);
-      setMetaTag('name', 'twitter:image', movie.poster);
+          setMetaTag('name', 'description', synopsisText);
+          setMetaTag('name', 'keywords', `crate tv, ${movie.title}, ${movie.director}, ${movie.cast.map(a => a.name).join(', ')}, independent film, short film, Philadelphia film, netflix, prime video, hulu, tubi, peacock, indie streaming`);
+          setMetaTag('property', 'og:title', `${movie.title} | Crate TV`);
+          setMetaTag('property', 'og:description', synopsisText);
+          setMetaTag('property', 'og:url', pageUrl);
+          setMetaTag('property', 'og:image', movie.poster);
+          setMetaTag('property', 'og:type', 'video.movie');
+          setMetaTag('name', 'twitter:card', 'summary_large_image');
+          setMetaTag('name', 'twitter:title', `${movie.title} | Crate TV`);
+          setMetaTag('name', 'twitter:description', synopsisText);
+          setMetaTag('name', 'twitter:image', movie.poster);
+          
+          const oldSchema = document.getElementById('movie-schema');
+          if (oldSchema) oldSchema.remove();
+          
+          const schema = {
+            "@context": "https://schema.org", "@type": "Movie", "name": movie.title,
+            "description": synopsisText, "image": movie.poster, "url": pageUrl,
+            "director": movie.director.split(',').map(d => d.trim()).filter(Boolean).map(d => ({ "@type": "Person", "name": d })),
+            "actor": movie.cast.map(actor => ({ "@type": "Person", "name": actor.name })),
+            "provider": { "@type": "Organization", "name": "Crate TV", "url": "https://cratetv.net" }
+          };
+          const script = document.createElement('script');
+          script.id = 'movie-schema'; script.type = 'application/ld+json';
+          script.innerHTML = JSON.stringify(schema);
+          document.head.appendChild(script);
 
-      // Add JSON-LD schema
-      const oldSchema = document.getElementById('movie-schema');
-      if (oldSchema) {
-        oldSchema.remove();
+          return () => {
+            cleanupTimers();
+            const oldSchema = document.getElementById('movie-schema');
+            if (oldSchema) oldSchema.remove();
+            document.title = 'Crate TV | Home for Independent Films';
+          };
       }
-      
-      const schema = {
-        "@context": "https://schema.org",
-        "@type": "Movie",
-        "name": movie.title,
-        "description": synopsisText,
-        "image": movie.poster,
-        "url": pageUrl,
-        "director": movie.director.split(',').map(d => ({ "@type": "Person", "name": d.trim() })),
-        "actor": movie.cast.map(actor => ({
-            "@type": "Person",
-            "name": actor.name
-        })),
-        "provider": {
-            "@type": "Organization",
-            "name": "Crate TV",
-            "url": "https://cratetv.net"
-        }
-      };
-
-      const script = document.createElement('script');
-      script.id = 'movie-schema';
-      script.type = 'application/ld+json';
-      script.innerHTML = JSON.stringify(schema);
-      document.head.appendChild(script);
-
-      return () => {
-        const oldSchema = document.getElementById('movie-schema');
-        if (oldSchema) {
-          oldSchema.remove();
-        }
-        document.title = 'Crate TV';
-      };
     }
   }, [movie]);
   
@@ -259,6 +302,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     url.searchParams.set('play', 'true');
     window.history.pushState({}, '', url);
   };
+  
+  const exitStaging = () => {
+    sessionStorage.removeItem('crateTvStaging');
+    const params = new URLSearchParams(window.location.search);
+    params.delete('env');
+    window.location.search = params.toString();
+  };
 
   const togglePlayPause = () => {
     if (videoRef.current) {
@@ -325,6 +375,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
   };
 
+  const handleNavigate = (path: string) => {
+    // Construct a URL within the current origin to avoid cross-origin errors in sandboxed environments.
+    const newUrl = new URL(path, window.location.href);
+    window.history.pushState({}, '', newUrl.pathname + newUrl.search + newUrl.hash);
+    window.dispatchEvent(new Event('pushstate'));
+    window.scrollTo(0, 0);
+  };
+
+  const handleSelectMovieFromDirector = (selectedMovie: Movie) => {
+    setSelectedDirector(null);
+    handleNavigate(`/movie/${selectedMovie.key}`);
+  };
+
   const videoSource = movie?.fullMovie;
   const isLiked = movie ? likedMovies.has(movie.key) : false;
 
@@ -334,12 +397,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   
   return (
     <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+      {isStaging && <StagingBanner onExit={exitStaging} />}
       <Header 
         searchQuery={searchQuery} 
         onSearch={setSearchQuery} 
         isScrolled={true}
         onMobileSearchClick={() => setIsMobileSearchOpen(true)}
         onSearchSubmit={handleSearchSubmit}
+        isStaging={isStaging}
       />
       
       <main className="flex-grow">
@@ -375,7 +440,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
             {playerMode === 'poster' && (
                 <div className="absolute bottom-[20%] left-8 md:left-12 text-white z-10 max-w-xl animate-fadeInHeroContent">
-                    <h1 className="text-3xl md:text-6xl font-bold drop-shadow-lg">{movie.title}</h1>
+                    <h1 
+                        className="text-3xl md:text-6xl font-bold drop-shadow-lg transition-opacity duration-500"
+                        style={{ opacity: titleOpacity }}
+                    >
+                        {displayTitle}
+                    </h1>
                     <div className="flex flex-wrap items-center gap-3 mt-6">
                         {movie.fullMovie && (
                              <button onClick={handlePlayMovie} className="flex items-center justify-center px-6 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
@@ -449,7 +519,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         ))}
                     </div>
                     <h3 className="text-lg font-semibold text-gray-400 mt-4 mb-2">Director</h3>
-                    <p className="text-white">{movie.director}</p>
+                    <div className="space-y-2 text-white">
+                        {movie.director.split(',').map(name => name.trim()).filter(Boolean).map(directorName => (
+                            <p key={directorName} className="group cursor-pointer" onClick={() => setSelectedDirector(directorName)}>
+                                <span className="group-hover:text-red-400 transition">{directorName}</span>
+                            </p>
+                        ))}
+                    </div>
                  </div>
             </div>
 
@@ -471,6 +547,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       
       {selectedActor && (
           <ActorBioModal actor={selectedActor} onClose={handleCloseActorModal} />
+      )}
+      {selectedDirector && (
+        <DirectorCreditsModal
+            directorName={selectedDirector}
+            onClose={() => setSelectedDirector(null)}
+            allMovies={moviesData}
+            onSelectMovie={handleSelectMovieFromDirector}
+        />
       )}
       {isMobileSearchOpen && (
         <SearchOverlay 
