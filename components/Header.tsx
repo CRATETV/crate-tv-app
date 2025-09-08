@@ -29,11 +29,28 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
     window.dispatchEvent(new Event('pushstate'));
   };
 
+  const pathname = window.location.pathname;
+  const linkBaseStyles = "px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200";
+  const activeLinkStyles = "bg-white/10 text-white";
+  const inactiveLinkStyles = "text-gray-300 hover:bg-white/20 hover:text-white";
+
   return (
-    <header className={`fixed left-0 w-full z-40 px-4 md:px-8 py-4 flex justify-between items-center transition-all duration-500 ${isStaging ? 'top-8' : 'top-0'} ${isScrolled ? 'bg-[#141414]' : 'bg-gradient-to-b from-black/70 to-transparent'}`}>
-      <div className="flex items-center gap-4 md:gap-6 -translate-y-0.5">
-        <a href="/" onClick={(e) => handleNavigate(e, '/')} className="text-white font-medium hover:text-gray-300 transition-colors">Home</a>
-        <a href="/classics" onClick={(e) => handleNavigate(e, '/classics')} className="text-white font-medium hover:text-gray-300 transition-colors">Classics</a>
+    <header className={`fixed left-0 w-full z-40 px-4 md:px-8 py-3 flex justify-between items-center transition-all duration-500 ${isStaging ? 'top-8' : 'top-0'} ${isScrolled ? 'bg-[#141414]' : 'bg-gradient-to-b from-black/70 to-transparent'}`}>
+      <div className="flex items-center gap-2 md:gap-4">
+        <a 
+          href="/" 
+          onClick={(e) => handleNavigate(e, '/')} 
+          className={`${linkBaseStyles} ${pathname === '/' ? activeLinkStyles : inactiveLinkStyles}`}
+        >
+          Home
+        </a>
+        <a 
+          href="/classics" 
+          onClick={(e) => handleNavigate(e, '/classics')} 
+          className={`${linkBaseStyles} ${pathname.startsWith('/classics') ? activeLinkStyles : inactiveLinkStyles}`}
+        >
+          Classics
+        </a>
       </div>
       <div className="flex items-center gap-4">
         {showSearch && (
