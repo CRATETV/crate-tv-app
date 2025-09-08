@@ -322,24 +322,32 @@ const App: React.FC = () => {
             </div>
           ) : (
             <>
-              {Object.entries(categoriesData).filter(([key]) => key !== 'featured' && key !== 'publicDomainIndie').map(([key, value]) => {
-                const categoryMovies = value.movieKeys
-                    .filter(movieKey => visibleMovieKeys.has(movieKey))
-                    .map(movieKey => movies[movieKey])
-                    .filter(Boolean);
-                
-                if(categoryMovies.length === 0) return null;
+              {Object.entries(categoriesData)
+                .filter(([key]) => key !== 'featured' && key !== 'publicDomainIndie')
+                .map(([key, value]) => {
+                  const categoryMovies = value.movieKeys
+                      .filter(movieKey => visibleMovieKeys.has(movieKey))
+                      .map(movieKey => movies[movieKey])
+                      .filter(Boolean);
+                  
+                  if(categoryMovies.length === 0) return null;
 
-                const sortedMovies = [...categoryMovies].sort((a, b) => b.likes - a.likes);
+                  const sortedMovies = [...categoryMovies].sort((a, b) => b.likes - a.likes);
 
-                return (
-                  <MovieCarousel
-                    key={key}
-                    title={value.title}
-                    movies={sortedMovies}
-                    onSelectMovie={handleSelectMovie}
-                  />
-                );
+                  const carousel = (
+                    <MovieCarousel
+                      key={key}
+                      title={value.title}
+                      movies={sortedMovies}
+                      onSelectMovie={handleSelectMovie}
+                    />
+                  );
+
+                  if (key === 'newReleases') {
+                    return <div key={key} className="hidden md:block">{carousel}</div>;
+                  }
+
+                  return carousel;
               })}
             </>
           )}

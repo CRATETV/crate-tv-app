@@ -72,6 +72,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // Title animation state
   const [displayTitle, setDisplayTitle] = useState('');
   const [titleOpacity, setTitleOpacity] = useState(1);
+  const [isAnimatingTitle, setIsAnimatingTitle] = useState(false);
 
   // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
@@ -143,73 +144,85 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
   }, [movieKey]);
 
-  // SEO and Title Animation Effect
+  // SEO and Initial Title Setup
   useEffect(() => {
     if (movie) {
-      document.title = `${movie.title} | Crate TV`;
-
-      // SEO update logic for all movies
-      const synopsisText = movie.synopsis.replace(/<br\s*\/?>/gi, ' ').trim();
-      const pageUrl = `https://cratetv.net/movie/${movie.key}`;
-
-      setMetaTag('name', 'description', synopsisText);
-      setMetaTag('name', 'keywords', `crate tv, ${movie.title}, ${movie.director}, ${movie.cast.map(a => a.name).join(', ')}, independent film, short film, Philadelphia film, netflix, prime video, hulu, tubi, peacock, indie streaming`);
-      setMetaTag('property', 'og:title', `${movie.title} | Crate TV`);
-      setMetaTag('property', 'og:description', synopsisText);
-      setMetaTag('property', 'og:url', pageUrl);
-      setMetaTag('property', 'og:image', movie.poster);
-      setMetaTag('property', 'og:type', 'video.movie');
-      setMetaTag('name', 'twitter:card', 'summary_large_image');
-      setMetaTag('name', 'twitter:title', `${movie.title} | Crate TV`);
-      setMetaTag('name', 'twitter:description', synopsisText);
-      setMetaTag('name', 'twitter:image', movie.poster);
-      
-      const oldSchema = document.getElementById('movie-schema');
-      if (oldSchema) oldSchema.remove();
-      
-      const schema = {
-        "@context": "https://schema.org", "@type": "Movie", "name": movie.title,
-        "description": synopsisText, "image": movie.poster, "url": pageUrl,
-        "director": movie.director.split(',').map(d => d.trim()).filter(Boolean).map(d => ({ "@type": "Person", "name": d })),
-        "actor": movie.cast.map(actor => ({ "@type": "Person", "name": actor.name })),
-        "provider": { "@type": "Organization", "name": "Crate TV", "url": "https://cratetv.net" }
-      };
-      const script = document.createElement('script');
-      script.id = 'movie-schema'; script.type = 'application/ld+json';
-      script.innerHTML = JSON.stringify(schema);
-      document.head.appendChild(script);
-      
-      // Title animation logic
-      setDisplayTitle(movie.title);
-      setTitleOpacity(1);
-      let cleanupTimers = () => {};
-
-      if (movie.key === 'unchienandalou') {
-          const timers: ReturnType<typeof setTimeout>[] = [];
-          
-          timers.push(setTimeout(() => setTitleOpacity(0), 1000));
-          timers.push(setTimeout(() => {
-              setDisplayTitle('An Andalusian Dog');
-              setTitleOpacity(1);
-          }, 1500));
-          timers.push(setTimeout(() => setTitleOpacity(0), 3500));
-          timers.push(setTimeout(() => {
-              setDisplayTitle('Un Chien Andalou');
-              setTitleOpacity(1);
-          }, 4000));
-
-          cleanupTimers = () => timers.forEach(clearTimeout);
-      }
-      
-      return () => {
-        cleanupTimers();
+        document.title = `${movie.title} | Crate TV`;
+        
+        // SEO update logic
+        const synopsisText = movie.synopsis.replace(/<br\s*\/?>/gi, ' ').trim();
+        const pageUrl = `https://cratetv.net/movie/${movie.key}`;
+        
+        setMetaTag('name', 'description', synopsisText);
+        setMetaTag('name', 'keywords', `crate tv, ${movie.title}, ${movie.director}, ${movie.cast.map(a => a.name).join(', ')}, independent film, short film, Philadelphia film, netflix, prime video, hulu, tubi, peacock, indie streaming`);
+        setMetaTag('property', 'og:title', `${movie.title} | Crate TV`);
+        setMetaTag('property', 'og:description', synopsisText);
+        setMetaTag('property', 'og:url', pageUrl);
+        setMetaTag('property', 'og:image', movie.poster);
+        setMetaTag('property', 'og:type', 'video.movie');
+        setMetaTag('name', 'twitter:card', 'summary_large_image');
+        setMetaTag('name', 'twitter:title', `${movie.title} | Crate TV`);
+        setMetaTag('name', 'twitter:description', synopsisText);
+        setMetaTag('name', 'twitter:image', movie.poster);
+        
         const oldSchema = document.getElementById('movie-schema');
         if (oldSchema) oldSchema.remove();
-        document.title = 'Crate TV | Home for Independent Films';
-      };
+        
+        const schema = {
+          "@context": "https://schema.org", "@type": "Movie", "name": movie.title,
+          "description": synopsisText, "image": movie.poster, "url": pageUrl,
+          "director": movie.director.split(',').map(d => d.trim()).filter(Boolean).map(d => ({ "@type": "Person", "name": d })),
+          "actor": movie.cast.map(actor => ({ "@type": "Person", "name": actor.name })),
+          "provider": { "@type": "Organization", "name": "Crate TV", "url": "https://cratetv.net" }
+        };
+        const script = document.createElement('script');
+        script.id = 'movie-schema'; script.type = 'application/ld+json';
+        script.innerHTML = JSON.stringify(schema);
+        document.head.appendChild(script);
+        
+        // Set initial title without animation
+        setDisplayTitle(movie.title);
+        setTitleOpacity(1);
+
+        return () => {
+          const oldSchema = document.getElementById('movie-schema');
+          if (oldSchema) oldSchema.remove();
+          document.title = 'Crate TV | Home for Independent Films';
+        };
     }
   }, [movie]);
   
+  const handleTitleClick = () => {
+    if (movie?.key !== 'unchienandalou' || isAnimatingTitle) {
+      return;
+    }
+    
+    setIsAnimatingTitle(true);
+    
+    // Fade out original title
+    setTitleOpacity(0);
+    
+    setTimeout(() => {
+        // Change to English and fade in
+        setDisplayTitle('An Andalusian Dog');
+        setTitleOpacity(1);
+        
+        setTimeout(() => {
+            // Fade out English title
+            setTitleOpacity(0);
+            
+            setTimeout(() => {
+                // Change back to French and fade in
+                setDisplayTitle('Un Chien Andalou');
+                setTitleOpacity(1);
+                setIsAnimatingTitle(false); // Re-enable clicks
+            }, 500);
+            
+        }, 2000);
+        
+    }, 500);
+  };
+
   useEffect(() => {
     const onFullscreenChange = () => {
       const isFs = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
@@ -440,8 +453,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             {playerMode === 'poster' && (
                 <div className="absolute bottom-[12%] md:bottom-[20%] left-8 md:left-12 text-white z-10 max-w-xl animate-fadeInHeroContent">
                     <h1 
-                        className="text-3xl md:text-6xl font-bold drop-shadow-lg transition-opacity duration-500"
+                        className={`text-3xl md:text-6xl font-bold drop-shadow-lg transition-opacity duration-500 ${movie.key === 'unchienandalou' ? 'cursor-pointer' : ''}`}
                         style={{ opacity: titleOpacity }}
+                        onClick={handleTitleClick}
                     >
                         {displayTitle}
                     </h1>
