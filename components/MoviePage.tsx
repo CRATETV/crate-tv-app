@@ -144,8 +144,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
   }, [movieKey]);
 
-  // SEO and Initial Title Setup
+  // SEO and Title Animation
   useEffect(() => {
+    // FIX: Changed NodeJS.Timeout to ReturnType<typeof setTimeout> for browser compatibility.
+    let animationTimers: ReturnType<typeof setTimeout>[] = [];
     if (movie) {
         document.title = `${movie.title} | Crate TV`;
         
@@ -180,11 +182,41 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         script.innerHTML = JSON.stringify(schema);
         document.head.appendChild(script);
         
-        // Set initial title without animation
-        setDisplayTitle(movie.title);
-        setTitleOpacity(1);
+        // --- START: Automatic title animation ---
+        if (movie.key === 'unchienandalou') {
+            setIsAnimatingTitle(true);
+
+            // 1. Initial delay before starting animation
+            animationTimers.push(setTimeout(() => {
+                setTitleOpacity(0); // Fade out French
+
+                // 2. Show English
+                animationTimers.push(setTimeout(() => {
+                    setDisplayTitle('An Andalusian Dog');
+                    setTitleOpacity(1); // Fade in English
+
+                    // 3. Hold English
+                    animationTimers.push(setTimeout(() => {
+                        setTitleOpacity(0); // Fade out English
+
+                        // 4. Show French again
+                        animationTimers.push(setTimeout(() => {
+                            setDisplayTitle('Un Chien Andalou');
+                            setTitleOpacity(1); // Fade in French
+                            setIsAnimatingTitle(false);
+                        }, 500));
+                    }, 2000));
+                }, 500));
+            }, 1000)); // Start animation 1 second after page load
+        } else {
+            // Ensure title is correct for other movies
+            setDisplayTitle(movie.title);
+            setTitleOpacity(1);
+        }
+        // --- END: Automatic title animation ---
 
         return () => {
+          animationTimers.forEach(clearTimeout);
           const oldSchema = document.getElementById('movie-schema');
           if (oldSchema) oldSchema.remove();
           document.title = 'Crate TV | Home for Independent Films';
@@ -192,37 +224,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
   }, [movie]);
   
-  const handleTitleClick = () => {
-    if (movie?.key !== 'unchienandalou' || isAnimatingTitle) {
-      return;
-    }
-    
-    setIsAnimatingTitle(true);
-    
-    // Fade out original title
-    setTitleOpacity(0);
-    
-    setTimeout(() => {
-        // Change to English and fade in
-        setDisplayTitle('An Andalusian Dog');
-        setTitleOpacity(1);
-        
-        setTimeout(() => {
-            // Fade out English title
-            setTitleOpacity(0);
-            
-            setTimeout(() => {
-                // Change back to French and fade in
-                setDisplayTitle('Un Chien Andalou');
-                setTitleOpacity(1);
-                setIsAnimatingTitle(false); // Re-enable clicks
-            }, 500);
-            
-        }, 2000);
-        
-    }, 500);
-  };
-
   useEffect(() => {
     const onFullscreenChange = () => {
       const isFs = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
@@ -453,9 +454,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             {playerMode === 'poster' && (
                 <div className="absolute bottom-[12%] md:bottom-[20%] left-8 md:left-12 text-white z-10 max-w-xl animate-fadeInHeroContent">
                     <h1 
-                        className={`text-3xl md:text-6xl font-bold drop-shadow-lg transition-opacity duration-500 ${movie.key === 'unchienandalou' ? 'cursor-pointer' : ''}`}
+                        className="text-3xl md:text-6xl font-bold drop-shadow-lg transition-opacity duration-500"
                         style={{ opacity: titleOpacity }}
-                        onClick={handleTitleClick}
                     >
                         {displayTitle}
                     </h1>

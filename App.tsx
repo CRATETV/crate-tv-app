@@ -334,20 +334,15 @@ const App: React.FC = () => {
 
                   const sortedMovies = [...categoryMovies].sort((a, b) => b.likes - a.likes);
 
-                  const carousel = (
+                  return (
                     <MovieCarousel
                       key={key}
                       title={value.title}
                       movies={sortedMovies}
                       onSelectMovie={handleSelectMovie}
+                      hideTitleOnMobile={key === 'newReleases'}
                     />
                   );
-
-                  if (key === 'newReleases') {
-                    return <div key={key} className="hidden md:block">{carousel}</div>;
-                  }
-
-                  return carousel;
               })}
             </>
           )}

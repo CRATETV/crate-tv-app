@@ -6,9 +6,10 @@ interface MovieCarouselProps {
   title: string;
   movies: Movie[];
   onSelectMovie: (movie: Movie) => void;
+  hideTitleOnMobile?: boolean;
 }
 
-const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie }) => {
+const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, hideTitleOnMobile }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isAtStart, setIsAtStart] = useState(true);
   const [isAtEnd, setIsAtEnd] = useState(false);
@@ -55,7 +56,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {title && <h2 className="text-lg md:text-2xl font-bold mb-4 text-white hover:text-gray-300 transition-colors cursor-pointer">{title}</h2>}
+      {title && <h2 className={`text-lg md:text-2xl font-bold mb-4 text-white hover:text-gray-300 transition-colors cursor-pointer ${hideTitleOnMobile ? 'hidden md:block' : ''}`}>{title}</h2>}
       
       <div className="relative">
         <div 
