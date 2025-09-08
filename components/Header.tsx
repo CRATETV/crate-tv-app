@@ -24,9 +24,8 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
 
   const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
     e.preventDefault();
-    // Construct a URL within the current origin to avoid cross-origin errors in sandboxed environments.
-    const newUrl = new URL(path, window.location.href);
-    window.history.pushState({}, '', newUrl.pathname + newUrl.search + newUrl.hash);
+    // Use relative path directly to avoid issues in sandboxed environments
+    window.history.pushState({}, '', path);
     window.dispatchEvent(new Event('pushstate'));
   };
 

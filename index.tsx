@@ -6,6 +6,7 @@ import MoviePage from './components/MoviePage.tsx';
 import MerchPage from './components/MerchPage.tsx';
 import PublishingGuidePage from './components/RokuGuidePage.tsx';
 import ClassicsPage from './components/ClassicsPage.tsx';
+import SubmitPage from './components/SubmitPage.tsx';
 import Intro from './components/Intro.tsx';
 
 const rootElement = document.getElementById('root');
@@ -67,9 +68,13 @@ const AppRouter: React.FC = () => {
   if (pathname.startsWith('/publishing-guide')) {
     return <PublishingGuidePage />;
   }
-
+  
   if (pathname.startsWith('/classics')) {
     return <ClassicsPage />;
+  }
+
+  if (pathname.startsWith('/submit')) {
+    return <SubmitPage />;
   }
 
   if (pathname.startsWith('/movie/')) {

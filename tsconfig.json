@@ -18,6 +18,6 @@
     "allowImportingTsExtensions": true
   },
   "include": ["."],
-  "exclude": ["vite.config.ts"],
+  "exclude": ["vite.config.ts", "api"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

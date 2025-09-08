@@ -88,12 +88,10 @@ export async function POST(request: Request) {
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     await resend.emails.send({
-      // IMPORTANT: To prevent emails from going to spam, you should verify a domain with Resend
-      // and use an address like 'submissions@yourdomain.com'.
       from: 'Crate TV Submissions <noreply@cratetv.net>',
       to: recipientEmail,
-      // Fix: Corrected `reply_to` to `replyTo` to match the Resend SDK's CreateEmailOptions type.
-      replyTo: data.email, // Set the filmmaker's email as the reply-to address
+      // FIX: Corrected property name from `reply_to` to `replyTo` to match the Resend SDK type.
+      replyTo: data.email,
       subject: emailSubject,
       html: emailHtml,
     });

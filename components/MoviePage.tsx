@@ -34,9 +34,8 @@ const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
 
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
         e.preventDefault();
-        // Construct a URL within the current origin to avoid cross-origin errors in sandboxed environments.
-        const newUrl = new URL(path, window.location.href);
-        window.history.pushState({}, '', newUrl.pathname + newUrl.search + newUrl.hash);
+        // Use relative path directly to avoid issues in sandboxed environments
+        window.history.pushState({}, '', path);
         window.dispatchEvent(new Event('pushstate'));
         window.scrollTo(0, 0); // Scroll to top for a new page feel
     };
@@ -298,9 +297,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     setPlayerMode('full');
     setIsMuted(false);
     
-    const url = new URL(window.location.href);
-    url.searchParams.set('play', 'true');
-    window.history.pushState({}, '', url);
+    const params = new URLSearchParams(window.location.search);
+    params.set('play', 'true');
+    const newPath = `${window.location.pathname}?${params.toString()}`;
+    window.history.pushState({}, '', newPath);
   };
   
   const exitStaging = () => {
@@ -376,9 +376,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   };
 
   const handleNavigate = (path: string) => {
-    // Construct a URL within the current origin to avoid cross-origin errors in sandboxed environments.
-    const newUrl = new URL(path, window.location.href);
-    window.history.pushState({}, '', newUrl.pathname + newUrl.search + newUrl.hash);
+    // Use relative path directly to avoid issues in sandboxed environments
+    window.history.pushState({}, '', path);
     window.dispatchEvent(new Event('pushstate'));
     window.scrollTo(0, 0);
   };

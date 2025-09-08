@@ -66,8 +66,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     }
     // Update URL to reflect the currently viewed movie
     if (window.history.replaceState) {
-        const url = new URL(window.location.href);
-        const path = `/movie/${movie.key}${url.search}`;
+        const path = `/movie/${movie.key}${window.location.search}`;
         window.history.replaceState({ path }, '', path);
     }
   }, [movie]);
@@ -115,8 +114,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
   const closeAndResetUrl = () => {
     if (window.history.replaceState) {
-      const url = new URL(window.location.href);
-      const path = `/${url.search}`;
+      const path = `/${window.location.search}`;
       window.history.replaceState({ path }, '', path);
     }
     onClose();
@@ -153,8 +151,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   }, [movie, allMovies, allCategories]);
 
   const handleNavigate = (path: string) => {
-    const newUrl = new URL(path, window.location.href);
-    window.history.pushState({}, '', newUrl.pathname + newUrl.search + newUrl.hash);
+    window.history.pushState({}, '', path);
     window.dispatchEvent(new Event('pushstate'));
   }
 

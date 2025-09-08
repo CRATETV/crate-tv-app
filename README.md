@@ -6,6 +6,7 @@ Crate TV is a sleek, professional, and fully-featured streaming web application 
 
 - **Modern & Responsive UI**: A Netflix-inspired interface that looks great on all devices, from desktops to mobile phones.
 - **Dynamic Content**: All movie and category data is centralized in `constants.ts`, making content updates simple and code-free.
+- **Film Submission Form**: A dedicated page for filmmakers to submit their work, which sends a formatted email to the site admin using Resend.
 - **AI-Powered Bios**: Click on any actor to see their bio and a unique, AI-generated "fun fact" powered by the Gemini API.
 - **Advanced Search**: Instantly search for movies by title, actor, or genre.
 - **Persistent Likes**: Users can "like" movies, and their preferences are saved in their browser's local storage.
@@ -19,9 +20,10 @@ Crate TV is a sleek, professional, and fully-featured streaming web application 
 ## 🚀 Quick Start & Deployment
 
 ### 1. Set Up Environment Variables
-This project requires an API key for its AI features. You will need to configure this in your deployment environment (e.g., Vercel).
+This project requires API keys for its AI and email features. You will need to configure these in your deployment environment (e.g., Vercel).
 
 -   `API_KEY`: Your Google Gemini API key.
+-   `RESEND_API_KEY`: Your API key from Resend for handling email submissions.
 
 ### 2. Deploy to Vercel
 The simplest way to get started is to deploy this repository directly to Vercel.
@@ -82,6 +84,7 @@ If you wish to run the application on your local machine for development purpose
     Create a file named `.env.local` in the root of the project and add your API keys:
     ```
     API_KEY=your_gemini_api_key
+    RESEND_API_KEY=your_resend_api_key
     ```
     *Note: Vite automatically loads `.env.local` files, but these will not be used by the Vercel deployment.*
 
