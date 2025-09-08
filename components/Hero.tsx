@@ -25,7 +25,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
       <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent"></div>
 
       <div className="absolute inset-0 flex flex-col justify-center p-8 md:p-12 lg:p-24">
-        <div key={movie.key} className="max-w-xl animate-fadeInHeroContent mt-16 md:mt-0">
+        <div key={movie.key} className="max-w-xl animate-fadeInHeroContent mt-8 md:mt-0">
           <h1 id="hero-movie-title" className="text-3xl sm:text-4xl md:text-6xl font-bold text-white shadow-lg">
             {movie.title}
           </h1>
@@ -35,13 +35,13 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
           <div className="mt-6 flex flex-wrap gap-4">
             <button
               onClick={() => onSelectMovie(movie)}
-              className="flex items-center justify-center px-4 py-1.5 text-sm sm:px-8 sm:py-3 sm:text-base bg-gray-500/60 text-white font-bold rounded-md hover:bg-gray-500/40 transition-colors"
+              className="flex items-center justify-center p-2 rounded-full sm:px-8 sm:py-3 sm:rounded-md sm:text-base bg-gray-500/60 text-white font-bold hover:bg-gray-500/40 transition-colors"
               aria-label={`More information about ${movie.title}`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-7 sm:w-7 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 sm:h-7 sm:w-7 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              More Info
+              <span className="hidden sm:inline">More Info</span>
             </button>
           </div>
         </div>
