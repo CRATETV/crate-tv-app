@@ -10,9 +10,7 @@ Crate TV is a sleek, professional, and fully-featured streaming web application 
 - **Advanced Search**: Instantly search for movies by title, actor, or genre.
 - **Persistent Likes**: Users can "like" movies, and their preferences are saved in their browser's local storage.
 - **Dedicated Movie Pages**: Every film has a unique, shareable URL with automatically generated SEO and schema markup for better discovery on search engines.
-- **"Classics" Section**: A curated page featuring influential public domain independent films that shaped cinema history.
 - **Staging Environment**: Preview unreleased movies by adding `?env=staging` to the URL. A banner indicates you're in preview mode.
-- **Film Submission Form**: A built-in page for filmmakers to submit their work, which sends a formatted email notification via the Resend API.
 - **Built-in Admin Panel**: A password-protected page (`/admin`) to perform mock CRUD operations on movie data.
 - **Automated Roku Channel Packager**: A one-click tool in the Admin Panel that generates a complete, ready-to-upload Roku channel ZIP file, automatically configured to pull data from your live web app.
 
@@ -21,10 +19,9 @@ Crate TV is a sleek, professional, and fully-featured streaming web application 
 ## 🚀 Quick Start & Deployment
 
 ### 1. Set Up Environment Variables
-This project requires API keys for its AI and email features. You will need to configure these in your deployment environment (e.g., Vercel).
+This project requires an API key for its AI features. You will need to configure this in your deployment environment (e.g., Vercel).
 
 -   `API_KEY`: Your Google Gemini API key.
--   `RESEND_API_KEY`: Your Resend API key for the film submission form.
 
 ### 2. Deploy to Vercel
 The simplest way to get started is to deploy this repository directly to Vercel.
@@ -85,7 +82,6 @@ If you wish to run the application on your local machine for development purpose
     Create a file named `.env.local` in the root of the project and add your API keys:
     ```
     API_KEY=your_gemini_api_key
-    RESEND_API_KEY=your_resend_api_key
     ```
     *Note: Vite automatically loads `.env.local` files, but these will not be used by the Vercel deployment.*
 

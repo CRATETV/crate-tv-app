@@ -14,12 +14,6 @@ const Footer: React.FC = () => {
       <div className="max-w-5xl mx-auto">
         <ul className="flex flex-wrap items-center justify-center gap-x-6 sm:gap-x-8 gap-y-4 text-sm">
           <li>
-            <a href="/submit" onClick={(e) => handleNavigate(e, '/submit')} className="hover:text-white transition text-red-500 hover:text-red-400 font-bold">Submit Your Film</a>
-          </li>
-          <li>
-            <a href="/classics" onClick={(e) => handleNavigate(e, '/classics')} className="hover:text-white transition">Classics</a>
-          </li>
-          <li>
             <a href="mailto:cratetiv@gmail.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Contact Us</a>
           </li>
           <li>
