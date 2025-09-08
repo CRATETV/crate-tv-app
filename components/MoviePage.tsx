@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types.ts';
 import { moviesData, categoriesData } from '../constants.ts';
@@ -149,9 +148,41 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     if (movie) {
       document.title = `${movie.title} | Crate TV`;
 
+      // SEO update logic for all movies
+      const synopsisText = movie.synopsis.replace(/<br\s*\/?>/gi, ' ').trim();
+      const pageUrl = `https://cratetv.net/movie/${movie.key}`;
+
+      setMetaTag('name', 'description', synopsisText);
+      setMetaTag('name', 'keywords', `crate tv, ${movie.title}, ${movie.director}, ${movie.cast.map(a => a.name).join(', ')}, independent film, short film, Philadelphia film, netflix, prime video, hulu, tubi, peacock, indie streaming`);
+      setMetaTag('property', 'og:title', `${movie.title} | Crate TV`);
+      setMetaTag('property', 'og:description', synopsisText);
+      setMetaTag('property', 'og:url', pageUrl);
+      setMetaTag('property', 'og:image', movie.poster);
+      setMetaTag('property', 'og:type', 'video.movie');
+      setMetaTag('name', 'twitter:card', 'summary_large_image');
+      setMetaTag('name', 'twitter:title', `${movie.title} | Crate TV`);
+      setMetaTag('name', 'twitter:description', synopsisText);
+      setMetaTag('name', 'twitter:image', movie.poster);
+      
+      const oldSchema = document.getElementById('movie-schema');
+      if (oldSchema) oldSchema.remove();
+      
+      const schema = {
+        "@context": "https://schema.org", "@type": "Movie", "name": movie.title,
+        "description": synopsisText, "image": movie.poster, "url": pageUrl,
+        "director": movie.director.split(',').map(d => d.trim()).filter(Boolean).map(d => ({ "@type": "Person", "name": d })),
+        "actor": movie.cast.map(actor => ({ "@type": "Person", "name": actor.name })),
+        "provider": { "@type": "Organization", "name": "Crate TV", "url": "https://cratetv.net" }
+      };
+      const script = document.createElement('script');
+      script.id = 'movie-schema'; script.type = 'application/ld+json';
+      script.innerHTML = JSON.stringify(schema);
+      document.head.appendChild(script);
+      
       // Title animation logic
       setDisplayTitle(movie.title);
       setTitleOpacity(1);
+      let cleanupTimers = () => {};
 
       if (movie.key === 'unchienandalou') {
           const timers: ReturnType<typeof setTimeout>[] = [];
@@ -167,46 +198,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
               setTitleOpacity(1);
           }, 4000));
 
-          const cleanupTimers = () => timers.forEach(clearTimeout);
-          
-          // SEO update logic
-          const synopsisText = movie.synopsis.replace(/<br\s*\/?>/gi, ' ').trim();
-          const pageUrl = `https://cratetv.net/movie/${movie.key}`;
-
-          setMetaTag('name', 'description', synopsisText);
-          setMetaTag('name', 'keywords', `crate tv, ${movie.title}, ${movie.director}, ${movie.cast.map(a => a.name).join(', ')}, independent film, short film, Philadelphia film, netflix, prime video, hulu, tubi, peacock, indie streaming`);
-          setMetaTag('property', 'og:title', `${movie.title} | Crate TV`);
-          setMetaTag('property', 'og:description', synopsisText);
-          setMetaTag('property', 'og:url', pageUrl);
-          setMetaTag('property', 'og:image', movie.poster);
-          setMetaTag('property', 'og:type', 'video.movie');
-          setMetaTag('name', 'twitter:card', 'summary_large_image');
-          setMetaTag('name', 'twitter:title', `${movie.title} | Crate TV`);
-          setMetaTag('name', 'twitter:description', synopsisText);
-          setMetaTag('name', 'twitter:image', movie.poster);
-          
-          const oldSchema = document.getElementById('movie-schema');
-          if (oldSchema) oldSchema.remove();
-          
-          const schema = {
-            "@context": "https://schema.org", "@type": "Movie", "name": movie.title,
-            "description": synopsisText, "image": movie.poster, "url": pageUrl,
-            "director": movie.director.split(',').map(d => d.trim()).filter(Boolean).map(d => ({ "@type": "Person", "name": d })),
-            "actor": movie.cast.map(actor => ({ "@type": "Person", "name": actor.name })),
-            "provider": { "@type": "Organization", "name": "Crate TV", "url": "https://cratetv.net" }
-          };
-          const script = document.createElement('script');
-          script.id = 'movie-schema'; script.type = 'application/ld+json';
-          script.innerHTML = JSON.stringify(schema);
-          document.head.appendChild(script);
-
-          return () => {
-            cleanupTimers();
-            const oldSchema = document.getElementById('movie-schema');
-            if (oldSchema) oldSchema.remove();
-            document.title = 'Crate TV | Home for Independent Films';
-          };
+          cleanupTimers = () => timers.forEach(clearTimeout);
       }
+      
+      return () => {
+        cleanupTimers();
+        const oldSchema = document.getElementById('movie-schema');
+        if (oldSchema) oldSchema.remove();
+        document.title = 'Crate TV | Home for Independent Films';
+      };
     }
   }, [movie]);
   
@@ -438,7 +438,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             )}
 
             {playerMode === 'poster' && (
-                <div className="absolute bottom-[20%] left-8 md:left-12 text-white z-10 max-w-xl animate-fadeInHeroContent">
+                <div className="absolute bottom-[12%] md:bottom-[20%] left-8 md:left-12 text-white z-10 max-w-xl animate-fadeInHeroContent">
                     <h1 
                         className="text-3xl md:text-6xl font-bold drop-shadow-lg transition-opacity duration-500"
                         style={{ opacity: titleOpacity }}

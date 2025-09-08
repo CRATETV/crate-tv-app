@@ -25,7 +25,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
       <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent"></div>
 
       <div className="absolute inset-0 flex flex-col justify-center p-8 md:p-12 lg:p-24">
-        <div key={movie.key} className="max-w-xl animate-fadeInHeroContent">
+        <div key={movie.key} className="max-w-xl animate-fadeInHeroContent mt-16 md:mt-0">
           <h1 id="hero-movie-title" className="text-3xl sm:text-4xl md:text-6xl font-bold text-white shadow-lg">
             {movie.title}
           </h1>
