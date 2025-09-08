@@ -94,7 +94,7 @@ export async function POST(request: Request) {
       // and use an address like 'submissions@yourdomain.com'.
       from: 'Crate TV Submissions <noreply@cratetv.net>',
       to: recipientEmail,
-      // FIX: Changed `reply_to` to `replyTo` to match the Resend SDK's `CreateEmailOptions` type.
+      // FIX: Corrected property from `reply_to` to `replyTo` as per Resend SDK type definitions.
       replyTo: data.email, // Set the filmmaker's email as the reply-to address
       subject: emailSubject,
       html: emailHtml,
