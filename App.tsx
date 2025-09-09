@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { categoriesData, moviesData } from './constants.ts';
-import { Movie, Actor } from './types.ts';
+import { categoriesData as initialCategoriesData, moviesData as initialMoviesData } from './constants.ts';
+import { Movie, Actor, FilmBlock } from './types.ts';
 import Header from './components/Header.tsx';
 import Hero from './components/Hero.tsx';
 import MovieCarousel from './components/MovieCarousel.tsx';
@@ -13,18 +13,10 @@ import ActorBioModal from './components/ActorBioModal.tsx';
 import MovieCard from './components/MovieCard.tsx';
 import SearchOverlay from './components/SearchOverlay.tsx';
 import StagingBanner from './components/StagingBanner.tsx';
-
-// Pre-compute a map of movie keys to their genre titles for efficient searching.
-const movieToGenresMap = new Map<string, string[]>();
-for (const movieKey in moviesData) {
-    const movieGenres: string[] = [];
-    for (const category of Object.values(categoriesData)) {
-        if (category.movieKeys.includes(movieKey)) {
-            movieGenres.push(category.title.toLowerCase());
-        }
-    }
-    movieToGenresMap.set(movieKey, movieGenres);
-}
+import { festivalData } from './data/festivalData.ts';
+import FilmBlockCard from './components/FilmBlockCard.tsx';
+import FilmBlockDetailsModal from './components/FilmBlockDetailsModal.tsx';
+import StripePaymentModal from './components/StripePaymentModal.tsx';
 
 // Utility function to preload images in the background
 const preloadImages = (urls: string[]) => {
@@ -36,10 +28,80 @@ const preloadImages = (urls: string[]) => {
   });
 };
 
+interface FestivalPurchases {
+  hasFullPass: boolean;
+  purchasedBlocks: string[];
+  purchasedFilms: string[];
+}
+
+// Define the structure for an item being purchased
+interface PaymentItem {
+  type: 'pass' | 'block' | 'film';
+  id: string;
+  name: string;
+  price: number;
+}
+
+
+const useFestivalPurchases = () => {
+  const [purchases, setPurchases] = useState<FestivalPurchases>({
+    hasFullPass: false,
+    purchasedBlocks: [],
+    purchasedFilms: [],
+  });
+
+  useEffect(() => {
+    try {
+      const storedPurchases = localStorage.getItem('crateTvFestivalPurchases');
+      if (storedPurchases) {
+        setPurchases(JSON.parse(storedPurchases));
+      }
+    } catch (error) {
+      console.error("Failed to load festival purchases from localStorage", error);
+    }
+  }, []);
+
+  const updatePurchases = (newPurchases: FestivalPurchases) => {
+    setPurchases(newPurchases);
+    localStorage.setItem('crateTvFestivalPurchases', JSON.stringify(newPurchases));
+  };
+
+  const purchaseFullPass = () => {
+    updatePurchases({ ...purchases, hasFullPass: true });
+  };
+
+  const purchaseBlock = (blockId: string) => {
+    if (purchases.purchasedBlocks.includes(blockId)) return;
+    updatePurchases({
+      ...purchases,
+      purchasedBlocks: [...purchases.purchasedBlocks, blockId],
+    });
+  };
+  
+  const purchaseFilm = (filmKey: string) => {
+    if (purchases.purchasedFilms.includes(filmKey)) return;
+    updatePurchases({
+      ...purchases,
+      purchasedFilms: [...purchases.purchasedFilms, filmKey],
+    });
+  };
+
+  const isFilmUnlocked = (filmKey: string, blockId: string) => {
+    return purchases.hasFullPass || purchases.purchasedBlocks.includes(blockId) || purchases.purchasedFilms.includes(filmKey);
+  };
+  
+  const isBlockUnlocked = (blockId: string) => {
+     return purchases.hasFullPass || purchases.purchasedBlocks.includes(blockId);
+  }
+
+  return { purchases, purchaseFullPass, purchaseBlock, purchaseFilm, isFilmUnlocked, isBlockUnlocked };
+};
+
 
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [movies, setMovies] = useState<Record<string, Movie>>({});
+  const [categories, setCategories] = useState(initialCategoriesData);
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [showFeatureModal, setShowFeatureModal] = useState(false);
@@ -49,6 +111,31 @@ const App: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isStaging, setIsStaging] = useState(false);
+
+  // Festival State (Commented out to hide feature)
+  /*
+  const [activeDay, setActiveDay] = useState<number>(1);
+  const [selectedBlock, setSelectedBlock] = useState<FilmBlock | null>(null);
+  const { purchases, purchaseFullPass, purchaseBlock, purchaseFilm, isFilmUnlocked, isBlockUnlocked } = useFestivalPurchases();
+  const [showPurchaseConfirmation, setShowPurchaseConfirmation] = useState('');
+  const [paymentItem, setPaymentItem] = useState<PaymentItem | null>(null);
+  */
+  
+  // Create a memoized map of movie keys to their genre titles for efficient searching.
+  const movieToGenresMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const movieKey in movies) {
+        const movieGenres: string[] = [];
+        for (const category of Object.values(categories)) {
+            if (category.movieKeys.includes(movieKey)) {
+                movieGenres.push(category.title.toLowerCase());
+            }
+        }
+        map.set(movieKey, movieGenres);
+    }
+    return map;
+  }, [movies, categories]);
+
 
   useEffect(() => {
     // Check for staging environment
@@ -63,8 +150,18 @@ const App: React.FC = () => {
 
     const initApp = () => {
       try {
+        // Check for admin-edited data in localStorage for live preview
+        const storedMovies = localStorage.getItem('crateTvAdmin_movies');
+        const storedCategories = localStorage.getItem('crateTvAdmin_categories');
+        
+        let moviesDataSource = initialMoviesData;
+        if (storedMovies) {
+            moviesDataSource = JSON.parse(storedMovies);
+            setCategories(JSON.parse(storedCategories || '{}'));
+        }
+
         // Initialize likes from local storage
-        const newMoviesState = { ...moviesData };
+        const newMoviesState = { ...moviesDataSource };
         Object.keys(newMoviesState).forEach(key => {
           const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
           if (storedLikes) {
@@ -106,6 +203,18 @@ const App: React.FC = () => {
         setIsScrolled(window.scrollY > 10);
     };
     window.addEventListener('scroll', handleScroll);
+    
+    // Handle scrolling to hash anchor on initial load
+    if (window.location.hash) {
+        const elementId = window.location.hash.slice(1);
+        const element = document.getElementById(elementId);
+        if (element) {
+            setTimeout(() => {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 150);
+        }
+    }
+    
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -114,19 +223,19 @@ const App: React.FC = () => {
     const imagesToPreload: string[] = [];
 
     // Get all featured movie posters
-    const featuredKeys = categoriesData.featured?.movieKeys || [];
+    const featuredKeys = categories.featured?.movieKeys || [];
     featuredKeys.forEach(key => {
-      const movie = moviesData[key];
+      const movie = movies[key];
       if (movie?.poster) {
         imagesToPreload.push(movie.poster);
       }
     });
 
     // Get the first poster from other main categories
-    Object.entries(categoriesData).forEach(([key, category]) => {
+    Object.entries(categories).forEach(([key, category]) => {
       if (key !== 'featured' && category.movieKeys.length > 0) {
         const firstMovieKey = category.movieKeys[0];
-        const movie = moviesData[firstMovieKey];
+        const movie = movies[firstMovieKey];
         if (movie?.poster) {
           imagesToPreload.push(movie.poster);
         }
@@ -134,7 +243,7 @@ const App: React.FC = () => {
     });
 
     preloadImages(Array.from(new Set(imagesToPreload))); // Use Set to avoid duplicates
-  }, []);
+  }, [movies, categories]);
 
   const visibleMovieKeys = useMemo(() => {
     if (isStaging) {
@@ -224,6 +333,53 @@ const App: React.FC = () => {
     setSearchQuery('');
     window.history.pushState({}, '', window.location.pathname);
   };
+  
+  // Festival Handlers (Commented out to hide feature)
+  /*
+  const handlePurchase = (type: 'pass' | 'block' | 'film', id: string) => {
+    let item: PaymentItem | null = null;
+    if (type === 'pass') {
+      item = { type: 'pass', id: 'full', name: 'Full Festival Pass', price: 50 };
+    } else if (type === 'block') {
+      const block = festivalData.flatMap(d => d.blocks).find(b => b.id === id);
+      if (block) {
+        item = { type: 'block', id, name: `Block: ${block.title}`, price: 12 };
+      }
+    } else if (type === 'film') {
+      const film = moviesData[id];
+      if (film) {
+        item = { type: 'film', id, name: `Film: ${film.title}`, price: 5 };
+      }
+    }
+
+    if (item) {
+      setPaymentItem(item);
+      // Close the details modal if it's open
+      if (selectedBlock) setSelectedBlock(null);
+    }
+  };
+
+  const handlePaymentSuccess = (item: PaymentItem) => {
+    if (item.type === 'pass') {
+        purchaseFullPass();
+        setShowPurchaseConfirmation('Full Festival Pass unlocked!');
+    } else if (item.type === 'block') {
+        purchaseBlock(item.id);
+        setShowPurchaseConfirmation('Film Block unlocked!');
+    } else if (item.type === 'film') {
+        purchaseFilm(item.id);
+        setShowPurchaseConfirmation('Film unlocked!');
+    }
+    
+    setPaymentItem(null);
+    setTimeout(() => setShowPurchaseConfirmation(''), 3000);
+  };
+  */
+  
+  const handleNavigateToMovie = (movieKey: string) => {
+    window.history.pushState({}, '', `/movie/${movieKey}?play=true`);
+    window.dispatchEvent(new Event('pushstate'));
+  };
 
   const filteredMovies = useMemo(() => {
     if (!searchQuery) return null;
@@ -243,15 +399,15 @@ const App: React.FC = () => {
 
         return titleMatch || actorMatch || genreMatch;
     });
-  }, [searchQuery, movies, visibleMovieKeys]);
+  }, [searchQuery, movies, visibleMovieKeys, movieToGenresMap]);
 
   const featuredMovies = useMemo(() => {
-    if (!categoriesData.featured || Object.keys(movies).length === 0) return [];
-    return categoriesData.featured.movieKeys
+    if (!categories.featured || Object.keys(movies).length === 0) return [];
+    return categories.featured.movieKeys
         .filter(key => visibleMovieKeys.has(key))
         .map(key => movies[key])
         .filter(Boolean);
-  }, [movies, visibleMovieKeys]);
+  }, [movies, visibleMovieKeys, categories]);
 
   useEffect(() => {
     if (featuredMovies.length > 1) {
@@ -322,7 +478,81 @@ const App: React.FC = () => {
             </div>
           ) : (
             <>
-              {Object.entries(categoriesData)
+              {/* Festival Section (Commented out to hide feature) */}
+              {/*
+              <div id="festival-section" className="pt-8 md:pt-16">
+                 <div className="relative py-24 md:py-32 bg-gray-900 text-center mb-8 rounded-lg overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-red-900/40 to-black"></div>
+                    <div className="relative z-10 max-w-4xl mx-auto px-4">
+                        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">13th Annual Playhouse West Film Festival</h1>
+                        <p className="text-lg md:text-xl text-red-400 font-semibold -mt-2 mb-6">Presented by Crate TV</p>
+                        <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-8">
+                            Discover the next generation of indie filmmakers. Three days of incredible shorts, exclusive premieres, and unforgettable stories.
+                        </p>
+                        {!purchases.hasFullPass ? (
+                            <button onClick={() => handlePurchase('pass', 'full')} className="bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-lg text-xl shadow-lg transition-transform transform hover:scale-105">
+                                Buy Full Festival Pass - $50
+                            </button>
+                        ) : (
+                            <div className="bg-green-500/20 border border-green-400 text-green-300 font-bold py-4 px-8 rounded-lg text-xl inline-block">
+                                ✓ Festival Pass Unlocked
+                            </div>
+                        )}
+                    </div>
+                </div>
+                
+                <div className="max-w-7xl mx-auto">
+                    <div className="flex justify-center border-b border-gray-700 mb-8">
+                        {festivalData.map(day => (
+                            <button
+                                key={day.day}
+                                onClick={() => setActiveDay(day.day)}
+                                className={`px-4 sm:px-8 py-4 text-lg font-semibold transition-colors duration-300 border-b-4 ${activeDay === day.day ? 'border-red-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
+                            >
+                                Day {day.day} <span className="hidden sm:inline-block text-sm text-gray-500">- {day.date}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div>
+                        {festivalData.filter(day => day.day === activeDay).map(day => (
+                            <div key={day.day} className="space-y-10">
+                                {day.blocks.map(block => {
+                                    const blockMovies = block.movieKeys.map(key => moviesData[key]).filter(Boolean);
+                                    return (
+                                        <div key={block.id}>
+                                             <h2 className="text-2xl md:text-3xl font-bold mb-4 text-white">{block.title}</h2>
+                                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                                {blockMovies.map(movie => (
+                                                    <FilmBlockCard 
+                                                        key={movie.key}
+                                                        movie={movie}
+                                                        isUnlocked={isFilmUnlocked(movie.key, block.id)}
+                                                        onWatch={() => handleNavigateToMovie(movie.key)}
+                                                        onUnlock={() => setSelectedBlock(block)}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <div className="mt-4 text-center">
+                                                {isBlockUnlocked(block.id) ? (
+                                                     <span className="text-green-400 font-semibold">✓ You have access to this block</span>
+                                                ) : (
+                                                    <button onClick={() => handlePurchase('block', block.id)} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                                                        Unlock Full Block - $12
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+              </div>
+              */}
+
+              {Object.entries(categories)
                 .filter(([key]) => key !== 'featured' && key !== 'publicDomainIndie')
                 .map(([key, value]) => {
                   const categoryMovies = value.movieKeys
@@ -361,7 +591,7 @@ const App: React.FC = () => {
             onClose={handleCloseDetailsModal}
             onSelectActor={handleSelectActor}
             allMovies={movies}
-            allCategories={categoriesData}
+            allCategories={categories}
             onSelectRecommendedMovie={handleSelectMovie}
         />
       )}
@@ -379,6 +609,33 @@ const App: React.FC = () => {
           }}
         />
       )}
+      {/* Festival Modals (Commented out to hide feature) */}
+      {/*
+       {selectedBlock && (
+        <FilmBlockDetailsModal 
+            block={selectedBlock}
+            onClose={() => setSelectedBlock(null)}
+            onPurchaseFilm={(filmKey) => handlePurchase('film', filmKey)}
+            onPurchaseBlock={(blockId) => handlePurchase('block', blockId)}
+            isFilmUnlocked={isFilmUnlocked}
+            isBlockUnlocked={isBlockUnlocked}
+            onWatchMovie={handleNavigateToMovie}
+        />
+      )}
+       {paymentItem && (
+        <StripePaymentModal 
+            item={paymentItem}
+            onClose={() => setPaymentItem(null)}
+            onSuccess={handlePaymentSuccess}
+        />
+      )}
+      
+      {showPurchaseConfirmation && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg z-50 animate-fadeIn animate-bounce">
+            {showPurchaseConfirmation}
+        </div>
+      )}
+      */}
     </div>
   );
 };

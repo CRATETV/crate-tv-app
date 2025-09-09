@@ -111,6 +111,14 @@
         border-color: #8b5cf6;
         box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
       }
+      @keyframes pulse-bg {
+        50% {
+          background-color: #4b5563; /* Tailwind gray-600 */
+        }
+      }
+      .animate-pulse-bg {
+        animation: pulse-bg 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
     </style>
 
     <!-- Schema.org for Google -->

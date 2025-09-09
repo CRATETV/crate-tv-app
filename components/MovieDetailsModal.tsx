@@ -19,20 +19,22 @@ const RecommendedMovieCard: React.FC<{ movie: Movie; onClick: (movie: Movie) => 
     const [isLoaded, setIsLoaded] = useState(false);
     return (
         <div
-            className="group cursor-pointer rounded-md overflow-hidden"
+            className="group relative cursor-pointer rounded-md overflow-hidden aspect-[3/4] bg-gray-800"
             onClick={() => onClick(movie)}
         >
-            <div className="relative aspect-[3/4] bg-gray-800 overflow-hidden">
-                <img
-                    src={movie.poster}
-                    alt={movie.title}
-                    className={`w-full h-full object-cover transition-all duration-500 ease-in-out ${isLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-50 scale-110 blur-md'}`}
-                    loading="lazy"
-                    decoding="async"
-                    onLoad={() => setIsLoaded(true)}
-                />
-                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            </div>
+            {/* Skeleton Loader */}
+            {!isLoaded && (
+                <div className="absolute inset-0 bg-gray-700 animate-pulse-bg"></div>
+            )}
+            <img
+                src={movie.poster}
+                alt={movie.title}
+                className={`w-full h-full object-cover transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                loading="lazy"
+                decoding="async"
+                onLoad={() => setIsLoaded(true)}
+            />
+            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         </div>
     );
 };
@@ -179,15 +181,19 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
         <div className="relative w-full aspect-video bg-black">
           {playerMode === 'poster' ? (
-            <>
+            <div className="relative w-full h-full">
+              {/* Skeleton Loader */}
+              {!isPosterLoaded && (
+                <div className="absolute inset-0 bg-gray-700 animate-pulse-bg"></div>
+              )}
               <img
                 src={movie.poster}
                 alt={movie.title}
-                className={`w-full h-full object-cover transition-all duration-500 ease-in-out ${isPosterLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-50 scale-110 blur-md'}`}
+                className={`w-full h-full object-cover transition-opacity duration-500 ${isPosterLoaded ? 'opacity-100' : 'opacity-0'}`}
                 onLoad={() => setIsPosterLoaded(true)}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-transparent to-transparent"></div>
-            </>
+            </div>
           ) : (
             <video
               ref={videoRef}

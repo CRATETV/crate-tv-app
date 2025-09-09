@@ -24,9 +24,21 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
 
   const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
     e.preventDefault();
-    // Use relative path directly to avoid issues in sandboxed environments
-    window.history.pushState({}, '', path);
-    window.dispatchEvent(new Event('pushstate'));
+    const url = new URL(path, window.location.origin);
+
+    // If we are on the target page already, just handle scrolling.
+    if (window.location.pathname === url.pathname && url.hash) {
+      const element = document.querySelector(url.hash);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Update URL hash for bookmarking/linking without creating a new history entry
+        history.replaceState(null, '', path);
+      }
+    } else {
+      // Different page, navigate using pushState. The App component's useEffect will handle scrolling.
+      window.history.pushState({}, '', path);
+      window.dispatchEvent(new Event('pushstate'));
+    }
   };
 
   const pathname = window.location.pathname;
@@ -44,6 +56,15 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
         >
           Home
         </a>
+        {/*
+        <a 
+          href="/#festival-section" 
+          onClick={(e) => handleNavigate(e, '/#festival-section')} 
+          className={`${linkBaseStyles} ${inactiveLinkStyles}`}
+        >
+          Festival
+        </a>
+        */}
         <a 
           href="/classics" 
           onClick={(e) => handleNavigate(e, '/classics')} 

@@ -17,6 +17,14 @@ Crate TV is a sleek, professional, and fully-featured streaming web application 
 
 ---
 
+## ✨ Developed with Google Gemini
+
+This entire web application was built and is maintained by a world-class senior frontend engineer powered by Google Gemini. The AI handles everything from UI/UX design and component creation to API implementation and deployment configuration.
+
+-   **Find the AI on GitHub**: [Google Gemini](https://github.com/google-gemini)
+
+---
+
 ## 🚀 Quick Start & Deployment
 
 ### 1. Set Up Environment Variables

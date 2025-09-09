@@ -23,3 +23,15 @@ export interface Category {
   title: string;
   movieKeys: string[];
 }
+
+export interface FilmBlock {
+  id: string;
+  title:string;
+  movieKeys: string[];
+}
+
+export interface FestivalDay {
+  day: number;
+  date: string;
+  blocks: FilmBlock[];
+}

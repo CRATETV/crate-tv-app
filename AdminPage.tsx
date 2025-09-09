@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { moviesData as initialMoviesData, categoriesData as initialCategoriesData } from './constants.ts';
 import { Movie, Category } from './types.ts';
 import MovieEditor from './components/MovieEditor.tsx';
@@ -11,14 +11,77 @@ const placeholderHd_1280x720 = "iVBORw0KGgoAAAANSUhEUgAABQAAAAACgAQMAAADW3NdbAAA
 const placeholderFhd_1920x1080 = "iVBORw0KGgoAAAANSUhEUgAAB4AAAAQ4AQMAAADo/U5XAAAABlBMVEUAAAAAAAACVfYgAAAAAXRSTlMAQObYZgAAABhJREFUeF7twQEBAAAAgiD/r25IQAEA/g8BIgABgaU+NQAAAABJRU5ErkJggg==";
 const placeholderLogo_400x90 = "iVBORw0KGgoAAAANSUhEUgAAAZAAAABaAQMAAADoBH4LAAAABlBMVEUAAAAAAAACVfYgAAAAAXRSTlMAQObYZgAAABVJREFUeF7twQEBAAAAgiD/r25IQAEA+gMB2QABtLgN3wAAAABJRU5ErkJggg==";
 
+const GeneratedCodeModal: React.FC<{ code: string; onClose: () => void }> = ({ code, onClose }) => {
+    const [copySuccess, setCopySuccess] = useState('');
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(code).then(() => {
+            setCopySuccess('Copied to clipboard!');
+            setTimeout(() => setCopySuccess(''), 2500);
+        }, () => {
+            setCopySuccess('Failed to copy.');
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
+            <div className="bg-gray-900 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-700" onClick={(e) => e.stopPropagation()}>
+                <div className="p-6 border-b border-gray-700">
+                    <h2 className="text-2xl font-bold text-green-400">Changes Saved & Ready to Publish</h2>
+                    <p className="text-gray-400 mt-2 text-sm">Your changes are saved in this browser for a live preview. To make them permanent for all users, copy the code below and replace the content of your `constants.ts` file.</p>
+                </div>
+                <div className="p-6 flex-grow overflow-y-auto">
+                    <textarea
+                        readOnly
+                        value={code}
+                        className="w-full h-full bg-gray-950 text-gray-300 font-mono text-xs p-4 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+                        rows={15}
+                    />
+                </div>
+                <div className="p-6 border-t border-gray-700 flex justify-between items-center bg-gray-800/50 rounded-b-lg">
+                    <button onClick={handleCopy} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+                        {copySuccess ? copySuccess : 'Copy Code'}
+                    </button>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors font-semibold">
+                        Done
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 const AdminPage: React.FC = () => {
-  const [movies, setMovies] = useState<Record<string, Movie>>(initialMoviesData);
-  const [categories, setCategories] = useState<Record<string, Category>>(initialCategoriesData);
+  const [movies, setMovies] = useState<Record<string, Movie>>({});
+  const [categories, setCategories] = useState<Record<string, Category>>({});
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isPackaging, setIsPackaging] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+
+
+  useEffect(() => {
+    // On initial load, try to get data from localStorage, otherwise use initial data
+    try {
+        const storedMovies = localStorage.getItem('crateTvAdmin_movies');
+        const storedCategories = localStorage.getItem('crateTvAdmin_categories');
+        
+        if (storedMovies && storedCategories) {
+            setMovies(JSON.parse(storedMovies));
+            setCategories(JSON.parse(storedCategories));
+        } else {
+            setMovies(initialMoviesData);
+            setCategories(initialCategoriesData);
+        }
+    } catch (e) {
+        console.error("Failed to parse data from localStorage", e);
+        setMovies(initialMoviesData);
+        setCategories(initialCategoriesData);
+    }
+  }, []);
 
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +90,21 @@ const AdminPage: React.FC = () => {
     } else {
       alert('Incorrect password');
     }
+  };
+  
+  const persistChanges = (newMovies: Record<string, Movie>, newCategories: Record<string, Category>) => {
+    // 1. Persist to localStorage for live admin preview
+    localStorage.setItem('crateTvAdmin_movies', JSON.stringify(newMovies));
+    localStorage.setItem('crateTvAdmin_categories', JSON.stringify(newCategories));
+
+    // 2. Generate code for permanent file update
+    const newConstantsContent = `import { Category, Movie } from './types.ts';
+
+export const categoriesData: Record<string, Category> = ${JSON.stringify(newCategories, null, 2)};
+
+export const moviesData: Record<string, Movie> = ${JSON.stringify(newMovies, null, 2)};
+`;
+    setGeneratedCode(newConstantsContent);
   };
 
   const handleSelectMovie = (movie: Movie) => {
@@ -58,19 +136,15 @@ const AdminPage: React.FC = () => {
   };
 
   const handleSave = (updatedMovie: Movie) => {
-    console.log('Saving movie:', updatedMovie);
-    setMovies(prev => ({ ...prev, [updatedMovie.key]: updatedMovie }));
-    if (isAddingNew) {
-      console.log('New movie added. You may need to manually add it to a category file.');
-    }
+    const newMovies = { ...movies, [updatedMovie.key]: updatedMovie };
+    setMovies(newMovies);
+    persistChanges(newMovies, categories); // Use current categories state
     setSelectedMovie(null);
     setIsAddingNew(false);
-    alert('Movie saved! This is a mock save for demonstration. The changes are not persisted.');
   };
 
   const handleDelete = (movieKey: string) => {
-    if (window.confirm('Are you sure you want to delete this movie? This is a mock action and will not persist.')) {
-        console.log('Deleting movie:', movieKey);
+    if (window.confirm('This will generate the updated code to permanently delete this movie. Are you sure?')) {
         const newMovies = { ...movies };
         delete newMovies[movieKey];
         setMovies(newMovies);
@@ -80,8 +154,9 @@ const AdminPage: React.FC = () => {
             newCategories[catKey].movieKeys = newCategories[catKey].movieKeys.filter(key => key !== movieKey);
         });
         setCategories(newCategories);
+        
+        persistChanges(newMovies, newCategories);
         setSelectedMovie(null);
-        alert('Movie deleted! This is a mock delete for demonstration.');
     }
   };
 
@@ -344,6 +419,7 @@ End Sub
         </div>
       </main>
       <Footer />
+      {generatedCode && <GeneratedCodeModal code={generatedCode} onClose={() => setGeneratedCode(null)} />}
     </div>
   );
 };

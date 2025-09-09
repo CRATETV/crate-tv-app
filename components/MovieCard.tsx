@@ -11,13 +11,17 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie }) => {
 
   return (
     <div
-      className="w-full aspect-[3/4] rounded-md overflow-hidden cursor-pointer bg-gray-800 transition-transform duration-300 ease-in-out hover:scale-105"
+      className="relative w-full aspect-[3/4] rounded-md overflow-hidden cursor-pointer bg-gray-800 transition-transform duration-300 ease-in-out hover:scale-105"
       onClick={() => onSelectMovie(movie)}
     >
+        {/* Skeleton Loader */}
+        {!isLoaded && (
+            <div className="absolute inset-0 bg-gray-700 animate-pulse-bg"></div>
+        )}
         <img 
           src={movie.poster} 
           alt={movie.title} 
-          className={`w-full h-full object-cover transition-all duration-500 ease-in-out ${isLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-50 scale-110 blur-md'}`}
+          className={`w-full h-full object-cover transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
           loading="lazy"
           decoding="async"
           onLoad={() => setIsLoaded(true)}
