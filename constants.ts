@@ -1,92 +1,108 @@
 import { Category, Movie } from './types.ts';
 
 export const categoriesData: Record<string, Category> = {
-  featured: {
-    title: 'Featured Films',
-    movieKeys: ['newmovie1756741314485', 'lifeless', 'foodiecalldirectorscut', 'juniper']
-  },
-  newReleases: {
-    title: 'New Releases',
-    movieKeys: [
-        'newmovie1756741314485', // What If
-        'newmovie1756501125076', // of Bees and Boobs
-        'newmovie1756487626529', // Strange Encounters
-        'newmovie1756487390550', // I Still Love Her
-        'newmovie1756487215116', // Fling
-        'newmovie1756486933392', // Power Trip
-        'newmovie1756485973547', // Burst
+  "featured": {
+    "title": "Featured Films",
+    "movieKeys": [
+      "newmovie1756741314485",
+      "lifeless",
+      "foodiecalldirectorscut",
+      "juniper"
     ]
   },
-  awardWinners: {
-    title: 'Award-Winning Films',
-    movieKeys: ['lifeless', 'foodiecalldirectorscut', 'iloveyoublack', 'hair', 'juniper']
-  },
-  pwff12thAnnual: {
-    title: 'PWFF-12th Annual Selections',
-    movieKeys: [
-      'newmovie1756487626529', // Strange Encounters
-      'newmovie1756501125076', // of Bees and Boobs
-      'newmovie1756487215116', // Fling
-      'newmovie1756487390550', // I Still Love Her
-      'newmovie1756485973547',  // Burst
-      'newmovie1756486933392' // Power Trip
+  "newReleases": {
+    "title": "New Releases",
+    "movieKeys": [
+      "newmovie1756741314485",
+      "newmovie1756501125076",
+      "newmovie1756487626529",
+      "newmovie1756487390550",
+      "newmovie1756487215116",
+      "newmovie1756486933392",
+      "newmovie1756485973547"
     ]
   },
-  publicDomainIndie: {
-    title: 'Classic Independent Films',
-    movieKeys: [
-      'atriptothemoon',
-      'thegreattrainrobbery',
-      'suspense',
-      'thepawnshop',
-      'theimmigrant',
-      'thefallofthehouseofusher',
-      'unchienandalou',
-      'meshesofafternoon',
-      'bridelessgroom',
-      'palmourstreet'
+  "awardWinners": {
+    "title": "Award-Winning Films",
+    "movieKeys": [
+      "lifeless",
+      "foodiecalldirectorscut",
+      "iloveyoublack",
+      "hair",
+      "juniper"
     ]
   },
-  comedy: {
-    title: 'Comedies',
-    movieKeys: [
-      'foodiecalldirectorscut',
-      'foodiecalltheatricalcut',
-      'eharmonycs',
-      'youvsthem',
-      'wrapitup',
-      'newmovie1756485973547',
-      'newmovie1756487390550',
-      'newmovie1756501125076',
-      'newmovie1756741314485'
+  "pwff12thAnnual": {
+    "title": "PWFF-12th Annual Selections",
+    "movieKeys": [
+      "newmovie1756487626529",
+      "newmovie1756501125076",
+      "newmovie1756487215116",
+      "newmovie1756487390550",
+      "newmovie1756485973547",
+      "newmovie1756486933392"
     ]
   },
-  drama: {
-    title: 'Dramas',
-    movieKeys: [
-      'lifeless',
-      'almasvows',
-      'finallycaught',
-      'iloveyoublack',
-      'hair',
-      'autumn',
-      'silentlove',
-      'juniper',
-      'drive',
-      'crossroads',
-      'fatherdaughterdance',
-      'newmovie1756486933392',
-      'newmovie1756487626529',
-      'newmovie1756487215116'
+  "publicDomainIndie": {
+    "title": "Classic Independent Films",
+    "movieKeys": [
+      "atriptothemoon",
+      "thegreattrainrobbery",
+      "suspense",
+      "thepawnshop",
+      "theimmigrant",
+      "thefallofthehouseofusher",
+      "unchienandalou",
+      "meshesofafternoon",
+      "bridelessgroom",
+      "palmourstreet"
     ]
   },
-  documentary: {
-    title: 'Documentaries',
-    movieKeys: ['streeteatstheboot']
+  "comedy": {
+    "title": "Comedies",
+    "movieKeys": [
+      "foodiecalldirectorscut",
+      "foodiecalltheatricalcut",
+      "eharmonycs",
+      "youvsthem",
+      "wrapitup",
+      "newmovie1756485973547",
+      "newmovie1756487390550",
+      "newmovie1756501125076",
+      "newmovie1756741314485"
+    ]
   },
-  exploreTitles: {
-    title: 'Explore These Titles',
-    movieKeys: ['smirk', 'intrusivethoughts']
+  "drama": {
+    "title": "Dramas",
+    "movieKeys": [
+      "lifeless",
+      "almasvows",
+      "finallycaught",
+      "iloveyoublack",
+      "hair",
+      "autumn",
+      "silentlove",
+      "juniper",
+      "drive",
+      "crossroads",
+      "fatherdaughterdance",
+      "newmovie1756486933392",
+      "newmovie1756487626529",
+      "newmovie1756487215116"
+    ]
+  },
+  "documentary": {
+    "title": "Documentaries",
+    "movieKeys": [
+      "streeteatstheboot"
+    ]
+  },
+  "exploreTitles": {
+    "title": "Explore These Titles",
+    "movieKeys": [
+      "smirk",
+      "intrusivethoughts"
+    ]
   }
 };
 
@@ -95,7 +111,14 @@ export const moviesData: Record<string, Movie> = {
     "key": "atriptothemoon",
     "title": "A Trip to the Moon",
     "synopsis": "(1902) (14 mins) Directed by Georges Méliès, this pioneering sci-fi film is a masterpiece of early cinema.<br/><br/><strong>Contribution to Modern Cinema:</strong> It's famous for its groundbreaking special effects, whimsical storytelling, and establishing the foundation for the science-fiction genre. The iconic image of the rocket in the Man in the Moon's eye remains one of cinema's most famous shots, and Méliès' techniques, like substitution splices and dissolves, showed the world that film could be a medium of magic and fantasy, influencing generations of filmmakers.",
-    "cast": [{ "name": "Georges Méliès", "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Georges_M%C3%A9li%C3%A8s_color.jpg/800px-Georges_M%C3%A9li%C3%A8s_color.jpg", "bio": "A French illusionist and film director who led many technical and narrative developments in the earliest days of cinema. He was a prolific innovator in the use of special effects, popularizing such techniques as substitution splices, multiple exposures, and time-lapse photography.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Georges_M%C3%A9li%C3%A8s_color.jpg/800px-Georges_M%C3%A9li%C3%A8s_color.jpg" }],
+    "cast": [
+      {
+        "name": "Georges Méliès",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Me%CC%81lie%CC%80s_portrait_(cropped).png",
+        "bio": "A French illusionist and film director who led many technical and narrative developments in the earliest days of cinema. He was a prolific innovator in the use of special effects, popularizing such techniques as substitution splices, multiple exposures, and time-lapse photography.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Me%CC%81lie%CC%80s_portrait_(cropped).png"
+      }
+    ],
     "director": "Georges Méliès",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/A+Trip+to+the+Moon+-+the+1902+Science+Fiction+Film+by+Georges+Me%CC%81lie%CC%80s+-+Open+Culture+(480p%2C+h264%2C+youtube).mp4",
@@ -108,7 +131,14 @@ export const moviesData: Record<string, Movie> = {
     "key": "thegreattrainrobbery",
     "title": "The Great Train Robbery",
     "synopsis": "(1903) (12 mins) Directed by Edwin S. Porter, this film is a milestone in cinema history and one of the earliest narrative films.<br/><br/><strong>Contribution to Modern Cinema:</strong> It was revolutionary for its use of techniques like cross-cutting, on-location shooting, and a camera that moved with the action. The final shot of a bandit firing at the audience became an iconic cinematic moment. Its storytelling innovations laid the groundwork for the narrative structure of virtually every action and Western film that followed.",
-    "cast": [{ "name": "Justus D. Barnes", "photo": "https://upload.wikimedia.org/wikipedia/commons/4/41/The_Great_Train_Robbery_-_Close-up_of_a_bandit.jpg", "bio": "An American actor of the silent era, most famous for his role as the bandit in 'The Great Train Robbery' who fires his gun directly at the camera.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/4/41/The_Great_Train_Robbery_-_Close-up_of_a_bandit.jpg" }],
+    "cast": [
+      {
+        "name": "Justus D. Barnes",
+        "photo": "https://upload.wikimedia.org/wikipedia/commons/4/41/The_Great_Train_Robbery_-_Close-up_of_a_bandit.jpg",
+        "bio": "An American actor of the silent era, most famous for his role as the bandit in 'The Great Train Robbery' who fires his gun directly at the camera.",
+        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/4/41/The_Great_Train_Robbery_-_Close-up_of_a_bandit.jpg"
+      }
+    ],
     "director": "Edwin S. Porter",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Great+Train+Robbery+.mp4",
@@ -122,8 +152,18 @@ export const moviesData: Record<string, Movie> = {
     "title": "Suspense",
     "synopsis": "(1913) (10 mins) Directed by Lois Weber and Phillips Smalley, this film is a major work in early horror.<br/><br/><strong>Contribution to Modern Cinema:</strong> 'Suspense' was groundbreaking for its technical innovations. Its use of a three-way split screen was revolutionary, allowing audiences to see multiple actions simultaneously, a technique now common in thrillers and action films. The film's use of dramatic camera angles and parallel editing to create tension set a new standard for the suspense genre.",
     "cast": [
-        { "name": "Lois Weber", "photo": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Lois_Weber_LOC_32320.jpg", "bio": "An American silent film actress, screenwriter, producer, and director. She is identified as 'the most important female director the American film industry has known'.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Lois_Weber_LOC_32320.jpg" },
-        { "name": "Valentine Paul", "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Suspense_Lois_Weber_1913_2.png/800px-Suspense_Lois_Weber_1913_2.png", "bio": "A silent film actor known for his roles in suspense and drama films of the 1910s, often collaborating with director Lois Weber.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Suspense_Lois_Weber_1913_2.png/800px-Suspense_Lois_Weber_1913_2.png" }
+      {
+        "name": "Lois Weber",
+        "photo": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Lois_Weber_LOC_32320.jpg",
+        "bio": "An American silent film actress, screenwriter, producer, and director. She is identified as 'the most important female director the American film industry has known'.",
+        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Lois_Weber_LOC_32320.jpg"
+      },
+      {
+        "name": "Valentine Paul",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/LoisWeber.jpg",
+        "bio": "A silent film actor known for his roles in suspense and drama films of the 1910s, often collaborating with director Lois Weber.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/LoisWeber.jpg"
+      }
     ],
     "director": "Lois Weber, Phillips Smalley",
     "trailer": "",
@@ -137,7 +177,14 @@ export const moviesData: Record<string, Movie> = {
     "key": "thepawnshop",
     "title": "The Pawnshop",
     "synopsis": "(1916) (20 mins) A classic Charlie Chaplin silent comedy where he stars as a bumbling pawnshop assistant.<br/><br/><strong>Contribution to Modern Cinema:</strong> Famous for its inventive slapstick and balletic physical comedy, particularly the scene where Chaplin meticulously deconstructs and examines an alarm clock. It's a prime example of Chaplin's ability to create comedy from everyday objects and situations, a technique that has been a cornerstone of physical comedy ever since.",
-    "cast": [{ "name": "Charlie Chaplin", "photo": "https://upload.wikimedia.org/wikipedia/commons/0/00/Charlie_Chaplin.jpg", "bio": "An English comic actor, filmmaker, and composer who rose to fame in the era of silent film. He became a worldwide icon through his screen persona, 'The Tramp'.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/0/00/Charlie_Chaplin.jpg" }],
+    "cast": [
+      {
+        "name": "Charlie Chaplin",
+        "photo": "https://upload.wikimedia.org/wikipedia/commons/0/00/Charlie_Chaplin.jpg",
+        "bio": "An English comic actor, filmmaker, and composer who rose to fame in the era of silent film. He became a worldwide icon through his screen persona, 'The Tramp'.",
+        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/0/00/Charlie_Chaplin.jpg"
+      }
+    ],
     "director": "Charlie Chaplin",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/ThePawnshop.mp4",
@@ -151,8 +198,18 @@ export const moviesData: Record<string, Movie> = {
     "title": "The Immigrant",
     "synopsis": "(1917) (20 mins) A Charlie Chaplin comedy short that blends slapstick with social commentary.<br/><br/><strong>Contribution to Modern Cinema:</strong> The film is celebrated for its poignant portrayal of the immigrant experience, balancing humor with a touching depiction of the struggles and hopes of newcomers to America. Its ability to weave social themes into comedy influenced countless filmmakers and solidified the character of 'The Tramp' as a symbol of resilience for the common person.",
     "cast": [
-        { "name": "Charlie Chaplin", "photo": "https://upload.wikimedia.org/wikipedia/commons/0/00/Charlie_Chaplin.jpg", "bio": "An English comic actor, filmmaker, and composer who rose to fame in the era of silent film. He became a worldwide icon through his screen persona, 'The Tramp'.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/0/00/Charlie_Chaplin.jpg" },
-        { "name": "Edna Purviance", "photo": "https://upload.wikimedia.org/wikipedia/commons/d/d7/Edna_Purviance_publicity_photo_for_The_Kid_1921.jpg", "bio": "An American actress during the silent film era. She was the leading lady in many of Charlie Chaplin's films, starring in over 30 productions with him.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/d/d7/Edna_Purviance_publicity_photo_for_The_Kid_1921.jpg" }
+      {
+        "name": "Charlie Chaplin",
+        "photo": "https://upload.wikimedia.org/wikipedia/commons/0/00/Charlie_Chaplin.jpg",
+        "bio": "An English comic actor, filmmaker, and composer who rose to fame in the era of silent film. He became a worldwide icon through his screen persona, 'The Tramp'.",
+        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/0/00/Charlie_Chaplin.jpg"
+      },
+      {
+        "name": "Edna Purviance",
+        "photo": "https://upload.wikimedia.org/wikipedia/commons/d/d7/Edna_Purviance_publicity_photo_for_The_Kid_1921.jpg",
+        "bio": "An American actress during the silent film era. She was the leading lady in many of Charlie Chaplin's films, starring in over 30 productions with him.",
+        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/d/d7/Edna_Purviance_publicity_photo_for_The_Kid_1921.jpg"
+      }
     ],
     "director": "Charlie Chaplin",
     "trailer": "",
@@ -167,8 +224,18 @@ export const moviesData: Record<string, Movie> = {
     "title": "The Fall of the House of Usher",
     "synopsis": "(1928) (13 mins) An American silent experimental horror film directed by James Sibley Watson and Melville Webber.<br/><br/><strong>Contribution to Modern Cinema:</strong> This avant-garde adaptation of Edgar Allan Poe's story is celebrated for its surreal, dreamlike atmosphere and innovative cinematography, including superimpositions, prism effects, and dramatic shadows. It rejected traditional narrative structure in favor of visual poetry, profoundly influencing the psychological horror genre and experimental filmmakers who sought to convey mood and internal states over linear plot.",
     "cast": [
-      { "name": "Herbert Stern", "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Fall_of_the_House_of_Usher_%281928%29_-_Roderick_Usher.jpg/800px-Fall_of_the_House_of_Usher_%281928%29_-_Roderick_Usher.jpg", "bio": "An actor known for his role as Roderick Usher in the 1928 experimental silent film 'The Fall of the House of Usher'.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Fall_of_the_House_of_Usher_%281928%29_-_Roderick_Usher.jpg/800px-Fall_of_the_House_of_Usher_%281928%29_-_Roderick_Usher.jpg" },
-      { "name": "Hildegarde Watson", "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/The_Fall_of_the_House_of_Usher_%281928%29.jpg/800px-The_Fall_of_the_House_of_Usher_%281928%29.jpg", "bio": "An American actress and patron of the arts, best known for her role as Madeline Usher in the avant-garde film 'The Fall of the House of Usher'.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/The_Fall_of_the_House_of_Usher_%281928%29.jpg/800px-The_Fall_of_the_House_of_Usher_%281928%29.jpg" }
+      {
+        "name": "Herbert Stern",
+        "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Fall_of_the_House_of_Usher_%281928%29_-_Roderick_Usher.jpg/800px-Fall_of_the_House_of_Usher_%281928%29_-_Roderick_Usher.jpg",
+        "bio": "An actor known for his role as Roderick Usher in the 1928 experimental silent film 'The Fall of the House of Usher'.",
+        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Fall_of_the_House_of_Usher_%281928%29_-_Roderick_Usher.jpg/800px-Fall_of_the_House_of_Usher_%281928%29_-_Roderick_Usher.jpg"
+      },
+      {
+        "name": "Hildegarde Watson",
+        "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/The_Fall_of_the_House_of_Usher_%281928%29.jpg/800px-The_Fall_of_the_House_of_Usher_%281928%29.jpg",
+        "bio": "An American actress and patron of the arts, best known for her role as Madeline Usher in the avant-garde film 'The Fall of the House of Usher'.",
+        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/The_Fall_of_the_House_of_Usher_%281928%29.jpg/800px-The_Fall_of_the_House_of_Usher_%281928%29.jpg"
+      }
     ],
     "director": "James Sibley Watson, Melville Webber",
     "trailer": "",
@@ -178,13 +245,23 @@ export const moviesData: Record<string, Movie> = {
     "likes": 0,
     "releaseDate": "1928-10-29"
   },
-   "unchienandalou": {
+  "unchienandalou": {
     "key": "unchienandalou",
     "title": "Un Chien Andalou",
     "synopsis": "(1929) (16 mins) Co-directed by Luis Buñuel and Salvador Dalí, this film is the quintessential surrealist short.<br/><br/><strong>Contribution to Modern Cinema:</strong> Its discontinuous narrative and shocking, dreamlike imagery (most famously, the eyeball-slicing scene) revolutionized what was possible in film. It rejected linear storytelling in favor of Freudian free association, pioneering a new cinematic language that continues to influence avant-garde, art-house, and even mainstream filmmakers who want to depict the subconscious.",
     "cast": [
-        { "name": "Pierre Batcheff", "photo": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Pierre_Batcheff_Un_chien_andalou.jpg", "bio": "A Russian-born French actor, known for his lead role in the surrealist classic 'Un Chien Andalou' and for being a prominent figure in the French avant-garde cinema of the 1920s.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Pierre_Batcheff_Un_chien_andalou.jpg" },
-        { "name": "Simone Mareuil", "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Un_chien_andalou_04.jpg/800px-Un_chien_andalou_04.jpg", "bio": "A French actress best known for her role in Luis Buñuel and Salvador Dalí's surrealist film 'Un Chien Andalou', in which she appears in the film's most notorious scene.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Un_chien_andalou_04.jpg/800px-Un_chien_andalou_04.jpg" }
+      {
+        "name": "Pierre Batcheff",
+        "photo": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Pierre_Batcheff_Un_chien_andalou.jpg",
+        "bio": "A Russian-born French actor, known for his lead role in the surrealist classic 'Un Chien Andalou' and for being a prominent figure in the French avant-garde cinema of the 1920s.",
+        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Pierre_Batcheff_Un_chien_andalou.jpg"
+      },
+      {
+        "name": "Simone Mareuil",
+        "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Un_chien_andalou_04.jpg/800px-Un_chien_andalou_04.jpg",
+        "bio": "A French actress best known for her role in Luis Buñuel and Salvador Dalí's surrealist film 'Un Chien Andalou', in which she appears in the film's most notorious scene.",
+        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Un_chien_andalou_04.jpg/800px-Un_chien_andalou_04.jpg"
+      }
     ],
     "director": "Luis Buñuel, Salvador Dalí",
     "trailer": "",
@@ -199,8 +276,18 @@ export const moviesData: Record<string, Movie> = {
     "title": "Meshes of the Afternoon",
     "synopsis": "(1943) (14 mins) Made by Maya Deren and Alexander Hammid, this influential experimental film uses a non-linear, fragmented narrative to explore a dreamlike state.<br/><br/><strong>Contribution to Modern Cinema:</strong> Its surreal style and use of jump cuts have influenced a wide range of filmmakers, from psychological thrillers to music videos, establishing a new visual language for representing the subconscious.",
     "cast": [
-        { "name": "Maya Deren", "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Maya_Deren.jpg/800px-Maya_Deren.jpg", "bio": "A Ukrainian-born American experimental filmmaker and a prominent figure in the 1940s and 1950s avant-garde, Deren was also a choreographer, dancer, film theorist, poet, lecturer, and writer.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Maya_Deren.jpg/800px-Maya_Deren.jpg" },
-        { "name": "Alexander Hammid", "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Alexander_Hammid_and_Maya_Deren_in_Meshes_of_the_Afternoon.jpg/800px-Alexander_Hammid_and_Maya_Deren_in_Meshes_of_the_Afternoon.jpg", "bio": "A Czech-born American photographer, film director, and cinematographer. He is known for his work in documentary and experimental film, and his collaboration with Maya Deren.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Alexander_Hammid_and_Maya_Deren_in_Meshes_of_the_Afternoon.jpg/800px-Alexander_Hammid_and_Maya_Deren_in_Meshes_of_the_Afternoon.jpg" }
+      {
+        "name": "Maya Deren",
+        "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Maya_Deren.jpg/800px-Maya_Deren.jpg",
+        "bio": "A Ukrainian-born American experimental filmmaker and a prominent figure in the 1940s and 1950s avant-garde, Deren was also a choreographer, dancer, film theorist, poet, lecturer, and writer.",
+        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Maya_Deren.jpg/800px-Maya_Deren.jpg"
+      },
+      {
+        "name": "Alexander Hammid",
+        "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Alexander_Hammid_and_Maya_Deren_in_Meshes_of_the_Afternoon.jpg/800px-Alexander_Hammid_and_Maya_Deren_in_Meshes_of_the_Afternoon.jpg",
+        "bio": "A Czech-born American photographer, film director, and cinematographer. He is known for his work in documentary and experimental film, and his collaboration with Maya Deren.",
+        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Alexander_Hammid_and_Maya_Deren_in_Meshes_of_the_Afternoon.jpg/800px-Alexander_Hammid_and_Maya_Deren_in_Meshes_of_the_Afternoon.jpg"
+      }
     ],
     "director": "Maya Deren, Alexander Hammid",
     "trailer": "",
@@ -215,9 +302,24 @@ export const moviesData: Record<string, Movie> = {
     "title": "Brideless Groom",
     "synopsis": "(1947) (17 mins) A hilarious Three Stooges comedy short from Columbia Pictures.<br/><br/><strong>Contribution to Modern Cinema:</strong> It is a prime example of the fast-paced, violent slapstick comedy style of the era. As one of the many Three Stooges shorts whose copyright was not renewed, it became a television staple, introducing their unique brand of physical comedy to new generations and influencing countless comedy routines and films.",
     "cast": [
-        { "name": "Shemp Howard", "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Shemp_Howard_1947.jpg/800px-Shemp_Howard_1947.jpg", "bio": "An American actor and comedian, best known as a member of the comedy act The Three Stooges, known for his unique vocalizations and ad-libs.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Shemp_Howard_1947.jpg/800px-Shemp_Howard_1947.jpg" },
-        { "name": "Moe Howard", "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Moe_Howard_in_Disorder_in_the_Court.jpg/800px-Moe_Howard_in_Disorder_in_the_Court.jpg", "bio": "An American actor and comedian, known as the leader of The Three Stooges. His trademark bowl haircut and bossy, aggressive persona made him a comedy icon.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Moe_Howard_in_Disorder_in_the_Court.jpg/800px-Moe_Howard_in_Disorder_in_the_Court.jpg" },
-        { "name": "Larry Fine", "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Larry_Fine_in_Disorder_in_the_Court.jpg/800px-Larry_Fine_in_Disorder_in_the_Court.jpg", "bio": "An American comedian and actor, famous as a member of The Three Stooges. Known for his wild, frizzy hair and his role as the 'middleman' in the trio's antics.", "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Larry_Fine_in_Disorder_in_the_Court.jpg/800px-Larry_Fine_in_Disorder_in_the_Court.jpg" }
+      {
+        "name": "Shemp Howard",
+        "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Shemp_Howard_1947.jpg/800px-Shemp_Howard_1947.jpg",
+        "bio": "An American actor and comedian, best known as a member of the comedy act The Three Stooges, known for his unique vocalizations and ad-libs.",
+        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Shemp_Howard_1947.jpg/800px-Shemp_Howard_1947.jpg"
+      },
+      {
+        "name": "Moe Howard",
+        "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Moe_Howard_in_Disorder_in_the_Court.jpg/800px-Moe_Howard_in_Disorder_in_the_Court.jpg",
+        "bio": "An American actor and comedian, known as the leader of The Three Stooges. His trademark bowl haircut and bossy, aggressive persona made him a comedy icon.",
+        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Moe_Howard_in_Disorder_in_the_Court.jpg/800px-Moe_Howard_in_Disorder_in_the_Court.jpg"
+      },
+      {
+        "name": "Larry Fine",
+        "photo": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Larry_Fine_in_Disorder_in_the_Court.jpg/800px-Larry_Fine_in_Disorder_in_the_Court.jpg",
+        "bio": "An American comedian and actor, famous as a member of The Three Stooges. Known for his wild, frizzy hair and his role as the 'middleman' in the trio's antics.",
+        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Larry_Fine_in_Disorder_in_the_Court.jpg/800px-Larry_Fine_in_Disorder_in_the_Court.jpg"
+      }
     ],
     "director": "Edward Bernds",
     "trailer": "",
@@ -231,7 +333,14 @@ export const moviesData: Record<string, Movie> = {
     "key": "palmourstreet",
     "title": "Palmour Street",
     "synopsis": "(1949) (20 mins) A documentary short that provides a candid look into the lives of a Black family in Gainesville, Georgia.<br/><br/><strong>Contribution to Modern Cinema:</strong> The film's observational style and sensitive focus on the daily life and emotional well-being of an African American family was groundbreaking for its time, influencing the verité style of later documentary filmmakers and offering a rare, humanizing portrait of Black life in the Jim Crow South.",
-    "cast": [{ "name": "The Williams Family", "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/palmour-street.jpg", "bio": "The film documents the everyday lives of the Williams family in Gainesville, Georgia, offering a poignant and realistic look at family dynamics and child-rearing within a Black community in the segregated South.", "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/palmour-street.jpg" }],
+    "cast": [
+      {
+        "name": "The Williams Family",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/palmour-street.jpg",
+        "bio": "The film documents the everyday lives of the Williams family in Gainesville, Georgia, offering a poignant and realistic look at family dynamics and child-rearing within a Black community in the segregated South.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/palmour-street.jpg"
+      }
+    ],
     "director": "George Stoney",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Palmour-Street-A-Study-in-Family-Life-1957_360p.mp4",
@@ -240,7 +349,7 @@ export const moviesData: Record<string, Movie> = {
     "likes": 0,
     "releaseDate": "1949-01-01"
   },
-   "lifeless": {
+  "lifeless": {
     "key": "lifeless",
     "title": "Lifeless",
     "synopsis": "When Valerie uncovers a devastating truth, she is forced to confront her fears as she prepares to deliver a chilling report to her unsuspecting fiancé.<br/><br/>Trivia: Lifeless opened the 2023 Playhouse West-Philadelphia Film Festival.",
@@ -1054,4 +1163,3 @@ export const moviesData: Record<string, Movie> = {
     "likes": 0
   }
 };
-  
