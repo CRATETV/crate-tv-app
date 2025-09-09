@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 
 interface IntroProps {
@@ -10,8 +8,9 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const desktopSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/CRATE+INTO+2+SECONDS.mp4";
-  const mobileSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/CRATE+INTO+2+SECONDS.mp4"; 
+  // Corrected URLs to use %20 for spaces, which is the standard for URL path segments.
+  const desktopSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/CRATE%20INTO%202%20SECONDS.mp4";
+  const mobileSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/CRATE%20INTO%202%20SECONDS.mp4"; 
 
   const getInitialVideoSrc = () => {
     if (typeof window !== 'undefined') {
@@ -33,32 +32,34 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
     };
   }, [desktopSrc, mobileSrc]);
   
-  // A more robust effect to handle video playback
+  // A more robust effect to handle video playback, ensuring it starts reliably.
   useEffect(() => {
     const videoElement = videoRef.current;
     if (videoElement) {
-      const attemptPlay = () => {
-        // Attempt to play the video
-        videoElement.play().catch(error => {
-          // Autoplay was prevented by the browser (e.g., low power mode).
-          console.warn("Autoplay was prevented, bypassing intro video.", error);
-          // Skip the intro directly to improve UX if autoplay fails.
-          onIntroEnd();
-        });
+      const playVideo = () => {
+        // Attempt to play the video. The `muted` prop on the video tag is crucial for this to succeed.
+        const promise = videoElement.play();
+        if (promise !== undefined) {
+          promise.catch(error => {
+            // Autoplay was prevented by the browser (e.g., in low power mode).
+            console.warn("Autoplay was prevented, bypassing intro video.", error);
+            // Skip the intro directly to improve UX if autoplay fails.
+            onIntroEnd();
+          });
+        }
       };
 
-      // Listen for the 'canplay' event which signals the video is ready to start.
-      videoElement.addEventListener('canplay', attemptPlay);
-      
-      // Explicitly tell the browser to load the video data.
-      videoElement.load();
-
-      // Cleanup function to remove the event listener.
-      return () => {
-        videoElement.removeEventListener('canplay', attemptPlay);
-      };
+      // Check if the video is already ready to play to avoid race conditions.
+      // HAVE_FUTURE_DATA (readyState 3) means we have enough data to start playing.
+      if (videoElement.readyState >= 3) {
+        playVideo();
+      } else {
+        // If not ready, wait for the 'canplay' event.
+        // { once: true } automatically removes the listener after it runs.
+        videoElement.addEventListener('canplay', playVideo, { once: true });
+      }
     }
-  }, [videoSrc, onIntroEnd]); // Rerun when video source changes
+  }, [videoSrc, onIntroEnd]); // Rerun this effect if the video source changes
 
   return (
     <div className="relative w-screen h-screen bg-black">
@@ -67,6 +68,7 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
         id="intro-video"
         key={videoSrc}
         className="absolute top-0 left-0 w-full h-full object-cover"
+        autoPlay // Hint to the browser to start playing
         muted
         playsInline
         preload="auto"
