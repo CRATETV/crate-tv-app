@@ -10,7 +10,7 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
 
   // Corrected URLs to use %20 for spaces, which is the standard for URL path segments.
   const desktopSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/CRATE%20INTO%202%20SECONDS.mp4";
-  const mobileSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/CRATE%20INTO%202%20SECONDS.mp4"; 
+  const mobileSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/CRATE%20INTO%202%20SECONDS%20phone.mp4"; 
 
   const getInitialVideoSrc = () => {
     if (typeof window !== 'undefined') {

@@ -16,32 +16,17 @@ interface MovieDetailsModalProps {
 type PlayerMode = 'poster' | 'trailer' | 'full';
 
 const RecommendedMovieCard: React.FC<{ movie: Movie; onClick: (movie: Movie) => void; }> = ({ movie, onClick }) => {
-    const [isLoaded, setIsLoaded] = useState(false);
-
-    useEffect(() => {
-        setIsLoaded(false);
-    }, [movie.key]);
-
     return (
         <div
             className="group relative cursor-pointer rounded-md overflow-hidden aspect-[3/4] bg-gray-900"
             onClick={() => onClick(movie)}
         >
-            {/* Placeholder Image */}
-            <img
-                src={movie.posterPlaceholder || ''}
-                alt=""
-                aria-hidden="true"
-                className={`w-full h-full object-cover blur-md scale-105 transition-opacity duration-500 ${isLoaded ? 'opacity-0' : 'opacity-100'}`}
-            />
-            {/* High-Quality Image */}
-            <img
-                src={movie.poster}
-                alt={movie.title}
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-                loading="lazy"
-                onLoad={() => setIsLoaded(true)}
-            />
+              <img
+                  src={movie.poster}
+                  alt={movie.title}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+              />
             <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         </div>
     );
@@ -61,7 +46,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
-  const [isMainPosterLoaded, setIsMainPosterLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -69,7 +53,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   // Reset modal state when the movie prop changes
   useEffect(() => {
     setPlayerMode('poster');
-    setIsMainPosterLoaded(false);
     // Scroll to the top of the modal content when a new movie is selected
     if (modalContentRef.current) {
         modalContentRef.current.scrollTop = 0;
@@ -190,17 +173,10 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
         <div className="relative w-full aspect-video bg-black">
           {playerMode === 'poster' ? (
             <div className="relative w-full h-full">
-               <img
-                  src={movie.posterPlaceholder || ''}
-                  alt=""
-                  aria-hidden="true"
-                  className={`absolute inset-0 w-full h-full object-cover blur-md scale-105 transition-opacity duration-700 ${isMainPosterLoaded ? 'opacity-0' : 'opacity-100'}`}
-              />
               <img
                   src={movie.poster}
                   alt={movie.title}
-                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${isMainPosterLoaded ? 'opacity-100' : 'opacity-0'}`}
-                  onLoad={() => setIsMainPosterLoaded(true)}
+                  className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-transparent to-transparent"></div>
             </div>

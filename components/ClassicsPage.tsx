@@ -24,17 +24,17 @@ const filmmakers = [
     {
         name: 'Georges Méliès',
         bioSnippet: 'A French illusionist and film director who led many technical and narrative developments in the earliest days of cinema.',
-        photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Me%CC%81lie%CC%80s_portrait_(cropped).jpg'
+        photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies/Me%CC%81lie%CC%80s_portrait_(cropped).png'
     },
     {
         name: 'Charlie Chaplin',
         bioSnippet: 'An English comic actor, filmmaker, and composer who rose to fame in the era of silent film, becoming a worldwide icon.',
-        photo: 'https://upload.wikimedia.org/wikipedia/commons/0/00/Charlie_Chaplin.jpg'
+        photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies/Charlie_Chaplin.jpg'
     },
     {
         name: 'Lois Weber',
         bioSnippet: 'An American silent film actress, screenwriter, producer, and director, identified as the most important female director the industry has known.',
-        photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/LoisWeber.jpg'
+        photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies/LoisWeber.jpg'
     },
 ];
 

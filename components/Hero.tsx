@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Movie } from '../types.ts';
 
 interface HeroProps {
@@ -9,17 +9,7 @@ interface HeroProps {
 }
 
 const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, onSelectMovie }) => {
-  const [isLoaded, setIsLoaded] = useState(false);
   const movie = movies[currentIndex];
-
-  useEffect(() => {
-    setIsLoaded(false); // Reset on movie change
-    if (movie?.poster) {
-      const img = new Image();
-      img.src = movie.poster;
-      img.onload = () => setIsLoaded(true);
-    }
-  }, [movie]);
   
   if (!movie) {
     return <div className="h-[56.25vw] max-h-[85vh] w-full bg-black" />;
@@ -27,21 +17,10 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
 
   return (
     <div 
-      className="relative h-[56.25vw] max-h-[85vh] w-full bg-black"
+      className="relative h-[56.25vw] max-h-[85vh] w-full bg-black bg-cover bg-center"
+      style={{ backgroundImage: `url(${movie.poster})` }}
       aria-labelledby="hero-movie-title"
     >
-      {/* Placeholder */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center blur-md scale-105 transition-opacity duration-700"
-        style={{ backgroundImage: `url(${movie.posterPlaceholder || ''})`, opacity: isLoaded ? 0 : 1 }}
-        aria-hidden="true"
-      />
-      {/* High-Quality Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center transition-opacity duration-700"
-        style={{ backgroundImage: `url(${movie.poster})`, opacity: isLoaded ? 1 : 0 }}
-      />
-      
       <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent"></div>
       <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent"></div>
       

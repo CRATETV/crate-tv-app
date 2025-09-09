@@ -27,14 +27,8 @@ const setMetaTag = (attr: 'name' | 'property', value: string, content: string) =
   element.setAttribute('content', content);
 };
 
-// A self-contained component for displaying a recommended movie with a loading placeholder.
+// A self-contained component for displaying a recommended movie.
 const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
-    const [isLoaded, setIsLoaded] = useState(false);
-
-    useEffect(() => {
-      setIsLoaded(false);
-    }, [movie.key]);
-
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
         e.preventDefault();
         window.history.pushState({}, '', path);
@@ -48,19 +42,12 @@ const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
             onClick={(e) => handleNavigate(e, `/movie/${movie.key}`)}
             className="group relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 bg-gray-900"
         >
-            <img
-                src={movie.posterPlaceholder || ''}
-                alt=""
-                aria-hidden="true"
-                className={`w-full h-full object-cover blur-md scale-105 transition-opacity duration-500 ${isLoaded ? 'opacity-0' : 'opacity-100'}`}
-            />
-            <img 
-                src={movie.poster} 
-                alt={movie.title} 
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-                loading="lazy"
-                onLoad={() => setIsLoaded(true)}
-            />
+              <img 
+                  src={movie.poster} 
+                  alt={movie.title} 
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+              />
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         </a>
     );
@@ -81,8 +68,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [displayTitle, setDisplayTitle] = useState('');
   const [titleOpacity, setTitleOpacity] = useState(1);
   const [isAnimatingTitle, setIsAnimatingTitle] = useState(false);
-  const [isMainPosterLoaded, setIsMainPosterLoaded] = useState(false);
-
 
   // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
@@ -135,7 +120,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       }
       setMovie(movieData);
       setDisplayTitle(movieData.title); // Initialize display title
-      setIsMainPosterLoaded(false); // Reset loader
 
       // Initialize liked set from local storage
       const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
@@ -158,7 +142,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   // SEO and Title Animation
   useEffect(() => {
-    // FIX: Changed NodeJS.Timeout to ReturnType<typeof setTimeout> for browser compatibility.
     let animationTimers: ReturnType<typeof setTimeout>[] = [];
     if (movie) {
         document.title = `${movie.title} | Crate TV`;
@@ -437,16 +420,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             {playerMode === 'poster' ? (
                 <div className="relative w-full h-full overflow-hidden">
                     <img
-                        src={movie.posterPlaceholder || ''}
-                        alt=""
-                        aria-hidden="true"
-                        className={`w-full h-full object-cover blur-md scale-105 transition-opacity duration-700 ${isMainPosterLoaded ? 'opacity-0' : 'opacity-100'}`}
-                    />
-                    <img
                         src={movie.poster}
                         alt={movie.title}
-                        className={`w-full h-full object-cover absolute inset-0 transition-opacity duration-700 ${isMainPosterLoaded ? 'opacity-100' : 'opacity-0'}`}
-                        onLoad={() => setIsMainPosterLoaded(true)}
+                        className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent"></div>
                     <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent"></div>

@@ -376,8 +376,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Darrah Lashley",
     "trailer": "https://cratetelevision.s3.amazonaws.com/LifelessTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/LIFELESS.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless+poster+remake+.jpg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless+poster+remake+.jpg",
+    "poster": "https://cratetelevision.s3.amazonaws.com/Lifeless+poster+remake+.jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Lifeless.png",
     "likes": 0
   },
   "almasvows": {
