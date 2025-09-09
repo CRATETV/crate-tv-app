@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 
 interface IntroProps {
   onIntroEnd: () => void;
@@ -8,76 +8,34 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // Corrected URLs to use %20 for spaces, which is the standard for URL path segments.
   const desktopSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/CRATE%20INTO%202%20SECONDS.mp4";
-  const mobileSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/CRATE%20INTO%202%20SECONDS%20phone.mp4"; 
+  const mobileSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/intro+for+cellphone1080p.mp4";
 
-  const getInitialVideoSrc = () => {
-    if (typeof window !== 'undefined') {
-      return window.matchMedia("(max-width: 768px)").matches ? mobileSrc : desktopSrc;
-    }
-    return desktopSrc;
+  // This function will be called if the video file fails to load or has a playback error.
+  const handleVideoError = () => {
+    console.error("Intro video failed to load or play. Skipping intro.");
+    onIntroEnd();
   };
-
-  const [videoSrc, setVideoSrc] = useState(getInitialVideoSrc);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 768px)");
-    const handleResize = (e: MediaQueryListEvent) => {
-      setVideoSrc(e.matches ? mobileSrc : desktopSrc);
-    };
-    mediaQuery.addEventListener('change', handleResize);
-    return () => {
-      mediaQuery.removeEventListener('change', handleResize);
-    };
-  }, [desktopSrc, mobileSrc]);
-  
-  // A more robust effect to handle video playback, ensuring it starts reliably.
-  useEffect(() => {
-    const videoElement = videoRef.current;
-    if (videoElement) {
-      const playVideo = () => {
-        // Attempt to play the video. The `muted` prop on the video tag is crucial for this to succeed.
-        const promise = videoElement.play();
-        if (promise !== undefined) {
-          promise.catch(error => {
-            // Autoplay was prevented by the browser (e.g., in low power mode).
-            console.warn("Autoplay was prevented, bypassing intro video.", error);
-            // Skip the intro directly to improve UX if autoplay fails.
-            onIntroEnd();
-          });
-        }
-      };
-
-      // Check if the video is already ready to play to avoid race conditions.
-      // HAVE_FUTURE_DATA (readyState 3) means we have enough data to start playing.
-      if (videoElement.readyState >= 3) {
-        playVideo();
-      } else {
-        // If not ready, wait for the 'canplay' event.
-        // { once: true } automatically removes the listener after it runs.
-        videoElement.addEventListener('canplay', playVideo, { once: true });
-      }
-    }
-  }, [videoSrc, onIntroEnd]); // Rerun this effect if the video source changes
 
   return (
     <div className="relative w-screen h-screen bg-black">
       <video
         ref={videoRef}
         id="intro-video"
-        key={videoSrc}
         className="absolute top-0 left-0 w-full h-full object-cover"
-        autoPlay // Hint to the browser to start playing
+        autoPlay
         muted
         playsInline
         preload="auto"
         onEnded={onIntroEnd}
+        onError={handleVideoError} // Add a direct error handler
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         poster="https://cratetelevision.s3.us-east-1.amazonaws.com/intro-poster.jpg"
-        src={videoSrc}
       >
+        {/* Use source tags for responsive video - this is more reliable than JS-based switching */}
+        <source src={mobileSrc} type="video/mp4" media="(max-width: 768px)" />
+        <source src={desktopSrc} type="video/mp4" media="(min-width: 769px)" />
         Your browser does not support the video tag.
       </video>
 
