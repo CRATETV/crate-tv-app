@@ -271,6 +271,12 @@ End Sub
             vertFocusAnimationStyle="fixedFocus"
             rowFocusAnimationStyle="fixedFocus"
             visible="false" />
+        <Video
+            id="videoPlayer"
+            width="1280"
+            height="720"
+            visible="false"
+        />
     </children>
 </component>
         `.trim();
@@ -280,6 +286,21 @@ End Sub
 Sub init()
     m.loadingLabel = m.top.findNode("loadingLabel")
     m.movieRowList = m.top.findNode("movieRowList")
+    m.videoPlayer = m.top.findNode("videoPlayer")
+
+    ' Set video player size based on display mode
+    deviceInfo = CreateObject("roDeviceInfo")
+    if deviceInfo.GetDisplayMode() = "1080p"
+        m.videoPlayer.width = 1920
+        m.videoPlayer.height = 1080
+    else
+        m.videoPlayer.width = 1280
+        m.videoPlayer.height = 720
+    end if
+
+    m.top.setFocus(true) ' The scene itself should handle key events
+    m.movieRowList.observeField("itemSelected", "onItemSelected")
+    m.videoPlayer.observeField("state", "onVideoStateChange")
     
     m.fetcher = CreateObject("roUrlTransfer")
     m.fetcher.SetUrl("${feedUrl}")
@@ -325,6 +346,59 @@ Sub ProcessData(data as String)
         m.loadingLabel.text = "Failed to parse feed data."
     end if
 End Sub
+
+Sub onItemSelected()
+    ' itemSelected is a roArray with [rowIndex, itemIndex]
+    selectedIndex = m.movieRowList.itemSelected
+    content = m.movieRowList.content
+    if content <> invalid AND content.getChildCount() > selectedIndex[0]
+        selectedRow = content.getChild(selectedIndex[0])
+        if selectedRow <> invalid AND selectedRow.getChildCount() > selectedIndex[1]
+            selectedMovie = selectedRow.getChild(selectedIndex[1])
+            
+            if selectedMovie <> invalid AND selectedMovie.streamUrl <> invalid
+                videoContent = CreateObject("roSGNode", "ContentNode")
+                videoContent.url = selectedMovie.streamUrl
+                videoContent.title = selectedMovie.title
+                videoContent.streamformat = "mp4"
+                
+                m.videoPlayer.content = videoContent
+                m.videoPlayer.visible = true
+                m.videoPlayer.setFocus(true)
+                m.videoPlayer.control = "play"
+
+                m.movieRowList.visible = false
+            end if
+        end if
+    end if
+End Sub
+
+Sub onVideoStateChange()
+    state = m.videoPlayer.state
+    if state = "finished" or state = "error"
+        closeVideoPlayer()
+    end if
+End Sub
+
+Sub closeVideoPlayer()
+    m.videoPlayer.control = "stop"
+    m.videoPlayer.visible = false
+    
+    m.movieRowList.visible = true
+    m.movieRowList.setFocus(true)
+End Sub
+
+Function onKeyEvent(key as String, press as Boolean) as Boolean
+    if press then
+        if key = "back"
+            if m.videoPlayer.visible
+                closeVideoPlayer()
+                return true ' event handled
+            end if
+        end if
+    end if
+    return false ' event not handled
+End Function
         `.trim();
         componentsFolder?.file('HomeScene.brs', homeSceneBrs);
         
