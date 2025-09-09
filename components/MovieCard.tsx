@@ -8,7 +8,7 @@ interface MovieCardProps {
 
 const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie }) => {
   const [isLoaded, setIsLoaded] = useState(false);
-
+  
   return (
     <div
       className="relative w-full aspect-[3/4] rounded-md overflow-hidden cursor-pointer bg-gray-800 transition-transform duration-300 ease-in-out hover:scale-105"

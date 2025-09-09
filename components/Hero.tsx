@@ -14,7 +14,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
   if (!movie) {
     return <div className="h-[56.25vw] max-h-[85vh] w-full bg-black" />;
   }
-
+  
   return (
     <div 
       className="relative h-[56.25vw] max-h-[85vh] w-full bg-cover bg-center transition-all duration-1000"
@@ -23,6 +23,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
     >
       <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent"></div>
       <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent"></div>
+      
 
       <div className="absolute inset-0 flex flex-col justify-center p-8 md:p-12 lg:p-24">
         <div key={movie.key} className="max-w-xl animate-fadeInHeroContent mt-8 md:mt-0">

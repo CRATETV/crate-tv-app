@@ -56,15 +56,6 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
         >
           Home
         </a>
-        {/*
-        <a 
-          href="/#festival-section" 
-          onClick={(e) => handleNavigate(e, '/#festival-section')} 
-          className={`${linkBaseStyles} ${inactiveLinkStyles}`}
-        >
-          Festival
-        </a>
-        */}
         <a 
           href="/classics" 
           onClick={(e) => handleNavigate(e, '/classics')} 

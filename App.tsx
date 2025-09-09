@@ -110,15 +110,19 @@ const App: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isStaging, setIsStaging] = useState(false);
+  const [recommendedKeys, setRecommendedKeys] = useState<string[]>([]);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  
+  // Feature Toggles
+  const [isFestivalLive, setIsFestivalLive] = useState(false);
 
-  // Festival State (Commented out to hide feature)
-  /*
+
+  // Festival State
   const [activeDay, setActiveDay] = useState<number>(1);
   const [selectedBlock, setSelectedBlock] = useState<FilmBlock | null>(null);
   const { purchases, purchaseFullPass, purchaseBlock, purchaseFilm, isFilmUnlocked, isBlockUnlocked } = useFestivalPurchases();
   const [showPurchaseConfirmation, setShowPurchaseConfirmation] = useState('');
   const [paymentItem, setPaymentItem] = useState<PaymentItem | null>(null);
-  */
   
   // Create a memoized map of movie keys to their genre titles for efficient searching.
   const movieToGenresMap = useMemo(() => {
@@ -137,6 +141,10 @@ const App: React.FC = () => {
 
 
   useEffect(() => {
+    // Check feature toggles
+    const festivalStatus = localStorage.getItem('crateTv_isFestivalLive');
+    if (festivalStatus === 'true') setIsFestivalLive(true);
+    
     // Check for staging environment
     const params = new URLSearchParams(window.location.search);
     const env = params.get('env');
@@ -216,6 +224,54 @@ const App: React.FC = () => {
     
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Fetch AI recommendations when liked movies change
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      if (likedMovies.size < 3) {
+        setRecommendedKeys([]); // Not enough data for recommendations
+        return;
+      }
+      setIsLoadingRecommendations(true);
+
+      try {
+        // Cache recommendations in session storage to avoid repeated API calls
+        const likedMoviesArray = Array.from(likedMovies);
+        const cacheKey = `recommendations-${likedMoviesArray.sort().join(',')}`;
+        const cachedRecs = sessionStorage.getItem(cacheKey);
+
+        if (cachedRecs) {
+          setRecommendedKeys(JSON.parse(cachedRecs));
+        } else {
+          const likedTitles = likedMoviesArray.map(key => movies[key]?.title).filter(Boolean);
+          const allMoviesForApi = Object.entries(movies).reduce((acc, [key, movie]) => {
+              acc[key] = movie.title;
+              return acc;
+          }, {} as Record<string, string>);
+
+          const response = await fetch('/api/generate-recommendations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ likedTitles, allMovies: allMoviesForApi }),
+          });
+
+          if (!response.ok) throw new Error('Failed to fetch recommendations');
+          
+          const { recommendedKeys: keys } = await response.json();
+          setRecommendedKeys(keys || []);
+          sessionStorage.setItem(cacheKey, JSON.stringify(keys || []));
+        }
+      } catch (error) {
+        console.error("Error fetching recommendations:", error);
+      } finally {
+        setIsLoadingRecommendations(false);
+      }
+    };
+
+    if (Object.keys(movies).length > 0) {
+        fetchRecommendations();
+    }
+  }, [likedMovies, movies]);
 
   // Preload critical images while the app is initializing
   useEffect(() => {
@@ -333,8 +389,7 @@ const App: React.FC = () => {
     window.history.pushState({}, '', window.location.pathname);
   };
   
-  // Festival Handlers (Commented out to hide feature)
-  /*
+  // Festival Handlers
   const handlePurchase = (type: 'pass' | 'block' | 'film', id: string) => {
     let item: PaymentItem | null = null;
     if (type === 'pass') {
@@ -345,7 +400,7 @@ const App: React.FC = () => {
         item = { type: 'block', id, name: `Block: ${block.title}`, price: 12 };
       }
     } else if (type === 'film') {
-      const film = moviesData[id];
+      const film = movies[id];
       if (film) {
         item = { type: 'film', id, name: `Film: ${film.title}`, price: 5 };
       }
@@ -373,7 +428,6 @@ const App: React.FC = () => {
     setPaymentItem(null);
     setTimeout(() => setShowPurchaseConfirmation(''), 3000);
   };
-  */
   
   const handleNavigateToMovie = (movieKey: string) => {
     window.history.pushState({}, '', `/movie/${movieKey}?play=true`);
@@ -425,6 +479,10 @@ const App: React.FC = () => {
     return <LoadingSpinner />;
   }
   
+  const recommendedMoviesList = recommendedKeys
+      .map(key => movies[key])
+      .filter(movie => movie && visibleMovieKeys.has(movie.key));
+
   return (
     <div className="flex flex-col min-h-screen bg-[#141414] text-white">
       {isStaging && <StagingBanner onExit={exitStaging} />}
@@ -442,7 +500,8 @@ const App: React.FC = () => {
             movies={featuredMovies} 
             currentIndex={currentHeroIndex}
             onSetCurrentIndex={handleSetCurrentHeroIndex}
-            onSelectMovie={handleSelectMovie} />}
+            onSelectMovie={handleSelectMovie} 
+            />}
 
         <div className={`relative px-4 md:px-12 pb-8 ${searchQuery.length > 0 ? 'pt-24' : '-mt-8 md:-mt-24'}`}>
           {filteredMovies ? (
@@ -477,82 +536,110 @@ const App: React.FC = () => {
             </div>
           ) : (
             <>
-              {/* Festival Section (Commented out to hide feature) */}
-              {/*
-              <div id="festival-section" className="pt-8 md:pt-16">
-                 <div className="relative py-24 md:py-32 bg-gray-900 text-center mb-8 rounded-lg overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-red-900/40 to-black"></div>
-                    <div className="relative z-10 max-w-4xl mx-auto px-4">
-                        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">13th Annual Playhouse West Film Festival</h1>
-                        <p className="text-lg md:text-xl text-red-400 font-semibold -mt-2 mb-6">Presented by Crate TV</p>
-                        <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-8">
-                            Discover the next generation of indie filmmakers. Three days of incredible shorts, exclusive premieres, and unforgettable stories.
-                        </p>
-                        {!purchases.hasFullPass ? (
-                            <button onClick={() => handlePurchase('pass', 'full')} className="bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-lg text-xl shadow-lg transition-transform transform hover:scale-105">
-                                Buy Full Festival Pass - $50
-                            </button>
-                        ) : (
-                            <div className="bg-green-500/20 border border-green-400 text-green-300 font-bold py-4 px-8 rounded-lg text-xl inline-block">
-                                ✓ Festival Pass Unlocked
-                            </div>
-                        )}
-                    </div>
-                </div>
-                
-                <div className="max-w-7xl mx-auto">
-                    <div className="flex justify-center border-b border-gray-700 mb-8">
-                        {festivalData.map(day => (
-                            <button
-                                key={day.day}
-                                onClick={() => setActiveDay(day.day)}
-                                className={`px-4 sm:px-8 py-4 text-lg font-semibold transition-colors duration-300 border-b-4 ${activeDay === day.day ? 'border-red-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
-                            >
-                                Day {day.day} <span className="hidden sm:inline-block text-sm text-gray-500">- {day.date}</span>
-                            </button>
-                        ))}
-                    </div>
+              {isFestivalLive && (
+                <>
+                  {/* --- Film Festival Section --- */}
+                  <div id="festival" className="max-w-7xl mx-auto my-16 p-4 sm:p-0 border-t border-b border-gray-800 py-12">
+                      <div className="relative py-16 md:py-20 bg-gray-900 text-center rounded-lg overflow-hidden mb-12">
+                          <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-red-900/40 to-black"></div>
+                          <div className="relative z-10 max-w-4xl mx-auto px-4">
+                              <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Crate TV Film Festival</h2>
+                              <p className="text-md md:text-lg text-gray-300 max-w-2xl mx-auto mb-8">
+                                  Discover the next generation of indie filmmakers. Three days of incredible shorts, exclusive premieres, and unforgettable stories.
+                              </p>
+                              {!purchases.hasFullPass ? (
+                                  <button onClick={() => handlePurchase('pass', 'full')} className="bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-lg transition-transform transform hover:scale-105">
+                                      Buy Full Festival Pass - $50
+                                  </button>
+                              ) : (
+                                  <div className="bg-green-500/20 border border-green-400 text-green-300 font-bold py-3 px-6 rounded-lg text-lg inline-block">
+                                      ✓ Festival Pass Unlocked
+                                  </div>
+                              )}
+                          </div>
+                      </div>
+                      
+                      <div className="flex justify-center border-b border-gray-700 mb-8">
+                          {festivalData.map(day => (
+                              <button
+                                  key={day.day}
+                                  onClick={() => setActiveDay(day.day)}
+                                  className={`px-4 sm:px-8 py-3 text-md font-semibold transition-colors duration-300 border-b-4 ${activeDay === day.day ? 'border-red-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
+                              >
+                                  Day {day.day} <span className="hidden sm:inline-block text-sm text-gray-500">- {day.date}</span>
+                              </button>
+                          ))}
+                      </div>
 
-                    <div>
-                        {festivalData.filter(day => day.day === activeDay).map(day => (
-                            <div key={day.day} className="space-y-10">
-                                {day.blocks.map(block => {
-                                    const blockMovies = block.movieKeys.map(key => moviesData[key]).filter(Boolean);
-                                    return (
-                                        <div key={block.id}>
-                                             <h2 className="text-2xl md:text-3xl font-bold mb-4 text-white">{block.title}</h2>
-                                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                                {blockMovies.map(movie => (
-                                                    <FilmBlockCard 
-                                                        key={movie.key}
-                                                        movie={movie}
-                                                        isUnlocked={isFilmUnlocked(movie.key, block.id)}
-                                                        onWatch={() => handleNavigateToMovie(movie.key)}
-                                                        onUnlock={() => setSelectedBlock(block)}
-                                                    />
-                                                ))}
-                                            </div>
-                                            <div className="mt-4 text-center">
-                                                {isBlockUnlocked(block.id) ? (
-                                                     <span className="text-green-400 font-semibold">✓ You have access to this block</span>
-                                                ) : (
-                                                    <button onClick={() => handlePurchase('block', block.id)} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">
-                                                        Unlock Full Block - $12
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-              </div>
-              */}
+                      <div>
+                          {festivalData.filter(day => day.day === activeDay).map(day => (
+                              <div key={day.day} className="space-y-10 animate-[fadeIn_0.5s_ease-out]">
+                                  {day.blocks.map(block => {
+                                      const blockMovies = block.movieKeys.map(key => movies[key]).filter(Boolean);
+                                      return (
+                                          <div key={block.id}>
+                                               <h3 className="text-2xl md:text-3xl font-bold mb-4 text-white">{block.title}</h3>
+                                               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                                  {blockMovies.map(movie => (
+                                                      <FilmBlockCard 
+                                                          key={movie.key}
+                                                          movie={movie}
+                                                          isUnlocked={isFilmUnlocked(movie.key, block.id)}
+                                                          onWatch={() => handleNavigateToMovie(movie.key)}
+                                                          onUnlock={() => setSelectedBlock(block)}
+                                                      />
+                                                  ))}
+                                              </div>
+                                              <div className="mt-4 text-center">
+                                                  {isBlockUnlocked(block.id) ? (
+                                                       <span className="text-green-400 font-semibold">✓ You have access to this block</span>
+                                                  ) : (
+                                                      <button onClick={() => handlePurchase('block', block.id)} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                                                          Unlock Full Block - $12
+                                                      </button>
+                                                  )}
+                                              </div>
+                                          </div>
+                                      );
+                                  })}
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+                  {/* --- End Film Festival Section --- */}
+                </>
+              )}
 
+               {Object.entries(categories)
+                .filter(([key]) => key === 'newReleases')
+                .map(([key, value]) => {
+                  const categoryMovies = value.movieKeys
+                      .filter(movieKey => visibleMovieKeys.has(movieKey))
+                      .map(movieKey => movies[movieKey])
+                      .filter(Boolean);
+                  if(categoryMovies.length === 0) return null;
+                  return (
+                    <MovieCarousel
+                      key={key}
+                      title={value.title}
+                      movies={categoryMovies}
+                      onSelectMovie={handleSelectMovie}
+                      hideTitleOnMobile={true}
+                    />
+                  );
+              })}
+
+              {recommendedMoviesList.length > 0 && (
+                <MovieCarousel
+                  key="recommendations"
+                  title="✨ Picks For You"
+                  movies={recommendedMoviesList}
+                  onSelectMovie={handleSelectMovie}
+                />
+              )}
+              
               {Object.entries(categories)
-                .filter(([key]) => key !== 'featured' && key !== 'publicDomainIndie')
+                .filter(([key]) => key !== 'featured' && key !== 'publicDomainIndie' && key !== 'newReleases')
                 .map(([key, value]) => {
                   const categoryMovies = value.movieKeys
                       .filter(movieKey => visibleMovieKeys.has(movieKey))
@@ -569,7 +656,6 @@ const App: React.FC = () => {
                       title={value.title}
                       movies={sortedMovies}
                       onSelectMovie={handleSelectMovie}
-                      hideTitleOnMobile={key === 'newReleases'}
                     />
                   );
               })}
@@ -608,8 +694,7 @@ const App: React.FC = () => {
           }}
         />
       )}
-      {/* Festival Modals (Commented out to hide feature) */}
-      {/*
+      {/* Festival Modals */}
        {selectedBlock && (
         <FilmBlockDetailsModal 
             block={selectedBlock}
@@ -634,7 +719,6 @@ const App: React.FC = () => {
             {showPurchaseConfirmation}
         </div>
       )}
-      */}
     </div>
   );
 };

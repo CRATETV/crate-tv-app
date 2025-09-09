@@ -6,11 +6,20 @@ import { festivalData as initialFestivalData, moviesData } from '../constants.ts
 import { FilmBlock, Movie } from '../types.ts';
 import FilmBlockCard from './FilmBlockCard.tsx';
 import FilmBlockDetailsModal from './FilmBlockDetailsModal.tsx';
+import StripePaymentModal from './StripePaymentModal.tsx';
 
 interface FestivalPurchases {
   hasFullPass: boolean;
   purchasedBlocks: string[];
   purchasedFilms: string[];
+}
+
+// Define the structure for an item being purchased
+interface PaymentItem {
+  type: 'pass' | 'block' | 'film';
+  id: string;
+  name: string;
+  price: number;
 }
 
 const useFestivalPurchases = () => {
@@ -74,6 +83,7 @@ const FestivalPage: React.FC = () => {
   const { purchases, purchaseFullPass, purchaseBlock, purchaseFilm, isFilmUnlocked, isBlockUnlocked } = useFestivalPurchases();
   const [showPurchaseConfirmation, setShowPurchaseConfirmation] = useState('');
   const [festivalData, setFestivalData] = useState(initialFestivalData);
+  const [paymentItem, setPaymentItem] = useState<PaymentItem | null>(null);
 
   useEffect(() => {
     // This effect runs on mount to check for live preview data
@@ -88,17 +98,41 @@ const FestivalPage: React.FC = () => {
   }, []);
 
   const handlePurchase = (type: 'pass' | 'block' | 'film', id: string) => {
+    let item: PaymentItem | null = null;
     if (type === 'pass') {
+      item = { type: 'pass', id: 'full', name: 'Full Festival Pass', price: 50 };
+    } else if (type === 'block') {
+      const block = festivalData.flatMap(d => d.blocks).find(b => b.id === id);
+      if (block) {
+        item = { type: 'block', id, name: `Block: ${block.title}`, price: 12 };
+      }
+    } else if (type === 'film') {
+      const film = moviesData[id];
+      if (film) {
+        item = { type: 'film', id, name: `Film: ${film.title}`, price: 5 };
+      }
+    }
+
+    if (item) {
+      setPaymentItem(item);
+      // Close the details modal if it's open
+      if (selectedBlock) setSelectedBlock(null);
+    }
+  };
+
+  const handlePaymentSuccess = (item: PaymentItem) => {
+    if (item.type === 'pass') {
         purchaseFullPass();
         setShowPurchaseConfirmation('Full Festival Pass unlocked!');
-    } else if (type === 'block') {
-        purchaseBlock(id);
+    } else if (item.type === 'block') {
+        purchaseBlock(item.id);
         setShowPurchaseConfirmation('Film Block unlocked!');
-    } else if (type === 'film') {
-        purchaseFilm(id);
+    } else if (item.type === 'film') {
+        purchaseFilm(item.id);
         setShowPurchaseConfirmation('Film unlocked!');
     }
     
+    setPaymentItem(null);
     setTimeout(() => setShowPurchaseConfirmation(''), 3000);
   };
   
@@ -193,6 +227,13 @@ const FestivalPage: React.FC = () => {
             isFilmUnlocked={isFilmUnlocked}
             isBlockUnlocked={isBlockUnlocked}
             onWatchMovie={handleNavigateToMovie}
+        />
+      )}
+       {paymentItem && (
+        <StripePaymentModal 
+            item={paymentItem}
+            onClose={() => setPaymentItem(null)}
+            onSuccess={handlePaymentSuccess}
         />
       )}
       

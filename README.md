@@ -6,13 +6,13 @@ Crate TV is a sleek, professional, and fully-featured streaming web application 
 
 - **Modern & Responsive UI**: A Netflix-inspired interface that looks great on all devices, from desktops to mobile phones.
 - **Dynamic Content**: All movie and category data is centralized in `constants.ts`, making content updates simple and code-free.
-- **Film Submission Form**: A dedicated page for filmmakers to submit their work, which sends a formatted email to the site admin using Resend.
+- **Secure Contact & Submission Forms**: Dedicated pages for filmmakers to submit their work and for users to send messages. Both are powered by secure, serverless backend functions using Resend.
 - **AI-Powered Bios**: Click on any actor to see their bio and a unique, AI-generated "fun fact" powered by the Gemini API.
 - **Advanced Search**: Instantly search for movies by title, actor, or genre.
 - **Persistent Likes**: Users can "like" movies, and their preferences are saved in their browser's local storage.
 - **Dedicated Movie Pages**: Every film has a unique, shareable URL with automatically generated SEO and schema markup for better discovery on search engines.
 - **Staging Environment**: Preview unreleased movies by adding `?env=staging` to the URL. A banner indicates you're in preview mode.
-- **Built-in Admin Panel**: A password-protected page (`/admin`) to perform mock CRUD operations on movie data.
+- **Secure Admin Panel**: A password-protected page (`/admin`) for content management. Authentication is handled by a secure, serverless API endpoint, and the password is stored safely as an environment variable.
 - **Automated Roku Channel Packager**: A one-click tool in the Admin Panel that generates a complete, ready-to-upload Roku channel ZIP file, automatically configured to pull data from your live web app.
 
 ---
@@ -28,10 +28,11 @@ This entire web application was built and is maintained by a world-class senior 
 ## 🚀 Quick Start & Deployment
 
 ### 1. Set Up Environment Variables
-This project requires API keys for its AI and email features. You will need to configure these in your deployment environment (e.g., Vercel).
+This project requires API keys and a password for its features. You will need to configure these in your deployment environment (e.g., Vercel).
 
 -   `API_KEY`: Your Google Gemini API key.
 -   `RESEND_API_KEY`: Your API key from Resend for handling email submissions.
+-   `ADMIN_PASSWORD`: A secure password of your choice to protect the `/admin` page.
 
 ### 2. Deploy to Vercel
 The simplest way to get started is to deploy this repository directly to Vercel.
@@ -60,7 +61,7 @@ The web application includes an amazing feature: an automated packager that crea
 
 ### Step 2: Generate the Roku Channel Package
 1.  Navigate to the Admin Panel of your **live, deployed** web application (e.g., `https://your-project-name.vercel.app/admin`).
-2.  Enter the admin password (`admin123` for this demo).
+2.  Enter the admin password you set in your environment variables.
 3.  In the "Automated Roku Channel Packager" section, click the **"Generate & Download Roku ZIP"** button. A file named `cratv.zip` will be downloaded.
 
 ### Step 3: Install the Channel on Your Roku
@@ -89,10 +90,11 @@ If you wish to run the application on your local machine for development purpose
     ```
 
 3.  **Create a local environment file:**
-    Create a file named `.env.local` in the root of the project and add your API keys:
+    Create a file named `.env.local` in the root of the project and add your API keys and admin password:
     ```
     API_KEY=your_gemini_api_key
     RESEND_API_KEY=your_resend_api_key
+    ADMIN_PASSWORD=your_secure_password
     ```
     *Note: Vite automatically loads `.env.local` files, but these will not be used by the Vercel deployment.*
 

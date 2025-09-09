@@ -10,7 +10,7 @@ import MoviePage from './components/MoviePage.tsx';
 import Intro from './components/Intro.tsx';
 import MerchPage from './components/MerchPage.tsx';
 import RokuGuidePage from './components/RokuGuidePage.tsx';
-import FestivalPage from './components/FestivalPage.tsx';
+import ContactPage from './components/ContactPage.tsx';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -70,8 +70,8 @@ const AppRouter: React.FC = () => {
       return <AdminPage />;
     case '/roku-guide':
       return <RokuGuidePage />;
-    case '/festival':
-      return <FestivalPage />;
+    case '/contact':
+      return <ContactPage />;
     default:
       // Fallback to the homepage for any unknown routes
       return <App />;

@@ -16,7 +16,7 @@ const Footer: React.FC = () => {
             <a href="/submit" onClick={(e) => handleNavigate(e, '/submit')} className="hover:text-white transition">Submit Your Film</a>
           </li>
           <li>
-            <a href="mailto:cratetiv@gmail.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Contact Us</a>
+            <a href="/contact" onClick={(e) => handleNavigate(e, '/contact')} className="hover:text-white transition">Contact Us</a>
           </li>
           <li>
             <a href="https://www.instagram.com/cratetv.philly?igsh=dXJrYTdlMHVhbXcw" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Instagram</a>

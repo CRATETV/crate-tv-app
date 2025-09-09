@@ -88,7 +88,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   
-  // Staging state
+  // Staging and feature toggles
   const [isStaging, setIsStaging] = useState(false);
 
   useEffect(() => {

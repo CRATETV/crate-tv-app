@@ -63,9 +63,21 @@ const AdminPage: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isPackaging, setIsPackaging] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isFestivalLiveAdmin, setIsFestivalLiveAdmin] = useState(false);
 
 
   useEffect(() => {
+    // Check session storage for auth status on initial load
+    if (sessionStorage.getItem('isAdminAuthenticated') === 'true') {
+        setIsAuthenticated(true);
+    }
+    
+    // Check feature toggles status from localStorage
+    const festivalStatus = localStorage.getItem('crateTv_isFestivalLive');
+    setIsFestivalLiveAdmin(festivalStatus === 'true');
+
     // On initial load, try to get data from localStorage, otherwise use initial data
     try {
         const storedMovies = localStorage.getItem('crateTvAdmin_movies');
@@ -83,12 +95,29 @@ const AdminPage: React.FC = () => {
     }
   }, []);
 
-  const handleAuth = (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'admin123') { 
-      setIsAuthenticated(true);
-    } else {
-      alert('Incorrect password');
+    setLoginError('');
+    setIsAuthenticating(true);
+
+    try {
+        const response = await fetch('/api/admin-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+        });
+
+        if (response.ok) {
+            sessionStorage.setItem('isAdminAuthenticated', 'true');
+            setIsAuthenticated(true);
+        } else {
+            const data = await response.json();
+            setLoginError(data.error || 'Login failed.');
+        }
+    } catch (error) {
+        setLoginError('An error occurred. Please try again.');
+    } finally {
+        setIsAuthenticating(false);
     }
   };
   
@@ -168,6 +197,13 @@ export const festivalData: FestivalDay[] = ${JSON.stringify(newFestivalData, nul
   const handleSaveFestival = (updatedFestivalData: FestivalDay[]) => {
     setFestivalData(updatedFestivalData);
     persistChanges(movies, categories, updatedFestivalData);
+  };
+
+  const toggleFestivalLive = () => {
+      const newStatus = !isFestivalLiveAdmin;
+      setIsFestivalLiveAdmin(newStatus);
+      localStorage.setItem('crateTv_isFestivalLive', String(newStatus));
+      alert(`Film Festival module has been ${newStatus ? 'made LIVE' : 'taken DOWN'}. Changes will be visible on the homepage for all users on their next page load.`);
   };
 
   const generateRokuZip = async () => {
@@ -360,9 +396,11 @@ End Sub
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500"
+              disabled={isAuthenticating}
             />
-            <button type="submit" className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
-              Login
+            {loginError && <p className="text-red-500 text-sm mt-2 text-center">{loginError}</p>}
+            <button type="submit" className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-red-800 disabled:cursor-not-allowed" disabled={isAuthenticating}>
+              {isAuthenticating ? 'Logging in...' : 'Login'}
             </button>
           </form>
         </div>
@@ -377,6 +415,31 @@ End Sub
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl sm:text-4xl font-bold mb-8">Admin Panel</h1>
           
+           <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
+                <h2 className="text-xl sm:text-2xl font-bold mb-3 text-green-400">Live Feature Toggles</h2>
+                <p className="text-gray-400 mb-4 max-w-3xl">
+                    Control the visibility of major site features for all users in real-time.
+                </p>
+                <div className="space-y-4">
+                  {/* Festival Toggle */}
+                  <div className="flex items-center gap-4">
+                      <button
+                          onClick={toggleFestivalLive}
+                          className={`font-bold py-2 px-5 rounded-md transition-colors w-44 text-center ${
+                              isFestivalLiveAdmin
+                              ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
+                              : 'bg-green-600 hover:bg-green-700 text-white'
+                          }`}
+                      >
+                          {isFestivalLiveAdmin ? 'Take Festival Down' : 'Make Festival Live'}
+                      </button>
+                      <span className={`text-sm font-semibold ${isFestivalLiveAdmin ? 'text-green-400' : 'text-gray-500'}`}>
+                          Film Festival is currently {isFestivalLiveAdmin ? 'LIVE' : 'HIDDEN'}
+                      </span>
+                  </div>
+                </div>
+            </div>
+
            {/* Roku Packager Section */}
           <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
               <h2 className="text-xl sm:text-2xl font-bold mb-3 text-red-400">Automated Roku Channel Packager</h2>
