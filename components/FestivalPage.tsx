@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Header from './Header.tsx';
 import Footer from './Footer.tsx';
 import BackToTopButton from './BackToTopButton.tsx';
-import { festivalData } from '../data/festivalData.ts';
-import { moviesData } from '../constants.ts';
+import { festivalData as initialFestivalData, moviesData } from '../constants.ts';
 import { FilmBlock, Movie } from '../types.ts';
 import FilmBlockCard from './FilmBlockCard.tsx';
 import FilmBlockDetailsModal from './FilmBlockDetailsModal.tsx';
@@ -74,6 +73,19 @@ const FestivalPage: React.FC = () => {
   const [selectedBlock, setSelectedBlock] = useState<FilmBlock | null>(null);
   const { purchases, purchaseFullPass, purchaseBlock, purchaseFilm, isFilmUnlocked, isBlockUnlocked } = useFestivalPurchases();
   const [showPurchaseConfirmation, setShowPurchaseConfirmation] = useState('');
+  const [festivalData, setFestivalData] = useState(initialFestivalData);
+
+  useEffect(() => {
+    // This effect runs on mount to check for live preview data
+    try {
+      const storedFestival = localStorage.getItem('crateTvAdmin_festival');
+      if (storedFestival) {
+        setFestivalData(JSON.parse(storedFestival));
+      }
+    } catch (error) {
+      console.error("Failed to load festival data from localStorage", error);
+    }
+  }, []);
 
   const handlePurchase = (type: 'pass' | 'block' | 'film', id: string) => {
     if (type === 'pass') {

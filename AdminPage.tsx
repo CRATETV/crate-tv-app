@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { moviesData as initialMoviesData, categoriesData as initialCategoriesData } from './constants.ts';
-import { Movie, Category } from './types.ts';
+import { moviesData as initialMoviesData, categoriesData as initialCategoriesData, festivalData as initialFestivalData } from './constants.ts';
+import { Movie, Category, FestivalDay } from './types.ts';
 import MovieEditor from './components/MovieEditor.tsx';
 import Header from './components/Header.tsx';
 import Footer from './components/Footer.tsx';
 import JSZip from 'jszip';
+import FestivalEditor from './components/FestivalEditor.tsx';
 
 // Base64 encoded placeholder images
 const placeholderHd_1280x720 = "iVBORw0KGgoAAAANSUhEUgAABQAAAAACgAQMAAADW3NdbAAAABlBMVEUAAAAAAAACVfYgAAAAAXRSTlMAQObYZgAAABNJREFUeF7twQEBAAAAgiD/r25IQAEAWQEbAAEa4cOjAAAAAElFTkSuQmCC";
@@ -55,6 +56,7 @@ const GeneratedCodeModal: React.FC<{ code: string; onClose: () => void }> = ({ c
 const AdminPage: React.FC = () => {
   const [movies, setMovies] = useState<Record<string, Movie>>({});
   const [categories, setCategories] = useState<Record<string, Category>>({});
+  const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [password, setPassword] = useState('');
@@ -68,18 +70,16 @@ const AdminPage: React.FC = () => {
     try {
         const storedMovies = localStorage.getItem('crateTvAdmin_movies');
         const storedCategories = localStorage.getItem('crateTvAdmin_categories');
+        const storedFestival = localStorage.getItem('crateTvAdmin_festival');
         
-        if (storedMovies && storedCategories) {
-            setMovies(JSON.parse(storedMovies));
-            setCategories(JSON.parse(storedCategories));
-        } else {
-            setMovies(initialMoviesData);
-            setCategories(initialCategoriesData);
-        }
+        setMovies(storedMovies ? JSON.parse(storedMovies) : initialMoviesData);
+        setCategories(storedCategories ? JSON.parse(storedCategories) : initialCategoriesData);
+        setFestivalData(storedFestival ? JSON.parse(storedFestival) : initialFestivalData);
     } catch (e) {
         console.error("Failed to parse data from localStorage", e);
         setMovies(initialMoviesData);
         setCategories(initialCategoriesData);
+        setFestivalData(initialFestivalData);
     }
   }, []);
 
@@ -92,17 +92,22 @@ const AdminPage: React.FC = () => {
     }
   };
   
-  const persistChanges = (newMovies: Record<string, Movie>, newCategories: Record<string, Category>) => {
-    // 1. Persist to localStorage for live admin preview
+  const persistChanges = (
+    newMovies: Record<string, Movie>,
+    newCategories: Record<string, Category>,
+    newFestivalData: FestivalDay[]
+  ) => {
     localStorage.setItem('crateTvAdmin_movies', JSON.stringify(newMovies));
     localStorage.setItem('crateTvAdmin_categories', JSON.stringify(newCategories));
+    localStorage.setItem('crateTvAdmin_festival', JSON.stringify(newFestivalData));
 
-    // 2. Generate code for permanent file update
-    const newConstantsContent = `import { Category, Movie } from './types.ts';
+    const newConstantsContent = `import { Category, Movie, FestivalDay } from './types.ts';
 
 export const categoriesData: Record<string, Category> = ${JSON.stringify(newCategories, null, 2)};
 
 export const moviesData: Record<string, Movie> = ${JSON.stringify(newMovies, null, 2)};
+
+export const festivalData: FestivalDay[] = ${JSON.stringify(newFestivalData, null, 2)};
 `;
     setGeneratedCode(newConstantsContent);
   };
@@ -138,7 +143,7 @@ export const moviesData: Record<string, Movie> = ${JSON.stringify(newMovies, nul
   const handleSave = (updatedMovie: Movie) => {
     const newMovies = { ...movies, [updatedMovie.key]: updatedMovie };
     setMovies(newMovies);
-    persistChanges(newMovies, categories); // Use current categories state
+    persistChanges(newMovies, categories, festivalData);
     setSelectedMovie(null);
     setIsAddingNew(false);
   };
@@ -155,9 +160,14 @@ export const moviesData: Record<string, Movie> = ${JSON.stringify(newMovies, nul
         });
         setCategories(newCategories);
         
-        persistChanges(newMovies, newCategories);
+        persistChanges(newMovies, newCategories, festivalData);
         setSelectedMovie(null);
     }
+  };
+  
+  const handleSaveFestival = (updatedFestivalData: FestivalDay[]) => {
+    setFestivalData(updatedFestivalData);
+    persistChanges(movies, categories, updatedFestivalData);
   };
 
   const generateRokuZip = async () => {
@@ -380,6 +390,15 @@ End Sub
               >
                   {isPackaging ? 'Packaging...' : 'Generate & Download Roku ZIP'}
               </button>
+          </div>
+          
+          {/* Festival Editor Section */}
+           <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
+              <FestivalEditor
+                initialData={festivalData}
+                allMovies={movies}
+                onSave={handleSaveFestival}
+              />
           </div>
 
           <div className="flex justify-between items-center mb-8">

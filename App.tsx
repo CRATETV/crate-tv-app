@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { categoriesData as initialCategoriesData, moviesData as initialMoviesData } from './constants.ts';
+import { categoriesData as initialCategoriesData, moviesData as initialMoviesData, festivalData } from './constants.ts';
 import { Movie, Actor, FilmBlock } from './types.ts';
 import Header from './components/Header.tsx';
 import Hero from './components/Hero.tsx';
@@ -13,7 +13,6 @@ import ActorBioModal from './components/ActorBioModal.tsx';
 import MovieCard from './components/MovieCard.tsx';
 import SearchOverlay from './components/SearchOverlay.tsx';
 import StagingBanner from './components/StagingBanner.tsx';
-import { festivalData } from './data/festivalData.ts';
 import FilmBlockCard from './components/FilmBlockCard.tsx';
 import FilmBlockDetailsModal from './components/FilmBlockDetailsModal.tsx';
 import StripePaymentModal from './components/StripePaymentModal.tsx';

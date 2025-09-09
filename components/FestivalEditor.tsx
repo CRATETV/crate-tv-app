@@ -1,0 +1,220 @@
+import React, { useState, useEffect } from 'react';
+import { FestivalDay, FilmBlock, Movie } from '../types.ts';
+
+interface MovieSelectorModalProps {
+  allMovies: Movie[];
+  initialSelectedKeys: string[];
+  onSave: (newMovieKeys: string[]) => void;
+  onClose: () => void;
+}
+
+const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, initialSelectedKeys, onSave, onClose }) => {
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set(initialSelectedKeys));
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const toggleSelection = (key: string) => {
+    const newSelection = new Set(selectedKeys);
+    if (newSelection.has(key)) {
+      newSelection.delete(key);
+    } else {
+      newSelection.add(key);
+    }
+    setSelectedKeys(newSelection);
+  };
+
+  const handleSave = () => {
+    onSave(Array.from(selectedKeys));
+  };
+
+  const filteredMovies = allMovies.filter(movie => movie.title.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[110] p-4" onClick={onClose}>
+      <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col border border-gray-600" onClick={e => e.stopPropagation()}>
+        <div className="p-4 border-b border-gray-700">
+          <h3 className="text-xl font-bold text-white">Select Films</h3>
+          <input
+            type="text"
+            placeholder="Search films..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full mt-2 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-red-500"
+          />
+        </div>
+        <div className="p-4 overflow-y-auto">
+          <div className="space-y-2">
+            {filteredMovies.map(movie => (
+              <label key={movie.key} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedKeys.has(movie.key)}
+                  onChange={() => toggleSelection(movie.key)}
+                  className="h-5 w-5 rounded bg-gray-600 border-gray-500 text-red-500 focus:ring-red-500"
+                />
+                <span className="text-gray-200">{movie.title}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="p-4 border-t border-gray-700 flex justify-end gap-4">
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition">Cancel</button>
+          <button onClick={handleSave} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Save Selection</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+interface FestivalEditorProps {
+  initialData: FestivalDay[];
+  allMovies: Record<string, Movie>;
+  onSave: (newData: FestivalDay[]) => void;
+}
+
+const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, allMovies, onSave }) => {
+  const [data, setData] = useState<FestivalDay[]>(initialData);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
+
+  useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
+
+  const handleDayChange = (dayIndex: number, field: 'date', value: string) => {
+    const newData = [...data];
+    newData[dayIndex] = { ...newData[dayIndex], [field]: value };
+    setData(newData);
+  };
+  
+  const handleBlockChange = (dayIndex: number, blockIndex: number, field: 'title', value: string) => {
+    const newData = [...data];
+    const newBlocks = [...newData[dayIndex].blocks];
+    newBlocks[blockIndex] = { ...newBlocks[blockIndex], [field]: value };
+    newData[dayIndex] = { ...newData[dayIndex], blocks: newBlocks };
+    setData(newData);
+  };
+  
+  const handleMovieSelectionSave = (dayIndex: number, blockIndex: number, newMovieKeys: string[]) => {
+    const newData = [...data];
+    const newBlocks = [...newData[dayIndex].blocks];
+    newBlocks[blockIndex] = { ...newBlocks[blockIndex], movieKeys: newMovieKeys };
+    newData[dayIndex] = { ...newData[dayIndex], blocks: newBlocks };
+    setData(newData);
+    setEditingBlock(null);
+  };
+
+  const addDay = () => {
+    const newDay: FestivalDay = {
+      day: data.length + 1,
+      date: `New Day Date`,
+      blocks: [],
+    };
+    setData([...data, newDay]);
+  };
+
+  const removeDay = (dayIndex: number) => {
+    if (window.confirm('Are you sure you want to remove this day and all its blocks?')) {
+        let newData = data.filter((_, i) => i !== dayIndex);
+        // Re-number the days
+        newData = newData.map((day, index) => ({ ...day, day: index + 1 }));
+        setData(newData);
+    }
+  };
+  
+  const addBlock = (dayIndex: number) => {
+    const newBlock: FilmBlock = {
+      id: `day${dayIndex + 1}-block${Date.now()}`,
+      title: 'New Film Block',
+      movieKeys: [],
+    };
+    const newData = [...data];
+    newData[dayIndex].blocks.push(newBlock);
+    setData(newData);
+  };
+  
+  const removeBlock = (dayIndex: number, blockIndex: number) => {
+    const newData = [...data];
+    newData[dayIndex].blocks = newData[dayIndex].blocks.filter((_, i) => i !== blockIndex);
+    setData(newData);
+  };
+
+  const handleSave = () => {
+    setIsSaving(true);
+    onSave(data);
+    setTimeout(() => {
+      setIsSaving(false);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 2000);
+    }, 500);
+  };
+
+  return (
+    <div>
+      <h2 className="text-xl sm:text-2xl font-bold mb-4 text-purple-400">Film Festival Editor</h2>
+      <div className="space-y-6">
+        {data.map((day, dayIndex) => (
+          <div key={day.day} className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Day {day.day}</h3>
+              <button onClick={() => removeDay(dayIndex)} className="text-xs text-red-500 hover:text-red-400">Remove Day</button>
+            </div>
+            <input
+              type="text"
+              value={day.date}
+              onChange={e => handleDayChange(dayIndex, 'date', e.target.value)}
+              className="w-full mb-4 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white"
+            />
+            <div className="space-y-4 pl-4 border-l-2 border-gray-600">
+              {day.blocks.map((block, blockIndex) => (
+                <div key={block.id} className="bg-gray-800 p-3 rounded-md">
+                   <div className="flex justify-between items-center mb-2">
+                        <input
+                            type="text"
+                            value={block.title}
+                            onChange={e => handleBlockChange(dayIndex, blockIndex, 'title', e.target.value)}
+                            className="w-full text-lg font-semibold bg-transparent text-white focus:outline-none focus:bg-gray-700 rounded-md px-2"
+                        />
+                        <button onClick={() => removeBlock(dayIndex, blockIndex)} className="text-xs text-red-500 hover:text-red-400 ml-2 flex-shrink-0">Remove Block</button>
+                   </div>
+                   <p className="text-xs text-gray-400 mb-2">{block.movieKeys.length} film(s) selected.</p>
+                   <button onClick={() => setEditingBlock({ dayIndex, blockIndex })} className="text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md">
+                     Edit Films
+                   </button>
+                </div>
+              ))}
+               <button onClick={() => addBlock(dayIndex)} className="text-sm bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md mt-4">
+                 + Add Block
+               </button>
+            </div>
+          </div>
+        ))}
+        <button onClick={addDay} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md">
+          + Add Day
+        </button>
+      </div>
+
+      <div className="mt-6 pt-6 border-t border-gray-700">
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-5 rounded-md transition-colors"
+        >
+          {isSaving ? 'Saving...' : (showSuccess ? 'Saved Successfully!' : 'Save Festival Schedule')}
+        </button>
+      </div>
+      
+      {editingBlock !== null && (
+        <MovieSelectorModal
+          allMovies={Object.values(allMovies)}
+          initialSelectedKeys={data[editingBlock.dayIndex].blocks[editingBlock.blockIndex].movieKeys}
+          onSave={(newKeys) => handleMovieSelectionSave(editingBlock.dayIndex, editingBlock.blockIndex, newKeys)}
+          onClose={() => setEditingBlock(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default FestivalEditor;
