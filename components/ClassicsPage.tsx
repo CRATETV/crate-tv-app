@@ -24,7 +24,7 @@ const filmmakers = [
     {
         name: 'Georges Méliès',
         bioSnippet: 'A French illusionist and film director who led many technical and narrative developments in the earliest days of cinema.',
-        photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Me%CC%81lie%CC%80s_portrait_(cropped).png'
+        photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Me%CC%81lie%CC%80s_portrait_(cropped).jpg'
     },
     {
         name: 'Charlie Chaplin',

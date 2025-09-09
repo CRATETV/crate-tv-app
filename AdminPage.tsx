@@ -6,6 +6,7 @@ import Header from './components/Header.tsx';
 import Footer from './components/Footer.tsx';
 import JSZip from 'jszip';
 import FestivalEditor from './components/FestivalEditor.tsx';
+import MovieCard from './components/MovieCard.tsx';
 
 // Base64 encoded placeholder images
 const placeholderHd_1280x720 = "iVBORw0KGgoAAAANSUhEUgAABQAAAAACgAQMAAADW3NdbAAAABlBMVEUAAAAAAAACVfYgAAAAAXRSTlMAQObYZgAAABNJREFUeF7twQEBAAAAgiD/r25IQAEAWQEbAAEa4cOjAAAAAElFTkSuQmCC";
@@ -156,6 +157,7 @@ export const festivalData: FestivalDay[] = ${JSON.stringify(newFestivalData, nul
       trailer: '',
       fullMovie: '',
       poster: '',
+      posterPlaceholder: '',
       tvPoster: '',
       likes: 0,
       releaseDate: new Date().toISOString().split('T')[0],
@@ -488,11 +490,12 @@ End Sub
               <h2 className="text-xl sm:text-2xl font-bold mb-4">Select a Movie to Edit</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {Object.values(movies).sort((a, b) => a.title.localeCompare(b.title)).map(movie => (
-                  <div key={movie.key} className="group cursor-pointer" onClick={() => handleSelectMovie(movie)}>
-                    <div className="aspect-[3/4] rounded-md overflow-hidden bg-gray-700 transition-transform duration-300 group-hover:scale-105">
-                        <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />
-                    </div>
-                    <p className="text-sm mt-2 text-center truncate group-hover:text-red-400">{movie.title}</p>
+                  <div key={movie.key} className="group">
+                     <MovieCard
+                        movie={movie}
+                        onSelectMovie={handleSelectMovie}
+                      />
+                    <p className="text-sm mt-2 text-center truncate group-hover:text-red-400 cursor-pointer" onClick={() => handleSelectMovie(movie)}>{movie.title}</p>
                   </div>
                 ))}
               </div>

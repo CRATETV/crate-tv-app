@@ -1,3 +1,5 @@
+
+// FIX: Removed self-import of 'Actor' which caused a name collision.
 export interface Actor {
   name: string;
   photo: string;
@@ -14,6 +16,7 @@ export interface Movie {
   trailer: string;
   fullMovie: string;
   poster: string;
+  posterPlaceholder?: string; // Optional: URL for a small, low-quality image for blur-up loading
   tvPoster?: string; // Optional: URL for TV-optimized portrait poster (2:3 aspect ratio)
   likes: number;
   releaseDate?: string; // YYYY-MM-DD format

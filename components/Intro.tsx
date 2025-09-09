@@ -10,8 +10,8 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const desktopSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/mobile+intro+that+matches+webapp.mp4";
-  const mobileSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/intro+for+cellphone1080p.mp4"; 
+  const desktopSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/CRATE+INTO+2+SECONDS.mp4";
+  const mobileSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/CRATE+INTO+2+SECONDS.mp4"; 
 
   const getInitialVideoSrc = () => {
     if (typeof window !== 'undefined') {
