@@ -154,9 +154,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Lois Weber",
-        "photo": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Lois_Weber_LOC_32320.jpg",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/LoisWeber.jpg",
         "bio": "An American silent film actress, screenwriter, producer, and director. She is identified as 'the most important female director the American film industry has known'.",
-        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Lois_Weber_LOC_32320.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/LoisWeber.jpg"
       },
       {
         "name": "Valentine Paul",
