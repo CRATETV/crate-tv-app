@@ -29,7 +29,7 @@ const filmmakers = [
     {
         name: 'Charlie Chaplin',
         bioSnippet: 'An English comic actor, filmmaker, and composer who rose to fame in the era of silent film, becoming a worldwide icon.',
-        photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies/Charlie_Chaplin.jpg'
+        photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Charlie_Chaplin_portrait.jpg'
     },
     {
         name: 'Lois Weber',
