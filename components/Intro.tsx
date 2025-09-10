@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 
 interface IntroProps {
   onIntroEnd: () => void;
@@ -6,15 +7,52 @@ interface IntroProps {
 
 const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [showPlayButton, setShowPlayButton] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const desktopSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/CRATE%20INTO%202%20SECONDS.mp4";
-  const mobileSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/intro+for+cellphone1080p.mp4";
+  const desktopSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/mobile+intro+that+matches+webapp.mp4";
+  const mobileSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/intro+for+cellphone1080p.mp4"; 
 
-  // This function will be called if the video file fails to load or has a playback error.
-  const handleVideoError = () => {
-    console.error("Intro video failed to load or play. Skipping intro.");
-    onIntroEnd();
+  const getInitialVideoSrc = () => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia("(max-width: 768px)").matches ? mobileSrc : desktopSrc;
+    }
+    return desktopSrc;
+  };
+
+  const [videoSrc, setVideoSrc] = useState(getInitialVideoSrc);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+    const handleResize = (e: MediaQueryListEvent) => {
+      setVideoSrc(e.matches ? mobileSrc : desktopSrc);
+    };
+    mediaQuery.addEventListener('change', handleResize);
+    return () => {
+      mediaQuery.removeEventListener('change', handleResize);
+    };
+  }, [desktopSrc, mobileSrc]);
+
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (videoElement) {
+      setShowPlayButton(false);
+      const playPromise = videoElement.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error("Autoplay was prevented:", error);
+          setShowPlayButton(true);
+        });
+      }
+    }
+  }, [videoSrc]);
+
+  const handleManualPlay = () => {
+    const videoElement = videoRef.current;
+    if (videoElement) {
+        videoElement.play();
+        setShowPlayButton(false);
+    }
   };
 
   return (
@@ -22,22 +60,33 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
       <video
         ref={videoRef}
         id="intro-video"
+        key={videoSrc}
         className="absolute top-0 left-0 w-full h-full object-cover"
-        autoPlay
         muted
+        autoPlay
         playsInline
-        preload="auto"
         onEnded={onIntroEnd}
-        onError={handleVideoError} // Add a direct error handler
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         poster="https://cratetelevision.s3.us-east-1.amazonaws.com/intro-poster.jpg"
+        src={videoSrc}
       >
-        {/* Use source tags for responsive video - this is more reliable than JS-based switching */}
-        <source src={mobileSrc} type="video/mp4" media="(max-width: 768px)" />
-        <source src={desktopSrc} type="video/mp4" media="(min-width: 769px)" />
         Your browser does not support the video tag.
       </video>
+
+      {showPlayButton && (
+        <div className="absolute inset-0 bg-black/60 flex items-center justify-center animate-[fadeIn_0.5s_ease-out]">
+            <button
+                onClick={handleManualPlay}
+                className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center text-white backdrop-blur-sm border border-white/30 hover:bg-white/30 transition-colors"
+                aria-label="Play intro video"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                </svg>
+            </button>
+        </div>
+      )}
 
       {/* Show Skip Intro button only when video is successfully playing */}
       {isPlaying && (
