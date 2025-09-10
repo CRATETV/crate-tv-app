@@ -180,9 +180,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Charlie Chaplin",
-        "photo": "https://upload.wikimedia.org/wikipedia/commons/0/00/Charlie_Chaplin.jpg",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies/Charlie_Chaplin.jpg",
         "bio": "An English comic actor, filmmaker, and composer who rose to fame in the era of silent film. He became a worldwide icon through his screen persona, 'The Tramp'.",
-        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/0/00/Charlie_Chaplin.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies/Charlie_Chaplin.jpg"
       }
     ],
     "director": "Charlie Chaplin",
@@ -200,9 +200,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Charlie Chaplin",
-        "photo": "https://upload.wikimedia.org/wikipedia/commons/0/00/Charlie_Chaplin.jpg",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies/Charlie_Chaplin.jpg",
         "bio": "An English comic actor, filmmaker, and composer who rose to fame in the era of silent film. He became a worldwide icon through his screen persona, 'The Tramp'.",
-        "highResPhoto": "https://upload.wikimedia.org/wikipedia/commons/0/00/Charlie_Chaplin.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies/Charlie_Chaplin.jpg"
       },
       {
         "name": "Edna Purviance",
