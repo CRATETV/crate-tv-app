@@ -258,23 +258,24 @@ End Sub
 <component name="HomeScene" extends="Scene">
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
     <children>
-        <Label id="loadingLabel" text="Loading..." translation="[50, 50]" />
+        <Label id="loadingLabel" text="Loading..." translation="[960, 540]" horizAlign="center" vertAlign="center" />
         <RowList 
             id="movieRowList"
             itemComponentName="MoviePoster"
-            itemSize="[267, 150]"
-            rowItemSize="[320,180]"
-            numRows="1"
-            rowHeights="[190]"
-            itemSpacing="[20,0]"
+            itemSize="[336, 189]"
+            numRows="3"
+            rowHeights="[250]"
+            itemSpacing="[20, 20]"
             showRowLabel="true"
+            rowLabelOffset="[[0, 20]]"
+            translation="[80, 80]"
             vertFocusAnimationStyle="fixedFocus"
             rowFocusAnimationStyle="fixedFocus"
             visible="false" />
         <Video
             id="videoPlayer"
-            width="1280"
-            height="720"
+            width="1920"
+            height="1080"
             visible="false"
         />
     </children>
@@ -290,10 +291,7 @@ Sub init()
 
     ' Set video player size based on display mode
     deviceInfo = CreateObject("roDeviceInfo")
-    if deviceInfo.GetDisplayMode() = "1080p"
-        m.videoPlayer.width = 1920
-        m.videoPlayer.height = 1080
-    else
+    if deviceInfo.GetDisplayMode() <> "1080p"
         m.videoPlayer.width = 1280
         m.videoPlayer.height = 720
     end if
@@ -315,7 +313,7 @@ Sub init()
             if msg.GetResponseCode() = 200
                 ProcessData(msg.GetString())
             else
-                m.loadingLabel.text = "Error loading feed: " + msg.GetResponseCode().toStr()
+                m.loadingLabel.text = "Error loading feed: " + msg.GetResponseCode().ToStr()
             end if
             exit while
         end if
@@ -334,7 +332,7 @@ Sub ProcessData(data as String)
                 item.id = movie.id
                 item.title = movie.title
                 item.description = movie.description
-                item.hdposterurl = movie.thumbnail
+                item.HDPosterUrl = movie.thumbnail ' Use correct case for ContentNode field
                 item.streamUrl = movie.streamUrl
             end for
         end for
@@ -412,8 +410,8 @@ End Function
     <children>
         <Poster
             id="poster"
-            width="267"
-            height="150"
+            width="336"
+            height="189"
             loadDisplayMode="scaleToFit"
         />
     </children>
@@ -429,7 +427,7 @@ End Sub
 Sub onContentChange()
     itemContent = m.top.itemContent
     if itemContent <> invalid
-        m.poster.uri = itemContent.hdposterurl
+        m.poster.uri = itemContent.HDPosterUrl ' Use correct case for ContentNode field
     end if
 End Sub
         `.trim();
