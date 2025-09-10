@@ -221,8 +221,8 @@ minor_version=0
 build_version=0
 mm_icon_focus_hd=pkg:/images/logo_400x90.png
 mm_icon_side_hd=pkg:/images/logo_400x90.png
-splash_screen_hd=pkg:/images/splash_hd_1280x720.jpg
-splash_screen_fhd=pkg:/images/splash_fhd_1920x1080.jpg
+splash_screen_hd=pkg:/images/splash_hd_1280x720.png
+splash_screen_fhd=pkg:/images/splash_fhd_1920x1080.png
         `.trim();
         zip.file('manifest', manifestContent);
 
@@ -436,8 +436,8 @@ End Sub
         // Create images folder and add placeholders
         const imagesFolder = zip.folder('images');
         imagesFolder?.file('logo_400x90.png', placeholderLogo_400x90, { base64: true });
-        imagesFolder?.file('splash_hd_1280x720.jpg', placeholderHd_1280x720, { base64: true });
-        imagesFolder?.file('splash_fhd_1920x1080.jpg', placeholderFhd_1920x1080, { base64: true });
+        imagesFolder?.file('splash_hd_1280x720.png', placeholderHd_1280x720, { base64: true });
+        imagesFolder?.file('splash_fhd_1920x1080.png', placeholderFhd_1920x1080, { base64: true });
 
         // Generate and download zip
         const zipContent = await zip.generateAsync({ type: 'blob' });
