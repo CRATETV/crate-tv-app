@@ -42,7 +42,7 @@ export async function POST(request: Request) {
         });
     } else {
         // Handle other statuses like PENDING, FAILED, CANCELED
-        const errorMessage = response.result.payment?.statusMessage || 'Payment was not completed successfully.';
+        const errorMessage = 'Payment failed or was declined.';
         return new Response(JSON.stringify({ success: false, error: errorMessage }), {
             status: 402, // Payment Required (but failed)
             headers: { 'Content-Type': 'application/json' },

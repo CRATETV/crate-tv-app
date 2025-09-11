@@ -90,6 +90,7 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: 'onboarding@resend.dev',
       to: recipientEmail,
+      // Fix: Corrected property from `reply_to` to `replyTo` to match Resend SDK.
       replyTo: data.email,
       subject: emailSubject,
       html: emailHtml,
