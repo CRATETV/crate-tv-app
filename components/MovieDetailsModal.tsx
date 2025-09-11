@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category } from '../types.ts';
 import DirectorCreditsModal from './DirectorCreditsModal.tsx';
+import Countdown from './Countdown.tsx';
 
 interface MovieDetailsModalProps {
   movie: Movie;
@@ -49,10 +50,17 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [isReleased, setIsReleased] = useState(() => {
+    const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
+    return !releaseDate || releaseDate <= new Date();
+  });
 
   // Reset modal state when the movie prop changes
   useEffect(() => {
     setPlayerMode('poster');
+    const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
+    setIsReleased(!releaseDate || releaseDate <= new Date());
+    
     // Scroll to the top of the modal content when a new movie is selected
     if (modalContentRef.current) {
         modalContentRef.current.scrollTop = 0;
@@ -198,16 +206,25 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
           <div className="absolute bottom-6 left-6 text-white z-10">
             <h2 className="text-2xl md:text-4xl font-bold drop-shadow-lg mb-4">{movie.title}</h2>
             <div className="flex flex-wrap items-center gap-3">
-              {movie.fullMovie && (
-                <button onClick={() => handlePlayMovie('full')} className="flex items-center justify-center px-4 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-                    Play Full Movie
-                </button>
-              )}
-              {movie.trailer && (
-                <button onClick={() => handlePlayMovie('trailer')} className="flex items-center justify-center px-4 py-2 bg-gray-500/60 text-white font-bold rounded-md hover:bg-gray-500/40 transition-colors">
-                  Play Trailer
-                </button>
+              {isReleased ? (
+                <>
+                  {movie.fullMovie && (
+                    <button onClick={() => handlePlayMovie('full')} className="flex items-center justify-center px-4 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                        Play Full Movie
+                    </button>
+                  )}
+                  {movie.trailer && (
+                    <button onClick={() => handlePlayMovie('trailer')} className="flex items-center justify-center px-4 py-2 bg-gray-500/60 text-white font-bold rounded-md hover:bg-gray-500/40 transition-colors">
+                      Play Trailer
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div className="bg-red-900/50 text-red-200 border border-red-700 rounded-md px-4 py-2 text-center">
+                  <p className="font-bold">Coming Soon!</p>
+                  {movie.releaseDateTime && <Countdown targetDate={movie.releaseDateTime} onEnd={() => setIsReleased(true)} className="text-sm" />}
+                </div>
               )}
               <button onClick={handleToggleLike} className={`h-10 w-10 flex items-center justify-center rounded-full border-2 border-gray-400 text-white hover:border-white transition ${isAnimatingLike ? 'animate-heartbeat' : ''}`}>
                 <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors ${isLiked ? 'text-red-500' : 'text-inherit'}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

@@ -12,7 +12,8 @@ const getVisibleMovies = (): Record<string, Movie> => {
 
     Object.values(moviesData).forEach(movie => {
       // A movie is visible if it has no release date or the release date is in the past.
-      if (!movie.releaseDate || new Date(movie.releaseDate.replace(/-/g, '/')) <= today) {
+      // FIX: Changed movie.releaseDate to movie.releaseDateTime to match the data structure.
+      if (!movie.releaseDateTime || new Date(movie.releaseDateTime) <= today) {
         visibleMovies[movie.key] = movie;
       }
     });

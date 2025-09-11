@@ -1,5 +1,3 @@
-
-
 export interface Actor {
   name: string;
   photo: string;
@@ -16,9 +14,9 @@ export interface Movie {
   trailer: string;
   fullMovie: string;
   poster: string;
-  tvPoster?: string; // Optional: URL for TV-optimized portrait poster (2:3 aspect ratio)
+  tvPoster: string;
   likes: number;
-  releaseDate?: string; // YYYY-MM-DD format
+  releaseDateTime?: string;
 }
 
 export interface Category {
@@ -28,7 +26,7 @@ export interface Category {
 
 export interface FilmBlock {
   id: string;
-  title:string;
+  title: string;
   movieKeys: string[];
 }
 
@@ -39,6 +37,6 @@ export interface FestivalDay {
 }
 
 export interface FestivalConfig {
-  title: string;
-  description: string;
+    title: string;
+    description: string;
 }

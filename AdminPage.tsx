@@ -6,6 +6,15 @@ import Header from './components/Header.tsx';
 import Footer from './components/Footer.tsx';
 import FestivalEditor from './components/FestivalEditor.tsx';
 
+// Helper to format the current date/time for a datetime-local input
+const getLocalDatetimeString = () => {
+    const now = new Date();
+    // Adjust for timezone offset to get local time
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    // Format as 'YYYY-MM-DDTHH:MM'
+    return now.toISOString().slice(0, 16);
+};
+
 const AdminPage: React.FC = () => {
   const [movies, setMovies] = useState<Record<string, Movie>>({});
   const [categories, setCategories] = useState<Record<string, Category>>({});
@@ -157,7 +166,7 @@ export const festivalData: FestivalDay[] = ${JSON.stringify(festivalData, null, 
       poster: '',
       tvPoster: '',
       likes: 0,
-      releaseDate: new Date().toISOString().split('T')[0],
+      releaseDateTime: getLocalDatetimeString(),
     };
     setSelectedMovie(newMovie);
     setIsAddingNew(true);

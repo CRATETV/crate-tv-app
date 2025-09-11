@@ -130,7 +130,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "tvPoster": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Le_Voyage_dans_la_lune.jpg/800px-Le_Voyage_dans_la_lune.jpg",
     "likes": 0,
-    "releaseDate": "1902-09-01"
+    "releaseDateTime": "1902-09-01T00:00"
   },
   "thegreattrainrobbery": {
     "key": "thegreattrainrobbery",
@@ -150,7 +150,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The_Great_Train_Robbery%2C_Edwin_S._Porter%2C_Edison_Films%2C_1903_Poster.jpg",
     "tvPoster": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/The_Great_Train_Robbery_%281903%29.jpg/800px-The_Great_Train_Robbery_%281903%29.jpg",
     "likes": 0,
-    "releaseDate": "1903-12-01"
+    "releaseDateTime": "1903-12-01T00:00"
   },
   "suspense": {
     "key": "suspense",
@@ -176,7 +176,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/suspense+movie+poster+.jpeg",
     "tvPoster": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Suspense_1913.jpg/800px-Suspense_1913.jpg",
     "likes": 0,
-    "releaseDate": "1913-07-06"
+    "releaseDateTime": "1913-07-06T00:00"
   },
   "thepawnshop": {
     "key": "thepawnshop",
@@ -196,7 +196,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/'The_Pawnshop'.jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The_Pawnshop.jpg",
     "likes": 0,
-    "releaseDate": "1916-10-02"
+    "releaseDateTime": "1916-10-02T00:00"
   },
   "theimmigrant": {
     "key": "theimmigrant",
@@ -222,7 +222,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The_Immigrant_1917.JPG",
     "tvPoster": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/The_Immigrant_%281917_film%29.jpg/800px-The_Immigrant_%281917_film%29.jpg",
     "likes": 0,
-    "releaseDate": "1917-06-17"
+    "releaseDateTime": "1917-06-17T00:00"
   },
   "thefallofthehouseofusher": {
     "key": "thefallofthehouseofusher",
@@ -248,7 +248,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Fall+of+House+Of+Usher+.jpeg",
     "tvPoster": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/The_Fall_of_the_House_of_Usher_1928_poster.jpg/800px-The_Fall_of_the_House_of_Usher_1928_poster.jpg",
     "likes": 0,
-    "releaseDate": "1928-10-29"
+    "releaseDateTime": "1928-10-29T00:00"
   },
   "unchienandalou": {
     "key": "unchienandalou",
@@ -274,7 +274,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Un+Chien+Andalou.webp",
     "tvPoster": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Un_chien_andalou_poster.jpg/800px-Un_chien_andalou_poster.jpg",
     "likes": 0,
-    "releaseDate": "1929-06-06"
+    "releaseDateTime": "1929-06-06T00:00"
   },
   "meshesofafternoon": {
     "key": "meshesofafternoon",
@@ -300,7 +300,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Meshes_of_the_Afternoon_1.png",
     "tvPoster": "https://upload.wikimedia.org/wikipedia/en/b/b8/Meshes_of_the_Afternoon_poster.jpg",
     "likes": 0,
-    "releaseDate": "1943-01-01"
+    "releaseDateTime": "1943-01-01T00:00"
   },
   "bridelessgroom": {
     "key": "bridelessgroom",
@@ -332,7 +332,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Bridelessgroom_1sht.jpg",
     "tvPoster": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Brideless_Groom_lobby_card.jpg/800px-Brideless_Groom_lobby_card.jpg",
     "likes": 0,
-    "releaseDate": "1947-09-11"
+    "releaseDateTime": "1947-09-11T00:00"
   },
   "palmourstreet": {
     "key": "palmourstreet",
@@ -352,7 +352,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Palmour_Street_2.jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/palmour-street.jpg",
     "likes": 0,
-    "releaseDate": "1949-01-01"
+    "releaseDateTime": "1949-01-01T00:00"
   },
   "lifeless": {
     "key": "lifeless",

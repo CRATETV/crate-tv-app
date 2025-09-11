@@ -95,8 +95,9 @@ const ClassicsPage: React.FC = () => {
       .map(key => movies[key])
       .filter(Boolean)
       .sort((a, b) => {
-        const dateA = a.releaseDate ? new Date(a.releaseDate) : new Date(0);
-        const dateB = b.releaseDate ? new Date(b.releaseDate) : new Date(0);
+        // FIX: Changed releaseDate to releaseDateTime to match the data structure.
+        const dateA = a.releaseDateTime ? new Date(a.releaseDateTime) : new Date(0);
+        const dateB = b.releaseDateTime ? new Date(b.releaseDateTime) : new Date(0);
         return dateA.getTime() - dateB.getTime();
       });
 

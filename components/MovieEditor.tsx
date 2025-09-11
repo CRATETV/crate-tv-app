@@ -67,9 +67,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
       
       {/* Release Date */}
       <div>
-        <label htmlFor="releaseDate" className="block text-sm font-medium text-gray-300">Release Date (Optional: YYYY-MM-DD)</label>
-        <input type="date" name="releaseDate" value={formData.releaseDate || ''} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
-        <p className="text-xs text-gray-500 mt-1">Leave blank to release immediately. Set a future date to hide the movie until then.</p>
+        <label htmlFor="releaseDateTime" className="block text-sm font-medium text-gray-300">Release Date & Time (Optional)</label>
+        <input type="datetime-local" name="releaseDateTime" value={formData.releaseDateTime || ''} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+        <p className="text-xs text-gray-500 mt-1">Leave blank to release immediately. Set a future date/time to hide the movie until then.</p>
       </div>
       
       {/* URLs */}

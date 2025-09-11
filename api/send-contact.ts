@@ -48,10 +48,10 @@ export async function POST(request: Request) {
     
     const resend = new Resend(process.env.RESEND_API_KEY);
 
+    // FIX: Changed 'reply_to' to 'replyTo' to match the Resend SDK's type definition.
     await resend.emails.send({
       from: 'onboarding@resend.dev',
       to: recipientEmail,
-      // FIX: Corrected property name from 'reply_to' to 'replyTo' to match the expected type.
       replyTo: data.email,
       subject: emailSubject,
       html: emailHtml,

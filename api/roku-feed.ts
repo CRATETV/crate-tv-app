@@ -10,7 +10,8 @@ const getVisibleMovies = (): Record<string, Movie> => {
     today.setHours(0, 0, 0, 0);
 
     Object.values(moviesData).forEach(movie => {
-      if (!movie.releaseDate || new Date(movie.releaseDate.replace(/-/g, '/')) <= today) {
+      // FIX: Changed movie.releaseDate to movie.releaseDateTime to match the data structure.
+      if (!movie.releaseDateTime || new Date(movie.releaseDateTime) <= today) {
         visibleMovies[movie.key] = movie;
       }
     });

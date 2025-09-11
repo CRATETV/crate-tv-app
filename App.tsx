@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { categoriesData as initialCategoriesData, moviesData as initialMoviesData, festivalData, festivalConfigData as initialFestivalConfigData } from './constants.ts';
+// FIX: Corrected import to use type definitions from types.ts
 import { Movie, Actor, FilmBlock, FestivalConfig } from './types.ts';
 import Header from './components/Header.tsx';
 import Hero from './components/Hero.tsx';
@@ -306,29 +307,6 @@ const App: React.FC = () => {
     preloadImages(Array.from(new Set(imagesToPreload))); // Use Set to avoid duplicates
   }, [movies, categories]);
 
-  const visibleMovieKeys = useMemo(() => {
-    if (isStaging) {
-        // In staging, all movies are visible
-        return new Set<string>(Object.keys(movies));
-    }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const visibleKeys = new Set<string>();
-    Object.values(movies).forEach(movie => {
-      if (!movie.releaseDate) {
-        visibleKeys.add(movie.key);
-      } else {
-        const releaseDate = new Date(movie.releaseDate.replace(/-/g, '/'));
-        if (releaseDate <= today) {
-          visibleKeys.add(movie.key);
-        }
-      }
-    });
-    return visibleKeys;
-  }, [movies, isStaging]);
-
   const handleCloseFeatureModal = () => {
     setShowFeatureModal(false);
     localStorage.setItem('featureModalShown', 'true');
@@ -448,7 +426,6 @@ const App: React.FC = () => {
     if (allMovies.length === 0) return [];
     
     return allMovies
-      .filter(movie => visibleMovieKeys.has(movie.key))
       .filter(movie => {
         const titleMatch = movie.title.toLowerCase().includes(lowercasedQuery);
         const actorMatch = movie.cast.some(actor => actor.name.toLowerCase().includes(lowercasedQuery));
@@ -458,15 +435,14 @@ const App: React.FC = () => {
 
         return titleMatch || actorMatch || genreMatch;
     });
-  }, [searchQuery, movies, visibleMovieKeys, movieToGenresMap]);
+  }, [searchQuery, movies, movieToGenresMap]);
 
   const featuredMovies = useMemo(() => {
     if (!categories.featured || Object.keys(movies).length === 0) return [];
     return categories.featured.movieKeys
-        .filter(key => visibleMovieKeys.has(key))
         .map(key => movies[key])
         .filter(Boolean);
-  }, [movies, visibleMovieKeys, categories]);
+  }, [movies, categories]);
 
   useEffect(() => {
     if (featuredMovies.length > 1) {
@@ -487,7 +463,7 @@ const App: React.FC = () => {
   
   const recommendedMoviesList = recommendedKeys
       .map(key => movies[key])
-      .filter(movie => movie && visibleMovieKeys.has(movie.key));
+      .filter(Boolean);
 
   return (
     <div className="flex flex-col min-h-screen bg-[#141414] text-white">
@@ -620,7 +596,6 @@ const App: React.FC = () => {
                 .filter(([key]) => key === 'newReleases')
                 .map(([key, value]) => {
                   const categoryMovies = value.movieKeys
-                      .filter(movieKey => visibleMovieKeys.has(movieKey))
                       .map(movieKey => movies[movieKey])
                       .filter(Boolean);
                   if(categoryMovies.length === 0) return null;
@@ -648,7 +623,6 @@ const App: React.FC = () => {
                 .filter(([key]) => key !== 'featured' && key !== 'publicDomainIndie' && key !== 'newReleases')
                 .map(([key, value]) => {
                   const categoryMovies = value.movieKeys
-                      .filter(movieKey => visibleMovieKeys.has(movieKey))
                       .map(movieKey => movies[movieKey])
                       .filter(Boolean);
                   

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Movie } from '../types.ts';
+import Countdown from './Countdown.tsx';
 
 interface HeroProps {
   movies: Movie[];
@@ -14,6 +15,9 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
   if (!movie) {
     return <div className="h-[56.25vw] max-h-[85vh] w-full bg-black" />;
   }
+  
+  const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
+  const isReleased = !releaseDate || releaseDate <= new Date();
 
   return (
     <div 
@@ -26,6 +30,14 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
       
       <div className="absolute inset-0 flex flex-col justify-center p-8 md:p-12 lg:p-24">
         <div key={movie.key} className="max-w-xl animate-fadeInHeroContent mt-8 md:mt-0">
+          {!isReleased && movie.releaseDateTime && (
+            <div className="mb-4 bg-red-600/80 text-white font-bold py-2 px-4 rounded-md inline-flex items-center gap-2">
+               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+               </svg>
+               <Countdown targetDate={movie.releaseDateTime} className="text-sm" />
+            </div>
+          )}
           <h1 id="hero-movie-title" className="text-3xl sm:text-4xl md:text-6xl font-bold text-white shadow-lg">
             {movie.title}
           </h1>
