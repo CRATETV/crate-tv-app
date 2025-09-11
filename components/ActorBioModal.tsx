@@ -69,6 +69,7 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
                     className={`w-32 h-32 sm:w-48 sm:h-48 rounded-full object-cover shadow-lg border-4 border-gray-700 transition-all duration-500 ease-in-out ${isImageLoaded ? 'opacity-100 blur-0' : 'opacity-50 blur-md'}`}
                     onLoad={() => setIsImageLoaded(true)}
                     decoding="async"
+                    onContextMenu={(e) => e.preventDefault()}
                  />
             </div>
             <div className="md:col-span-2 p-4 sm:p-6 md:pl-0 flex flex-col justify-center">

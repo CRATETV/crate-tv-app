@@ -84,12 +84,6 @@ const S3Uploader: React.FC<S3UploaderProps> = ({ onUploadSuccess, label }) => {
       setStatus('error');
     }
   };
-  
-  // Store password in session storage on successful login to be used by uploader
-  // This function is not used here but shows the required pattern for the AdminPage
-  const handleLogin = (password: string) => {
-      sessionStorage.setItem('adminPassword', password);
-  }
 
   return (
     <div className="bg-gray-700/50 p-3 rounded-md border border-gray-600">

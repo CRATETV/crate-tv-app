@@ -194,7 +194,7 @@ const ClassicsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {filmmakers.map(filmmaker => (
                     <div key={filmmaker.name} className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 flex flex-col items-center text-center transform transition-transform duration-300 hover:scale-105 hover:border-red-500">
-                        <img src={filmmaker.photo} alt={filmmaker.name} className="w-32 h-32 rounded-full object-cover mb-4 border-4 border-gray-600"/>
+                        <img src={filmmaker.photo} alt={filmmaker.name} className="w-32 h-32 rounded-full object-cover mb-4 border-4 border-gray-600" onContextMenu={(e) => e.preventDefault()} />
                         <h3 className="text-2xl font-bold text-white mb-2">{filmmaker.name}</h3>
                         <p className="text-gray-400 text-sm mb-4 flex-grow">{filmmaker.bioSnippet}</p>
                         <button 

@@ -173,11 +173,11 @@ Sub onItemSelected()
             
             if selectedMovie <> invalid AND selectedMovie.streamUrl <> invalid
                 videoContent = CreateObject("roSGNode", "ContentNode")
-                videoContent.url = selectedMovie.streamUrl
+                videoContent.stream = { url: selectedMovie.streamUrl }
                 videoContent.title = selectedMovie.title
-                videoContent.streamformat = "mp4"
-                
+
                 m.videoPlayer.content = videoContent
+                m.videoPlayer.streamFormat = "mp4"
                 m.videoPlayer.visible = true
                 m.videoPlayer.setFocus(true)
                 m.videoPlayer.control = "play"
@@ -204,9 +204,8 @@ Sub closeVideoPlayer()
 End Sub
 
 Function onKeyEvent(key as String, press as Boolean) as Boolean
-    key_event = key ' Avoid using reserved keyword 'key'
     if press then
-        if key_event = "back"
+        if key = "back"
             if m.videoPlayer.visible
                 closeVideoPlayer()
                 return true ' event handled

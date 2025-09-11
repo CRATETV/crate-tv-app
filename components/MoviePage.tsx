@@ -49,6 +49,7 @@ const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
                   alt={movie.title} 
                   className="w-full h-full object-cover"
                   loading="lazy"
+                  onContextMenu={(e) => e.preventDefault()}
               />
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         </a>
@@ -198,12 +199,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             />
 
             <main className="flex-grow">
-                <div ref={videoContainerRef} className="relative w-full aspect-video bg-black">
-                     <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" />
+                <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container">
+                     <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" onContextMenu={(e) => e.preventDefault()} />
                      {isReleased ? (
                         playerMode === 'poster' ? (
                             <div className="relative w-full h-full flex items-center justify-center">
-                                <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain" />
+                                <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                                 <button 
                                     onClick={() => setPlayerMode('full')} 
@@ -216,7 +217,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             </div>
                         ) : (
                             <>
-                              <video ref={videoRef} src={movie.fullMovie} className="w-full h-full" controls autoPlay playsInline />
+                              <video ref={videoRef} src={movie.fullMovie} className="w-full h-full" controls autoPlay playsInline onContextMenu={(e) => e.preventDefault()} />
                               <CastButton videoElement={videoRef.current} />
                             </>
                         )

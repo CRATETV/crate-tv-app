@@ -37,6 +37,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie }) => {
         alt={movie.title}
         className="w-full h-full object-cover"
         loading="lazy"
+        onContextMenu={(e) => e.preventDefault()}
       />
       {!isReleased && movie.releaseDateTime && (
          <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center p-2 text-center backdrop-blur-sm">

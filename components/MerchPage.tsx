@@ -38,6 +38,7 @@ const MerchPage: React.FC = () => {
                 <div 
                     className="relative py-24 md:py-32 bg-cover bg-center"
                     style={{ backgroundImage: `url('https://cratetelevision.s3.us-east-1.amazonaws.com/merch-bg.jpg')` }}
+                    onContextMenu={(e) => e.preventDefault()}
                 >
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
                     <div className="relative z-10 max-w-4xl mx-auto text-center px-4 animate-fadeInHeroContent">
@@ -57,6 +58,7 @@ const MerchPage: React.FC = () => {
                                         src={item.imageUrl} 
                                         alt={item.name}
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                                        onContextMenu={(e) => e.preventDefault()}
                                     />
                                 </div>
                                 <div className="p-6 flex flex-col flex-grow">

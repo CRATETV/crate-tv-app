@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category } from '../types.ts';
 import DirectorCreditsModal from './DirectorCreditsModal.tsx';
 import Countdown from './Countdown.tsx';
-import CastButton from './CastButton.tsx';
 
 interface MovieDetailsModalProps {
   movie: Movie;
@@ -15,8 +14,6 @@ interface MovieDetailsModalProps {
   onSelectRecommendedMovie: (movie: Movie) => void;
 }
 
-type PlayerMode = 'poster' | 'trailer' | 'full';
-
 const RecommendedMovieCard: React.FC<{ movie: Movie; onClick: (movie: Movie) => void; }> = ({ movie, onClick }) => {
     return (
         <div
@@ -28,6 +25,7 @@ const RecommendedMovieCard: React.FC<{ movie: Movie; onClick: (movie: Movie) => 
                   alt={movie.title}
                   className="w-full h-full object-cover"
                   loading="lazy"
+                  onContextMenu={(e) => e.preventDefault()}
               />
             <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         </div>
@@ -45,10 +43,8 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   allCategories,
   onSelectRecommendedMovie
 }) => {
-  const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [isReleased, setIsReleased] = useState(() => {
@@ -58,7 +54,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
   // Reset modal state when the movie prop changes
   useEffect(() => {
-    setPlayerMode('poster');
     const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
     setIsReleased(!releaseDate || releaseDate <= new Date());
     
@@ -107,13 +102,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   }, [isLiked, movie.key]);
 
 
-  // Autoplay video when mode changes
-  useEffect(() => {
-    if ((playerMode === 'trailer' || playerMode === 'full') && videoRef.current) {
-      videoRef.current.play().catch(err => console.warn("Autoplay was prevented:", err));
-    }
-  }, [playerMode]);
-
   const closeAndResetUrl = () => {
     if (window.history.replaceState) {
       const path = `/${window.location.search}`;
@@ -130,8 +118,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     setSelectedDirector(null);
     onSelectRecommendedMovie(selectedMovie);
   };
-
-  const videoSource = playerMode === 'trailer' ? movie.trailer : movie.fullMovie;
 
   const recommendedMovies = useMemo(() => {
     if (!movie) return [];
@@ -157,13 +143,9 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     window.dispatchEvent(new Event('pushstate'));
   }
 
-  const handlePlayMovie = (type: 'trailer' | 'full') => {
-      if (type === 'full') {
-          onClose(); // Close the modal
-          handleNavigate(`/movie/${movie.key}?play=true`); // Navigate to the dedicated page and play
-      } else {
-          setPlayerMode(type);
-      }
+  const handlePlayMovie = () => {
+      onClose(); // Close the modal
+      handleNavigate(`/movie/${movie.key}?play=true`); // Navigate to the dedicated page and play
   };
 
   return (
@@ -180,31 +162,15 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
         </button>
 
         <div className="relative w-full aspect-video bg-black">
-          {playerMode === 'poster' ? (
-            <div className="relative w-full h-full">
-              <img
-                  src={movie.poster}
-                  alt={movie.title}
-                  className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-transparent to-transparent"></div>
-            </div>
-          ) : (
-            <video
-              ref={videoRef}
-              key={videoSource}
-              className="w-full h-full object-contain"
-              controls
-              autoPlay
-              muted={false} // User initiated play, so unmute
-              playsInline
-            >
-              <source src={videoSource} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-          )}
-
-          {playerMode !== 'poster' && <CastButton videoElement={videoRef.current} />}
+          <div className="relative w-full h-full">
+            <img
+                src={movie.poster}
+                alt={movie.title}
+                className="w-full h-full object-cover"
+                onContextMenu={(e) => e.preventDefault()}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-transparent to-transparent"></div>
+          </div>
 
           <div className="absolute bottom-6 left-6 text-white z-10">
             <h2 className="text-2xl md:text-4xl font-bold drop-shadow-lg mb-4">{movie.title}</h2>
@@ -212,14 +178,9 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
               {isReleased ? (
                 <>
                   {movie.fullMovie && (
-                    <button onClick={() => handlePlayMovie('full')} className="flex items-center justify-center px-4 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
+                    <button onClick={handlePlayMovie} className="flex items-center justify-center px-4 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                         Play Full Movie
-                    </button>
-                  )}
-                  {movie.trailer && (
-                    <button onClick={() => handlePlayMovie('trailer')} className="flex items-center justify-center px-4 py-2 bg-gray-500/60 text-white font-bold rounded-md hover:bg-gray-500/40 transition-colors">
-                      Play Trailer
                     </button>
                   )}
                 </>
