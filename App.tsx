@@ -15,7 +15,7 @@ import SearchOverlay from './components/SearchOverlay.tsx';
 import StagingBanner from './components/StagingBanner.tsx';
 import FilmBlockCard from './components/FilmBlockCard.tsx';
 import FilmBlockDetailsModal from './components/FilmBlockDetailsModal.tsx';
-import StripePaymentModal from './components/StripePaymentModal.tsx';
+import SquarePaymentModal from './components/SquarePaymentModal.tsx';
 
 // Utility function to preload images in the background
 const preloadImages = (urls: string[]) => {
@@ -34,7 +34,7 @@ interface FestivalPurchases {
 }
 
 // Define the structure for an item being purchased
-interface PaymentItem {
+export interface PaymentItem {
   type: 'pass' | 'block' | 'film';
   id: string;
   name: string;
@@ -713,7 +713,7 @@ const App: React.FC = () => {
         />
       )}
        {paymentItem && (
-        <StripePaymentModal 
+        <SquarePaymentModal 
             item={paymentItem}
             onClose={() => setPaymentItem(null)}
             onSuccess={handlePaymentSuccess}

@@ -6,7 +6,8 @@ import { festivalData as initialFestivalData, moviesData } from '../constants.ts
 import { FilmBlock, Movie } from '../types.ts';
 import FilmBlockCard from './FilmBlockCard.tsx';
 import FilmBlockDetailsModal from './FilmBlockDetailsModal.tsx';
-import StripePaymentModal from './StripePaymentModal.tsx';
+// Fix: Corrected import from non-existent StripePaymentModal to SquarePaymentModal.
+import SquarePaymentModal from './SquarePaymentModal.tsx';
 
 interface FestivalPurchases {
   hasFullPass: boolean;
@@ -230,7 +231,8 @@ const FestivalPage: React.FC = () => {
         />
       )}
        {paymentItem && (
-        <StripePaymentModal 
+        // Fix: Corrected component usage from non-existent StripePaymentModal to SquarePaymentModal.
+        <SquarePaymentModal 
             item={paymentItem}
             onClose={() => setPaymentItem(null)}
             onSuccess={handlePaymentSuccess}

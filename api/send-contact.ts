@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     await resend.emails.send({
-      from: 'Crate TV Contact Form <noreply@cratetv.net>',
+      from: 'onboarding@resend.dev',
       to: recipientEmail,
       replyTo: data.email,
       subject: emailSubject,

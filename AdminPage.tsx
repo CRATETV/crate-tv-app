@@ -18,6 +18,8 @@ const AdminPage: React.FC = () => {
   const [loginError, setLoginError] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isFestivalLiveAdmin, setIsFestivalLiveAdmin] = useState(false);
+  const [isPackaging, setIsPackaging] = useState(false);
+  const [packagingError, setPackagingError] = useState('');
 
 
   useEffect(() => {
@@ -109,6 +111,33 @@ export const festivalData: FestivalDay[] = ${JSON.stringify(festivalData, null, 
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+  
+  const handleDownloadRokuZip = async () => {
+      setIsPackaging(true);
+      setPackagingError('');
+      try {
+          const response = await fetch('/api/generate-roku-zip');
+          if (!response.ok) {
+              const errorText = await response.text();
+              console.error('Roku packaging error response:', errorText);
+              throw new Error(`Server returned status ${response.status}`);
+          }
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'cratv.zip';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+      } catch (error) {
+          console.error('Download failed:', error);
+          setPackagingError('An error occurred while packaging the channel. Check the console for details.');
+      } finally {
+          setIsPackaging(false);
+      }
   };
 
   const handleSelectMovie = (movie: Movie) => {
@@ -240,13 +269,14 @@ export const festivalData: FestivalDay[] = ${JSON.stringify(festivalData, null, 
               <p className="text-gray-400 mb-4 max-w-3xl">
                   This tool automatically generates a ready-to-upload Roku channel ZIP file. It uses your website's current URL to create the data feed, so it's best to use this after deploying your site to a public address (like Vercel).
               </p>
-              <a
-                href="/api/generate-roku-zip"
-                download="cratv.zip"
-                className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-md transition-colors"
+              <button
+                onClick={handleDownloadRokuZip}
+                disabled={isPackaging}
+                className="inline-block bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white font-bold py-2 px-5 rounded-md transition-colors"
               >
-                Generate & Download Roku ZIP
-              </a>
+                {isPackaging ? 'Generating...' : 'Generate & Download Roku ZIP'}
+              </button>
+              {packagingError && <p className="text-red-500 text-sm mt-2">{packagingError}</p>}
           </div>
 
            {/* Publish Section */}

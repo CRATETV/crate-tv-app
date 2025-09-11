@@ -8,6 +8,7 @@ Crate TV is a sleek, professional, and fully-featured streaming web application 
 - **Dynamic Content**: All movie and category data is centralized in `constants.ts`, making content updates simple and code-free.
 - **Secure Contact & Submission Forms**: Dedicated pages for filmmakers to submit their work and for users to send messages. Both are powered by secure, serverless backend functions using Resend.
 - **AI-Powered Bios**: Click on any actor to see their bio and a unique, AI-generated "fun fact" powered by the Gemini API.
+- **Real Payments with Square**: Securely accept payments for film festival passes or individual movies using the Square Payments SDK.
 - **Advanced Search**: Instantly search for movies by title, actor, or genre.
 - **Persistent Likes**: Users can "like" movies, and their preferences are saved in their browser's local storage.
 - **Dedicated Movie Pages**: Every film has a unique, shareable URL with automatically generated SEO and schema markup for better discovery on search engines.
@@ -30,9 +31,16 @@ This entire web application was built and is maintained by a world-class senior 
 ### 1. Set Up Environment Variables
 This project requires API keys and a password for its features. You will need to configure these in your deployment environment (e.g., Vercel).
 
+**Required for Core Features:**
 -   `API_KEY`: Your Google Gemini API key.
 -   `RESEND_API_KEY`: Your API key from Resend for handling email submissions.
 -   `ADMIN_PASSWORD`: A secure password of your choice to protect the `/admin` page.
+
+**Required for Payment Processing:**
+To enable users to purchase festival passes or movies, you need a [Square Developer account](https://developer.squareup.com/apps).
+-   `SQUARE_APPLICATION_ID`: Your Square Application ID (public).
+-   `SQUARE_LOCATION_ID`: Your Square Location ID (public).
+-   `SQUARE_ACCESS_TOKEN`: Your Square Access Token (this is a secret and should be kept private).
 
 ### 2. Deploy to Vercel
 The simplest way to get started is to deploy this repository directly to Vercel.
@@ -95,6 +103,9 @@ If you wish to run the application on your local machine for development purpose
     API_KEY=your_gemini_api_key
     RESEND_API_KEY=your_resend_api_key
     ADMIN_PASSWORD=your_secure_password
+    SQUARE_APPLICATION_ID=your_square_application_id
+    SQUARE_LOCATION_ID=your_square_location_id
+    SQUARE_ACCESS_TOKEN=your_square_access_token
     ```
     *Note: Vite automatically loads `.env.local` files, but these will not be used by the Vercel deployment.*
 
