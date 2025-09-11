@@ -262,13 +262,13 @@ End Sub
         <RowList 
             id="movieRowList"
             itemComponentName="MoviePoster"
-            itemSize="[336, 189]"
-            numRows="3"
-            rowHeights="[250]"
+            itemSize="[200, 300]"
+            numRows="2"
+            rowHeights="[360, 360]"
             itemSpacing="[20, 20]"
             showRowLabel="true"
-            rowLabelOffset="[[0, 20]]"
-            translation="[80, 80]"
+            rowLabelOffset="[[0, 10]]"
+            translation="[100, 80]"
             vertFocusAnimationStyle="fixedFocus"
             rowFocusAnimationStyle="fixedFocus"
             visible="false" />
@@ -388,9 +388,9 @@ Sub closeVideoPlayer()
     m.movieRowList.setFocus(true)
 End Sub
 
-Function onKeyEvent(key as String, press as Boolean) as Boolean
+Function onKeyEvent(key_pressed as String, press as Boolean) as Boolean
     if press then
-        if key = "back"
+        if key_pressed = "back"
             if m.videoPlayer.visible
                 closeVideoPlayer()
                 return true ' event handled
@@ -412,8 +412,8 @@ End Function
     <children>
         <Poster
             id="poster"
-            width="336"
-            height="189"
+            width="200"
+            height="300"
             loadDisplayMode="scaleToFit"
         />
     </children>
