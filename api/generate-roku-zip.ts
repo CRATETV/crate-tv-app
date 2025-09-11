@@ -9,8 +9,7 @@ const placeholderLogo_400x90 = "iVBORw0KGgoAAAANSUhEUgAAAZAAAABaAQMAAADoBH4LAAAA
 
 export async function GET(request: Request) {
     try {
-        const url = new URL(request.url);
-        const host = url.host;
+        const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? new URL(request.url).host;
         const protocol = host.includes('localhost') ? 'http' : 'https';
         const feedUrl = `${protocol}://${host}/api/roku-feed`;
 
@@ -191,9 +190,10 @@ Sub closeVideoPlayer()
     m.movieRowList.setFocus(true)
 End Sub
 
-Function onKeyEvent(key_pressed as String, press as Boolean) as Boolean
+Function onKeyEvent(key as String, press as Boolean) as Boolean
+    key_event = key ' Avoid using reserved keyword 'key'
     if press then
-        if key_pressed = "back"
+        if key_event = "back"
             if m.videoPlayer.visible
                 closeVideoPlayer()
                 return true ' event handled
