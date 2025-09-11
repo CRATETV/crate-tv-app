@@ -301,6 +301,8 @@ Sub init()
     m.videoPlayer.observeField("state", "onVideoStateChange")
     
     m.fetcher = CreateObject("roUrlTransfer")
+    m.fetcher.SetCertificatesFile("common:/certs/ca-bundle.crt")
+    m.fetcher.InitClientCertificates()
     m.fetcher.SetUrl("${feedUrl}")
     
     port = CreateObject("roMessagePort")
