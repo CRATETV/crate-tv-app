@@ -37,3 +37,8 @@ export interface FestivalDay {
   date: string;
   blocks: FilmBlock[];
 }
+
+export interface FestivalConfig {
+  title: string;
+  description: string;
+}

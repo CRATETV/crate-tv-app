@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FestivalDay, FilmBlock, Movie } from '../types.ts';
+import { FestivalDay, FilmBlock, Movie, FestivalConfig } from '../types.ts';
 
 interface MovieSelectorModalProps {
   allMovies: Movie[];
@@ -68,19 +68,22 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
 
 interface FestivalEditorProps {
   initialData: FestivalDay[];
+  initialConfig: FestivalConfig;
   allMovies: Record<string, Movie>;
-  onSave: (newData: FestivalDay[]) => void;
+  onSave: (newData: FestivalDay[], newConfig: FestivalConfig) => void;
 }
 
-const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, allMovies, onSave }) => {
+const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialConfig, allMovies, onSave }) => {
   const [data, setData] = useState<FestivalDay[]>(initialData);
+  const [config, setConfig] = useState<FestivalConfig>(initialConfig);
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
 
   useEffect(() => {
     setData(initialData);
-  }, [initialData]);
+    setConfig(initialConfig);
+  }, [initialData, initialConfig]);
 
   const handleDayChange = (dayIndex: number, field: 'date', value: string) => {
     const newData = [...data];
@@ -103,6 +106,11 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, allMovies,
     newData[dayIndex] = { ...newData[dayIndex], blocks: newBlocks };
     setData(newData);
     setEditingBlock(null);
+  };
+
+  const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setConfig(prev => ({ ...prev, [name]: value }));
   };
 
   const addDay = () => {
@@ -142,7 +150,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, allMovies,
 
   const handleSave = () => {
     setIsSaving(true);
-    onSave(data);
+    onSave(data, config);
     setTimeout(() => {
       setIsSaving(false);
       setShowSuccess(true);
@@ -153,6 +161,30 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, allMovies,
   return (
     <div>
       <h2 className="text-xl sm:text-2xl font-bold mb-4 text-purple-400">Film Festival Editor</h2>
+      
+      <div className="space-y-4 mb-6 bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+          <div>
+              <label htmlFor="title" className="block text-sm font-medium text-gray-300">Festival Title</label>
+              <input 
+                type="text" 
+                name="title" 
+                value={config.title} 
+                onChange={handleConfigChange} 
+                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" 
+              />
+          </div>
+          <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-300">Festival Description</label>
+              <textarea 
+                name="description" 
+                value={config.description} 
+                onChange={handleConfigChange} 
+                rows={3} 
+                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+              ></textarea>
+          </div>
+      </div>
+
       <div className="space-y-6">
         {data.map((day, dayIndex) => (
           <div key={day.day} className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
@@ -201,7 +233,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, allMovies,
           disabled={isSaving}
           className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-5 rounded-md transition-colors"
         >
-          {isSaving ? 'Saving...' : (showSuccess ? 'Saved Successfully!' : 'Save Festival Schedule')}
+          {isSaving ? 'Saving...' : (showSuccess ? 'Saved Successfully!' : 'Save Festival Settings')}
         </button>
       </div>
       

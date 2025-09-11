@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { categoriesData as initialCategoriesData, moviesData as initialMoviesData, festivalData } from './constants.ts';
-import { Movie, Actor, FilmBlock } from './types.ts';
+import { categoriesData as initialCategoriesData, moviesData as initialMoviesData, festivalData, festivalConfigData as initialFestivalConfigData } from './constants.ts';
+import { Movie, Actor, FilmBlock, FestivalConfig } from './types.ts';
 import Header from './components/Header.tsx';
 import Hero from './components/Hero.tsx';
 import MovieCarousel from './components/MovieCarousel.tsx';
@@ -120,6 +120,7 @@ const App: React.FC = () => {
   // Festival State
   const [activeDay, setActiveDay] = useState<number>(1);
   const [selectedBlock, setSelectedBlock] = useState<FilmBlock | null>(null);
+  const [festivalConfig, setFestivalConfig] = useState<FestivalConfig>(initialFestivalConfigData);
   const { purchases, purchaseFullPass, purchaseBlock, purchaseFilm, isFilmUnlocked, isBlockUnlocked } = useFestivalPurchases();
   const [showPurchaseConfirmation, setShowPurchaseConfirmation] = useState('');
   const [paymentItem, setPaymentItem] = useState<PaymentItem | null>(null);
@@ -160,12 +161,17 @@ const App: React.FC = () => {
         // Check for admin-edited data in localStorage for live preview
         const storedMovies = localStorage.getItem('crateTvAdmin_movies');
         const storedCategories = localStorage.getItem('crateTvAdmin_categories');
+        const storedFestivalConfig = localStorage.getItem('crateTvAdmin_festivalConfig');
         
         let moviesDataSource = initialMoviesData;
         if (storedMovies) {
             moviesDataSource = JSON.parse(storedMovies);
             setCategories(JSON.parse(storedCategories || '{}'));
         }
+        if (storedFestivalConfig) {
+            setFestivalConfig(JSON.parse(storedFestivalConfig));
+        }
+
 
         // Initialize likes from local storage
         const newMoviesState = { ...moviesDataSource };
@@ -543,9 +549,9 @@ const App: React.FC = () => {
                       <div className="relative py-16 md:py-20 bg-gray-900 text-center rounded-lg overflow-hidden mb-12">
                           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-red-900/40 to-black"></div>
                           <div className="relative z-10 max-w-4xl mx-auto px-4">
-                              <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Crate TV Film Festival</h2>
+                              <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">{festivalConfig.title}</h2>
                               <p className="text-md md:text-lg text-gray-300 max-w-2xl mx-auto mb-8">
-                                  Discover the next generation of indie filmmakers. Three days of incredible shorts, exclusive premieres, and unforgettable stories.
+                                  {festivalConfig.description}
                               </p>
                               {!purchases.hasFullPass ? (
                                   <button onClick={() => handlePurchase('pass', 'full')} className="bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-lg transition-transform transform hover:scale-105">
