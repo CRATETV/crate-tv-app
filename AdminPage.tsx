@@ -76,6 +76,8 @@ const AdminPage: React.FC = () => {
 
         if (response.ok) {
             sessionStorage.setItem('isAdminAuthenticated', 'true');
+            // Store password for use in authenticated API calls like file uploads
+            sessionStorage.setItem('adminPassword', password);
             setIsAuthenticated(true);
         } else {
             const data = await response.json();

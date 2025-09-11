@@ -10,6 +10,7 @@ import SearchOverlay from './SearchOverlay.tsx';
 import StagingBanner from './StagingBanner.tsx';
 import DirectorCreditsModal from './DirectorCreditsModal.tsx';
 import Countdown from './Countdown.tsx';
+import CastButton from './CastButton.tsx';
 
 interface MoviePageProps {
   movieKey: string;
@@ -214,7 +215,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 </button>
                             </div>
                         ) : (
-                            <video ref={videoRef} src={movie.fullMovie} className="w-full h-full" controls autoPlay playsInline />
+                            <>
+                              <video ref={videoRef} src={movie.fullMovie} className="w-full h-full" controls autoPlay playsInline />
+                              <CastButton videoElement={videoRef.current} />
+                            </>
                         )
                      ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center text-center p-4">

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category } from '../types.ts';
 import DirectorCreditsModal from './DirectorCreditsModal.tsx';
 import Countdown from './Countdown.tsx';
+import CastButton from './CastButton.tsx';
 
 interface MovieDetailsModalProps {
   movie: Movie;
@@ -202,6 +203,8 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
               Your browser does not support the video tag.
             </video>
           )}
+
+          {playerMode !== 'poster' && <CastButton videoElement={videoRef.current} />}
 
           <div className="absolute bottom-6 left-6 text-white z-10">
             <h2 className="text-2xl md:text-4xl font-bold drop-shadow-lg mb-4">{movie.title}</h2>

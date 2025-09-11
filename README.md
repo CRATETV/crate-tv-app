@@ -14,6 +14,7 @@ Crate TV is a sleek, professional, and fully-featured streaming web application 
 - **Dedicated Movie Pages**: Every film has a unique, shareable URL with automatically generated SEO and schema markup for better discovery on search engines.
 - **Staging Environment**: Preview unreleased movies by adding `?env=staging` to the URL. A banner indicates you're in preview mode.
 - **Secure Admin Panel**: A password-protected page (`/admin`) for content management. Authentication is handled by a secure, serverless API endpoint, and the password is stored safely as an environment variable.
+- **Integrated Secure File Uploader**: Upload movie files, trailers, and posters directly to Amazon S3 from the admin panel. The system uses secure presigned URLs for fast, direct-to-S3 uploads.
 - **Automated Roku Channel Packager**: A one-click tool in the Admin Panel that generates a complete, ready-to-upload Roku channel ZIP file, automatically configured to pull data from your live web app.
 
 ---
@@ -41,6 +42,13 @@ To enable users to purchase festival passes or movies, you need a [Square Develo
 -   `SQUARE_APPLICATION_ID`: Your Square Application ID (public).
 -   `SQUARE_LOCATION_ID`: Your Square Location ID (public).
 -   `SQUARE_ACCESS_TOKEN`: Your Square Access Token (this is a secret and should be kept private).
+
+**Required for File Uploads:**
+You need an AWS account and an S3 bucket to use the file uploader in the admin panel. The bucket must have public read access enabled and CORS configured to allow PUT requests from your website's domain.
+-   `AWS_ACCESS_KEY_ID`: Your AWS IAM user's access key ID.
+-   `AWS_SECRET_ACCESS_KEY`: Your AWS IAM user's secret access key.
+-   `AWS_S3_REGION`: The region of your S3 bucket (e.g., `us-east-1`).
+-   `AWS_S3_BUCKET_NAME`: The name of your S3 bucket.
 
 ### 2. Deploy to Vercel
 The simplest way to get started is to deploy this repository directly to Vercel.
@@ -106,6 +114,10 @@ If you wish to run the application on your local machine for development purpose
     SQUARE_APPLICATION_ID=your_square_application_id
     SQUARE_LOCATION_ID=your_square_location_id
     SQUARE_ACCESS_TOKEN=your_square_access_token
+    AWS_ACCESS_KEY_ID=your_aws_access_key
+    AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+    AWS_S3_REGION=your_s3_bucket_region
+    AWS_S3_BUCKET_NAME=your_s3_bucket_name
     ```
     *Note: Vite automatically loads `.env.local` files, but these will not be used by the Vercel deployment.*
 

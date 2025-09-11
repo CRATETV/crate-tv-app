@@ -9,7 +9,6 @@ import SubmitPage from './components/SubmitPage.tsx';
 import MoviePage from './components/MoviePage.tsx';
 import Intro from './components/Intro.tsx';
 import MerchPage from './components/MerchPage.tsx';
-import RokuGuidePage from './components/RokuGuidePage.tsx';
 import ContactPage from './components/ContactPage.tsx';
 
 const rootElement = document.getElementById('root');
@@ -68,8 +67,6 @@ const AppRouter: React.FC = () => {
       return <MerchPage />;
     case '/admin':
       return <AdminPage />;
-    case '/roku-guide':
-      return <RokuGuidePage />;
     case '/contact':
       return <ContactPage />;
     default:

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Movie, Actor } from '../types.ts';
+import S3Uploader from './S3Uploader.tsx';
 
 interface MovieEditorProps {
   movie: Movie;
@@ -19,11 +20,19 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  const handleUrlUpdate = (field: keyof Movie, url: string) => {
+    setFormData(prev => ({ ...prev, [field]: url }));
+  };
   
   const handleCastChange = (index: number, field: keyof Actor, value: string) => {
     const updatedCast = [...formData.cast];
     updatedCast[index] = { ...updatedCast[index], [field]: value };
     setFormData(prev => ({ ...prev, cast: updatedCast }));
+  };
+
+  const handleCastUrlUpdate = (index: number, field: keyof Actor, url: string) => {
+    handleCastChange(index, field, url);
   };
 
   const addCastMember = () => {
@@ -73,27 +82,30 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
       </div>
       
       {/* URLs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
             <label htmlFor="poster" className="block text-sm font-medium text-gray-300">Poster URL (for Web App)</label>
-            <input type="text" name="poster" value={formData.poster} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+            <input type="text" name="poster" value={formData.poster} onChange={handleChange} className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+            <S3Uploader label="Or Upload Poster" onUploadSuccess={(url) => handleUrlUpdate('poster', url)} />
         </div>
-        <div>
+        <div className="space-y-2">
             <label htmlFor="tvPoster" className="block text-sm font-medium text-gray-300">TV Poster URL (Portrait 2:3)</label>
-            <input type="text" name="tvPoster" value={formData.tvPoster || ''} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
-            <p className="text-xs text-gray-500 mt-1">For TV apps like Instant TV.</p>
+            <input type="text" name="tvPoster" value={formData.tvPoster || ''} onChange={handleChange} className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+            <S3Uploader label="Or Upload TV Poster" onUploadSuccess={(url) => handleUrlUpdate('tvPoster', url)} />
         </div>
-        <div>
+        <div className="space-y-2">
           <label htmlFor="director" className="block text-sm font-medium text-gray-300">Director</label>
-          <input type="text" name="director" value={formData.director} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+          <input type="text" name="director" value={formData.director} onChange={handleChange} className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
         </div>
-        <div>
+         <div className="space-y-2">
           <label htmlFor="trailer" className="block text-sm font-medium text-gray-300">Trailer URL</label>
-          <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+          <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+          <S3Uploader label="Or Upload Trailer" onUploadSuccess={(url) => handleUrlUpdate('trailer', url)} />
         </div>
-        <div className="md:col-span-2">
+        <div className="md:col-span-2 space-y-2">
           <label htmlFor="fullMovie" className="block text-sm font-medium text-gray-300">Full Movie URL</label>
-          <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+          <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+          <S3Uploader label="Or Upload Full Movie" onUploadSuccess={(url) => handleUrlUpdate('fullMovie', url)} />
         </div>
       </div>
 
@@ -106,8 +118,14 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
               <button type="button" onClick={() => removeCastMember(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-400">&times;</button>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input type="text" placeholder="Actor Name" value={actor.name} onChange={e => handleCastChange(index, 'name', e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white" />
-                <input type="text" placeholder="Photo URL (small)" value={actor.photo} onChange={e => handleCastChange(index, 'photo', e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white" />
-                <input type="text" placeholder="High-Res Photo URL" value={actor.highResPhoto} onChange={e => handleCastChange(index, 'highResPhoto', e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white" />
+                <div className="space-y-2">
+                    <input type="text" placeholder="Photo URL (small)" value={actor.photo} onChange={e => handleCastChange(index, 'photo', e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white" />
+                    <S3Uploader label="Upload Small Photo" onUploadSuccess={(url) => handleCastUrlUpdate(index, 'photo', url)} />
+                </div>
+                <div className="space-y-2">
+                    <input type="text" placeholder="High-Res Photo URL" value={actor.highResPhoto} onChange={e => handleCastChange(index, 'highResPhoto', e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white" />
+                    <S3Uploader label="Upload High-Res Photo" onUploadSuccess={(url) => handleCastUrlUpdate(index, 'highResPhoto', url)} />
+                </div>
                  <textarea placeholder="Bio" value={actor.bio} onChange={e => handleCastChange(index, 'bio', e.target.value)} className="md:col-span-2 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white" rows={2}/>
               </div>
             </div>
