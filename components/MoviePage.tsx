@@ -200,41 +200,48 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
             <main className="flex-grow">
                 <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container">
-                     <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" onContextMenu={(e) => e.preventDefault()} />
-                     {isReleased ? (
-                        playerMode === 'poster' ? (
-                            <div className="relative w-full h-full flex items-center justify-center">
-                                <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-                                <button 
-                                    onClick={() => setPlayerMode('full')} 
-                                    className="absolute text-white bg-black/50 rounded-full p-4 hover:bg-black/70 transition-colors"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                                    </svg>
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                              <video ref={videoRef} src={movie.fullMovie} className="w-full h-full" controls autoPlay playsInline onContextMenu={(e) => e.preventDefault()} />
-                              <CastButton videoElement={videoRef.current} />
-                            </>
-                        )
-                     ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-center p-4">
-                            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Coming Soon</h2>
-                            {movie.releaseDateTime && (
-                                <div className="bg-black/50 rounded-lg p-4">
-                                    <Countdown 
-                                        targetDate={movie.releaseDateTime} 
-                                        onEnd={() => setIsReleased(true)} 
-                                        className="text-xl md:text-3xl text-white" 
-                                    />
+                    {/* If the video is playing, just show the video player. */}
+                    {isReleased && playerMode === 'full' ? (
+                        <>
+                            <video ref={videoRef} src={movie.fullMovie} className="w-full h-full" controls autoPlay playsInline onContextMenu={(e) => e.preventDefault()} />
+                            <CastButton videoElement={videoRef.current} />
+                        </>
+                    ) : (
+                        <>
+                            {/* In all other cases (poster mode or 'coming soon'), show the blurred background and the content. */}
+                            <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" onContextMenu={(e) => e.preventDefault()} />
+                            
+                            {isReleased ? (
+                                // This is the POSTER mode state
+                                <div className="relative w-full h-full flex items-center justify-center">
+                                    <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                                    <button 
+                                        onClick={() => setPlayerMode('full')} 
+                                        className="absolute text-white bg-black/50 rounded-full p-4 hover:bg-black/70 transition-colors"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ) : (
+                                // This is the COMING SOON state
+                                <div className="relative w-full h-full flex flex-col items-center justify-center text-center p-4">
+                                    <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Coming Soon</h2>
+                                    {movie.releaseDateTime && (
+                                        <div className="bg-black/50 rounded-lg p-4">
+                                            <Countdown 
+                                                targetDate={movie.releaseDateTime} 
+                                                onEnd={() => setIsReleased(true)} 
+                                                className="text-xl md:text-3xl text-white" 
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             )}
-                        </div>
-                     )}
+                        </>
+                    )}
                 </div>
 
                 <div className="max-w-6xl mx-auto p-4 md:p-8">
