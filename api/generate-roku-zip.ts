@@ -54,27 +54,23 @@ Sub Main(args As Object)
     app.EnableMemoryWarningEvent(true)
     app.EnableLowGeneralMemoryEvent(true)
 
-    ' Check for deep link launch from roInput event (e.g., from Roku Search).
-    if Type(args) = "roAssociativeArray" AND args.DoesExist("contentID")
-        ShowChannelHomeScreen({ "contentID": args.contentID })
-    else
-        ShowChannelHomeScreen(invalid)
-    end if
+    ' Pass any launch arguments (for deep linking) directly to the home screen function.
+    ShowChannelHomeScreen(args)
 End Sub
 
 '******************************************************************
 '** ShowChannelHomeScreen
 '** Initializes and displays the main scene of the channel.
 '******************************************************************
-Sub ShowChannelHomeScreen(launchParams as Object)
+Sub ShowChannelHomeScreen(args as Object)
     screen = CreateObject("roSGScreen")
     m.port = CreateObject("roMessagePort")
     screen.setMessagePort(m.port)
     m.scene = screen.CreateScene("HomeScene")
 
-    ' Pass launch parameters to the scene if they exist (for deep linking)
-    if launchParams <> invalid
-        m.scene.setField("launchParams", launchParams)
+    ' Pass launch parameters to the scene if they exist and are valid.
+    if Type(args) = "roAssociativeArray" AND args.DoesExist("contentID")
+        m.scene.setField("launchParams", args)
     end if
     
     screen.show()
@@ -133,19 +129,17 @@ Sub init()
     m.loadingLabel = m.top.findNode("loadingLabel")
     m.movieRowList = m.top.findNode("movieRowList")
     m.videoPlayer = m.top.findNode("videoPlayer")
-    m.deepLinkedContentId = invalid ' Initialize here
+    m.deepLinkedContentId = invalid
 
-    ' Observe context for deep linking
     m.top.observeField("launchParams", "onLaunchParamsSet")
 
-    ' Set video player size based on display mode
     deviceInfo = CreateObject("roDeviceInfo")
     if deviceInfo.GetDisplayMode() <> "1080p"
         m.videoPlayer.width = 1280
         m.videoPlayer.height = 720
     end if
 
-    m.top.setFocus(true) ' The scene itself should handle key events
+    m.top.setFocus(true)
     m.movieRowList.observeField("itemSelected", "onItemSelected")
     m.videoPlayer.observeField("state", "onVideoStateChange")
     
@@ -165,6 +159,8 @@ Sub init()
                 ProcessData(msg.GetString())
             else
                 m.loadingLabel.text = "Error loading feed: " + msg.GetResponseCode().ToStr()
+                ' Fire beacon on failure to load feed, as an error screen is still a "first screen".
+                CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
             end if
             exit while
         end if
@@ -180,7 +176,7 @@ End Sub
 
 Sub ProcessData(data as String)
     json = ParseJson(data)
-    if json <> invalid AND json.categories <> invalid
+    if json <> invalid AND json.DoesExist("categories") AND json.categories.count() > 0
         content = CreateObject("roSGNode", "ContentNode")
         for each category in json.categories
             row = content.createChild("ContentNode")
@@ -190,7 +186,7 @@ Sub ProcessData(data as String)
                 item.id = movie.id
                 item.title = movie.title
                 item.description = movie.description
-                item.HDPosterUrl = movie.thumbnail ' Use correct case for ContentNode field
+                item.HDPosterUrl = movie.thumbnail
                 item.streamUrl = movie.streamUrl
             end for
         end for
@@ -199,17 +195,17 @@ Sub ProcessData(data as String)
         m.movieRowList.visible = true
         m.movieRowList.setFocus(true)
         
-        ' Fire the AppLaunchComplete beacon after the first screen is rendered
-        CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
-
-        ' Handle deep link if it exists
         if m.deepLinkedContentId <> invalid
             PlayDeepLinkedContent(m.deepLinkedContentId)
-            m.deepLinkedContentId = invalid ' Clear after use
+            m.deepLinkedContentId = invalid
         end if
     else
-        m.loadingLabel.text = "Failed to parse feed data."
+        m.loadingLabel.text = "Failed to parse feed data or feed is empty."
     end if
+    
+    ' Fire the AppLaunchComplete beacon after the first screen is rendered and interactive.
+    ' This is a critical certification requirement.
+    CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
 End Sub
 
 Sub PlayDeepLinkedContent(contentId as String)
@@ -278,11 +274,11 @@ Function onKeyEvent(key as String, press as Boolean) as Boolean
         if key = "back"
             if m.videoPlayer.visible
                 closeVideoPlayer()
-                return true ' event handled
+                return true
             end if
         end if
     end if
-    return false ' event not handled
+    return false
 End Function
         `.trim();
         componentsFolder?.file('HomeScene.brs', homeSceneBrs);
@@ -314,7 +310,7 @@ End Sub
 Sub onContentChange()
     itemContent = m.top.itemContent
     if itemContent <> invalid
-        m.poster.uri = itemContent.HDPosterUrl ' Use correct case for ContentNode field
+        m.poster.uri = itemContent.HDPosterUrl
     end if
 End Sub
         `.trim();
