@@ -9,22 +9,9 @@ const placeholderLogo_400x90 = "iVBORw0KGgoAAAANSUhEUgAAAZAAAABaAQMAAADoBH4LAAAA
 
 export async function GET(request: Request) {
     try {
-        let feedUrl: string;
-
-        // Use Vercel's environment variables for a reliable public URL.
-        if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-            // This is the production URL (e.g., your custom domain)
-            feedUrl = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/api/roku-feed`;
-        } else if (process.env.VERCEL_URL) {
-            // This is the unique URL for the current deployment
-            feedUrl = `https://${process.env.VERCEL_URL}/api/roku-feed`;
-        } else {
-            // Fallback for local development or other environments
-            const host = request.headers.get('host') ?? 'localhost:5173';
-            const protocol = host.includes('localhost') ? 'http' : 'https';
-            feedUrl = `${protocol}://${host}/api/roku-feed`;
-        }
-
+        // FIX: Hardcode the feed URL to the production domain as requested.
+        // This ensures the Roku channel always points to the correct live data source.
+        const feedUrl = 'https://cratetv.net/api/roku-feed';
 
         const zip = new JSZip();
 

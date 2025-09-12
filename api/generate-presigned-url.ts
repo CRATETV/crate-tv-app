@@ -3,8 +3,16 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
+// FIX: Correct the AWS region if it's incorrectly set to 'global'.
+// The S3 SDK requires a specific region (e.g., 'us-east-1') to build the correct endpoint.
+let region = process.env.AWS_S3_REGION;
+if (region === 'global') {
+    console.warn("AWS_S3_REGION was 'global', defaulting to 'us-east-1'.");
+    region = 'us-east-1';
+}
+
 const s3Client = new S3Client({
-    region: process.env.AWS_S3_REGION,
+    region: region,
     credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID as string,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string,
@@ -49,7 +57,7 @@ export async function POST(request: Request) {
         const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 }); // URL expires in 5 minutes
 
         // 4. Construct the final public URL
-        const publicUrl = `https://${bucketName}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${key}`;
+        const publicUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;
         
         // 5. Return both URLs to the client
         return new Response(JSON.stringify({ signedUrl, publicUrl }), {

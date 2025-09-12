@@ -5,8 +5,16 @@ let cachedData: any = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 60 * 1000; // 1 minute
 
+// FIX: Correct the AWS region if it's incorrectly set to 'global'.
+// The S3 SDK requires a specific region (e.g., 'us-east-1') to build the correct endpoint.
+let region = process.env.AWS_S3_REGION;
+if (region === 'global') {
+    console.warn("AWS_S3_REGION was 'global', defaulting to 'us-east-1'.");
+    region = 'us-east-1';
+}
+
 const s3Client = new S3Client({
-    region: process.env.AWS_S3_REGION,
+    region: region,
     credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID as string,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string,

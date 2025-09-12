@@ -92,18 +92,38 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
   };
   
   const handleBlockChange = (dayIndex: number, blockIndex: number, field: 'title', value: string) => {
-    const newData = [...data];
-    const newBlocks = [...newData[dayIndex].blocks];
-    newBlocks[blockIndex] = { ...newBlocks[blockIndex], [field]: value };
-    newData[dayIndex] = { ...newData[dayIndex], blocks: newBlocks };
+    const newData = data.map((day, i) => {
+        if (i === dayIndex) {
+            return {
+                ...day,
+                blocks: day.blocks.map((block, j) => {
+                    if (j === blockIndex) {
+                        return { ...block, [field]: value };
+                    }
+                    return block;
+                })
+            };
+        }
+        return day;
+    });
     setData(newData);
   };
   
   const handleMovieSelectionSave = (dayIndex: number, blockIndex: number, newMovieKeys: string[]) => {
-    const newData = [...data];
-    const newBlocks = [...newData[dayIndex].blocks];
-    newBlocks[blockIndex] = { ...newBlocks[blockIndex], movieKeys: newMovieKeys };
-    newData[dayIndex] = { ...newData[dayIndex], blocks: newBlocks };
+    const newData = data.map((day, i) => {
+        if (i === dayIndex) {
+            return {
+                ...day,
+                blocks: day.blocks.map((block, j) => {
+                    if (j === blockIndex) {
+                        return { ...block, movieKeys: newMovieKeys };
+                    }
+                    return block;
+                })
+            };
+        }
+        return day;
+    });
     setData(newData);
     setEditingBlock(null);
   };
@@ -137,14 +157,28 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
       title: 'New Film Block',
       movieKeys: [],
     };
-    const newData = [...data];
-    newData[dayIndex].blocks.push(newBlock);
+    const newData = data.map((day, index) => {
+        if (index === dayIndex) {
+            return {
+                ...day,
+                blocks: [...day.blocks, newBlock]
+            };
+        }
+        return day;
+    });
     setData(newData);
   };
   
   const removeBlock = (dayIndex: number, blockIndex: number) => {
-    const newData = [...data];
-    newData[dayIndex].blocks = newData[dayIndex].blocks.filter((_, i) => i !== blockIndex);
+     const newData = data.map((day, index) => {
+        if (index === dayIndex) {
+            return {
+                ...day,
+                blocks: day.blocks.filter((_, i) => i !== blockIndex)
+            };
+        }
+        return day;
+    });
     setData(newData);
   };
 

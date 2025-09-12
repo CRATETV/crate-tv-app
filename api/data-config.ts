@@ -4,7 +4,12 @@
 export async function GET(request: Request) {
   try {
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
-    const region = process.env.AWS_S3_REGION;
+    // FIX: Correct the AWS region if it's incorrectly set to 'global'.
+    // S3 URLs require a specific region, not 'global'. Defaulting to 'us-east-1'.
+    let region = process.env.AWS_S3_REGION;
+    if (region === 'global') {
+        region = 'us-east-1';
+    }
 
     if (!bucketName || !region) {
       console.error('Server is not configured with AWS S3 bucket/region for live data.');
