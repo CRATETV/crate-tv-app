@@ -36,7 +36,7 @@ requires_payment=false
 # supports_input_launch: Enables deep linking into the channel (e.g., from Roku Search).
 supports_input_launch=1
 # bs_const: BrightScript constants. enable_app_launch_logging is required for certification.
-bs_const=enable_app_launch_logging=1
+bs_const=enable_app_launch_logging=true
         `.trim();
         zip.file('manifest', manifestContent);
 
