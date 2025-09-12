@@ -1,14 +1,14 @@
 // This is a Vercel Serverless Function that generates a feed for Instant TV Channel.
 // It will be accessible at the path /api/instant-tv-feed
 
-import { moviesData, categoriesData } from '../constants.ts';
-import { Movie } from '../types.ts';
+import { getApiData } from './_lib/data.ts';
+// FIX: Imported the Category type to ensure type safety when processing category data.
+import { Movie, Category } from '../types.ts';
 
 // Helper function to get movies that are currently released
-const getVisibleMovies = (): Record<string, Movie> => {
+const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Movie> => {
     const visibleMovies: Record<string, Movie> = {};
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
     Object.values(moviesData).forEach(movie => {
       // A movie is visible if it has no release date or the release date is in the past.
@@ -23,21 +23,25 @@ const getVisibleMovies = (): Record<string, Movie> => {
 // Main function to handle the GET request
 export async function GET(request: Request) {
   try {
-    const visibleMovies = getVisibleMovies();
+    const { movies: moviesData, categories: categoriesData } = await getApiData();
+    const visibleMovies = getVisibleMovies(moviesData);
     const visibleMovieKeys = new Set(Object.keys(visibleMovies));
 
     // Transform categories and their movies into the Instant TV Channel format
     const categories = Object.entries(categoriesData)
       .filter(([key]) => key !== 'featured') // Exclude the web-only 'featured' category
       .map(([key, categoryData]) => {
+        // FIX: Cast categoryData to the Category type to resolve property access errors.
+        const catData = categoryData as Category;
         
-        const playlist = categoryData.movieKeys
+        const playlist = catData.movieKeys
           .filter(movieKey => visibleMovieKeys.has(movieKey))
           .map(movieKey => {
             const movie = visibleMovies[movieKey];
             const genres = Object.values(categoriesData)
-                .filter(cat => cat.movieKeys.includes(movie.key))
-                .map(cat => cat.title);
+                // FIX: Cast inner category object to resolve property access errors.
+                .filter(cat => (cat as Category).movieKeys.includes(movie.key))
+                .map(cat => (cat as Category).title);
 
             return {
               title: movie.title,
@@ -63,7 +67,8 @@ export async function GET(request: Request) {
         // Only include the category in the final feed if it has visible movies
         if (playlist.length > 0) {
           return {
-            name: categoryData.title,
+            // FIX: Accessed title from the correctly typed 'catData' variable.
+            name: catData.title,
             playlist: playlist,
           };
         }

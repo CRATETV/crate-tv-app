@@ -1,13 +1,13 @@
 // This is a Vercel Serverless Function that generates a feed for the custom Roku channel.
 // It will be accessible at the path /api/roku-feed
 
-import { moviesData, categoriesData } from '../constants.ts';
-import { Movie } from '../types.ts';
+import { getApiData } from './_lib/data.ts';
+// FIX: Imported the Category type to ensure type safety when processing category data.
+import { Movie, Category } from '../types.ts';
 
-const getVisibleMovies = (): Record<string, Movie> => {
+const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Movie> => {
     const visibleMovies: Record<string, Movie> = {};
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
     Object.values(moviesData).forEach(movie => {
       // FIX: Changed movie.releaseDate to movie.releaseDateTime to match the data structure.
@@ -20,14 +20,17 @@ const getVisibleMovies = (): Record<string, Movie> => {
 
 export async function GET(request: Request) {
   try {
-    const visibleMovies = getVisibleMovies();
+    const { movies: moviesData, categories: categoriesData } = await getApiData();
+    const visibleMovies = getVisibleMovies(moviesData);
     const visibleMovieKeys = new Set(Object.keys(visibleMovies));
 
     const content = {
       categories: Object.entries(categoriesData)
         .filter(([key]) => key !== 'featured')
         .map(([key, categoryData]) => {
-          const movies = categoryData.movieKeys
+          // FIX: Cast categoryData to the Category type to resolve property access errors.
+          const cat = categoryData as Category;
+          const movies = cat.movieKeys
             .filter(movieKey => visibleMovieKeys.has(movieKey))
             .map(movieKey => {
               const movie = visibleMovies[movieKey];
@@ -45,7 +48,8 @@ export async function GET(request: Request) {
           
           if (movies.length > 0) {
             return {
-              title: categoryData.title,
+              // FIX: Accessed title from the correctly typed 'cat' variable.
+              title: cat.title,
               movies: movies,
             };
           }

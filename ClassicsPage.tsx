@@ -7,8 +7,7 @@ import MovieDetailsModal from './MovieDetailsModal.tsx';
 import ActorBioModal from './ActorBioModal.tsx';
 import MovieCard from './MovieCard.tsx';
 import StagingBanner from './StagingBanner.tsx';
-// FIX: Corrected import path for sibling component.
-import LoadingSpinner from './LoadingSpinner.tsx';
+import LoadingSpinner from './components/LoadingSpinner.tsx';
 
 // Data for new features
 const classicGenreMap: Record<string, string> = {
@@ -67,9 +66,18 @@ const ClassicsPage: React.FC = () => {
     const loadClassicsData = async () => {
         try {
             const liveData = await fetchAndCacheLiveData();
+            let moviesDataSource = liveData.movies;
+            let categoriesDataSource = liveData.categories;
+
+            if (isStagingActive) {
+                const storedMovies = localStorage.getItem('crateTvAdmin_movies');
+                if (storedMovies) moviesDataSource = JSON.parse(storedMovies);
+                const storedCategories = localStorage.getItem('crateTvAdmin_categories');
+                if (storedCategories) categoriesDataSource = JSON.parse(storedCategories);
+            }
             
             // Initialize movies with likes from local storage
-            const newMoviesState = { ...liveData.movies };
+            const newMoviesState = { ...moviesDataSource };
             Object.keys(newMoviesState).forEach(key => {
               const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
               if (storedLikes) {
@@ -77,7 +85,7 @@ const ClassicsPage: React.FC = () => {
               }
             });
             setMovies(newMoviesState);
-            setCategories(liveData.categories);
+            setCategories(categoriesDataSource);
 
             // Initialize the set of liked movies
             const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
@@ -176,7 +184,7 @@ const ClassicsPage: React.FC = () => {
   }, [likedMovies]);
   
   if (isLoading) {
-      return <LoadingSpinner />;
+    return <LoadingSpinner />;
   }
 
   return (

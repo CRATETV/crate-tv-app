@@ -12,6 +12,8 @@ interface MovieDetailsModalProps {
   allMovies: Record<string, Movie>;
   allCategories: Record<string, Category>;
   onSelectRecommendedMovie: (movie: Movie) => void;
+  // FIX: Added optional onSubscribe prop to handle subscription actions from the modal.
+  onSubscribe?: () => void;
 }
 
 const RecommendedMovieCard: React.FC<{ movie: Movie; onClick: (movie: Movie) => void; }> = ({ movie, onClick }) => {
@@ -47,6 +49,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
   const [isReleased, setIsReleased] = useState(() => {
     const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
     return !releaseDate || releaseDate <= new Date();
@@ -173,7 +176,9 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
           </div>
 
           <div className="absolute bottom-6 left-6 text-white z-10">
-            <h2 className="text-2xl md:text-4xl font-bold drop-shadow-lg mb-4">{movie.title}</h2>
+            <h2 className="text-2xl md:text-4xl font-bold drop-shadow-lg mb-4 flex items-center gap-3">
+              {movie.title}
+            </h2>
             <div className="flex flex-wrap items-center gap-3">
               {isReleased ? (
                 <>

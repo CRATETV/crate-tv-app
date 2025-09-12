@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { FilmBlock, Movie } from '../types.ts';
-import { moviesData } from '../constants.ts';
 
 interface FilmBlockDetailsModalProps {
     block: FilmBlock;
@@ -10,6 +9,7 @@ interface FilmBlockDetailsModalProps {
     isFilmUnlocked: (filmKey: string, blockId: string) => boolean;
     isBlockUnlocked: (blockId: string) => boolean;
     onWatchMovie: (filmKey: string) => void;
+    allMovies: Record<string, Movie>;
 }
 
 const FilmBlockDetailsModal: React.FC<FilmBlockDetailsModalProps> = ({
@@ -20,6 +20,7 @@ const FilmBlockDetailsModal: React.FC<FilmBlockDetailsModalProps> = ({
     isFilmUnlocked,
     isBlockUnlocked,
     onWatchMovie,
+    allMovies
 }) => {
     useEffect(() => {
         const handleEsc = (event: KeyboardEvent) => {
@@ -33,7 +34,7 @@ const FilmBlockDetailsModal: React.FC<FilmBlockDetailsModalProps> = ({
         };
     }, [onClose]);
 
-    const blockMovies = block.movieKeys.map(key => moviesData[key]).filter(Boolean);
+    const blockMovies = block.movieKeys.map(key => allMovies[key]).filter(Boolean);
     const blockIsUnlocked = isBlockUnlocked(block.id);
 
     return (

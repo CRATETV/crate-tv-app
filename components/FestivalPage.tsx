@@ -228,6 +228,8 @@ const FestivalPage: React.FC = () => {
             isFilmUnlocked={isFilmUnlocked}
             isBlockUnlocked={isBlockUnlocked}
             onWatchMovie={handleNavigateToMovie}
+            // FIX: Pass the 'allMovies' prop, which is required by FilmBlockDetailsModal.
+            allMovies={moviesData}
         />
       )}
        {paymentItem && (

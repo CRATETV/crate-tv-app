@@ -25,7 +25,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie }) => {
   
   return (
     <div
-      className="relative w-full aspect-[3/4] rounded-md overflow-hidden cursor-pointer bg-gray-900 transition-transform duration-300 ease-in-out hover:scale-105"
+      className="relative w-full aspect-[3/4] rounded-md overflow-hidden cursor-pointer bg-gray-900 transition-transform duration-300 ease-in-out hover:scale-105 group"
       onClick={() => onSelectMovie(movie)}
       role="button"
       tabIndex={0}
@@ -39,6 +39,9 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie }) => {
         loading="lazy"
         onContextMenu={(e) => e.preventDefault()}
       />
+      
+      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
       {!isReleased && movie.releaseDateTime && (
          <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center p-2 text-center backdrop-blur-sm">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

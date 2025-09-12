@@ -92,56 +92,50 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
     
     const loadMovieData = async () => {
-        try {
-            const liveData = await fetchAndCacheLiveData();
-            setAllMovies(liveData.movies);
-            setAllCategories(liveData.categories);
+        const liveData = await fetchAndCacheLiveData();
+        setAllMovies(liveData.movies);
+        setAllCategories(liveData.categories);
 
-            const sourceMovie = liveData.movies[movieKey];
-            if (sourceMovie) {
-              const movieData = { ...sourceMovie };
-               // Check if movie should be visible
-              const releaseDateTime = movieData.releaseDateTime ? new Date(movieData.releaseDateTime) : null;
-              const released = !releaseDateTime || releaseDateTime <= new Date();
-    
-              if (!released && !stagingActive) {
-                setIsReleased(false);
-              } else {
-                setIsReleased(true);
-              }
-    
-              // Initialize likes from local storage for this specific movie
-              const storedLikes = localStorage.getItem(`cratetv-${movieKey}-likes`);
-              if (storedLikes) {
-                movieData.likes = parseInt(storedLikes, 10);
-              } else {
-                movieData.likes = movieData.likes || 0;
-              }
-              setMovie(movieData);
-    
-              // Initialize liked set from local storage
-              const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
-              if (storedLikedMovies) {
-                setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
-              }
-    
-              // Handle play from URL
-              if (params.get('play') === 'true' && movieData.fullMovie && released) {
-                setPlayerMode('full');
-              } else {
-                setPlayerMode('poster');
-              }
-            } else {
-              // Handle movie not found, redirect to homepage
-              window.location.href = '/';
-              return;
-            }
-        } catch (error) {
-            console.error("Failed to load movie data:", error);
-            window.location.href = '/';
-        } finally {
-            setIsLoading(false);
+        const sourceMovie = liveData.movies[movieKey];
+        if (sourceMovie) {
+          const movieData = { ...sourceMovie };
+           // Check if movie should be visible
+          const releaseDateTime = movieData.releaseDateTime ? new Date(movieData.releaseDateTime) : null;
+          const released = !releaseDateTime || releaseDateTime <= new Date();
+
+          if (!released && !stagingActive) {
+            setIsReleased(false);
+          } else {
+            setIsReleased(true);
+          }
+
+          // Initialize likes from local storage for this specific movie
+          const storedLikes = localStorage.getItem(`cratetv-${movieKey}-likes`);
+          if (storedLikes) {
+            movieData.likes = parseInt(storedLikes, 10);
+          } else {
+            movieData.likes = movieData.likes || 0;
+          }
+          setMovie(movieData);
+
+          // Initialize liked set from local storage
+          const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
+          if (storedLikedMovies) {
+            setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
+          }
+
+          // Handle play from URL
+          if (params.get('play') === 'true' && movieData.fullMovie && released) {
+            setPlayerMode('full');
+          } else {
+            setPlayerMode('poster');
+          }
+        } else {
+          // Handle movie not found, redirect to homepage
+          window.location.href = '/';
+          return;
         }
+        setIsLoading(false);
     };
 
     loadMovieData();

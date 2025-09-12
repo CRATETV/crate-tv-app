@@ -5,14 +5,14 @@ Crate TV is a sleek, professional, and fully-featured streaming web application 
 ## 🌟 Features
 
 - **Modern & Responsive UI**: A Netflix-inspired interface that looks great on all devices, from desktops to mobile phones.
-- **Dynamic Content**: All movie and category data is centralized in `constants.ts`, making content updates simple and code-free.
+- **Dynamic Content**: All movie and category data is managed from a secure admin panel and published directly to the live site, eliminating the need for code changes or redeployments for content updates.
 - **Secure Contact & Submission Forms**: Dedicated pages for filmmakers to submit their work and for users to send messages. Both are powered by secure, serverless backend functions using Resend.
 - **AI-Powered Bios**: Click on any actor to see their bio and a unique, AI-generated "fun fact" powered by the Gemini API.
 - **Real Payments with Square**: Securely accept payments for film festival passes or individual movies using the Square Payments SDK.
 - **Advanced Search**: Instantly search for movies by title, actor, or genre.
 - **Persistent Likes**: Users can "like" movies, and their preferences are saved in their browser's local storage.
 - **Dedicated Movie Pages**: Every film has a unique, shareable URL with automatically generated SEO and schema markup for better discovery on search engines.
-- **Staging Environment**: Preview unreleased movies by adding `?env=staging` to the URL. A banner indicates you're in preview mode.
+- **Staging Environment**: Preview unreleased movies and content changes by adding `?env=staging` to the URL. A banner indicates you're in preview mode.
 - **Secure Admin Panel**: A password-protected page (`/admin`) for content management. Authentication is handled by a secure, serverless API endpoint, and the password is stored safely as an environment variable.
 - **Integrated Secure File Uploader**: Upload movie files, trailers, and posters directly to Amazon S3 from the admin panel. The system uses secure presigned URLs for fast, direct-to-S3 uploads.
 - **Automated Roku Channel Packager**: A one-click tool in the Admin Panel that generates a complete, ready-to-upload Roku channel ZIP file, automatically configured to pull data from your live web app.
@@ -43,8 +43,8 @@ To enable users to purchase festival passes or movies, you need a [Square Develo
 -   `SQUARE_LOCATION_ID`: Your Square Location ID (public).
 -   `SQUARE_ACCESS_TOKEN`: Your Square Access Token (this is a secret and should be kept private).
 
-**Required for File Uploads:**
-You need an AWS account and an S3 bucket to use the file uploader in the admin panel. The bucket must have public read access enabled and CORS configured to allow PUT requests from your website's domain.
+**Required for File Uploads & Live Data Publishing:**
+You need an AWS account and an S3 bucket to use the file uploader and the new live data publishing feature. The bucket must have public read access enabled and CORS configured to allow PUT requests from your website's domain.
 -   `AWS_ACCESS_KEY_ID`: Your AWS IAM user's access key ID.
 -   `AWS_SECRET_ACCESS_KEY`: Your AWS IAM user's secret access key.
 -   `AWS_S3_REGION`: The region of your S3 bucket (e.g., `us-east-1`).
@@ -60,7 +60,7 @@ The simplest way to get started is to deploy this repository directly to Vercel.
 During the import process, Vercel will prompt you to enter the Environment Variables listed above.
 
 ### 3. Access Your Live App
-Once deployed, Vercel will provide you with a public URL (e.g., `https://your-project-name.vercel.app`). You can now access your live Crate TV application.
+Once deployed, Vercel will provide you with a public URL (e.g., `https://your-project-name.vercel.app`). You can now access your live Crate TV application. To manage content, simply navigate to `/admin`. Changes saved in the admin panel can be published to the live site instantly with the "Publish" button.
 
 ---
 

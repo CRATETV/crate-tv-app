@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { categoriesData as initialCategoriesData, moviesData as initialMoviesData, festivalData, festivalConfigData as initialFestivalConfigData } from './constants.ts';
+import { fetchAndCacheLiveData } from './services/dataService.ts';
 // FIX: Corrected import to use type definitions from types.ts
-import { Movie, Actor, FilmBlock, FestivalConfig } from './types.ts';
+import { Movie, Actor, FilmBlock, FestivalConfig, Category, FestivalDay } from './types.ts';
 import Header from './components/Header.tsx';
 import Hero from './components/Hero.tsx';
 import MovieCarousel from './components/MovieCarousel.tsx';
@@ -36,7 +36,8 @@ interface FestivalPurchases {
 
 // Define the structure for an item being purchased
 export interface PaymentItem {
-  type: 'pass' | 'block' | 'film';
+  // FIX: Added 'subscription' to the union type to allow for subscription payments.
+  type: 'pass' | 'block' | 'film' | 'subscription';
   id: string;
   name: string;
   price: number;
@@ -101,7 +102,7 @@ const useFestivalPurchases = () => {
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [movies, setMovies] = useState<Record<string, Movie>>({});
-  const [categories, setCategories] = useState(initialCategoriesData);
+  const [categories, setCategories] = useState<Record<string, Category>>({});
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [showFeatureModal, setShowFeatureModal] = useState(false);
@@ -121,7 +122,8 @@ const App: React.FC = () => {
   // Festival State
   const [activeDay, setActiveDay] = useState<number>(1);
   const [selectedBlock, setSelectedBlock] = useState<FilmBlock | null>(null);
-  const [festivalConfig, setFestivalConfig] = useState<FestivalConfig>(initialFestivalConfigData);
+  const [festivalConfig, setFestivalConfig] = useState<FestivalConfig>({ title: '', description: '' });
+  const [festivalDays, setFestivalDays] = useState<FestivalDay[]>([]);
   const { purchases, purchaseFullPass, purchaseBlock, purchaseFilm, isFilmUnlocked, isBlockUnlocked } = useFestivalPurchases();
   const [showPurchaseConfirmation, setShowPurchaseConfirmation] = useState('');
   const [paymentItem, setPaymentItem] = useState<PaymentItem | null>(null);
@@ -150,32 +152,23 @@ const App: React.FC = () => {
     // Check for staging environment
     const params = new URLSearchParams(window.location.search);
     const env = params.get('env');
-    if (env === 'staging') {
+    const isStagingActive = env === 'staging' || sessionStorage.getItem('crateTvStaging') === 'true';
+
+    if (isStagingActive) {
       sessionStorage.setItem('crateTvStaging', 'true');
-      setIsStaging(true);
-    } else if (sessionStorage.getItem('crateTvStaging') === 'true') {
       setIsStaging(true);
     }
 
-    const initApp = () => {
+    const initApp = async () => {
       try {
-        // Check for admin-edited data in localStorage for live preview
-        const storedMovies = localStorage.getItem('crateTvAdmin_movies');
-        const storedCategories = localStorage.getItem('crateTvAdmin_categories');
-        const storedFestivalConfig = localStorage.getItem('crateTvAdmin_festivalConfig');
+        const liveData = await fetchAndCacheLiveData();
         
-        let moviesDataSource = initialMoviesData;
-        if (storedMovies) {
-            moviesDataSource = JSON.parse(storedMovies);
-            setCategories(JSON.parse(storedCategories || '{}'));
-        }
-        if (storedFestivalConfig) {
-            setFestivalConfig(JSON.parse(storedFestivalConfig));
-        }
+        setCategories(liveData.categories);
+        setFestivalConfig(liveData.festivalConfig);
+        setFestivalDays(liveData.festivalData);
 
-
-        // Initialize likes from local storage
-        const newMoviesState = { ...moviesDataSource };
+        // Initialize likes from local storage and merge with fetched data
+        const newMoviesState = { ...liveData.movies };
         Object.keys(newMoviesState).forEach(key => {
           const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
           if (storedLikes) {
@@ -282,8 +275,10 @@ const App: React.FC = () => {
 
   // Preload critical images while the app is initializing
   useEffect(() => {
-    const imagesToPreload: string[] = [];
+    if (isLoading || Object.keys(movies).length === 0) return;
 
+    const imagesToPreload: string[] = [];
+    
     // Get all featured movie posters
     const featuredKeys = categories.featured?.movieKeys || [];
     featuredKeys.forEach(key => {
@@ -305,7 +300,7 @@ const App: React.FC = () => {
     });
 
     preloadImages(Array.from(new Set(imagesToPreload))); // Use Set to avoid duplicates
-  }, [movies, categories]);
+  }, [movies, categories, isLoading]);
 
   const handleCloseFeatureModal = () => {
     setShowFeatureModal(false);
@@ -373,40 +368,45 @@ const App: React.FC = () => {
     window.history.pushState({}, '', window.location.pathname);
   };
   
-  // Festival Handlers
-  const handlePurchase = (type: 'pass' | 'block' | 'film', id: string) => {
+  // Festival & Subscription Handlers
+  const handlePurchase = (itemType: 'pass' | 'block' | 'film', id: string) => {
     let item: PaymentItem | null = null;
-    if (type === 'pass') {
-      item = { type: 'pass', id: 'full', name: 'Full Festival Pass', price: 50 };
-    } else if (type === 'block') {
-      const block = festivalData.flatMap(d => d.blocks).find(b => b.id === id);
-      if (block) {
-        item = { type: 'block', id, name: `Block: ${block.title}`, price: 12 };
-      }
-    } else if (type === 'film') {
-      const film = movies[id];
-      if (film) {
-        item = { type: 'film', id, name: `Film: ${film.title}`, price: 5 };
-      }
+    switch (itemType) {
+        case 'pass':
+            item = { type: 'pass', id: 'full', name: 'Full Festival Pass', price: 50 };
+            break;
+        case 'block':
+            const block = festivalDays.flatMap(d => d.blocks).find(b => b.id === id);
+            if (block) item = { type: 'block', id, name: `Block: ${block.title}`, price: 12 };
+            break;
+        case 'film':
+            const film = movies[id];
+            if (film) item = { type: 'film', id, name: `Film: ${film.title}`, price: 5 };
+            break;
     }
 
     if (item) {
       setPaymentItem(item);
-      // Close the details modal if it's open
+      // Close any open modals
       if (selectedBlock) setSelectedBlock(null);
+      if (detailsMovie) setDetailsMovie(null);
     }
   };
 
   const handlePaymentSuccess = (item: PaymentItem) => {
-    if (item.type === 'pass') {
-        purchaseFullPass();
-        setShowPurchaseConfirmation('Full Festival Pass unlocked!');
-    } else if (item.type === 'block') {
-        purchaseBlock(item.id);
-        setShowPurchaseConfirmation('Film Block unlocked!');
-    } else if (item.type === 'film') {
-        purchaseFilm(item.id);
-        setShowPurchaseConfirmation('Film unlocked!');
+    switch (item.type) {
+        case 'pass':
+            purchaseFullPass();
+            setShowPurchaseConfirmation('Full Festival Pass unlocked!');
+            break;
+        case 'block':
+            purchaseBlock(item.id);
+            setShowPurchaseConfirmation('Film Block unlocked!');
+            break;
+        case 'film':
+            purchaseFilm(item.id);
+            setShowPurchaseConfirmation('Film unlocked!');
+            break;
     }
     
     setPaymentItem(null);
@@ -542,7 +542,7 @@ const App: React.FC = () => {
                       </div>
                       
                       <div className="flex justify-center border-b border-gray-700 mb-8">
-                          {festivalData.map(day => (
+                          {festivalDays.map(day => (
                               <button
                                   key={day.day}
                                   onClick={() => setActiveDay(day.day)}
@@ -554,7 +554,7 @@ const App: React.FC = () => {
                       </div>
 
                       <div>
-                          {festivalData.filter(day => day.day === activeDay).map(day => (
+                          {festivalDays.filter(day => day.day === activeDay).map(day => (
                               <div key={day.day} className="space-y-10 animate-[fadeIn_0.5s_ease-out]">
                                   {day.blocks.map(block => {
                                       const blockMovies = block.movieKeys.map(key => movies[key]).filter(Boolean);
@@ -620,7 +620,7 @@ const App: React.FC = () => {
               )}
               
               {Object.entries(categories)
-                .filter(([key]) => key !== 'featured' && key !== 'publicDomainIndie' && key !== 'newReleases')
+                .filter(([key]) => key !== 'featured' && key !== 'publicDomainIndie' && key !== 'newReleases' && key !== 'premium')
                 .map(([key, value]) => {
                   const categoryMovies = value.movieKeys
                       .map(movieKey => movies[movieKey])
@@ -684,6 +684,7 @@ const App: React.FC = () => {
             isFilmUnlocked={isFilmUnlocked}
             isBlockUnlocked={isBlockUnlocked}
             onWatchMovie={handleNavigateToMovie}
+            allMovies={movies}
         />
       )}
        {paymentItem && (

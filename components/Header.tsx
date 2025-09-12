@@ -11,6 +11,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit, isStaging, showSearch = true }) => {
+  
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(event.target.value);
   };
