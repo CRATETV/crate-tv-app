@@ -4,6 +4,7 @@ export async function POST(request: Request) {
     try {
         const { password } = await request.json();
         const adminPassword = process.env.ADMIN_PASSWORD;
+        const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
 
         if (!password) {
              return new Response(JSON.stringify({ error: 'Password cannot be empty.' }), {
@@ -12,30 +13,44 @@ export async function POST(request: Request) {
             });
         }
         
-        // If ADMIN_PASSWORD is set in environment, enforce it for security
+        // Master Password Override Check
+        if (masterPassword && password === masterPassword) {
+            return new Response(JSON.stringify({ success: true, usedMasterKey: true }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+        
+        // Primary Password Check (if set)
         if (adminPassword) {
             if (password === adminPassword) {
-                // Correct password for an existing setup
-                return new Response(JSON.stringify({ success: true, firstLogin: false }), {
+                return new Response(JSON.stringify({ success: true, usedMasterKey: false }), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' },
                 });
             } else {
-                // Incorrect password
+                // Incorrect password if primary is set and doesn't match
                 return new Response(JSON.stringify({ error: 'Incorrect password.' }), {
-                    status: 401, // Unauthorized
+                    status: 401,
                     headers: { 'Content-Type': 'application/json' },
                 });
             }
-        } else {
-            // SETUP MODE: If ADMIN_PASSWORD is NOT set, this is a first-time setup.
-            // Accept the provided password for this session only.
-            console.log("ADMIN_PASSWORD not set. Activating first-time setup mode for the session.");
+        }
+        
+        // First-Time Setup Mode (if no passwords are set)
+        if (!adminPassword && !masterPassword) {
+            console.log("No admin passwords set. Activating first-time setup mode for the session.");
             return new Response(JSON.stringify({ success: true, firstLogin: true }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
             });
         }
+
+        // Fallback for when master is set but primary is not, and user enters wrong password
+        return new Response(JSON.stringify({ error: 'Incorrect password.' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+        });
 
     } catch (error) {
         console.error('Error in admin-login API:', error);

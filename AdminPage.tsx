@@ -43,6 +43,7 @@ const AdminPage: React.FC = () => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isFestivalLiveAdmin, setIsFestivalLiveAdmin] = useState(false);
   const [loginMessage, setLoginMessage] = useState('');
+  const [loggedInWithMaster, setLoggedInWithMaster] = useState(false);
   
   // Auto-publishing state
   const [autoPublishStatus, setAutoPublishStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
@@ -73,6 +74,9 @@ const AdminPage: React.FC = () => {
     // Check session storage for auth status on initial load
     if (sessionStorage.getItem('isAdminAuthenticated') === 'true') {
         setIsAuthenticated(true);
+        if (sessionStorage.getItem('usedMasterKey') === 'true') {
+            setLoggedInWithMaster(true);
+        }
         fetchSalesData();
         fetchAdminData();
     }
@@ -130,8 +134,16 @@ const AdminPage: React.FC = () => {
             sessionStorage.setItem('adminPassword', password);
             setIsAuthenticated(true);
             
+            if (data.usedMasterKey) {
+                sessionStorage.setItem('usedMasterKey', 'true');
+                setLoggedInWithMaster(true);
+            } else {
+                sessionStorage.removeItem('usedMasterKey');
+                setLoggedInWithMaster(false);
+            }
+
             if (data.firstLogin) {
-                setLoginMessage("Setup complete! The password you entered will work for this session. To make it permanent, add it as the ADMIN_PASSWORD environment variable in your project's settings.");
+                setLoginMessage("Setup complete! To secure your admin panel, add this password as the ADMIN_PASSWORD environment variable in your project's settings.");
             }
             
             fetchSalesData();
@@ -278,6 +290,14 @@ const AdminPage: React.FC = () => {
       <main className="flex-grow p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
            {loginMessage && <p className="text-green-400 text-sm mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-md">{loginMessage}</p>}
+           
+           {loggedInWithMaster && (
+                <div className="bg-yellow-500/20 border border-yellow-500 text-yellow-300 text-sm rounded-lg p-4 mb-8">
+                    <p className="font-bold mb-1">Security Notice: Logged in with Master Password</p>
+                    <p>You have accessed the admin panel using the `ADMIN_MASTER_PASSWORD`. For maximum security, please update your primary `ADMIN_PASSWORD` in your Vercel project settings, then remove the `ADMIN_MASTER_PASSWORD` variable.</p>
+                </div>
+            )}
+
            <div className="flex justify-between items-start mb-8">
               <h1 className="text-2xl sm:text-4xl font-bold">Admin Panel</h1>
               {autoPublishStatus !== 'idle' && (
