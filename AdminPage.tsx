@@ -27,8 +27,6 @@ const AdminPage: React.FC = () => {
   const [loginError, setLoginError] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isFestivalLiveAdmin, setIsFestivalLiveAdmin] = useState(false);
-  const [isPackaging, setIsPackaging] = useState(false);
-  const [packagingError, setPackagingError] = useState('');
 
 
   useEffect(() => {
@@ -124,33 +122,6 @@ export const festivalData: FestivalDay[] = ${JSON.stringify(festivalData, null, 
     URL.revokeObjectURL(url);
   };
   
-  const handleDownloadRokuZip = async () => {
-      setIsPackaging(true);
-      setPackagingError('');
-      try {
-          const response = await fetch('/api/generate-roku-zip');
-          if (!response.ok) {
-              const errorText = await response.text();
-              console.error('Roku packaging error response:', errorText);
-              throw new Error(`Server returned status ${response.status}`);
-          }
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'cratv.zip';
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          window.URL.revokeObjectURL(url);
-      } catch (error) {
-          console.error('Download failed:', error);
-          setPackagingError('An error occurred while packaging the channel. Check the console for details.');
-      } finally {
-          setIsPackaging(false);
-      }
-  };
-
   const handleSelectMovie = (movie: Movie) => {
     setSelectedMovie(movie);
     setIsAddingNew(false);
@@ -273,22 +244,6 @@ export const festivalData: FestivalDay[] = ${JSON.stringify(festivalData, null, 
                   </div>
                 </div>
             </div>
-
-           {/* Roku Packager Section */}
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
-              <h2 className="text-xl sm:text-2xl font-bold mb-3 text-red-400">Automated Roku Channel Packager</h2>
-              <p className="text-gray-400 mb-4 max-w-3xl">
-                  This tool automatically generates a ready-to-upload Roku channel ZIP file. It uses your website's current URL to create the data feed, so it's best to use this after deploying your site to a public address (like Vercel).
-              </p>
-              <button
-                onClick={handleDownloadRokuZip}
-                disabled={isPackaging}
-                className="inline-block bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white font-bold py-2 px-5 rounded-md transition-colors"
-              >
-                {isPackaging ? 'Generating...' : 'Generate & Download Roku ZIP'}
-              </button>
-              {packagingError && <p className="text-red-500 text-sm mt-2">{packagingError}</p>}
-          </div>
 
            {/* Publish Section */}
           <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
