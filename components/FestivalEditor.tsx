@@ -97,15 +97,13 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
     setData(currentData =>
       currentData.map((day, i) => {
         if (i === dayIndex) {
-          return {
-            ...day,
-            blocks: day.blocks.map((block, j) => {
-              if (j === blockIndex) {
-                return { ...block, [field]: value };
-              }
-              return block;
-            })
-          };
+          const updatedBlocks = day.blocks.map((block, j) => {
+            if (j === blockIndex) {
+              return { ...block, [field]: value };
+            }
+            return block;
+          });
+          return { ...day, blocks: updatedBlocks };
         }
         return day;
       })
@@ -116,15 +114,13 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
     setData(currentData =>
       currentData.map((day, i) => {
         if (i === dayIndex) {
-          return {
-            ...day,
-            blocks: day.blocks.map((block, j) => {
-              if (j === blockIndex) {
-                return { ...block, movieKeys: newMovieKeys };
-              }
-              return block;
-            })
-          };
+          const updatedBlocks = day.blocks.map((block, j) => {
+            if (j === blockIndex) {
+              return { ...block, movieKeys: newMovieKeys };
+            }
+            return block;
+          });
+          return { ...day, blocks: updatedBlocks };
         }
         return day;
       })
@@ -167,10 +163,8 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
     setData(currentData => 
       currentData.map((day, index) => {
         if (index === dayIndex) {
-          return {
-            ...day,
-            blocks: [...day.blocks, newBlock]
-          };
+          // Create a new array for the blocks to ensure immutability
+          return { ...day, blocks: [...day.blocks, newBlock] };
         }
         return day;
       })
@@ -181,10 +175,8 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
      setData(currentData =>
         currentData.map((day, index) => {
           if (index === dayIndex) {
-            return {
-              ...day,
-              blocks: day.blocks.filter((_, i) => i !== blockIndex)
-            };
+            // Create a new filtered array for blocks
+            return { ...day, blocks: day.blocks.filter((_, i) => i !== blockIndex) };
           }
           return day;
         })

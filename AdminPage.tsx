@@ -53,6 +53,9 @@ const AdminPage: React.FC = () => {
   const [salesData, setSalesData] = useState<SalesData | null>(null);
   const [isLoadingSales, setIsLoadingSales] = useState(false);
   const [salesError, setSalesError] = useState('');
+  
+  // Roku Packager State
+  const [isPackaging, setIsPackaging] = useState(false);
 
   const fetchAdminData = async () => {
     try {
@@ -258,6 +261,29 @@ const AdminPage: React.FC = () => {
       alert(`Film Festival module has been ${newStatus ? 'made LIVE' : 'taken DOWN'}. Changes will be visible on the homepage for all users on their next page load.`);
   };
 
+  const handleGenerateRokuZip = async () => {
+    setIsPackaging(true);
+    try {
+        const response = await fetch('/api/generate-roku-zip');
+        if (!response.ok) {
+            throw new Error('Failed to generate Roku package. Server responded with an error.');
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'cratv.zip';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Roku packaging error:', error);
+        alert('Could not generate the Roku package. Please check the console for errors.');
+    } finally {
+        setIsPackaging(false);
+    }
+  };
 
   if (!isAuthenticated) {
     return (
@@ -391,6 +417,21 @@ const AdminPage: React.FC = () => {
               )}
           </div>
           
+           {/* Roku Channel Packager */}
+            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
+                <h2 className="text-xl sm:text-2xl font-bold mb-3 text-cyan-400">Automated Roku Channel Packager</h2>
+                <p className="text-gray-400 mb-4 max-w-3xl">
+                    Generate a ready-to-upload ZIP file for the Crate TV Roku channel. The channel will automatically be configured to pull content from your live website.
+                </p>
+                <button
+                    onClick={handleGenerateRokuZip}
+                    disabled={isPackaging}
+                    className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-cyan-800 text-white font-bold py-2 px-5 rounded-md transition-colors"
+                >
+                    {isPackaging ? 'Packaging...' : 'Generate & Download Roku ZIP'}
+                </button>
+            </div>
+
           {/* Festival Editor Section */}
            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
               <FestivalEditor
