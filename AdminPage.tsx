@@ -42,6 +42,7 @@ const AdminPage: React.FC = () => {
   const [loginError, setLoginError] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isFestivalLiveAdmin, setIsFestivalLiveAdmin] = useState(false);
+  const [loginMessage, setLoginMessage] = useState('');
   
   // Auto-publishing state
   const [autoPublishStatus, setAutoPublishStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
@@ -112,6 +113,7 @@ const AdminPage: React.FC = () => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
+    setLoginMessage('');
     setIsAuthenticating(true);
 
     try {
@@ -121,15 +123,20 @@ const AdminPage: React.FC = () => {
             body: JSON.stringify({ password }),
         });
 
-        if (response.ok) {
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
             sessionStorage.setItem('isAdminAuthenticated', 'true');
-            // Store password for use in authenticated API calls like file uploads
             sessionStorage.setItem('adminPassword', password);
             setIsAuthenticated(true);
-            fetchSalesData(); // Fetch sales data on successful login
-            fetchAdminData(); // Fetch live content on successful login
+            
+            if (data.firstLogin) {
+                setLoginMessage("Setup complete! The password you entered will work for this session. To make it permanent, add it as the ADMIN_PASSWORD environment variable in your project's settings.");
+            }
+            
+            fetchSalesData();
+            fetchAdminData();
         } else {
-            const data = await response.json();
             setLoginError(data.error || 'Login failed.');
         }
     } catch (error) {
@@ -245,6 +252,7 @@ const AdminPage: React.FC = () => {
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
         <div className="w-full max-w-sm bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
           <h1 className="text-2xl font-bold mb-6 text-center text-white">Admin Login</h1>
+          {loginMessage && <p className="text-green-400 text-sm mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-md">{loginMessage}</p>}
           <form onSubmit={handleAuth}>
             <input
               type="password"
@@ -269,6 +277,7 @@ const AdminPage: React.FC = () => {
       <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
       <main className="flex-grow p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
+           {loginMessage && <p className="text-green-400 text-sm mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-md">{loginMessage}</p>}
            <div className="flex justify-between items-start mb-8">
               <h1 className="text-2xl sm:text-4xl font-bold">Admin Panel</h1>
               {autoPublishStatus !== 'idle' && (
