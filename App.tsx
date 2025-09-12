@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData } from './services/dataService.ts';
 // FIX: Corrected import to use type definitions from types.ts
@@ -37,8 +38,8 @@ interface FestivalPurchases {
 
 // Define the structure for an item being purchased
 export interface PaymentItem {
-  // FIX: Added 'subscription' back to the type to support the Premium Page feature.
-  type: 'pass' | 'block' | 'film' | 'subscription';
+  // FIX: Removed 'subscription' type to resolve build error after premium feature rollback.
+  type: 'pass' | 'block' | 'film';
   id: string;
   name: string;
   price: number;
