@@ -48,8 +48,8 @@ bs_const=enable_app_launch_logging=1
         const mainBrsContent = `
 Sub Main(args As Object)
     ' Check for deep link launch from roInput event
-    if Type(args) = "roAssociativeArray" AND args.DoesExist("contentId")
-        ShowChannelHomeScreen({ "contentId": args.contentId })
+    if Type(args) = "roAssociativeArray" AND args.DoesExist("contentID")
+        ShowChannelHomeScreen({ "contentID": args.contentID })
     else
         ShowChannelHomeScreen(invalid)
     end if
@@ -63,8 +63,7 @@ Sub ShowChannelHomeScreen(launchParams as Object)
 
     ' Pass launch parameters to the scene if they exist
     if launchParams <> invalid
-        context = { launchParams: launchParams }
-        m.scene.setField("context", context)
+        m.scene.setField("launchParams", launchParams)
     end if
     
     screen.show()
@@ -88,7 +87,7 @@ End Sub
 <component name="HomeScene" extends="Scene">
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
     <interface>
-        <field id="context" type="assocarray" />
+        <field id="launchParams" type="assocarray" />
     </interface>
     <children>
         <Label id="loadingLabel" text="Loading..." translation="[960, 540]" horizAlign="center" vertAlign="center" />
@@ -124,7 +123,7 @@ Sub init()
     m.deepLinkedContentId = invalid ' Initialize here
 
     ' Observe context for deep linking
-    m.top.observeField("context", "onContextSet")
+    m.top.observeField("launchParams", "onLaunchParamsSet")
 
     ' Set video player size based on display mode
     deviceInfo = CreateObject("roDeviceInfo")
@@ -159,10 +158,10 @@ Sub init()
     end while
 End Sub
 
-Sub onContextSet()
-    context = m.top.context
-    if context <> invalid AND context.launchParams <> invalid AND context.launchParams.contentId <> invalid
-        m.deepLinkedContentId = context.launchParams.contentId
+Sub onLaunchParamsSet()
+    params = m.top.launchParams
+    if params <> invalid AND params.DoesExist("contentID")
+        m.deepLinkedContentId = params.contentID
     end if
 End Sub
 
