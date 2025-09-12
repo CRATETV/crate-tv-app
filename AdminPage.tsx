@@ -244,20 +244,6 @@ export const festivalData: FestivalDay[] = ${JSON.stringify(festivalData, null, 
                   </div>
                 </div>
             </div>
-
-           {/* Publish Section */}
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
-              <h2 className="text-xl sm:text-2xl font-bold mb-3 text-yellow-400">Publish Changes</h2>
-              <p className="text-gray-400 mb-4 max-w-3xl">
-                  Your changes are saved in this browser for a live preview. To make them permanent for all users, download the updated constants file, replace `constants.ts` in your project, and then redeploy your application.
-              </p>
-              <button
-                  onClick={handleDownloadConstants}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-2 px-5 rounded-md transition-colors"
-              >
-                  Download constants.ts
-              </button>
-          </div>
           
           {/* Festival Editor Section */}
            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
@@ -303,6 +289,20 @@ export const festivalData: FestivalDay[] = ${JSON.stringify(festivalData, null, 
               </div>
             </div>
           )}
+
+           {/* Publish Section */}
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mt-12">
+              <h2 className="text-xl sm:text-2xl font-bold mb-3 text-yellow-400">Publish Changes</h2>
+              <p className="text-gray-400 mb-4 max-w-3xl">
+                  Your changes are saved in this browser for a live preview. To make them permanent for all users, download the updated constants file, replace `constants.ts` in your project, and then redeploy your application.
+              </p>
+              <button
+                  onClick={handleDownloadConstants}
+                  className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-2 px-5 rounded-md transition-colors"
+              >
+                  Download constants.ts
+              </button>
+          </div>
         </div>
       </main>
       <Footer />

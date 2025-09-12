@@ -38,20 +38,35 @@ mm_icon_focus_hd=pkg:/images/logo_400x90.png
 mm_icon_side_hd=pkg:/images/logo_400x90.png
 splash_screen_hd=pkg:/images/splash_hd_1280x720.png
 splash_screen_fhd=pkg:/images/splash_fhd_1920x1080.png
+requires_payment=false
+supports_input_launch=1
+bs_const=enable_app_launch_logging=1
         `.trim();
         zip.file('manifest', manifestContent);
 
         // Create source/main.brs
         const mainBrsContent = `
-Sub Main()
-    ShowChannelHomeScreen()
+Sub Main(args As Object)
+    ' Check for deep link launch from roInput event
+    if Type(args) = "roAssociativeArray" AND args.DoesExist("contentId")
+        ShowChannelHomeScreen({ "contentId": args.contentId })
+    else
+        ShowChannelHomeScreen(invalid)
+    end if
 End Sub
 
-Sub ShowChannelHomeScreen()
+Sub ShowChannelHomeScreen(launchParams as Object)
     screen = CreateObject("roSGScreen")
     m.port = CreateObject("roMessagePort")
     screen.setMessagePort(m.port)
     m.scene = screen.CreateScene("HomeScene")
+
+    ' Pass launch parameters to the scene if they exist
+    if launchParams <> invalid
+        context = { launchParams: launchParams }
+        m.scene.setField("context", context)
+    end if
+    
     screen.show()
 
     while(true)
@@ -72,6 +87,9 @@ End Sub
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="HomeScene" extends="Scene">
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
+    <interface>
+        <field id="context" type="assocarray" />
+    </interface>
     <children>
         <Label id="loadingLabel" text="Loading..." translation="[960, 540]" horizAlign="center" vertAlign="center" />
         <RowList 
@@ -103,6 +121,10 @@ Sub init()
     m.loadingLabel = m.top.findNode("loadingLabel")
     m.movieRowList = m.top.findNode("movieRowList")
     m.videoPlayer = m.top.findNode("videoPlayer")
+    m.deepLinkedContentId = invalid ' Initialize here
+
+    ' Observe context for deep linking
+    m.top.observeField("context", "onContextSet")
 
     ' Set video player size based on display mode
     deviceInfo = CreateObject("roDeviceInfo")
@@ -137,6 +159,13 @@ Sub init()
     end while
 End Sub
 
+Sub onContextSet()
+    context = m.top.context
+    if context <> invalid AND context.launchParams <> invalid AND context.launchParams.contentId <> invalid
+        m.deepLinkedContentId = context.launchParams.contentId
+    end if
+End Sub
+
 Sub ProcessData(data as String)
     json = ParseJson(data)
     if json <> invalid AND json.categories <> invalid
@@ -157,33 +186,63 @@ Sub ProcessData(data as String)
         m.loadingLabel.visible = false
         m.movieRowList.visible = true
         m.movieRowList.setFocus(true)
+        
+        ' Fire the AppLaunchComplete beacon
+        CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
+
+        ' Handle deep link if it exists
+        if m.deepLinkedContentId <> invalid
+            PlayDeepLinkedContent(m.deepLinkedContentId)
+            m.deepLinkedContentId = invalid ' Clear after use
+        end if
     else
         m.loadingLabel.text = "Failed to parse feed data."
     end if
 End Sub
 
+Sub PlayDeepLinkedContent(contentId as String)
+    content = m.movieRowList.content
+    if content <> invalid
+        for i = 0 to content.getChildCount() - 1
+            row = content.getChild(i)
+            if row <> invalid
+                for j = 0 to row.getChildCount() - 1
+                    movie = row.getChild(j)
+                    if movie <> invalid AND movie.id = contentId
+                        playMovie(movie)
+                        return
+                    end if
+                end for
+            end if
+        end for
+    end if
+    print "Deep linked contentId not found: "; contentId
+End Sub
+
+Sub playMovie(movieNode as Object)
+    if movieNode <> invalid AND movieNode.streamUrl <> invalid
+        videoContent = CreateObject("roSGNode", "ContentNode")
+        videoContent.stream = { url: movieNode.streamUrl }
+        videoContent.title = movieNode.title
+
+        m.videoPlayer.content = videoContent
+        m.videoPlayer.streamFormat = "mp4"
+        m.videoPlayer.visible = true
+        m.videoPlayer.setFocus(true)
+        m.videoPlayer.control = "play"
+
+        m.movieRowList.visible = false
+    end if
+End Sub
+
 Sub onItemSelected()
-    ' itemSelected is a roArray with [rowIndex, itemIndex]
     selectedIndex = m.movieRowList.itemSelected
     content = m.movieRowList.content
     if content <> invalid AND content.getChildCount() > selectedIndex[0]
         selectedRow = content.getChild(selectedIndex[0])
         if selectedRow <> invalid AND selectedRow.getChildCount() > selectedIndex[1]
             selectedMovie = selectedRow.getChild(selectedIndex[1])
-            
-            if selectedMovie <> invalid AND selectedMovie.streamUrl <> invalid
-                videoContent = CreateObject("roSGNode", "ContentNode")
-                videoContent.stream = { url: selectedMovie.streamUrl }
-                videoContent.title = selectedMovie.title
-
-                m.videoPlayer.content = videoContent
-                m.videoPlayer.streamFormat = "mp4"
-                m.videoPlayer.visible = true
-                m.videoPlayer.setFocus(true)
-                m.videoPlayer.control = "play"
-
-                m.movieRowList.visible = false
-            end if
+            playMovie(selectedMovie)
         end if
     end if
 End Sub
@@ -198,7 +257,6 @@ End Sub
 Sub closeVideoPlayer()
     m.videoPlayer.control = "stop"
     m.videoPlayer.visible = false
-    
     m.movieRowList.visible = true
     m.movieRowList.setFocus(true)
 End Sub
