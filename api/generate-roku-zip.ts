@@ -9,32 +9,51 @@ const placeholderLogo_400x90 = "iVBORw0KGgoAAAANSUhEUgAAAZAAAABaAQMAAADoBH4LAAAA
 
 export async function GET(request: Request) {
     try {
-        // FIX: Hardcode the feed URL to the production domain as requested.
-        // This ensures the Roku channel always points to the correct live data source.
+        // This URL points to the live JSON feed that powers the Roku channel.
+        // It's hardcoded to the production domain to ensure stability.
         const feedUrl = 'https://cratetv.net/api/roku-feed';
 
         const zip = new JSZip();
 
-        // Create manifest
+        // --- Create manifest file ---
+        // This file contains essential metadata for the Roku channel.
         const manifestContent = `
+# Channel Info
 title=Crate TV
+# Version numbers for channel updates. build_version is set to 2+ to pass certification.
 major_version=1
 minor_version=0
-build_version=0
+build_version=2
+# Channel Artwork (required for certification)
 mm_icon_focus_hd=pkg:/images/logo_400x90.png
 mm_icon_side_hd=pkg:/images/logo_400x90.png
 splash_screen_hd=pkg:/images/splash_hd_1280x720.png
 splash_screen_fhd=pkg:/images/splash_fhd_1920x1080.png
+# Channel Behavior
 requires_payment=false
+# Certification Requirements
+# supports_input_launch: Enables deep linking into the channel (e.g., from Roku Search).
 supports_input_launch=1
+# bs_const: BrightScript constants. enable_app_launch_logging is required for certification.
 bs_const=enable_app_launch_logging=1
         `.trim();
         zip.file('manifest', manifestContent);
 
-        // Create source/main.brs
+        // --- Create source/main.brs file ---
+        // This is the main entry point for the Roku channel application.
         const mainBrsContent = `
+'******************************************************************
+'** Main Entry Point
+'** This is the first function called when the channel starts.
+'******************************************************************
 Sub Main(args As Object)
-    ' Check for deep link launch from roInput event
+    ' Enable memory monitoring events for certification requirements.
+    ' This helps the channel manage memory usage effectively.
+    app = CreateObject("roAppManager")
+    app.EnableMemoryWarningEvent(true)
+    app.EnableLowGeneralMemoryEvent(true)
+
+    ' Check for deep link launch from roInput event (e.g., from Roku Search).
     if Type(args) = "roAssociativeArray" AND args.DoesExist("contentID")
         ShowChannelHomeScreen({ "contentID": args.contentID })
     else
@@ -42,19 +61,24 @@ Sub Main(args As Object)
     end if
 End Sub
 
+'******************************************************************
+'** ShowChannelHomeScreen
+'** Initializes and displays the main scene of the channel.
+'******************************************************************
 Sub ShowChannelHomeScreen(launchParams as Object)
     screen = CreateObject("roSGScreen")
     m.port = CreateObject("roMessagePort")
     screen.setMessagePort(m.port)
     m.scene = screen.CreateScene("HomeScene")
 
-    ' Pass launch parameters to the scene if they exist
+    ' Pass launch parameters to the scene if they exist (for deep linking)
     if launchParams <> invalid
         m.scene.setField("launchParams", launchParams)
     end if
     
     screen.show()
 
+    ' Event loop to keep the channel alive
     while(true)
         msg = wait(0, m.port)
         msgType = type(msg)
@@ -66,7 +90,8 @@ End Sub
         `.trim();
         zip.folder('source')?.file('main.brs', mainBrsContent);
         
-        // Create components folder and files
+        // --- Create SceneGraph components ---
+        // These are XML and BrightScript files that define the UI and logic.
         const componentsFolder = zip.folder('components');
 
         const homeSceneXml = `
@@ -173,7 +198,7 @@ Sub ProcessData(data as String)
         m.movieRowList.visible = true
         m.movieRowList.setFocus(true)
         
-        ' Fire the AppLaunchComplete beacon
+        ' Fire the AppLaunchComplete beacon after the first screen is rendered
         CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
 
         ' Handle deep link if it exists
@@ -294,12 +319,13 @@ End Sub
         `.trim();
         componentsFolder?.file('MoviePoster.brs', moviePosterBrs);
 
-        // Create images folder and add placeholders
+        // --- Create images folder and add placeholders ---
         const imagesFolder = zip.folder('images');
         imagesFolder?.file('logo_400x90.png', placeholderLogo_400x90, { base64: true });
         imagesFolder?.file('splash_hd_1280x720.png', placeholderHd_1280x720, { base64: true });
         imagesFolder?.file('splash_fhd_1920x1080.png', placeholderFhd_1920x1080, { base64: true });
 
+        // --- Generate and send the ZIP file ---
         const zipContent = await zip.generateAsync({ type: 'blob' });
         
         return new Response(zipContent, {
