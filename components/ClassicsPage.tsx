@@ -70,7 +70,7 @@ const ClassicsPage: React.FC = () => {
             
             // Initialize movies with likes from local storage
             const newMoviesState = { ...liveData.movies };
-            Object.keys(newMoviesState).forEach(key => {
+            Object.keys(newMoviesState).forEach((key: string) => {
               const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
               if (storedLikes) {
                 newMoviesState[key].likes = parseInt(storedLikes, 10);
@@ -101,7 +101,7 @@ const ClassicsPage: React.FC = () => {
     const allClassics = categories.publicDomainIndie.movieKeys
       .map(key => movies[key])
       .filter(Boolean)
-      .sort((a, b) => {
+      .sort((a: Movie, b: Movie) => {
         // FIX: Changed releaseDate to releaseDateTime to match the data structure.
         const dateA = a.releaseDateTime ? new Date(a.releaseDateTime) : new Date(0);
         const dateB = b.releaseDateTime ? new Date(b.releaseDateTime) : new Date(0);
@@ -114,11 +114,11 @@ const ClassicsPage: React.FC = () => {
     
     // Check if filter is a director's name
     if (filmmakers.some(f => f.name === activeFilter)) {
-        return allClassics.filter(movie => movie.director.includes(activeFilter));
+        return allClassics.filter((movie: Movie) => movie.director.includes(activeFilter));
     }
     
     // Otherwise, filter by genre
-    return allClassics.filter(movie => classicGenreMap[movie.key] === activeFilter);
+    return allClassics.filter((movie: Movie) => classicGenreMap[movie.key] === activeFilter);
       
   }, [movies, categories, activeFilter]);
 
@@ -245,7 +245,7 @@ const ClassicsPage: React.FC = () => {
             
             {classicFilms.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6 mb-16">
-                    {classicFilms.map(movie => (
+                    {classicFilms.map((movie: Movie) => (
                        <div key={movie.key} className="animate-[fadeIn_0.5s_ease-out]">
                          <MovieCard
                             movie={movie}

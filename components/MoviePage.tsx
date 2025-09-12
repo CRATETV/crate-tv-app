@@ -171,7 +171,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         const currentMovieCategories = Object.values(allCategories).filter(cat => cat.movieKeys.includes(movie.key));
         
         currentMovieCategories.forEach(cat => {
-          cat.movieKeys.forEach(key => {
+          cat.movieKeys.forEach((key: string) => {
             if (key !== movie.key) {
               recommendedKeys.add(key);
             }
@@ -272,7 +272,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         <div>
                              <h3 className="text-lg font-semibold text-gray-400 mb-2">Cast</h3>
                             <div className="space-y-2 text-white">
-                                {movie.cast.map((actor) => (
+                                {movie.cast.map((actor: Actor) => (
                                 <p key={actor.name} className="group cursor-pointer" onClick={() => setSelectedActor(actor)}>
                                     <span className="group-hover:text-red-400 transition">{actor.name}</span>
                                 </p>
@@ -280,7 +280,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             </div>
                             <h3 className="text-lg font-semibold text-gray-400 mt-4 mb-2">Director</h3>
                             <div className="space-y-2 text-white">
-                                {movie.director.split(',').map(name => name.trim()).filter(Boolean).map(directorName => (
+                                {movie.director.split(',').map((directorName: string) => directorName.trim()).filter(Boolean).map(directorName => (
                                     <p key={directorName} className="group cursor-pointer" onClick={() => setSelectedDirector(directorName)}>
                                         <span className="group-hover:text-red-400 transition">{directorName}</span>
                                     </p>
@@ -313,7 +313,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     directorName={selectedDirector}
                     onClose={() => setSelectedDirector(null)}
                     allMovies={allMovies}
-                    onSelectMovie={(m) => {
+                    onSelectMovie={(m: Movie) => {
                          const path = `/movie/${m.key}`;
                          window.history.pushState({}, '', path);
                          window.dispatchEvent(new Event('pushstate'));

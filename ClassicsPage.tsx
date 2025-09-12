@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { fetchAndCacheLiveData } from '../services/dataService.ts';
-import { Movie, Actor, Category } from '../types.ts';
-import Header from './Header.tsx';
-import BackToTopButton from './BackToTopButton.tsx';
-import MovieDetailsModal from './MovieDetailsModal.tsx';
-import ActorBioModal from './ActorBioModal.tsx';
-import MovieCard from './MovieCard.tsx';
-import StagingBanner from './StagingBanner.tsx';
+import { fetchAndCacheLiveData } from './services/dataService.ts';
+import { Movie, Actor, Category } from './types.ts';
+import Header from './components/Header.tsx';
+import BackToTopButton from './components/BackToTopButton.tsx';
+import MovieDetailsModal from './components/MovieDetailsModal.tsx';
+import ActorBioModal from './components/ActorBioModal.tsx';
+import MovieCard from './components/MovieCard.tsx';
+import StagingBanner from './components/StagingBanner.tsx';
 import LoadingSpinner from './components/LoadingSpinner.tsx';
 
 // Data for new features
@@ -66,26 +66,17 @@ const ClassicsPage: React.FC = () => {
     const loadClassicsData = async () => {
         try {
             const liveData = await fetchAndCacheLiveData();
-            let moviesDataSource = liveData.movies;
-            let categoriesDataSource = liveData.categories;
-
-            if (isStagingActive) {
-                const storedMovies = localStorage.getItem('crateTvAdmin_movies');
-                if (storedMovies) moviesDataSource = JSON.parse(storedMovies);
-                const storedCategories = localStorage.getItem('crateTvAdmin_categories');
-                if (storedCategories) categoriesDataSource = JSON.parse(storedCategories);
-            }
             
             // Initialize movies with likes from local storage
-            const newMoviesState = { ...moviesDataSource };
-            Object.keys(newMoviesState).forEach(key => {
+            const newMoviesState = { ...liveData.movies };
+            Object.keys(newMoviesState).forEach((key: string) => {
               const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
               if (storedLikes) {
                 newMoviesState[key].likes = parseInt(storedLikes, 10);
               }
             });
             setMovies(newMoviesState);
-            setCategories(categoriesDataSource);
+            setCategories(liveData.categories);
 
             // Initialize the set of liked movies
             const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
@@ -109,7 +100,7 @@ const ClassicsPage: React.FC = () => {
     const allClassics = categories.publicDomainIndie.movieKeys
       .map(key => movies[key])
       .filter(Boolean)
-      .sort((a, b) => {
+      .sort((a: Movie, b: Movie) => {
         // FIX: Changed releaseDate to releaseDateTime to match the data structure.
         const dateA = a.releaseDateTime ? new Date(a.releaseDateTime) : new Date(0);
         const dateB = b.releaseDateTime ? new Date(b.releaseDateTime) : new Date(0);
@@ -122,11 +113,11 @@ const ClassicsPage: React.FC = () => {
     
     // Check if filter is a director's name
     if (filmmakers.some(f => f.name === activeFilter)) {
-        return allClassics.filter(movie => movie.director.includes(activeFilter));
+        return allClassics.filter((movie: Movie) => movie.director.includes(activeFilter));
     }
     
     // Otherwise, filter by genre
-    return allClassics.filter(movie => classicGenreMap[movie.key] === activeFilter);
+    return allClassics.filter((movie: Movie) => classicGenreMap[movie.key] === activeFilter);
       
   }, [movies, categories, activeFilter]);
 
@@ -184,7 +175,7 @@ const ClassicsPage: React.FC = () => {
   }, [likedMovies]);
   
   if (isLoading) {
-    return <LoadingSpinner />;
+      return <LoadingSpinner />;
   }
 
   return (

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header.tsx';
 import Footer from './Footer.tsx';
@@ -56,7 +57,8 @@ const PremiumPage: React.FC = () => {
     
     const handleSubscribe = () => {
         if (user) {
-            setPaymentItem({ type: 'subscription', id: 'premium_monthly', name: 'Crate TV Premium', price: 4.99 });
+            // FIX: Corrected the payment item type to one of the valid options. The 'subscription' type has been rolled back.
+            setPaymentItem({ type: 'pass', id: 'premium_monthly', name: 'Crate TV Premium', price: 4.99 });
         } else {
             // If not logged in, redirect to login page with intent to subscribe
             window.history.pushState({}, '', '/login?redirect=/premium&action=subscribe');

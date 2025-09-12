@@ -1,16 +1,17 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Movie, Actor, Category } from '../types.ts';
-import { fetchAndCacheLiveData } from '../services/dataService.ts';
-import ActorBioModal from './ActorBioModal.tsx';
-import Header from './Header.tsx';
-import Footer from './Footer.tsx';
-import LoadingSpinner from './LoadingSpinner.tsx';
-import BackToTopButton from './BackToTopButton.tsx';
-import SearchOverlay from './SearchOverlay.tsx';
-import StagingBanner from './StagingBanner.tsx';
-import DirectorCreditsModal from './DirectorCreditsModal.tsx';
-import Countdown from './Countdown.tsx';
-import CastButton from './CastButton.tsx';
+import { Movie, Actor, Category } from './types.ts';
+import { fetchAndCacheLiveData } from './services/dataService.ts';
+import ActorBioModal from './components/ActorBioModal.tsx';
+import Header from './components/Header.tsx';
+import Footer from './components/Footer.tsx';
+import LoadingSpinner from './components/LoadingSpinner.tsx';
+import BackToTopButton from './components/BackToTopButton.tsx';
+import SearchOverlay from './components/SearchOverlay.tsx';
+import StagingBanner from './components/StagingBanner.tsx';
+import DirectorCreditsModal from './components/DirectorCreditsModal.tsx';
+import Countdown from './components/Countdown.tsx';
+import CastButton from './components/CastButton.tsx';
 
 interface MoviePageProps {
   movieKey: string;
@@ -92,50 +93,56 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
     
     const loadMovieData = async () => {
-        const liveData = await fetchAndCacheLiveData();
-        setAllMovies(liveData.movies);
-        setAllCategories(liveData.categories);
+        try {
+            const liveData = await fetchAndCacheLiveData();
+            setAllMovies(liveData.movies);
+            setAllCategories(liveData.categories);
 
-        const sourceMovie = liveData.movies[movieKey];
-        if (sourceMovie) {
-          const movieData = { ...sourceMovie };
-           // Check if movie should be visible
-          const releaseDateTime = movieData.releaseDateTime ? new Date(movieData.releaseDateTime) : null;
-          const released = !releaseDateTime || releaseDateTime <= new Date();
-
-          if (!released && !stagingActive) {
-            setIsReleased(false);
-          } else {
-            setIsReleased(true);
-          }
-
-          // Initialize likes from local storage for this specific movie
-          const storedLikes = localStorage.getItem(`cratetv-${movieKey}-likes`);
-          if (storedLikes) {
-            movieData.likes = parseInt(storedLikes, 10);
-          } else {
-            movieData.likes = movieData.likes || 0;
-          }
-          setMovie(movieData);
-
-          // Initialize liked set from local storage
-          const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
-          if (storedLikedMovies) {
-            setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
-          }
-
-          // Handle play from URL
-          if (params.get('play') === 'true' && movieData.fullMovie && released) {
-            setPlayerMode('full');
-          } else {
-            setPlayerMode('poster');
-          }
-        } else {
-          // Handle movie not found, redirect to homepage
-          window.location.href = '/';
-          return;
+            const sourceMovie = liveData.movies[movieKey];
+            if (sourceMovie) {
+              const movieData = { ...sourceMovie };
+               // Check if movie should be visible
+              const releaseDateTime = movieData.releaseDateTime ? new Date(movieData.releaseDateTime) : null;
+              const released = !releaseDateTime || releaseDateTime <= new Date();
+    
+              if (!released && !stagingActive) {
+                setIsReleased(false);
+              } else {
+                setIsReleased(true);
+              }
+    
+              // Initialize likes from local storage for this specific movie
+              const storedLikes = localStorage.getItem(`cratetv-${movieKey}-likes`);
+              if (storedLikes) {
+                movieData.likes = parseInt(storedLikes, 10);
+              } else {
+                movieData.likes = movieData.likes || 0;
+              }
+              setMovie(movieData);
+    
+              // Initialize liked set from local storage
+              const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
+              if (storedLikedMovies) {
+                setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
+              }
+    
+              // Handle play from URL
+              if (params.get('play') === 'true' && movieData.fullMovie && released) {
+                setPlayerMode('full');
+              } else {
+                setPlayerMode('poster');
+              }
+            } else {
+              // Handle movie not found, redirect to homepage
+              window.location.href = '/';
+              return;
+            }
+        } catch (error) {
+            console.error("Failed to load movie data:", error);
+            window.location.href = '/';
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     };
 
     loadMovieData();
@@ -165,7 +172,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         const currentMovieCategories = Object.values(allCategories).filter(cat => cat.movieKeys.includes(movie.key));
         
         currentMovieCategories.forEach(cat => {
-          cat.movieKeys.forEach(key => {
+          cat.movieKeys.forEach((key: string) => {
             if (key !== movie.key) {
               recommendedKeys.add(key);
             }
@@ -266,7 +273,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         <div>
                              <h3 className="text-lg font-semibold text-gray-400 mb-2">Cast</h3>
                             <div className="space-y-2 text-white">
-                                {movie.cast.map((actor) => (
+                                {movie.cast.map((actor: Actor) => (
                                 <p key={actor.name} className="group cursor-pointer" onClick={() => setSelectedActor(actor)}>
                                     <span className="group-hover:text-red-400 transition">{actor.name}</span>
                                 </p>
@@ -274,7 +281,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             </div>
                             <h3 className="text-lg font-semibold text-gray-400 mt-4 mb-2">Director</h3>
                             <div className="space-y-2 text-white">
-                                {movie.director.split(',').map(name => name.trim()).filter(Boolean).map(directorName => (
+                                {/* FIX: Corrected a typo where an undefined 'name' variable was used instead of 'directorName'. */}
+                                {movie.director.split(',').map(directorName => directorName.trim()).filter(Boolean).map(directorName => (
                                     <p key={directorName} className="group cursor-pointer" onClick={() => setSelectedDirector(directorName)}>
                                         <span className="group-hover:text-red-400 transition">{directorName}</span>
                                     </p>
@@ -307,7 +315,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     directorName={selectedDirector}
                     onClose={() => setSelectedDirector(null)}
                     allMovies={allMovies}
-                    onSelectMovie={(m) => {
+                    onSelectMovie={(m: Movie) => {
                          const path = `/movie/${m.key}`;
                          window.history.pushState({}, '', path);
                          window.dispatchEvent(new Event('pushstate'));

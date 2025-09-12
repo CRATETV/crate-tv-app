@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData } from './services/dataService.ts';
 // FIX: Corrected import to use type definitions from types.ts
@@ -36,7 +37,7 @@ interface FestivalPurchases {
 
 // Define the structure for an item being purchased
 export interface PaymentItem {
-  // FIX: Added 'subscription' to the union type to allow for subscription payments.
+  // FIX: Added 'subscription' back to the type to support the Premium Page feature.
   type: 'pass' | 'block' | 'film' | 'subscription';
   id: string;
   name: string;

@@ -215,8 +215,8 @@ const AdminPage: React.FC = () => {
         delete newMovies[movieKey];
         
         const newCategories = JSON.parse(JSON.stringify(categories));
-        Object.keys(newCategories).forEach(catKey => {
-            newCategories[catKey].movieKeys = newCategories[catKey].movieKeys.filter(key => key !== movieKey);
+        Object.keys(newCategories).forEach((catKey: string) => {
+            newCategories[catKey].movieKeys = newCategories[catKey].movieKeys.filter((key: string) => key !== movieKey);
         });
         
         setMovies(newMovies);
