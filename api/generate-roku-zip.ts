@@ -44,33 +44,32 @@ bs_const=enable_app_launch_logging=true
         // This is the main entry point for the Roku channel application.
         const mainBrsContent = `
 '******************************************************************
-'** Main Entry Point
-'** This is the first function called when the channel starts.
+'** Main Entry Point & Launch Handler
+'** This function is called when the channel starts and routes
+'** to the correct scene based on launch arguments.
 '******************************************************************
 Sub Main(args As Object)
     ' Enable memory monitoring events for certification requirements.
-    ' This helps the channel manage memory usage effectively.
     app = CreateObject("roAppManager")
     app.EnableMemoryWarningEvent(true)
     app.EnableLowGeneralMemoryEvent(true)
 
-    ' Pass any launch arguments (for deep linking) directly to the home screen function.
-    ShowChannelHomeScreen(args)
-End Sub
-
-'******************************************************************
-'** ShowChannelHomeScreen
-'** Initializes and displays the main scene of the channel.
-'******************************************************************
-Sub ShowChannelHomeScreen(args as Object)
     screen = CreateObject("roSGScreen")
     m.port = CreateObject("roMessagePort")
     screen.setMessagePort(m.port)
-    m.scene = screen.CreateScene("HomeScene")
+    scene = invalid
 
-    ' Pass launch parameters to the scene if they exist and are valid.
+    ' CERTIFICATION FIX: Direct-to-Play launch logic is handled here.
+    ' Check for a contentID passed in the launch arguments.
     if Type(args) = "roAssociativeArray" AND args.DoesExist("contentID")
-        m.scene.setField("launchParams", args)
+        ' If a contentID exists, launch directly into the VideoPlayerScene.
+        print "Deep link detected. Launching VideoPlayerScene with contentID: "; args.contentID
+        scene = screen.CreateScene("VideoPlayerScene")
+        scene.setField("contentID", args.contentID)
+    else
+        ' If no contentID, perform a normal launch to the HomeScene.
+        print "Normal launch detected. Launching HomeScene."
+        scene = screen.CreateScene("HomeScene")
     end if
     
     screen.show()
@@ -95,9 +94,6 @@ End Sub
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="HomeScene" extends="Scene">
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
-    <interface>
-        <field id="launchParams" type="assocarray" />
-    </interface>
     <children>
         <Label id="loadingLabel" text="Loading..." translation="[960, 540]" horizAlign="center" vertAlign="center" />
         <RowList 
@@ -128,10 +124,7 @@ Sub init()
     m.loadingLabel = m.top.findNode("loadingLabel")
     m.movieRowList = m.top.findNode("movieRowList")
     m.videoPlayer = m.top.findNode("videoPlayer")
-    m.deepLinkedContentId = invalid
     m.launchBeaconFired = false ' Flag to prevent sending beacon multiple times
-
-    m.top.observeField("launchParams", "onLaunchParamsSet")
 
     deviceInfo = CreateObject("roDeviceInfo")
     if deviceInfo.GetDisplayMode() <> "1080p"
@@ -166,13 +159,6 @@ Sub init()
     end while
 End Sub
 
-Sub onLaunchParamsSet()
-    params = m.top.launchParams
-    if params <> invalid AND params.DoesExist("contentID")
-        m.deepLinkedContentId = params.contentID
-    end if
-End Sub
-
 Sub ProcessData(data as String)
     json = ParseJson(data)
     if json <> invalid AND json.DoesExist("categories") AND json.categories.count() > 0
@@ -191,18 +177,8 @@ Sub ProcessData(data as String)
         end for
         m.movieRowList.content = content
         
-        ' CERTIFICATION FIX: Check for deep link BEFORE showing the UI
-        if m.deepLinkedContentId <> invalid
-            ' Attempt to find and play the content immediately
-            wasFound = PlayDeepLinkedContent(m.deepLinkedContentId)
-            if not wasFound
-                ' If deep-linked content isn't found, fall back to normal launch
-                ShowHomeScreenUI()
-            end if
-        else
-            ' No deep link, normal launch
-            ShowHomeScreenUI()
-        end if
+        ' For a normal launch, show the UI.
+        ShowHomeScreenUI()
     else
         m.loadingLabel.text = "Failed to parse feed data or feed is empty."
         FireLaunchBeacon() ' App has launched to an error state.
@@ -217,27 +193,6 @@ Sub ShowHomeScreenUI()
     FireLaunchBeacon() ' Fire beacon for normal launch
 End Sub
 
-' Find and play deep-linked content, returning true if found
-Function PlayDeepLinkedContent(contentId as String) as Boolean
-    content = m.movieRowList.content
-    if content <> invalid
-        for i = 0 to content.getChildCount() - 1
-            row = content.getChild(i)
-            if row <> invalid
-                for j = 0 to row.getChildCount() - 1
-                    movie = row.getChild(j)
-                    if movie <> invalid AND movie.id = contentId
-                        playMovie(movie)
-                        return true ' Found and playing
-                    end if
-                end for
-            end if
-        end for
-    end if
-    print "Deep linked contentId not found: "; contentId
-    return false ' Not found
-End Function
-
 Sub playMovie(movieNode as Object)
     if movieNode <> invalid AND movieNode.streamUrl <> invalid
         videoContent = CreateObject("roSGNode", "ContentNode")
@@ -247,8 +202,8 @@ Sub playMovie(movieNode as Object)
         m.videoPlayer.content = videoContent
         m.videoPlayer.streamFormat = "mp4"
         
-        m.loadingLabel.visible = false ' Hide loading label
-        m.movieRowList.visible = false ' Ensure RowList is hidden
+        m.loadingLabel.visible = false
+        m.movieRowList.visible = false 
         m.videoPlayer.visible = true
         m.videoPlayer.setFocus(true)
         m.videoPlayer.control = "play"
@@ -269,10 +224,7 @@ End Sub
 
 Sub onVideoStateChange()
     state = m.videoPlayer.state
-    ' CERTIFICATION FIX: Fire beacon when playback starts for deep link
-    if state = "playing"
-        FireLaunchBeacon()
-    else if state = "finished" or state = "error"
+    if state = "finished" or state = "error"
         closeVideoPlayer()
     end if
 End Sub
@@ -306,6 +258,148 @@ End Function
         `.trim();
         componentsFolder?.file('HomeScene.brs', homeSceneBrs);
         
+        // --- NEW COMPONENT: VideoPlayerScene ---
+        const videoPlayerSceneXml = `
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="VideoPlayerScene" extends="Scene">
+    <script type="text/brightscript" uri="pkg:/components/VideoPlayerScene.brs" />
+    <interface>
+        ' This field will be set by main.brs with the deep link content ID
+        <field id="contentID" type="string" />
+    </interface>
+    <children>
+        <Label 
+            id="statusLabel" 
+            text="Loading video..." 
+            translation="[960, 540]" 
+            horizAlign="center" 
+            vertAlign="center" />
+        <Video
+            id="videoPlayer"
+            width="1920"
+            height="1080"
+            visible="false"
+        />
+    </children>
+</component>
+        `.trim();
+        componentsFolder?.file('VideoPlayerScene.xml', videoPlayerSceneXml);
+        
+        const videoPlayerSceneBrs = `
+Sub init()
+    m.top.setFocus(true)
+    m.statusLabel = m.top.findNode("statusLabel")
+    m.videoPlayer = m.top.findNode("videoPlayer")
+    m.launchBeaconFired = false
+
+    m.videoPlayer.observeField("state", "onVideoStateChange")
+    
+    deviceInfo = CreateObject("roDeviceInfo")
+    if deviceInfo.GetDisplayMode() <> "1080p"
+        m.videoPlayer.width = 1280
+        m.videoPlayer.height = 720
+    end if
+
+    ' Check if contentID was passed from main.brs
+    if m.top.contentID <> invalid AND m.top.contentID <> ""
+        fetchContentAndPlay(m.top.contentID)
+    else
+        m.statusLabel.text = "Error: No content ID provided."
+        FireLaunchBeacon() ' Launch to error state
+    end if
+End Sub
+
+Sub fetchContentAndPlay(contentId as String)
+    fetcher = CreateObject("roUrlTransfer")
+    fetcher.SetCertificatesFile("common:/certs/ca-bundle.crt")
+    fetcher.InitClientCertificates()
+    fetcher.SetUrl("${feedUrl}")
+    
+    port = CreateObject("roMessagePort")
+    fetcher.SetMessagePort(port)
+    fetcher.AsyncGetToString()
+    
+    ' Wait for the feed to download
+    msg = wait(15000, port) ' 15 second timeout
+    if type(msg) = "roUrlEvent"
+        if msg.GetResponseCode() = 200
+            ' Find the specific movie in the feed
+            json = ParseJson(msg.GetString())
+            movieData = FindMovieInFeed(json, contentId)
+            if movieData <> invalid
+                playMovie(movieData)
+            else
+                m.statusLabel.text = "Error: Content not found in feed."
+                FireLaunchBeacon() ' Launch to error state
+            end if
+        else
+            m.statusLabel.text = "Error loading content: " + msg.GetResponseCode().ToStr()
+            FireLaunchBeacon() ' Launch to error state
+        end if
+    else if msg = invalid ' Timeout
+        m.statusLabel.text = "Error: Timed out while loading content."
+        FireLaunchBeacon()
+    end if
+End Sub
+
+Function FindMovieInFeed(feed as Object, contentId as String) as Object
+    if feed = invalid OR NOT feed.DoesExist("categories") then return invalid
+    for each category in feed.categories
+        if category.DoesExist("movies")
+            for each movie in category.movies
+                if movie.DoesExist("id") AND movie.id = contentId
+                    return movie
+                end if
+            end for
+        end if
+    end for
+    return invalid ' Return invalid if not found
+End Function
+
+Sub playMovie(movieData as Object)
+    videoContent = CreateObject("roSGNode", "ContentNode")
+    videoContent.stream = { url: movieData.streamUrl }
+    videoContent.title = movieData.title
+
+    m.videoPlayer.content = videoContent
+    m.videoPlayer.streamFormat = "mp4"
+    
+    m.statusLabel.visible = false
+    m.videoPlayer.visible = true
+    m.videoPlayer.setFocus(true)
+    m.videoPlayer.control = "play"
+End Sub
+
+Sub onVideoStateChange()
+    state = m.videoPlayer.state
+    if state = "playing"
+        ' CERTIFICATION REQUIREMENT: Fire beacon when deep-linked video starts playing.
+        FireLaunchBeacon()
+    else if state = "finished" or state = "error"
+        ' Close the screen (and the channel) when the video is done.
+        m.top.getScene().close = true
+    end if
+End Sub
+
+Sub FireLaunchBeacon()
+    if not m.launchBeaconFired
+        CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
+        m.launchBeaconFired = true
+    end if
+End Sub
+
+Function onKeyEvent(key as String, press as Boolean) as Boolean
+    if press and key = "back"
+        ' For a deep-linked video, the back button should exit the channel.
+        m.top.getScene().close = true
+        return true
+    end if
+    return false
+End Function
+        `.trim();
+        componentsFolder?.file('VideoPlayerScene.brs', videoPlayerSceneBrs);
+        
+        // --- MOVIE POSTER COMPONENT (Unchanged) ---
         const moviePosterXml = `
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="MoviePoster" extends="Group">
