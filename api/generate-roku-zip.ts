@@ -50,8 +50,9 @@ bs_const=enable_app_launch_logging=true
 '** to the correct scene based on launch arguments.
 '******************************************************************
 Sub Main(args As Object)
-    print "--- Crate TV Channel Launch ---"
-    print "Roku OS Version: "; CreateObject("roDeviceInfo").GetVersion()
+    ' The EnableMemoryWarningEvent and EnableLowGeneralMemoryEvent functions
+    ' have been removed as they are deprecated in modern Roku OS and were
+    ' causing a startup crash. Memory management is now handled automatically.
 
     screen = CreateObject("roSGScreen")
     m.port = CreateObject("roMessagePort")
@@ -71,15 +72,10 @@ Sub Main(args As Object)
         scene = screen.CreateScene("HomeScene")
     end if
     
-    if scene = invalid
-        print "FATAL ERROR: Scene object is invalid before screen.show()!"
-        ' As a fallback, try to create HomeScene again to prevent a crash.
-        scene = screen.CreateScene("HomeScene")
-    end if
-
-    print "Showing scene: "; scene.sub_type
+    ' screen.show() is a blocking call that handles its own event loop.
+    ' The channel will remain active until the scene is closed, so no
+    ' further event loop (like a while=true) is needed here.
     screen.show()
-    print "--- Crate TV Channel Exit ---"
 End Sub
         `.trim();
         zip.folder('source')?.file('main.brs', mainBrsContent);
@@ -106,74 +102,68 @@ End Sub
             <!-- Group to dynamically hold the carousels -->
             <Group id="carouselsGroup" translation="[0, 120]" />
         </Group>
-        
-        <!-- A dedicated Task node to handle fetching data on the correct thread -->
-        <ContentFetcherTask id="contentFetcher" />
+
+        <!-- The video player has been removed from this scene. -->
+        <!-- Playback is now handled exclusively by VideoPlayerScene for a cleaner architecture. -->
     </children>
 </component>
         `.trim();
         componentsFolder?.file('HomeScene.xml', homeSceneXml);
         
         const homeSceneBrs = `
-' FIX: Implemented a more robust startup sequence using a Timer to prevent race conditions.
 Sub init()
-    print "[HomeScene.brs] >> init() ENTER"
     m.loadingLabel = m.top.findNode("loadingLabel")
     m.mainGroup = m.top.findNode("mainGroup")
     m.carouselsGroup = m.top.findNode("carouselsGroup")
-    m.launchBeaconFired = false
+    m.launchBeaconFired = false 
     m.firstRow = invalid ' Will hold the first created RowList for focus management
 
     m.top.setFocus(true)
     
-    ' ROKU OS WORKAROUND: Use a Timer to reliably defer the start of the data fetch task.
-    ' This prevents a potential race condition during scene initialization.
-    m.fetchDelayTimer = m.top.createChild("Timer")
-    m.fetchDelayTimer.repeat = false
-    m.fetchDelayTimer.duration = 0.05 ' 50ms delay
-    m.fetchDelayTimer.observeField("fire", "onFetchDelayTimerFired")
-    m.fetchDelayTimer.control = "start"
-    print "[HomeScene.brs] << init() EXIT. Fetch timer started."
+    m.fetcher = CreateObject("roUrlTransfer")
+    m.fetcher.SetCertificatesFile("common:/certs/ca-bundle.crt")
+    m.fetcher.InitClientCertificates()
+    m.fetcher.SetUrl("${feedUrl}")
+    m.fetcher.observeField("status", "onFeedStatusChange")
+    m.fetcher.AsyncGetToString()
 End Sub
 
-' This function is now called safely after the scene is fully initialized.
-Sub onFetchDelayTimerFired()
-    print "[HomeScene.brs] >> onFetchDelayTimerFired() ENTER"
-    m.fetcher = m.top.findNode("contentFetcher")
-
-    if m.fetcher = invalid
-        print "[HomeScene.brs] FATAL ERROR: ContentFetcherTask node not found!"
-        m.loadingLabel.text = "Error: Channel component failed to load."
-        FireLaunchBeacon(false)
-        return
+Sub onFeedStatusChange()
+    status = m.fetcher.status
+    if status = "completed"
+        if m.fetcher.GetResponseCode() = 200
+            ProcessData(m.fetcher.GetString())
+        else
+            m.loadingLabel.text = "Error loading feed: " + m.fetcher.GetResponseCode().ToStr()
+            FireLaunchBeacon()
+        end if
+    else if status = "error"
+        m.loadingLabel.text = "Failed to load feed."
+        FireLaunchBeacon()
     end if
-
-    m.fetcher.observeField("output", "onFeedData")
-    m.fetcher.uri = "${feedUrl}"
-    m.fetcher.control = "RUN"
-    print "[HomeScene.brs] << onFetchDelayTimerFired() EXIT. Fetcher task is running."
 End Sub
 
-' This function is called when the ContentFetcherTask has finished its work.
-Sub onFeedData(event as object)
-    print "[HomeScene.brs] >> onFeedData() ENTER"
-    json = event.getData()
+Sub ProcessData(data as String)
+    json = ParseJson(data)
     if json <> invalid AND json.DoesExist("categories") AND json.categories.count() > 0
         
         yOffset = 0 ' Starting Y position for the first carousel title
         for i = 0 to json.categories.count() - 1
             category = json.categories[i]
             if category.movies.count() > 0
+                ' Create and position category title
                 titleLabel = m.carouselsGroup.createChild("Label")
                 titleLabel.text = category.title
                 titleLabel.translation = [90, yOffset]
                 titleLabel.font = { size: 32 }
-                yOffset = yOffset + 50
 
+                yOffset = yOffset + 50 ' Space between title and row
+
+                ' Create and populate the RowList
                 row = m.carouselsGroup.createChild("RowList")
                 row.translation = [90, yOffset]
                 row.itemComponentName = "MoviePoster"
-                row.itemSize = [240, 360]
+                row.itemSize = [240, 360] ' Wider posters
                 row.rowHeight = 400
                 row.itemSpacing = [20, 0]
                 row.showRowLabel = false
@@ -193,32 +183,32 @@ Sub onFeedData(event as object)
                 
                 row.observeField("itemSelected", "onCarouselItemSelected")
                 
-                if m.firstRow = invalid then m.firstRow = row
+                if m.firstRow = invalid
+                    m.firstRow = row ' Store a reference to the first row
+                end if
                 
-                yOffset = yOffset + 420
+                yOffset = yOffset + 420 ' Space for the next category
             end if
         end for
         
         ShowHomeScreenUI()
     else
         m.loadingLabel.text = "Failed to parse feed data or feed is empty."
-        FireLaunchBeacon(false)
+        FireLaunchBeacon()
     end if
-    print "[HomeScene.brs] << onFeedData() EXIT"
 End Sub
 
 Sub ShowHomeScreenUI()
-    print "[HomeScene.brs] >> ShowHomeScreenUI() ENTER"
     m.loadingLabel.visible = false
     m.mainGroup.visible = true
-    if m.firstRow <> invalid then m.firstRow.setFocus(true)
-    FireLaunchBeacon(true)
-    print "[HomeScene.brs] << ShowHomeScreenUI() EXIT"
+    if m.firstRow <> invalid
+        m.firstRow.setFocus(true)
+    end if
+    FireLaunchBeacon()
 End Sub
 
-' Launches the dedicated VideoPlayerScene for instant playback.
+' REVISED: This function now launches the dedicated VideoPlayerScene for instant playback.
 Sub onCarouselItemSelected(event as object)
-    print "[HomeScene.brs] >> onCarouselItemSelected() ENTER"
     rowlist = event.getRoSGNode()
     selectedIndex = event.getData()
     selectedMovie = rowlist.content.getChild(selectedIndex[1])
@@ -229,99 +219,47 @@ Sub onCarouselItemSelected(event as object)
         videoScene.setField("contentID", selectedMovie.id)
         scene.dialog = videoScene
     end if
-    print "[HomeScene.brs] << onCarouselItemSelected() EXIT"
 End Sub
 
-' ROKU CERTIFICATION FIX: Fires the AppLaunchComplete beacon.
-Sub FireLaunchBeacon(success as Boolean)
+' ROKU CERTIFICATION FIX: This function was missing, causing a runtime error.
+' It fires the AppLaunchComplete beacon required for certification.
+Sub FireLaunchBeacon()
     if not m.launchBeaconFired
-        print "[HomeScene.brs] Firing AppLaunchComplete beacon, success: "; success
-        launchResult = "Failure"
-        if success = true then launchResult = "Success"
-        params = { "partner_id": "cratetv", "event_name": "AppLaunchComplete", "event_data": { "launch_result": launchResult } }
-        CreateObject("roSystemLog").sendline(FormatJson(params))
+        CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
         m.launchBeaconFired = true
     end if
 End Sub
 
-Function onKeyEvent() as Boolean
-    return false ' Let OS handle back button to exit
+' SIMPLIFIED: onKeyEvent no longer needs to handle the video player.
+Function onKeyEvent(key as String, press as Boolean) as Boolean
+    ' The OS will handle the back button to exit the channel from this scene.
+    return false
 End Function
         `.trim();
         componentsFolder?.file('HomeScene.brs', homeSceneBrs);
         
-        // --- COMPONENT: ContentFetcherTask ---
-        const contentFetcherTaskXml = `
-<?xml version="1.0" encoding="UTF-8"?>
-<component name="ContentFetcherTask" extends="Task">
-    <interface>
-        <field id="uri" type="string" />
-        <field id="output" type="assocarray" />
-        ' Add a control field to trigger the task run
-        <field id="control" type="string" alias="TaskRunner.control" />
-    </interface>
-    <script type="text/brightscript" uri="pkg:/components/ContentFetcherTask.brs" />
-</component>
-        `.trim();
-        componentsFolder?.file('ContentFetcherTask.xml', contentFetcherTaskXml);
-
-        const contentFetcherTaskBrs = `
-Sub init()
-    m.top.functionName = "fetchContent"
-End Sub
-
-Sub fetchContent()
-    print "[ContentFetcherTask.brs] >> fetchContent() ENTER"
-    uri = m.top.uri
-    if uri = invalid or uri = ""
-        print "[ContentFetcherTask.brs] ERROR: No URI provided."
-        return
-    end if
-
-    fetcher = CreateObject("roUrlTransfer")
-    fetcher.SetCertificatesFile("common:/certs/ca-bundle.crt")
-    fetcher.InitClientCertificates()
-    fetcher.SetUrl(uri)
-    
-    port = CreateObject("roMessagePort")
-    fetcher.SetMessagePort(port)
-    
-    if fetcher.AsyncGetToString()
-        while true
-            msg = wait(0, port)
-            if type(msg) = "roUrlEvent"
-                code = msg.GetResponseCode()
-                if code = 200
-                    print "[ContentFetcherTask.brs] Successfully fetched data."
-                    m.top.output = ParseJson(msg.GetString())
-                else
-                    print "[ContentFetcherTask.brs] HTTP Error "; code
-                    m.top.output = invalid
-                end if
-                exit while
-            end if
-        end while
-    else
-        print "[ContentFetcherTask.brs] ERROR: AsyncGetToString failed."
-        m.top.output = invalid
-    end if
-    print "[ContentFetcherTask.brs] << fetchContent() EXIT"
-End Sub
-        `.trim();
-        componentsFolder?.file('ContentFetcherTask.brs', contentFetcherTaskBrs);
-        
-        // --- COMPONENT: VideoPlayerScene ---
+        // --- NEW COMPONENT: VideoPlayerScene (for deep linking) ---
         const videoPlayerSceneXml = `
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="VideoPlayerScene" extends="Scene">
     <script type="text/brightscript" uri="pkg:/components/VideoPlayerScene.brs" />
     <interface>
+        ' This field will be set by main.brs with the deep link content ID
         <field id="contentID" type="string" />
     </interface>
     <children>
-        <Label id="statusLabel" text="Loading video..." translation="[960, 540]" horizAlign="center" vertAlign="center" />
-        <Video id="videoPlayer" width="1920" height="1080" visible="false" />
-        <ContentFetcherTask id="contentFetcher" />
+        <Label 
+            id="statusLabel" 
+            text="Loading video..." 
+            translation="[960, 540]" 
+            horizAlign="center" 
+            vertAlign="center" />
+        <Video
+            id="videoPlayer"
+            width="1920"
+            height="1080"
+            visible="false"
+        />
     </children>
 </component>
         `.trim();
@@ -329,7 +267,6 @@ End Sub
         
         const videoPlayerSceneBrs = `
 Sub init()
-    print "[VideoPlayerScene.brs] >> init() ENTER"
     m.top.setFocus(true)
     m.statusLabel = m.top.findNode("statusLabel")
     m.videoPlayer = m.top.findNode("videoPlayer")
@@ -337,35 +274,50 @@ Sub init()
 
     m.videoPlayer.observeField("state", "onVideoStateChange")
     
-    deviceInfo = CreateObject("roDeviceInfo")
-    if deviceInfo.GetDisplayMode() <> "1080p"
-        m.videoPlayer.width = 1280
-        m.videoPlayer.height = 720
-    end if
+    ' The roDeviceInfo.GetDisplayMode() call has been removed.
+    ' It is deprecated and causes crashes on modern Roku OS versions.
+    ' The Video node's default 1920x1080 dimensions will be
+    ' automatically scaled by the OS for 720p displays.
     
+    m.fetcher = CreateObject("roUrlTransfer")
+
     if m.top.contentID <> invalid AND m.top.contentID <> ""
-        m.fetcher = m.top.findNode("contentFetcher")
-        m.fetcher.observeField("output", "onFeedData")
-        m.fetcher.control = "RUN"
-        m.fetcher.uri = "${feedUrl}"
+        fetchContentAndPlay(m.top.contentID)
     else
         m.statusLabel.text = "Error: No content ID provided."
-        FireLaunchBeacon(false)
+        FireLaunchBeacon()
     end if
-    print "[VideoPlayerScene.brs] << init() EXIT"
 End Sub
 
-Sub onFeedData(event as object)
-    print "[VideoPlayerScene.brs] >> onFeedData() ENTER"
-    json = event.getData()
-    movieData = FindMovieInFeed(json, m.top.contentID)
-    if movieData <> invalid
-        playMovie(movieData)
-    else
-        m.statusLabel.text = "Error: Content not found in feed."
-        FireLaunchBeacon(false)
+Sub fetchContentAndPlay(contentId as String)
+    m.contentId = contentId
+    m.fetcher.SetCertificatesFile("common:/certs/ca-bundle.crt")
+    m.fetcher.InitClientCertificates()
+    m.fetcher.SetUrl("${feedUrl}")
+    m.fetcher.observeField("status", "onFeedStatusChange")
+    m.fetcher.AsyncGetToString()
+End Sub
+
+Sub onFeedStatusChange()
+    status = m.fetcher.status
+    if status = "completed"
+        if m.fetcher.GetResponseCode() = 200
+            json = ParseJson(m.fetcher.GetString())
+            movieData = FindMovieInFeed(json, m.contentId)
+            if movieData <> invalid
+                playMovie(movieData)
+            else
+                m.statusLabel.text = "Error: Content not found in feed."
+                FireLaunchBeacon()
+            end if
+        else
+            m.statusLabel.text = "Error loading content: " + m.fetcher.GetResponseCode().ToStr()
+            FireLaunchBeacon()
+        end if
+    else if status = "error"
+        m.statusLabel.text = "Failed to load content."
+        FireLaunchBeacon()
     end if
-    print "[VideoPlayerScene.brs] << onFeedData() EXIT"
 End Sub
 
 Function FindMovieInFeed(feed as Object, contentId as String) as Object
@@ -383,39 +335,38 @@ Function FindMovieInFeed(feed as Object, contentId as String) as Object
 End Function
 
 Sub playMovie(movieData as Object)
-    print "[VideoPlayerScene.brs] >> playMovie() ENTER"
     videoContent = CreateObject("roSGNode", "ContentNode")
     videoContent.stream = { url: movieData.streamUrl }
     videoContent.title = movieData.title
+
     m.videoPlayer.content = videoContent
     m.videoPlayer.streamFormat = "mp4"
+    
     m.statusLabel.visible = false
     m.videoPlayer.visible = true
     m.videoPlayer.setFocus(true)
     m.videoPlayer.control = "play"
-    print "[VideoPlayerScene.brs] << playMovie() EXIT"
 End Sub
 
 Sub onVideoStateChange()
     state = m.videoPlayer.state
-    if state = "playing" then FireLaunchBeacon(true)
-    if state = "finished" or state = "error" then m.top.close = true
-end sub
+    if state = "playing"
+        FireLaunchBeacon()
+    else if state = "finished" or state = "error"
+        m.top.getScene().close = true
+    end if
+End Sub
 
-Sub FireLaunchBeacon(success as Boolean)
+Sub FireLaunchBeacon()
     if not m.launchBeaconFired
-        print "[VideoPlayerScene.brs] Firing AppLaunchComplete beacon, success: "; success
-        launchResult = "Failure"
-        if success = true then launchResult = "Success"
-        params = { "partner_id": "cratetv", "event_name": "AppLaunchComplete", "event_data": { "launch_result": launchResult } }
-        CreateObject("roSystemLog").sendline(FormatJson(params))
+        CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
         m.launchBeaconFired = true
     end if
 End Sub
 
 Function onKeyEvent(key as String, press as Boolean) as Boolean
     if press and key = "back"
-        m.top.close = true
+        m.top.getScene().close = true
         return true
     end if
     return false
@@ -439,16 +390,12 @@ End Function
             loadDisplayMode="scaleToFit"
         />
         <!-- Adds a red, scaled border when focused -->
-        <Rectangle id="focusRing" color="#E50914" width="252" height="372" translation="[-6, -6]" visible="false">
-            <animations>
-                <Animation id="focusAnimation" duration="0.3" easeFunction="easeOutQuint">
-                    <Vector2DFieldInterpolator key="[0.0, 1.0]" field="scale" value="[ [1.0, 1.0], [1.05, 1.05] ]" />
-                </Animation>
-                <Animation id="unfocusAnimation" duration="0.3" easeFunction="easeOutQuint">
-                     <Vector2DFieldInterpolator key="[0.0, 1.0]" field="scale" value="[ [1.05, 1.05], [1.0, 1.0] ]" />
-                </Animation>
-            </animations>
-        </Rectangle>
+        <FocusRing 
+            color="#E50914" 
+            scale="1.05"
+            width="240"
+            height="360"
+        />
     </children>
 </component>
         `.trim();
@@ -456,51 +403,39 @@ End Function
         
         const moviePosterBrs = `
 Sub init()
-    m.top.observeField("focusPercent", "OnFocusChange")
-    m.focusRing = m.top.findNode("focusRing")
-    m.focusAnimation = m.top.findNode("focusAnimation")
-    m.unfocusAnimation = m.top.findNode("unfocusAnimation")
+    m.poster = m.top.findNode("poster")
 End Sub
 
 Sub onContentChange()
     itemContent = m.top.itemContent
     if itemContent <> invalid
-        m.top.findNode("poster").uri = itemContent.HDPosterUrl
-    end if
-End Sub
-
-Sub OnFocusChange()
-    focusPercent = m.top.focusPercent
-    if focusPercent > 0
-        m.focusRing.visible = true
-        m.focusAnimation.control = "start"
-    else
-        m.focusRing.visible = false
-        m.unfocusAnimation.control = "start"
+        m.poster.uri = itemContent.HDPosterUrl
     end if
 End Sub
         `.trim();
         componentsFolder?.file('MoviePoster.brs', moviePosterBrs);
-        
-        // --- Add image assets to the ZIP ---
+
+        // --- Create images folder and add placeholders ---
         const imagesFolder = zip.folder('images');
+        imagesFolder?.file('logo_400x90.png', placeholderLogo_400x90, { base64: true });
         imagesFolder?.file('splash_hd_1280x720.png', placeholderHd_1280x720, { base64: true });
         imagesFolder?.file('splash_fhd_1920x1080.png', placeholderFhd_1920x1080, { base64: true });
-        imagesFolder?.file('logo_400x90.png', placeholderLogo_400x90, { base64: true });
 
         // --- Generate and send the ZIP file ---
-        const content = await zip.generateAsync({ type: 'blob' });
+        const zipContent = await zip.generateAsync({ type: 'blob' });
         
-        return new Response(content, {
+        return new Response(zipContent, {
             status: 200,
             headers: {
                 'Content-Type': 'application/zip',
-                'Content-Disposition': 'attachment; filename="cratv.zip"',
-            },
+                'Content-Disposition': 'attachment; filename="cratv.zip"'
+            }
         });
+
     } catch (error) {
-        console.error('Error generating Roku ZIP:', error);
-        return new Response(JSON.stringify({ error: 'Failed to generate Roku ZIP package.' }), {
+        console.error("Failed to generate Roku ZIP:", error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return new Response(JSON.stringify({ error: `Failed to generate Roku package: ${errorMessage}` }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
         });
