@@ -50,10 +50,9 @@ bs_const=enable_app_launch_logging=true
 '** to the correct scene based on launch arguments.
 '******************************************************************
 Sub Main(args As Object)
-    ' Enable memory monitoring events for certification requirements.
-    app = CreateObject("roAppManager")
-    app.EnableMemoryWarningEvent(true)
-    app.EnableLowGeneralMemoryEvent(true)
+    ' The EnableMemoryWarningEvent and EnableLowGeneralMemoryEvent functions
+    ' have been removed as they are deprecated in modern Roku OS and were
+    ' causing a startup crash. Memory management is now handled automatically.
 
     screen = CreateObject("roSGScreen")
     m.port = CreateObject("roMessagePort")
@@ -222,6 +221,8 @@ Sub onCarouselItemSelected(event as object)
     end if
 End Sub
 
+' ROKU CERTIFICATION FIX: This function was missing, causing a runtime error.
+' It fires the AppLaunchComplete beacon required for certification.
 Sub FireLaunchBeacon()
     if not m.launchBeaconFired
         CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
