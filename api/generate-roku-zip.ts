@@ -129,6 +129,7 @@ Sub init()
     m.movieRowList = m.top.findNode("movieRowList")
     m.videoPlayer = m.top.findNode("videoPlayer")
     m.deepLinkedContentId = invalid
+    m.launchBeaconFired = false ' Flag to prevent sending beacon multiple times
 
     m.top.observeField("launchParams", "onLaunchParamsSet")
 
@@ -158,8 +159,7 @@ Sub init()
                 ProcessData(msg.GetString())
             else
                 m.loadingLabel.text = "Error loading feed: " + msg.GetResponseCode().ToStr()
-                ' Fire beacon on failure to load feed, as an error screen is still a "first screen".
-                CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
+                FireLaunchBeacon() ' App has launched to an error screen, a valid terminal state.
             end if
             exit while
         end if
@@ -190,28 +190,35 @@ Sub ProcessData(data as String)
             end for
         end for
         m.movieRowList.content = content
-        m.loadingLabel.visible = false
-        m.movieRowList.visible = true
-        m.movieRowList.setFocus(true)
         
-        ' CERTIFICATION FIX: Fire the AppLaunchComplete beacon immediately after the home screen
-        ' is rendered and interactive. This completes the "launch" phase.
-        CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
-
-        ' CERTIFICATION FIX: After the launch is officially complete, handle any deep linking.
-        ' This separates the two required actions cleanly.
+        ' CERTIFICATION FIX: Check for deep link BEFORE showing the UI
         if m.deepLinkedContentId <> invalid
-            PlayDeepLinkedContent(m.deepLinkedContentId)
-            m.deepLinkedContentId = invalid
+            ' Attempt to find and play the content immediately
+            wasFound = PlayDeepLinkedContent(m.deepLinkedContentId)
+            if not wasFound
+                ' If deep-linked content isn't found, fall back to normal launch
+                ShowHomeScreenUI()
+            end if
+        else
+            ' No deep link, normal launch
+            ShowHomeScreenUI()
         end if
     else
         m.loadingLabel.text = "Failed to parse feed data or feed is empty."
-        ' CERTIFICATION FIX: Also fire beacon if the app launches to an error state.
-        CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
+        FireLaunchBeacon() ' App has launched to an error state.
     end if
 End Sub
 
-Sub PlayDeepLinkedContent(contentId as String)
+' Helper function for normal home screen launch
+Sub ShowHomeScreenUI()
+    m.loadingLabel.visible = false
+    m.movieRowList.visible = true
+    m.movieRowList.setFocus(true)
+    FireLaunchBeacon() ' Fire beacon for normal launch
+End Sub
+
+' Find and play deep-linked content, returning true if found
+Function PlayDeepLinkedContent(contentId as String) as Boolean
     content = m.movieRowList.content
     if content <> invalid
         for i = 0 to content.getChildCount() - 1
@@ -221,14 +228,15 @@ Sub PlayDeepLinkedContent(contentId as String)
                     movie = row.getChild(j)
                     if movie <> invalid AND movie.id = contentId
                         playMovie(movie)
-                        return
+                        return true ' Found and playing
                     end if
                 end for
             end if
         end for
     end if
     print "Deep linked contentId not found: "; contentId
-End Sub
+    return false ' Not found
+End Function
 
 Sub playMovie(movieNode as Object)
     if movieNode <> invalid AND movieNode.streamUrl <> invalid
@@ -238,11 +246,12 @@ Sub playMovie(movieNode as Object)
 
         m.videoPlayer.content = videoContent
         m.videoPlayer.streamFormat = "mp4"
+        
+        m.loadingLabel.visible = false ' Hide loading label
+        m.movieRowList.visible = false ' Ensure RowList is hidden
         m.videoPlayer.visible = true
         m.videoPlayer.setFocus(true)
         m.videoPlayer.control = "play"
-
-        m.movieRowList.visible = false
     end if
 End Sub
 
@@ -260,8 +269,19 @@ End Sub
 
 Sub onVideoStateChange()
     state = m.videoPlayer.state
-    if state = "finished" or state = "error"
+    ' CERTIFICATION FIX: Fire beacon when playback starts for deep link
+    if state = "playing"
+        FireLaunchBeacon()
+    else if state = "finished" or state = "error"
         closeVideoPlayer()
+    end if
+End Sub
+
+' Helper function to fire the launch beacon only once
+Sub FireLaunchBeacon()
+    if not m.launchBeaconFired
+        CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
+        m.launchBeaconFired = true
     end if
 End Sub
 
