@@ -1,3 +1,4 @@
+
 // This is a Vercel Serverless Function that generates a Roku channel package.
 // It will be accessible at the path /api/generate-roku-zip
 import JSZip from 'jszip';
@@ -99,20 +100,12 @@ End Sub
                 <font role="font" size="40" />
             </Label>
             
-            <!-- Hero component for featured film -->
-            <Hero id="hero" translation="[0, 120]" />
-            
             <!-- Group to dynamically hold the carousels -->
-            <Group id="carouselsGroup" />
+            <Group id="carouselsGroup" translation="[0, 120]" />
         </Group>
 
-        <!-- Video player, sits on top -->
-        <Video
-            id="videoPlayer"
-            width="1920"
-            height="1080"
-            visible="false"
-        />
+        <!-- The video player has been removed from this scene. -->
+        <!-- Playback is now handled exclusively by VideoPlayerScene for a cleaner architecture. -->
     </children>
 </component>
         `.trim();
@@ -122,20 +115,11 @@ End Sub
 Sub init()
     m.loadingLabel = m.top.findNode("loadingLabel")
     m.mainGroup = m.top.findNode("mainGroup")
-    m.hero = m.top.findNode("hero")
     m.carouselsGroup = m.top.findNode("carouselsGroup")
-    m.videoPlayer = m.top.findNode("videoPlayer")
     m.launchBeaconFired = false 
-
-    deviceInfo = CreateObject("roDeviceInfo")
-    if deviceInfo.GetDisplayMode() <> "1080p"
-        m.videoPlayer.width = 1280
-        m.videoPlayer.height = 720
-    end if
+    m.firstRow = invalid ' Will hold the first created RowList for focus management
 
     m.top.setFocus(true)
-    m.hero.observeField("wasSelected", "onHeroSelected")
-    m.videoPlayer.observeField("state", "onVideoStateChange")
     
     m.fetcher = CreateObject("roUrlTransfer")
     m.fetcher.SetCertificatesFile("common:/certs/ca-bundle.crt")
@@ -164,22 +148,8 @@ Sub ProcessData(data as String)
     json = ParseJson(data)
     if json <> invalid AND json.DoesExist("categories") AND json.categories.count() > 0
         
-        ' 1. Set up Hero component with the first featured movie
-        featuredCategory = json.categories[0]
-        if featuredCategory.movies.count() > 0
-            heroContent = CreateObject("roSGNode", "ContentNode")
-            firstMovie = featuredCategory.movies[0]
-            heroContent.id = firstMovie.id
-            heroContent.title = firstMovie.title
-            heroContent.description = firstMovie.description
-            heroContent.HDPosterUrl = firstMovie.hdThumbnail
-            heroContent.streamUrl = firstMovie.streamUrl
-            m.hero.itemContent = heroContent
-        end if
-        
-        ' 2. Create carousels for all other categories
-        yOffset = 500 ' Starting Y position for the first carousel
-        for i = 1 to json.categories.count() - 1
+        yOffset = 0 ' Starting Y position for the first carousel title
+        for i = 0 to json.categories.count() - 1
             category = json.categories[i]
             if category.movies.count() > 0
                 ' Create and position category title
@@ -212,8 +182,11 @@ Sub ProcessData(data as String)
                 end for
                 row.content = rowContent
                 
-                ' Observe this specific row for selection
                 row.observeField("itemSelected", "onCarouselItemSelected")
+                
+                if m.firstRow = invalid
+                    m.firstRow = row ' Store a reference to the first row
+                end if
                 
                 yOffset = yOffset + 420 ' Space for the next category
             end if
@@ -229,47 +202,26 @@ End Sub
 Sub ShowHomeScreenUI()
     m.loadingLabel.visible = false
     m.mainGroup.visible = true
-    m.hero.setFocus(true)
+    if m.firstRow <> invalid
+        m.firstRow.setFocus(true)
+    end if
     FireLaunchBeacon()
 End Sub
 
-Sub onHeroSelected()
-    playMovie(m.hero.itemContent)
-End Sub
-
+' REVISED: This function now launches the dedicated VideoPlayerScene for instant playback.
 Sub onCarouselItemSelected(event as object)
     rowlist = event.getRoSGNode()
     selectedIndex = event.getData()
     selectedMovie = rowlist.content.getChild(selectedIndex[1])
-    playMovie(selectedMovie)
-End Sub
-
-Sub playMovie(movieNode as Object)
-    if movieNode <> invalid AND movieNode.streamUrl <> invalid
-        videoContent = CreateObject("roSGNode", "ContentNode")
-        videoContent.stream = { url: movieNode.streamUrl }
-        videoContent.title = movieNode.title
-
-        m.videoPlayer.content = videoContent
-        m.videoPlayer.streamFormat = "mp4"
-        
-        m.mainGroup.visible = false
-        m.videoPlayer.visible = true
-        m.videoPlayer.setFocus(true)
-        m.videoPlayer.control = "play"
+    
+    if selectedMovie <> invalid AND selectedMovie.id <> invalid
+        scene = m.top.getScene()
+        videoScene = scene.createScene("VideoPlayerScene")
+        videoScene.setField("contentID", selectedMovie.id)
+        scene.dialog = videoScene
     end if
 End Sub
 
-Sub onVideoStateChange()
-    state = m.videoPlayer.state
-    if state = "finished" or state = "error"
-        closeVideoPlayer()
-    end if
-End Sub
-
-' ** CERTIFICATION FIX **
-' This function was missing, causing a runtime error that
-' prevented the AppLaunchComplete beacon from being sent.
 Sub FireLaunchBeacon()
     if not m.launchBeaconFired
         CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
@@ -277,100 +229,15 @@ Sub FireLaunchBeacon()
     end if
 End Sub
 
-Sub closeVideoPlayer()
-    m.videoPlayer.control = "stop"
-    m.videoPlayer.visible = false
-    m.mainGroup.visible = true
-    m.hero.setFocus(true)
-End Sub
-
+' SIMPLIFIED: onKeyEvent no longer needs to handle the video player.
 Function onKeyEvent(key as String, press as Boolean) as Boolean
-    if press then
-        if key = "back"
-            if m.videoPlayer.visible
-                closeVideoPlayer()
-                return true
-            end if
-        end if
-    end if
+    ' The OS will handle the back button to exit the channel from this scene.
     return false
 End Function
         `.trim();
         componentsFolder?.file('HomeScene.brs', homeSceneBrs);
         
-        // --- NEW COMPONENT: Hero ---
-        const heroXml = `
-<?xml version="1.0" encoding="utf-8" ?>
-<component name="Hero" extends="Group">
-    <script type="text/brightscript" uri="pkg:/components/Hero.brs" />
-    <interface>
-        <field id="itemContent" type="node" onChange="onContentChange" />
-        <field id="wasSelected" type="boolean" alwaysNotify="true" />
-    </interface>
-    <children>
-        <Poster 
-            id="backgroundPoster" 
-            width="1920" 
-            height="500" 
-            blendColor="#606060" />
-        <Rectangle 
-            id="gradient" 
-            color="#141414" 
-            opacity="0.8" 
-            width="1920" 
-            height="500">
-            <Gradient>
-                <Color offset="0.0" color="#141414" opacity="0.0" />
-                <Color offset="0.5" color="#141414" opacity="1.0" />
-            </Gradient>
-        </Rectangle>
-        <Group id="infoGroup" translation="[90, 100]">
-            <Label id="titleLabel" width="800" wrap="true">
-                <font role="font" size="52" />
-            </Label>
-            <Label id="descriptionLabel" translation="[0, 70]" width="700" maxLines="3" wrap="true">
-                <font role="font" size="24" />
-            </Label>
-            <Button id="watchButton" text="Watch Now" translation="[0, 170]" minWidth="200" />
-        </Group>
-    </children>
-</component>
-        `.trim();
-        componentsFolder?.file('Hero.xml', heroXml);
-
-        const heroBrs = `
-Sub init()
-    m.top.observeField("itemContent", "onContentChange")
-    m.watchButton = m.top.findNode("watchButton")
-    m.watchButton.observeField("buttonSelected", "onButtonSelected")
-End Sub
-
-Sub onContentChange()
-    content = m.top.itemContent
-    if content <> invalid
-        m.top.findNode("backgroundPoster").uri = content.HDPosterUrl
-        m.top.findNode("titleLabel").text = content.title
-        m.top.findNode("descriptionLabel").text = content.description
-    end if
-End Sub
-
-Sub onButtonSelected()
-    m.top.wasSelected = true
-End Sub
-
-Function onKeyEvent(key as String, press as Boolean) as Boolean
-    if press then
-        if key = "OK"
-            m.top.wasSelected = true
-            return true
-        end if
-    end if
-    return false
-End Function
-        `.trim();
-        componentsFolder?.file('Hero.brs', heroBrs);
-
-        // --- NEW COMPONENT: VideoPlayerScene ---
+        // --- NEW COMPONENT: VideoPlayerScene (for deep linking) ---
         const videoPlayerSceneXml = `
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="VideoPlayerScene" extends="Scene">
@@ -507,7 +374,7 @@ End Function
         `.trim();
         componentsFolder?.file('VideoPlayerScene.brs', videoPlayerSceneBrs);
         
-        // --- MOVIE POSTER COMPONENT (Updated with Focus Ring) ---
+        // --- MOVIE POSTER COMPONENT (with Focus Ring) ---
         const moviePosterXml = `
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="MoviePoster" extends="Group">
