@@ -50,9 +50,8 @@ bs_const=enable_app_launch_logging=true
 '** to the correct scene based on launch arguments.
 '******************************************************************
 Sub Main(args As Object)
-    ' The EnableMemoryWarningEvent and EnableLowGeneralMemoryEvent functions
-    ' have been removed as they are deprecated in modern Roku OS and were
-    ' causing a startup crash. Memory management is now handled automatically.
+    print "--- Crate TV Channel Launch ---"
+    print "Roku OS Version: "; CreateObject("roDeviceInfo").GetVersion()
 
     screen = CreateObject("roSGScreen")
     m.port = CreateObject("roMessagePort")
@@ -72,10 +71,15 @@ Sub Main(args As Object)
         scene = screen.CreateScene("HomeScene")
     end if
     
-    ' screen.show() is a blocking call that handles its own event loop.
-    ' The channel will remain active until the scene is closed, so no
-    ' further event loop (like a while=true) is needed here.
+    if scene = invalid
+        print "FATAL ERROR: Scene object is invalid before screen.show()!"
+        ' As a fallback, try to create HomeScene again to prevent a crash.
+        scene = screen.CreateScene("HomeScene")
+    end if
+
+    print "Showing scene: "; scene.sub_type
     screen.show()
+    print "--- Crate TV Channel Exit ---"
 End Sub
         `.trim();
         zip.folder('source')?.file('main.brs', mainBrsContent);
@@ -111,8 +115,7 @@ End Sub
         componentsFolder?.file('HomeScene.xml', homeSceneXml);
         
         const homeSceneBrs = `
-' DEBUGGING: Added print statements to trace execution flow.
-' FIX: Restructured init() to prevent a race condition with the ContentFetcherTask.
+' FIX: Implemented a more robust startup sequence using a Timer to prevent race conditions.
 Sub init()
     print "[HomeScene.brs] >> init() ENTER"
     m.loadingLabel = m.top.findNode("loadingLabel")
@@ -123,20 +126,32 @@ Sub init()
 
     m.top.setFocus(true)
     
-    ' Delegate data fetching to the ContentFetcherTask AFTER the scene is ready.
-    ' Using callFunc to ensure the task runs on the next event loop cycle.
-    m.top.callFunc("startDataFetch")
-    print "[HomeScene.brs] << init() EXIT"
+    ' ROKU OS WORKAROUND: Use a Timer to reliably defer the start of the data fetch task.
+    ' This prevents a potential race condition during scene initialization.
+    m.fetchDelayTimer = m.top.createChild("Timer")
+    m.fetchDelayTimer.repeat = false
+    m.fetchDelayTimer.duration = 0.05 ' 50ms delay
+    m.fetchDelayTimer.observeField("fire", "onFetchDelayTimerFired")
+    m.fetchDelayTimer.control = "start"
+    print "[HomeScene.brs] << init() EXIT. Fetch timer started."
 End Sub
 
-' This function is now called safely after init() completes.
-Sub startDataFetch()
-    print "[HomeScene.brs] >> startDataFetch() ENTER"
+' This function is now called safely after the scene is fully initialized.
+Sub onFetchDelayTimerFired()
+    print "[HomeScene.brs] >> onFetchDelayTimerFired() ENTER"
     m.fetcher = m.top.findNode("contentFetcher")
+
+    if m.fetcher = invalid
+        print "[HomeScene.brs] FATAL ERROR: ContentFetcherTask node not found!"
+        m.loadingLabel.text = "Error: Channel component failed to load."
+        FireLaunchBeacon(false)
+        return
+    end if
+
     m.fetcher.observeField("output", "onFeedData")
-    m.fetcher.control = "RUN" ' Use control field to trigger task
     m.fetcher.uri = "${feedUrl}"
-    print "[HomeScene.brs] << startDataFetch() EXIT"
+    m.fetcher.control = "RUN"
+    print "[HomeScene.brs] << onFetchDelayTimerFired() EXIT. Fetcher task is running."
 End Sub
 
 ' This function is called when the ContentFetcherTask has finished its work.
@@ -229,7 +244,6 @@ Sub FireLaunchBeacon(success as Boolean)
     end if
 End Sub
 
-' CLEANUP: Removed unused 'key' and 'press' parameters to eliminate compiler warnings.
 Function onKeyEvent() as Boolean
     return false ' Let OS handle back button to exit
 End Function
@@ -385,7 +399,6 @@ End Sub
 Sub onVideoStateChange()
     state = m.videoPlayer.state
     if state = "playing" then FireLaunchBeacon(true)
-    ' FIX: Changed m.top.getScene().close to the more direct m.top.close
     if state = "finished" or state = "error" then m.top.close = true
 end sub
 
@@ -400,10 +413,8 @@ Sub FireLaunchBeacon(success as Boolean)
     end if
 End Sub
 
-' CLEANUP: Removed unused 'key' and 'press' parameters to eliminate compiler warnings.
 Function onKeyEvent(key as String, press as Boolean) as Boolean
     if press and key = "back"
-        ' FIX: Changed m.top.getScene().close to the more direct m.top.close
         m.top.close = true
         return true
     end if
