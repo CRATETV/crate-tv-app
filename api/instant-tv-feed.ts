@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function that generates a feed for Instant TV Channel.
 // It will be accessible at the path /api/instant-tv-feed
 
-import { getApiData } from './_lib/data';
+import { getApiData } from './_lib/data.ts';
 // FIX: Imported the Category type to ensure type safety when processing category data.
 import { Movie, Category } from '../types';
 
