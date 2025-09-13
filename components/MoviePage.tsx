@@ -165,6 +165,21 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
  }, [movie]);
 
+ // Effect to handle exiting full player with Escape key
+ useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+        if (event.key === 'Escape' && playerMode === 'full') {
+            setPlayerMode('poster');
+        }
+    };
+
+    document.addEventListener('keydown', handleEscKey);
+
+    return () => {
+        document.removeEventListener('keydown', handleEscKey);
+    };
+}, [playerMode]);
+
 
     const recommendedMovies = useMemo(() => {
         if (!movie) return [];
@@ -219,8 +234,26 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     {/* If the video is playing, just show the video player. */}
                     {isReleased && playerMode === 'full' ? (
                         <>
-                            <video ref={videoRef} src={movie.fullMovie} className="w-full h-full" controls autoPlay playsInline onContextMenu={(e) => e.preventDefault()} />
+                            <video 
+                                ref={videoRef} 
+                                src={movie.fullMovie} 
+                                className="w-full h-full" 
+                                controls 
+                                autoPlay 
+                                playsInline 
+                                onContextMenu={(e) => e.preventDefault()} 
+                                controlsList="nodownload"
+                            />
                             <CastButton videoElement={videoRef.current} />
+                            <button
+                                onClick={() => setPlayerMode('poster')}
+                                className="absolute top-4 right-16 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white z-10"
+                                aria-label="Exit video player"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </>
                     ) : (
                         <>

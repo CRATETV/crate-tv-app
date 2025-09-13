@@ -29,7 +29,7 @@ const RokuGuidePage: React.FC = () => {
             <main className="flex-grow pt-24 px-4 md:px-12">
                 <div className="max-w-3xl mx-auto">
                      <div className="text-center mb-12">
-                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/roku-logo.png" alt="Roku Logo" className="w-24 h-24 mx-auto mb-4" />
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Roku_logo.svg/512px-Roku_logo.svg.png" alt="Roku Logo" className="w-24 h-24 object-contain mx-auto mb-4" />
                         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Watch Crate TV on Roku</h1>
                         <p className="text-lg text-gray-400">
                            Follow these simple steps to install the official Crate TV channel and enjoy our films on your television.
