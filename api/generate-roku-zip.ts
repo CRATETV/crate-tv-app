@@ -267,6 +267,9 @@ Sub onVideoStateChange()
     end if
 End Sub
 
+' ** CERTIFICATION FIX **
+' This function was missing, causing a runtime error that
+' prevented the AppLaunchComplete beacon from being sent.
 Sub FireLaunchBeacon()
     if not m.launchBeaconFired
         CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
