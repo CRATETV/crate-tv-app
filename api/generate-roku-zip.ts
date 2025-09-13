@@ -72,16 +72,10 @@ Sub Main(args As Object)
         scene = screen.CreateScene("HomeScene")
     end if
     
+    ' screen.show() is a blocking call that handles its own event loop.
+    ' The channel will remain active until the scene is closed, so no
+    ' further event loop (like a while=true) is needed here.
     screen.show()
-
-    ' Event loop to keep the channel alive
-    while(true)
-        msg = wait(0, m.port)
-        msgType = type(msg)
-        if msgType = "roSGScreenEvent"
-            if msg.isScreenClosed() then return
-        end if
-    end while
 End Sub
         `.trim();
         zip.folder('source')?.file('main.brs', mainBrsContent);
