@@ -1,12 +1,13 @@
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { moviesData as fallbackMovies, categoriesData as fallbackCategories, festivalData as fallbackFestival, festivalConfigData as fallbackConfig } from '../../constants.ts'; // relative path
+// FIX: Using a namespace import for the AWS S3 client to prevent potential type conflicts that may cause the 'send' method to not be found.
+import * as S3 from "@aws-sdk/client-s3";
+import { moviesData as fallbackMovies, categoriesData as fallbackCategories, festivalData as fallbackFestival, festivalConfigData as fallbackConfig } from '../../constants'; // relative path
 
 let cachedData: any = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 60 * 1000; // 1 minute
 
 // Create a singleton S3 client to avoid re-instantiation on every call
-let s3Client: S3Client | null = null;
+let s3Client: S3.S3Client | null = null;
 const getS3Client = () => {
     if (s3Client) return s3Client;
 
@@ -25,7 +26,7 @@ const getS3Client = () => {
         region = 'us-east-1';
     }
 
-    s3Client = new S3Client({
+    s3Client = new S3.S3Client({
         region: region,
         credentials: {
             accessKeyId,
@@ -58,7 +59,7 @@ export const getApiData = async () => {
     }
     
     try {
-        const command = new GetObjectCommand({
+        const command = new S3.GetObjectCommand({
             Bucket: bucketName,
             Key: 'live-data.json',
         });
