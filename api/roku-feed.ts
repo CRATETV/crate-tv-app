@@ -42,12 +42,12 @@ export async function GET(request: Request) {
               return {
                 id: movie.key,
                 title: movie.title,
-                description: movie.synopsis.replace(/<br\s*\/?>/gi, '\n').trim(),
-                thumbnail: movie.tvPoster || movie.poster, // Prioritize portrait TV poster
-                hdThumbnail: movie.tvPoster || movie.poster,
-                streamUrl: movie.fullMovie,
-                director: movie.director,
-                actors: movie.cast.map(c => c.name),
+                description: movie.synopsis ? movie.synopsis.replace(/<br\s*\/?>/gi, '\n').trim() : '',
+                thumbnail: movie.tvPoster || movie.poster || '',
+                hdThumbnail: movie.tvPoster || movie.poster || '',
+                streamUrl: movie.fullMovie || '',
+                director: movie.director || '',
+                actors: movie.cast ? movie.cast.map(c => c.name) : [],
               };
             });
           

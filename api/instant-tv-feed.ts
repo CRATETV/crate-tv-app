@@ -50,20 +50,20 @@ export async function GET(request: Request) {
             return {
               title: movie.title,
               // Instant TV requires both short and long descriptions
-              shortdescription: movie.synopsis.replace(/<br\s*\/?>/gi, ' ').substring(0, 200).trim(),
-              longdescription: movie.synopsis.replace(/<br\s*\/?>/gi, '\n').trim(),
-              thumbnail: movie.tvPoster || movie.poster, // Prioritize TV-specific portrait poster
+              shortdescription: movie.synopsis ? movie.synopsis.replace(/<br\s*\/?>/gi, ' ').substring(0, 200).trim() : '',
+              longdescription: movie.synopsis ? movie.synopsis.replace(/<br\s*\/?>/gi, '\n').trim() : '',
+              thumbnail: movie.tvPoster || movie.poster || '',
               // Instant TV uses a 'stream' object for video URLs
               stream: {
-                url: movie.fullMovie,
+                url: movie.fullMovie || '',
                 bitrate: 1500, // Example bitrate, can be adjusted
                 quality: "HD"
               },
               streamformat: "mp4",
               genres: genres,
               credits: [
-                { name: movie.director, role: "director" },
-                ...movie.cast.map(c => ({ name: c.name, role: "actor" }))
+                { name: movie.director || '', role: "director" },
+                ...(movie.cast ? movie.cast.map(c => ({ name: c.name, role: "actor" })) : [])
               ]
             };
           });
