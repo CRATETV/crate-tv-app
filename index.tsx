@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
+import { AuthProvider } from './contexts/AuthContext.tsx';
 
 // Import all page components
 import App from './App.tsx';
@@ -10,6 +11,9 @@ import MoviePage from './components/MoviePage.tsx';
 import Intro from './components/Intro.tsx';
 import MerchPage from './components/MerchPage.tsx';
 import ContactPage from './components/ContactPage.tsx';
+import PremiumPage from './components/PremiumPage.tsx';
+import LoginPage from './components/LoginPage.tsx';
+import AccountPage from './components/AccountPage.tsx';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -69,6 +73,12 @@ const AppRouter: React.FC = () => {
       return <AdminPage />;
     case '/contact':
       return <ContactPage />;
+    case '/premium':
+      return <PremiumPage />;
+    case '/login':
+      return <LoginPage />;
+    case '/account':
+      return <AccountPage />;
     default:
       // Fallback to the homepage for any unknown routes
       return <App />;
@@ -78,6 +88,8 @@ const AppRouter: React.FC = () => {
 
 root.render(
   <React.StrictMode>
-    <AppRouter />
+    <AuthProvider>
+      <AppRouter />
+    </AuthProvider>
   </React.StrictMode>
 );

@@ -195,17 +195,21 @@ Sub ProcessData(data as String)
         m.movieRowList.visible = true
         m.movieRowList.setFocus(true)
         
+        ' CERTIFICATION FIX: Fire the AppLaunchComplete beacon immediately after the home screen
+        ' is rendered and interactive. This completes the "launch" phase.
+        CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
+
+        ' CERTIFICATION FIX: After the launch is officially complete, handle any deep linking.
+        ' This separates the two required actions cleanly.
         if m.deepLinkedContentId <> invalid
             PlayDeepLinkedContent(m.deepLinkedContentId)
             m.deepLinkedContentId = invalid
         end if
     else
         m.loadingLabel.text = "Failed to parse feed data or feed is empty."
+        ' CERTIFICATION FIX: Also fire beacon if the app launches to an error state.
+        CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
     end if
-    
-    ' Fire the AppLaunchComplete beacon after the first screen is rendered and interactive.
-    ' This is a critical certification requirement.
-    CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
 End Sub
 
 Sub PlayDeepLinkedContent(contentId as String)
