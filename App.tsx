@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData } from './services/dataService.ts';
 // FIX: Corrected import to use type definitions from types.ts
@@ -44,6 +45,18 @@ export interface PaymentItem {
   name: string;
   price: number;
 }
+
+// Helper function to determine if a movie should be visible on the main page.
+const isMovieVisible = (movie: Movie) => {
+    const now = new Date();
+    const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
+    const expiryDate = movie.mainPageExpiry ? new Date(movie.mainPageExpiry) : null;
+
+    const isReleased = !releaseDate || releaseDate <= now;
+    const isNotExpired = !expiryDate || expiryDate > now;
+
+    return isReleased && isNotExpired;
+};
 
 
 const useFestivalPurchases = () => {
@@ -424,7 +437,7 @@ const App: React.FC = () => {
     if (!searchQuery) return null;
 
     const lowercasedQuery = searchQuery.toLowerCase();
-    const allMovies = Object.values(movies);
+    const allMovies = Object.values(movies).filter(isMovieVisible);
     if (allMovies.length === 0) return [];
     
     return allMovies
@@ -443,7 +456,8 @@ const App: React.FC = () => {
     if (!categories.featured || Object.keys(movies).length === 0) return [];
     return categories.featured.movieKeys
         .map(key => movies[key])
-        .filter(Boolean);
+        .filter(Boolean)
+        .filter(isMovieVisible);
   }, [movies, categories]);
 
   useEffect(() => {
@@ -465,7 +479,8 @@ const App: React.FC = () => {
   
   const recommendedMoviesList = recommendedKeys
       .map(key => movies[key])
-      .filter(Boolean);
+      .filter(Boolean)
+      .filter(isMovieVisible);
 
   return (
     <div className="flex flex-col min-h-screen bg-[#141414] text-white">
@@ -599,7 +614,8 @@ const App: React.FC = () => {
                 .map(([key, value]) => {
                   const categoryMovies = value.movieKeys
                       .map(movieKey => movies[movieKey])
-                      .filter(Boolean);
+                      .filter(Boolean)
+                      .filter(isMovieVisible);
                   if(categoryMovies.length === 0) return null;
                   return (
                     <MovieCarousel
@@ -626,7 +642,8 @@ const App: React.FC = () => {
                 .map(([key, value]) => {
                   const categoryMovies = value.movieKeys
                       .map(movieKey => movies[movieKey])
-                      .filter(Boolean);
+                      .filter(Boolean)
+                      .filter(isMovieVisible);
                   
                   if(categoryMovies.length === 0) return null;
 

@@ -213,6 +213,7 @@ const AdminPage: React.FC = () => {
       tvPoster: '',
       likes: 0,
       releaseDateTime: getLocalDatetimeString(),
+      mainPageExpiry: '',
     };
     setSelectedMovie(newMovie);
     setIsAddingNew(true);

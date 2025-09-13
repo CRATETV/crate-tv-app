@@ -17,6 +17,7 @@ export interface Movie {
   tvPoster: string;
   likes: number;
   releaseDateTime?: string;
+  mainPageExpiry?: string;
 }
 
 export interface Category {

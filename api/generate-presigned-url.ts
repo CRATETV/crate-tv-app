@@ -8,7 +8,31 @@ export async function POST(request: Request) {
         const { fileName, fileType, password } = await request.json();
 
         // 1. Authentication
-        if (password !== process.env.ADMIN_PASSWORD) {
+        const primaryAdminPassword = process.env.ADMIN_PASSWORD;
+        const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
+        
+        let isAuthenticated = false;
+        
+        if (primaryAdminPassword && password === primaryAdminPassword) {
+            isAuthenticated = true;
+        } else if (masterPassword && password === masterPassword) {
+            isAuthenticated = true;
+        } else {
+            for (const key in process.env) {
+                if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
+                    isAuthenticated = true;
+                    break;
+                }
+            }
+        }
+        
+        // Also allow for first-time setup mode if no passwords are set at all
+        const anyPasswordSet = primaryAdminPassword || masterPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
+        if (!anyPasswordSet) {
+            isAuthenticated = true; 
+        }
+
+        if (!isAuthenticated) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
                 status: 401,
                 headers: { 'Content-Type': 'application/json' },

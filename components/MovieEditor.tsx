@@ -81,6 +81,12 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
           <input type="datetime-local" name="releaseDateTime" value={formData.releaseDateTime || ''} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
           <p className="text-xs text-gray-500 mt-1">Leave blank to release immediately.</p>
         </div>
+        {/* Expiry Date */}
+        <div>
+          <label htmlFor="mainPageExpiry" className="block text-sm font-medium text-gray-300">Remove from Main Page on (Optional)</label>
+          <input type="datetime-local" name="mainPageExpiry" value={formData.mainPageExpiry || ''} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+          <p className="text-xs text-gray-500 mt-1">Movie will be hidden from carousels after this date.</p>
+        </div>
       </div>
       
       {/* URLs */}

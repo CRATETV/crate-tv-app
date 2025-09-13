@@ -7,11 +7,16 @@ import { Movie, Category } from '../types';
 
 const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Movie> => {
     const visibleMovies: Record<string, Movie> = {};
-    const today = new Date();
+    const now = new Date();
 
     Object.values(moviesData).forEach(movie => {
-      // FIX: Changed movie.releaseDate to movie.releaseDateTime to match the data structure.
-      if (!movie.releaseDateTime || new Date(movie.releaseDateTime) <= today) {
+      const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
+      const expiryDate = movie.mainPageExpiry ? new Date(movie.mainPageExpiry) : null;
+      
+      const isReleased = !releaseDate || releaseDate <= now;
+      const isNotExpired = !expiryDate || expiryDate > now;
+
+      if (isReleased && isNotExpired) {
         visibleMovies[movie.key] = movie;
       }
     });

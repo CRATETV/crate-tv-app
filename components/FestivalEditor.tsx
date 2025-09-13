@@ -111,20 +111,25 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
   };
   
   const handleMovieSelectionSave = (dayIndex: number, blockIndex: number, newMovieKeys: string[]) => {
-    setData(currentData =>
-      currentData.map((day, i) => {
-        if (i === dayIndex) {
-          const updatedBlocks = day.blocks.map((block, j) => {
-            if (j === blockIndex) {
-              return { ...block, movieKeys: newMovieKeys };
-            }
-            return block;
-          });
-          return { ...day, blocks: updatedBlocks };
-        }
-        return day;
-      })
-    );
+    // Create the new data structure first
+    const newData = data.map((day, i) => {
+      if (i === dayIndex) {
+        const updatedBlocks = day.blocks.map((block, j) => {
+          if (j === blockIndex) {
+            return { ...block, movieKeys: newMovieKeys };
+          }
+          return block;
+        });
+        return { ...day, blocks: updatedBlocks };
+      }
+      return day;
+    });
+
+    // Update the local state for immediate UI feedback
+    setData(newData);
+    // Immediately call the onSave prop to publish the changes
+    onSave(newData, config);
+    // Close the modal
     setEditingBlock(null);
   };
 
