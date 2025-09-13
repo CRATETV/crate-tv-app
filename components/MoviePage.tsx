@@ -213,6 +213,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         }
     };
     
+    const handleMovieEnd = () => {
+      // Navigate to the homepage
+      window.history.pushState({}, '', '/');
+      window.dispatchEvent(new Event('pushstate'));
+    };
+    
     if (isLoading || !movie) {
         return <LoadingSpinner />;
     }
@@ -229,7 +235,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 isStaging={isStaging}
             />
 
-            <main className="flex-grow">
+            <main className="flex-grow pt-16">
                 <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container">
                     {/* If the video is playing, just show the video player. */}
                     {isReleased && playerMode === 'full' ? (
@@ -243,6 +249,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 playsInline 
                                 onContextMenu={(e) => e.preventDefault()} 
                                 controlsList="nodownload"
+                                onEnded={handleMovieEnd}
                             />
                             <CastButton videoElement={videoRef.current} />
                             <button
