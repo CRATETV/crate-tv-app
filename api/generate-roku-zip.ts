@@ -205,15 +205,18 @@ Sub onCarouselItemSelected(event as object)
     end if
 End Sub
 
-' ROKU CERTIFICATION FIX: It fires the AppLaunchComplete beacon required for certification.
-' It now takes a 'success' parameter.
+' ROKU CERTIFICATION FIX: Fires the AppLaunchComplete beacon.
+' SYNTAX FIX: Rewritten to use a standard if/else block, which is valid BrightScript syntax.
 Sub FireLaunchBeacon(success as Boolean)
     if not m.launchBeaconFired
+        launchResult = "Failure"
+        if success = true then launchResult = "Success"
+
         params = {
             "partner_id": "cratetv",
             "event_name": "AppLaunchComplete",
             "event_data": {
-                "launch_result": if success then "Success" else "Failure"
+                "launch_result": launchResult
             }
         }
         CreateObject("roSystemLog").sendline(FormatJson(params))
@@ -387,14 +390,18 @@ Sub onVideoStateChange()
     end if
 end sub
 
-' ROKU CERTIFICATION FIX: It fires the AppLaunchComplete beacon required for certification.
+' ROKU CERTIFICATION FIX: Fires the AppLaunchComplete beacon.
+' SYNTAX FIX: Rewritten to use a standard if/else block, which is valid BrightScript syntax.
 Sub FireLaunchBeacon(success as Boolean)
     if not m.launchBeaconFired
+        launchResult = "Failure"
+        if success = true then launchResult = "Success"
+
         params = {
             "partner_id": "cratetv",
             "event_name": "AppLaunchComplete",
             "event_data": {
-                "launch_result": if success then "Success" else "Failure"
+                "launch_result": launchResult
             }
         }
         CreateObject("roSystemLog").sendline(FormatJson(params))
