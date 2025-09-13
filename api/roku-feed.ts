@@ -28,8 +28,13 @@ export async function GET(request: Request) {
       categories: Object.entries(categoriesData)
         .filter(([key]) => key !== 'featured')
         .map(([key, categoryData]) => {
-          // FIX: Cast categoryData to the Category type to resolve property access errors.
           const cat = categoryData as Category;
+
+          // Add a guard to prevent crashes if a category is null or malformed.
+          if (!cat || !Array.isArray(cat.movieKeys)) {
+            return null;
+          }
+
           const movies = cat.movieKeys
             .filter(movieKey => visibleMovieKeys.has(movieKey))
             .map(movieKey => {
@@ -48,7 +53,6 @@ export async function GET(request: Request) {
           
           if (movies.length > 0) {
             return {
-              // FIX: Accessed title from the correctly typed 'cat' variable.
               title: cat.title,
               movies: movies,
             };

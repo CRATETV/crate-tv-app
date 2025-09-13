@@ -1,3 +1,4 @@
+
 import { Category, Movie, FestivalDay, FestivalConfig } from './types.ts';
 
 export const festivalConfigData: FestivalConfig = {

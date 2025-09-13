@@ -31,16 +31,20 @@ export async function GET(request: Request) {
     const categories = Object.entries(categoriesData)
       .filter(([key]) => key !== 'featured') // Exclude the web-only 'featured' category
       .map(([key, categoryData]) => {
-        // FIX: Cast categoryData to the Category type to resolve property access errors.
         const catData = categoryData as Category;
+        
+        // Add a guard to prevent crashes if a category is null or malformed.
+        if (!catData || !Array.isArray(catData.movieKeys)) {
+            return null;
+        }
         
         const playlist = catData.movieKeys
           .filter(movieKey => visibleMovieKeys.has(movieKey))
           .map(movieKey => {
             const movie = visibleMovies[movieKey];
+            // Add a guard for the inner loop to ensure categories are valid objects.
             const genres = Object.values(categoriesData)
-                // FIX: Cast inner category object to resolve property access errors.
-                .filter(cat => (cat as Category).movieKeys.includes(movie.key))
+                .filter(cat => cat && Array.isArray((cat as Category).movieKeys) && (cat as Category).movieKeys.includes(movie.key))
                 .map(cat => (cat as Category).title);
 
             return {
@@ -67,7 +71,6 @@ export async function GET(request: Request) {
         // Only include the category in the final feed if it has visible movies
         if (playlist.length > 0) {
           return {
-            // FIX: Accessed title from the correctly typed 'catData' variable.
             name: catData.title,
             playlist: playlist,
           };

@@ -3,22 +3,6 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-// FIX: Correct the AWS region if it's incorrectly set to 'global'.
-// The S3 SDK requires a specific region (e.g., 'us-east-1') to build the correct endpoint.
-let region = process.env.AWS_S3_REGION;
-if (region === 'global') {
-    console.warn("AWS_S3_REGION was 'global', defaulting to 'us-east-1'.");
-    region = 'us-east-1';
-}
-
-const s3Client = new S3Client({
-    region: region,
-    credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID as string,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string,
-    },
-});
-
 export async function POST(request: Request) {
     try {
         const { fileName, fileType, password } = await request.json();
@@ -31,7 +15,22 @@ export async function POST(request: Request) {
             });
         }
         
-        // 2. Validation
+        // 2. AWS Configuration Check
+        const bucketName = process.env.AWS_S3_BUCKET_NAME;
+        const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+        const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+        let region = process.env.AWS_S3_REGION;
+
+        if (!bucketName || !region || !accessKeyId || !secretAccessKey) {
+            throw new Error("AWS S3 environment variables are not fully configured on the server. Cannot generate upload URL.");
+        }
+        
+        // FIX: Correct the AWS region if it's incorrectly set to 'global'.
+        if (region === 'global') {
+            region = 'us-east-1';
+        }
+
+        // 3. Validation
         if (!fileName || !fileType) {
             return new Response(JSON.stringify({ error: 'fileName and fileType are required' }), {
                 status: 400,
@@ -39,15 +38,13 @@ export async function POST(request: Request) {
             });
         }
         
-        const bucketName = process.env.AWS_S3_BUCKET_NAME;
-        if (!bucketName) {
-            throw new Error("AWS_S3_BUCKET_NAME is not set.");
-        }
+        const s3Client = new S3Client({
+            region,
+            credentials: { accessKeyId, secretAccessKey },
+        });
 
-        // Create a unique key for the S3 object
+        // 4. Create Presigned URL
         const key = `uploads/${Date.now()}-${fileName.replace(/\s/g, '_')}`;
-
-        // 3. Create Presigned URL
         const command = new PutObjectCommand({
             Bucket: bucketName,
             Key: key,
@@ -56,10 +53,10 @@ export async function POST(request: Request) {
 
         const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 }); // URL expires in 5 minutes
 
-        // 4. Construct the final public URL
+        // 5. Construct the final public URL
         const publicUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;
         
-        // 5. Return both URLs to the client
+        // 6. Return both URLs to the client
         return new Response(JSON.stringify({ signedUrl, publicUrl }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },

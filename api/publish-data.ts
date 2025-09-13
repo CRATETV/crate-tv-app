@@ -2,22 +2,6 @@
 // It will be accessible at the path /api/publish-data
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
-// FIX: Correct the AWS region if it's incorrectly set to 'global'.
-// The S3 SDK requires a specific region (e.g., 'us-east-1') to build the correct endpoint.
-let region = process.env.AWS_S3_REGION;
-if (region === 'global') {
-    console.warn("AWS_S3_REGION was 'global', defaulting to 'us-east-1'.");
-    region = 'us-east-1';
-}
-
-const s3Client = new S3Client({
-    region: region,
-    credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID as string,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string,
-    },
-});
-
 export async function POST(request: Request) {
     try {
         const { password, data } = await request.json();
@@ -30,6 +14,21 @@ export async function POST(request: Request) {
             });
         }
 
+        // AWS Configuration Check
+        const bucketName = process.env.AWS_S3_BUCKET_NAME;
+        const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+        const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+        let region = process.env.AWS_S3_REGION;
+
+        if (!bucketName || !region || !accessKeyId || !secretAccessKey) {
+            throw new Error("AWS S3 environment variables are not fully configured on the server. Cannot publish data.");
+        }
+        
+        // FIX: Correct the AWS region if it's incorrectly set to 'global'.
+        if (region === 'global') {
+            region = 'us-east-1';
+        }
+
         // Validation
         if (!data || !data.movies || !data.categories || !data.festivalData || !data.festivalConfig) {
             return new Response(JSON.stringify({ error: 'Invalid data structure provided.' }), { 
@@ -37,11 +36,11 @@ export async function POST(request: Request) {
                 headers: { 'Content-Type': 'application/json' },
             });
         }
-
-        const bucketName = process.env.AWS_S3_BUCKET_NAME;
-        if (!bucketName) {
-            throw new Error("AWS_S3_BUCKET_NAME is not set.");
-        }
+        
+        const s3Client = new S3Client({
+            region,
+            credentials: { accessKeyId, secretAccessKey },
+        });
 
         const command = new PutObjectCommand({
             Bucket: bucketName,
