@@ -89,19 +89,24 @@ End Sub
 <component name="HomeScene" extends="Scene">
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
     <children>
+        <!-- Dark background to match webapp -->
+        <Rectangle id="background" color="#141414" width="1920" height="1080" />
         <Label id="loadingLabel" text="Loading..." translation="[960, 540]" horizAlign="center" vertAlign="center" />
-        <RowList 
-            id="movieRowList"
-            itemComponentName="MoviePoster"
-            itemSize="[200, 300]"
-            rowHeight="360"
-            itemSpacing="[20, 20]"
-            showRowLabel="true"
-            rowLabelOffset="[[0, 10]]"
-            translation="[100, 80]"
-            vertFocusAnimationStyle="fixedFocus"
-            rowFocusAnimationStyle="fixedFocus"
-            visible="false" />
+        
+        <!-- Main content group -->
+        <Group id="mainGroup" visible="false">
+            <Label id="logoLabel" text="Crate TV" translation="[90, 40]">
+                <font role="font" size="40" />
+            </Label>
+            
+            <!-- Hero component for featured film -->
+            <Hero id="hero" translation="[0, 120]" />
+            
+            <!-- Group to dynamically hold the carousels -->
+            <Group id="carouselsGroup" />
+        </Group>
+
+        <!-- Video player, sits on top -->
         <Video
             id="videoPlayer"
             width="1920"
@@ -116,9 +121,11 @@ End Sub
         const homeSceneBrs = `
 Sub init()
     m.loadingLabel = m.top.findNode("loadingLabel")
-    m.movieRowList = m.top.findNode("movieRowList")
+    m.mainGroup = m.top.findNode("mainGroup")
+    m.hero = m.top.findNode("hero")
+    m.carouselsGroup = m.top.findNode("carouselsGroup")
     m.videoPlayer = m.top.findNode("videoPlayer")
-    m.launchBeaconFired = false ' Flag to prevent sending beacon multiple times
+    m.launchBeaconFired = false 
 
     deviceInfo = CreateObject("roDeviceInfo")
     if deviceInfo.GetDisplayMode() <> "1080p"
@@ -127,19 +134,17 @@ Sub init()
     end if
 
     m.top.setFocus(true)
-    m.movieRowList.observeField("itemSelected", "onItemSelected")
+    m.hero.observeField("wasSelected", "onHeroSelected")
     m.videoPlayer.observeField("state", "onVideoStateChange")
     
-    ' CERTIFICATION FIX: Non-blocking data fetch using an observer.
     m.fetcher = CreateObject("roUrlTransfer")
     m.fetcher.SetCertificatesFile("common:/certs/ca-bundle.crt")
     m.fetcher.InitClientCertificates()
     m.fetcher.SetUrl("${feedUrl}")
-    m.fetcher.observeField("status", "onFeedStatusChange") ' Observe the status field for completion
-    m.fetcher.AsyncGetToString() ' Start the async fetch
+    m.fetcher.observeField("status", "onFeedStatusChange")
+    m.fetcher.AsyncGetToString()
 End Sub
 
-' New observer function to handle the feed fetch completion.
 Sub onFeedStatusChange()
     status = m.fetcher.status
     if status = "completed"
@@ -147,46 +152,96 @@ Sub onFeedStatusChange()
             ProcessData(m.fetcher.GetString())
         else
             m.loadingLabel.text = "Error loading feed: " + m.fetcher.GetResponseCode().ToStr()
-            FireLaunchBeacon() ' App has launched to an error screen, a valid terminal state.
+            FireLaunchBeacon()
         end if
     else if status = "error"
         m.loadingLabel.text = "Failed to load feed."
-        FireLaunchBeacon() ' App has launched to an error state.
+        FireLaunchBeacon()
     end if
 End Sub
 
 Sub ProcessData(data as String)
     json = ParseJson(data)
     if json <> invalid AND json.DoesExist("categories") AND json.categories.count() > 0
-        content = CreateObject("roSGNode", "ContentNode")
-        for each category in json.categories
-            row = content.createChild("ContentNode")
-            row.title = category.title
-            for each movie in category.movies
-                item = row.createChild("ContentNode")
-                item.id = movie.id
-                item.title = movie.title
-                item.description = movie.description
-                item.HDPosterUrl = movie.thumbnail
-                item.streamUrl = movie.streamUrl
-            end for
-        end for
-        m.movieRowList.content = content
         
-        ' For a normal launch, show the UI.
+        ' 1. Set up Hero component with the first featured movie
+        featuredCategory = json.categories[0]
+        if featuredCategory.movies.count() > 0
+            heroContent = CreateObject("roSGNode", "ContentNode")
+            firstMovie = featuredCategory.movies[0]
+            heroContent.id = firstMovie.id
+            heroContent.title = firstMovie.title
+            heroContent.description = firstMovie.description
+            heroContent.HDPosterUrl = firstMovie.hdThumbnail
+            heroContent.streamUrl = firstMovie.streamUrl
+            m.hero.itemContent = heroContent
+        end if
+        
+        ' 2. Create carousels for all other categories
+        yOffset = 500 ' Starting Y position for the first carousel
+        for i = 1 to json.categories.count() - 1
+            category = json.categories[i]
+            if category.movies.count() > 0
+                ' Create and position category title
+                titleLabel = m.carouselsGroup.createChild("Label")
+                titleLabel.text = category.title
+                titleLabel.translation = [90, yOffset]
+                titleLabel.font = { size: 32 }
+
+                yOffset = yOffset + 50 ' Space between title and row
+
+                ' Create and populate the RowList
+                row = m.carouselsGroup.createChild("RowList")
+                row.translation = [90, yOffset]
+                row.itemComponentName = "MoviePoster"
+                row.itemSize = [240, 360] ' Wider posters
+                row.rowHeight = 400
+                row.itemSpacing = [20, 0]
+                row.showRowLabel = false
+                row.vertFocusAnimationStyle = "fixedFocus"
+                row.rowFocusAnimationStyle = "fixedFocus"
+                
+                rowContent = CreateObject("roSGNode", "ContentNode")
+                for each movie in category.movies
+                    item = rowContent.createChild("ContentNode")
+                    item.id = movie.id
+                    item.title = movie.title
+                    item.description = movie.description
+                    item.HDPosterUrl = movie.thumbnail
+                    item.streamUrl = movie.streamUrl
+                end for
+                row.content = rowContent
+                
+                ' Observe this specific row for selection
+                row.observeField("itemSelected", "onCarouselItemSelected")
+                
+                yOffset = yOffset + 420 ' Space for the next category
+            end if
+        end for
+        
         ShowHomeScreenUI()
     else
         m.loadingLabel.text = "Failed to parse feed data or feed is empty."
-        FireLaunchBeacon() ' App has launched to an error state.
+        FireLaunchBeacon()
     end if
 End Sub
 
-' Helper function for normal home screen launch
 Sub ShowHomeScreenUI()
     m.loadingLabel.visible = false
-    m.movieRowList.visible = true
-    m.movieRowList.setFocus(true)
-    FireLaunchBeacon() ' Fire beacon for normal launch
+    m.mainGroup.visible = true
+    m.hero.setFocus(true)
+    FireLaunchBeacon()
+End Sub
+
+Sub onHeroSelected()
+    playMovie(m.hero.itemContent)
+End Sub
+
+Sub onCarouselItemSelected(event as object)
+    rowlist = event.getRoSGNode()
+    selectedIndex = event.getData()
+    selectedMovie = rowlist.content.getChild(selectedIndex[1])
+    playMovie(selectedMovie)
 End Sub
 
 Sub playMovie(movieNode as Object)
@@ -198,23 +253,10 @@ Sub playMovie(movieNode as Object)
         m.videoPlayer.content = videoContent
         m.videoPlayer.streamFormat = "mp4"
         
-        m.loadingLabel.visible = false
-        m.movieRowList.visible = false 
+        m.mainGroup.visible = false
         m.videoPlayer.visible = true
         m.videoPlayer.setFocus(true)
         m.videoPlayer.control = "play"
-    end if
-End Sub
-
-Sub onItemSelected()
-    selectedIndex = m.movieRowList.itemSelected
-    content = m.movieRowList.content
-    if content <> invalid AND content.getChildCount() > selectedIndex[0]
-        selectedRow = content.getChild(selectedIndex[0])
-        if selectedRow <> invalid AND selectedRow.getChildCount() > selectedIndex[1]
-            selectedMovie = selectedRow.getChild(selectedIndex[1])
-            playMovie(selectedMovie)
-        end if
     end if
 End Sub
 
@@ -225,7 +267,6 @@ Sub onVideoStateChange()
     end if
 End Sub
 
-' Helper function to fire the launch beacon only once
 Sub FireLaunchBeacon()
     if not m.launchBeaconFired
         CreateObject("roSystemLog").sendline("Roku AppLaunchComplete")
@@ -236,8 +277,8 @@ End Sub
 Sub closeVideoPlayer()
     m.videoPlayer.control = "stop"
     m.videoPlayer.visible = false
-    m.movieRowList.visible = true
-    m.movieRowList.setFocus(true)
+    m.mainGroup.visible = true
+    m.hero.setFocus(true)
 End Sub
 
 Function onKeyEvent(key as String, press as Boolean) as Boolean
@@ -254,6 +295,78 @@ End Function
         `.trim();
         componentsFolder?.file('HomeScene.brs', homeSceneBrs);
         
+        // --- NEW COMPONENT: Hero ---
+        const heroXml = `
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="Hero" extends="Group">
+    <script type="text/brightscript" uri="pkg:/components/Hero.brs" />
+    <interface>
+        <field id="itemContent" type="node" onChange="onContentChange" />
+        <field id="wasSelected" type="boolean" alwaysNotify="true" />
+    </interface>
+    <children>
+        <Poster 
+            id="backgroundPoster" 
+            width="1920" 
+            height="500" 
+            blendColor="#606060" />
+        <Rectangle 
+            id="gradient" 
+            color="#141414" 
+            opacity="0.8" 
+            width="1920" 
+            height="500">
+            <Gradient>
+                <Color offset="0.0" color="#141414" opacity="0.0" />
+                <Color offset="0.5" color="#141414" opacity="1.0" />
+            </Gradient>
+        </Rectangle>
+        <Group id="infoGroup" translation="[90, 100]">
+            <Label id="titleLabel" width="800" wrap="true">
+                <font role="font" size="52" />
+            </Label>
+            <Label id="descriptionLabel" translation="[0, 70]" width="700" maxLines="3" wrap="true">
+                <font role="font" size="24" />
+            </Label>
+            <Button id="watchButton" text="Watch Now" translation="[0, 170]" minWidth="200" />
+        </Group>
+    </children>
+</component>
+        `.trim();
+        componentsFolder?.file('Hero.xml', heroXml);
+
+        const heroBrs = `
+Sub init()
+    m.top.observeField("itemContent", "onContentChange")
+    m.watchButton = m.top.findNode("watchButton")
+    m.watchButton.observeField("buttonSelected", "onButtonSelected")
+End Sub
+
+Sub onContentChange()
+    content = m.top.itemContent
+    if content <> invalid
+        m.top.findNode("backgroundPoster").uri = content.HDPosterUrl
+        m.top.findNode("titleLabel").text = content.title
+        m.top.findNode("descriptionLabel").text = content.description
+    end if
+End Sub
+
+Sub onButtonSelected()
+    m.top.wasSelected = true
+End Sub
+
+Function onKeyEvent(key as String, press as Boolean) as Boolean
+    if press then
+        if key = "OK"
+            m.top.wasSelected = true
+            return true
+        end if
+    end if
+    return false
+End Function
+        `.trim();
+        componentsFolder?.file('Hero.brs', heroBrs);
+
         // --- NEW COMPONENT: VideoPlayerScene ---
         const videoPlayerSceneXml = `
 <?xml version="1.0" encoding="utf-8" ?>
@@ -296,23 +409,18 @@ Sub init()
         m.videoPlayer.height = 720
     end if
     
-    ' Initialize fetcher here to make it accessible to observer
     m.fetcher = CreateObject("roUrlTransfer")
 
-    ' Check if contentID was passed from main.brs
     if m.top.contentID <> invalid AND m.top.contentID <> ""
         fetchContentAndPlay(m.top.contentID)
     else
         m.statusLabel.text = "Error: No content ID provided."
-        FireLaunchBeacon() ' Launch to error state
+        FireLaunchBeacon()
     end if
 End Sub
 
 Sub fetchContentAndPlay(contentId as String)
-    ' Store contentId to be used in the observer
     m.contentId = contentId
-
-    ' CERTIFICATION FIX: Non-blocking data fetch using an observer.
     m.fetcher.SetCertificatesFile("common:/certs/ca-bundle.crt")
     m.fetcher.InitClientCertificates()
     m.fetcher.SetUrl("${feedUrl}")
@@ -320,13 +428,11 @@ Sub fetchContentAndPlay(contentId as String)
     m.fetcher.AsyncGetToString()
 End Sub
 
-' New observer function to handle the feed fetch completion for deep linking.
 Sub onFeedStatusChange()
     status = m.fetcher.status
     if status = "completed"
         if m.fetcher.GetResponseCode() = 200
             json = ParseJson(m.fetcher.GetString())
-            ' Use the stored contentId from m.contentId
             movieData = FindMovieInFeed(json, m.contentId)
             if movieData <> invalid
                 playMovie(movieData)
@@ -355,7 +461,7 @@ Function FindMovieInFeed(feed as Object, contentId as String) as Object
             end for
         end if
     end for
-    return invalid ' Return invalid if not found
+    return invalid
 End Function
 
 Sub playMovie(movieData as Object)
@@ -375,10 +481,8 @@ End Sub
 Sub onVideoStateChange()
     state = m.videoPlayer.state
     if state = "playing"
-        ' CERTIFICATION REQUIREMENT: Fire beacon when deep-linked video starts playing.
         FireLaunchBeacon()
     else if state = "finished" or state = "error"
-        ' Close the screen (and the channel) when the video is done.
         m.top.getScene().close = true
     end if
 End Sub
@@ -392,7 +496,6 @@ End Sub
 
 Function onKeyEvent(key as String, press as Boolean) as Boolean
     if press and key = "back"
-        ' For a deep-linked video, the back button should exit the channel.
         m.top.getScene().close = true
         return true
     end if
@@ -401,7 +504,7 @@ End Function
         `.trim();
         componentsFolder?.file('VideoPlayerScene.brs', videoPlayerSceneBrs);
         
-        // --- MOVIE POSTER COMPONENT (Unchanged) ---
+        // --- MOVIE POSTER COMPONENT (Updated with Focus Ring) ---
         const moviePosterXml = `
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="MoviePoster" extends="Group">
@@ -412,9 +515,16 @@ End Function
     <children>
         <Poster
             id="poster"
-            width="200"
-            height="300"
+            width="240"
+            height="360"
             loadDisplayMode="scaleToFit"
+        />
+        <!-- Adds a red, scaled border when focused -->
+        <FocusRing 
+            color="#E50914" 
+            scale="1.05"
+            width="240"
+            height="360"
         />
     </children>
 </component>

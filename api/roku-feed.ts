@@ -18,28 +18,17 @@ const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Mov
     return visibleMovies;
 };
 
-export async function GET(request: Request) {
-  try {
-    const { movies: moviesData, categories: categoriesData } = await getApiData();
-    const visibleMovies = getVisibleMovies(moviesData);
-    const visibleMovieKeys = new Set(Object.keys(visibleMovies));
+// Helper function to process a single category into the Roku format
+const processCategory = (categoryData: Category, visibleMovies: Record<string, Movie>, visibleMovieKeys: Set<string>) => {
+    if (!categoryData || !Array.isArray(categoryData.movieKeys)) {
+        return null;
+    }
 
-    const content = {
-      categories: Object.entries(categoriesData)
-        .filter(([key]) => key !== 'featured')
-        .map(([key, categoryData]) => {
-          const cat = categoryData as Category;
-
-          // Add a guard to prevent crashes if a category is null or malformed.
-          if (!cat || !Array.isArray(cat.movieKeys)) {
-            return null;
-          }
-
-          const movies = cat.movieKeys
-            .filter(movieKey => visibleMovieKeys.has(movieKey))
-            .map(movieKey => {
-              const movie = visibleMovies[movieKey];
-              return {
+    const movies = categoryData.movieKeys
+        .filter(movieKey => visibleMovieKeys.has(movieKey))
+        .map(movieKey => {
+            const movie = visibleMovies[movieKey];
+            return {
                 id: movie.key,
                 title: movie.title,
                 description: movie.synopsis ? movie.synopsis.replace(/<br\s*\/?>/gi, '\n').trim() : '',
@@ -48,18 +37,47 @@ export async function GET(request: Request) {
                 streamUrl: movie.fullMovie || '',
                 director: movie.director || '',
                 actors: movie.cast ? movie.cast.map(c => c.name) : [],
-              };
-            });
-          
-          if (movies.length > 0) {
-            return {
-              title: cat.title,
-              movies: movies,
             };
-          }
-          return null;
-        })
-        .filter(Boolean),
+        });
+      
+    if (movies.length > 0) {
+        return {
+            title: categoryData.title,
+            movies: movies,
+        };
+    }
+    return null;
+};
+
+export async function GET(request: Request) {
+  try {
+    const { movies: moviesData, categories: categoriesData } = await getApiData();
+    const visibleMovies = getVisibleMovies(moviesData);
+    const visibleMovieKeys = new Set(Object.keys(visibleMovies));
+    
+    const finalCategories = [];
+
+    // 1. Explicitly process the 'featured' category first
+    const featuredCategoryData = categoriesData['featured'];
+    if (featuredCategoryData) {
+        const processedFeatured = processCategory(featuredCategoryData, visibleMovies, visibleMovieKeys);
+        if (processedFeatured) {
+            finalCategories.push(processedFeatured);
+        }
+    }
+
+    // 2. Process all other categories
+    Object.entries(categoriesData)
+        .filter(([key]) => key !== 'featured') // Exclude the one we already processed
+        .forEach(([key, categoryData]) => {
+            const processedCategory = processCategory(categoryData as Category, visibleMovies, visibleMovieKeys);
+            if (processedCategory) {
+                finalCategories.push(processedCategory);
+            }
+        });
+
+    const content = {
+      categories: finalCategories,
     };
 
     return new Response(JSON.stringify(content, null, 2), {

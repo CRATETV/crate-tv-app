@@ -14,6 +14,7 @@ import ContactPage from './components/ContactPage.tsx';
 import PremiumPage from './components/PremiumPage.tsx';
 import LoginPage from './components/LoginPage.tsx';
 import AccountPage from './components/AccountPage.tsx';
+import RokuGuidePage from './components/RokuGuidePage.tsx';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -79,6 +80,8 @@ const AppRouter: React.FC = () => {
       return <LoginPage />;
     case '/account':
       return <AccountPage />;
+    case '/roku-guide':
+      return <RokuGuidePage />;
     default:
       // Fallback to the homepage for any unknown routes
       return <App />;

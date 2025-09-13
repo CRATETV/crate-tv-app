@@ -11,6 +11,7 @@ import StagingBanner from './StagingBanner.tsx';
 import DirectorCreditsModal from './DirectorCreditsModal.tsx';
 import Countdown from './Countdown.tsx';
 import CastButton from './CastButton.tsx';
+import RokuBanner from './RokuBanner.tsx';
 
 interface MoviePageProps {
   movieKey: string;
@@ -263,6 +264,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     <h1 className="text-3xl md:text-5xl font-bold text-white">{movie.title}</h1>
                     <div className="mt-4 text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
                      
+                    <RokuBanner />
+
                     <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div className="md:col-span-2">
                              <div className="mt-6 bg-gradient-to-r from-red-500/10 to-blue-500/10 p-3 rounded-lg text-center border border-gray-700">
