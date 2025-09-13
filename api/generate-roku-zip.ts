@@ -130,27 +130,29 @@ Sub init()
     m.movieRowList.observeField("itemSelected", "onItemSelected")
     m.videoPlayer.observeField("state", "onVideoStateChange")
     
+    ' CERTIFICATION FIX: Non-blocking data fetch using an observer.
     m.fetcher = CreateObject("roUrlTransfer")
     m.fetcher.SetCertificatesFile("common:/certs/ca-bundle.crt")
     m.fetcher.InitClientCertificates()
     m.fetcher.SetUrl("${feedUrl}")
-    
-    port = CreateObject("roMessagePort")
-    m.fetcher.SetMessagePort(port)
-    m.fetcher.AsyncGetToString()
-    
-    while true
-        msg = wait(0, port)
-        if type(msg) = "roUrlEvent"
-            if msg.GetResponseCode() = 200
-                ProcessData(msg.GetString())
-            else
-                m.loadingLabel.text = "Error loading feed: " + msg.GetResponseCode().ToStr()
-                FireLaunchBeacon() ' App has launched to an error screen, a valid terminal state.
-            end if
-            exit while
+    m.fetcher.observeField("status", "onFeedStatusChange") ' Observe the status field for completion
+    m.fetcher.AsyncGetToString() ' Start the async fetch
+End Sub
+
+' New observer function to handle the feed fetch completion.
+Sub onFeedStatusChange()
+    status = m.fetcher.status
+    if status = "completed"
+        if m.fetcher.GetResponseCode() = 200
+            ProcessData(m.fetcher.GetString())
+        else
+            m.loadingLabel.text = "Error loading feed: " + m.fetcher.GetResponseCode().ToStr()
+            FireLaunchBeacon() ' App has launched to an error screen, a valid terminal state.
         end if
-    end while
+    else if status = "error"
+        m.loadingLabel.text = "Failed to load feed."
+        FireLaunchBeacon() ' App has launched to an error state.
+    end if
 End Sub
 
 Sub ProcessData(data as String)
@@ -293,6 +295,9 @@ Sub init()
         m.videoPlayer.width = 1280
         m.videoPlayer.height = 720
     end if
+    
+    ' Initialize fetcher here to make it accessible to observer
+    m.fetcher = CreateObject("roUrlTransfer")
 
     ' Check if contentID was passed from main.brs
     if m.top.contentID <> invalid AND m.top.contentID <> ""
@@ -304,34 +309,37 @@ Sub init()
 End Sub
 
 Sub fetchContentAndPlay(contentId as String)
-    fetcher = CreateObject("roUrlTransfer")
-    fetcher.SetCertificatesFile("common:/certs/ca-bundle.crt")
-    fetcher.InitClientCertificates()
-    fetcher.SetUrl("${feedUrl}")
-    
-    port = CreateObject("roMessagePort")
-    fetcher.SetMessagePort(port)
-    fetcher.AsyncGetToString()
-    
-    ' Wait for the feed to download
-    msg = wait(15000, port) ' 15 second timeout
-    if type(msg) = "roUrlEvent"
-        if msg.GetResponseCode() = 200
-            ' Find the specific movie in the feed
-            json = ParseJson(msg.GetString())
-            movieData = FindMovieInFeed(json, contentId)
+    ' Store contentId to be used in the observer
+    m.contentId = contentId
+
+    ' CERTIFICATION FIX: Non-blocking data fetch using an observer.
+    m.fetcher.SetCertificatesFile("common:/certs/ca-bundle.crt")
+    m.fetcher.InitClientCertificates()
+    m.fetcher.SetUrl("${feedUrl}")
+    m.fetcher.observeField("status", "onFeedStatusChange")
+    m.fetcher.AsyncGetToString()
+End Sub
+
+' New observer function to handle the feed fetch completion for deep linking.
+Sub onFeedStatusChange()
+    status = m.fetcher.status
+    if status = "completed"
+        if m.fetcher.GetResponseCode() = 200
+            json = ParseJson(m.fetcher.GetString())
+            ' Use the stored contentId from m.contentId
+            movieData = FindMovieInFeed(json, m.contentId)
             if movieData <> invalid
                 playMovie(movieData)
             else
                 m.statusLabel.text = "Error: Content not found in feed."
-                FireLaunchBeacon() ' Launch to error state
+                FireLaunchBeacon()
             end if
         else
-            m.statusLabel.text = "Error loading content: " + msg.GetResponseCode().ToStr()
-            FireLaunchBeacon() ' Launch to error state
+            m.statusLabel.text = "Error loading content: " + m.fetcher.GetResponseCode().ToStr()
+            FireLaunchBeacon()
         end if
-    else if msg = invalid ' Timeout
-        m.statusLabel.text = "Error: Timed out while loading content."
+    else if status = "error"
+        m.statusLabel.text = "Failed to load content."
         FireLaunchBeacon()
     end if
 End Sub
