@@ -103,7 +103,7 @@ End Sub
             <Group id="carouselsGroup" translation="[0, 120]" />
         </Group>
         
-        <!-- NEW: A dedicated Task node to handle fetching data on the correct thread -->
+        <!-- A dedicated Task node to handle fetching data on the correct thread -->
         <ContentFetcherTask id="contentFetcher" />
     </children>
 </component>
@@ -111,7 +111,10 @@ End Sub
         componentsFolder?.file('HomeScene.xml', homeSceneXml);
         
         const homeSceneBrs = `
+' DEBUGGING: Added print statements to trace execution flow.
+' FIX: Restructured init() to prevent a race condition with the ContentFetcherTask.
 Sub init()
+    print "[HomeScene.brs] >> init() ENTER"
     m.loadingLabel = m.top.findNode("loadingLabel")
     m.mainGroup = m.top.findNode("mainGroup")
     m.carouselsGroup = m.top.findNode("carouselsGroup")
@@ -120,14 +123,25 @@ Sub init()
 
     m.top.setFocus(true)
     
-    ' REFACTORED: Delegate data fetching to the ContentFetcherTask
+    ' Delegate data fetching to the ContentFetcherTask AFTER the scene is ready.
+    ' Using callFunc to ensure the task runs on the next event loop cycle.
+    m.top.callFunc("startDataFetch")
+    print "[HomeScene.brs] << init() EXIT"
+End Sub
+
+' This function is now called safely after init() completes.
+Sub startDataFetch()
+    print "[HomeScene.brs] >> startDataFetch() ENTER"
     m.fetcher = m.top.findNode("contentFetcher")
     m.fetcher.observeField("output", "onFeedData")
-    m.fetcher.uri = "${feedUrl}" ' Trigger the fetch
+    m.fetcher.control = "RUN" ' Use control field to trigger task
+    m.fetcher.uri = "${feedUrl}"
+    print "[HomeScene.brs] << startDataFetch() EXIT"
 End Sub
 
 ' This function is called when the ContentFetcherTask has finished its work.
 Sub onFeedData(event as object)
+    print "[HomeScene.brs] >> onFeedData() ENTER"
     json = event.getData()
     if json <> invalid AND json.DoesExist("categories") AND json.categories.count() > 0
         
@@ -135,19 +149,16 @@ Sub onFeedData(event as object)
         for i = 0 to json.categories.count() - 1
             category = json.categories[i]
             if category.movies.count() > 0
-                ' Create and position category title
                 titleLabel = m.carouselsGroup.createChild("Label")
                 titleLabel.text = category.title
                 titleLabel.translation = [90, yOffset]
                 titleLabel.font = { size: 32 }
+                yOffset = yOffset + 50
 
-                yOffset = yOffset + 50 ' Space between title and row
-
-                ' Create and populate the RowList
                 row = m.carouselsGroup.createChild("RowList")
                 row.translation = [90, yOffset]
                 row.itemComponentName = "MoviePoster"
-                row.itemSize = [240, 360] ' Wider posters
+                row.itemSize = [240, 360]
                 row.rowHeight = 400
                 row.itemSpacing = [20, 0]
                 row.showRowLabel = false
@@ -167,11 +178,9 @@ Sub onFeedData(event as object)
                 
                 row.observeField("itemSelected", "onCarouselItemSelected")
                 
-                if m.firstRow = invalid
-                    m.firstRow = row ' Store a reference to the first row
-                end if
+                if m.firstRow = invalid then m.firstRow = row
                 
-                yOffset = yOffset + 420 ' Space for the next category
+                yOffset = yOffset + 420
             end if
         end for
         
@@ -180,19 +189,21 @@ Sub onFeedData(event as object)
         m.loadingLabel.text = "Failed to parse feed data or feed is empty."
         FireLaunchBeacon(false)
     end if
+    print "[HomeScene.brs] << onFeedData() EXIT"
 End Sub
 
 Sub ShowHomeScreenUI()
+    print "[HomeScene.brs] >> ShowHomeScreenUI() ENTER"
     m.loadingLabel.visible = false
     m.mainGroup.visible = true
-    if m.firstRow <> invalid
-        m.firstRow.setFocus(true)
-    end if
+    if m.firstRow <> invalid then m.firstRow.setFocus(true)
     FireLaunchBeacon(true)
+    print "[HomeScene.brs] << ShowHomeScreenUI() EXIT"
 End Sub
 
-' REVISED: This function now launches the dedicated VideoPlayerScene for instant playback.
+' Launches the dedicated VideoPlayerScene for instant playback.
 Sub onCarouselItemSelected(event as object)
+    print "[HomeScene.brs] >> onCarouselItemSelected() ENTER"
     rowlist = event.getRoSGNode()
     selectedIndex = event.getData()
     selectedMovie = rowlist.content.getChild(selectedIndex[1])
@@ -203,41 +214,37 @@ Sub onCarouselItemSelected(event as object)
         videoScene.setField("contentID", selectedMovie.id)
         scene.dialog = videoScene
     end if
+    print "[HomeScene.brs] << onCarouselItemSelected() EXIT"
 End Sub
 
 ' ROKU CERTIFICATION FIX: Fires the AppLaunchComplete beacon.
-' SYNTAX FIX: Rewritten to use a standard if/else block, which is valid BrightScript syntax.
 Sub FireLaunchBeacon(success as Boolean)
     if not m.launchBeaconFired
+        print "[HomeScene.brs] Firing AppLaunchComplete beacon, success: "; success
         launchResult = "Failure"
         if success = true then launchResult = "Success"
-
-        params = {
-            "partner_id": "cratetv",
-            "event_name": "AppLaunchComplete",
-            "event_data": {
-                "launch_result": launchResult
-            }
-        }
+        params = { "partner_id": "cratetv", "event_name": "AppLaunchComplete", "event_data": { "launch_result": launchResult } }
         CreateObject("roSystemLog").sendline(FormatJson(params))
         m.launchBeaconFired = true
     end if
 End Sub
 
-Function onKeyEvent(key as String, press as Boolean) as Boolean
-    ' The OS will handle the back button to exit the channel from this scene.
-    return false
+' CLEANUP: Removed unused 'key' and 'press' parameters to eliminate compiler warnings.
+Function onKeyEvent() as Boolean
+    return false ' Let OS handle back button to exit
 End Function
         `.trim();
         componentsFolder?.file('HomeScene.brs', homeSceneBrs);
         
-        // --- NEW COMPONENT: ContentFetcherTask ---
+        // --- COMPONENT: ContentFetcherTask ---
         const contentFetcherTaskXml = `
 <?xml version="1.0" encoding="UTF-8"?>
 <component name="ContentFetcherTask" extends="Task">
     <interface>
         <field id="uri" type="string" />
         <field id="output" type="assocarray" />
+        ' Add a control field to trigger the task run
+        <field id="control" type="string" alias="TaskRunner.control" />
     </interface>
     <script type="text/brightscript" uri="pkg:/components/ContentFetcherTask.brs" />
 </component>
@@ -250,9 +257,10 @@ Sub init()
 End Sub
 
 Sub fetchContent()
+    print "[ContentFetcherTask.brs] >> fetchContent() ENTER"
     uri = m.top.uri
     if uri = invalid or uri = ""
-        ? "ContentFetcherTask: No URI provided."
+        print "[ContentFetcherTask.brs] ERROR: No URI provided."
         return
     end if
 
@@ -270,45 +278,35 @@ Sub fetchContent()
             if type(msg) = "roUrlEvent"
                 code = msg.GetResponseCode()
                 if code = 200
+                    print "[ContentFetcherTask.brs] Successfully fetched data."
                     m.top.output = ParseJson(msg.GetString())
                 else
-                    ? "ContentFetcherTask: HTTP Error "; code
+                    print "[ContentFetcherTask.brs] HTTP Error "; code
                     m.top.output = invalid
                 end if
                 exit while
             end if
         end while
     else
-        ? "ContentFetcherTask: AsyncGetToString failed."
+        print "[ContentFetcherTask.brs] ERROR: AsyncGetToString failed."
         m.top.output = invalid
     end if
+    print "[ContentFetcherTask.brs] << fetchContent() EXIT"
 End Sub
         `.trim();
         componentsFolder?.file('ContentFetcherTask.brs', contentFetcherTaskBrs);
         
-        // --- COMPONENT: VideoPlayerScene (for deep linking and playback) ---
+        // --- COMPONENT: VideoPlayerScene ---
         const videoPlayerSceneXml = `
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="VideoPlayerScene" extends="Scene">
     <script type="text/brightscript" uri="pkg:/components/VideoPlayerScene.brs" />
     <interface>
-        ' This field will be set by main.brs with the deep link content ID
         <field id="contentID" type="string" />
     </interface>
     <children>
-        <Label 
-            id="statusLabel" 
-            text="Loading video..." 
-            translation="[960, 540]" 
-            horizAlign="center" 
-            vertAlign="center" />
-        <Video
-            id="videoPlayer"
-            width="1920"
-            height="1080"
-            visible="false"
-        />
-        <!-- NEW: A dedicated Task node to handle fetching data on the correct thread -->
+        <Label id="statusLabel" text="Loading video..." translation="[960, 540]" horizAlign="center" vertAlign="center" />
+        <Video id="videoPlayer" width="1920" height="1080" visible="false" />
         <ContentFetcherTask id="contentFetcher" />
     </children>
 </component>
@@ -317,6 +315,7 @@ End Sub
         
         const videoPlayerSceneBrs = `
 Sub init()
+    print "[VideoPlayerScene.brs] >> init() ENTER"
     m.top.setFocus(true)
     m.statusLabel = m.top.findNode("statusLabel")
     m.videoPlayer = m.top.findNode("videoPlayer")
@@ -331,18 +330,19 @@ Sub init()
     end if
     
     if m.top.contentID <> invalid AND m.top.contentID <> ""
-        ' REFACTORED: Delegate data fetching to the ContentFetcherTask
         m.fetcher = m.top.findNode("contentFetcher")
         m.fetcher.observeField("output", "onFeedData")
-        m.fetcher.uri = "${feedUrl}" ' Trigger the fetch
+        m.fetcher.control = "RUN"
+        m.fetcher.uri = "${feedUrl}"
     else
         m.statusLabel.text = "Error: No content ID provided."
         FireLaunchBeacon(false)
     end if
+    print "[VideoPlayerScene.brs] << init() EXIT"
 End Sub
 
-' This function is called when the ContentFetcherTask has finished its work.
 Sub onFeedData(event as object)
+    print "[VideoPlayerScene.brs] >> onFeedData() ENTER"
     json = event.getData()
     movieData = FindMovieInFeed(json, m.top.contentID)
     if movieData <> invalid
@@ -351,6 +351,7 @@ Sub onFeedData(event as object)
         m.statusLabel.text = "Error: Content not found in feed."
         FireLaunchBeacon(false)
     end if
+    print "[VideoPlayerScene.brs] << onFeedData() EXIT"
 End Sub
 
 Function FindMovieInFeed(feed as Object, contentId as String) as Object
@@ -368,50 +369,42 @@ Function FindMovieInFeed(feed as Object, contentId as String) as Object
 End Function
 
 Sub playMovie(movieData as Object)
+    print "[VideoPlayerScene.brs] >> playMovie() ENTER"
     videoContent = CreateObject("roSGNode", "ContentNode")
     videoContent.stream = { url: movieData.streamUrl }
     videoContent.title = movieData.title
-
     m.videoPlayer.content = videoContent
     m.videoPlayer.streamFormat = "mp4"
-    
     m.statusLabel.visible = false
     m.videoPlayer.visible = true
     m.videoPlayer.setFocus(true)
     m.videoPlayer.control = "play"
+    print "[VideoPlayerScene.brs] << playMovie() EXIT"
 End Sub
 
 Sub onVideoStateChange()
     state = m.videoPlayer.state
-    if state = "playing"
-        FireLaunchBeacon(true)
-    else if state = "finished" or state = "error"
-        m.top.getScene().close = true
-    end if
+    if state = "playing" then FireLaunchBeacon(true)
+    ' FIX: Changed m.top.getScene().close to the more direct m.top.close
+    if state = "finished" or state = "error" then m.top.close = true
 end sub
 
-' ROKU CERTIFICATION FIX: Fires the AppLaunchComplete beacon.
-' SYNTAX FIX: Rewritten to use a standard if/else block, which is valid BrightScript syntax.
 Sub FireLaunchBeacon(success as Boolean)
     if not m.launchBeaconFired
+        print "[VideoPlayerScene.brs] Firing AppLaunchComplete beacon, success: "; success
         launchResult = "Failure"
         if success = true then launchResult = "Success"
-
-        params = {
-            "partner_id": "cratetv",
-            "event_name": "AppLaunchComplete",
-            "event_data": {
-                "launch_result": launchResult
-            }
-        }
+        params = { "partner_id": "cratetv", "event_name": "AppLaunchComplete", "event_data": { "launch_result": launchResult } }
         CreateObject("roSystemLog").sendline(FormatJson(params))
         m.launchBeaconFired = true
     end if
 End Sub
 
+' CLEANUP: Removed unused 'key' and 'press' parameters to eliminate compiler warnings.
 Function onKeyEvent(key as String, press as Boolean) as Boolean
     if press and key = "back"
-        m.top.getScene().close = true
+        ' FIX: Changed m.top.getScene().close to the more direct m.top.close
+        m.top.close = true
         return true
     end if
     return false
