@@ -534,22 +534,6 @@ const AdminPage: React.FC = () => {
                 </button>
             </div>
             
-            {/* Developer Tools Section */}
-            {isDeveloperMode && (
-                <div className="bg-gray-800 p-6 rounded-lg border border-red-700 mb-8">
-                    <h2 className="text-xl sm:text-2xl font-bold mb-3 text-red-400">Developer Tools</h2>
-                    <p className="text-gray-400 mb-4 max-w-3xl">
-                        Download the current live content data as a `constants.ts` file. This is useful for creating a local backup or for manual bulk edits.
-                    </p>
-                    <button
-                        onClick={handleDownloadConstants}
-                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
-                    >
-                        Download constants.ts
-                    </button>
-                </div>
-            )}
-
           <div className="flex justify-between items-center mb-8">
               <h2 className="text-xl sm:text-2xl font-bold">Content Management</h2>
               <button
@@ -583,6 +567,22 @@ const AdminPage: React.FC = () => {
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Developer Tools Section */}
+          {isDeveloperMode && (
+              <div className="bg-gray-800 p-6 rounded-lg border border-red-700 mt-8">
+                  <h2 className="text-xl sm:text-2xl font-bold mb-3 text-red-400">Developer Tools</h2>
+                  <p className="text-gray-400 mb-4 max-w-3xl">
+                      Download the current live content data as a `constants.ts` file. This is useful for creating a local backup or for manual bulk edits.
+                  </p>
+                  <button
+                      onClick={handleDownloadConstants}
+                      className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+                  >
+                      Download constants.ts
+                  </button>
+              </div>
           )}
         </div>
       </main>
