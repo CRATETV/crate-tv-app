@@ -8,13 +8,18 @@ export interface LiveData {
     festivalConfig: FestivalConfig;
 }
 
-// Store the live data URL in memory to avoid refetching it constantly
+// In-memory cache variables
 let liveDataUrl: string | null = null;
+let cachedLiveData: LiveData | null = null;
+let lastFetchTimestamp: number = 0;
+const CACHE_DURATION_MS = 60 * 1000; // 1 minute cache
 
 export const invalidateCache = () => {
-    // Invalidate the cached URL, so it's refetched next time.
+    // Invalidate both the data and the URL to force a full refresh
     liveDataUrl = null; 
-    console.log("Live data URL cache invalidated.");
+    cachedLiveData = null;
+    lastFetchTimestamp = 0;
+    console.log("Live data cache invalidated.");
 };
 
 const getFallbackData = (): LiveData => ({
@@ -38,29 +43,36 @@ const getLiveUrl = async (): Promise<string | null> => {
 };
 
 export const fetchAndCacheLiveData = async (): Promise<LiveData> => {
+    const now = Date.now();
+    // Return cached data if it's available and not expired
+    if (cachedLiveData && (now - lastFetchTimestamp < CACHE_DURATION_MS)) {
+        return cachedLiveData;
+    }
+
     const url = await getLiveUrl();
     if (!url) {
         console.warn("Could not retrieve live data URL, using static data.");
-        // Return fallback data if the live URL can't be fetched.
         return getFallbackData();
     }
 
     try {
-        // Fetch fresh data every time. Use a cache-busting param to ensure the latest version is retrieved.
+        // Use a cache-busting param to ensure the latest version is retrieved from S3
         const response = await fetch(`${url}?t=${new Date().getTime()}`);
         if (!response.ok) throw new Error('Network response was not ok');
         
         const data = await response.json();
         
-        // Basic validation of fetched data structure
         if (!data.movies || !data.categories) {
            throw new Error('Fetched data has incorrect structure');
         }
         
-        // Return the fresh data without caching it in this service.
+        // Store the freshly fetched data in our cache
+        cachedLiveData = data;
+        lastFetchTimestamp = now;
         return data;
     } catch (error) {
         console.error("Could not fetch live data, falling back to static data.", error);
+        // Do not cache fallback data, as the issue might be temporary
         return getFallbackData();
     }
 };

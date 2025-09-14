@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchAndCacheLiveData } from '../services/dataService.ts';
 
 interface HeaderProps {
   searchQuery: string;
@@ -11,6 +12,21 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit, isStaging, showSearch = true }) => {
+  const [isFestivalLive, setIsFestivalLive] = useState(false);
+
+  useEffect(() => {
+    const checkFestivalStatus = async () => {
+        try {
+            const liveData = await fetchAndCacheLiveData();
+            // Use ?? false to handle cases where the property might be missing from older data
+            setIsFestivalLive(liveData.festivalConfig?.isFestivalLive ?? false);
+        } catch (error) {
+            console.error("Could not check festival status for header", error);
+            setIsFestivalLive(false); // Default to not showing the link on error
+        }
+    };
+    checkFestivalStatus();
+  }, []);
   
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(event.target.value);
@@ -57,6 +73,15 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
         >
           Home
         </a>
+        {isFestivalLive && (
+            <a 
+              href="/festival" 
+              onClick={(e) => handleNavigate(e, '/festival')} 
+              className={`${linkBaseStyles} ${pathname.startsWith('/festival') ? activeLinkStyles : inactiveLinkStyles}`}
+            >
+              Festival
+            </a>
+        )}
         <a 
           href="/classics" 
           onClick={(e) => handleNavigate(e, '/classics')} 

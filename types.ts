@@ -40,6 +40,7 @@ export interface FestivalDay {
 export interface FestivalConfig {
     title: string;
     description: string;
+    isFestivalLive?: boolean;
 }
 
 // FIX: Added the User interface to be used by the AuthContext.

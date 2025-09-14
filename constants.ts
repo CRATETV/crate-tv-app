@@ -3,7 +3,8 @@ import { Category, Movie, FestivalDay, FestivalConfig } from './types.ts';
 
 export const festivalConfigData: FestivalConfig = {
   "title": "Crate TV Film Festival",
-  "description": "Discover the next generation of indie filmmakers. Three days of incredible shorts, exclusive premieres, and unforgettable stories."
+  "description": "Discover the next generation of indie filmmakers. Three days of incredible shorts, exclusive premieres, and unforgettable stories.",
+  "isFestivalLive": false
 };
 
 export const categoriesData: Record<string, Category> = {

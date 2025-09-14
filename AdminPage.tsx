@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
-import { moviesData as initialMoviesData, categoriesData as initialCategoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfigData } from './constants.ts';
+// FIX: Imported the 'LiveData' type to resolve 'Cannot find name' errors.
+import { fetchAndCacheLiveData, invalidateCache, LiveData } from './services/dataService.ts';
 import { Movie, Category, FestivalDay, FestivalConfig, FilmBlock } from './types.ts';
 import MovieEditor from './components/MovieEditor.tsx';
 import Footer from './components/Footer.tsx';
-import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
+import ConstantsUploader from './components/ConstantsUploader.tsx';
 
 // Helper to format the current date/time for a datetime-local input
 const getLocalDatetimeString = () => {
@@ -13,7 +13,7 @@ const getLocalDatetimeString = () => {
     return now.toISOString().slice(0, 16);
 };
 
-// --- MovieSelectorModal Component ---
+// --- MovieSelectorModal Component (Used by Festival Editor) ---
 interface MovieSelectorModalProps {
   allMovies: Movie[];
   initialSelectedKeys: string[];
@@ -42,24 +42,13 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
       <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col border border-gray-600" onClick={e => e.stopPropagation()}>
         <div className="p-4 border-b border-gray-700">
           <h3 className="text-xl font-bold text-white">Select Films</h3>
-          <input
-            type="text"
-            placeholder="Search films..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full mt-2 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-red-500"
-          />
+          <input type="text" placeholder="Search films..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full mt-2 form-input" />
         </div>
         <div className="p-4 overflow-y-auto">
           <div className="space-y-2">
             {filteredMovies.map(movie => (
               <label key={movie.key} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-700 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedKeys.has(movie.key)}
-                  onChange={() => toggleSelection(movie.key)}
-                  className="h-5 w-5 rounded bg-gray-600 border-gray-500 text-red-500 focus:ring-red-500"
-                />
+                <input type="checkbox" checked={selectedKeys.has(movie.key)} onChange={() => toggleSelection(movie.key)} className="h-5 w-5 rounded bg-gray-600 border-gray-500 text-red-500 focus:ring-red-500" />
                 <img src={movie.poster} alt="" className="w-10 h-10 object-cover rounded-md" />
                 <span className="text-gray-200">{movie.title}</span>
               </label>
@@ -74,43 +63,29 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
     </div>
   );
 };
-// --- End MovieSelectorModal Component ---
 
-
+// Main Admin Page
 const AdminPage: React.FC = () => {
-  const [movies, setMovies] = useState<Record<string, Movie>>({});
-  const [categories, setCategories] = useState<Record<string, Category>>({});
-  const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
-  const [festivalConfig, setFestivalConfig] = useState<FestivalConfig>(initialFestivalConfigData);
+  const [data, setData] = useState<LiveData | null>(null);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  
-  // Authentication State
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [loginMessage, setLoginMessage] = useState('');
-
-  // UI State
   const [publishStatus, setPublishStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [publishError, setPublishError] = useState('');
+  const [activeTab, setActiveTab] = useState('festival');
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
 
   const fetchAdminData = async () => {
     try {
         invalidateCache();
         const liveData = await fetchAndCacheLiveData();
-        setMovies(liveData.movies);
-        setCategories(liveData.categories);
-        setFestivalData(liveData.festivalData);
-        setFestivalConfig(liveData.festivalConfig);
+        setData(liveData);
     } catch (e) {
-        console.error("Failed to fetch live data for admin, falling back to initial data.", e);
-        setMovies(initialMoviesData);
-        setCategories(initialCategoriesData);
-        setFestivalData(initialFestivalData);
-        setFestivalConfig(initialFestivalConfigData);
+        console.error("Failed to fetch live data for admin.", e);
+        setPublishError("Could not load live data.");
     }
   };
 
@@ -126,25 +101,23 @@ const AdminPage: React.FC = () => {
     setLoginError('');
     setLoginMessage('');
     setIsAuthenticating(true);
-
     try {
         const response = await fetch('/api/admin-login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password }),
         });
-        const data = await response.json();
-        
-        if (response.ok && data.success) {
+        const resData = await response.json();
+        if (response.ok && resData.success) {
             sessionStorage.setItem('isAdminAuthenticated', 'true');
             sessionStorage.setItem('adminPassword', password);
             setIsAuthenticated(true);
-            if (data.firstLogin) {
+            if (resData.firstLogin) {
                 setLoginMessage("Setup complete! Secure your admin panel by adding this password as the ADMIN_PASSWORD environment variable.");
             }
             fetchAdminData();
         } else {
-            setLoginError(data.error || 'Login failed.');
+            setLoginError(resData.error || 'Login failed.');
         }
     } catch (error) {
         setLoginError('An error occurred. Please try again.');
@@ -159,7 +132,7 @@ const AdminPage: React.FC = () => {
     setPassword('');
     setLoginError('');
   };
-  
+
   const publishData = async () => {
     setPublishStatus('saving');
     setPublishError('');
@@ -167,12 +140,10 @@ const AdminPage: React.FC = () => {
         const adminPassword = sessionStorage.getItem('adminPassword');
         if (!adminPassword) throw new Error('Authentication error. Please log in again.');
         
-        const fullData = { movies, categories, festivalData, festivalConfig };
-
         const response = await fetch('/api/publish-data', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: adminPassword, data: fullData }),
+            body: JSON.stringify({ password: adminPassword, data: data }),
         });
 
         if (!response.ok) {
@@ -182,98 +153,128 @@ const AdminPage: React.FC = () => {
 
         invalidateCache();
         setPublishStatus('success');
-        
-        // Notify other tabs to reload data
         const updateChannel = new BroadcastChannel('cratetv_data_update');
         updateChannel.postMessage({ type: 'update' });
         updateChannel.close();
-
         setTimeout(() => setPublishStatus('idle'), 2500);
-
     } catch (error) {
         setPublishStatus('error');
         setPublishError(error instanceof Error ? error.message : 'An unknown error occurred.');
     }
   };
-  
-  const handleAddNewMovie = () => {
-    setSelectedMovie({
-      key: `newmovie${Date.now()}`,
-      title: '', synopsis: '', cast: [], director: '',
-      trailer: '', fullMovie: '', poster: '', tvPoster: '',
-      likes: 0, releaseDateTime: getLocalDatetimeString(), mainPageExpiry: '',
-    });
-  };
+
+  const handleAddNewMovie = () => setSelectedMovie({
+    key: `newmovie${Date.now()}`, title: '', synopsis: '', cast: [], director: '',
+    trailer: '', fullMovie: '', poster: '', tvPoster: '',
+    likes: 0, releaseDateTime: getLocalDatetimeString(), mainPageExpiry: '',
+  });
 
   const handleMovieSave = (updatedMovie: Movie) => {
-    const newMovies = { ...movies, [updatedMovie.key]: updatedMovie };
-    setMovies(newMovies);
-    // Add to 'newReleases' category automatically if not there already
-    setCategories(prev => {
-        const newCats = { ...prev };
+    setData((prev: LiveData | null) => {
+        if (!prev) return null;
+        const newMovies = { ...prev.movies, [updatedMovie.key]: updatedMovie };
+        const newCats = { ...prev.categories };
         if (newCats.newReleases && !newCats.newReleases.movieKeys.includes(updatedMovie.key)) {
             newCats.newReleases.movieKeys.unshift(updatedMovie.key);
         }
-        return newCats;
+        return { ...prev, movies: newMovies, categories: newCats };
     });
     setSelectedMovie(null);
   };
-  
-  const handleMovieDelete = (movieKey: string) => {
-     if (window.confirm('Are you sure you want to permanently delete this film from the library? This will also remove it from all categories and festival blocks.')) {
-        const newMovies = { ...movies };
-        delete newMovies[movieKey];
-        
-        const newCategories = JSON.parse(JSON.stringify(categories));
-        Object.keys(newCategories).forEach(catKey => {
-            newCategories[catKey].movieKeys = newCategories[catKey].movieKeys.filter((key: string) => key !== movieKey);
-        });
 
-        const newFestivalData = JSON.parse(JSON.stringify(festivalData));
-        newFestivalData.forEach((day: FestivalDay) => {
-            day.blocks.forEach((block: FilmBlock) => {
-                block.movieKeys = block.movieKeys.filter((key: string) => key !== movieKey);
+  const handleMovieDelete = (movieKey: string) => {
+     if (window.confirm('Are you sure you want to permanently delete this film?')) {
+        setData((prev: LiveData | null) => {
+            if (!prev) return null;
+            const newMovies = { ...prev.movies };
+            delete newMovies[movieKey];
+            const newCategories = JSON.parse(JSON.stringify(prev.categories));
+            Object.keys(newCategories).forEach(catKey => {
+                newCategories[catKey].movieKeys = newCategories[catKey].movieKeys.filter((key: string) => key !== movieKey);
             });
+            const newFestivalData = JSON.parse(JSON.stringify(prev.festivalData));
+            newFestivalData.forEach((day: FestivalDay) => {
+                day.blocks.forEach((block: FilmBlock) => {
+                    block.movieKeys = block.movieKeys.filter((key: string) => key !== movieKey);
+                });
+            });
+            return { ...prev, movies: newMovies, categories: newCategories, festivalData: newFestivalData };
         });
-        
-        setMovies(newMovies);
-        setCategories(newCategories);
-        setFestivalData(newFestivalData);
         setSelectedMovie(null);
     }
-  }
+  };
 
   // Festival Data Handlers
   const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFestivalConfig(prev => ({ ...prev, [name]: value }));
+    setData((prev: LiveData | null) => {
+        if (!prev) return null;
+        const currentConfig = prev.festivalConfig || { title: '', description: '' };
+        return { ...prev, festivalConfig: { ...currentConfig, [name]: value } };
+    });
+  };
+  const handleFestivalLiveToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { checked } = e.target;
+    setData((prev: LiveData | null) => {
+        if (!prev) return null;
+        const currentConfig = prev.festivalConfig || { title: '', description: '' };
+        return { ...prev, festivalConfig: { ...currentConfig, isFestivalLive: checked }};
+    });
   };
   const handleDayChange = (dayIndex: number, field: 'date', value: string) => {
-    setFestivalData(currentData => currentData.map((day, i) => i === dayIndex ? { ...day, [field]: value } : day));
+    setData((prev: LiveData | null) => (prev ? {...prev, festivalData: prev.festivalData.map((day, i) => i === dayIndex ? { ...day, [field]: value } : day)} : null));
   };
   const handleBlockChange = (dayIndex: number, blockIndex: number, field: 'title', value: string) => {
-    setFestivalData(currentData =>
-      currentData.map((day, i) => i === dayIndex
+    setData((prev: LiveData | null) => (prev ? {...prev, festivalData: prev.festivalData.map((day, i) => i === dayIndex
         ? { ...day, blocks: day.blocks.map((block, j) => j === blockIndex ? { ...block, [field]: value } : block) }
-        : day
-      )
-    );
+        : day)}: null));
   };
   const handleMovieSelectionSave = (dayIndex: number, blockIndex: number, newMovieKeys: string[]) => {
-    setFestivalData(currentData =>
-      currentData.map((day, i) => i === dayIndex
+    setData((prev: LiveData | null) => (prev ? {...prev, festivalData: prev.festivalData.map((day, i) => i === dayIndex
         ? { ...day, blocks: day.blocks.map((block, j) => j === blockIndex ? { ...block, movieKeys: newMovieKeys } : block) }
-        : day
-      )
-    );
+        : day)} : null));
     setEditingBlock(null);
   };
   const addBlock = (dayIndex: number) => {
     const newBlock: FilmBlock = { id: `day${dayIndex + 1}-block${Date.now()}`, title: 'New Film Block', movieKeys: [] };
-    setFestivalData(currentData => currentData.map((day, i) => i === dayIndex ? { ...day, blocks: [...day.blocks, newBlock] } : day));
+    setData((prev: LiveData | null) => (prev ? {...prev, festivalData: prev.festivalData.map((day, i) => i === dayIndex ? { ...day, blocks: [...day.blocks, newBlock] } : day)} : null));
   };
   const removeBlock = (dayIndex: number, blockIndex: number) => {
-     setFestivalData(currentData => currentData.map((day, i) => i === dayIndex ? { ...day, blocks: day.blocks.filter((_, j) => j !== blockIndex) } : day));
+     setData((prev: LiveData | null) => (prev ? {...prev, festivalData: prev.festivalData.map((day, i) => i === dayIndex ? { ...day, blocks: day.blocks.filter((_, j) => j !== blockIndex) } : day)} : null));
+  };
+
+  const TabButton: React.FC<{ tabName: string, children: React.ReactNode }> = ({ tabName, children }) => (
+    <button onClick={() => setActiveTab(tabName)} className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tabName ? 'bg-gray-800 text-white' : 'bg-gray-900 text-gray-400 hover:bg-gray-800/50'}`}>
+        {children}
+    </button>
+  );
+
+  const [isPackaging, setIsPackaging] = useState(false);
+  const [packageError, setPackageError] = useState('');
+
+  const generateRokuZip = async () => {
+    setIsPackaging(true);
+    setPackageError('');
+    try {
+        const response = await fetch('/api/generate-roku-zip');
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Failed to generate package');
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'cratv.zip';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (err) {
+        setPackageError(err instanceof Error ? err.message : 'An unknown error occurred.');
+    } finally {
+        setIsPackaging(false);
+    }
   };
 
 
@@ -283,13 +284,10 @@ const AdminPage: React.FC = () => {
         <div className="w-full max-w-sm bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
           <h1 className="text-2xl font-bold mb-6 text-center text-white">Admin Login</h1>
           {loginMessage && <p className="text-green-400 text-sm mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-md">{loginMessage}</p>}
-          <form onSubmit={handleAuth}>
-            <div className="relative">
-                <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500 pr-10" disabled={isAuthenticating}/>
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white" aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.477 3 10 3a9.958 9.958 0 00-4.512 1.074L3.707 2.293zM10 12a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /><path d="M2 10s3.939 4 8 4 8-4 8-4-3.939-4-8-4-8 4-8 4zm13.707 1.293a1 1 0 01-1.414 1.414l-1.473-1.473A3.003 3.003 0 0110 12a3 3 0 01-3-3 2.999 2.999 0 01.176-1.041l-1.56-1.56a1 1 0 111.414-1.414l1.473 1.473A3.003 3.003 0 0110 8a3 3 0 013 3c0 .54-.14 1.04-.383 1.464z" /></svg> : <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.523 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" /></svg>}</button>
-            </div>
+          <form onSubmit={handleAuth} className="space-y-4">
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" className="w-full form-input" disabled={isAuthenticating}/>
             {loginError && <p className="text-red-500 text-sm mt-2 text-center">{loginError}</p>}
-            <button type="submit" className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-red-800 disabled:cursor-not-allowed" disabled={isAuthenticating}>{isAuthenticating ? 'Logging in...' : 'Login'}</button>
+            <button type="submit" className="w-full submit-btn" disabled={isAuthenticating}>{isAuthenticating ? 'Logging in...' : 'Login'}</button>
           </form>
         </div>
       </div>
@@ -300,11 +298,11 @@ const AdminPage: React.FC = () => {
     <div className="flex flex-col min-h-screen bg-gray-900 text-white">
       <header className="sticky top-0 bg-gray-900/80 backdrop-blur-md z-50 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3 flex justify-between items-center">
-             <h1 className="text-2xl font-bold">Film Festival Editor</h1>
+             <h1 className="text-2xl font-bold">Admin Panel</h1>
              <div className="flex items-center gap-4">
                  {publishError && <span className="text-red-400 text-sm">{publishError}</span>}
                  <button onClick={publishData} disabled={publishStatus === 'saving'} className={`font-bold py-2 px-5 rounded-md transition-colors w-48 text-center text-white ${publishStatus === 'saving' ? 'bg-blue-600' : publishStatus === 'success' ? 'bg-green-600' : 'bg-red-600 hover:bg-red-700'}`}>
-                    {publishStatus === 'saving' ? 'Publishing...' : publishStatus === 'success' ? '✓ Published' : 'Save & Publish'}
+                    {publishStatus === 'saving' ? 'Publishing...' : publishStatus === 'success' ? '✓ Published' : 'Save & Publish All'}
                  </button>
                  <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-white">Log Out</button>
              </div>
@@ -312,67 +310,123 @@ const AdminPage: React.FC = () => {
       </header>
       
       <main className="flex-grow p-4 sm:p-8">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-                 {/* Festival General Settings */}
-                <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                    <h2 className="text-2xl font-bold mb-4 text-purple-400">Festival General Settings</h2>
-                    <div className="space-y-4">
-                        <div>
-                            <label htmlFor="title" className="block text-sm font-medium text-gray-300">Festival Title</label>
-                            <input type="text" name="title" value={festivalConfig.title} onChange={handleConfigChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-purple-500" />
-                        </div>
-                        <div>
-                            <label htmlFor="description" className="block text-sm font-medium text-gray-300">Festival Description</label>
-                            <textarea name="description" value={festivalConfig.description} onChange={handleConfigChange} rows={3} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-purple-500"></textarea>
-                        </div>
-                    </div>
-                </div>
-                {/* Festival Schedule */}
-                <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                     <h2 className="text-2xl font-bold mb-4 text-purple-400">Festival Schedule</h2>
-                     <div className="space-y-6">
-                        {festivalData.map((day, dayIndex) => (
-                          <div key={day.day} className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
-                            <div className="flex justify-between items-center mb-4">
-                              <h3 className="text-xl font-bold text-white">Day {day.day}</h3>
-                              <input type="text" value={day.date} onChange={e => handleDayChange(dayIndex, 'date', e.target.value)} className="bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-white text-sm" />
-                            </div>
-                            <div className="space-y-4 pl-4 border-l-2 border-gray-600">
-                              {day.blocks.map((block, blockIndex) => (
-                                <div key={block.id} className="bg-gray-800 p-3 rounded-md">
-                                   <div className="flex justify-between items-center mb-2">
-                                        <input type="text" value={block.title} onChange={e => handleBlockChange(dayIndex, blockIndex, 'title', e.target.value)} className="w-full text-lg font-semibold bg-transparent text-white focus:outline-none focus:bg-gray-700 rounded-md px-2"/>
-                                        <button onClick={() => removeBlock(dayIndex, blockIndex)} className="text-xs text-red-500 hover:text-red-400 ml-2 flex-shrink-0">Remove Block</button>
-                                   </div>
-                                   <p className="text-xs text-gray-400 mb-2">{block.movieKeys.length} film(s) selected.</p>
-                                   <button onClick={() => setEditingBlock({ dayIndex, blockIndex })} className="text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md">Add/Remove Films</button>
-                                </div>
-                              ))}
-                               <button onClick={() => addBlock(dayIndex)} className="text-sm bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md mt-4">+ Add Block</button>
-                            </div>
-                          </div>
-                        ))}
-                     </div>
-                </div>
+        <div className="max-w-7xl mx-auto">
+            <div className="flex border-b border-gray-700">
+                <TabButton tabName="festival">Film Festival</TabButton>
+                <TabButton tabName="sales">Sales Data</TabButton>
+                <TabButton tabName="roku">Roku Packager</TabButton>
+                <TabButton tabName="dev">Developer Tools</TabButton>
             </div>
-
-            {/* Film Library */}
-            <div className="lg:col-span-1">
-                <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 sticky top-24">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold text-purple-400">Film Library</h2>
-                        <button onClick={handleAddNewMovie} className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md text-sm">+ Add Film</button>
-                    </div>
-                    <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
-                        {Object.values(movies).sort((a,b) => a.title.localeCompare(b.title)).map(movie => (
-                            <div key={movie.key} onClick={() => setSelectedMovie(movie)} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-700 cursor-pointer">
-                                <img src={movie.poster} alt={movie.title} className="w-12 h-16 object-cover rounded-md flex-shrink-0" />
-                                <span className="text-white text-sm flex-grow">{movie.title}</span>
+            <div className="bg-gray-800 p-6 rounded-b-lg">
+                {!data ? (
+                    <p>Loading data...</p>
+                ) : (
+                    <>
+                        {activeTab === 'festival' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                <div className="lg:col-span-2 space-y-6">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label htmlFor="title" className="block text-sm font-medium text-gray-300">Festival Title</label>
+                                            <input type="text" name="title" value={data.festivalConfig?.title || ''} onChange={handleConfigChange} className="mt-1 block w-full form-input" />
+                                        </div>
+                                        <div>
+                                            <label htmlFor="description" className="block text-sm font-medium text-gray-300">Festival Description</label>
+                                            <textarea name="description" value={data.festivalConfig?.description || ''} onChange={handleConfigChange} rows={3} className="mt-1 block w-full form-input"></textarea>
+                                        </div>
+                                        <div className="flex items-center justify-between bg-gray-700/50 p-3 rounded-md">
+                                            <label htmlFor="isFestivalLive" className="font-medium text-gray-200">Make Festival Publicly Visible</label>
+                                            <div className="relative inline-flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    id="isFestivalLive"
+                                                    checked={data.festivalConfig?.isFestivalLive ?? false}
+                                                    onChange={handleFestivalLiveToggle}
+                                                    className="sr-only peer"
+                                                />
+                                                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-red-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-6">
+                                        {data.festivalData.map((day: FestivalDay, dayIndex: number) => (
+                                        <div key={day.day} className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+                                            <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-xl font-bold text-white">Day {day.day}</h3>
+                                            <input type="text" value={day.date} onChange={e => handleDayChange(dayIndex, 'date', e.target.value)} className="bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-white text-sm" />
+                                            </div>
+                                            <div className="space-y-4 pl-4 border-l-2 border-gray-600">
+                                            {day.blocks.map((block, blockIndex) => (
+                                                <div key={block.id} className="bg-gray-800 p-3 rounded-md">
+                                                <div className="flex justify-between items-center mb-2">
+                                                        <input type="text" value={block.title} onChange={e => handleBlockChange(dayIndex, blockIndex, 'title', e.target.value)} className="w-full text-lg font-semibold bg-transparent text-white focus:outline-none focus:bg-gray-700 rounded-md px-2"/>
+                                                        <button onClick={() => removeBlock(dayIndex, blockIndex)} className="text-xs text-red-500 hover:text-red-400 ml-2 flex-shrink-0">Remove Block</button>
+                                                </div>
+                                                <p className="text-xs text-gray-400 mb-2">{block.movieKeys.length} film(s) selected.</p>
+                                                <button onClick={() => setEditingBlock({ dayIndex, blockIndex })} className="text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md">Add/Remove Films</button>
+                                                </div>
+                                            ))}
+                                            <button onClick={() => addBlock(dayIndex)} className="text-sm bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md mt-4">+ Add Block</button>
+                                            </div>
+                                        </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="lg:col-span-1">
+                                    <div className="sticky top-24">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h2 className="text-2xl font-bold">Film Library</h2>
+                                            <button onClick={handleAddNewMovie} className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md text-sm">+ Add Film</button>
+                                        </div>
+                                        <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2 bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+                                            {Object.values(data.movies).sort((a: any, b: any) => a.title.localeCompare(b.title)).map((movie: any) => (
+                                                <div key={movie.key} onClick={() => setSelectedMovie(movie)} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-700 cursor-pointer">
+                                                    <img src={movie.poster} alt={movie.title} className="w-12 h-16 object-cover rounded-md flex-shrink-0" />
+                                                    <span className="text-white text-sm flex-grow">{movie.title}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        ))}
-                    </div>
-                </div>
+                        )}
+
+                        {activeTab === 'sales' && (
+                            <div>
+                                <h2 className="text-2xl font-bold mb-4">Sales Data</h2>
+                                <div className="bg-gray-700/50 p-6 rounded-lg text-center">
+                                    <p className="text-gray-400">Payment processing and sales data are temporarily unavailable.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'roku' && (
+                             <div>
+                                <h2 className="text-2xl font-bold mb-4">Automated Roku Channel Packager</h2>
+                                <div className="bg-gray-700/50 p-6 rounded-lg">
+                                    <p className="text-gray-300 mb-4">Click the button below to generate a ready-to-upload ZIP file for the Crate TV Roku channel. The channel will automatically pull its content from the live website data.</p>
+                                    <button onClick={generateRokuZip} disabled={isPackaging} className="submit-btn">
+                                        {isPackaging ? 'Packaging...' : 'Generate & Download Roku ZIP'}
+                                    </button>
+                                    {packageError && <p className="text-red-400 mt-4 text-sm">{packageError}</p>}
+                                </div>
+                            </div>
+                        )}
+                        
+                        {activeTab === 'dev' && (
+                             <div>
+                                <h2 className="text-2xl font-bold mb-4">Developer Tools</h2>
+                                <div className="bg-gray-700/50 p-6 rounded-lg space-y-6">
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-red-400 mb-2">Overwrite Live Data from File</h3>
+                                        <p className="text-sm text-gray-400 mb-4">This is a dangerous operation. Upload a `constants.ts` file to completely replace all movies, categories, and festival data on the live site. Use with extreme caution.</p>
+                                        <ConstantsUploader />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
             </div>
         </div>
       </main>
@@ -381,23 +435,13 @@ const AdminPage: React.FC = () => {
       {selectedMovie && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
             <div className="bg-gray-800 rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-gray-700 p-6">
-                <MovieEditor 
-                    movie={selectedMovie}
-                    onSave={handleMovieSave}
-                    onCancel={() => setSelectedMovie(null)}
-                    onDelete={handleMovieDelete}
-                />
+                <MovieEditor movie={selectedMovie} onSave={handleMovieSave} onCancel={() => setSelectedMovie(null)} onDelete={handleMovieDelete} />
             </div>
         </div>
       )}
 
-       {editingBlock !== null && (
-        <MovieSelectorModal
-          allMovies={Object.values(movies)}
-          initialSelectedKeys={festivalData[editingBlock.dayIndex].blocks[editingBlock.blockIndex].movieKeys}
-          onSave={(newKeys) => handleMovieSelectionSave(editingBlock.dayIndex, editingBlock.blockIndex, newKeys)}
-          onClose={() => setEditingBlock(null)}
-        />
+       {editingBlock !== null && data && (
+        <MovieSelectorModal allMovies={Object.values(data.movies)} initialSelectedKeys={data.festivalData[editingBlock.dayIndex].blocks[editingBlock.blockIndex].movieKeys} onSave={(newKeys) => handleMovieSelectionSave(editingBlock.dayIndex, editingBlock.blockIndex, newKeys)} onClose={() => setEditingBlock(null)} />
       )}
     </div>
   );

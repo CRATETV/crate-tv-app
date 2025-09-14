@@ -2,10 +2,11 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Header from './Header.tsx';
 import Footer from './Footer.tsx';
 import BackToTopButton from './BackToTopButton.tsx';
-import { festivalData as initialFestivalData, moviesData } from '../constants.ts';
-import { FilmBlock, Movie } from '../types.ts';
+import { fetchAndCacheLiveData } from '../services/dataService.ts';
+import { FilmBlock, Movie, FestivalDay, FestivalConfig } from '../types.ts';
 import FilmBlockCard from './FilmBlockCard.tsx';
 import FilmBlockDetailsModal from './FilmBlockDetailsModal.tsx';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 interface FestivalPurchases {
   hasFullPass: boolean;
@@ -69,27 +70,39 @@ const useFestivalPurchases = () => {
 
 
 const FestivalPage: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(true);
   const [activeDay, setActiveDay] = useState<number>(1);
   const [selectedBlock, setSelectedBlock] = useState<FilmBlock | null>(null);
   const { purchases, isFilmUnlocked, isBlockUnlocked } = useFestivalPurchases();
-  const [festivalData, setFestivalData] = useState(initialFestivalData);
+  const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
+  const [festivalConfig, setFestivalConfig] = useState<FestivalConfig>({ title: '', description: '' });
+  const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
 
   useEffect(() => {
-    // This effect runs on mount to check for live preview data
-    try {
-      const storedFestival = localStorage.getItem('crateTvAdmin_festival');
-      if (storedFestival) {
-        setFestivalData(JSON.parse(storedFestival));
-      }
-    } catch (error) {
-      console.error("Failed to load festival data from localStorage", error);
-    }
+    const initPage = async () => {
+        setIsLoading(true);
+        try {
+            const liveData = await fetchAndCacheLiveData();
+            setFestivalData(liveData.festivalData);
+            setFestivalConfig(liveData.festivalConfig);
+            setAllMovies(liveData.movies);
+        } catch (error) {
+            console.error("Failed to load festival data:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    initPage();
   }, []);
   
   const handleNavigateToMovie = (movieKey: string) => {
     window.history.pushState({}, '', `/movie/${movieKey}?play=true`);
     window.dispatchEvent(new Event('pushstate'));
   };
+
+  if (isLoading) {
+      return <LoadingSpinner />;
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-[#141414] text-white">
@@ -99,9 +112,9 @@ const FestivalPage: React.FC = () => {
          <div className="relative py-24 md:py-32 bg-gray-900 text-center">
             <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-red-900/40 to-black"></div>
             <div className="relative z-10 max-w-4xl mx-auto px-4">
-                <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">Crate TV Film Festival</h1>
+                <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">{festivalConfig.title}</h1>
                 <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-8">
-                    Discover the next generation of indie filmmakers. Three days of incredible shorts, exclusive premieres, and unforgettable stories.
+                    {festivalConfig.description}
                 </p>
                 {!purchases.hasFullPass ? (
                     <div className="bg-gray-800/50 border border-gray-700 text-gray-400 font-bold py-4 px-8 rounded-lg text-xl inline-block cursor-not-allowed" title="Payments are temporarily unavailable">
@@ -116,12 +129,12 @@ const FestivalPage: React.FC = () => {
         </div>
         
         <div className="max-w-7xl mx-auto p-4 sm:p-8 md:p-12">
-            <div className="flex justify-center border-b border-gray-700 mb-8">
+            <div className="flex justify-center border-b border-gray-700 mb-8 overflow-x-auto scrollbar-hide">
                 {festivalData.map(day => (
                     <button
                         key={day.day}
                         onClick={() => setActiveDay(day.day)}
-                        className={`px-4 sm:px-8 py-4 text-lg font-semibold transition-colors duration-300 border-b-4 ${activeDay === day.day ? 'border-red-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
+                        className={`flex-shrink-0 px-4 sm:px-8 py-4 text-lg font-semibold transition-colors duration-300 border-b-4 ${activeDay === day.day ? 'border-red-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
                     >
                         Day {day.day} <span className="hidden sm:inline-block text-sm text-gray-500">- {day.date}</span>
                     </button>
@@ -130,9 +143,9 @@ const FestivalPage: React.FC = () => {
 
             <div>
                 {festivalData.filter(day => day.day === activeDay).map(day => (
-                    <div key={day.day} className="space-y-10">
+                    <div key={day.day} className="space-y-10 animate-[fadeIn_0.5s_ease-out]">
                         {day.blocks.map(block => {
-                            const blockMovies = block.movieKeys.map(key => moviesData[key]).filter(Boolean);
+                            const blockMovies = block.movieKeys.map(key => allMovies[key]).filter(Boolean);
                             return (
                                 <div key={block.id}>
                                      <h2 className="text-2xl md:text-3xl font-bold mb-4 text-white">{block.title}</h2>
@@ -175,7 +188,7 @@ const FestivalPage: React.FC = () => {
             isFilmUnlocked={isFilmUnlocked}
             isBlockUnlocked={isBlockUnlocked}
             onWatchMovie={handleNavigateToMovie}
-            allMovies={moviesData}
+            allMovies={allMovies}
         />
       )}
     </div>
