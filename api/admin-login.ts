@@ -11,10 +11,19 @@ export async function POST(request: Request) {
             });
         }
 
-        // --- Developer Password Check ---
-        // This password unlocks special developer-only features in the admin panel.
+        // --- Special Password Checks ---
+
+        // Developer: Full access + developer tools
         if (password === "Reb@1984") {
-            return new Response(JSON.stringify({ success: true, isDeveloper: true, usedMasterKey: false }), {
+            return new Response(JSON.stringify({ success: true, isDeveloper: true, hasElevatedPrivileges: true, usedMasterKey: false }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+        
+        // Elevated User: Access to sales and festival editor
+        if (password === "Coll@b660") {
+            return new Response(JSON.stringify({ success: true, isDeveloper: false, hasElevatedPrivileges: true, usedMasterKey: false }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
             });
@@ -27,7 +36,7 @@ export async function POST(request: Request) {
 
         // 1. Check against the primary password
         if (primaryAdminPassword && password === primaryAdminPassword) {
-            return new Response(JSON.stringify({ success: true, isDeveloper: false, usedMasterKey: false }), {
+            return new Response(JSON.stringify({ success: true, isDeveloper: false, hasElevatedPrivileges: false, usedMasterKey: false }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
             });
@@ -35,7 +44,7 @@ export async function POST(request: Request) {
 
         // 2. Check against the master password override
         if (masterPassword && password === masterPassword) {
-            return new Response(JSON.stringify({ success: true, isDeveloper: false, usedMasterKey: true }), {
+            return new Response(JSON.stringify({ success: true, isDeveloper: false, hasElevatedPrivileges: false, usedMasterKey: true }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
             });
@@ -44,7 +53,7 @@ export async function POST(request: Request) {
         // 3. Check against the list of additional user passwords
         for (const key in process.env) {
             if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
-                 return new Response(JSON.stringify({ success: true, isDeveloper: false, usedMasterKey: false }), {
+                 return new Response(JSON.stringify({ success: true, isDeveloper: false, hasElevatedPrivileges: false, usedMasterKey: false }), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' },
                 });
@@ -55,7 +64,7 @@ export async function POST(request: Request) {
         const anyPasswordSet = primaryAdminPassword || masterPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
         if (!anyPasswordSet) {
             console.log("No admin passwords set. Activating first-time setup mode for the session.");
-            return new Response(JSON.stringify({ success: true, firstLogin: true, isDeveloper: false }), {
+            return new Response(JSON.stringify({ success: true, firstLogin: true, isDeveloper: false, hasElevatedPrivileges: true }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
             });

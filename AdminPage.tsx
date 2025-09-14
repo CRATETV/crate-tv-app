@@ -39,6 +39,7 @@ const AdminPage: React.FC = () => {
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -46,6 +47,7 @@ const AdminPage: React.FC = () => {
   const [loginMessage, setLoginMessage] = useState('');
   const [loggedInWithMaster, setLoggedInWithMaster] = useState(false);
   const [isDeveloperMode, setIsDeveloperMode] = useState(false);
+  const [hasElevatedPrivileges, setHasElevatedPrivileges] = useState(false);
   
   // Auto-publishing state
   const [autoPublishStatus, setAutoPublishStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
@@ -85,7 +87,10 @@ const AdminPage: React.FC = () => {
         if (sessionStorage.getItem('isDeveloperMode') === 'true') {
             setIsDeveloperMode(true);
         }
-        fetchSalesData();
+        if (sessionStorage.getItem('hasElevatedPrivileges') === 'true') {
+            setHasElevatedPrivileges(true);
+            fetchSalesData();
+        }
         fetchAdminData();
     }
     
@@ -158,11 +163,19 @@ const AdminPage: React.FC = () => {
                 setIsDeveloperMode(false);
             }
 
+            if (data.hasElevatedPrivileges) {
+                sessionStorage.setItem('hasElevatedPrivileges', 'true');
+                setHasElevatedPrivileges(true);
+                fetchSalesData();
+            } else {
+                sessionStorage.removeItem('hasElevatedPrivileges');
+                setHasElevatedPrivileges(false);
+            }
+
             if (data.firstLogin) {
                 setLoginMessage("Setup complete! To secure your admin panel, add this password as the ADMIN_PASSWORD environment variable in your project's settings.");
             }
             
-            fetchSalesData();
             fetchAdminData();
         } else {
             setLoginError(data.error || 'Login failed.');
@@ -172,6 +185,19 @@ const AdminPage: React.FC = () => {
     } finally {
         setIsAuthenticating(false);
     }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.clear();
+    setIsAuthenticated(false);
+    setIsDeveloperMode(false);
+    setHasElevatedPrivileges(false);
+    setPassword('');
+    setLoginError('');
+    setMovies({});
+    setCategories({});
+    setFestivalData([]);
+    setSalesData(null);
   };
 
   const publishData = async (
@@ -300,6 +326,28 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const handleDownloadConstants = () => {
+    const header = `import { Category, Movie, FestivalDay, FestivalConfig } from './types.ts';\n\n`;
+    
+    const festivalConfigString = `export const festivalConfigData: FestivalConfig = ${JSON.stringify(festivalConfig, null, 2)};\n\n`;
+    const categoriesString = `export const categoriesData: Record<string, Category> = ${JSON.stringify(categories, null, 2)};\n\n`;
+    const moviesString = `export const moviesData: Record<string, Movie> = ${JSON.stringify(movies, null, 2)};\n\n`;
+    const festivalDataString = `export const festivalData: FestivalDay[] = ${JSON.stringify(festivalData, null, 2)};\n`;
+
+    const fileContent = header + festivalConfigString + categoriesString + moviesString + festivalDataString;
+    
+    const blob = new Blob([fileContent], { type: 'text/typescript;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'constants.ts';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
@@ -307,14 +355,34 @@ const AdminPage: React.FC = () => {
           <h1 className="text-2xl font-bold mb-6 text-center text-white">Admin Login</h1>
           {loginMessage && <p className="text-green-400 text-sm mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-md">{loginMessage}</p>}
           <form onSubmit={handleAuth}>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500"
-              disabled={isAuthenticating}
-            />
+            <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500 pr-10"
+                  disabled={isAuthenticating}
+                />
+                <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                    {showPassword ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.477 3 10 3a9.958 9.958 0 00-4.512 1.074L3.707 2.293zM10 12a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                          <path d="M2 10s3.939 4 8 4 8-4 8-4-3.939-4-8-4-8 4-8 4zm13.707 1.293a1 1 0 01-1.414 1.414l-1.473-1.473A3.003 3.003 0 0110 12a3 3 0 01-3-3 2.999 2.999 0 01.176-1.041l-1.56-1.56a1 1 0 111.414-1.414l1.473 1.473A3.003 3.003 0 0110 8a3 3 0 013 3c0 .54-.14 1.04-.383 1.464z" />
+                        </svg>
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                          <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.523 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                        </svg>
+                    )}
+                </button>
+            </div>
             {loginError && <p className="text-red-500 text-sm mt-2 text-center">{loginError}</p>}
             <button type="submit" className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-red-800 disabled:cursor-not-allowed" disabled={isAuthenticating}>
               {isAuthenticating ? 'Logging in...' : 'Login'}
@@ -340,19 +408,24 @@ const AdminPage: React.FC = () => {
             )}
 
            <div className="flex justify-between items-start mb-8">
-              <h1 className="text-2xl sm:text-4xl font-bold">Admin Panel</h1>
-              {autoPublishStatus !== 'idle' && (
-                  <div className={`text-sm px-3 py-1 rounded-md ${
-                      autoPublishStatus === 'saving' ? 'bg-blue-500/20 text-blue-300' :
-                      autoPublishStatus === 'success' ? 'bg-green-500/20 text-green-300' :
-                      'bg-red-500/20 text-red-300'
-                  }`}>
-                      {autoPublishStatus === 'saving' && 'Saving...'}
-                      {autoPublishStatus === 'success' && '✓ Saved & Published'}
-                      {autoPublishStatus === 'error' && 'Error Saving!'}
-                  </div>
-              )}
-          </div>
+                <h1 className="text-2xl sm:text-4xl font-bold">Admin Panel</h1>
+                <div className="flex items-center gap-4">
+                    {autoPublishStatus !== 'idle' && (
+                        <div className={`text-sm px-3 py-1 rounded-md ${
+                            autoPublishStatus === 'saving' ? 'bg-blue-500/20 text-blue-300' :
+                            autoPublishStatus === 'success' ? 'bg-green-500/20 text-green-300' :
+                            'bg-red-500/20 text-red-300'
+                        }`}>
+                            {autoPublishStatus === 'saving' && 'Saving...'}
+                            {autoPublishStatus === 'success' && '✓ Saved & Published'}
+                            {autoPublishStatus === 'error' && 'Error Saving!'}
+                        </div>
+                    )}
+                    <button onClick={handleLogout} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md text-sm">
+                        Log Out
+                    </button>
+                </div>
+            </div>
           {autoPublishStatus === 'error' && <p className="text-red-400 text-sm mb-4 -mt-6">{autoPublishError}</p>}
           
            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
@@ -380,58 +453,72 @@ const AdminPage: React.FC = () => {
                 </div>
             </div>
           
-          {/* Sales Dashboard Section */}
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
-              <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl sm:text-2xl font-bold text-green-400">Sales Dashboard</h2>
-                  <button onClick={fetchSalesData} disabled={isLoadingSales} className="text-sm bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md disabled:opacity-50">
-                      {isLoadingSales ? 'Refreshing...' : 'Refresh'}
-                  </button>
-              </div>
-              {isLoadingSales && (
-                  <div className="text-center py-8">
-                      <p className="text-gray-400">Loading sales data...</p>
-                  </div>
-              )}
-              {salesError && (
-                  <div className="text-center py-8 text-red-400">
-                      <p>Error: {salesError}</p>
-                  </div>
-              )}
-              {salesData && !isLoadingSales && (
-                  <div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                           <StatCard title="Total Revenue" value={`$${salesData.totalRevenue.toFixed(2)}`} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01" /></svg>} />
-                           <StatCard title="Full Passes Sold" value={salesData.fullPassesSold} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>} />
-                           <StatCard title="Film Blocks Sold" value={salesData.filmBlocksSold} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>} />
-                           <StatCard title="Individual Films Sold" value={salesData.individualFilmsSold} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>} />
-                      </div>
-                      <h3 className="text-lg font-semibold mb-2 text-gray-300">Recent Transactions</h3>
-                      <div className="overflow-x-auto max-h-64">
-                          <table className="w-full text-sm text-left text-gray-400">
-                              <thead className="text-xs text-gray-300 uppercase bg-gray-700 sticky top-0">
-                                  <tr>
-                                      <th scope="col" className="px-4 py-2">Date</th>
-                                      <th scope="col" className="px-4 py-2">Item</th>
-                                      <th scope="col" className="px-4 py-2">Amount</th>
-                                  </tr>
-                              </thead>
-                              <tbody>
-                                  {salesData.transactions.map((tx, index) => (
-                                      <tr key={index} className="bg-gray-800 border-b border-gray-700 hover:bg-gray-700/50">
-                                          <td className="px-4 py-2">{new Date(tx.date).toLocaleString()}</td>
-                                          <td className="px-4 py-2">{tx.item}</td>
-                                          <td className="px-4 py-2 font-medium text-white">${tx.amount.toFixed(2)}</td>
-                                      </tr>
-                                  ))}
-                              </tbody>
-                          </table>
-                           {salesData.transactions.length === 0 && <p className="text-center py-4 text-gray-500">No transactions found for the last 90 days.</p>}
-                      </div>
-                  </div>
-              )}
-          </div>
-          
+          {hasElevatedPrivileges && (
+            <>
+                {/* Sales Dashboard Section */}
+                <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl sm:text-2xl font-bold text-green-400">Sales Dashboard</h2>
+                        <button onClick={fetchSalesData} disabled={isLoadingSales} className="text-sm bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md disabled:opacity-50">
+                            {isLoadingSales ? 'Refreshing...' : 'Refresh'}
+                        </button>
+                    </div>
+                    {isLoadingSales && (
+                        <div className="text-center py-8">
+                            <p className="text-gray-400">Loading sales data...</p>
+                        </div>
+                    )}
+                    {salesError && (
+                        <div className="text-center py-8 text-red-400">
+                            <p>Error: {salesError}</p>
+                        </div>
+                    )}
+                    {salesData && !isLoadingSales && (
+                        <div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <StatCard title="Total Revenue" value={`$${salesData.totalRevenue.toFixed(2)}`} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01" /></svg>} />
+                                <StatCard title="Full Passes Sold" value={salesData.fullPassesSold} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>} />
+                                <StatCard title="Film Blocks Sold" value={salesData.filmBlocksSold} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>} />
+                                <StatCard title="Individual Films Sold" value={salesData.individualFilmsSold} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>} />
+                            </div>
+                            <h3 className="text-lg font-semibold mb-2 text-gray-300">Recent Transactions</h3>
+                            <div className="overflow-x-auto max-h-64">
+                                <table className="w-full text-sm text-left text-gray-400">
+                                    <thead className="text-xs text-gray-300 uppercase bg-gray-700 sticky top-0">
+                                        <tr>
+                                            <th scope="col" className="px-4 py-2">Date</th>
+                                            <th scope="col" className="px-4 py-2">Item</th>
+                                            <th scope="col" className="px-4 py-2">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {salesData.transactions.map((tx, index) => (
+                                            <tr key={index} className="bg-gray-800 border-b border-gray-700 hover:bg-gray-700/50">
+                                                <td className="px-4 py-2">{new Date(tx.date).toLocaleString()}</td>
+                                                <td className="px-4 py-2">{tx.item}</td>
+                                                <td className="px-4 py-2 font-medium text-white">${tx.amount.toFixed(2)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                {salesData.transactions.length === 0 && <p className="text-center py-4 text-gray-500">No transactions found for the last 90 days.</p>}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Festival Editor Section */}
+                <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
+                    <FestivalEditor
+                        initialData={festivalData}
+                        initialConfig={festivalConfig}
+                        allMovies={movies}
+                        onSave={handleSaveFestival}
+                    />
+                </div>
+            </>
+          )}
+
            {/* Roku Channel Packager */}
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
                 <h2 className="text-xl sm:text-2xl font-bold mb-3 text-cyan-400">Automated Roku Channel Packager</h2>
@@ -452,21 +539,16 @@ const AdminPage: React.FC = () => {
                 <div className="bg-gray-800 p-6 rounded-lg border border-red-700 mb-8">
                     <h2 className="text-xl sm:text-2xl font-bold mb-3 text-red-400">Developer Tools</h2>
                     <p className="text-gray-400 mb-4 max-w-3xl">
-                        Upload a `constants.ts` file to overwrite all live content data. This is a highly destructive action and cannot be undone.
+                        Download the current live content data as a `constants.ts` file. This is useful for creating a local backup or for manual bulk edits.
                     </p>
-                    <ConstantsUploader />
+                    <button
+                        onClick={handleDownloadConstants}
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+                    >
+                        Download constants.ts
+                    </button>
                 </div>
             )}
-
-          {/* Festival Editor Section */}
-           <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
-              <FestivalEditor
-                initialData={festivalData}
-                initialConfig={festivalConfig}
-                allMovies={movies}
-                onSave={handleSaveFestival}
-              />
-          </div>
 
           <div className="flex justify-between items-center mb-8">
               <h2 className="text-xl sm:text-2xl font-bold">Content Management</h2>
