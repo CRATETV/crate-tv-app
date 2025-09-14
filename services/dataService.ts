@@ -12,6 +12,12 @@ export interface LiveData {
 let cachedData: LiveData | null = null;
 let liveDataUrl: string | null = null;
 
+export const invalidateCache = () => {
+    cachedData = null;
+    liveDataUrl = null; 
+    console.log("Live data cache invalidated.");
+};
+
 const getFallbackData = (): LiveData => ({
     movies: moviesData,
     categories: categoriesData,

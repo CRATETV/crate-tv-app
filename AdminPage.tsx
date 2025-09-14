@@ -5,7 +5,8 @@ import MovieEditor from './components/MovieEditor.tsx';
 import Header from './components/Header.tsx';
 import Footer from './components/Footer.tsx';
 import FestivalEditor from './components/FestivalEditor.tsx';
-import { fetchAndCacheLiveData } from './services/dataService.ts';
+import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
+import ConstantsUploader from './components/ConstantsUploader.tsx';
 
 
 // Helper to format the current date/time for a datetime-local input
@@ -44,6 +45,7 @@ const AdminPage: React.FC = () => {
   const [isFestivalLiveAdmin, setIsFestivalLiveAdmin] = useState(false);
   const [loginMessage, setLoginMessage] = useState('');
   const [loggedInWithMaster, setLoggedInWithMaster] = useState(false);
+  const [isDeveloperMode, setIsDeveloperMode] = useState(false);
   
   // Auto-publishing state
   const [autoPublishStatus, setAutoPublishStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
@@ -79,6 +81,9 @@ const AdminPage: React.FC = () => {
         setIsAuthenticated(true);
         if (sessionStorage.getItem('usedMasterKey') === 'true') {
             setLoggedInWithMaster(true);
+        }
+        if (sessionStorage.getItem('isDeveloperMode') === 'true') {
+            setIsDeveloperMode(true);
         }
         fetchSalesData();
         fetchAdminData();
@@ -145,6 +150,14 @@ const AdminPage: React.FC = () => {
                 setLoggedInWithMaster(false);
             }
 
+            if (data.isDeveloper) {
+                sessionStorage.setItem('isDeveloperMode', 'true');
+                setIsDeveloperMode(true);
+            } else {
+                sessionStorage.removeItem('isDeveloperMode');
+                setIsDeveloperMode(false);
+            }
+
             if (data.firstLogin) {
                 setLoginMessage("Setup complete! To secure your admin panel, add this password as the ADMIN_PASSWORD environment variable in your project's settings.");
             }
@@ -186,6 +199,7 @@ const AdminPage: React.FC = () => {
             throw new Error(errorData.error || 'Publishing failed.');
         }
 
+        invalidateCache();
         setAutoPublishStatus('success');
         setTimeout(() => setAutoPublishStatus('idle'), 2500);
 
@@ -432,6 +446,17 @@ const AdminPage: React.FC = () => {
                     {isPackaging ? 'Packaging...' : 'Generate & Download Roku ZIP'}
                 </button>
             </div>
+            
+            {/* Developer Tools Section */}
+            {isDeveloperMode && (
+                <div className="bg-gray-800 p-6 rounded-lg border border-red-700 mb-8">
+                    <h2 className="text-xl sm:text-2xl font-bold mb-3 text-red-400">Developer Tools</h2>
+                    <p className="text-gray-400 mb-4 max-w-3xl">
+                        Upload a `constants.ts` file to overwrite all live content data. This is a highly destructive action and cannot be undone.
+                    </p>
+                    <ConstantsUploader />
+                </div>
+            )}
 
           {/* Festival Editor Section */}
            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">

@@ -1,6 +1,6 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/generate-presigned-url
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import * as S3 from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export async function POST(request: Request) {
@@ -62,14 +62,14 @@ export async function POST(request: Request) {
             });
         }
         
-        const s3Client = new S3Client({
+        const s3Client = new S3.S3Client({
             region,
             credentials: { accessKeyId, secretAccessKey },
         });
 
         // 4. Create Presigned URL
         const key = `uploads/${Date.now()}-${fileName.replace(/\s/g, '_')}`;
-        const command = new PutObjectCommand({
+        const command = new S3.PutObjectCommand({
             Bucket: bucketName,
             Key: key,
             ContentType: fileType,

@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData } from './services/dataService.ts';
 // FIX: Corrected import to use type definitions from types.ts
@@ -538,7 +539,7 @@ const App: React.FC = () => {
               {isFestivalLive && (
                 <>
                   {/* --- Film Festival Section --- */}
-                  <div id="festival" className="max-w-7xl mx-auto my-16 p-4 sm:p-0 border-t border-b border-gray-800 py-12">
+                  <div id="festival" className="max-w-7xl mx-auto my-16 border-t border-b border-gray-800 py-12">
                       <div className="relative py-16 md:py-20 bg-gray-900 text-center rounded-lg overflow-hidden mb-12">
                           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-red-900/40 to-black"></div>
                           <div className="relative z-10 max-w-4xl mx-auto px-4">
