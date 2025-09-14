@@ -1,11 +1,8 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/process-square-payment
-// FIX: Switched from a namespace import to a default import to correctly handle module exports from the Square SDK.
-import square from 'square';
+// FIX: Switched to named imports to correctly handle module exports from the Square SDK.
+import { Client, Environment } from 'square';
 import { randomUUID } from 'crypto';
-
-// FIX: Destructured Client and Environment from the default import.
-const { Client, Environment } = square;
 
 // Initialize the Square client
 const { paymentsApi } = new Client({
