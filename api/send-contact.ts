@@ -51,8 +51,8 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: 'Crate TV Contact Form <noreply@cratetv.net>',
       to: recipientEmail,
-      // FIX: Corrected the property name to 'replyTo' to resolve build error.
-      reply_to: data.email,
+      // FIX: Corrected property name to 'replyTo' to resolve build error.
+      replyTo: data.email,
       subject: emailSubject,
       html: emailHtml,
     });
