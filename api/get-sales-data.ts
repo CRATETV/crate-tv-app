@@ -1,11 +1,12 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/get-sales-data
 // FIX: Switched to named imports to correctly handle module exports from the Square SDK.
-import { Client, Environment } from 'square';
+// FIX: Corrected import to use a namespace import because named exports 'Client' and 'Environment' were not found in the 'square' module.
+import * as Square from 'square';
 
 // Initialize the Square client
-const { paymentsApi } = new Client({
-  environment: Environment.Production, // Use Environment.Sandbox for testing
+const { paymentsApi } = new Square.Client({
+  environment: Square.Environment.Production, // Use Environment.Sandbox for testing
   accessToken: process.env.SQUARE_ACCESS_TOKEN,
 });
 

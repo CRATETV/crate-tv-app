@@ -1,5 +1,3 @@
-
-
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/send-submission
 import { Resend } from 'resend';
@@ -94,7 +92,7 @@ export async function POST(request: Request) {
       // and use an address like 'submissions@yourdomain.com'.
       from: 'Crate TV Submissions <noreply@cratetv.net>',
       to: recipientEmail,
-      // FIX: The property for the reply-to address is 'replyTo' (camelCase), not 'reply_to'.
+// FIX: Corrected property 'reply_to' to 'replyTo' to match the 'resend' library's API.
       replyTo: data.email, // Set the filmmaker's email as the reply-to address
       subject: emailSubject,
       html: emailHtml,
