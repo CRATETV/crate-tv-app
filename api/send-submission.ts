@@ -72,15 +72,15 @@ export async function POST(request: Request) {
     if (!process.env.RESEND_API_KEY) {
         throw new Error("RESEND_API_KEY environment variable is not set. Email cannot be sent.");
     }
-
+    
     // Basic validation
-    if (!data.filmTitle || !data.directorName || !data.email) {
+    if (!data.filmTitle || !data.directorName || !data.email || !data.synopsis) {
       return new Response(JSON.stringify({ error: 'Missing required fields.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-
+    
     const emailHtml = createEmailBody(data);
     const emailSubject = `New Film Submission: "${data.filmTitle}"`;
     const recipientEmail = "cratetiv@gmail.com";
@@ -88,12 +88,10 @@ export async function POST(request: Request) {
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     await resend.emails.send({
-      // IMPORTANT: To prevent emails from going to spam, you should verify a domain with Resend
-      // and use an address like 'submissions@yourdomain.com'.
       from: 'Crate TV Submissions <noreply@cratetv.net>',
       to: recipientEmail,
-// FIX: Corrected property 'reply_to' to 'replyTo' to match the 'resend' library's API.
-      replyTo: data.email, // Set the filmmaker's email as the reply-to address
+      // FIX: Changed 'reply_to' to 'replyTo' to match the Resend SDK's expected property name.
+      replyTo: data.email,
       subject: emailSubject,
       html: emailHtml,
     });
@@ -106,7 +104,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error in send-submission API:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-    return new Response(JSON.stringify({ error: `Failed to process submission: ${errorMessage}` }), {
+    return new Response(JSON.stringify({ error: `Failed to send submission: ${errorMessage}` }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

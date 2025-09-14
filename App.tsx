@@ -19,14 +19,6 @@ import StagingBanner from './components/StagingBanner.tsx';
 import FilmBlockCard from './components/FilmBlockCard.tsx';
 import FilmBlockDetailsModal from './components/FilmBlockDetailsModal.tsx';
 
-// FIX: Added and exported the PaymentItem interface so it can be used by other components like the payment modal.
-export interface PaymentItem {
-  id: string;
-  type: 'block' | 'film' | 'pass';
-  name: string;
-  price: number;
-}
-
 // Utility function to preload images in the background
 const preloadImages = (urls: string[]) => {
   urls.forEach(url => {
