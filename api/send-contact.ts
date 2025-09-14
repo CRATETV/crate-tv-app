@@ -2,7 +2,14 @@
 // It will be accessible at the path /api/send-contact
 import { Resend } from 'resend';
 
-const createEmailBody = (data: { name: string; email: string; message: string; }): string => {
+// Define the expected shape of the data for type safety
+interface ContactFormData {
+  name: string;
+  email: string;
+  message: string;
+}
+
+const createEmailBody = (data: ContactFormData): string => {
   // Basic styles for a clean email layout
   const styles = {
     body: 'font-family: Arial, sans-serif; line-height: 1.6; color: #333;',
@@ -28,9 +35,11 @@ const createEmailBody = (data: { name: string; email: string; message: string; }
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
+    const data: ContactFormData = await request.json(); // Type assertion
 
     if (!process.env.RESEND_API_KEY) {
+        // It's good practice to throw an error if a critical env var is missing.
+        // Vercel should catch this and show an error during build or runtime.
         throw new Error("RESEND_API_KEY environment variable is not set. Email cannot be sent.");
     }
 
@@ -51,6 +60,7 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: 'Crate TV Contact Form <noreply@cratetv.net>',
       to: recipientEmail,
+      // FIX: Corrected the property name from 'reply_to' to 'replyTo' to match the Resend SDK's expected type.
       replyTo: data.email,
       subject: emailSubject,
       html: emailHtml,
@@ -63,7 +73,15 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Error in send-contact API:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+    // More robust error handling for better debugging
+    let errorMessage = 'An unknown error occurred.';
+    if (error instanceof Error) {
+        errorMessage = error.message;
+    } else if (typeof error === 'string') {
+        errorMessage = error;
+    }
+    
+    // Consider returning more specific error codes or messages if needed
     return new Response(JSON.stringify({ error: `Failed to send message: ${errorMessage}` }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
