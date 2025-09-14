@@ -1,11 +1,6 @@
 
-
-
-
-
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { fetchAndCacheLiveData } from './services/dataService.ts';
+import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
 // FIX: Corrected import to use type definitions from types.ts
 import { Movie, Actor, FilmBlock, FestivalConfig, Category, FestivalDay } from './types.ts';
 import Header from './components/Header.tsx';
@@ -240,7 +235,20 @@ const App: React.FC = () => {
         }
     }
     
-    return () => window.removeEventListener('scroll', handleScroll);
+    // Live update listener
+    const updateChannel = new BroadcastChannel('cratetv_data_update');
+    const handleUpdate = () => {
+        console.log('Received data update signal. Refetching live data...');
+        invalidateCache();
+        initApp();
+    };
+    updateChannel.addEventListener('message', handleUpdate);
+
+    return () => {
+        window.removeEventListener('scroll', handleScroll);
+        updateChannel.removeEventListener('message', handleUpdate);
+        updateChannel.close();
+    };
   }, []);
 
   // Fetch AI recommendations when liked movies change
@@ -647,7 +655,7 @@ const App: React.FC = () => {
                       .map(movieKey => movies[movieKey])
                       .filter(Boolean)
                       .filter(isMovieVisible);
-                  
+
                   if(categoryMovies.length === 0) return null;
 
                   const sortedMovies = [...categoryMovies].sort((a, b) => b.likes - a.likes);
