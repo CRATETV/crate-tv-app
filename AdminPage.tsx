@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { moviesData as initialMoviesData, categoriesData as initialCategoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfigData } from './constants.ts';
 import { Movie, Category, FestivalDay, FestivalConfig, SalesData } from './types.ts';
 import MovieEditor from './components/MovieEditor.tsx';
-import Header from './components/Header.tsx';
 import Footer from './components/Footer.tsx';
 import FestivalEditor from './components/FestivalEditor.tsx';
 import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
@@ -63,6 +62,7 @@ const AdminPage: React.FC = () => {
 
   const fetchAdminData = async () => {
     try {
+        invalidateCache(); // Ensure fresh data on admin login
         const liveData = await fetchAndCacheLiveData();
         setMovies(liveData.movies);
         setCategories(liveData.categories);
@@ -395,7 +395,6 @@ const AdminPage: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-900 text-white">
-      <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
       <main className="flex-grow p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
            {loginMessage && <p className="text-green-400 text-sm mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-md">{loginMessage}</p>}

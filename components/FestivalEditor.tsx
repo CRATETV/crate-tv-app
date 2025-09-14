@@ -26,7 +26,9 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
     onSave(Array.from(selectedKeys));
   };
 
-  const filteredMovies = allMovies.filter(movie => movie.title.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredMovies = allMovies
+    .filter(movie => movie.title.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => a.title.localeCompare(b.title));
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[110] p-4" onClick={onClose}>

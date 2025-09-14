@@ -82,7 +82,7 @@ export async function POST(request: Request) {
             Key: 'live-data.json',
             Body: JSON.stringify(liveData, null, 2),
             ContentType: 'application/json',
-            CacheControl: 'public, max-age=60',
+            CacheControl: 'no-cache, no-store, must-revalidate',
         });
         
         await s3Client.send(command);

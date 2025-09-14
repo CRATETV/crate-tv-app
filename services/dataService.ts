@@ -8,14 +8,13 @@ export interface LiveData {
     festivalConfig: FestivalConfig;
 }
 
-// Store data in memory to avoid refetching on every page navigation
-let cachedData: LiveData | null = null;
+// Store the live data URL in memory to avoid refetching it constantly
 let liveDataUrl: string | null = null;
 
 export const invalidateCache = () => {
-    cachedData = null;
+    // Invalidate the cached URL, so it's refetched next time.
     liveDataUrl = null; 
-    console.log("Live data cache invalidated.");
+    console.log("Live data URL cache invalidated.");
 };
 
 const getFallbackData = (): LiveData => ({
@@ -39,17 +38,15 @@ const getLiveUrl = async (): Promise<string | null> => {
 };
 
 export const fetchAndCacheLiveData = async (): Promise<LiveData> => {
-    if (cachedData) return cachedData;
-
     const url = await getLiveUrl();
     if (!url) {
         console.warn("Could not retrieve live data URL, using static data.");
-        cachedData = getFallbackData();
-        return cachedData;
+        // Return fallback data if the live URL can't be fetched.
+        return getFallbackData();
     }
 
     try {
-        // Use cache-busting param to ensure we get the latest version
+        // Fetch fresh data every time. Use a cache-busting param to ensure the latest version is retrieved.
         const response = await fetch(`${url}?t=${new Date().getTime()}`);
         if (!response.ok) throw new Error('Network response was not ok');
         
@@ -59,12 +56,11 @@ export const fetchAndCacheLiveData = async (): Promise<LiveData> => {
         if (!data.movies || !data.categories) {
            throw new Error('Fetched data has incorrect structure');
         }
-
-        cachedData = data;
+        
+        // Return the fresh data without caching it in this service.
         return data;
     } catch (error) {
         console.error("Could not fetch live data, falling back to static data.", error);
-        cachedData = getFallbackData();
-        return cachedData;
+        return getFallbackData();
     }
 };
