@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header.tsx';
 import Footer from './Footer.tsx';
@@ -10,8 +11,6 @@ import ActorBioModal from './ActorBioModal.tsx';
 import { fetchAndCacheLiveData } from '../services/dataService.ts';
 import { Movie, Actor, Category } from '../types.ts';
 import { useAuth } from '../contexts/AuthContext.tsx';
-import SquarePaymentModal from './SquarePaymentModal.tsx';
-import { PaymentItem } from '../App.tsx';
 
 const PremiumPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -20,10 +19,8 @@ const PremiumPage: React.FC = () => {
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
     const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
     const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
-    const [paymentItem, setPaymentItem] = useState<PaymentItem | null>(null);
-    const [showPurchaseConfirmation, setShowPurchaseConfirmation] = useState('');
 
-    const { user, subscribe } = useAuth();
+    const { user } = useAuth();
 
     useEffect(() => {
         const loadData = async () => {
@@ -56,21 +53,11 @@ const PremiumPage: React.FC = () => {
     const handleCloseActorModal = () => setSelectedActor(null);
     
     const handleSubscribe = () => {
-        if (user) {
-            // FIX: Corrected the payment item type to one of the valid options. The 'subscription' type has been rolled back.
-            setPaymentItem({ type: 'pass', id: 'premium_monthly', name: 'Crate TV Premium', price: 4.99 });
-        } else {
+        if (!user) {
             // If not logged in, redirect to login page with intent to subscribe
             window.history.pushState({}, '', '/login?redirect=/premium&action=subscribe');
             window.dispatchEvent(new Event('pushstate'));
         }
-    };
-    
-    const handlePaymentSuccess = () => {
-        subscribe();
-        setPaymentItem(null);
-        setShowPurchaseConfirmation('Welcome to Premium!');
-        setTimeout(() => setShowPurchaseConfirmation(''), 3000);
     };
 
     const toggleLikeMovie = (movieKey: string) => {
@@ -97,7 +84,11 @@ const PremiumPage: React.FC = () => {
                             Get exclusive access to our entire library of premium films, extended director's cuts, and special features for just $4.99/month.
                         </p>
                         {!user?.isPremiumSubscriber && (
-                            <button onClick={handleSubscribe} className="bg-gradient-to-r from-yellow-500 to-red-600 hover:from-yellow-600 hover:to-red-700 text-white font-bold py-4 px-8 rounded-lg text-xl shadow-lg transition-transform transform hover:scale-105">
+                            <button 
+                                onClick={handleSubscribe} 
+                                className="bg-gray-600 cursor-not-allowed text-white font-bold py-4 px-8 rounded-lg text-xl shadow-lg"
+                                title="Payments are temporarily unavailable"
+                            >
                                 Join Premium
                             </button>
                         )}
@@ -129,7 +120,7 @@ const PremiumPage: React.FC = () => {
                              <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/80 to-transparent flex items-end justify-center p-8">
                                 <div className="text-center">
                                     <h3 className="text-2xl font-bold text-white mb-4">Join Premium to Watch</h3>
-                                    <button onClick={handleSubscribe} className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg transition-colors">
+                                    <button onClick={handleSubscribe} className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg transition-colors cursor-not-allowed" title="Payments are temporarily unavailable">
                                         Subscribe Now
                                     </button>
                                 </div>
@@ -156,12 +147,6 @@ const PremiumPage: React.FC = () => {
                 />
             )}
             {selectedActor && <ActorBioModal actor={selectedActor} onClose={handleCloseActorModal} />}
-            {paymentItem && <SquarePaymentModal item={paymentItem} onClose={() => setPaymentItem(null)} onSuccess={handlePaymentSuccess} />}
-             {showPurchaseConfirmation && (
-                <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg z-50 animate-fadeIn animate-bounce">
-                    {showPurchaseConfirmation}
-                </div>
-            )}
         </div>
     );
 };

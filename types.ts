@@ -47,18 +47,3 @@ export interface User {
     email: string;
     isPremiumSubscriber: boolean;
 }
-
-export interface Transaction {
-    id: string;
-    date: string;
-    item: string;
-    amount: number;
-}
-
-export interface SalesData {
-    totalRevenue: number;
-    fullPassesSold: number;
-    filmBlocksSold: number;
-    individualFilmsSold: number;
-    transactions: Transaction[];
-}

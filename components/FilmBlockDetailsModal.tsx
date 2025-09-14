@@ -4,8 +4,6 @@ import { FilmBlock, Movie } from '../types.ts';
 interface FilmBlockDetailsModalProps {
     block: FilmBlock;
     onClose: () => void;
-    onPurchaseFilm: (filmKey: string) => void;
-    onPurchaseBlock: (blockId: string) => void;
     isFilmUnlocked: (filmKey: string, blockId: string) => boolean;
     isBlockUnlocked: (blockId: string) => boolean;
     onWatchMovie: (filmKey: string) => void;
@@ -15,8 +13,6 @@ interface FilmBlockDetailsModalProps {
 const FilmBlockDetailsModal: React.FC<FilmBlockDetailsModalProps> = ({
     block,
     onClose,
-    onPurchaseFilm,
-    onPurchaseBlock,
     isFilmUnlocked,
     isBlockUnlocked,
     onWatchMovie,
@@ -70,9 +66,9 @@ const FilmBlockDetailsModal: React.FC<FilmBlockDetailsModalProps> = ({
                                             Watch Now
                                         </button>
                                      ) : (
-                                        <button onClick={() => onPurchaseFilm(movie.key)} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
-                                            Unlock Film - $5
-                                        </button>
+                                        <div className="w-full text-center bg-gray-700 text-gray-400 font-bold py-3 px-4 rounded-lg cursor-not-allowed" title="Payments are temporarily unavailable">
+                                            Unlock Film
+                                        </div>
                                      )}
                                 </div>
                             </div>
@@ -86,9 +82,9 @@ const FilmBlockDetailsModal: React.FC<FilmBlockDetailsModalProps> = ({
                              ✓ You have unlocked this entire block
                         </div>
                     ) : (
-                         <button onClick={() => onPurchaseBlock(block.id)} className="bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-700 hover:to-purple-700 text-white font-bold py-3 px-8 rounded-lg text-lg shadow-lg transition-transform transform hover:scale-105">
-                            Unlock Full Block - $12
-                        </button>
+                         <div className="bg-gray-700 text-gray-400 font-bold py-3 px-8 rounded-lg text-lg inline-block cursor-not-allowed" title="Payments are temporarily unavailable">
+                            Unlock Full Block
+                        </div>
                     )}
                  </div>
 

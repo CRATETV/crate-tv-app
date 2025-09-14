@@ -6,21 +6,11 @@ import { festivalData as initialFestivalData, moviesData } from '../constants.ts
 import { FilmBlock, Movie } from '../types.ts';
 import FilmBlockCard from './FilmBlockCard.tsx';
 import FilmBlockDetailsModal from './FilmBlockDetailsModal.tsx';
-// Fix: Corrected import from non-existent StripePaymentModal to SquarePaymentModal.
-import SquarePaymentModal from './SquarePaymentModal.tsx';
 
 interface FestivalPurchases {
   hasFullPass: boolean;
   purchasedBlocks: string[];
   purchasedFilms: string[];
-}
-
-// Define the structure for an item being purchased
-interface PaymentItem {
-  type: 'pass' | 'block' | 'film';
-  id: string;
-  name: string;
-  price: number;
 }
 
 const useFestivalPurchases = () => {
@@ -81,10 +71,8 @@ const useFestivalPurchases = () => {
 const FestivalPage: React.FC = () => {
   const [activeDay, setActiveDay] = useState<number>(1);
   const [selectedBlock, setSelectedBlock] = useState<FilmBlock | null>(null);
-  const { purchases, purchaseFullPass, purchaseBlock, purchaseFilm, isFilmUnlocked, isBlockUnlocked } = useFestivalPurchases();
-  const [showPurchaseConfirmation, setShowPurchaseConfirmation] = useState('');
+  const { purchases, isFilmUnlocked, isBlockUnlocked } = useFestivalPurchases();
   const [festivalData, setFestivalData] = useState(initialFestivalData);
-  const [paymentItem, setPaymentItem] = useState<PaymentItem | null>(null);
 
   useEffect(() => {
     // This effect runs on mount to check for live preview data
@@ -97,45 +85,6 @@ const FestivalPage: React.FC = () => {
       console.error("Failed to load festival data from localStorage", error);
     }
   }, []);
-
-  const handlePurchase = (type: 'pass' | 'block' | 'film', id: string) => {
-    let item: PaymentItem | null = null;
-    if (type === 'pass') {
-      item = { type: 'pass', id: 'full', name: 'Full Festival Pass', price: 50 };
-    } else if (type === 'block') {
-      const block = festivalData.flatMap(d => d.blocks).find(b => b.id === id);
-      if (block) {
-        item = { type: 'block', id, name: `Block: ${block.title}`, price: 12 };
-      }
-    } else if (type === 'film') {
-      const film = moviesData[id];
-      if (film) {
-        item = { type: 'film', id, name: `Film: ${film.title}`, price: 5 };
-      }
-    }
-
-    if (item) {
-      setPaymentItem(item);
-      // Close the details modal if it's open
-      if (selectedBlock) setSelectedBlock(null);
-    }
-  };
-
-  const handlePaymentSuccess = (item: PaymentItem) => {
-    if (item.type === 'pass') {
-        purchaseFullPass();
-        setShowPurchaseConfirmation('Full Festival Pass unlocked!');
-    } else if (item.type === 'block') {
-        purchaseBlock(item.id);
-        setShowPurchaseConfirmation('Film Block unlocked!');
-    } else if (item.type === 'film') {
-        purchaseFilm(item.id);
-        setShowPurchaseConfirmation('Film unlocked!');
-    }
-    
-    setPaymentItem(null);
-    setTimeout(() => setShowPurchaseConfirmation(''), 3000);
-  };
   
   const handleNavigateToMovie = (movieKey: string) => {
     window.history.pushState({}, '', `/movie/${movieKey}?play=true`);
@@ -155,9 +104,9 @@ const FestivalPage: React.FC = () => {
                     Discover the next generation of indie filmmakers. Three days of incredible shorts, exclusive premieres, and unforgettable stories.
                 </p>
                 {!purchases.hasFullPass ? (
-                    <button onClick={() => handlePurchase('pass', 'full')} className="bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-700 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-lg text-xl shadow-lg transition-transform transform hover:scale-105">
-                        Buy Full Festival Pass - $50
-                    </button>
+                    <div className="bg-gray-800/50 border border-gray-700 text-gray-400 font-bold py-4 px-8 rounded-lg text-xl inline-block cursor-not-allowed" title="Payments are temporarily unavailable">
+                        Buy Full Festival Pass
+                    </div>
                 ) : (
                     <div className="bg-green-500/20 border border-green-400 text-green-300 font-bold py-4 px-8 rounded-lg text-xl inline-block">
                         ✓ Festival Pass Unlocked
@@ -202,9 +151,9 @@ const FestivalPage: React.FC = () => {
                                         {isBlockUnlocked(block.id) ? (
                                              <span className="text-green-400 font-semibold">✓ You have access to this block</span>
                                         ) : (
-                                            <button onClick={() => handlePurchase('block', block.id)} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">
-                                                Unlock Full Block - $12
-                                            </button>
+                                            <div className="bg-gray-700 text-gray-400 font-bold py-2 px-6 rounded-lg inline-block cursor-not-allowed" title="Payments are temporarily unavailable">
+                                                Unlock Full Block
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -223,28 +172,11 @@ const FestivalPage: React.FC = () => {
         <FilmBlockDetailsModal 
             block={selectedBlock}
             onClose={() => setSelectedBlock(null)}
-            onPurchaseFilm={(filmKey) => handlePurchase('film', filmKey)}
-            onPurchaseBlock={(blockId) => handlePurchase('block', blockId)}
             isFilmUnlocked={isFilmUnlocked}
             isBlockUnlocked={isBlockUnlocked}
             onWatchMovie={handleNavigateToMovie}
-            // FIX: Pass the 'allMovies' prop, which is required by FilmBlockDetailsModal.
             allMovies={moviesData}
         />
-      )}
-       {paymentItem && (
-        // Fix: Corrected component usage from non-existent StripePaymentModal to SquarePaymentModal.
-        <SquarePaymentModal 
-            item={paymentItem}
-            onClose={() => setPaymentItem(null)}
-            onSuccess={handlePaymentSuccess}
-        />
-      )}
-      
-      {showPurchaseConfirmation && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg z-50 animate-fadeIn animate-bounce">
-            {showPurchaseConfirmation}
-        </div>
       )}
     </div>
   );

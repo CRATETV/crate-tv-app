@@ -1,3 +1,5 @@
+
+
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/send-submission
 import { Resend } from 'resend';
@@ -87,12 +89,13 @@ export async function POST(request: Request) {
     
     const resend = new Resend(process.env.RESEND_API_KEY);
 
-    // The 'reply_to' field allows replying directly to the user who submitted the form.
     await resend.emails.send({
-      from: 'onboarding@resend.dev',
+      // IMPORTANT: To prevent emails from going to spam, you should verify a domain with Resend
+      // and use an address like 'submissions@yourdomain.com'.
+      from: 'Crate TV Submissions <noreply@cratetv.net>',
       to: recipientEmail,
-      // FIX: Corrected 'reply_to' to 'replyTo' to match the Resend SDK's expected property name.
-      replyTo: data.email,
+      // FIX: Corrected property name from 'reply_to' to 'replyTo' to match the Resend SDK's type definition.
+      replyTo: data.email, // Set the filmmaker's email as the reply-to address
       subject: emailSubject,
       html: emailHtml,
     });

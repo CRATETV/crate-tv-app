@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
 // FIX: Corrected import to use type definitions from types.ts
@@ -17,7 +18,14 @@ import SearchOverlay from './components/SearchOverlay.tsx';
 import StagingBanner from './components/StagingBanner.tsx';
 import FilmBlockCard from './components/FilmBlockCard.tsx';
 import FilmBlockDetailsModal from './components/FilmBlockDetailsModal.tsx';
-import SquarePaymentModal from './components/SquarePaymentModal.tsx';
+
+// FIX: Added and exported the PaymentItem interface so it can be used by other components like the payment modal.
+export interface PaymentItem {
+  id: string;
+  type: 'block' | 'film' | 'pass';
+  name: string;
+  price: number;
+}
 
 // Utility function to preload images in the background
 const preloadImages = (urls: string[]) => {
@@ -33,15 +41,6 @@ interface FestivalPurchases {
   hasFullPass: boolean;
   purchasedBlocks: string[];
   purchasedFilms: string[];
-}
-
-// Define the structure for an item being purchased
-export interface PaymentItem {
-  // FIX: Removed 'subscription' type to resolve build error after premium feature rollback.
-  type: 'pass' | 'block' | 'film';
-  id: string;
-  name: string;
-  price: number;
 }
 
 // Helper function to determine if a movie should be visible on the main page.
@@ -137,9 +136,7 @@ const App: React.FC = () => {
   const [selectedBlock, setSelectedBlock] = useState<FilmBlock | null>(null);
   const [festivalConfig, setFestivalConfig] = useState<FestivalConfig>({ title: '', description: '' });
   const [festivalDays, setFestivalDays] = useState<FestivalDay[]>([]);
-  const { purchases, purchaseFullPass, purchaseBlock, purchaseFilm, isFilmUnlocked, isBlockUnlocked } = useFestivalPurchases();
-  const [showPurchaseConfirmation, setShowPurchaseConfirmation] = useState('');
-  const [paymentItem, setPaymentItem] = useState<PaymentItem | null>(null);
+  const { purchases, isFilmUnlocked, isBlockUnlocked } = useFestivalPurchases();
   
   // Create a memoized map of movie keys to their genre titles for efficient searching.
   const movieToGenresMap = useMemo(() => {
@@ -394,51 +391,6 @@ const App: React.FC = () => {
     window.history.pushState({}, '', window.location.pathname);
   };
   
-  // Festival & Subscription Handlers
-  const handlePurchase = (itemType: 'pass' | 'block' | 'film', id: string) => {
-    let item: PaymentItem | null = null;
-    switch (itemType) {
-        case 'pass':
-            item = { type: 'pass', id: 'full', name: 'Full Festival Pass', price: 50 };
-            break;
-        case 'block':
-            const block = festivalDays.flatMap(d => d.blocks).find(b => b.id === id);
-            if (block) item = { type: 'block', id, name: `Block: ${block.title}`, price: 12 };
-            break;
-        case 'film':
-            const film = movies[id];
-            if (film) item = { type: 'film', id, name: `Film: ${film.title}`, price: 5 };
-            break;
-    }
-
-    if (item) {
-      setPaymentItem(item);
-      // Close any open modals
-      if (selectedBlock) setSelectedBlock(null);
-      if (detailsMovie) setDetailsMovie(null);
-    }
-  };
-
-  const handlePaymentSuccess = (item: PaymentItem) => {
-    switch (item.type) {
-        case 'pass':
-            purchaseFullPass();
-            setShowPurchaseConfirmation('Full Festival Pass unlocked!');
-            break;
-        case 'block':
-            purchaseBlock(item.id);
-            setShowPurchaseConfirmation('Film Block unlocked!');
-            break;
-        case 'film':
-            purchaseFilm(item.id);
-            setShowPurchaseConfirmation('Film unlocked!');
-            break;
-    }
-    
-    setPaymentItem(null);
-    setTimeout(() => setShowPurchaseConfirmation(''), 3000);
-  };
-  
   const handleNavigateToMovie = (movieKey: string) => {
     window.history.pushState({}, '', `/movie/${movieKey}?play=true`);
     window.dispatchEvent(new Event('pushstate'));
@@ -558,9 +510,9 @@ const App: React.FC = () => {
                                   {festivalConfig.description}
                               </p>
                               {!purchases.hasFullPass ? (
-                                  <button onClick={() => handlePurchase('pass', 'full')} className="bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-lg transition-transform transform hover:scale-105">
-                                      Buy Full Festival Pass - $50
-                                  </button>
+                                  <div className="bg-gray-800/50 border border-gray-700 text-gray-400 font-bold py-3 px-6 rounded-lg text-lg inline-block cursor-not-allowed">
+                                      Payments Are Currently Unavailable
+                                  </div>
                               ) : (
                                   <div className="bg-green-500/20 border border-green-400 text-green-300 font-bold py-3 px-6 rounded-lg text-lg inline-block">
                                       ✓ Festival Pass Unlocked
@@ -604,9 +556,9 @@ const App: React.FC = () => {
                                                   {isBlockUnlocked(block.id) ? (
                                                        <span className="text-green-400 font-semibold">✓ You have access to this block</span>
                                                   ) : (
-                                                      <button onClick={() => handlePurchase('block', block.id)} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">
-                                                          Unlock Full Block - $12
-                                                      </button>
+                                                      <div className="bg-gray-700 text-gray-400 font-bold py-2 px-6 rounded-lg inline-block cursor-not-allowed">
+                                                          Unlock Full Block
+                                                      </div>
                                                   )}
                                               </div>
                                           </div>
@@ -709,26 +661,11 @@ const App: React.FC = () => {
         <FilmBlockDetailsModal 
             block={selectedBlock}
             onClose={() => setSelectedBlock(null)}
-            onPurchaseFilm={(filmKey) => handlePurchase('film', filmKey)}
-            onPurchaseBlock={(blockId) => handlePurchase('block', blockId)}
             isFilmUnlocked={isFilmUnlocked}
             isBlockUnlocked={isBlockUnlocked}
             onWatchMovie={handleNavigateToMovie}
             allMovies={movies}
         />
-      )}
-       {paymentItem && (
-        <SquarePaymentModal 
-            item={paymentItem}
-            onClose={() => setPaymentItem(null)}
-            onSuccess={handlePaymentSuccess}
-        />
-      )}
-      
-      {showPurchaseConfirmation && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg z-50 animate-fadeIn animate-bounce">
-            {showPurchaseConfirmation}
-        </div>
       )}
     </div>
   );
