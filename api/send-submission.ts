@@ -91,7 +91,7 @@ export async function POST(request: Request) {
       from: 'Crate TV Submissions <noreply@cratetv.net>',
       to: recipientEmail,
       // FIX: Corrected property name from `reply_to` to `replyTo` as per Resend SDK's `CreateEmailOptions` type.
-      replyTo: data.email,
+      reply_to: data.email,
       subject: emailSubject,
       html: emailHtml,
     });
