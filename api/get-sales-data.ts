@@ -1,11 +1,11 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/get-sales-data
-// FIX: The Square SDK is a CommonJS module, so a namespace import is required for TypeScript to correctly resolve the types.
-import * as Square from 'square';
+// FIX: Changed to a named import for `Client` and `Environment` from the Square SDK to resolve a type error.
+import { Client, Environment } from 'square';
 
 // Initialize the Square client
-const { paymentsApi } = new Square.Client({
-  environment: Square.Environment.Production, // Use Environment.Sandbox for testing
+const { paymentsApi } = new Client({
+  environment: Environment.Production, // Use Environment.Sandbox for testing
   accessToken: process.env.SQUARE_ACCESS_TOKEN,
 });
 
@@ -31,7 +31,6 @@ export async function POST(request: Request) {
 
     const { result: { payments } } = await paymentsApi.listPayments({
         beginTime: ninetyDaysAgo.toISOString(),
-        // limit: 100 // Removed to fix TS build error TS2345
     });
 
     let totalRevenue = 0;
