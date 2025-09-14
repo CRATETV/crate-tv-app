@@ -379,7 +379,7 @@ const AdminPage: React.FC = () => {
                                             <button onClick={handleAddNewMovie} className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md text-sm">+ Add Film</button>
                                         </div>
                                         <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2 bg-gray-900/50 p-4 rounded-lg border border-gray-700">
-                                            {Object.values(data.movies).sort((a: any, b: any) => a.title.localeCompare(b.title)).map((movie: any) => (
+                                            {Object.values(data.movies).sort((a: Movie, b: Movie) => a.title.localeCompare(b.title)).map((movie: Movie) => (
                                                 <div key={movie.key} onClick={() => setSelectedMovie(movie)} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-700 cursor-pointer">
                                                     <img src={movie.poster} alt={movie.title} className="w-12 h-16 object-cover rounded-md flex-shrink-0" />
                                                     <span className="text-white text-sm flex-grow">{movie.title}</span>

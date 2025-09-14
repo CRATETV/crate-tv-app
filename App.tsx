@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
-// FIX: Corrected import to use type definitions from types.ts
-import { Movie, Actor, FilmBlock, FestivalConfig, Category, FestivalDay } from './types.ts';
+import { Movie, Actor, Category } from './types.ts';
 import Header from './components/Header.tsx';
 import Hero from './components/Hero.tsx';
 import MovieCarousel from './components/MovieCarousel.tsx';

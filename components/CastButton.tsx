@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 
 interface CastButtonProps {
@@ -18,17 +19,17 @@ const CastButton: React.FC<CastButtonProps> = ({ videoElement }) => {
       return;
     }
 
-    const remote = videoElement.remote;
+    const remote = (videoElement as any).remote;
     let availabilityId: number | undefined;
 
     // The watchAvailability callback is called immediately with the current state,
     // and then again whenever availability changes. This replaces the need for
     // a separate initial check and an 'availabilitychange' event listener.
-    remote.watchAvailability((available) => {
+    remote.watchAvailability((available: boolean) => {
       setIsAvailable(available);
-    }).then(id => {
+    }).then((id: number) => {
       availabilityId = id;
-    }).catch(err => {
+    }).catch((err: Error) => {
       console.error("Cannot watch remote playback availability: ", err);
       setIsAvailable(false);
     });
@@ -65,7 +66,7 @@ const CastButton: React.FC<CastButtonProps> = ({ videoElement }) => {
       return;
     }
 
-    videoElement.remote.prompt().catch(err => {
+    (videoElement as any).remote.prompt().catch((err: Error) => {
       // AbortError is expected if the user cancels the prompt.
       if (err.name !== 'AbortError') {
         console.error("Error prompting for remote playback:", err);
