@@ -48,11 +48,11 @@ export async function POST(request: Request) {
     
     const resend = new Resend(process.env.RESEND_API_KEY);
 
-    // This allows replying directly to the user who submitted the form.
+    // The 'replyTo' field allows replying directly to the user who submitted the form.
     await resend.emails.send({
       from: 'onboarding@resend.dev',
       to: recipientEmail,
-      // FIX: Corrected property 'reply_to' to 'replyTo' to match the Resend SDK's type definition.
+      // FIX: Corrected property name from 'reply_to' to 'replyTo' to match Resend SDK type definitions.
       replyTo: data.email,
       subject: emailSubject,
       html: emailHtml,
