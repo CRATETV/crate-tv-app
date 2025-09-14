@@ -48,11 +48,11 @@ export async function POST(request: Request) {
     
     const resend = new Resend(process.env.RESEND_API_KEY);
 
+    // FIX: Changed 'reply_to' to 'replyTo' to match the Resend API's expected property name.
     await resend.emails.send({
       from: 'Crate TV Contact Form <noreply@cratetv.net>',
       to: recipientEmail,
-      // FIX: Changed 'reply_to' to 'replyTo' to match the expected property name in the Resend API options.
-      replyTo: data.email,
+      reply_to: data.email,
       subject: emailSubject,
       html: emailHtml,
     });
