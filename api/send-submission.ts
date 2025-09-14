@@ -90,7 +90,7 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: 'Crate TV Submissions <noreply@cratetv.net>',
       to: recipientEmail,
-      // FIX: Corrected property name to 'replyTo' to resolve build error.
+      // FIX: Changed 'reply_to' to 'replyTo' to match the expected property name in the Resend API options.
       replyTo: data.email,
       subject: emailSubject,
       html: emailHtml,
