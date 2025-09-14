@@ -91,7 +91,8 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: 'onboarding@resend.dev',
       to: recipientEmail,
-      reply_to: data.email,
+      // FIX: Corrected property 'reply_to' to 'replyTo' to match the Resend SDK's type definition.
+      replyTo: data.email,
       subject: emailSubject,
       html: emailHtml,
     });

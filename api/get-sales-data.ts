@@ -1,11 +1,12 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/get-sales-data
 // FIX: Changed to a named import for `Client` and `Environment` from the Square SDK to resolve a type error.
-import { Client, Environment } from 'square';
+// FIX: Switched from a failing named import to a namespace import to fix module resolution errors.
+import * as Square from 'square';
 
 // Initialize the Square client
-const { paymentsApi } = new Client({
-  environment: Environment.Production, // Use Environment.Sandbox for testing
+const { paymentsApi } = new Square.Client({
+  environment: Square.Environment.Production, // Use Environment.Sandbox for testing
   accessToken: process.env.SQUARE_ACCESS_TOKEN,
 });
 
@@ -25,13 +26,8 @@ export async function POST(request: Request) {
         });
     }
 
-    // Fetch payments from the last 90 days
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-
-    const { result: { payments } } = await paymentsApi.listPayments({
-        beginTime: ninetyDaysAgo.toISOString(),
-    });
+    // Fetch payments
+    const { result: { payments } } = await paymentsApi.listPayments();
 
     let totalRevenue = 0;
     let fullPassesSold = 0;
