@@ -2,6 +2,8 @@
 
 
 
+
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData } from './services/dataService.ts';
 // FIX: Corrected import to use type definitions from types.ts
@@ -559,12 +561,12 @@ const App: React.FC = () => {
                           </div>
                       </div>
                       
-                      <div className="flex justify-center border-b border-gray-700 mb-8">
+                      <div className="flex justify-center border-b border-gray-700 mb-8 overflow-x-auto scrollbar-hide">
                           {festivalDays.map(day => (
                               <button
                                   key={day.day}
                                   onClick={() => setActiveDay(day.day)}
-                                  className={`px-4 sm:px-8 py-3 text-md font-semibold transition-colors duration-300 border-b-4 ${activeDay === day.day ? 'border-red-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
+                                  className={`flex-shrink-0 px-4 sm:px-8 py-3 text-md font-semibold transition-colors duration-300 border-b-4 ${activeDay === day.day ? 'border-red-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
                               >
                                   Day {day.day} <span className="hidden sm:inline-block text-sm text-gray-500">- {day.date}</span>
                               </button>

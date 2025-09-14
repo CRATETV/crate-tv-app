@@ -24,15 +24,10 @@ export async function POST(request: Request) {
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-    const { result: { payments } } = await paymentsApi.listPayments(
-        undefined, // cursor
-        ninetyDaysAgo.toISOString(), // beginTime
-        undefined, // endTime
-        undefined, // sortOrder
-        undefined, // last4
-        undefined, // cardBrand
-        100 // limit
-    );
+    const { result: { payments } } = await paymentsApi.listPayments({
+        beginTime: ninetyDaysAgo.toISOString(),
+        limit: 100
+    });
 
     let totalRevenue = 0;
     let fullPassesSold = 0;
