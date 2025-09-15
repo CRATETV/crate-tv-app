@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: 'Crate TV Contact Form <noreply@cratetv.net>',
       to: recipientEmail,
-      // FIX: Corrected the 'reply_to' property to 'replyTo' to match the expected type from the 'resend' library.
+      // FIX: Corrected 'reply_to' to 'replyTo' to match the Resend SDK's type definition.
       replyTo: data.email,
       subject: emailSubject,
       html: emailHtml,

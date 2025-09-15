@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+// FIX: Imported `invalidateCache` to be used in the live update handler.
 import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
 import { Movie, Actor, Category } from './types.ts';
 import Header from './components/Header.tsx';
@@ -13,6 +14,7 @@ import ActorBioModal from './components/ActorBioModal.tsx';
 import MovieCard from './components/MovieCard.tsx';
 import SearchOverlay from './components/SearchOverlay.tsx';
 import StagingBanner from './components/StagingBanner.tsx';
+import DataStatusIndicator from './components/DataStatusIndicator.tsx';
 
 // Utility function to preload images in the background
 const preloadImages = (urls: string[]) => {
@@ -51,6 +53,7 @@ const App: React.FC = () => {
   const [isStaging, setIsStaging] = useState(false);
   const [recommendedKeys, setRecommendedKeys] = useState<string[]>([]);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
   
   // Create a memoized map of movie keys to their genre titles for efficient searching.
   const movieToGenresMap = useMemo(() => {
@@ -81,7 +84,8 @@ const App: React.FC = () => {
 
     const initApp = async () => {
       try {
-        const liveData = await fetchAndCacheLiveData();
+        const { data: liveData, source } = await fetchAndCacheLiveData();
+        setDataSource(source);
         
         setCategories(liveData.categories);
 
@@ -352,10 +356,13 @@ const App: React.FC = () => {
       .map(key => movies[key])
       .filter(Boolean)
       .filter(isMovieVisible);
+  
+  const isOffline = dataSource === 'fallback';
 
   return (
     <div className="flex flex-col min-h-screen bg-[#141414] text-white">
-      {isStaging && <StagingBanner onExit={exitStaging} />}
+      <DataStatusIndicator source={dataSource} />
+      {isStaging && <StagingBanner onExit={exitStaging} isOffline={isOffline} />}
       <Header 
         searchQuery={searchQuery} 
         onSearch={setSearchQuery} 
@@ -363,6 +370,7 @@ const App: React.FC = () => {
         onMobileSearchClick={() => setIsMobileSearchOpen(true)}
         onSearchSubmit={handleSearchSubmit}
         isStaging={isStaging}
+        isOffline={isOffline}
       />
       
       <main className="flex-grow overflow-x-hidden">

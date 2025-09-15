@@ -30,7 +30,7 @@ const AdminPage: React.FC = () => {
   const fetchAdminData = async () => {
     try {
         invalidateCache();
-        const liveData = await fetchAndCacheLiveData();
+        const { data: liveData } = await fetchAndCacheLiveData();
         setData(liveData);
     } catch (e) {
         console.error("Failed to fetch live data for admin.", e);
@@ -105,7 +105,7 @@ const AdminPage: React.FC = () => {
         const updateChannel = new BroadcastChannel('cratetv_data_update');
         updateChannel.postMessage({ type: 'update' });
         updateChannel.close();
-        setTimeout(() => setPublishStatus('idle'), 2500);
+        setTimeout(() => setPublishStatus('idle'), 3500);
     } catch (error) {
         setPublishStatus('error');
         setPublishError(error instanceof Error ? error.message : 'An unknown error occurred.');
@@ -223,6 +223,12 @@ const AdminPage: React.FC = () => {
 
             <main className="flex-grow p-4 md:p-8">
                 {publishStatus === 'error' && <div className="max-w-7xl mx-auto mb-4 text-red-400 bg-red-900/50 p-3 rounded-md border border-red-800">Error publishing: {publishError}</div>}
+                {publishStatus === 'success' && (
+                  <div className="max-w-7xl mx-auto mb-4 text-green-300 bg-green-900/50 p-3 rounded-md border border-green-800">
+                    <strong>Published Successfully!</strong> It may take up to a minute for your changes to appear on the live site due to caching.
+                  </div>
+                )}
+
 
                 {selectedMovie ? (
                     <div className="max-w-4xl mx-auto bg-gray-800 p-6 rounded-lg">

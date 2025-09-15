@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header.tsx';
 import Footer from './Footer.tsx';
@@ -25,7 +23,8 @@ const PremiumPage: React.FC = () => {
     useEffect(() => {
         const loadData = async () => {
             try {
-                const liveData = await fetchAndCacheLiveData();
+                // FIX: Destructured `data` from the `fetchAndCacheLiveData` result.
+                const { data: liveData } = await fetchAndCacheLiveData();
                 setMovies(liveData.movies);
                 setCategories(liveData.categories);
 

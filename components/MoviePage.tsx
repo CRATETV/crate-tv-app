@@ -80,6 +80,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   
   // Staging and feature toggles
   const [isStaging, setIsStaging] = useState(false);
+  // FIX: Added dataSource state to track if the app is in offline/fallback mode.
+  const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
 
   useEffect(() => {
     setIsLoading(true);
@@ -94,7 +96,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     
     const loadMovieData = async () => {
         try {
-            const liveData = await fetchAndCacheLiveData();
+            // FIX: Destructured `data` and `source` from the `fetchAndCacheLiveData` result.
+            const { data: liveData, source } = await fetchAndCacheLiveData();
+            setDataSource(source);
             setAllMovies(liveData.movies);
             setAllCategories(liveData.categories);
 
@@ -225,7 +229,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
     return (
         <div className="flex flex-col min-h-screen bg-black text-white">
-            {isStaging && <StagingBanner onExit={exitStaging} />}
+            {/* FIX: Passed the `isOffline` prop to the StagingBanner component. */}
+            {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
             <Header
                 searchQuery={searchQuery}
                 onSearch={setSearchQuery}

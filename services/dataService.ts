@@ -8,9 +8,14 @@ export interface LiveData {
     festivalConfig: FestivalConfig;
 }
 
+export interface FetchResult {
+    data: LiveData;
+    source: 'live' | 'fallback';
+}
+
 // In-memory cache variables
 let liveDataUrl: string | null = null;
-let cachedLiveData: LiveData | null = null;
+let cachedLiveData: FetchResult | null = null;
 let lastFetchTimestamp: number = 0;
 const CACHE_DURATION_MS = 60 * 1000; // 1 minute cache
 
@@ -42,7 +47,7 @@ const getLiveUrl = async (): Promise<string | null> => {
     }
 };
 
-export const fetchAndCacheLiveData = async (): Promise<LiveData> => {
+export const fetchAndCacheLiveData = async (): Promise<FetchResult> => {
     const now = Date.now();
     // Return cached data if it's available and not expired
     if (cachedLiveData && (now - lastFetchTimestamp < CACHE_DURATION_MS)) {
@@ -52,7 +57,7 @@ export const fetchAndCacheLiveData = async (): Promise<LiveData> => {
     const url = await getLiveUrl();
     if (!url) {
         console.warn("Could not retrieve live data URL, using static data.");
-        return getFallbackData();
+        return { data: getFallbackData(), source: 'fallback' };
     }
 
     try {
@@ -66,13 +71,14 @@ export const fetchAndCacheLiveData = async (): Promise<LiveData> => {
            throw new Error('Fetched data has incorrect structure');
         }
         
+        const result: FetchResult = { data, source: 'live' };
         // Store the freshly fetched data in our cache
-        cachedLiveData = data;
+        cachedLiveData = result;
         lastFetchTimestamp = now;
-        return data;
+        return result;
     } catch (error) {
         console.error("Could not fetch live data, falling back to static data.", error);
-        // Do not cache fallback data, as the issue might be temporary
-        return getFallbackData();
+        // Do not cache fallback data, so the app can retry on the next load
+        return { data: getFallbackData(), source: 'fallback' };
     }
 };

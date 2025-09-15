@@ -51,6 +51,8 @@ const ClassicsPage: React.FC = () => {
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
   const [isStaging, setIsStaging] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
+  // FIX: Added dataSource state to track if the app is in offline/fallback mode.
+  const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
   const movieGridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,7 +68,9 @@ const ClassicsPage: React.FC = () => {
     
     const loadClassicsData = async () => {
         try {
-            const liveData = await fetchAndCacheLiveData();
+            // FIX: Destructured `data` and `source` from the `fetchAndCacheLiveData` result.
+            const { data: liveData, source } = await fetchAndCacheLiveData();
+            setDataSource(source);
             
             // Initialize movies with likes from local storage
             const newMoviesState = { ...liveData.movies };
@@ -181,7 +185,8 @@ const ClassicsPage: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#141414] text-white">
-      {isStaging && <StagingBanner onExit={exitStaging} />}
+      {/* FIX: Passed the `isOffline` prop to the StagingBanner component. */}
+      {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
       <Header 
         searchQuery="" 
         onSearch={() => {}} 

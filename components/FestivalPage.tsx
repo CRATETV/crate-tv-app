@@ -82,7 +82,8 @@ const FestivalPage: React.FC = () => {
     const initPage = async () => {
         setIsLoading(true);
         try {
-            const liveData = await fetchAndCacheLiveData();
+            // FIX: Destructured `data` from the `fetchAndCacheLiveData` result.
+            const { data: liveData } = await fetchAndCacheLiveData();
             setFestivalData(liveData.festivalData);
             setFestivalConfig(liveData.festivalConfig);
             setAllMovies(liveData.movies);

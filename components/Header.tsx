@@ -8,16 +8,25 @@ interface HeaderProps {
   onMobileSearchClick: () => void;
   onSearchSubmit?: (query: string) => void;
   isStaging?: boolean;
+  isOffline?: boolean;
   showSearch?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit, isStaging, showSearch = true }) => {
+const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit, isStaging, isOffline, showSearch = true }) => {
   const [isFestivalLive, setIsFestivalLive] = useState(false);
+  const [topOffset, setTopOffset] = useState(0);
+
+  useEffect(() => {
+    let offset = 0;
+    if (isOffline) offset += 32; // Height of the offline banner (h-8 in tailwind)
+    if (isStaging) offset += 32; // Height of the staging banner (h-8 in tailwind)
+    setTopOffset(offset);
+  }, [isStaging, isOffline]);
 
   useEffect(() => {
     const checkFestivalStatus = async () => {
         try {
-            const liveData = await fetchAndCacheLiveData();
+            const { data: liveData } = await fetchAndCacheLiveData();
             // Use ?? false to handle cases where the property might be missing from older data
             setIsFestivalLive(liveData.festivalConfig?.isFestivalLive ?? false);
         } catch (error) {
@@ -64,7 +73,10 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
   const inactiveLinkStyles = "text-gray-300 hover:bg-white/20 hover:text-white";
 
   return (
-    <header className={`fixed left-0 w-full z-40 px-4 md:px-8 py-3 flex justify-between items-center transition-all duration-500 ${isStaging ? 'top-8' : 'top-0'} ${isScrolled ? 'bg-[#141414]' : 'bg-gradient-to-b from-black/70 to-transparent'}`}>
+    <header 
+      className={`fixed left-0 w-full z-40 px-4 md:px-8 py-3 flex justify-between items-center transition-all duration-500 ${isScrolled ? 'bg-[#141414]' : 'bg-gradient-to-b from-black/70 to-transparent'}`}
+      style={{ top: `${topOffset}px` }}
+    >
       <div className="flex items-center gap-2 md:gap-4">
         <a 
           href="/" 

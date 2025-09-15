@@ -137,6 +137,10 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
     const { name, value } = e.target;
     setConfig(prev => ({ ...prev, [name]: value }));
   };
+  
+  const handleToggleLiveStatus = () => {
+    setConfig(prev => ({ ...prev, isFestivalLive: !prev.isFestivalLive }));
+  };
 
   const addDay = () => {
     setData(currentData => {
@@ -222,6 +226,24 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
                 rows={3} 
                 className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               ></textarea>
+          </div>
+          <div className="flex items-center justify-between bg-gray-800 p-3 rounded-md">
+            <label htmlFor="isFestivalLive" className="font-medium text-white">Is Festival Live?</label>
+            <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                <input 
+                    type="checkbox" 
+                    name="isFestivalLive" 
+                    id="isFestivalLive" 
+                    checked={config.isFestivalLive || false}
+                    onChange={handleToggleLiveStatus}
+                    className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                />
+                <label htmlFor="isFestivalLive" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-600 cursor-pointer"></label>
+            </div>
+            <style>{`
+                .toggle-checkbox:checked { right: 0; border-color: #6d28d9; }
+                .toggle-checkbox:checked + .toggle-label { background-color: #a78bfa; }
+            `}</style>
           </div>
       </div>
 
