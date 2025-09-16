@@ -75,7 +75,7 @@ const FilmBlockDetailsModal: React.FC<FilmBlockDetailsModalProps> = ({
                         {filmIsUnlocked ? (
                             <button onClick={() => onWatchMovie(movie.key)} className="bg-red-600 hover:bg-red-700 text-white text-sm font-bold py-2 px-4 rounded-md transition-colors">Watch</button>
                         ) : (
-                            <div className="bg-gray-600 text-white text-sm font-bold py-2 px-4 rounded-md text-center">Locked</div>
+                            <div className="bg-gray-600 text-white text-sm font-bold py-2 px-4 rounded-md text-center cursor-not-allowed" title="Payments are temporarily unavailable">Unlock - $5</div>
                         )}
                     </div>
                 </div>
@@ -88,7 +88,7 @@ const FilmBlockDetailsModal: React.FC<FilmBlockDetailsModalProps> = ({
               <p className="text-green-400 font-semibold">✓ You have access to all films in this block.</p>
             ) : (
               <div>
-                <h3 className="text-xl text-white mb-2">Unlock this block for $5.00</h3>
+                <h3 className="text-xl text-white mb-2">Unlock this block for $10.00</h3>
                 <p className="text-gray-400 mb-4">Gain access to all {blockMovies.length} films in the "{block.title}" block.</p>
                  <div className="bg-gray-700 text-gray-400 font-bold py-3 px-6 rounded-lg inline-block cursor-not-allowed" title="Payments are temporarily unavailable">
                     Unlock Block

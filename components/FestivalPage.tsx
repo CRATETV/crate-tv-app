@@ -119,7 +119,7 @@ const FestivalPage: React.FC = () => {
                 </p>
                 {!purchases.hasFullPass ? (
                     <div className="bg-gray-800/50 border border-gray-700 text-gray-400 font-bold py-4 px-8 rounded-lg text-xl inline-block cursor-not-allowed" title="Payments are temporarily unavailable">
-                        Buy Full Festival Pass
+                        Buy Full Festival Pass - $50
                     </div>
                 ) : (
                     <div className="bg-green-500/20 border border-green-400 text-green-300 font-bold py-4 px-8 rounded-lg text-xl inline-block">
@@ -166,7 +166,7 @@ const FestivalPage: React.FC = () => {
                                              <span className="text-green-400 font-semibold">✓ You have access to this block</span>
                                         ) : (
                                             <div className="bg-gray-700 text-gray-400 font-bold py-2 px-6 rounded-lg inline-block cursor-not-allowed" title="Payments are temporarily unavailable">
-                                                Unlock Full Block
+                                                Unlock Full Block - $10
                                             </div>
                                         )}
                                     </div>
