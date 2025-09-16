@@ -13,13 +13,13 @@ import LoadingSpinner from './components/LoadingSpinner.tsx';
 import BackToTopButton from './components/BackToTopButton.tsx';
 import DataStatusIndicator from './components/DataStatusIndicator.tsx';
 import FeatureModal from './components/FeatureModal.tsx';
-import RokuBanner from './components/RokuBanner.tsx';
+import FestivalView from './components/FestivalView.tsx'; // Import FestivalView
 // FIX: Imported the MovieCard component to resolve the 'Cannot find name' error.
 import MovieCard from './components/MovieCard.tsx';
 
 // Services and types
-import { fetchAndCacheLiveData } from './services/dataService.ts';
-import { Movie, Actor, Category, FestivalConfig } from './types.ts';
+import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
+import { Movie, Actor, Category, FestivalConfig, FestivalDay } from './types.ts';
 import { useAuth } from './contexts/AuthContext.tsx';
 
 
@@ -27,6 +27,7 @@ function App() {
   // State variables
   const [movies, setMovies] = useState<Record<string, Movie>>({});
   const [categories, setCategories] = useState<Record<string, Category>>({});
+  const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
   const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
@@ -42,7 +43,47 @@ function App() {
 
   const { user, subscribe } = useAuth();
 
-  // Initial data load and environment check
+  const loadAppData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const { data, source } = await fetchAndCacheLiveData();
+      setDataSource(source);
+
+      // Initialize movies with likes from local storage
+      const newMoviesState = { ...data.movies };
+      Object.keys(newMoviesState).forEach(key => {
+        const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
+        if (storedLikes) {
+          newMoviesState[key].likes = parseInt(storedLikes, 10);
+        }
+      });
+      setMovies(newMoviesState);
+
+      setCategories(data.categories);
+      setFestivalData(data.festivalData);
+      setFestivalConfig(data.festivalConfig);
+
+      // Initialize liked set from local storage
+      const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
+      if (storedLikedMovies) {
+        setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
+      }
+      
+      // Feature modal logic
+      const hasSeenModal = localStorage.getItem('hasSeenAiFactFeature');
+      if (!hasSeenModal) {
+        setShowFeatureModal(true);
+        localStorage.setItem('hasSeenAiFactFeature', 'true');
+      }
+
+    } catch (error) {
+      console.error("Failed to load app data", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Initial data load, environment check, and live update listener
   useEffect(() => {
     // Check for staging env
     const params = new URLSearchParams(window.location.search);
@@ -59,46 +100,23 @@ function App() {
     }
 
     // Load main app data
-    const loadAppData = async () => {
-      setIsLoading(true);
-      try {
-        const { data, source } = await fetchAndCacheLiveData();
-        setDataSource(source);
-
-        // Initialize movies with likes from local storage
-        const newMoviesState = { ...data.movies };
-        Object.keys(newMoviesState).forEach(key => {
-          const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
-          if (storedLikes) {
-            newMoviesState[key].likes = parseInt(storedLikes, 10);
-          }
-        });
-        setMovies(newMoviesState);
-
-        setCategories(data.categories);
-        setFestivalConfig(data.festivalConfig);
-
-        // Initialize liked set from local storage
-        const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
-        if (storedLikedMovies) {
-          setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
-        }
-        
-        // Feature modal logic
-        const hasSeenModal = localStorage.getItem('hasSeenAiFactFeature');
-        if (!hasSeenModal) {
-          setShowFeatureModal(true);
-          localStorage.setItem('hasSeenAiFactFeature', 'true');
-        }
-
-      } catch (error) {
-        console.error("Failed to load app data", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     loadAppData();
-  }, []);
+
+    // Critical fix: Listen for live data updates from the admin panel
+    const broadcastChannel = new BroadcastChannel('cratetv-data-update');
+    const handleMessage = () => {
+      console.log("Live update signal received. Refreshing data...");
+      invalidateCache(); // Clear the cache to force a fresh fetch
+      loadAppData();
+    };
+    broadcastChannel.addEventListener('message', handleMessage);
+
+    return () => {
+      broadcastChannel.removeEventListener('message', handleMessage);
+      broadcastChannel.close();
+    };
+
+  }, [loadAppData]);
 
   // Handle scroll for header transparency
   useEffect(() => {
@@ -257,14 +275,21 @@ function App() {
           </div>
         ) : (
           <>
-            <Hero
-              movies={heroMovies}
-              currentIndex={heroIndex}
-              onSetCurrentIndex={setHeroIndex}
-              onSelectMovie={handleSelectMovie}
-            />
-            <div className="px-4 md:px-12 -mt-16 relative z-10">
-               <RokuBanner />
+            {festivalConfig?.isFestivalLive ? (
+              <FestivalView 
+                festivalData={festivalData}
+                festivalConfig={festivalConfig}
+                allMovies={movies}
+              />
+            ) : (
+              <Hero
+                movies={heroMovies}
+                currentIndex={heroIndex}
+                onSetCurrentIndex={setHeroIndex}
+                onSelectMovie={handleSelectMovie}
+              />
+            )}
+            <div className={`px-4 md:px-12 relative z-10 ${!festivalConfig?.isFestivalLive && '-mt-16'}`}>
                {mainPageCategoryKeys.map(key => {
                  const category = categories[key];
                  if (!category || category.movieKeys.length === 0) return null;

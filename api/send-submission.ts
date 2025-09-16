@@ -1,9 +1,24 @@
+import { Resend } from 'resend';
+
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/send-submission
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const fromEmail = process.env.FROM_EMAIL || 'submissions@cratetv.net';
+const toEmail = process.env.TO_EMAIL || 'info@cratetv.net';
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { filmTitle, directorName, email, synopsis } = body;
+    const { 
+        filmTitle, 
+        directorName, 
+        email, 
+        synopsis,
+        actorBio,
+        awards,
+        relevantInfo
+    } = body;
 
     // Basic validation
     if (!filmTitle || !directorName || !email || !synopsis) {
@@ -12,16 +27,48 @@ export async function POST(request: Request) {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-
-    // In a real application, you would add logic here to:
-    // 1. Sanitize the input data.
-    // 2. Send an email notification using a service like SendGrid, Resend, or Nodemailer.
-    //    e.g., await sendEmail({ to: 'admin@cratetv.net', subject: `New Film Submission: ${filmTitle}`, ... });
-    // 3. Save the submission details to a database.
     
-    console.log('Received new film submission:', body);
+    // Ensure environment variables are set
+    if (!process.env.RESEND_API_KEY) {
+        throw new Error("RESEND_API_KEY is not configured on the server.");
+    }
 
-    // Simulate a successful operation
+    const emailHtml = `
+        <div>
+            <h2>New Film Submission: "${filmTitle}"</h2>
+            <p><strong>Director:</strong> ${directorName}</p>
+            <p><strong>Submitter Email:</strong> ${email}</p>
+            <hr>
+            <h3>Synopsis:</h3>
+            <p>${synopsis.replace(/\n/g, '<br>')}</p>
+            
+            ${actorBio ? `<h3>Actor Bios:</h3><p>${actorBio.replace(/\n/g, '<br>')}</p>` : ''}
+            ${awards ? `<h3>Awards & Recognition:</h3><p>${awards.replace(/\n/g, '<br>')}</p>` : ''}
+            ${relevantInfo ? `<h3>Relevant Information:</h3><p>${relevantInfo.replace(/\n/g, '<br>')}</p>` : ''}
+
+            <hr>
+            <p>The submitter has been instructed to upload their film files via the Dropbox link.</p>
+        </div>
+    `;
+
+    // Send email using Resend
+    const { data, error } = await resend.emails.send({
+        from: `Crate TV Submissions <${fromEmail}>`,
+        to: [toEmail],
+        subject: `New Film Submission: ${filmTitle}`,
+        html: emailHtml,
+        // FIX: Corrected the property name from 'reply_to' to 'replyTo' to match the Resend SDK's type definition.
+        reply_to: email,
+    });
+
+    if (error) {
+        console.error('Resend error:', error);
+        return new Response(JSON.stringify({ error: error.message }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
+
     return new Response(JSON.stringify({ message: 'Submission received successfully.' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

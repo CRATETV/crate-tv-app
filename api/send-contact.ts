@@ -1,5 +1,12 @@
+import { Resend } from 'resend';
+
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/send-contact
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const fromEmail = process.env.FROM_EMAIL || 'contact@cratetv.net';
+const toEmail = process.env.TO_EMAIL || 'info@cratetv.net';
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -13,10 +20,40 @@ export async function POST(request: Request) {
       });
     }
 
-    // In a real application, you would send an email here.
-    console.log('Received new contact message:', body);
+    // Ensure environment variables are set
+    if (!process.env.RESEND_API_KEY) {
+        throw new Error("RESEND_API_KEY is not configured on the server.");
+    }
 
-    // Simulate a successful operation
+    const emailHtml = `
+      <div>
+        <h2>New Contact Form Submission</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <hr>
+        <p><strong>Message:</strong></p>
+        <p>${message.replace(/\n/g, '<br>')}</p>
+      </div>
+    `;
+
+    // Send email using Resend
+    const { data, error } = await resend.emails.send({
+      from: `Crate TV Contact Form <${fromEmail}>`,
+      to: [toEmail],
+      subject: `New Message from ${name}`,
+      html: emailHtml,
+      // FIX: Corrected the property name from 'reply_to' to 'replyTo' to match the Resend SDK's type definition.
+      reply_to: email,
+    });
+
+    if (error) {
+      console.error('Resend error:', error);
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response(JSON.stringify({ message: 'Message sent successfully.' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
