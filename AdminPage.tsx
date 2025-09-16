@@ -82,7 +82,14 @@ const AdminPage: React.FC = () => {
     setLoginError('');
   };
 
-  const publishData = async () => {
+  const publishData = async (dataToPublish?: LiveData) => {
+    const payload = dataToPublish || data;
+    if (!payload) {
+        setPublishError("No data available to publish.");
+        setPublishStatus('error');
+        throw new Error("No data available to publish.");
+    }
+
     setPublishStatus('saving');
     setPublishError('');
     try {
@@ -92,7 +99,7 @@ const AdminPage: React.FC = () => {
         const response = await fetch('/api/publish-data', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: adminPassword, data: data }),
+            body: JSON.stringify({ password: adminPassword, data: payload }),
         });
 
         if (!response.ok) {
@@ -105,10 +112,17 @@ const AdminPage: React.FC = () => {
         const updateChannel = new BroadcastChannel('cratetv_data_update');
         updateChannel.postMessage({ type: 'update' });
         updateChannel.close();
-        setTimeout(() => setPublishStatus('idle'), 3500);
     } catch (error) {
         setPublishStatus('error');
         setPublishError(error instanceof Error ? error.message : 'An unknown error occurred.');
+        throw error; // Re-throw to allow callers to handle their own UI state
+    }
+  };
+
+  const handleMainPublishClick = async () => {
+    await publishData().catch(() => {}); // Catch error to prevent unhandled rejection
+    if (publishStatus !== 'error') {
+        setTimeout(() => setPublishStatus('idle'), 3500);
     }
   };
 
@@ -167,6 +181,19 @@ const AdminPage: React.FC = () => {
                 festivalConfig: newFestivalConfig
             }
         });
+    };
+
+    const handlePublishFestivalStatus = async (newStatus: boolean) => {
+      if (!data) throw new Error("Data not loaded");
+      
+      const updatedData = JSON.parse(JSON.stringify(data));
+      updatedData.festivalConfig.isFestivalLive = newStatus;
+      
+      // Update local state immediately for a responsive UI
+      setData(updatedData);
+
+      // Publish this specific state immediately
+      await publishData(updatedData);
     };
 
     const handleDownloadConstants = () => {
@@ -301,7 +328,7 @@ export const festivalData: FestivalDay[] = ${JSON.stringify(data.festivalData, n
             <header className="bg-gray-800 p-4 flex justify-between items-center shadow-md sticky top-0 z-50">
                 <h1 className="text-2xl font-bold">Admin Panel</h1>
                 <div>
-                    <button onClick={publishData} disabled={publishStatus === 'saving'} className={`mr-4 font-bold py-2 px-4 rounded-md transition-colors ${
+                    <button onClick={handleMainPublishClick} disabled={publishStatus === 'saving'} className={`mr-4 font-bold py-2 px-4 rounded-md transition-colors ${
                         publishStatus === 'saving' ? 'bg-yellow-700 cursor-not-allowed' : 
                         publishStatus === 'success' ? 'bg-green-600' : 
                         publishStatus === 'error' ? 'bg-red-700' : 'bg-green-600 hover:bg-green-700'
@@ -339,6 +366,7 @@ export const festivalData: FestivalDay[] = ${JSON.stringify(data.festivalData, n
                                 initialConfig={data.festivalConfig}
                                 allMovies={data.movies}
                                 onSave={handleFestivalSave}
+                                onPublishLiveStatus={handlePublishFestivalStatus}
                             />
                         )}
                         {activeView === 'movies' && renderEditorView('Movie Management',
