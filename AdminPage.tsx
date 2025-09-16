@@ -1,390 +1,301 @@
-import React, { useState, useEffect } from 'react';
-import { moviesData as initialMoviesData, categoriesData as initialCategoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfigData } from './constants.ts';
-import { Movie, Category, FestivalDay, FestivalConfig, SalesData } from './types.ts';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Movie, Category, FestivalDay, FestivalConfig } from './types.ts';
+import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
 import MovieEditor from './components/MovieEditor.tsx';
-import Header from './components/Header.tsx';
-import Footer from './components/Footer.tsx';
+import CategoryEditor from './components/CategoryEditor.tsx';
 import FestivalEditor from './components/FestivalEditor.tsx';
-import { fetchAndCacheLiveData } from './services/dataService.ts';
+import LoadingSpinner from './components/LoadingSpinner.tsx';
+import Footer from './components/Footer.tsx';
 
-
-// Helper to format the current date/time for a datetime-local input
-const getLocalDatetimeString = () => {
-    const now = new Date();
-    // Adjust for timezone offset to get local time
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    // Format as 'YYYY-MM-DDTHH:MM'
-    return now.toISOString().slice(0, 16);
-};
-
-const StatCard: React.FC<{ title: string; value: string | number; icon: JSX.Element }> = ({ title, value, icon }) => (
-    <div className="bg-gray-800 p-4 rounded-lg flex items-center gap-4 border border-gray-700">
-        <div className="bg-gray-700 p-3 rounded-full">
-            {icon}
-        </div>
-        <div>
-            <p className="text-sm text-gray-400">{title}</p>
-            <p className="text-2xl font-bold text-white">{value}</p>
-        </div>
-    </div>
-);
-
+type AdminTab = 'movies' | 'categories' | 'festival' | 'sales';
 
 const AdminPage: React.FC = () => {
-  const [movies, setMovies] = useState<Record<string, Movie>>({});
-  const [categories, setCategories] = useState<Record<string, Category>>({});
-  const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
-  const [festivalConfig, setFestivalConfig] = useState<FestivalConfig>(initialFestivalConfigData);
-  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  const [isAddingNew, setIsAddingNew] = useState(false);
-  const [password, setPassword] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loginError, setLoginError] = useState('');
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
-  
-  // Auto-publishing state
-  const [autoPublishStatus, setAutoPublishStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
-  const [autoPublishError, setAutoPublishError] = useState('');
-  
-  // Sales Dashboard State
-  const [salesData, setSalesData] = useState<SalesData | null>(null);
-  const [isLoadingSales, setIsLoadingSales] = useState(false);
-  const [salesError, setSalesError] = useState('');
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [password, setPassword] = useState('');
+    const [loginError, setLoginError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingData, setIsLoadingData] = useState(true);
 
-  const fetchAdminData = async () => {
-    try {
-        const { data: liveData } = await fetchAndCacheLiveData();
-        setMovies(liveData.movies);
-        setCategories(liveData.categories);
-        setFestivalData(liveData.festivalData);
-        setFestivalConfig(liveData.festivalConfig);
-    } catch (e) {
-        console.error("Failed to fetch live data for admin, falling back to initial data.", e);
-        setMovies(initialMoviesData);
-        setCategories(initialCategoriesData);
-        setFestivalData(initialFestivalData);
-        setFestivalConfig(initialFestivalConfigData);
-    }
-  };
+    // Data states
+    const [movies, setMovies] = useState<Record<string, Movie>>({});
+    const [categories, setCategories] = useState<Record<string, Category>>({});
+    const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
+    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig>({ title: '', description: '' });
 
-  useEffect(() => {
-    // Check session storage for auth status on initial load
-    if (sessionStorage.getItem('isAdminAuthenticated') === 'true') {
-        setIsAuthenticated(true);
-        fetchSalesData();
-        fetchAdminData();
-    }
-  }, []);
-
-  const fetchSalesData = async () => {
-    setIsLoadingSales(true);
-    setSalesError('');
-    try {
-      const adminPassword = sessionStorage.getItem('adminPassword');
-      if (!adminPassword) throw new Error('Authentication error. Please log in again.');
-
-      const response = await fetch('/api/get-sales-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: adminPassword }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch sales data.');
-      }
-      
-      const data = await response.json();
-      setSalesData(data);
-    } catch (error) {
-      setSalesError(error instanceof Error ? error.message : 'An unknown error occurred.');
-    } finally {
-      setIsLoadingSales(false);
-    }
-  };
+    // UI states
+    const [activeTab, setActiveTab] = useState<AdminTab>('movies');
+    const [editingMovie, setEditingMovie] = useState<Movie | null>(null);
+    const [publishStatus, setPublishStatus] = useState<'idle' | 'publishing' | 'success' | 'error'>('idle');
+    const [publishError, setPublishError] = useState('');
+    
+    // Permission states
+    const [isDeveloper, setIsDeveloper] = useState(false);
+    const [hasElevatedPrivileges, setHasElevatedPrivileges] = useState(false);
 
 
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-    setIsAuthenticating(true);
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setLoginError('');
 
-    try {
-        const response = await fetch('/api/admin-login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password }),
-        });
+        try {
+            const response = await fetch('/api/admin-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password }),
+            });
 
-        if (response.ok) {
-            sessionStorage.setItem('isAdminAuthenticated', 'true');
-            // Store password for use in authenticated API calls like file uploads
+            if (!response.ok) {
+                const { error } = await response.json();
+                throw new Error(error || 'Incorrect password.');
+            }
+            
+            const { isDeveloper, hasElevatedPrivileges } = await response.json();
+            setIsDeveloper(isDeveloper);
+            setHasElevatedPrivileges(hasElevatedPrivileges);
+
             sessionStorage.setItem('adminPassword', password);
-            setIsAuthenticated(true);
-            fetchSalesData(); // Fetch sales data on successful login
-            fetchAdminData(); // Fetch live content on successful login
-        } else {
-            const data = await response.json();
-            setLoginError(data.error || 'Login failed.');
+            setIsLoggedIn(true);
+        } catch (error) {
+            setLoginError(error instanceof Error ? error.message : 'Login failed.');
+        } finally {
+            setIsLoading(false);
         }
-    } catch (error) {
-        setLoginError('An error occurred. Please try again.');
-    } finally {
-        setIsAuthenticating(false);
-    }
-  };
-
-  const publishData = async (
-    updatedData: {
-        movies: Record<string, Movie>,
-        categories: Record<string, Category>,
-        festivalData: FestivalDay[],
-        festivalConfig: FestivalConfig
-    }
-  ) => {
-    setAutoPublishStatus('saving');
-    setAutoPublishError('');
-    try {
-        const adminPassword = sessionStorage.getItem('adminPassword');
-        if (!adminPassword) throw new Error('Authentication error. Please log in again.');
-
-        const response = await fetch('/api/publish-data', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: adminPassword, data: updatedData }),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Publishing failed.');
-        }
-
-        setAutoPublishStatus('success');
-        const broadcastChannel = new BroadcastChannel('cratetv-data-update');
-        broadcastChannel.postMessage('refresh');
-        broadcastChannel.close();
-
-        setTimeout(() => setAutoPublishStatus('idle'), 2500);
-
-    } catch (error) {
-        setAutoPublishStatus('error');
-        setAutoPublishError(error instanceof Error ? error.message : 'An unknown error occurred.');
-    }
-  };
-  
-  const handleSelectMovie = (movie: Movie) => {
-    setSelectedMovie(movie);
-    setIsAddingNew(false);
-  };
-  
-  const handleAddNewMovie = () => {
-    const newMovie: Movie = {
-      key: `newmovie${Date.now()}`,
-      title: '',
-      synopsis: '',
-      cast: [],
-      director: '',
-      trailer: '',
-      fullMovie: '',
-      poster: '',
-      tvPoster: '',
-      likes: 0,
-      releaseDateTime: getLocalDatetimeString(),
     };
-    setSelectedMovie(newMovie);
-    setIsAddingNew(true);
-  };
-  
-  const handleCancel = () => {
-    setSelectedMovie(null);
-    setIsAddingNew(false);
-  };
+    
+    const fetchData = useCallback(async () => {
+        setIsLoadingData(true);
+        try {
+            invalidateCache();
+            const { data } = await fetchAndCacheLiveData();
+            setMovies(data.movies);
+            setCategories(data.categories);
+            setFestivalData(data.festivalData);
+            setFestivalConfig(data.festivalConfig);
+        } catch (error) {
+            console.error("Failed to fetch admin data:", error);
+            setLoginError("Could not load data. Check console for details.");
+        } finally {
+            setIsLoadingData(false);
+        }
+    }, []);
 
-  const handleSave = (updatedMovie: Movie) => {
-    const newMovies = { ...movies, [updatedMovie.key]: updatedMovie };
-    setMovies(newMovies);
-    setSelectedMovie(null);
-    setIsAddingNew(false);
-    publishData({ movies: newMovies, categories, festivalData, festivalConfig });
-  };
+    useEffect(() => {
+        const storedPassword = sessionStorage.getItem('adminPassword');
+        if (storedPassword) {
+            setPassword(storedPassword);
+            // Re-validate password on page load
+            const revalidate = async () => {
+                const res = await fetch('/api/admin-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: storedPassword }),
+                });
+                if(res.ok) {
+                    const { isDeveloper, hasElevatedPrivileges } = await res.json();
+                    setIsDeveloper(isDeveloper);
+                    setHasElevatedPrivileges(hasElevatedPrivileges);
+                    setIsLoggedIn(true);
+                } else {
+                    sessionStorage.removeItem('adminPassword');
+                }
+            };
+            revalidate();
+        }
+    }, []);
 
-  const handleDelete = (movieKey: string) => {
-    if (window.confirm('This will immediately delete the movie from the live site. This action cannot be undone. Are you sure?')) {
-        const newMovies = { ...movies };
-        delete newMovies[movieKey];
-        
-        const newCategories = JSON.parse(JSON.stringify(categories));
-        Object.keys(newCategories).forEach(catKey => {
-            newCategories[catKey].movieKeys = newCategories[catKey].movieKeys.filter((key: string) => key !== movieKey);
-        });
-        
+    useEffect(() => {
+        if (isLoggedIn) {
+            fetchData();
+        }
+    }, [isLoggedIn, fetchData]);
+
+    const handlePublish = async (updatedData?: any, successMessage = 'Data published successfully.') => {
+        setPublishStatus('publishing');
+        setPublishError('');
+        const adminPassword = sessionStorage.getItem('adminPassword');
+
+        try {
+            const dataToPublish = updatedData || {
+                movies,
+                categories,
+                festivalData,
+                festivalConfig,
+            };
+            
+            const response = await fetch('/api/publish-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: adminPassword, data: dataToPublish }),
+            });
+
+            if (!response.ok) {
+                const { error } = await response.json();
+                throw new Error(error || 'Failed to publish data.');
+            }
+            setPublishStatus('success');
+            setTimeout(() => setPublishStatus('idle'), 2000);
+
+        } catch (error) {
+            setPublishStatus('error');
+            setPublishError(error instanceof Error ? error.message : 'An unknown error occurred.');
+        }
+    };
+
+    const handleSaveMovie = (movie: Movie) => {
+        const newMovies = { ...movies, [movie.key]: movie };
         setMovies(newMovies);
+        setEditingMovie(null);
+        handlePublish({ movies: newMovies, categories, festivalData, festivalConfig }, 'Movie saved successfully.');
+    };
+    
+    const handleDeleteMovie = (movieKey: string) => {
+        if (window.confirm(`Are you sure you want to delete the movie "${movies[movieKey].title}"? This action cannot be undone.`)) {
+            const newMovies = { ...movies };
+            delete newMovies[movieKey];
+            
+            const newCategories = { ...categories };
+            Object.keys(newCategories).forEach(catKey => {
+                newCategories[catKey].movieKeys = newCategories[catKey].movieKeys.filter(key => key !== movieKey);
+            });
+            
+            setMovies(newMovies);
+            setCategories(newCategories);
+            setEditingMovie(null);
+            handlePublish({ movies: newMovies, categories: newCategories, festivalData, festivalConfig }, 'Movie deleted successfully.');
+        }
+    };
+
+    const handleAddNewMovie = () => {
+        const newMovie: Movie = {
+            key: `newmovie${Date.now()}`,
+            title: '',
+            synopsis: '',
+            cast: [],
+            director: '',
+            trailer: '',
+            fullMovie: '',
+            poster: '',
+            tvPoster: '',
+            likes: 0,
+        };
+        setEditingMovie(newMovie);
+        setActiveTab('movies');
+    };
+    
+    const handleSaveCategories = (newCategories: Record<string, Category>) => {
         setCategories(newCategories);
-        setSelectedMovie(null);
-        publishData({ movies: newMovies, categories: newCategories, festivalData, festivalConfig });
+        handlePublish({ movies, categories: newCategories, festivalData, festivalConfig }, 'Categories saved successfully.');
+    };
+    
+    const handleSaveFestival = (newFestivalData: FestivalDay[], newFestivalConfig: FestivalConfig) => {
+        setFestivalData(newFestivalData);
+        setFestivalConfig(newFestivalConfig);
+        handlePublish({ movies, categories, festivalData: newFestivalData, festivalConfig: newFestivalConfig }, 'Festival data saved successfully.');
+    };
+    
+    const handlePublishLiveStatus = async (isLive: boolean) => {
+        const newConfig = { ...festivalConfig, isFestivalLive: isLive };
+        setFestivalConfig(newConfig);
+        await handlePublish({ movies, categories, festivalData, festivalConfig: newConfig }, `Festival status set to ${isLive ? 'LIVE' : 'OFFLINE'}.`);
+    };
+
+    if (!isLoggedIn) {
+        return (
+             <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+                <div className="w-full max-w-sm bg-gray-800 p-8 rounded-lg shadow-lg">
+                    <h1 className="text-3xl font-bold text-center mb-6 text-red-400">Admin Login</h1>
+                    <form onSubmit={handleLogin} className="space-y-6">
+                        <div>
+                            <label htmlFor="password" className="block text-sm font-medium text-gray-400 mb-2">Password</label>
+                            <input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                className="form-input"
+                                required
+                            />
+                        </div>
+                         <button type="submit" disabled={isLoading} className="submit-btn w-full">
+                            {isLoading ? 'Logging In...' : 'Login'}
+                        </button>
+                        {loginError && <p className="text-red-500 text-sm text-center mt-4">{loginError}</p>}
+                    </form>
+                </div>
+            </div>
+        );
     }
-  };
-  
-  const handleSaveFestival = (updatedFestivalData: FestivalDay[], updatedFestivalConfig: FestivalConfig) => {
-    setFestivalData(updatedFestivalData);
-    setFestivalConfig(updatedFestivalConfig);
-    publishData({ movies, categories, festivalData: updatedFestivalData, festivalConfig: updatedFestivalConfig });
-  };
+    
+    if (isLoadingData) {
+        return <LoadingSpinner />;
+    }
 
-  const handlePublishFestivalStatus = async (isLive: boolean) => {
-    const newConfig = { ...festivalConfig, isFestivalLive: isLive };
-    setFestivalConfig(newConfig);
-    await publishData({ movies, categories, festivalData, festivalConfig: newConfig });
-  };
-
-
-  if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
-        <div className="w-full max-w-sm bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
-          <h1 className="text-2xl font-bold mb-6 text-center text-white">Admin Login</h1>
-          <form onSubmit={handleAuth}>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500"
-              disabled={isAuthenticating}
-            />
-            {loginError && <p className="text-red-500 text-sm mt-2 text-center">{loginError}</p>}
-            <button type="submit" className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-red-800 disabled:cursor-not-allowed" disabled={isAuthenticating}>
-              {isAuthenticating ? 'Logging in...' : 'Login'}
-            </button>
-          </form>
+        <div className="min-h-screen bg-gray-900 text-gray-200">
+            <header className="bg-gray-800 p-4 flex justify-between items-center shadow-md">
+                <h1 className="text-xl font-bold text-red-400">Crate TV Admin</h1>
+                <div>
+                     <button
+                        onClick={() => handlePublish()}
+                        disabled={publishStatus === 'publishing'}
+                        className={`font-bold py-2 px-5 rounded-md transition-colors text-sm ${
+                           publishStatus === 'publishing' ? 'bg-yellow-600' :
+                           publishStatus === 'success' ? 'bg-green-600' :
+                           publishStatus === 'error' ? 'bg-red-600' :
+                           'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                     >
+                        {publishStatus === 'publishing' ? 'Publishing...' : 
+                         publishStatus === 'success' ? 'Published!' :
+                         publishStatus === 'error' ? 'Error!' :
+                         'Publish All Changes'}
+                     </button>
+                </div>
+            </header>
+            
+            <main className="p-4 sm:p-6 lg:p-8">
+                {publishStatus === 'error' && <div className="bg-red-800 text-red-200 p-3 rounded-md mb-4 text-sm">{publishError}</div>}
+                
+                <div className="flex border-b border-gray-700 mb-6">
+                    <button onClick={() => setActiveTab('movies')} className={`tab ${activeTab === 'movies' && 'tab-active'}`}>Movies</button>
+                    <button onClick={() => setActiveTab('categories')} className={`tab ${activeTab === 'categories' && 'tab-active'}`}>Categories</button>
+                    {hasElevatedPrivileges && <button onClick={() => setActiveTab('festival')} className={`tab ${activeTab === 'festival' && 'tab-active'}`}>Festival</button>}
+                </div>
+
+                {editingMovie ? (
+                    <MovieEditor
+                        movie={editingMovie}
+                        onSave={handleSaveMovie}
+                        onCancel={() => setEditingMovie(null)}
+                        onDelete={handleDeleteMovie}
+                    />
+                ) : (
+                    <>
+                        {activeTab === 'movies' && (
+                             <div>
+                                 <div className="flex justify-between items-center mb-4">
+                                     <h2 className="text-xl sm:text-2xl font-bold text-red-400">Manage Movies</h2>
+                                     <button onClick={handleAddNewMovie} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md text-sm">Add New Movie</button>
+                                 </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                    {Object.values(movies).sort((a,b) => a.title.localeCompare(b.title)).map(movie => (
+                                        <div key={movie.key} onClick={() => setEditingMovie(movie)} className="cursor-pointer bg-gray-800 p-2 rounded-lg hover:bg-gray-700 transition">
+                                            <img src={movie.poster} alt={movie.title} className="w-full aspect-[3/4] object-cover rounded-md" />
+                                            <p className="text-xs text-center mt-2 truncate">{movie.title}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                             </div>
+                        )}
+                        {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={handleSaveCategories} />}
+                        {activeTab === 'festival' && hasElevatedPrivileges && <FestivalEditor initialData={festivalData} initialConfig={festivalConfig} allMovies={movies} onSave={handleSaveFestival} onPublishLiveStatus={handlePublishLiveStatus} />}
+                    </>
+                )}
+            </main>
+            <Footer />
         </div>
-      </div>
     );
-  }
-
-  return (
-    <div className="flex flex-col min-h-screen bg-gray-900 text-white">
-      <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
-      <main className="flex-grow p-4 sm:p-8">
-        <div className="max-w-7xl mx-auto">
-           <div className="flex justify-between items-start mb-8">
-              <h1 className="text-2xl sm:text-4xl font-bold">Admin Panel</h1>
-              {autoPublishStatus !== 'idle' && (
-                  <div className={`text-sm px-3 py-1 rounded-md ${
-                      autoPublishStatus === 'saving' ? 'bg-blue-500/20 text-blue-300' :
-                      autoPublishStatus === 'success' ? 'bg-green-500/20 text-green-300' :
-                      'bg-red-500/20 text-red-300'
-                  }`}>
-                      {autoPublishStatus === 'saving' && 'Saving...'}
-                      {autoPublishStatus === 'success' && '✓ Saved & Published'}
-                      {autoPublishStatus === 'error' && 'Error Saving!'}
-                  </div>
-              )}
-          </div>
-          {autoPublishStatus === 'error' && <p className="text-red-400 text-sm mb-4 -mt-6">{autoPublishError}</p>}
-          
-          {/* Sales Dashboard Section */}
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
-              <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl sm:text-2xl font-bold text-green-400">Sales Dashboard</h2>
-                  <button onClick={fetchSalesData} disabled={isLoadingSales} className="text-sm bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md disabled:opacity-50">
-                      {isLoadingSales ? 'Refreshing...' : 'Refresh'}
-                  </button>
-              </div>
-              {isLoadingSales && (
-                  <div className="text-center py-8">
-                      <p className="text-gray-400">Loading sales data...</p>
-                  </div>
-              )}
-              {salesError && (
-                  <div className="text-center py-8 text-red-400">
-                      <p>Error: {salesError}</p>
-                  </div>
-              )}
-              {salesData && !isLoadingSales && (
-                  <div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                           <StatCard title="Total Revenue" value={`$${salesData.totalRevenue.toFixed(2)}`} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01" /></svg>} />
-                           <StatCard title="Full Passes Sold" value={salesData.fullPassesSold} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>} />
-                           <StatCard title="Film Blocks Sold" value={salesData.filmBlocksSold} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>} />
-                           <StatCard title="Individual Films Sold" value={salesData.individualFilmsSold} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>} />
-                      </div>
-                      <h3 className="text-lg font-semibold mb-2 text-gray-300">Recent Transactions</h3>
-                      <div className="overflow-x-auto max-h-64">
-                          <table className="w-full text-sm text-left text-gray-400">
-                              <thead className="text-xs text-gray-300 uppercase bg-gray-700 sticky top-0">
-                                  <tr>
-                                      <th scope="col" className="px-4 py-2">Date</th>
-                                      <th scope="col" className="px-4 py-2">Item</th>
-                                      <th scope="col" className="px-4 py-2">Amount</th>
-                                  </tr>
-                              </thead>
-                              <tbody>
-                                  {salesData.transactions.map((tx, index) => (
-                                      <tr key={index} className="bg-gray-800 border-b border-gray-700 hover:bg-gray-700/50">
-                                          <td className="px-4 py-2">{new Date(tx.date).toLocaleString()}</td>
-                                          <td className="px-4 py-2">{tx.item}</td>
-                                          <td className="px-4 py-2 font-medium text-white">${tx.amount.toFixed(2)}</td>
-                                      </tr>
-                                  ))}
-                              </tbody>
-                          </table>
-                           {salesData.transactions.length === 0 && <p className="text-center py-4 text-gray-500">No transactions found for the last 90 days.</p>}
-                      </div>
-                  </div>
-              )}
-          </div>
-          
-          {/* Festival Editor Section */}
-           <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
-              <FestivalEditor
-                initialData={festivalData}
-                initialConfig={festivalConfig}
-                allMovies={movies}
-                onSave={handleSaveFestival}
-                onPublishLiveStatus={handlePublishFestivalStatus}
-              />
-          </div>
-
-          <div className="flex justify-between items-center mb-8">
-              <h2 className="text-xl sm:text-2xl font-bold">Content Management</h2>
-              <button
-                  onClick={handleAddNewMovie}
-                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md text-sm sm:text-base"
-              >
-                  Add New Movie
-              </button>
-          </div>
-
-          {selectedMovie ? (
-            <div className="bg-gray-800 p-4 sm:p-6 rounded-lg border border-gray-700">
-              <MovieEditor 
-                movie={selectedMovie}
-                onSave={handleSave}
-                onCancel={handleCancel}
-                onDelete={handleDelete}
-              />
-            </div>
-          ) : (
-            <div className="bg-gray-800 p-4 sm:p-6 rounded-lg border border-gray-700">
-              <h2 className="text-xl sm:text-2xl font-bold mb-4">Select a Movie to Edit</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {Object.values(movies).sort((a, b) => a.title.localeCompare(b.title)).map(movie => (
-                  <div key={movie.key} className="group" onClick={() => handleSelectMovie(movie)}>
-                    <div className="relative w-full aspect-[3/4] rounded-md overflow-hidden cursor-pointer bg-gray-900 transition-transform duration-300 ease-in-out hover:scale-105">
-                        <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" loading="lazy" />
-                    </div>
-                    <p className="text-sm mt-2 text-center truncate group-hover:text-red-400 cursor-pointer">{movie.title}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </main>
-      <Footer />
-    </div>
-  );
 };
 
 export default AdminPage;
