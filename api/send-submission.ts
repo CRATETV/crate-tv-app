@@ -51,39 +51,4 @@ export async function POST(request: Request) {
     }
 
     if (!data.filmTitle || !data.directorName || !data.email || !data.synopsis) {
-      return new Response(JSON.stringify({ error: 'Missing required fields.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    const emailHtml = createEmailBody(data);
-    const emailSubject = `New Film Submission: "${data.filmTitle}"`;
-    const recipientEmail = "cratetiv@gmail.com";
-    
-    const resend = new Resend(process.env.RESEND_API_KEY);
-
-    await resend.emails.send({
-      from: 'Crate TV Submissions <noreply@cratetv.net>',
-      to: recipientEmail,
-      // FIX: Corrected the `reply_to` property to `replyTo` to match the expected type `CreateEmailOptions` and resolve the TypeScript error.
-      reply_to: data.email,
-      subject: emailSubject,
-      html: emailHtml,
-    });
-
-    return new Response(JSON.stringify({ message: 'Submission sent successfully.' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-  } catch (error) {
-    console.error('Error in send-submission API:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-    
-    return new Response(JSON.stringify({ error: `Failed to send submission: ${errorMessage}` }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-}
+      return new Response(JSON.stringify({ error: '
