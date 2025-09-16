@@ -2,79 +2,55 @@
 // It will be accessible at the path /api/send-submission
 import { Resend } from 'resend';
 
-// Helper function to create the HTML email body
-const createEmailBody = (data: Record<string, string>): string => {
+interface SubmissionFormData {
+  filmTitle: string;
+  directorName: string;
+  email: string;
+  synopsis: string;
+  actorBio?: string;
+  awards?: string;
+  relevantInfo?: string;
+}
+
+const createEmailBody = (data: SubmissionFormData): string => {
   const styles = {
-    body: 'background-color: #f4f4f4; margin: 0; padding: 0; font-family: Arial, sans-serif;',
-    container: 'max-width: 600px; margin: 20px auto; background-color: #ffffff; border: 1px solid #dddddd; border-radius: 8px; overflow: hidden;',
-    header: 'background-color: #141414; color: #ffffff; padding: 20px; text-align: center;',
-    headerH1: 'margin: 0; font-size: 24px;',
-    content: 'padding: 30px;',
-    section: 'margin-bottom: 20px;',
-    sectionH2: 'font-size: 18px; color: #333333; border-bottom: 2px solid #eeeeee; padding-bottom: 10px; margin-top: 0;',
-    label: 'font-weight: bold; color: #555555;',
-    text: 'color: #333333; line-height: 1.6;',
-    pre: 'background-color: #f9f9f9; border: 1px solid #dddddd; padding: 15px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-family: monospace;',
-    footer: 'background-color: #f4f4f4; color: #888888; text-align: center; padding: 20px; font-size: 12px;',
+    body: 'font-family: Arial, sans-serif; line-height: 1.6; color: #333;',
+    container: 'max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #fff;',
+    header: 'font-size: 24px; color: #141414; margin-bottom: 20px;',
+    label: 'font-weight: bold; color: #555; display: block; margin-top: 15px;',
+    content: 'background-color: #f9f9f9; border: 1px solid #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word;',
   };
 
-  const fields = [
-    { key: 'filmTitle', label: 'Film Title' },
-    { key: 'directorName', label: "Director's Name" },
-    { key: 'email', label: 'Email Address' },
-    { key: 'synopsis', label: 'Synopsis' },
-    { key: 'actorBio', label: 'Actor Bios' },
-    { key: 'awards', label: 'Awards & Recognition' },
-    { key: 'relevantInfo', label: 'Relevant Information' },
-  ];
-
-  let contentHtml = '';
-  for (const field of fields) {
-    if (data[field.key]) {
-      contentHtml += `
-        <div style="${styles.section}">
-          <h2 style="${styles.sectionH2}">${field.label}</h2>
-          <pre style="${styles.pre}">${data[field.key]}</pre>
-        </div>
-      `;
-    }
-  }
+  let awardsHtml = data.awards ? `<p><span style="${styles.label}">Awards & Recognition:</span><div style="${styles.content}">${data.awards}</div></p>` : '';
+  let bioHtml = data.actorBio ? `<p><span style="${styles.label}">Actor Bios:</span><div style="${styles.content}">${data.actorBio}</div></p>` : '';
+  let infoHtml = data.relevantInfo ? `<p><span style="${styles.label}">Relevant Information:</span><div style="${styles.content}">${data.relevantInfo}</div></p>` : '';
 
   return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>New Film Submission</title>
-    </head>
-    <body style="${styles.body}">
+    <div style="${styles.body}">
       <div style="${styles.container}">
-        <div style="${styles.header}">
-          <h1 style="${styles.headerH1}">New Film Submission from Crate TV</h1>
-        </div>
-        <div style="${styles.content}">
-          ${contentHtml}
-        </div>
-        <div style="${styles.footer}">
-          <p>This is an automated notification from the Crate TV website.</p>
-        </div>
+        <h1 style="${styles.header}">New Film Submission for Crate TV</h1>
+        <p><span style="${styles.label}">Film Title:</span> ${data.filmTitle}</p>
+        <p><span style="${styles.label}">Director's Name:</span> ${data.directorName}</p>
+        <p><span style="${styles.label}">Submitter's Email:</span> ${data.email}</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p><span style="${styles.label}">Synopsis:</span><div style="${styles.content}">${data.synopsis}</div></p>
+        ${bioHtml}
+        ${awardsHtml}
+        ${infoHtml}
       </div>
-    </body>
-    </html>
+    </div>
   `;
 };
 
-
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
+    const data: SubmissionFormData = await request.json();
 
     if (!process.env.RESEND_API_KEY) {
-        throw new Error("RESEND_API_KEY environment variable is not set. Email cannot be sent.");
+      throw new Error("RESEND_API_KEY environment variable is not set.");
     }
 
-    // Basic validation
-    if (!data.filmTitle || !data.directorName || !data.email) {
+    if (!data.filmTitle || !data.directorName || !data.email || !data.synopsis) {
       return new Response(JSON.stringify({ error: 'Missing required fields.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -90,13 +66,12 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: 'Crate TV Submissions <noreply@cratetv.net>',
       to: recipientEmail,
-      // FIX: Changed 'reply_to' to 'replyTo' to match the expected property name in CreateEmailOptions.
-      replyTo: data.email,
+      reply_to: data.email,
       subject: emailSubject,
       html: emailHtml,
     });
 
-    return new Response(JSON.stringify({ message: 'Submission received successfully.' }), {
+    return new Response(JSON.stringify({ message: 'Submission sent successfully.' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -104,7 +79,8 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error in send-submission API:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-    return new Response(JSON.stringify({ error: `Failed to process submission: ${errorMessage}` }), {
+    
+    return new Response(JSON.stringify({ error: `Failed to send submission: ${errorMessage}` }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
