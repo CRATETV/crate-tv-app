@@ -2,54 +2,92 @@ import React, { useState, useEffect } from 'react';
 import Header from './Header.tsx';
 import Footer from './Footer.tsx';
 import BackToTopButton from './BackToTopButton.tsx';
-import { fetchAndCacheLiveData } from '../services/dataService.ts';
-import { FestivalDay, FestivalConfig, Movie } from '../types.ts';
 import LoadingSpinner from './LoadingSpinner.tsx';
-import FestivalView from './FestivalView.tsx'; // Import new view component
+import StagingBanner from './StagingBanner.tsx';
+import FestivalView from './FestivalView.tsx';
+import { fetchAndCacheLiveData } from '../services/dataService.ts';
+import { Movie, FestivalDay, FestivalConfig } from '../types.ts';
+import { useAuth } from '../contexts/AuthContext.tsx';
 
 const FestivalPage: React.FC = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
-  const [festivalConfig, setFestivalConfig] = useState<FestivalConfig>({ title: '', description: '' });
-  const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
+    const [isLoading, setIsLoading] = useState(true);
+    const [movies, setMovies] = useState<Record<string, Movie>>({});
+    const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
+    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+    const [isStaging, setIsStaging] = useState(false);
+    const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
+    const { user } = useAuth();
 
-  useEffect(() => {
-    const initPage = async () => {
-        setIsLoading(true);
-        try {
-            const { data: liveData } = await fetchAndCacheLiveData();
-            setFestivalData(liveData.festivalData);
-            setFestivalConfig(liveData.festivalConfig);
-            setAllMovies(liveData.movies);
-        } catch (error) {
-            console.error("Failed to load festival data:", error);
-        } finally {
-            setIsLoading(false);
+    useEffect(() => {
+        // Staging check
+        const params = new URLSearchParams(window.location.search);
+        const env = params.get('env');
+        const isStagingActive = env === 'staging' || sessionStorage.getItem('crateTvStaging') === 'true';
+        if (isStagingActive) {
+            sessionStorage.setItem('crateTvStaging', 'true');
+            setIsStaging(true);
         }
+
+        const loadData = async () => {
+            setIsLoading(true);
+            try {
+                const { data: liveData, source } = await fetchAndCacheLiveData();
+                setMovies(liveData.movies);
+                setFestivalData(liveData.festivalData);
+                setFestivalConfig(liveData.festivalConfig);
+                setDataSource(source);
+            } catch (error) {
+                console.error("Failed to load data for Festival page:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadData();
+    }, []);
+
+    const exitStaging = () => {
+        sessionStorage.removeItem('crateTvStaging');
+        const params = new URLSearchParams(window.location.search);
+        params.delete('env');
+        window.location.search = params.toString();
     };
-    initPage();
-  }, []);
 
-  if (isLoading) {
-      return <LoadingSpinner />;
-  }
+    if (isLoading) {
+        return <LoadingSpinner />;
+    }
 
-  return (
-    <div className="flex flex-col min-h-screen bg-[#141414] text-white">
-      <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
+    if (!festivalConfig || !festivalConfig.isFestivalLive) {
+        return (
+             <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+                <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
+                <main className="flex-grow flex items-center justify-center text-center p-4">
+                    <div>
+                        <h1 className="text-4xl font-bold mb-4">The Festival is Not Currently Live</h1>
+                        <p className="text-gray-400">Please check back later for updates on our next event.</p>
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        );
+    }
+    
+    return (
+        <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+            {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
+            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} isFestivalLive={festivalConfig?.isFestivalLive} />
+            
+            <main className="flex-grow pt-16">
+                 <FestivalView 
+                    festivalData={festivalData}
+                    festivalConfig={festivalConfig}
+                    allMovies={movies}
+                 />
+            </main>
 
-      <main className="flex-grow pt-16"> {/* Add padding for fixed header */}
-        <FestivalView 
-            festivalData={festivalData}
-            festivalConfig={festivalConfig}
-            allMovies={allMovies}
-        />
-      </main>
-
-      <Footer />
-      <BackToTopButton />
-    </div>
-  );
+            <Footer />
+            <BackToTopButton />
+        </div>
+    );
 };
 
 export default FestivalPage;
