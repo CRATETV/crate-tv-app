@@ -97,7 +97,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
     );
   };
   
-  const handleBlockChange = (dayIndex: number, blockIndex: number, field: 'title', value: string) => {
+  const handleBlockChange = (dayIndex: number, blockIndex: number, field: keyof FilmBlock, value: string) => {
     setData(currentData =>
       currentData.map((day, i) => {
         if (i === dayIndex) {
@@ -174,6 +174,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
     const newBlock: FilmBlock = {
       id: `day${dayIndex + 1}-block${Date.now()}`,
       title: 'New Film Block',
+      time: 'TBD',
       movieKeys: [],
     };
     setData(currentData => 
@@ -277,19 +278,31 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
             <div className="space-y-4 pl-4 border-l-2 border-gray-600">
               {day.blocks.map((block, blockIndex) => (
                 <div key={block.id} className="bg-gray-800 p-3 rounded-md">
-                   <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                         <input
                             type="text"
                             value={block.title}
                             onChange={e => handleBlockChange(dayIndex, blockIndex, 'title', e.target.value)}
+                            placeholder="Block Title"
                             className="w-full text-lg font-semibold bg-transparent text-white focus:outline-none focus:bg-gray-700 rounded-md px-2"
                         />
-                        <button onClick={() => removeBlock(dayIndex, blockIndex)} className="text-xs text-red-500 hover:text-red-400 self-end sm:self-center flex-shrink-0">Remove Block</button>
+                         <input
+                            type="text"
+                            value={block.time}
+                            onChange={e => handleBlockChange(dayIndex, blockIndex, 'time', e.target.value)}
+                            placeholder="e.g., 7:00 PM EST"
+                            className="w-full text-sm font-normal bg-transparent text-gray-300 focus:outline-none focus:bg-gray-700 rounded-md px-2"
+                        />
                    </div>
-                   <p className="text-xs text-gray-400 mb-2">{block.movieKeys.length} film(s) selected.</p>
-                   <button onClick={() => setEditingBlock({ dayIndex, blockIndex })} className="text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md">
-                     Edit Films
-                   </button>
+                   <div className="flex items-center justify-between">
+                     <div>
+                       <p className="text-xs text-gray-400 mb-2">{block.movieKeys.length} film(s) selected.</p>
+                       <button onClick={() => setEditingBlock({ dayIndex, blockIndex })} className="text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md">
+                         Edit Films
+                       </button>
+                     </div>
+                     <button onClick={() => removeBlock(dayIndex, blockIndex)} className="text-xs text-red-500 hover:text-red-400 self-end sm:self-center flex-shrink-0">Remove Block</button>
+                   </div>
                 </div>
               ))}
                <button onClick={() => addBlock(dayIndex)} className="text-sm bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md mt-4">

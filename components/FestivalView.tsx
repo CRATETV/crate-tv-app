@@ -1,43 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { FilmBlock, Movie, FestivalDay, FestivalConfig } from '../types.ts';
-import FilmBlockCard from './FilmBlockCard.tsx';
-import FilmBlockDetailsModal from './FilmBlockDetailsModal.tsx';
-
-interface FestivalPurchases {
-  hasFullPass: boolean;
-  purchasedBlocks: string[];
-  purchasedFilms: string[];
-}
-
-const useFestivalPurchases = () => {
-  const [purchases, setPurchases] = useState<FestivalPurchases>({
-    hasFullPass: false,
-    purchasedBlocks: [],
-    purchasedFilms: [],
-  });
-
-  useEffect(() => {
-    try {
-      const storedPurchases = localStorage.getItem('crateTvFestivalPurchases');
-      if (storedPurchases) {
-        setPurchases(JSON.parse(storedPurchases));
-      }
-    } catch (error) {
-      console.error("Failed to load festival purchases from localStorage", error);
-    }
-  }, []);
-
-  const isFilmUnlocked = (filmKey: string, blockId: string) => {
-    return purchases.hasFullPass || purchases.purchasedBlocks.includes(blockId) || purchases.purchasedFilms.includes(filmKey);
-  };
-  
-  const isBlockUnlocked = (blockId: string) => {
-     return purchases.hasFullPass || purchases.purchasedBlocks.includes(blockId);
-  }
-
-  return { purchases, isFilmUnlocked, isBlockUnlocked };
-};
-
+import { Movie, FestivalDay, FestivalConfig } from '../types.ts';
 
 interface FestivalViewProps {
   festivalData: FestivalDay[];
@@ -47,12 +10,10 @@ interface FestivalViewProps {
 
 const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfig, allMovies }) => {
   const [activeDay, setActiveDay] = useState<number>(1);
-  const [selectedBlock, setSelectedBlock] = useState<FilmBlock | null>(null);
-  const { purchases, isFilmUnlocked, isBlockUnlocked } = useFestivalPurchases();
-
-  const handleNavigateToMovie = (movieKey: string) => {
-    window.history.pushState({}, '', `/movie/${movieKey}?play=true`);
-    window.dispatchEvent(new Event('pushstate'));
+  
+  // This is a placeholder. In a real app, this would redirect to a checkout page.
+  const handlePurchaseClick = () => {
+    // For now, it does nothing as payments are disabled.
   };
 
   if (!festivalData || festivalData.length === 0) {
@@ -60,67 +21,83 @@ const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfi
   }
 
   return (
-    <>
-      <div className="relative py-24 md:py-32 bg-gray-900 text-center">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-red-900/40 to-black"></div>
-        <div className="relative z-10 max-w-4xl mx-auto px-4">
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">{festivalConfig.title}</h1>
+    <div className="font-sans">
+      {/* Elegant Header */}
+      <div className="relative bg-gradient-to-br from-[#2c1a4d] via-[#1a2c4d] to-[#141414] text-center py-20 px-4 overflow-hidden">
+        <div className="absolute inset-0 bg-black/30"></div>
+        <div className="relative z-10 max-w-4xl mx-auto">
+            <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 tracking-tight" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{festivalConfig.title}</h1>
             <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-8">
                 {festivalConfig.description}
             </p>
-            {!purchases.hasFullPass ? (
-                <div className="bg-gray-800/50 border border-gray-700 text-gray-400 font-bold py-4 px-8 rounded-lg text-xl inline-block cursor-not-allowed" title="Payments are temporarily unavailable">
-                    Buy Full Festival Pass - $50
-                </div>
-            ) : (
-                <div className="bg-green-500/20 border border-green-400 text-green-300 font-bold py-4 px-8 rounded-lg text-xl inline-block">
-                    ✓ Festival Pass Unlocked
-                </div>
-            )}
+            <div 
+              className="inline-block bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-bold py-4 px-8 rounded-lg text-xl shadow-lg transform transition-transform hover:scale-105 cursor-not-allowed"
+              title="Payments are temporarily unavailable"
+              onClick={handlePurchaseClick}
+            >
+              Buy All-Access Pass - $50.00
+            </div>
         </div>
       </div>
         
-      <div className="max-w-7xl mx-auto p-4 sm:p-8 md:p-12">
-          <div className="flex justify-center border-b border-gray-700 mb-8 overflow-x-auto scrollbar-hide">
+      <div className="max-w-7xl mx-auto p-4 sm:p-8 md:p-12 bg-[#141414]">
+          {/* Day Selector */}
+          <div className="flex justify-center border-b-2 border-gray-800 mb-8 sm:mb-12">
               {festivalData.map(day => (
                   <button
                       key={day.day}
                       onClick={() => setActiveDay(day.day)}
-                      className={`flex-shrink-0 px-4 sm:px-8 py-4 text-lg font-semibold transition-colors duration-300 border-b-4 ${activeDay === day.day ? 'border-red-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
+                      className={`px-4 sm:px-8 py-3 text-lg font-semibold transition-all duration-300 relative ${activeDay === day.day ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
                   >
-                      Day {day.day} <span className="hidden sm:inline-block text-sm text-gray-500">- {day.date}</span>
+                      Day {day.day}
+                      {activeDay === day.day && <div className="absolute bottom-[-2px] left-0 w-full h-1 bg-gradient-to-r from-teal-400 to-purple-500 rounded-t-full"></div>}
                   </button>
               ))}
           </div>
 
+          {/* Schedule View */}
           <div>
               {festivalData.filter(day => day.day === activeDay).map(day => (
-                  <div key={day.day} className="space-y-10 animate-[fadeIn_0.5s_ease-out]">
+                  <div key={day.day} className="space-y-12 animate-[fadeIn_0.5s_ease-out]">
                       {day.blocks.map(block => {
                           const blockMovies = block.movieKeys.map(key => allMovies[key]).filter(Boolean);
                           return (
-                              <div key={block.id}>
-                                   <h2 className="text-2xl md:text-3xl font-bold mb-4 text-white">{block.title}</h2>
-                                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                      {blockMovies.map(movie => (
-                                          <FilmBlockCard 
-                                              key={movie.key}
-                                              movie={movie}
-                                              isUnlocked={isFilmUnlocked(movie.key, block.id)}
-                                              onWatch={() => handleNavigateToMovie(movie.key)}
-                                              onUnlock={() => setSelectedBlock(block)}
-                                          />
-                                      ))}
-                                  </div>
-                                  <div className="mt-4 text-center">
-                                      {isBlockUnlocked(block.id) ? (
-                                           <span className="text-green-400 font-semibold">✓ You have access to this block</span>
-                                      ) : (
-                                          <div className="bg-gray-700 text-gray-400 font-bold py-2 px-6 rounded-lg inline-block cursor-not-allowed" title="Payments are temporarily unavailable">
-                                              Unlock Full Block - $10
-                                          </div>
-                                      )}
-                                  </div>
+                              <div key={block.id} className="bg-gradient-to-br from-gray-900 to-[#101010] border border-gray-800 rounded-xl shadow-lg overflow-hidden">
+                                <div className="p-6 bg-black/20">
+                                   <div className="flex flex-col sm:flex-row justify-between sm:items-center">
+                                     <div>
+                                      <h2 className="text-2xl md:text-3xl font-bold text-white">{block.title}</h2>
+                                      <p className="text-purple-300 font-semibold">{block.time}</p>
+                                     </div>
+                                      <div 
+                                        className="mt-4 sm:mt-0 flex-shrink-0 bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-5 rounded-lg transition-transform hover:scale-105 cursor-not-allowed shadow-md"
+                                        title="Payments are temporarily unavailable"
+                                        onClick={handlePurchaseClick}
+                                      >
+                                          Buy Block Pass - $10.00
+                                      </div>
+                                   </div>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                  {blockMovies.map(movie => (
+                                    <div key={movie.key} className="flex flex-col sm:flex-row items-center gap-4 bg-gray-800/50 p-3 rounded-lg">
+                                      <div className="flex-shrink-0 w-24 aspect-[3/4] rounded-md overflow-hidden">
+                                        <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />
+                                      </div>
+                                      <div className="flex-grow text-center sm:text-left">
+                                        <h4 className="text-white text-lg font-semibold">{movie.title}</h4>
+                                        <p className="text-sm text-gray-400">Directed by {movie.director}</p>
+                                      </div>
+                                      <div 
+                                        className="flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-gray-200 font-bold py-2 px-4 rounded-lg transition-colors cursor-not-allowed"
+                                        title="Payments are temporarily unavailable"
+                                        onClick={handlePurchaseClick}
+                                      >
+                                        Buy Ticket - $5.00
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                           );
                       })}
@@ -128,18 +105,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfi
               ))}
           </div>
       </div>
-
-      {selectedBlock && (
-        <FilmBlockDetailsModal 
-            block={selectedBlock}
-            onClose={() => setSelectedBlock(null)}
-            isFilmUnlocked={isFilmUnlocked}
-            isBlockUnlocked={isBlockUnlocked}
-            onWatchMovie={handleNavigateToMovie}
-            allMovies={allMovies}
-        />
-      )}
-    </>
+    </div>
   );
 };
 

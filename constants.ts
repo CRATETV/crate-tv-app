@@ -1,4 +1,5 @@
 
+
 import { Category, Movie, FestivalDay, FestivalConfig } from './types.ts';
 
 export const festivalConfigData: FestivalConfig = {
@@ -1179,6 +1180,7 @@ export const festivalData: FestivalDay[] = [
       {
         "id": "day1-block1",
         "title": "Dramatic Debuts",
+        "time": "7:00 PM EST",
         "movieKeys": [
           "lifeless",
           "almasvows",
@@ -1188,6 +1190,7 @@ export const festivalData: FestivalDay[] = [
       {
         "id": "day1-block2",
         "title": "Comedic Chaos",
+        "time": "8:30 PM EST",
         "movieKeys": [
           "foodiecalldirectorscut",
           "eharmonycs",
@@ -1197,6 +1200,7 @@ export const festivalData: FestivalDay[] = [
       {
         "id": "day1-block3",
         "title": "Unsettling Encounters",
+        "time": "10:00 PM EST",
         "movieKeys": [
           "newmovie1756487626529",
           "smirk"
@@ -1211,6 +1215,7 @@ export const festivalData: FestivalDay[] = [
       {
         "id": "day2-block1",
         "title": "Relationship Riddles",
+        "time": "6:00 PM EST",
         "movieKeys": [
           "newmovie1756487215116",
           "newmovie1756487390550",
@@ -1220,6 +1225,7 @@ export const festivalData: FestivalDay[] = [
       {
         "id": "day2-block2",
         "title": "Cycles of Power",
+        "time": "7:30 PM EST",
         "movieKeys": [
           "newmovie1756486933392",
           "hair",
@@ -1229,6 +1235,7 @@ export const festivalData: FestivalDay[] = [
       {
         "id": "day2-block3",
         "title": "Bold Visions",
+        "time": "9:00 PM EST",
         "movieKeys": [
           "fatherdaughterdance",
           "crossroads",
@@ -1244,6 +1251,7 @@ export const festivalData: FestivalDay[] = [
       {
         "id": "day3-block1",
         "title": "Absurdity & Art",
+        "time": "5:00 PM EST",
         "movieKeys": [
           "newmovie1756501125076",
           "newmovie1756485973547",
@@ -1253,6 +1261,7 @@ export const festivalData: FestivalDay[] = [
       {
         "id": "day3-block2",
         "title": "The Human Condition",
+        "time": "6:30 PM EST",
         "movieKeys": [
           "autumn",
           "finallycaught",
@@ -1262,6 +1271,7 @@ export const festivalData: FestivalDay[] = [
       {
         "id": "day3-block3",
         "title": "Spotlight Premiere",
+        "time": "8:00 PM EST",
         "movieKeys": [
           "newmovie1756741314485"
         ]

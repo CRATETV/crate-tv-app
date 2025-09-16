@@ -1,3 +1,4 @@
+
 export interface Actor {
   name: string;
   photo: string;
@@ -28,6 +29,7 @@ export interface Category {
 export interface FilmBlock {
   id: string;
   title: string;
+  time: string;
   movieKeys: string[];
 }
 
