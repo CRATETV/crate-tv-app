@@ -378,6 +378,7 @@ const App: React.FC = () => {
         onSearchSubmit={handleSearchSubmit}
         isStaging={isStaging}
         isOffline={isOffline}
+        isFestivalLive={isFestivalLive}
       />
       
       <main className="flex-grow overflow-x-hidden">

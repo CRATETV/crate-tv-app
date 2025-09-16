@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { fetchAndCacheLiveData, invalidateCache } from '../services/dataService.ts';
 
 interface HeaderProps {
   searchQuery: string;
@@ -10,10 +9,10 @@ interface HeaderProps {
   isStaging?: boolean;
   isOffline?: boolean;
   showSearch?: boolean;
+  isFestivalLive?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit, isStaging, isOffline, showSearch = true }) => {
-  const [isFestivalLive, setIsFestivalLive] = useState(false);
+const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit, isStaging, isOffline, showSearch = true, isFestivalLive }) => {
   const [topOffset, setTopOffset] = useState(0);
 
   useEffect(() => {
@@ -22,33 +21,6 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
     if (isStaging) offset += 32; // Height of the staging banner (h-8 in tailwind)
     setTopOffset(offset);
   }, [isStaging, isOffline]);
-
-  useEffect(() => {
-    const checkFestivalStatus = async () => {
-        try {
-            // Invalidate the cache to ensure we get the absolute latest status
-            invalidateCache();
-            const { data: liveData } = await fetchAndCacheLiveData();
-            setIsFestivalLive(liveData.festivalConfig?.isFestivalLive ?? false);
-        } catch (error) {
-            console.error("Could not check festival status for header", error);
-            setIsFestivalLive(false); // Default to not showing the link on error
-        }
-    };
-    
-    // Check status on initial component mount
-    checkFestivalStatus();
-
-    // Set up a listener to re-check the status whenever any data is published
-    const updateChannel = new BroadcastChannel('cratetv_data_update');
-    updateChannel.addEventListener('message', checkFestivalStatus);
-
-    // Clean up the listener when the component is unmounted
-    return () => {
-      updateChannel.removeEventListener('message', checkFestivalStatus);
-      updateChannel.close();
-    };
-  }, []);
   
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(event.target.value);

@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: 'Crate TV Submissions <noreply@cratetv.net>',
       to: recipientEmail,
-      // FIX: Corrected the `reply_to` property to `replyTo` in the `resend.emails.send` call to match the `resend` library's API, resolving a TypeScript error.
+      // FIX: Corrected the 'reply_to' property to 'replyTo' to match the expected type definition of CreateEmailOptions.
       reply_to: data.email,
       subject: emailSubject,
       html: emailHtml,
