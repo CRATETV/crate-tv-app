@@ -73,14 +73,16 @@ interface FestivalEditorProps {
   initialConfig: FestivalConfig;
   allMovies: Record<string, Movie>;
   onSave: (newData: FestivalDay[], newConfig: FestivalConfig) => void;
+  onPublishLiveStatus: (isLive: boolean) => Promise<void>;
 }
 
-const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialConfig, allMovies, onSave }) => {
+const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialConfig, allMovies, onSave, onPublishLiveStatus }) => {
   const [data, setData] = useState<FestivalDay[]>(initialData);
   const [config, setConfig] = useState<FestivalConfig>(initialConfig);
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
+  const [isLiveStatusSaving, setIsLiveStatusSaving] = useState(false);
 
   useEffect(() => {
     setData(initialData);
@@ -113,7 +115,6 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
   };
   
   const handleMovieSelectionSave = (dayIndex: number, blockIndex: number, newMovieKeys: string[]) => {
-    // This function now ONLY updates the local state. The main save button handles publishing.
     const newData = data.map((day, i) => {
       if (i === dayIndex) {
         const updatedBlocks = day.blocks.map((block, j) => {
@@ -136,8 +137,16 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
     setConfig(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleToggleLiveStatus = () => {
-    setConfig(prev => ({ ...prev, isFestivalLive: !prev.isFestivalLive }));
+  const handleLiveStatusToggle = async () => {
+    setIsLiveStatusSaving(true);
+    try {
+      await onPublishLiveStatus(!config.isFestivalLive);
+    } catch (error) {
+      console.error("Failed to update live status", error);
+      // The parent component handles error display, so we just need to reset loading state.
+    } finally {
+      setIsLiveStatusSaving(false);
+    }
   };
 
   const addDay = () => {
@@ -223,23 +232,32 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
                 className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               ></textarea>
           </div>
-          <div className="flex items-center justify-between bg-gray-800 p-3 rounded-md">
-            <label htmlFor="isFestivalLive" className="font-medium text-white">Is Festival Live?</label>
-            <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                <input 
-                    type="checkbox" 
-                    name="isFestivalLive" 
-                    id="isFestivalLive" 
-                    checked={config.isFestivalLive || false}
-                    onChange={handleToggleLiveStatus}
-                    className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-                />
-                <label htmlFor="isFestivalLive" className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-600 cursor-pointer"></label>
+          <div className="bg-gray-800 p-3 rounded-md">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div>
+                <h4 className="font-medium text-white">Festival Visibility</h4>
+                <p className="text-sm text-gray-400">
+                  {config.isFestivalLive 
+                    ? "The festival is currently LIVE and visible to the public."
+                    : "The festival is OFFLINE and hidden from the public."
+                  }
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleLiveStatusToggle}
+                disabled={isLiveStatusSaving}
+                className={`font-bold py-2 px-5 rounded-md transition-colors w-full sm:w-auto ${
+                  isLiveStatusSaving
+                    ? 'bg-yellow-700 cursor-not-allowed'
+                    : config.isFestivalLive
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {isLiveStatusSaving ? 'Updating...' : config.isFestivalLive ? 'Take Festival Offline' : 'Make Festival Live'}
+              </button>
             </div>
-            <style>{`
-                .toggle-checkbox:checked { right: 0; border-color: #6d28d9; }
-                .toggle-checkbox:checked + .toggle-label { background-color: #a78bfa; }
-            `}</style>
           </div>
       </div>
 

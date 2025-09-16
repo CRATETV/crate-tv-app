@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchAndCacheLiveData } from '../services/dataService.ts';
+import { fetchAndCacheLiveData, invalidateCache } from '../services/dataService.ts';
 
 interface HeaderProps {
   searchQuery: string;
@@ -26,15 +26,28 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
   useEffect(() => {
     const checkFestivalStatus = async () => {
         try {
+            // Invalidate the cache to ensure we get the absolute latest status
+            invalidateCache();
             const { data: liveData } = await fetchAndCacheLiveData();
-            // Use ?? false to handle cases where the property might be missing from older data
             setIsFestivalLive(liveData.festivalConfig?.isFestivalLive ?? false);
         } catch (error) {
             console.error("Could not check festival status for header", error);
             setIsFestivalLive(false); // Default to not showing the link on error
         }
     };
+    
+    // Check status on initial component mount
     checkFestivalStatus();
+
+    // Set up a listener to re-check the status whenever any data is published
+    const updateChannel = new BroadcastChannel('cratetv_data_update');
+    updateChannel.addEventListener('message', checkFestivalStatus);
+
+    // Clean up the listener when the component is unmounted
+    return () => {
+      updateChannel.removeEventListener('message', checkFestivalStatus);
+      updateChannel.close();
+    };
   }, []);
   
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {

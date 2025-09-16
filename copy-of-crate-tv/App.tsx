@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 // FIX: Imported `invalidateCache` to be used in the live update handler.
 import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
-import { Movie, Actor, Category } from './types.ts';
+import { Movie, Actor, Category, FestivalDay, FestivalConfig } from './types.ts';
 import Header from './components/Header.tsx';
 import Hero from './components/Hero.tsx';
 import MovieCarousel from './components/MovieCarousel.tsx';
@@ -15,6 +15,7 @@ import MovieCard from './components/MovieCard.tsx';
 import SearchOverlay from './components/SearchOverlay.tsx';
 import StagingBanner from './components/StagingBanner.tsx';
 import DataStatusIndicator from './components/DataStatusIndicator.tsx';
+import FestivalView from './components/FestivalView.tsx';
 
 // Utility function to preload images in the background
 const preloadImages = (urls: string[]) => {
@@ -54,6 +55,9 @@ const App: React.FC = () => {
   const [recommendedKeys, setRecommendedKeys] = useState<string[]>([]);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
+  const [isFestivalLive, setIsFestivalLive] = useState(false);
+  const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
+  const [festivalConfig, setFestivalConfig] = useState<FestivalConfig>({ title: '', description: '' });
   
   // Create a memoized map of movie keys to their genre titles for efficient searching.
   const movieToGenresMap = useMemo(() => {
@@ -88,6 +92,9 @@ const App: React.FC = () => {
         setDataSource(source);
         
         setCategories(liveData.categories);
+        setFestivalData(liveData.festivalData);
+        setFestivalConfig(liveData.festivalConfig);
+        setIsFestivalLive(liveData.festivalConfig?.isFestivalLive ?? false);
 
         // Initialize likes from local storage and merge with fetched data
         const newMoviesState = { ...liveData.movies };
@@ -374,14 +381,24 @@ const App: React.FC = () => {
       />
       
       <main className="flex-grow overflow-x-hidden">
-        {searchQuery.length === 0 && featuredMovies.length > 0 && <Hero 
-            movies={featuredMovies} 
-            currentIndex={currentHeroIndex}
-            onSetCurrentIndex={handleSetCurrentHeroIndex}
-            onSelectMovie={handleSelectMovie} 
-            />}
+        {isFestivalLive && searchQuery.length === 0 ? (
+          <div className="pt-16">
+            <FestivalView 
+              festivalData={festivalData}
+              festivalConfig={festivalConfig}
+              allMovies={movies}
+            />
+          </div>
+        ) : (
+           searchQuery.length === 0 && featuredMovies.length > 0 && <Hero 
+              movies={featuredMovies} 
+              currentIndex={currentHeroIndex}
+              onSetCurrentIndex={handleSetCurrentHeroIndex}
+              onSelectMovie={handleSelectMovie} 
+            />
+        )}
 
-        <div className={`relative px-4 md:px-12 pb-8 ${searchQuery.length > 0 ? 'pt-24' : '-mt-8 md:-mt-24'}`}>
+        <div className={`relative px-4 md:px-12 pb-8 ${isFestivalLive && searchQuery.length === 0 ? 'pt-8' : (searchQuery.length > 0 ? 'pt-24' : '-mt-8 md:-mt-24')}`}>
           {filteredMovies ? (
             <div>
               <div className="flex items-baseline justify-between mb-4">

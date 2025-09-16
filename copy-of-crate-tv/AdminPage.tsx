@@ -4,7 +4,6 @@ import { fetchAndCacheLiveData, invalidateCache, LiveData } from './services/dat
 import { Movie, Category, FestivalDay, FestivalConfig, FilmBlock } from './types.ts';
 import MovieEditor from './components/MovieEditor.tsx';
 import Footer from './components/Footer.tsx';
-import ConstantsUploader from './components/ConstantsUploader.tsx';
 import FestivalEditor from './components/FestivalEditor.tsx'; // Import the dedicated editor
 
 // Helper to format the current date/time for a datetime-local input
@@ -25,7 +24,7 @@ const AdminPage: React.FC = () => {
   const [loginMessage, setLoginMessage] = useState('');
   const [publishStatus, setPublishStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [publishError, setPublishError] = useState('');
-  const [activeTab, setActiveTab] = useState('festival');
+  const [activeView, setActiveView] = useState<'dashboard' | 'festival' | 'movies'>('dashboard');
   const [showPassword, setShowPassword] = useState(false);
 
   const fetchAdminData = async () => {
@@ -83,7 +82,14 @@ const AdminPage: React.FC = () => {
     setLoginError('');
   };
 
-  const publishData = async () => {
+  const publishData = async (dataToPublish?: LiveData) => {
+    const payload = dataToPublish || data;
+    if (!payload) {
+        setPublishError("No data available to publish.");
+        setPublishStatus('error');
+        throw new Error("No data available to publish.");
+    }
+
     setPublishStatus('saving');
     setPublishError('');
     try {
@@ -93,7 +99,7 @@ const AdminPage: React.FC = () => {
         const response = await fetch('/api/publish-data', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: adminPassword, data: data }),
+            body: JSON.stringify({ password: adminPassword, data: payload }),
         });
 
         if (!response.ok) {
@@ -106,10 +112,17 @@ const AdminPage: React.FC = () => {
         const updateChannel = new BroadcastChannel('cratetv_data_update');
         updateChannel.postMessage({ type: 'update' });
         updateChannel.close();
-        setTimeout(() => setPublishStatus('idle'), 3500);
     } catch (error) {
         setPublishStatus('error');
         setPublishError(error instanceof Error ? error.message : 'An unknown error occurred.');
+        throw error; // Re-throw to allow callers to handle their own UI state
+    }
+  };
+
+  const handleMainPublishClick = async () => {
+    await publishData().catch(() => {}); // Catch error to prevent unhandled rejection
+    if (publishStatus !== 'error') {
+        setTimeout(() => setPublishStatus('idle'), 3500);
     }
   };
 
@@ -170,6 +183,48 @@ const AdminPage: React.FC = () => {
         });
     };
 
+    const handlePublishFestivalStatus = async (newStatus: boolean) => {
+      if (!data) throw new Error("Data not loaded");
+      
+      const updatedData = JSON.parse(JSON.stringify(data));
+      updatedData.festivalConfig.isFestivalLive = newStatus;
+      
+      // Update local state immediately for a responsive UI
+      setData(updatedData);
+
+      // Publish this specific state immediately
+      await publishData(updatedData);
+    };
+
+    const handleDownloadConstants = () => {
+        if (!data) {
+            alert("Data not loaded yet.");
+            return;
+        }
+
+        const fileContent = `
+import { Category, Movie, FestivalDay, FestivalConfig } from './types.ts';
+
+export const festivalConfigData: FestivalConfig = ${JSON.stringify(data.festivalConfig, null, 2)};
+
+export const categoriesData: Record<string, Category> = ${JSON.stringify(data.categories, null, 2)};
+
+export const moviesData: Record<string, Movie> = ${JSON.stringify(data.movies, null, 2)};
+
+export const festivalData: FestivalDay[] = ${JSON.stringify(data.festivalData, null, 2)};
+`.trim();
+
+        const blob = new Blob([fileContent], { type: 'text/typescript;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "constants.ts");
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     if (!isAuthenticated) {
         return (
             <div className="flex flex-col min-h-screen bg-gray-900 text-white p-4">
@@ -226,12 +281,54 @@ const AdminPage: React.FC = () => {
         );
     }
 
+    const renderDashboard = () => (
+        <div className="max-w-4xl mx-auto text-center">
+             <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-white">Admin Dashboard</h2>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Manage Festival Card */}
+                <div onClick={() => setActiveView('festival')} className="bg-gradient-to-br from-purple-800 to-indigo-800 p-8 rounded-xl shadow-lg border border-purple-600 cursor-pointer transform hover:scale-105 transition-transform duration-300">
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-4 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 00-2-2H5z" /></svg>
+                     <h3 className="text-2xl font-bold text-white">Manage Festival</h3>
+                     <p className="text-purple-200 mt-2">Edit festival schedule, film blocks, and set live status.</p>
+                </div>
+                {/* Manage Films Card */}
+                <div onClick={() => setActiveView('movies')} className="bg-gradient-to-br from-red-800 to-pink-800 p-8 rounded-xl shadow-lg border border-red-600 cursor-pointer transform hover:scale-105 transition-transform duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-4 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>
+                     <h3 className="text-2xl font-bold text-white">Manage Films</h3>
+                     <p className="text-red-200 mt-2">Add, edit, or delete individual films from the library.</p>
+                </div>
+             </div>
+
+             {/* Developer Tools Section */}
+             <div className="mt-12 pt-8 border-t border-gray-700">
+                <h3 className="text-2xl font-bold mb-4 text-yellow-400">Developer Tools</h3>
+                <div className="max-w-md mx-auto bg-gray-800 p-6 rounded-lg border border-gray-600 text-left">
+                    <h4 className="font-semibold text-lg text-white">Download Live Data</h4>
+                    <p className="text-sm text-gray-400 mt-1 mb-4">Download the current live data as a `constants.ts` file. This is useful for backups or syncing with your local development environment.</p>
+                    <button onClick={handleDownloadConstants} className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-md w-full">
+                        Download constants.ts
+                    </button>
+                </div>
+             </div>
+        </div>
+    );
+
+    const renderEditorView = (title: string, children: React.ReactNode) => (
+         <div className="max-w-7xl mx-auto">
+            <button onClick={() => setActiveView('dashboard')} className="mb-6 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md text-sm inline-flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" /></svg>
+                Back to Dashboard
+            </button>
+            {children}
+        </div>
+    );
+
     return (
         <div className="flex flex-col min-h-screen bg-gray-900 text-white">
             <header className="bg-gray-800 p-4 flex justify-between items-center shadow-md sticky top-0 z-50">
                 <h1 className="text-2xl font-bold">Admin Panel</h1>
                 <div>
-                    <button onClick={publishData} disabled={publishStatus === 'saving'} className={`mr-4 font-bold py-2 px-4 rounded-md transition-colors ${
+                    <button onClick={handleMainPublishClick} disabled={publishStatus === 'saving'} className={`mr-4 font-bold py-2 px-4 rounded-md transition-colors ${
                         publishStatus === 'saving' ? 'bg-yellow-700 cursor-not-allowed' : 
                         publishStatus === 'success' ? 'bg-green-600' : 
                         publishStatus === 'error' ? 'bg-red-700' : 'bg-green-600 hover:bg-green-700'
@@ -261,22 +358,18 @@ const AdminPage: React.FC = () => {
                         />
                     </div>
                 ) : (
-                    <div className="max-w-7xl mx-auto">
-                        <div className="mb-6 flex border-b border-gray-700">
-                            <button onClick={() => setActiveTab('festival')} className={`py-2 px-4 ${activeTab === 'festival' ? 'border-b-2 border-purple-500 text-white' : 'text-gray-400'}`}>Festival Editor</button>
-                            <button onClick={() => setActiveTab('movies')} className={`py-2 px-4 ${activeTab === 'movies' ? 'border-b-2 border-red-500 text-white' : 'text-gray-400'}`}>Movie Management</button>
-                            <button onClick={() => setActiveTab('upload')} className={`py-2 px-4 ${activeTab === 'upload' ? 'border-b-2 border-yellow-500 text-white' : 'text-gray-400'}`}>Constants Uploader</button>
-                        </div>
-
-                        {activeTab === 'festival' && (
+                    <>
+                        {activeView === 'dashboard' && renderDashboard()}
+                        {activeView === 'festival' && renderEditorView('Festival Editor', 
                             <FestivalEditor 
                                 initialData={data.festivalData}
                                 initialConfig={data.festivalConfig}
                                 allMovies={data.movies}
                                 onSave={handleFestivalSave}
+                                onPublishLiveStatus={handlePublishFestivalStatus}
                             />
                         )}
-                        {activeTab === 'movies' && (
+                        {activeView === 'movies' && renderEditorView('Movie Management',
                             <div>
                                 <button onClick={handleAddNewMovie} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md mb-4">
                                 + Add New Movie
@@ -291,19 +384,7 @@ const AdminPage: React.FC = () => {
                                 </div>
                             </div>
                         )}
-                        {activeTab === 'upload' && (
-                            <div>
-                                <div className="max-w-xl mx-auto bg-gray-800 p-6 rounded-lg border border-gray-700">
-                                    <h2 className="text-xl font-bold mb-4 text-red-400">Upload `constants.ts` (Dev Tool)</h2>
-                                    <p className="text-gray-400 mb-4 text-sm">
-                                        This tool overwrites all live data with the contents of a local `constants.ts` file. 
-                                        This is a destructive action for rapid development and should be used with extreme caution.
-                                    </p>
-                                    <ConstantsUploader />
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    </>
                 )}
             </main>
             <Footer />
