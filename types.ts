@@ -1,5 +1,3 @@
-
-
 export interface Actor {
   name: string;
   photo: string;
@@ -41,26 +39,12 @@ export interface FestivalDay {
 }
 
 export interface FestivalConfig {
-    title: string;
-    description: string;
-    isFestivalLive?: boolean;
+  title: string;
+  description: string;
+  isFestivalLive?: boolean;
 }
 
 export interface User {
-    email: string;
-    isPremiumSubscriber: boolean;
-}
-
-export interface Transaction {
-    date: string;
-    item: string;
-    amount: number;
-}
-
-export interface SalesData {
-    totalRevenue: number;
-    fullPassesSold: number;
-    filmBlocksSold: number;
-    individualFilmsSold: number;
-    transactions: Transaction[];
+  email: string;
+  isPremiumSubscriber: boolean;
 }
