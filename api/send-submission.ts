@@ -58,7 +58,7 @@ export async function POST(request: Request) {
         subject: `New Film Submission: ${filmTitle}`,
         html: emailHtml,
         // FIX: Changed 'reply_to' to 'replyTo' to match the expected property in Resend's API.
-        reply_to email,
+        reply_to: email,
     });
 
     if (error) {
