@@ -1,4 +1,3 @@
-// FIX: The original file content was a placeholder. Replaced with a full data service implementation that fetches live data from an API endpoint, caches it in session storage, and provides fallback data on failure. This resolves module resolution errors across the application.
 import { Movie, Category, FestivalDay, FestivalConfig } from '../types.ts';
 import { moviesData, categoriesData, festivalData, festivalConfigData } from '../constants.ts';
 
@@ -17,7 +16,8 @@ interface FetchResult {
 let cachedData: FetchResult | null = null;
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+// Set to 0 to disable caching and ensure instant updates as requested.
+const CACHE_DURATION = 0; 
 
 const getFallbackData = (): FetchResult => ({
   data: {
