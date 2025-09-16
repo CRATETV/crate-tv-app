@@ -14,6 +14,8 @@ import LoadingSpinner from './components/LoadingSpinner.tsx';
 import FeatureModal from './components/FeatureModal.tsx';
 import DataStatusIndicator from './components/DataStatusIndicator.tsx';
 import RokuBanner from './components/RokuBanner.tsx';
+// FIX: Imported the MovieCard component to resolve the 'Cannot find name' error.
+import MovieCard from './components/MovieCard.tsx';
 
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
