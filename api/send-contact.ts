@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: 'Crate TV Contact Form <noreply@cratetv.net>',
       to: recipientEmail,
-      // FIX: Corrected the `reply_to` property to `replyTo` to match the expected type `CreateEmailOptions` and resolve the TypeScript error.
+      // Vercel build logs consistently require this to be 'reply_to'.
       reply_to: data.email,
       subject: emailSubject,
       html: emailHtml,
