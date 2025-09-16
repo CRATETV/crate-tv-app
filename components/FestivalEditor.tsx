@@ -113,7 +113,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
   };
   
   const handleMovieSelectionSave = (dayIndex: number, blockIndex: number, newMovieKeys: string[]) => {
-    // Create the new data structure first
+    // This function now ONLY updates the local state. The main save button handles publishing.
     const newData = data.map((day, i) => {
       if (i === dayIndex) {
         const updatedBlocks = day.blocks.map((block, j) => {
@@ -127,8 +127,6 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
       return day;
     });
 
-    // Update the local state for immediate UI feedback.
-    // The changes will be published when the user clicks the main "Save Festival Settings" button.
     setData(newData);
     setEditingBlock(null);
   };
@@ -172,7 +170,6 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
     setData(currentData => 
       currentData.map((day, index) => {
         if (index === dayIndex) {
-          // Create a new array for the blocks to ensure immutability
           return { ...day, blocks: [...day.blocks, newBlock] };
         }
         return day;
@@ -184,7 +181,6 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
      setData(currentData =>
         currentData.map((day, index) => {
           if (index === dayIndex) {
-            // Create a new filtered array for blocks
             return { ...day, blocks: day.blocks.filter((_, i) => i !== blockIndex) };
           }
           return day;
@@ -250,9 +246,9 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
       <div className="space-y-6">
         {data.map((day, dayIndex) => (
           <div key={day.day} className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4">
               <h3 className="text-xl font-bold text-white">Day {day.day}</h3>
-              <button onClick={() => removeDay(dayIndex)} className="text-xs text-red-500 hover:text-red-400">Remove Day</button>
+              <button onClick={() => removeDay(dayIndex)} className="text-xs text-red-500 hover:text-red-400 self-end sm:self-center">Remove Day</button>
             </div>
             <input
               type="text"
@@ -263,18 +259,18 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
             <div className="space-y-4 pl-4 border-l-2 border-gray-600">
               {day.blocks.map((block, blockIndex) => (
                 <div key={block.id} className="bg-gray-800 p-3 rounded-md">
-                   <div className="flex justify-between items-center mb-2">
+                   <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">
                         <input
                             type="text"
                             value={block.title}
                             onChange={e => handleBlockChange(dayIndex, blockIndex, 'title', e.target.value)}
                             className="w-full text-lg font-semibold bg-transparent text-white focus:outline-none focus:bg-gray-700 rounded-md px-2"
                         />
-                        <button onClick={() => removeBlock(dayIndex, blockIndex)} className="text-xs text-red-500 hover:text-red-400 ml-2 flex-shrink-0">Remove Block</button>
+                        <button onClick={() => removeBlock(dayIndex, blockIndex)} className="text-xs text-red-500 hover:text-red-400 self-end sm:self-center flex-shrink-0">Remove Block</button>
                    </div>
                    <p className="text-xs text-gray-400 mb-2">{block.movieKeys.length} film(s) selected.</p>
                    <button onClick={() => setEditingBlock({ dayIndex, blockIndex })} className="text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md">
-                     Add/Remove Films
+                     Edit Films
                    </button>
                 </div>
               ))}

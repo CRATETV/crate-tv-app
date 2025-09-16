@@ -18,7 +18,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
 
   useEffect(() => {
     let offset = 0;
-    if (isOffline) offset += 32; // Height of the offline banner (h-8 in tailwind)
+    // The offset for the offline banner is removed as the banner is now hidden.
     if (isStaging) offset += 32; // Height of the staging banner (h-8 in tailwind)
     setTopOffset(offset);
   }, [isStaging, isOffline]);
