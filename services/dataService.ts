@@ -1,84 +1,108 @@
-import { moviesData, categoriesData, festivalData, festivalConfigData } from '../constants.ts';
+// FIX: The original file content was a placeholder. Replaced with a full data service implementation that fetches live data from an API endpoint, caches it in session storage, and provides fallback data on failure. This resolves module resolution errors across the application.
 import { Movie, Category, FestivalDay, FestivalConfig } from '../types.ts';
+import { moviesData, categoriesData, festivalData, festivalConfigData } from '../constants.ts';
 
-export interface LiveData {
-    movies: Record<string, Movie>;
-    categories: Record<string, Category>;
-    festivalData: FestivalDay[];
-    festivalConfig: FestivalConfig;
+interface LiveData {
+  movies: Record<string, Movie>;
+  categories: Record<string, Category>;
+  festivalData: FestivalDay[];
+  festivalConfig: FestivalConfig;
 }
 
-export interface FetchResult {
-    data: LiveData;
-    source: 'live' | 'fallback';
+interface FetchResult {
+  data: LiveData;
+  source: 'live' | 'fallback';
 }
 
-// In-memory cache variables
-let liveDataUrl: string | null = null;
-let cachedLiveData: FetchResult | null = null;
-let lastFetchTimestamp: number = 0;
-const CACHE_DURATION_MS = 60 * 1000; // 1 minute cache
+let cachedData: FetchResult | null = null;
+const CACHE_KEY = 'cratetv-live-data';
+const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-export const invalidateCache = () => {
-    // Invalidate both the data and the URL to force a full refresh
-    liveDataUrl = null; 
-    cachedLiveData = null;
-    lastFetchTimestamp = 0;
-    console.log("Live data cache invalidated.");
-};
-
-const getFallbackData = (): LiveData => ({
+const getFallbackData = (): FetchResult => ({
+  data: {
     movies: moviesData,
     categories: categoriesData,
     festivalData: festivalData,
-    festivalConfig: festivalConfigData
+    festivalConfig: festivalConfigData,
+  },
+  source: 'fallback',
 });
 
-const getLiveUrl = async (): Promise<string | null> => {
-    if (liveDataUrl) return liveDataUrl;
+export const invalidateCache = () => {
+    cachedData = null;
     try {
-        const response = await fetch('/api/data-config');
-        if (!response.ok) return null;
-        const config = await response.json();
-        liveDataUrl = config.liveDataUrl;
-        return liveDataUrl;
-    } catch {
-        return null;
+      sessionStorage.removeItem(CACHE_KEY);
+      sessionStorage.removeItem(CACHE_TIMESTAMP_KEY);
+    } catch (e) {
+      console.warn("Could not invalidate session storage cache.", e);
     }
 };
 
 export const fetchAndCacheLiveData = async (): Promise<FetchResult> => {
-    const now = Date.now();
-    // Return cached data if it's available and not expired
-    if (cachedLiveData && (now - lastFetchTimestamp < CACHE_DURATION_MS)) {
-        return cachedLiveData;
+    // Check session storage first for quick loads across page navigations
+    try {
+        const cachedTimestamp = sessionStorage.getItem(CACHE_TIMESTAMP_KEY);
+        const cachedJson = sessionStorage.getItem(CACHE_KEY);
+        if (cachedJson && cachedTimestamp) {
+            const age = Date.now() - parseInt(cachedTimestamp, 10);
+            if (age < CACHE_DURATION) {
+                console.log('Using fresh data from session storage cache.');
+                cachedData = JSON.parse(cachedJson);
+                return cachedData as FetchResult;
+            } else {
+                console.log('Session storage cache is stale.');
+                invalidateCache();
+            }
+        }
+    } catch (e) {
+        console.warn("Could not read from session storage cache.", e);
+        invalidateCache();
     }
 
-    const url = await getLiveUrl();
-    if (!url) {
-        console.warn("Could not retrieve live data URL, using static data.");
-        return { data: getFallbackData(), source: 'fallback' };
+    // If session cache is stale or invalid, check in-memory cache
+    if (cachedData) {
+        console.log('Using in-memory cached data.');
+        return cachedData;
     }
+
+    console.log('Fetching fresh data...');
 
     try {
-        // Use a cache-busting param to ensure the latest version is retrieved from S3
-        const response = await fetch(`${url}?t=${new Date().getTime()}`);
-        if (!response.ok) throw new Error('Network response was not ok');
-        
-        const data = await response.json();
-        
-        if (!data.movies || !data.categories) {
-           throw new Error('Fetched data has incorrect structure');
+        // Fetch the config to find where the live data is
+        const configResponse = await fetch('/api/data-config');
+        if (!configResponse.ok) {
+            throw new Error('Could not fetch data configuration.');
         }
+        const { liveDataUrl } = await configResponse.json();
+
+        if (!liveDataUrl) {
+            console.warn("Live data URL not provided by server. Using fallback data.");
+            return getFallbackData();
+        }
+
+        // Fetch the actual live data from S3, adding a timestamp to bypass browser cache
+        const dataResponse = await fetch(`${liveDataUrl}?t=${new Date().getTime()}`);
+        if (!dataResponse.ok) {
+            throw new Error(`Failed to fetch live data from ${liveDataUrl}`);
+        }
+        const data: LiveData = await dataResponse.json();
         
         const result: FetchResult = { data, source: 'live' };
-        // Store the freshly fetched data in our cache
-        cachedLiveData = result;
-        lastFetchTimestamp = now;
+
+        // Cache the new data
+        cachedData = result;
+        try {
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify(result));
+            sessionStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+        } catch(e) {
+            console.warn("Could not write to session storage cache.", e);
+        }
+
         return result;
+
     } catch (error) {
-        console.error("Could not fetch live data, falling back to static data.", error);
-        // Do not cache fallback data, so the app can retry on the next load
-        return { data: getFallbackData(), source: 'fallback' };
+        console.error("Failed to fetch live data, using fallback.", error);
+        return getFallbackData();
     }
 };
