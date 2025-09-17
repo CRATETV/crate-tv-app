@@ -200,7 +200,7 @@ const AdminPage: React.FC = () => {
         festivalData: FestivalDay[],
         festivalConfig: FestivalConfig
     }
-  ) => {
+  ): Promise<boolean> => {
     setAutoPublishStatus('saving');
     setAutoPublishError('');
     try {
@@ -221,10 +221,12 @@ const AdminPage: React.FC = () => {
         invalidateCache();
         setAutoPublishStatus('success');
         setTimeout(() => setAutoPublishStatus('idle'), 2500);
+        return true;
 
     } catch (error) {
         setAutoPublishStatus('error');
         setAutoPublishError(error instanceof Error ? error.message : 'An unknown error occurred.');
+        return false;
     }
   };
   
@@ -257,15 +259,17 @@ const AdminPage: React.FC = () => {
     setIsAddingNew(false);
   };
 
-  const handleSave = (updatedMovie: Movie) => {
+  const handleSave = async (updatedMovie: Movie) => {
     const newMovies = { ...movies, [updatedMovie.key]: updatedMovie };
-    setMovies(newMovies);
-    setSelectedMovie(null);
-    setIsAddingNew(false);
-    publishData({ movies: newMovies, categories, festivalData, festivalConfig });
+    const success = await publishData({ movies: newMovies, categories, festivalData, festivalConfig });
+    if (success) {
+      setMovies(newMovies);
+      setSelectedMovie(null);
+      setIsAddingNew(false);
+    }
   };
 
-  const handleDelete = (movieKey: string) => {
+  const handleDelete = async (movieKey: string) => {
     if (window.confirm('This will immediately delete the movie from the live site. This action cannot be undone. Are you sure?')) {
         const newMovies = { ...movies };
         delete newMovies[movieKey];
@@ -275,43 +279,54 @@ const AdminPage: React.FC = () => {
             newCategories[catKey].movieKeys = newCategories[catKey].movieKeys.filter((key: string) => key !== movieKey);
         });
         
-        setMovies(newMovies);
-        setCategories(newCategories);
-        setSelectedMovie(null);
-        publishData({ movies: newMovies, categories: newCategories, festivalData, festivalConfig });
+        const success = await publishData({ movies: newMovies, categories: newCategories, festivalData, festivalConfig });
+
+        if (success) {
+            setMovies(newMovies);
+            setCategories(newCategories);
+            setSelectedMovie(null);
+        }
     }
   };
   
-  const handleSaveFestival = (updatedFestivalData: FestivalDay[], updatedFestivalConfig: FestivalConfig) => {
-    setFestivalData(updatedFestivalData);
-    setFestivalConfig(updatedFestivalConfig);
-    publishData({ movies, categories, festivalData: updatedFestivalData, festivalConfig: updatedFestivalConfig });
+  const handleSaveFestival = async (updatedFestivalData: FestivalDay[], updatedFestivalConfig: FestivalConfig) => {
+    const success = await publishData({ movies, categories, festivalData: updatedFestivalData, festivalConfig: updatedFestivalConfig });
+    if (success) {
+      setFestivalData(updatedFestivalData);
+      setFestivalConfig(updatedFestivalConfig);
+    }
   };
 
   const handlePublishLiveStatus = async (isLive: boolean) => {
     const updatedConfig = { ...festivalConfig, isFestivalLive: isLive };
-    setFestivalConfig(updatedConfig);
-    await publishData({
+    const success = await publishData({
       movies,
       categories,
       festivalData,
       festivalConfig: updatedConfig,
     });
+    if (success) {
+      setFestivalConfig(updatedConfig);
+    }
   };
 
   const toggleFestivalLive = async () => {
       const newStatus = !festivalConfig.isFestivalLive;
       const updatedConfig = { ...festivalConfig, isFestivalLive: newStatus };
-      setFestivalConfig(updatedConfig);
       
-      await publishData({
+      const success = await publishData({
           movies,
           categories,
           festivalData,
           festivalConfig: updatedConfig,
       });
 
-      alert(`Film Festival module status updated to: ${newStatus ? 'LIVE' : 'HIDDEN'}. The change will be published to the live site.`);
+      if (success) {
+        setFestivalConfig(updatedConfig);
+        alert(`Film Festival module status updated to: ${newStatus ? 'LIVE' : 'HIDDEN'}. The change is now live.`);
+      } else {
+        alert('Failed to update the festival status. Please check the error message on the page.');
+      }
   };
 
   const handleGenerateRokuZip = async () => {
@@ -449,13 +464,14 @@ const AdminPage: React.FC = () => {
                   <div className="flex items-center gap-4">
                       <button
                           onClick={toggleFestivalLive}
-                          className={`font-bold py-2 px-5 rounded-md transition-colors w-44 text-center ${
+                          disabled={autoPublishStatus === 'saving'}
+                          className={`font-bold py-2 px-5 rounded-md transition-colors w-44 text-center disabled:opacity-50 disabled:cursor-not-allowed ${
                               festivalConfig.isFestivalLive
                               ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
                               : 'bg-green-600 hover:bg-green-700 text-white'
                           }`}
                       >
-                          {festivalConfig.isFestivalLive ? 'Take Festival Down' : 'Make Festival Live'}
+                          {autoPublishStatus === 'saving' ? '...' : (festivalConfig.isFestivalLive ? 'Take Festival Down' : 'Make Festival Live')}
                       </button>
                       <span className={`text-sm font-semibold ${festivalConfig.isFestivalLive ? 'text-green-400' : 'text-gray-500'}`}>
                           Film Festival is currently {festivalConfig.isFestivalLive ? 'LIVE' : 'HIDDEN'}
