@@ -16,8 +16,8 @@ interface FetchResult {
 let cachedData: FetchResult | null = null;
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
-// Set to 0 to disable caching and ensure instant updates as requested.
-const CACHE_DURATION = 0; 
+// Cache data for 1 minute to reduce network requests and improve performance.
+const CACHE_DURATION = 60 * 1000; // 1 minute
 
 const getFallbackData = (): FetchResult => ({
   data: {

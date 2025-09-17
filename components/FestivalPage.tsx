@@ -77,11 +77,13 @@ const FestivalPage: React.FC = () => {
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} isFestivalLive={festivalConfig?.isFestivalLive} />
             
             <main className="flex-grow pt-16">
-                 <FestivalView 
-                    festivalData={festivalData}
-                    festivalConfig={festivalConfig}
-                    allMovies={movies}
-                 />
+                 <div className="max-w-7xl mx-auto p-4 sm:p-8 md:p-12">
+                     <FestivalView 
+                        festivalData={festivalData}
+                        festivalConfig={festivalConfig}
+                        allMovies={movies}
+                     />
+                 </div>
             </main>
 
             <Footer />

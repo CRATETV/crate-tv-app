@@ -6,9 +6,10 @@ interface FestivalViewProps {
   festivalData: FestivalDay[];
   festivalConfig: FestivalConfig;
   allMovies: Record<string, Movie>;
+  showHero?: boolean;
 }
 
-const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfig, allMovies }) => {
+const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfig, allMovies, showHero = true }) => {
   const [activeDay, setActiveDay] = useState<number>(1);
   
   // This is a placeholder. In a real app, this would redirect to a checkout page.
@@ -22,25 +23,26 @@ const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfi
 
   return (
     <div className="font-sans">
-      {/* Elegant Header */}
-      <div className="relative bg-gradient-to-br from-[#2c1a4d] via-[#1a2c4d] to-[#141414] text-center py-20 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-black/30"></div>
-        <div className="relative z-10 max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 tracking-tight" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{festivalConfig.title}</h1>
-            <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-8">
-                {festivalConfig.description}
-            </p>
-            <div 
-              className="inline-block bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-bold py-4 px-8 rounded-lg text-xl shadow-lg transform transition-transform hover:scale-105 cursor-not-allowed"
-              title="Payments are temporarily unavailable"
-              onClick={handlePurchaseClick}
-            >
-              Buy All-Access Pass - $50.00
-            </div>
+      {showHero && (
+        <div className="relative bg-gradient-to-br from-[#2c1a4d] via-[#1a2c4d] to-[#141414] text-center py-20 px-4 overflow-hidden">
+          <div className="absolute inset-0 bg-black/30"></div>
+          <div className="relative z-10 max-w-4xl mx-auto">
+              <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 tracking-tight" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{festivalConfig.title}</h1>
+              <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-8">
+                  {festivalConfig.description}
+              </p>
+              <div 
+                className="inline-block bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-bold py-4 px-8 rounded-lg text-xl shadow-lg transform transition-transform hover:scale-105 cursor-not-allowed"
+                title="Payments are temporarily unavailable"
+                onClick={handlePurchaseClick}
+              >
+                Buy All-Access Pass - $50.00
+              </div>
+          </div>
         </div>
-      </div>
+      )}
         
-      <div className="max-w-7xl mx-auto p-4 sm:p-8 md:p-12 bg-[#141414]">
+      <div>
           {/* Day Selector */}
           <div className="flex justify-center border-b-2 border-gray-800 mb-8 sm:mb-12">
               {festivalData.map(day => (
@@ -70,7 +72,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfi
                                       <p className="text-purple-300 font-semibold">{block.time}</p>
                                      </div>
                                       <div 
-                                        className="mt-4 sm:mt-0 flex-shrink-0 bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-5 rounded-lg transition-transform hover:scale-105 cursor-not-allowed shadow-md"
+                                        className="mt-4 sm:mt-0 w-full sm:w-auto text-center flex-shrink-0 bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-5 rounded-lg transition-transform hover:scale-105 cursor-not-allowed shadow-md"
                                         title="Payments are temporarily unavailable"
                                         onClick={handlePurchaseClick}
                                       >
@@ -89,7 +91,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfi
                                         <p className="text-sm text-gray-400">Directed by {movie.director}</p>
                                       </div>
                                       <div 
-                                        className="flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-gray-200 font-bold py-2 px-4 rounded-lg transition-colors cursor-not-allowed"
+                                        className="w-full sm:w-auto text-center flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-gray-200 font-bold py-2 px-4 rounded-lg transition-colors cursor-not-allowed"
                                         title="Payments are temporarily unavailable"
                                         onClick={handlePurchaseClick}
                                       >

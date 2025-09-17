@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
-import { Movie, Actor, Category, FestivalConfig } from './types.ts';
+import { Movie, Actor, Category, FestivalConfig, FestivalDay } from './types.ts';
 import Header from './components/Header.tsx';
 import Hero from './components/Hero.tsx';
 import MovieCarousel from './components/MovieCarousel.tsx';
@@ -13,6 +13,7 @@ import SearchOverlay from './components/SearchOverlay.tsx';
 import StagingBanner from './components/StagingBanner.tsx';
 import FeatureModal from './components/FeatureModal.tsx';
 import DataStatusIndicator from './components/DataStatusIndicator.tsx';
+import FestivalView from './components/FestivalView.tsx';
 
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -21,6 +22,7 @@ const App: React.FC = () => {
   const [movies, setMovies] = useState<Record<string, Movie>>({});
   const [categories, setCategories] = useState<Record<string, Category>>({});
   const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+  const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
@@ -68,6 +70,7 @@ const App: React.FC = () => {
             setMovies(newMoviesState);
             setCategories(liveData.categories);
             setFestivalConfig(liveData.festivalConfig);
+            setFestivalData(liveData.festivalData);
 
             // Initialize the set of liked movies
             const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
@@ -231,7 +234,17 @@ const App: React.FC = () => {
               onSetCurrentIndex={handleSetHeroIndex}
               onSelectMovie={handleSelectMovie}
             />
-            <div className="px-4 md:px-12 -mt-12 relative z-10">
+            {festivalConfig?.isFestivalLive && festivalData.length > 0 && festivalConfig && (
+                <div className="px-4 md:px-12">
+                  <FestivalView
+                      festivalData={festivalData}
+                      festivalConfig={festivalConfig}
+                      allMovies={movies}
+                      showHero={false}
+                  />
+                </div>
+            )}
+            <div className={`px-4 md:px-12 relative z-10 ${festivalConfig?.isFestivalLive ? 'mt-8' : '-mt-12'}`}>
               {categoryOrder.map(key => {
                 const category = categories[key];
                 if (!category) return null;
