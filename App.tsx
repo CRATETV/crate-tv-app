@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
 import { Movie, Actor, Category, FestivalConfig, FestivalDay } from './types.ts';
@@ -196,6 +197,7 @@ const App: React.FC = () => {
   }
 
   const categoryOrder: (keyof typeof categories)[] = ["newReleases", "awardWinners", "pwff12thAnnual", "comedy", "drama", "documentary", "exploreTitles"];
+  const isFestivalLive = festivalConfig?.isFestivalLive && festivalData.length > 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#141414]">
@@ -234,35 +236,35 @@ const App: React.FC = () => {
               onSetCurrentIndex={handleSetHeroIndex}
               onSelectMovie={handleSelectMovie}
             />
-            {festivalConfig?.isFestivalLive && festivalData.length > 0 && festivalConfig && (
-                <div className="px-4 md:px-12">
-                  <FestivalView
-                      festivalData={festivalData}
-                      festivalConfig={festivalConfig}
-                      allMovies={movies}
-                      showHero={false}
-                  />
-                </div>
-            )}
-            <div className={`px-4 md:px-12 relative z-10 ${festivalConfig?.isFestivalLive ? 'mt-8' : '-mt-12'}`}>
-              {categoryOrder.map(key => {
-                const category = categories[key];
-                if (!category) return null;
-                const categoryMovies = category.movieKeys
-                  .map(movieKey => visibleMovies.find(m => m.key === movieKey))
-                  .filter((m): m is Movie => !!m);
+            <div className="relative z-10 -mt-12 px-4 md:px-12">
+              {isFestivalLive && festivalConfig && (
+                <FestivalView
+                    festivalData={festivalData}
+                    festivalConfig={festivalConfig}
+                    allMovies={movies}
+                    showHero={false}
+                />
+              )}
+              <div className={isFestivalLive ? 'mt-8' : ''}>
+                {categoryOrder.map(key => {
+                  const category = categories[key];
+                  if (!category) return null;
+                  const categoryMovies = category.movieKeys
+                    .map(movieKey => visibleMovies.find(m => m.key === movieKey))
+                    .filter((m): m is Movie => !!m);
 
-                if (categoryMovies.length === 0) return null;
+                  if (categoryMovies.length === 0) return null;
 
-                return (
-                  <MovieCarousel
-                    key={key}
-                    title={category.title}
-                    movies={categoryMovies}
-                    onSelectMovie={handleSelectMovie}
-                  />
-                );
-              })}
+                  return (
+                    <MovieCarousel
+                      key={key}
+                      title={category.title}
+                      movies={categoryMovies}
+                      onSelectMovie={handleSelectMovie}
+                    />
+                  );
+                })}
+              </div>
             </div>
           </>
         )}
