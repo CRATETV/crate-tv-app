@@ -20,8 +20,8 @@ export const categoriesData: Record<string, Category> = {
     "title": "New Releases",
     "movieKeys": [
       "Neighbours",
-      "Two Peas in A Pod ",
-      "Slap ",
+      "two-peas-in-a-pod",
+      "slap",
       "newmovie1756741314485",
       "newmovie1756501125076",
       "newmovie1756487626529",
@@ -78,7 +78,8 @@ export const categoriesData: Record<string, Category> = {
       "newmovie1756485973547",
       "newmovie1756487390550",
       "newmovie1756501125076",
-      "newmovie1756741314485"
+      "newmovie1756741314485",
+      "two-peas-in-a-pod"
     ]
   },
   "drama": {
@@ -109,7 +110,7 @@ export const categoriesData: Record<string, Category> = {
   "exploreTitles": {
     "title": "Explore These Titles",
     "movieKeys": [
-      "Ted and Natalie",
+      "ted-and-natalie",
       "smirk",
       "intrusivethoughts"
     ]
@@ -939,7 +940,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756485973547": {
     "key": "newmovie1756485973547",
-    "title": "Burst ",
+    "title": "Burst",
     "synopsis": "When two people with anger issues meet to do their community service, they pick up more than trash.",
     "cast": [
       {
@@ -982,7 +983,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756486933392": {
     "key": "newmovie1756486933392",
-    "title": "Power Trip ",
+    "title": "Power Trip",
     "synopsis": "A Traffic stop goes terribly bad.",
     "cast": [
       {
@@ -1019,7 +1020,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756487215116": {
     "key": "newmovie1756487215116",
-    "title": "Fling ",
+    "title": "Fling",
     "synopsis": "When a casual hookup between two strangers unexpectedly turns into dinner, what begins as flirtation spirals into something deeper.",
     "cast": [
       {
@@ -1044,7 +1045,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756487390550": {
     "key": "newmovie1756487390550",
-    "title": "I Still Love Her ",
+    "title": "I Still Love Her",
     "synopsis": "A boyfriend and his girlfriend quibble about the girlfriend’s boneheaded mistake.",
     "cast": [
       {
@@ -1069,7 +1070,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756487626529": {
     "key": "newmovie1756487626529",
-    "title": "Strange Encounters ",
+    "title": "Strange Encounters",
     "synopsis": " A black man experiences some strange encounters on his daily jog.",
     "cast": [
       {
@@ -1131,7 +1132,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756741314485": {
     "key": "newmovie1756741314485",
-    "title": "What If ",
+    "title": "What If",
     "synopsis": "Desperately seeking love and a date for her cousin's wedding, Sophia bypasses the usual suspects and takes a wild chance on a psychic medium.",
     "cast": [
       {
@@ -1172,19 +1173,19 @@ export const moviesData: Record<string, Movie> = {
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/what+If+poster+for+instant+tv+(1920+x+1080+px)+(1925+x+1085+px)+(1920+x+1080+px).png",
     "likes": 0
   },
-  "Ted and Natalie": {
-    "key": "Ted and Natalie",
-    "title": "Ted and Natalie ",
+  "ted-and-natalie": {
+    "key": "ted-and-natalie",
+    "title": "Ted and Natalie",
     "synopsis": "A loving boyfriend begins to doubt that his relationship can go the distance when he realizes that his dream girl has been strategically avoiding meeting his friends.\n",
     "cast": [
       {
-        "name": "Patrick Thomas Kaey ",
+        "name": "Patrick Thomas Kasey",
         "photo": "",
         "bio": "",
         "highResPhoto": ""
       },
       {
-        "name": "Dana Godfrey ",
+        "name": "Dana Godfrey",
         "photo": "",
         "bio": "",
         "highResPhoto": ""
@@ -1202,7 +1203,7 @@ export const moviesData: Record<string, Movie> = {
   "Neighbours": {
     "key": "Neighbours",
     "title": "Neighbours",
-    "synopsis": "At the end of the day, do you really know who you live next to?",
+    "synopsis": "\"At the end of the day, do you really know who you live next to?\"",
     "cast": [],
     "director": "Seth Sharpe",
     "trailer": "",
@@ -1213,12 +1214,12 @@ export const moviesData: Record<string, Movie> = {
     "releaseDateTime": "2025-09-18T13:49",
     "mainPageExpiry": ""
   },
-  "Two Peas in A Pod ": {
-    "key": "Two Peas in A Pod ",
-    "title": "Two Peas In A Pod ",
+  "two-peas-in-a-pod": {
+    "key": "two-peas-in-a-pod",
+    "title": "Two Peas In A Pod",
     "synopsis": "TWO PEAS IN A POD is a comedic stoner buddy flick about trying to find the ultimate stoner. ",
     "cast": [],
-    "director": "ShaunPaul Costello ",
+    "director": "ShaunPaul Costello",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/TWO+PEAS+IN+A+POD+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+pod+.png",
@@ -1227,9 +1228,9 @@ export const moviesData: Record<string, Movie> = {
     "releaseDateTime": "2025-09-18T13:54",
     "mainPageExpiry": ""
   },
-  "Slap ": {
-    "key": "Slap ",
-    "title": "Slap ",
+  "slap": {
+    "key": "slap",
+    "title": "Slap",
     "synopsis": "",
     "cast": [],
     "director": "",
