@@ -73,6 +73,7 @@ export async function POST(request: Request) {
             Bucket: bucketName,
             Key: key,
             ContentType: fileType,
+            ACL: 'public-read',
         });
 
         const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 }); // URL expires in 5 minutes
