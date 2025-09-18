@@ -1,5 +1,3 @@
-
-
 import { Category, Movie, FestivalDay, FestivalConfig } from './types.ts';
 
 export const festivalConfigData: FestivalConfig = {
@@ -21,6 +19,9 @@ export const categoriesData: Record<string, Category> = {
   "newReleases": {
     "title": "New Releases",
     "movieKeys": [
+      "Neighbours",
+      "Two Peas in A Pod ",
+      "Slap ",
       "newmovie1756741314485",
       "newmovie1756501125076",
       "newmovie1756487626529",
@@ -108,6 +109,7 @@ export const categoriesData: Record<string, Category> = {
   "exploreTitles": {
     "title": "Explore These Titles",
     "movieKeys": [
+      "Ted and Natalie",
       "smirk",
       "intrusivethoughts"
     ]
@@ -1169,6 +1171,75 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/I+love+you+black.+poster+.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/what+If+poster+for+instant+tv+(1920+x+1080+px)+(1925+x+1085+px)+(1920+x+1080+px).png",
     "likes": 0
+  },
+  "Ted and Natalie": {
+    "key": "Ted and Natalie",
+    "title": "Ted and Natalie ",
+    "synopsis": "A loving boyfriend begins to doubt that his relationship can go the distance when he realizes that his dream girl has been strategically avoiding meeting his friends.\n",
+    "cast": [
+      {
+        "name": "Patrick Thomas Kaey ",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      },
+      {
+        "name": "Dana Godfrey ",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      }
+    ],
+    "director": "Michelle M. Charles",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/TED+AND+NATALIE+-+Lotus+Blossom+Productions+(1080p%2C+h264%2C+youtube).mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
+    "tvPoster": "",
+    "likes": 0,
+    "releaseDateTime": "2025-09-18T13:41",
+    "mainPageExpiry": ""
+  },
+  "Neighbours": {
+    "key": "Neighbours",
+    "title": "Neighbours",
+    "synopsis": "\"At the end of the day, do you really know who you live next to?\"",
+    "cast": [],
+    "director": "Seth Sharpe",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/NEIGHBORS+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Neighbors.png",
+    "tvPoster": "",
+    "likes": 0,
+    "releaseDateTime": "2025-09-18T13:49",
+    "mainPageExpiry": ""
+  },
+  "Two Peas in A Pod ": {
+    "key": "Two Peas in A Pod ",
+    "title": "Two Peas In A Pod ",
+    "synopsis": "TWO PEAS IN A POD is a comedic stoner buddy flick about trying to find the ultimate stoner. ",
+    "cast": [],
+    "director": "ShaunPaul Costello ",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/TWO+PEAS+IN+A+POD+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+pod+.png",
+    "tvPoster": "",
+    "likes": 0,
+    "releaseDateTime": "2025-09-18T13:54",
+    "mainPageExpiry": ""
+  },
+  "Slap ": {
+    "key": "Slap ",
+    "title": "Slap ",
+    "synopsis": "",
+    "cast": [],
+    "director": "",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/SLAP+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
+    "tvPoster": "",
+    "likes": 0,
+    "releaseDateTime": "2025-09-18T13:58",
+    "mainPageExpiry": ""
   }
 };
 
