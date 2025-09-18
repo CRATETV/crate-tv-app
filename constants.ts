@@ -1202,7 +1202,7 @@ export const moviesData: Record<string, Movie> = {
   "Neighbours": {
     "key": "Neighbours",
     "title": "Neighbours",
-    "synopsis": "\"At the end of the day, do you really know who you live next to?\"",
+    "synopsis": "At the end of the day, do you really know who you live next to?",
     "cast": [],
     "director": "Seth Sharpe",
     "trailer": "",
