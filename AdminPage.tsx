@@ -310,25 +310,6 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  const toggleFestivalLive = async () => {
-      const newStatus = !festivalConfig.isFestivalLive;
-      const updatedConfig = { ...festivalConfig, isFestivalLive: newStatus };
-      
-      const success = await publishData({
-          movies,
-          categories,
-          festivalData,
-          festivalConfig: updatedConfig,
-      });
-
-      if (success) {
-        setFestivalConfig(updatedConfig);
-        alert(`Film Festival module status updated to: ${newStatus ? 'LIVE' : 'HIDDEN'}. The change is now live.`);
-      } else {
-        alert('Failed to update the festival status. Please check the error message on the page.');
-      }
-  };
-
   const handleGenerateRokuZip = async () => {
     setIsPackaging(true);
     try {
@@ -453,32 +434,6 @@ const AdminPage: React.FC = () => {
                 </div>
             </div>
           {autoPublishStatus === 'error' && <p className="text-red-400 text-sm mb-4 -mt-6">{autoPublishError}</p>}
-          
-           <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
-                <h2 className="text-xl sm:text-2xl font-bold mb-3 text-green-400">Live Feature Toggles</h2>
-                <p className="text-gray-400 mb-4 max-w-3xl">
-                    Control the visibility of major site features for all users in real-time.
-                </p>
-                <div className="space-y-4">
-                  {/* Festival Toggle */}
-                  <div className="flex items-center gap-4">
-                      <button
-                          onClick={toggleFestivalLive}
-                          disabled={autoPublishStatus === 'saving'}
-                          className={`font-bold py-2 px-5 rounded-md transition-colors w-44 text-center disabled:opacity-50 disabled:cursor-not-allowed ${
-                              festivalConfig.isFestivalLive
-                              ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
-                              : 'bg-green-600 hover:bg-green-700 text-white'
-                          }`}
-                      >
-                          {autoPublishStatus === 'saving' ? '...' : (festivalConfig.isFestivalLive ? 'Take Festival Down' : 'Make Festival Live')}
-                      </button>
-                      <span className={`text-sm font-semibold ${festivalConfig.isFestivalLive ? 'text-green-400' : 'text-gray-500'}`}>
-                          Film Festival is currently {festivalConfig.isFestivalLive ? 'LIVE' : 'HIDDEN'}
-                      </span>
-                  </div>
-                </div>
-            </div>
           
           {hasElevatedPrivileges && (
             <>
