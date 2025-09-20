@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { moviesData as initialMoviesData, categoriesData as initialCategoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfigData } from './constants.ts';
 import { Movie, Category, FestivalDay, FestivalConfig } from './types.ts';
@@ -219,6 +220,8 @@ const AdminPage: React.FC = () => {
         }
 
         invalidateCache();
+        // Notify other open tabs that data has changed.
+        window.dispatchEvent(new CustomEvent('datachanged'));
         setAutoPublishStatus('success');
         setTimeout(() => setAutoPublishStatus('idle'), 2500);
         return true;
