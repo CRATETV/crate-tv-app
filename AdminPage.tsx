@@ -358,6 +358,14 @@ const AdminPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleClearCacheAndRefresh = () => {
+    invalidateCache();
+    // Also notify other tabs to refresh their data
+    window.dispatchEvent(new CustomEvent('datachanged'));
+    alert('Cache cleared. The page will now refresh to pull the latest live data.');
+    window.location.reload();
+  };
+
 
   if (!isAuthenticated) {
     return (
@@ -431,6 +439,9 @@ const AdminPage: React.FC = () => {
                             {autoPublishStatus === 'error' && 'Error Saving!'}
                         </div>
                     )}
+                    <button onClick={handleClearCacheAndRefresh} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">
+                        Clear Cache & Refresh
+                    </button>
                     <button onClick={handleLogout} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md text-sm">
                         Log Out
                     </button>
