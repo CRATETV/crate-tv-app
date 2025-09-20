@@ -1,16 +1,15 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Movie, FestivalDay, FestivalConfig } from '../types.ts';
 
 interface FestivalViewProps {
-  festivalData: FestivalDay[];
-  festivalConfig: FestivalConfig;
-  allMovies: Record<string, Movie>;
-  showHero?: boolean;
+    festivalData: FestivalDay[];
+    festivalConfig: FestivalConfig;
+    allMovies: Record<string, Movie>;
+    showHero?: boolean;
 }
 
 const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfig, allMovies, showHero = true }) => {
-  const [activeDay, setActiveDay] = useState<number>(1);
+  const [activeDay, setActiveDay] = useState(1);
   
   // This is a placeholder. In a real app, this would redirect to a checkout page.
   const handlePurchaseClick = () => {
@@ -22,7 +21,18 @@ const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfi
   }
 
   return (
-    <div className="font-sans">
+    <div className="font-sans bg-gray-950 text-gray-200">
+       <style>
+        {`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.5s ease-out;
+        }
+        `}
+      </style>
       {showHero && (
         <div className="relative bg-gradient-to-br from-[#2c1a4d] via-[#1a2c4d] to-[#141414] text-center py-20 px-4 overflow-hidden">
           <div className="absolute inset-0 bg-black/30"></div>
@@ -41,8 +51,8 @@ const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfi
           </div>
         </div>
       )}
-        
-      <div>
+      
+      <div className="max-w-7xl mx-auto px-4 py-12">
           {/* Day Selector */}
           <div className="flex justify-center border-b-2 border-gray-800 mb-8 sm:mb-12">
               {festivalData.map(day => (
@@ -60,7 +70,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfi
           {/* Schedule View */}
           <div>
               {festivalData.filter(day => day.day === activeDay).map(day => (
-                  <div key={day.day} className="space-y-12 animate-[fadeIn_0.5s_ease-out]">
+                  <div key={day.day} className="space-y-12 animate-fadeIn">
                       {day.blocks.map(block => {
                           const blockMovies = block.movieKeys.map(key => allMovies[key]).filter(Boolean);
                           return (

@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/data-config
 // It provides the public URL for the live data file.
-export async function GET(request: Request) {
+export async function POST(request: Request) {
   try {
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
     let region = process.env.AWS_S3_REGION;

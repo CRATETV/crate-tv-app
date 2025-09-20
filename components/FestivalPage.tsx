@@ -6,8 +6,8 @@ import LoadingSpinner from './LoadingSpinner.tsx';
 import StagingBanner from './StagingBanner.tsx';
 import FestivalView from './FestivalView.tsx';
 import { fetchAndCacheLiveData } from '../services/dataService.ts';
+import { initializeFirebaseAndAuth, listenToFestivalData } from '../services/firebaseService.ts';
 import { Movie, FestivalDay, FestivalConfig } from '../types.ts';
-import { useAuth } from '../contexts/AuthContext.tsx';
 
 const FestivalPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -16,10 +16,8 @@ const FestivalPage: React.FC = () => {
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
     const [isStaging, setIsStaging] = useState(false);
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
-    const { user } = useAuth();
 
     useEffect(() => {
-        // Staging check
         const params = new URLSearchParams(window.location.search);
         const env = params.get('env');
         const isStagingActive = env === 'staging' || sessionStorage.getItem('crateTvStaging') === 'true';
@@ -28,21 +26,36 @@ const FestivalPage: React.FC = () => {
             setIsStaging(true);
         }
 
+        setIsLoading(true);
+        let unsubscribe: (() => void) | null = null;
+        
         const loadData = async () => {
-            setIsLoading(true);
             try {
+                // Fetch movies data from S3
                 const { data: liveData, source } = await fetchAndCacheLiveData();
                 setMovies(liveData.movies);
-                setFestivalData(liveData.festivalData);
-                setFestivalConfig(liveData.festivalConfig);
                 setDataSource(source);
+                
+                // Set up real-time listener for festival data from Firestore
+                await initializeFirebaseAndAuth();
+                unsubscribe = await listenToFestivalData(({ config, days }) => {
+                    setFestivalData(days);
+                    setFestivalConfig(config);
+                    setIsLoading(false); // Data is ready
+                });
             } catch (error) {
                 console.error("Failed to load data for Festival page:", error);
-            } finally {
                 setIsLoading(false);
             }
         };
+
         loadData();
+
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
     }, []);
 
     const exitStaging = () => {

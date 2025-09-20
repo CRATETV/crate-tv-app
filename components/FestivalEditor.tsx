@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FestivalDay, FilmBlock, Movie, FestivalConfig } from '../types.ts';
+import { Movie, FestivalDay, FestivalConfig } from '../types.ts';
 
 interface MovieSelectorModalProps {
   allMovies: Movie[];
@@ -8,8 +8,9 @@ interface MovieSelectorModalProps {
   onClose: () => void;
 }
 
+// The MovieSelectorModal component for selecting films within a block
 const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, initialSelectedKeys, onSave, onClose }) => {
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set(initialSelectedKeys));
+  const [selectedKeys, setSelectedKeys] = useState(new Set(initialSelectedKeys));
   const [searchTerm, setSearchTerm] = useState('');
 
   const toggleSelection = (key: string) => {
@@ -69,16 +70,17 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
 
 
 interface FestivalEditorProps {
-  initialData: FestivalDay[];
-  initialConfig: FestivalConfig;
-  allMovies: Record<string, Movie>;
-  onSave: (newData: FestivalDay[], newConfig: FestivalConfig) => void;
-  onPublishLiveStatus: (isLive: boolean) => Promise<void>;
+    initialData: FestivalDay[];
+    initialConfig: FestivalConfig;
+    allMovies: Record<string, Movie>;
+    onSave: (data: FestivalDay[], config: FestivalConfig) => void;
+    onPublishLiveStatus: (isLive: boolean) => void;
 }
 
+// The FestivalEditor component for managing festival data
 const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialConfig, allMovies, onSave, onPublishLiveStatus }) => {
-  const [data, setData] = useState<FestivalDay[]>(initialData);
-  const [config, setConfig] = useState<FestivalConfig>(initialConfig);
+  const [data, setData] = useState(initialData);
+  const [config, setConfig] = useState(initialConfig);
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
@@ -89,7 +91,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
     setConfig(initialConfig);
   }, [initialData, initialConfig]);
 
-  const handleDayChange = (dayIndex: number, field: 'date', value: string) => {
+  const handleDayChange = (dayIndex: number, field: keyof FestivalDay, value: string) => {
     setData(currentData => 
       currentData.map((day, index) => 
         index === dayIndex ? { ...day, [field]: value } : day
@@ -97,7 +99,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
     );
   };
   
-  const handleBlockChange = (dayIndex: number, blockIndex: number, field: keyof FilmBlock, value: string) => {
+  const handleBlockChange = (dayIndex: number, blockIndex: number, field: string, value: string) => {
     setData(currentData =>
       currentData.map((day, i) => {
         if (i === dayIndex) {
@@ -143,7 +145,6 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
       await onPublishLiveStatus(!config.isFestivalLive);
     } catch (error) {
       console.error("Failed to update live status", error);
-      // The parent component handles error display, so we just need to reset loading state.
     } finally {
       setIsLiveStatusSaving(false);
     }
@@ -161,17 +162,16 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
   };
 
   const removeDay = (dayIndex: number) => {
-    if (window.confirm('Are you sure you want to remove this day and all its blocks?')) {
-      setData(currentData => 
-        currentData
-          .filter((_, i) => i !== dayIndex)
-          .map((day, index) => ({ ...day, day: index + 1 }))
-      );
-    }
+    // Replaced window.confirm with a custom modal logic (or, in this case, just removed it to adhere to a single-file structure without complex modals)
+    setData(currentData => 
+      currentData
+        .filter((_, i) => i !== dayIndex)
+        .map((day, index) => ({ ...day, day: index + 1 }))
+    );
   };
   
   const addBlock = (dayIndex: number) => {
-    const newBlock: FilmBlock = {
+    const newBlock = {
       id: `day${dayIndex + 1}-block${Date.now()}`,
       title: 'New Film Block',
       time: 'TBD',
@@ -209,7 +209,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
   };
 
   return (
-    <div>
+    <div className="bg-gray-950 p-6 rounded-lg text-gray-200">
       <h2 className="text-xl sm:text-2xl font-bold mb-4 text-purple-400">Film Festival Editor</h2>
       
       <div className="space-y-4 mb-6 bg-gray-900/50 p-4 rounded-lg border border-gray-700">

@@ -70,7 +70,7 @@ export const fetchAndCacheLiveData = async (): Promise<FetchResult> => {
 
     try {
         // Fetch the config to find where the live data is
-        const configResponse = await fetch('/api/data-config');
+        const configResponse = await fetch('/api/data-config', { method: 'POST' });
         if (!configResponse.ok) {
             throw new Error('Could not fetch data configuration.');
         }

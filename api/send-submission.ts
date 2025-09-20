@@ -57,7 +57,6 @@ export async function POST(request: Request) {
         to: [toEmail],
         subject: `New Film Submission: ${filmTitle}`,
         html: emailHtml,
-        // FIX: Corrected property name from 'reply_to' to 'replyTo' to align with the Resend SDK's type definitions.
         reply_to: email,
     });
 

@@ -1,11 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
-import { moviesData as initialMoviesData, categoriesData as initialCategoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfigData } from './constants.ts';
+import { moviesData as initialMoviesData, categoriesData as initialCategoriesData } from './constants.ts';
 import { Movie, Category, FestivalDay, FestivalConfig } from './types.ts';
 import MovieEditor from './components/MovieEditor.tsx';
 import Footer from './components/Footer.tsx';
 import FestivalEditor from './components/FestivalEditor.tsx';
 import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
+import { initializeFirebaseAndAuth, listenToFestivalData, saveFestivalConfig, saveFestivalDays } from './services/firebaseService.ts';
+import LoadingSpinner from './components/LoadingSpinner.tsx';
 
 // Helper to format the current date/time for a datetime-local input
 const getLocalDatetimeString = () => {
@@ -33,7 +34,8 @@ const AdminPage: React.FC = () => {
   const [movies, setMovies] = useState<Record<string, Movie>>({});
   const [categories, setCategories] = useState<Record<string, Category>>({});
   const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
-  const [festivalConfig, setFestivalConfig] = useState<FestivalConfig>(initialFestivalConfigData);
+  const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [password, setPassword] = useState('');
@@ -58,38 +60,53 @@ const AdminPage: React.FC = () => {
   // Roku Packager State
   const [isPackaging, setIsPackaging] = useState(false);
 
-  const fetchAdminData = async () => {
+  // Fetch non-festival data from S3
+  const fetchS3Data = async () => {
     try {
         invalidateCache(); // Ensure fresh data on admin login
         const { data: liveData } = await fetchAndCacheLiveData();
         setMovies(liveData.movies);
         setCategories(liveData.categories);
-        setFestivalData(liveData.festivalData);
-        setFestivalConfig(liveData.festivalConfig);
     } catch (e) {
-        console.error("Failed to fetch live data for admin, falling back to initial data.", e);
+        console.error("Failed to fetch S3 data for admin, falling back to initial data.", e);
         setMovies(initialMoviesData);
         setCategories(initialCategoriesData);
-        setFestivalData(initialFestivalData);
-        setFestivalConfig(initialFestivalConfigData);
     }
   };
 
   useEffect(() => {
-    // Check session storage for auth status on initial load
-    if (sessionStorage.getItem('isAdminAuthenticated') === 'true') {
+    const isAdmin = sessionStorage.getItem('isAdminAuthenticated') === 'true';
+    if (isAdmin) {
         setIsAuthenticated(true);
-        if (sessionStorage.getItem('usedMasterKey') === 'true') {
-            setLoggedInWithMaster(true);
-        }
-        if (sessionStorage.getItem('isDeveloperMode') === 'true') {
-            setIsDeveloperMode(true);
-        }
+        if (sessionStorage.getItem('usedMasterKey') === 'true') setLoggedInWithMaster(true);
+        if (sessionStorage.getItem('isDeveloperMode') === 'true') setIsDeveloperMode(true);
         if (sessionStorage.getItem('hasElevatedPrivileges') === 'true') {
             setHasElevatedPrivileges(true);
             fetchSalesData();
         }
-        fetchAdminData();
+
+        let unsubscribe: (() => void) | null = null;
+        const loadAdminData = async () => {
+            setIsLoading(true);
+            await fetchS3Data();
+            await initializeFirebaseAndAuth();
+
+            unsubscribe = await listenToFestivalData(({ config, days }) => {
+                setFestivalConfig(config);
+                setFestivalData(days);
+                setIsLoading(false);
+            });
+        };
+
+        loadAdminData();
+        
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
+    } else {
+        setIsLoading(false);
     }
   }, []);
 
@@ -139,38 +156,16 @@ const AdminPage: React.FC = () => {
         if (response.ok && (data.success || data.firstLogin)) {
             sessionStorage.setItem('isAdminAuthenticated', 'true');
             sessionStorage.setItem('adminPassword', password);
-            setIsAuthenticated(true);
+            if (data.usedMasterKey) sessionStorage.setItem('usedMasterKey', 'true');
+            if (data.isDeveloper) sessionStorage.setItem('isDeveloperMode', 'true');
+            if (data.hasElevatedPrivileges) sessionStorage.setItem('hasElevatedPrivileges', 'true');
             
-            if (data.usedMasterKey) {
-                sessionStorage.setItem('usedMasterKey', 'true');
-                setLoggedInWithMaster(true);
-            } else {
-                sessionStorage.removeItem('usedMasterKey');
-                setLoggedInWithMaster(false);
-            }
-
-            if (data.isDeveloper) {
-                sessionStorage.setItem('isDeveloperMode', 'true');
-                setIsDeveloperMode(true);
-            } else {
-                sessionStorage.removeItem('isDeveloperMode');
-                setIsDeveloperMode(false);
-            }
-
-            if (data.hasElevatedPrivileges) {
-                sessionStorage.setItem('hasElevatedPrivileges', 'true');
-                setHasElevatedPrivileges(true);
-                fetchSalesData();
-            } else {
-                sessionStorage.removeItem('hasElevatedPrivileges');
-                setHasElevatedPrivileges(false);
-            }
-
             if (data.firstLogin) {
                 setLoginMessage("Setup complete! To secure your admin panel, add this password as the ADMIN_PASSWORD environment variable in your project's settings.");
             }
             
-            fetchAdminData();
+            // Reload the page to trigger the useEffect that loads all data
+            window.location.reload();
         } else {
             setLoginError(data.error || 'Login failed.');
         }
@@ -194,12 +189,10 @@ const AdminPage: React.FC = () => {
     setSalesData(null);
   };
 
-  const publishData = async (
+  const publishMovieData = async (
     updatedData: {
         movies: Record<string, Movie>,
-        categories: Record<string, Category>,
-        festivalData: FestivalDay[],
-        festivalConfig: FestivalConfig
+        categories: Record<string, Category>
     }
   ): Promise<boolean> => {
     setAutoPublishStatus('saving');
@@ -220,7 +213,6 @@ const AdminPage: React.FC = () => {
         }
 
         invalidateCache();
-        // Notify other open tabs that data has changed.
         window.dispatchEvent(new CustomEvent('datachanged'));
         setAutoPublishStatus('success');
         setTimeout(() => setAutoPublishStatus('idle'), 2500);
@@ -264,7 +256,7 @@ const AdminPage: React.FC = () => {
 
   const handleSave = async (updatedMovie: Movie) => {
     const newMovies = { ...movies, [updatedMovie.key]: updatedMovie };
-    const success = await publishData({ movies: newMovies, categories, festivalData, festivalConfig });
+    const success = await publishMovieData({ movies: newMovies, categories });
     if (success) {
       setMovies(newMovies);
       setSelectedMovie(null);
@@ -282,7 +274,7 @@ const AdminPage: React.FC = () => {
             newCategories[catKey].movieKeys = newCategories[catKey].movieKeys.filter((key: string) => key !== movieKey);
         });
         
-        const success = await publishData({ movies: newMovies, categories: newCategories, festivalData, festivalConfig });
+        const success = await publishMovieData({ movies: newMovies, categories: newCategories });
 
         if (success) {
             setMovies(newMovies);
@@ -293,23 +285,31 @@ const AdminPage: React.FC = () => {
   };
   
   const handleSaveFestival = async (updatedFestivalData: FestivalDay[], updatedFestivalConfig: FestivalConfig) => {
-    const success = await publishData({ movies, categories, festivalData: updatedFestivalData, festivalConfig: updatedFestivalConfig });
-    if (success) {
-      setFestivalData(updatedFestivalData);
-      setFestivalConfig(updatedFestivalConfig);
+    setAutoPublishStatus('saving');
+    setAutoPublishError('');
+    try {
+        await saveFestivalConfig(updatedFestivalConfig);
+        await saveFestivalDays(updatedFestivalData);
+        setAutoPublishStatus('success');
+        setTimeout(() => setAutoPublishStatus('idle'), 2500);
+    } catch (error) {
+        setAutoPublishStatus('error');
+        setAutoPublishError(error instanceof Error ? 'Failed to save festival data.' : 'An unknown error occurred.');
     }
   };
 
   const handlePublishLiveStatus = async (isLive: boolean) => {
-    const updatedConfig = { ...festivalConfig, isFestivalLive: isLive };
-    const success = await publishData({
-      movies,
-      categories,
-      festivalData,
-      festivalConfig: updatedConfig,
-    });
-    if (success) {
-      setFestivalConfig(updatedConfig);
+    if (!festivalConfig) return;
+    setAutoPublishStatus('saving');
+    setAutoPublishError('');
+    try {
+        const updatedConfig = { ...festivalConfig, isFestivalLive: isLive };
+        await saveFestivalConfig(updatedConfig);
+        setAutoPublishStatus('success');
+        setTimeout(() => setAutoPublishStatus('idle'), 2500);
+    } catch (error) {
+        setAutoPublishStatus('error');
+        setAutoPublishError(error instanceof Error ? 'Failed to update live status.' : 'An unknown error occurred.');
     }
   };
 
@@ -338,6 +338,10 @@ const AdminPage: React.FC = () => {
   };
 
   const handleDownloadConstants = () => {
+    if (!festivalConfig) {
+      alert("Festival data not loaded yet.");
+      return;
+    }
     const header = `import { Category, Movie, FestivalDay, FestivalConfig } from './types.ts';\n\n`;
     
     const festivalConfigString = `export const festivalConfigData: FestivalConfig = ${JSON.stringify(festivalConfig, null, 2)};\n\n`;
@@ -360,7 +364,6 @@ const AdminPage: React.FC = () => {
 
   const handleClearCacheAndRefresh = () => {
     invalidateCache();
-    // Also notify other tabs to refresh their data
     window.dispatchEvent(new CustomEvent('datachanged'));
     alert('Cache cleared. The page will now refresh to pull the latest live data.');
     window.location.reload();
@@ -412,6 +415,10 @@ const AdminPage: React.FC = () => {
     );
   }
 
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-900 text-white">
       <main className="flex-grow p-4 sm:p-8">
@@ -449,7 +456,7 @@ const AdminPage: React.FC = () => {
             </div>
           {autoPublishStatus === 'error' && <p className="text-red-400 text-sm mb-4 -mt-6">{autoPublishError}</p>}
           
-          {hasElevatedPrivileges && (
+          {hasElevatedPrivileges && festivalConfig && (
             <>
                 {/* Sales Dashboard Section */}
                 <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">

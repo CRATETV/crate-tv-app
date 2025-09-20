@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
+import { initializeFirebaseAndAuth, listenToFestivalData } from './services/firebaseService.ts';
 import { Movie, Actor, Category, FestivalConfig, FestivalDay } from './types.ts';
 import Header from './components/Header.tsx';
 import Hero from './components/Hero.tsx';
@@ -35,35 +35,6 @@ const App: React.FC = () => {
 
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const loadAppData = useCallback(async (isInitialLoad = false) => {
-    if (isInitialLoad) setIsLoading(true);
-    try {
-        const { data: liveData, source } = await fetchAndCacheLiveData();
-        setDataSource(source);
-        
-        const newMoviesState = { ...liveData.movies };
-        Object.keys(newMoviesState).forEach((key: string) => {
-          const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
-          if (storedLikes) {
-            newMoviesState[key].likes = parseInt(storedLikes, 10);
-          }
-        });
-        setMovies(newMoviesState);
-        setCategories(liveData.categories);
-        setFestivalConfig(liveData.festivalConfig);
-        setFestivalData(liveData.festivalData);
-
-        const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
-        if (storedLikedMovies) {
-          setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
-        }
-    } catch (error) {
-        console.error("Failed to load app data", error);
-    } finally {
-        if (isInitialLoad) setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const env = params.get('env');
@@ -82,27 +53,52 @@ const App: React.FC = () => {
       sessionStorage.setItem('hasSeenActorAiFeature', 'true');
     }
 
-    // Initial data load
-    loadAppData(true);
+    setIsLoading(true);
 
-    // Handle data changes from other tabs (e.g., admin panel)
-    const handleDataChange = () => {
-      console.log('Live data changed. Refreshing content.');
-      loadAppData(false);
+    const fetchS3Data = async () => {
+      try {
+        const { data: liveData, source } = await fetchAndCacheLiveData();
+        setDataSource(source);
+        
+        const newMoviesState = { ...liveData.movies };
+        Object.keys(newMoviesState).forEach((key: string) => {
+          const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
+          if (storedLikes) newMoviesState[key].likes = parseInt(storedLikes, 10);
+        });
+        setMovies(newMoviesState);
+        setCategories(liveData.categories);
+
+        const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
+        if (storedLikedMovies) {
+          setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
+        }
+      } catch (error) {
+        console.error("Failed to load S3 app data", error);
+      }
     };
-    window.addEventListener('datachanged', handleDataChange);
+    
+    let unsubscribe: (() => void) | null = null;
+    const setupFirestoreListener = async () => {
+      await initializeFirebaseAndAuth();
+      unsubscribe = await listenToFestivalData(({ config, days }) => {
+        setFestivalConfig(config);
+        setFestivalData(days);
+      });
+    };
+    
+    Promise.all([fetchS3Data(), setupFirestoreListener()]).finally(() => {
+      setIsLoading(false);
+    });
 
     const handleScroll = () => setIsScrolled(window.pageYOffset > 10);
     window.addEventListener('scroll', handleScroll, { passive: true });
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('datachanged', handleDataChange);
-      if (heroIntervalRef.current) {
-        clearInterval(heroIntervalRef.current);
-      }
+      if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
+      if (unsubscribe) unsubscribe();
     };
-  }, [loadAppData]);
+  }, []);
   
   // Logic for the hero banner auto-scroll
   const heroMovies = useMemo(() => {
