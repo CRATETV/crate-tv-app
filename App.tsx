@@ -35,8 +35,36 @@ const App: React.FC = () => {
 
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const loadAppData = useCallback(async (isInitialLoad = false) => {
+    if (isInitialLoad) setIsLoading(true);
+    try {
+        const { data: liveData, source } = await fetchAndCacheLiveData();
+        setDataSource(source);
+        
+        const newMoviesState = { ...liveData.movies };
+        Object.keys(newMoviesState).forEach((key: string) => {
+          const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
+          if (storedLikes) {
+            newMoviesState[key].likes = parseInt(storedLikes, 10);
+          }
+        });
+        setMovies(newMoviesState);
+        setCategories(liveData.categories);
+        setFestivalConfig(liveData.festivalConfig);
+        setFestivalData(liveData.festivalData);
+
+        const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
+        if (storedLikedMovies) {
+          setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
+        }
+    } catch (error) {
+        console.error("Failed to load app data", error);
+    } finally {
+        if (isInitialLoad) setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    // Check for staging environment
     const params = new URLSearchParams(window.location.search);
     const env = params.get('env');
     const stagingSession = sessionStorage.getItem('crateTvStaging');
@@ -48,56 +76,33 @@ const App: React.FC = () => {
       invalidateCache();
     }
     
-    // Check if we should show the feature modal
     const hasSeenFeatureModal = sessionStorage.getItem('hasSeenActorAiFeature');
     if (!hasSeenFeatureModal) {
       setShowFeatureModal(true);
       sessionStorage.setItem('hasSeenActorAiFeature', 'true');
     }
 
-    const loadAppData = async () => {
-        try {
-            const { data: liveData, source } = await fetchAndCacheLiveData();
-            setDataSource(source);
-            
-            // Initialize movies with likes from local storage
-            const newMoviesState = { ...liveData.movies };
-            Object.keys(newMoviesState).forEach((key: string) => {
-              const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
-              if (storedLikes) {
-                newMoviesState[key].likes = parseInt(storedLikes, 10);
-              }
-            });
-            setMovies(newMoviesState);
-            setCategories(liveData.categories);
-            setFestivalConfig(liveData.festivalConfig);
-            setFestivalData(liveData.festivalData);
+    // Initial data load
+    loadAppData(true);
 
-            // Initialize the set of liked movies
-            const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
-            if (storedLikedMovies) {
-              setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
-            }
-        } catch (error) {
-            console.error("Failed to load initial app data", error);
-        } finally {
-            setIsLoading(false);
-        }
+    // Handle data changes from other tabs (e.g., admin panel)
+    const handleDataChange = () => {
+      console.log('Live data changed. Refreshing content.');
+      loadAppData(false);
     };
-    
-    loadAppData();
+    window.addEventListener('datachanged', handleDataChange);
 
-    // Handle scroll for header transparency
     const handleScroll = () => setIsScrolled(window.pageYOffset > 10);
     window.addEventListener('scroll', handleScroll, { passive: true });
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('datachanged', handleDataChange);
       if (heroIntervalRef.current) {
         clearInterval(heroIntervalRef.current);
       }
     };
-  }, []);
+  }, [loadAppData]);
   
   // Logic for the hero banner auto-scroll
   const heroMovies = useMemo(() => {
