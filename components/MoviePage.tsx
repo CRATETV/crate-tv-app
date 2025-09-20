@@ -73,6 +73,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   
   // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
+  const [isVideoLoading, setIsVideoLoading] = useState(false);
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,7 +81,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   
   // Staging and feature toggles
   const [isStaging, setIsStaging] = useState(false);
-  // FIX: Added dataSource state to track if the app is in offline/fallback mode.
   const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
 
   useEffect(() => {
@@ -96,7 +96,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     
     const loadMovieData = async () => {
         try {
-            // FIX: Destructured `data` and `source` from the `fetchAndCacheLiveData` result.
             const { data: liveData, source } = await fetchAndCacheLiveData();
             setDataSource(source);
             setAllMovies(liveData.movies);
@@ -133,6 +132,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
               // Handle play from URL
               if (params.get('play') === 'true' && movieData.fullMovie && released) {
                 setPlayerMode('full');
+                setIsVideoLoading(true);
               } else {
                 setPlayerMode('poster');
               }
@@ -173,7 +173,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
  useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
         if (event.key === 'Escape' && playerMode === 'full') {
-            setPlayerMode('poster');
+            handleExitPlayer();
         }
     };
 
@@ -222,6 +222,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       window.history.pushState({}, '', '/');
       window.dispatchEvent(new Event('pushstate'));
     };
+
+    const handleExitPlayer = () => {
+        setPlayerMode('poster');
+        setIsVideoLoading(false);
+    };
     
     if (isLoading || !movie) {
         return <LoadingSpinner />;
@@ -229,7 +234,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
     return (
         <div className="flex flex-col min-h-screen bg-black text-white">
-            {/* FIX: Passed the `isOffline` prop to the StagingBanner component. */}
             {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
             <Header
                 searchQuery={searchQuery}
@@ -248,17 +252,27 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             <video 
                                 ref={videoRef} 
                                 src={movie.fullMovie} 
-                                className="w-full h-full" 
+                                className={`w-full h-full transition-opacity ${isVideoLoading ? 'opacity-0' : 'opacity-100'}`}
                                 controls 
                                 autoPlay 
                                 playsInline 
                                 onContextMenu={(e) => e.preventDefault()} 
                                 controlsList="nodownload"
                                 onEnded={handleMovieEnd}
+                                onCanPlay={() => setIsVideoLoading(false)}
                             />
+                             {isVideoLoading && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-md animate-[fadeIn_0.3s_ease-out]">
+                                    <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" />
+                                    <div className="relative text-center">
+                                        <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-white mb-4"></div>
+                                        <p className="text-white text-lg font-semibold">Preparing your film...</p>
+                                    </div>
+                                </div>
+                            )}
                             <CastButton videoElement={videoRef.current} />
                             <button
-                                onClick={() => setPlayerMode('poster')}
+                                onClick={handleExitPlayer}
                                 className="absolute top-4 right-16 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white z-10"
                                 aria-label="Exit video player"
                             >
@@ -278,7 +292,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                                     <button 
-                                        onClick={() => setPlayerMode('full')} 
+                                        onClick={() => { setPlayerMode('full'); setIsVideoLoading(true); }}
                                         className="absolute text-white bg-black/50 rounded-full p-4 hover:bg-black/70 transition-colors"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" viewBox="0 0 20 20" fill="currentColor">
