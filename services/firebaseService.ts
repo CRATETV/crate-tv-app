@@ -93,7 +93,7 @@ export const listenToFestivalData = async (
     }
 
     const configRef = db.doc("festival/config");
-    const configUnsubscribe = configRef.onSnapshot((docSnap) => {
+    const configUnsubscribe = configRef.onSnapshot((docSnap: firebase.firestore.DocumentSnapshot) => {
         if (docSnap.exists) {
             configData = docSnap.data() as FestivalConfig;
         } else {
@@ -101,20 +101,20 @@ export const listenToFestivalData = async (
             configData = { title: 'Crate TV Film Festival', description: '', isFestivalLive: false };
         }
         tryCallback();
-    }, (error) => {
+    }, (error: firebase.firestore.FirestoreError) => {
         console.error("Error listening to festival config:", error);
     });
 
     const daysRef = db.collection("festival/schedule/days");
-    const daysUnsubscribe = daysRef.onSnapshot((querySnapshot) => {
+    const daysUnsubscribe = daysRef.onSnapshot((querySnapshot: firebase.firestore.QuerySnapshot) => {
         const days: FestivalDay[] = [];
-        querySnapshot.forEach((doc) => {
+        querySnapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
             days.push(doc.data() as FestivalDay);
         });
         days.sort((a, b) => a.day - b.day);
         daysData = days;
         tryCallback();
-    }, (error) => {
+    }, (error: firebase.firestore.FirestoreError) => {
         console.error("Error listening to festival schedule:", error);
     });
     
@@ -139,7 +139,7 @@ export const saveFestivalDays = async (days: FestivalDay[]): Promise<void> => {
     const daysCollectionRef = db.collection("festival/schedule/days");
 
     const existingDocsSnapshot = await daysCollectionRef.get();
-    existingDocsSnapshot.forEach(doc => {
+    existingDocsSnapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
         batch.delete(doc.ref);
     });
 

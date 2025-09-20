@@ -42,7 +42,8 @@ export async function POST(request: Request) {
       to: [toEmail],
       subject: `New Message from ${name}`,
       html: emailHtml,
-      reply_to: email,
+      // FIX: Corrected `reply_to` to `replyTo` to match the Resend SDK's expected property name.
+      replyTo: email,
     });
 
     if (error) {
