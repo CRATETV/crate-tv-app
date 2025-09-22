@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
-import { initializeFirebaseAndAuth, listenToFestivalData } from './services/firebaseService.ts';
 import { Movie, Actor, Category, FestivalConfig, FestivalDay } from './types.ts';
 import Header from './components/Header.tsx';
 import Hero from './components/Hero.tsx';
@@ -55,40 +54,39 @@ const App: React.FC = () => {
 
     setIsLoading(true);
 
-    const fetchS3Data = async () => {
+    const loadAppData = async () => {
       try {
         const { data: liveData, source } = await fetchAndCacheLiveData();
         setDataSource(source);
         
+        // MOVIES
         const newMoviesState = { ...liveData.movies };
         Object.keys(newMoviesState).forEach((key: string) => {
           const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
           if (storedLikes) newMoviesState[key].likes = parseInt(storedLikes, 10);
         });
         setMovies(newMoviesState);
+        
+        // CATEGORIES
         setCategories(liveData.categories);
+        
+        // FESTIVAL DATA
+        setFestivalConfig(liveData.festivalConfig);
+        setFestivalData(liveData.festivalData);
 
+        // LIKES
         const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
         if (storedLikedMovies) {
           setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
         }
       } catch (error) {
         console.error("Failed to load S3 app data", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
-    let unsubscribe: (() => void) | null = null;
-    const setupFirestoreListener = async () => {
-      await initializeFirebaseAndAuth();
-      unsubscribe = await listenToFestivalData(({ config, days }) => {
-        setFestivalConfig(config);
-        setFestivalData(days);
-      });
-    };
-    
-    Promise.all([fetchS3Data(), setupFirestoreListener()]).finally(() => {
-      setIsLoading(false);
-    });
+    loadAppData();
 
     const handleScroll = () => setIsScrolled(window.pageYOffset > 10);
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -96,7 +94,6 @@ const App: React.FC = () => {
     return () => {
       window.removeEventListener('scroll', handleScroll);
       if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
-      if (unsubscribe) unsubscribe();
     };
   }, []);
   

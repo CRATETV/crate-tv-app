@@ -48,9 +48,9 @@ const AdminPage: React.FC = () => {
   const [isDeveloperMode, setIsDeveloperMode] = useState(false);
   const [hasElevatedPrivileges, setHasElevatedPrivileges] = useState(false);
   
-  // Auto-publishing state
-  const [autoPublishStatus, setAutoPublishStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
-  const [autoPublishError, setAutoPublishError] = useState('');
+  // Publishing state
+  const [publishStatus, setPublishStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [publishError, setPublishError] = useState('');
   
   // Sales Dashboard State
   const [salesData, setSalesData] = useState<{ totalRevenue: number; fullPassesSold: number; filmBlocksSold: number; individualFilmsSold: number; transactions: any[] } | null>(null);
@@ -189,14 +189,15 @@ const AdminPage: React.FC = () => {
     setSalesData(null);
   };
 
-  const publishMovieData = async (
-    updatedData: {
-        movies: Record<string, Movie>,
-        categories: Record<string, Category>
+  const publishFullData = async (dataToPublish: { movies: Record<string, Movie>, categories: Record<string, Category>, festivalData: FestivalDay[], festivalConfig: FestivalConfig | null }) => {
+    if (!dataToPublish.festivalConfig) {
+        setPublishError('Cannot publish without festival configuration.');
+        setPublishStatus('error');
+        return false;
     }
-  ): Promise<boolean> => {
-    setAutoPublishStatus('saving');
-    setAutoPublishError('');
+    
+    setPublishStatus('saving');
+    setPublishError('');
     try {
         const adminPassword = sessionStorage.getItem('adminPassword');
         if (!adminPassword) throw new Error('Authentication error. Please log in again.');
@@ -204,7 +205,7 @@ const AdminPage: React.FC = () => {
         const response = await fetch('/api/publish-data', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: adminPassword, data: updatedData }),
+            body: JSON.stringify({ password: adminPassword, data: dataToPublish }),
         });
 
         if (!response.ok) {
@@ -214,13 +215,13 @@ const AdminPage: React.FC = () => {
 
         invalidateCache();
         window.dispatchEvent(new CustomEvent('datachanged'));
-        setAutoPublishStatus('success');
-        setTimeout(() => setAutoPublishStatus('idle'), 2500);
+        setPublishStatus('success');
+        setTimeout(() => setPublishStatus('idle'), 2500);
         return true;
 
     } catch (error) {
-        setAutoPublishStatus('error');
-        setAutoPublishError(error instanceof Error ? error.message : 'An unknown error occurred.');
+        setPublishStatus('error');
+        setPublishError(error instanceof Error ? error.message : 'An unknown error occurred.');
         return false;
     }
   };
@@ -256,7 +257,7 @@ const AdminPage: React.FC = () => {
 
   const handleSave = async (updatedMovie: Movie) => {
     const newMovies = { ...movies, [updatedMovie.key]: updatedMovie };
-    const success = await publishMovieData({ movies: newMovies, categories });
+    const success = await publishFullData({ movies: newMovies, categories, festivalData, festivalConfig });
     if (success) {
       setMovies(newMovies);
       setSelectedMovie(null);
@@ -274,7 +275,7 @@ const AdminPage: React.FC = () => {
             newCategories[catKey].movieKeys = newCategories[catKey].movieKeys.filter((key: string) => key !== movieKey);
         });
         
-        const success = await publishMovieData({ movies: newMovies, categories: newCategories });
+        const success = await publishFullData({ movies: newMovies, categories: newCategories, festivalData, festivalConfig });
 
         if (success) {
             setMovies(newMovies);
@@ -285,31 +286,29 @@ const AdminPage: React.FC = () => {
   };
   
   const handleSaveFestival = async (updatedFestivalData: FestivalDay[], updatedFestivalConfig: FestivalConfig) => {
-    setAutoPublishStatus('saving');
-    setAutoPublishError('');
+    setPublishStatus('saving');
+    setPublishError('');
     try {
         await saveFestivalConfig(updatedFestivalConfig);
         await saveFestivalDays(updatedFestivalData);
-        setAutoPublishStatus('success');
-        setTimeout(() => setAutoPublishStatus('idle'), 2500);
+        await publishFullData({ movies, categories, festivalData: updatedFestivalData, festivalConfig: updatedFestivalConfig });
     } catch (error) {
-        setAutoPublishStatus('error');
-        setAutoPublishError(error instanceof Error ? 'Failed to save festival data.' : 'An unknown error occurred.');
+        setPublishStatus('error');
+        setPublishError(error instanceof Error ? 'Failed to save festival data.' : 'An unknown error occurred.');
     }
   };
 
   const handlePublishLiveStatus = async (isLive: boolean) => {
     if (!festivalConfig) return;
-    setAutoPublishStatus('saving');
-    setAutoPublishError('');
+    setPublishStatus('saving');
+    setPublishError('');
     try {
         const updatedConfig = { ...festivalConfig, isFestivalLive: isLive };
         await saveFestivalConfig(updatedConfig);
-        setAutoPublishStatus('success');
-        setTimeout(() => setAutoPublishStatus('idle'), 2500);
+        await publishFullData({ movies, categories, festivalData, festivalConfig: updatedConfig });
     } catch (error) {
-        setAutoPublishStatus('error');
-        setAutoPublishError(error instanceof Error ? 'Failed to update live status.' : 'An unknown error occurred.');
+        setPublishStatus('error');
+        setPublishError(error instanceof Error ? 'Failed to update live status.' : 'An unknown error occurred.');
     }
   };
 
@@ -435,15 +434,15 @@ const AdminPage: React.FC = () => {
            <div className="flex justify-between items-start mb-8">
                 <h1 className="text-2xl sm:text-4xl font-bold">Admin Panel</h1>
                 <div className="flex items-center gap-4">
-                    {autoPublishStatus !== 'idle' && (
+                    {publishStatus !== 'idle' && (
                         <div className={`text-sm px-3 py-1 rounded-md ${
-                            autoPublishStatus === 'saving' ? 'bg-blue-500/20 text-blue-300' :
-                            autoPublishStatus === 'success' ? 'bg-green-500/20 text-green-300' :
+                            publishStatus === 'saving' ? 'bg-blue-500/20 text-blue-300' :
+                            publishStatus === 'success' ? 'bg-green-500/20 text-green-300' :
                             'bg-red-500/20 text-red-300'
                         }`}>
-                            {autoPublishStatus === 'saving' && 'Saving...'}
-                            {autoPublishStatus === 'success' && '✓ Saved & Published'}
-                            {autoPublishStatus === 'error' && 'Error Saving!'}
+                            {publishStatus === 'saving' && 'Saving...'}
+                            {publishStatus === 'success' && '✓ Saved & Published'}
+                            {publishStatus === 'error' && 'Error Saving!'}
                         </div>
                     )}
                     <button onClick={handleClearCacheAndRefresh} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">
@@ -454,7 +453,7 @@ const AdminPage: React.FC = () => {
                     </button>
                 </div>
             </div>
-          {autoPublishStatus === 'error' && <p className="text-red-400 text-sm mb-4 -mt-6">{autoPublishError}</p>}
+          {publishStatus === 'error' && <p className="text-red-400 text-sm mb-4 -mt-6">{publishError}</p>}
           
           {hasElevatedPrivileges && festivalConfig && (
             <>

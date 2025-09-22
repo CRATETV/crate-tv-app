@@ -6,7 +6,6 @@ import LoadingSpinner from './LoadingSpinner.tsx';
 import StagingBanner from './StagingBanner.tsx';
 import FestivalView from './FestivalView.tsx';
 import { fetchAndCacheLiveData } from '../services/dataService.ts';
-import { initializeFirebaseAndAuth, listenToFestivalData } from '../services/firebaseService.ts';
 import { Movie, FestivalDay, FestivalConfig } from '../types.ts';
 
 const FestivalPage: React.FC = () => {
@@ -27,35 +26,22 @@ const FestivalPage: React.FC = () => {
         }
 
         setIsLoading(true);
-        let unsubscribe: (() => void) | null = null;
         
         const loadData = async () => {
             try {
-                // Fetch movies data from S3
                 const { data: liveData, source } = await fetchAndCacheLiveData();
                 setMovies(liveData.movies);
                 setDataSource(source);
-                
-                // Set up real-time listener for festival data from Firestore
-                await initializeFirebaseAndAuth();
-                unsubscribe = await listenToFestivalData(({ config, days }) => {
-                    setFestivalData(days);
-                    setFestivalConfig(config);
-                    setIsLoading(false); // Data is ready
-                });
+                setFestivalData(liveData.festivalData);
+                setFestivalConfig(liveData.festivalConfig);
             } catch (error) {
                 console.error("Failed to load data for Festival page:", error);
+            } finally {
                 setIsLoading(false);
             }
         };
 
         loadData();
-
-        return () => {
-            if (unsubscribe) {
-                unsubscribe();
-            }
-        };
     }, []);
 
     const exitStaging = () => {
