@@ -57,8 +57,8 @@ export async function POST(request: Request) {
         to: [toEmail],
         subject: `New Film Submission: ${filmTitle}`,
         html: emailHtml,
-        //  Corrected `reply_to`  the code assitant changes it sometimes. 
-        reply_to: email,
+        // FIX: The correct property name is `replyTo`, not `reply_to`.
+        replyTo: email,
     });
 
     if (error) {

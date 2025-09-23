@@ -42,8 +42,8 @@ export async function POST(request: Request) {
       to: [toEmail],
       subject: `New Message from ${name}`,
       html: emailHtml,
-      // it needs to be reply_to. sometimes the code assistant changes it but Vercel won't accept it.
-      reply_to: email,
+      // FIX: The correct property name is `replyTo`, not `reply_to`.
+      replyTo: email,
     });
 
     if (error) {

@@ -2,39 +2,35 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
 
-import { FestivalConfig, FestivalDay } from '../types.ts';
+import { Movie, Category, FestivalConfig, FestivalDay } from '../types.ts';
+import { moviesData as initialMovies, categoriesData as initialCategories, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig } from '../constants.ts';
 
-let app: firebase.app.App;
-let auth: firebase.auth.Auth;
 let db: firebase.firestore.Firestore;
 
-// A promise that resolves when initialization is complete, ensuring it only runs once.
 let initializationPromise: Promise<void> | null = null;
 
 const initialize = async () => {
-    // Prevent re-initialization if already successful
     if (firebase.apps.length) {
+        db = firebase.firestore();
         return;
     }
 
     try {
         const response = await fetch('/api/firebase-config', { method: 'POST' });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to fetch Firebase config from server.');
-        }
-
+        if (!response.ok) throw new Error('Failed to fetch Firebase config.');
         const config = await response.json();
-        if (!config.apiKey || !config.projectId) {
-            throw new Error('Incomplete Firebase config received from server.');
+        if (!config.apiKey) throw new Error('Incomplete Firebase config received.');
+
+        firebase.initializeApp(config);
+        db = firebase.firestore();
+        
+        const auth = firebase.auth();
+        if (!auth.currentUser) {
+            await auth.signInAnonymously();
         }
 
-        app = firebase.initializeApp(config);
-        auth = firebase.auth();
-        db = firebase.firestore();
     } catch (error) {
         console.warn("Firebase initialization failed:", error);
-        // Subsequent checks for 'db' or 'auth' will fail gracefully.
     }
 };
 
@@ -45,103 +41,171 @@ const ensureInitialized = (): Promise<void> => {
     return initializationPromise;
 };
 
-export const initializeFirebaseAndAuth = async (): Promise<void> => {
-    await ensureInitialized();
-    if (!auth || auth.currentUser) return;
 
-    try {
-        const token = sessionStorage.getItem('__initial_auth_token');
-        if (token) {
-            await auth.signInWithCustomToken(token);
-            console.log("Authenticated with custom token.");
-        } else {
-            await auth.signInAnonymously();
-            console.log("Authenticated anonymously.");
-        }
-    } catch (error) {
-        console.error("Firebase authentication failed:", error);
-        if (auth && !auth.currentUser) {
-            try {
-                await auth.signInAnonymously();
-                console.log("Fallback: Authenticated anonymously.");
-            } catch (anonError) {
-                console.error("Anonymous sign-in also failed:", anonError);
-            }
-        }
+// One-time data migration if Firestore is empty
+const migrateInitialData = async () => {
+    if (!db) return;
+    
+    // Check movies
+    const moviesSnapshot = await db.collection('movies').limit(1).get();
+    if (moviesSnapshot.empty) {
+        console.log("Migrating initial movies to Firestore...");
+        const batch = db.batch();
+        Object.entries(initialMovies).forEach(([key, movie]) => {
+            const docRef = db.collection('movies').doc(key);
+            batch.set(docRef, movie);
+        });
+        await batch.commit();
+    }
+    
+    // Check categories
+    const categoriesSnapshot = await db.collection('categories').limit(1).get();
+    if (categoriesSnapshot.empty) {
+        console.log("Migrating initial categories to Firestore...");
+        const batch = db.batch();
+        Object.entries(initialCategories).forEach(([key, category]) => {
+            const docRef = db.collection('categories').doc(key);
+            batch.set(docRef, category);
+        });
+        await batch.commit();
+    }
+    
+    // Check festival config
+    const festivalConfigDoc = await db.doc('festival/config').get();
+    if (!festivalConfigDoc.exists) {
+        console.log("Migrating initial festival config to Firestore...");
+        await db.doc('festival/config').set(initialFestivalConfig);
+    }
+    
+    // Check festival days
+    const festivalDaysSnapshot = await db.collection('festival/schedule/days').limit(1).get();
+    if (festivalDaysSnapshot.empty) {
+        console.log("Migrating initial festival days to Firestore...");
+        const batch = db.batch();
+        initialFestivalData.forEach(day => {
+            const docRef = db.collection('festival/schedule/days').doc(`day-${day.day}`);
+            batch.set(docRef, day);
+        });
+        await batch.commit();
     }
 };
 
-export const listenToFestivalData = async (
-    callback: (data: { config: FestivalConfig; days: FestivalDay[] }) => void
+export const listenToAllAdminData = async (
+    callback: (data: {
+        movies: Record<string, Movie>;
+        categories: Record<string, Category>;
+        festivalConfig: FestivalConfig;
+        festivalData: FestivalDay[];
+    }) => void
 ): Promise<() => void> => {
     
     await ensureInitialized();
-    
     if (!db) {
-        console.error("Firestore is not initialized. Cannot listen to festival data.");
-        callback({ config: { title: 'Festival Unavailable', description: 'Please check connection.', isFestivalLive: false }, days: [] });
-        return () => {}; // Return a no-op unsubscribe function
-    }
-
-    let configData: FestivalConfig | null = null;
-    let daysData: FestivalDay[] | null = null;
-    
-    const tryCallback = () => {
-        if (configData && daysData) {
-            callback({ config: configData, days: daysData });
-        }
-    }
-
-    const configRef = db.doc("festival/config");
-    const configUnsubscribe = configRef.onSnapshot((docSnap: firebase.firestore.DocumentSnapshot) => {
-        if (docSnap.exists) {
-            configData = docSnap.data() as FestivalConfig;
-        } else {
-            console.warn("Festival config document does not exist in Firestore.");
-            configData = { title: 'Crate TV Film Festival', description: '', isFestivalLive: false };
-        }
-        tryCallback();
-    }, (error: firebase.firestore.FirestoreError) => {
-        console.error("Error listening to festival config:", error);
-    });
-
-    const daysRef = db.collection("festival/schedule/days");
-    const daysUnsubscribe = daysRef.onSnapshot((querySnapshot: firebase.firestore.QuerySnapshot) => {
-        const days: FestivalDay[] = [];
-        querySnapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
-            days.push(doc.data() as FestivalDay);
+        console.error("Firestore not initialized. Cannot listen to data.");
+        // Return fallback data and a no-op unsubscriber
+        callback({
+            movies: initialMovies,
+            categories: initialCategories,
+            festivalConfig: initialFestivalConfig,
+            festivalData: initialFestivalData,
         });
-        days.sort((a, b) => a.day - b.day);
-        daysData = days;
-        tryCallback();
-    }, (error: firebase.firestore.FirestoreError) => {
-        console.error("Error listening to festival schedule:", error);
-    });
-    
-    return () => {
-        configUnsubscribe();
-        daysUnsubscribe();
+        return () => {};
+    }
+
+    // Perform one-time migration check
+    await migrateInitialData();
+
+    let allData = {
+        movies: {} as Record<string, Movie>,
+        categories: {} as Record<string, Category>,
+        festivalConfig: initialFestivalConfig,
+        festivalData: [] as FestivalDay[],
     };
+
+    const unsubscribers: (() => void)[] = [];
+
+    const update = () => callback(allData);
+
+    unsubscribers.push(db.collection('movies').onSnapshot(snapshot => {
+        const movies: Record<string, Movie> = {};
+        snapshot.forEach(doc => {
+            movies[doc.id] = doc.data() as Movie;
+        });
+        allData.movies = movies;
+        update();
+    }));
+
+    unsubscribers.push(db.collection('categories').onSnapshot(snapshot => {
+        const categories: Record<string, Category> = {};
+        snapshot.forEach(doc => {
+            categories[doc.id] = doc.data() as Category;
+        });
+        allData.categories = categories;
+        update();
+    }));
+    
+    unsubscribers.push(db.doc('festival/config').onSnapshot(doc => {
+        allData.festivalConfig = (doc.data() as FestivalConfig) || initialFestivalConfig;
+        update();
+    }));
+
+    unsubscribers.push(db.collection('festival/schedule/days').onSnapshot(snapshot => {
+        const festivalData: FestivalDay[] = [];
+        snapshot.forEach(doc => {
+            festivalData.push(doc.data() as FestivalDay);
+        });
+        allData.festivalData = festivalData.sort((a, b) => a.day - b.day);
+        update();
+    }));
+
+    return () => unsubscribers.forEach(unsub => unsub());
+};
+
+// --- Save Functions ---
+
+export const saveMovie = async (movie: Movie): Promise<void> => {
+    await ensureInitialized();
+    if (!db) throw new Error("Firestore not initialized.");
+    await db.collection('movies').doc(movie.key).set(movie, { merge: true });
+};
+
+export const deleteMovie = async (movieKey: string): Promise<void> => {
+    await ensureInitialized();
+    if (!db) throw new Error("Firestore not initialized.");
+    
+    // Also remove the movie key from all categories it might be in
+    const categoriesRef = db.collection('categories');
+    const snapshot = await categoriesRef.get();
+    const batch = db.batch();
+    snapshot.forEach(doc => {
+        const category = doc.data() as Category;
+        if (category.movieKeys.includes(movieKey)) {
+            const updatedKeys = category.movieKeys.filter(key => key !== movieKey);
+            batch.update(doc.ref, { movieKeys: updatedKeys });
+        }
+    });
+
+    // Delete the movie document itself
+    batch.delete(db.collection('movies').doc(movieKey));
+    
+    await batch.commit();
 };
 
 export const saveFestivalConfig = async (config: FestivalConfig): Promise<void> => {
     await ensureInitialized();
-    if (!db) throw new Error("Firestore is not initialized. Cannot save config.");
-    const configRef = db.doc("festival/config");
-    await configRef.set(config, { merge: true });
+    if (!db) throw new Error("Firestore not initialized.");
+    await db.doc("festival/config").set(config, { merge: true });
 };
 
 export const saveFestivalDays = async (days: FestivalDay[]): Promise<void> => {
     await ensureInitialized();
-    if (!db) throw new Error("Firestore is not initialized. Cannot save festival days.");
+    if (!db) throw new Error("Firestore not initialized.");
     
     const batch = db.batch();
     const daysCollectionRef = db.collection("festival/schedule/days");
 
     const existingDocsSnapshot = await daysCollectionRef.get();
-    existingDocsSnapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
-        batch.delete(doc.ref);
-    });
+    existingDocsSnapshot.forEach(doc => batch.delete(doc.ref));
 
     days.forEach(day => {
         const dayDocRef = daysCollectionRef.doc(`day-${day.day}`);
