@@ -75,16 +75,13 @@ const App: React.FC = () => {
         setFestivalConfig(liveData.festivalConfig);
         setFestivalData(liveData.festivalData);
 
+        // Set modal visibility based on live status
+        setShowFestivalModal(liveData.festivalConfig?.isFestivalLive ?? false);
+
         // LIKES
         const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
         if (storedLikedMovies) {
           setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
-        }
-
-        const hasSeenFestivalModal = sessionStorage.getItem('hasSeenFestivalModal');
-        if (liveData.festivalConfig?.isFestivalLive && !hasSeenFestivalModal) {
-            setShowFestivalModal(true);
-            sessionStorage.setItem('hasSeenFestivalModal', 'true');
         }
       } catch (error) {
         console.error("Failed to load S3 app data", error);
@@ -102,6 +99,21 @@ const App: React.FC = () => {
       window.removeEventListener('scroll', handleScroll);
       if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
     };
+  }, []);
+  
+  // Polling for festival status changes
+  useEffect(() => {
+    const checkFestivalStatus = async () => {
+        invalidateCache(); // Invalidate cache to force a re-fetch
+        const { data: liveData } = await fetchAndCacheLiveData();
+        setFestivalConfig(liveData.festivalConfig);
+        setFestivalData(liveData.festivalData);
+        setShowFestivalModal(liveData.festivalConfig?.isFestivalLive ?? false);
+    };
+
+    const intervalId = setInterval(checkFestivalStatus, 30000); // Poll every 30 seconds
+
+    return () => clearInterval(intervalId); // Cleanup on component unmount
   }, []);
   
   // Logic for the hero banner auto-scroll
