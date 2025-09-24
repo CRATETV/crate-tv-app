@@ -13,7 +13,7 @@ import SearchOverlay from './components/SearchOverlay.tsx';
 import StagingBanner from './components/StagingBanner.tsx';
 import FeatureModal from './components/FeatureModal.tsx';
 import DataStatusIndicator from './components/DataStatusIndicator.tsx';
-import FestivalView from './components/FestivalView.tsx';
+import FestivalModal from './components/FestivalModal.tsx';
 
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -31,6 +31,7 @@ const App: React.FC = () => {
   const [isStaging, setIsStaging] = useState(false);
   const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
   const [showFeatureModal, setShowFeatureModal] = useState(false);
+  const [showFestivalModal, setShowFestivalModal] = useState(false);
 
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -78,6 +79,12 @@ const App: React.FC = () => {
         const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
         if (storedLikedMovies) {
           setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
+        }
+
+        const hasSeenFestivalModal = sessionStorage.getItem('hasSeenFestivalModal');
+        if (liveData.festivalConfig?.isFestivalLive && !hasSeenFestivalModal) {
+            setShowFestivalModal(true);
+            sessionStorage.setItem('hasSeenFestivalModal', 'true');
         }
       } catch (error) {
         console.error("Failed to load S3 app data", error);
@@ -190,12 +197,15 @@ const App: React.FC = () => {
     window.location.search = params.toString();
   };
 
+  const handleCloseFestivalModal = () => {
+    setShowFestivalModal(false);
+  };
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
 
   const categoryOrder: (keyof typeof categories)[] = ["newReleases", "awardWinners", "pwff12thAnnual", "comedy", "drama", "documentary", "exploreTitles"];
-  const isFestivalLive = festivalConfig?.isFestivalLive && festivalData.length > 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#141414]">
@@ -235,15 +245,7 @@ const App: React.FC = () => {
               onSelectMovie={handleSelectMovie}
             />
             <div className="relative z-10 -mt-12 px-4 md:px-12">
-              {isFestivalLive && festivalConfig && (
-                <FestivalView
-                    festivalData={festivalData}
-                    festivalConfig={festivalConfig}
-                    allMovies={movies}
-                    showHero={false}
-                />
-              )}
-              <div className={isFestivalLive ? 'mt-8' : ''}>
+              <div>
                 {categoryOrder.map(key => {
                   const category = categories[key];
                   if (!category) return null;
@@ -291,6 +293,14 @@ const App: React.FC = () => {
           searchQuery={searchQuery}
           onSearch={setSearchQuery}
           onClose={() => setIsMobileSearchOpen(false)}
+        />
+      )}
+      {showFestivalModal && festivalConfig && festivalData.length > 0 && (
+        <FestivalModal
+            festivalData={festivalData}
+            festivalConfig={festivalConfig}
+            allMovies={movies}
+            onClose={handleCloseFestivalModal}
         />
       )}
       {showFeatureModal && (
