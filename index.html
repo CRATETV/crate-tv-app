@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Crate TV | Fresh Independent Films & Philadelphia's Indie Scene</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Welcome to Crate TV, your home for fresh independent content. Explore the vibrant Philadelphia film scene, discover original movies from Playhouse West, and stream unique voices in indie film. The destination for creativity and emerging filmmakers. Crate TV, not Create TV." />
+    <meta name="keywords" content="crate tv, CrateTV, Crate Television, fresh independent content, fresh movies, Philadelphia film scene, Playhouse West-Philadelphia, creativity, independent films, indie filmmakers, short films, streaming service, Philadelphia artists, emerging artists, unknown actors, acting school, film school, indie film streaming, Philadelphia filmmakers" />
+    <link rel="canonical" href="https://cratetv.net" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://cratetv.net" />
+    <meta property="og:title" content="Crate TV | Fresh Independent Films & Philadelphia's Indie Scene" />
+    <meta property="og:description" content="Welcome to Crate TV, your home for fresh independent content. Explore the vibrant Philadelphia film scene and discover unique voices in indie film. The destination for creativity and emerging filmmakers." />
+    <meta property="og:image" content="https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless%20poster%20remake.jpg" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://cratetv.net" />
+    <meta name="twitter:title" content="Crate TV | Fresh Independent Films & Philadelphia's Indie Scene" />
+    <meta name="twitter:description" content="Welcome to Crate TV, your home for fresh independent content. Explore the vibrant Philadelphia film scene and discover unique voices in indie film. The destination for creativity and emerging filmmakers." />
+    <meta name="twitter:image" content="https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless%20poster%20remake.jpg" />
+
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon-96x96.png">
+    <link rel="icon" type="image/svg+xml" href="https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon.svg">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="shortcut icon" href="https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon.ico">
+
+    <!-- Preload Critical Assets for faster loading -->
+    <link rel="preload" as="image" href="https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless%20poster%20remake.jpg">
+    <link rel="preload" as="video" href="https://cratetelevision.s3.us-east-1.amazonaws.com/CRATE%20INTO%202%20SECONDS%20phone.mp4" media="(max-width: 768px)" type="video/mp4">
+    <link rel="preload" as="video" href="https://cratetelevision.s3.us-east-1.amazonaws.com/CRATE%20INTO%202%20SECONDS.mp4" media="(min-width: 769px)" type="video/mp4">
+    
+    <!-- Fonts and Styles -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        font-family: 'Roboto', sans-serif;
+        background-color: #141414;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .animate-heartbeat {
+        animation: heartbeat 0.5s ease-in-out;
+      }
+      @keyframes heartbeat {
+        0% { transform: scale(1); }
+        25% { transform: scale(1.3); }
+        50% { transform: scale(1); }
+        75% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      .animate-fadeInHeroContent {
+        animation: fadeInHeroContent 0.7s ease-in-out;
+      }
+      @keyframes fadeInHeroContent {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0px); }
+      }
+      .submit-btn {
+        background-color: #6d28d9; /* A vibrant purple */
+        color: white;
+        font-weight: bold;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(109, 40, 217, 0.4);
+      }
+      .submit-btn:hover, .submit-btn:focus {
+        background-color: #5b21b6;
+        box-shadow: 0 6px 20px rgba(109, 40, 217, 0.5);
+        transform: translateY(-2px);
+      }
+      .submit-btn:disabled {
+        background-color: #4c1d95;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+      }
+      .form-input {
+        width: 100%;
+        background-color: #1f1f1f;
+        border: 1px solid #4a4a6e;
+        color: #e0e0e0;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      }
+      .form-input:focus {
+        outline: none;
+        border-color: #8b5cf6;
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+      }
+      @keyframes pulse-bg {
+        50% {
+          background-color: #4b5563; /* Tailwind gray-600 */
+        }
+      }
+      .animate-pulse-bg {
+        animation: pulse-bg 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      /* Screen Recording Deterrent */
+      .secure-video-container {
+        position: relative;
+        overflow: hidden;
+      }
+      .secure-video-container::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        background-image: repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,0.01) 0, rgba(0,0,0,0.01) 1px, transparent 1px, transparent 10px);
+        background-size: 200% 200%;
+        animation: secure-overlay-anim 0.15s infinite linear;
+      }
+      @keyframes secure-overlay-anim {
+        0% { background-position: 0 0; }
+        100% { background-position: -100% -100%; }
+      }
+    </style>
+
+    <!-- Schema.org for Google -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Crate TV",
+      "url": "https://cratetv.net",
+      "description": "Welcome to Crate TV, your home for fresh independent content. Explore the vibrant Philadelphia film scene, discover original movies from Playhouse West, and stream unique voices in indie film. The destination for creativity and emerging filmmakers.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://cratetv.net/?search={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Crate TV",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon-32x32.png"
+        }
+      }
+    }
+    </script>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.22.0",
+    "vite": "https://aistudiocdn.com/vite@^7.1.9",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.4",
+    "@aws-sdk/client-s3": "https://aistudiocdn.com/@aws-sdk/client-s3@^3.901.0",
+    "resend": "https://aistudiocdn.com/resend@^6.1.2",
+    "jszip": "https://aistudiocdn.com/jszip@^3.10.1",
+    "@aws-sdk/s3-request-presigner": "https://aistudiocdn.com/@aws-sdk/s3-request-presigner@^3.901.0",
+    "firebase/": "https://aistudiocdn.com/firebase@^12.3.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-[#141414] text-white">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
