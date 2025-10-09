@@ -1,8 +1,6 @@
-// FIX: Add a triple-slash directive to include Vite's client types.
-// This provides TypeScript with the necessary definitions for `import.meta.env`,
-// resolving errors about the 'env' property not existing on type 'ImportMeta'.
 /// <reference types="vite/client" />
 
+// FIX: The triple-slash directive `/// <reference types="vite/client" />` must be at the very top of the file for TypeScript to correctly process it and recognize Vite's client-side types for `import.meta.env`, which resolves the compilation errors.
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';

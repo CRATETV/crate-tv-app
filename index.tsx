@@ -17,6 +17,7 @@ import AccountPage from './components/AccountPage.tsx';
 import RokuGuidePage from './components/RokuGuidePage.tsx';
 import FestivalPage from './components/FestivalPage.tsx';
 import FilmFestivalModule from './FilmpFestivalModule.tsx';
+import DeveloperGuidePage from './components/DeveloperGuidePage.tsx';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -77,6 +78,8 @@ const AppRouter: React.FC = () => {
       return <FestivalPage />;
     case '/filmfestivalmodule':
       return <FilmFestivalModule />;
+    case '/developer-guide':
+      return <DeveloperGuidePage />;
     default:
       // Fallback to the homepage for any unknown routes
       return <App />;

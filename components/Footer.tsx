@@ -19,6 +19,9 @@ const Footer: React.FC = () => {
             <a href="/contact" onClick={(e) => handleNavigate(e, '/contact')} className="hover:text-white transition">Contact Us</a>
           </li>
           <li>
+            <a href="/developer-guide" onClick={(e) => handleNavigate(e, '/developer-guide')} className="hover:text-white transition">Developer Guide</a>
+          </li>
+          <li>
             <a href="https://www.instagram.com/cratetv.philly?igsh=dXJrYTdlMHVhbXcw" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Instagram</a>
           </li>
           <li>
