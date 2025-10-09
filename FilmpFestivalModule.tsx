@@ -1,8 +1,9 @@
 import React from 'react';
-import { moviesData } from './constants.ts';
-import { festivalData } from './constants.ts';
-import { festivalConfigData } from './constants.ts';
-import FestivalView from './components/FestivalView.tsx';
+import { moviesData } from './constants';
+import { festivalData } from './constants';
+import { festivalConfigData } from './constants';
+// FIX: Changed to a named import as FestivalView does not have a default export.
+import { FestivalView } from './components/FestivalView';
 
 // This is a special, self-contained component created to demonstrate
 // the visual appearance of the Film Festival module.

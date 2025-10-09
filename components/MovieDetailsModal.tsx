@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Movie, Actor, Category } from '../types.ts';
-import DirectorCreditsModal from './DirectorCreditsModal.tsx';
-import Countdown from './Countdown.tsx';
+import { Movie, Actor, Category } from '../types';
+import DirectorCreditsModal from './DirectorCreditsModal';
+import Countdown from './Countdown';
 
 interface MovieDetailsModalProps {
   movie: Movie;

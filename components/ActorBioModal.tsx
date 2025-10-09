@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Actor } from '../types.ts';
-import { generateActorFact, findImdbUrl } from '../services/geminiService.ts';
+import { Actor } from '../types';
+import { generateActorFact, findImdbUrl } from '../services/geminiService';
 
 interface ActorBioModalProps {
   actor: Actor;

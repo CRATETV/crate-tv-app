@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { fetchAndCacheLiveData, invalidateCache } from './services/dataService.ts';
-import { Movie, Actor, Category, FestivalConfig, FestivalDay } from './types.ts';
-import Header from './components/Header.tsx';
-import Hero from './components/Hero.tsx';
-import MovieCarousel from './components/MovieCarousel.tsx';
-import MovieDetailsModal from './components/MovieDetailsModal.tsx';
-import ActorBioModal from './components/ActorBioModal.tsx';
-import Footer from './components/Footer.tsx';
-import LoadingSpinner from './components/LoadingSpinner.tsx';
-import BackToTopButton from './components/BackToTopButton.tsx';
-import SearchOverlay from './components/SearchOverlay.tsx';
-import StagingBanner from './components/StagingBanner.tsx';
-import FeatureModal from './components/FeatureModal.tsx';
-import DataStatusIndicator from './components/DataStatusIndicator.tsx';
-import FestivalModal from './components/FestivalModal.tsx';
+import { fetchAndCacheLiveData, invalidateCache } from './services/dataService';
+import { Movie, Actor, Category, FestivalConfig, FestivalDay } from './types';
+import Header from './components/Header';
+import Hero from './components/Hero';
+import MovieCarousel from './components/MovieCarousel';
+import MovieDetailsModal from './components/MovieDetailsModal';
+import ActorBioModal from './components/ActorBioModal';
+import Footer from './components/Footer';
+import LoadingSpinner from './components/LoadingSpinner';
+import BackToTopButton from './components/BackToTopButton';
+import SearchOverlay from './components/SearchOverlay';
+import StagingBanner from './components/StagingBanner';
+import FeatureModal from './components/FeatureModal';
+import DataStatusIndicator from './components/DataStatusIndicator';
+import FestivalModal from './components/FestivalModal';
 
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);

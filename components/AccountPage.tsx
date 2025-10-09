@@ -1,7 +1,7 @@
 import React from 'react';
-import Header from './Header.tsx';
-import Footer from './Footer.tsx';
-import { useAuth } from '../contexts/AuthContext.tsx';
+import Header from './Header';
+import Footer from './Footer';
+import { useAuth } from '../contexts/AuthContext';
 
 const AccountPage: React.FC = () => {
     const { user, logout } = useAuth();

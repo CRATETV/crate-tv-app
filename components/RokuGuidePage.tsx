@@ -1,7 +1,7 @@
 import React from 'react';
-import Header from './Header.tsx';
-import Footer from './Footer.tsx';
-import BackToTopButton from './BackToTopButton.tsx';
+import Header from './Header';
+import Footer from './Footer';
+import BackToTopButton from './BackToTopButton';
 
 const Step: React.FC<{ number: string; title: string; children: React.ReactNode }> = ({ number, title, children }) => (
     <div className="flex items-start gap-4">

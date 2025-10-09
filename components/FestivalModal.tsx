@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { Movie, FestivalDay, FestivalConfig } from '../types.ts';
-import FestivalView from './FestivalView.tsx';
+import { Movie, FestivalDay, FestivalConfig } from '../types';
+// FIX: Changed to a named import as FestivalView does not have a default export.
+import { FestivalView } from './FestivalView';
 
 interface FestivalModalProps {
     festivalData: FestivalDay[];

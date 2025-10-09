@@ -1,23 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { AuthProvider } from './contexts/AuthContext.tsx';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Import all page components
-import App from './App.tsx';
-import AdminPage from './AdminPage.tsx';
-import ClassicsPage from './components/ClassicsPage.tsx';
-import SubmitPage from './components/SubmitPage.tsx';
-import MoviePage from './components/MoviePage.tsx';
-import Intro from './components/Intro.tsx';
-import MerchPage from './components/MerchPage.tsx';
-import ContactPage from './components/ContactPage.tsx';
-import PremiumPage from './components/PremiumPage.tsx';
-import LoginPage from './components/LoginPage.tsx';
-import AccountPage from './components/AccountPage.tsx';
-import RokuGuidePage from './components/RokuGuidePage.tsx';
-import FestivalPage from './components/FestivalPage.tsx';
-import FilmFestivalModule from './FilmpFestivalModule.tsx';
-import DeveloperGuidePage from './components/DeveloperGuidePage.tsx';
+import App from './App';
+// FIX: Changed to a named import to resolve the "no default export" error.
+import { AdminPage } from './AdminPage';
+import ClassicsPage from './components/ClassicsPage';
+import SubmitPage from './components/SubmitPage';
+import MoviePage from './components/MoviePage';
+import Intro from './components/Intro';
+import MerchPage from './components/MerchPage';
+import ContactPage from './components/ContactPage';
+import PremiumPage from './components/PremiumPage';
+import LoginPage from './components/LoginPage';
+import AccountPage from './components/AccountPage';
+import RokuGuidePage from './components/RokuGuidePage';
+import FestivalPage from './components/FestivalPage';
+import FilmFestivalModule from './FilmpFestivalModule';
+import DeveloperGuidePage from './components/DeveloperGuidePage';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

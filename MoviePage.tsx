@@ -1,3 +1,3 @@
-import MoviePage from './components/MoviePage.tsx';
+import MoviePage from './components/MoviePage';
 
 export default MoviePage;

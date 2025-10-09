@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Movie } from '../types.ts';
-import Countdown from './Countdown.tsx';
+import { Movie } from '../types';
+import Countdown from './Countdown';
 
 interface MovieCardProps {
   movie: Movie;

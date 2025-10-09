@@ -1,5 +1,5 @@
-import { Movie, Category, FestivalDay, FestivalConfig } from '../types.ts';
-import { moviesData, categoriesData, festivalData, festivalConfigData } from '../constants.ts';
+import { Movie, Category, FestivalDay, FestivalConfig } from '../types';
+import { moviesData, categoriesData, festivalData, festivalConfigData } from '../constants';
 
 interface LiveData {
   movies: Record<string, Movie>;

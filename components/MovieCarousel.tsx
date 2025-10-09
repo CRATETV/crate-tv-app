@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Movie } from '../types.ts';
-import MovieCard from './MovieCard.tsx';
+import { Movie } from '../types';
+import MovieCard from './MovieCard';
 
 interface MovieCarouselProps {
   title: string;

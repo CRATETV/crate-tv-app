@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Movie, FestivalDay, FestivalConfig } from '../types.ts';
+import { Movie, FestivalDay, FestivalConfig } from '../types';
 
 interface MovieSelectorModalProps {
   allMovies: Movie[];

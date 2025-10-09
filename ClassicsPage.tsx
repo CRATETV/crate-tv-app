@@ -1,3 +1,3 @@
-import ClassicsPage from './components/ClassicsPage.tsx';
+import ClassicsPage from './components/ClassicsPage';
 
 export default ClassicsPage;

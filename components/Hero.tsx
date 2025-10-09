@@ -1,6 +1,6 @@
 import React from 'react';
-import { Movie } from '../types.ts';
-import Countdown from './Countdown.tsx';
+import { Movie } from '../types';
+import Countdown from './Countdown';
 
 interface HeroProps {
   movies: Movie[];

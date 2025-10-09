@@ -1,12 +1,12 @@
+// FIX: The triple-slash directive `/// <reference types="vite/client" />` must be at the very top of the file for TypeScript to correctly process it and recognize Vite's client-side types for `import.meta.env`, which resolves the compilation errors.
 /// <reference types="vite/client" />
 
-// FIX: The triple-slash directive `/// <reference types="vite/client" />` must be at the very top of the file for TypeScript to correctly process it and recognize Vite's client-side types for `import.meta.env`, which resolves the compilation errors.
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
 
-import { Movie, Category, FestivalConfig, FestivalDay } from '../types.ts';
-import { moviesData as initialMovies, categoriesData as initialCategories, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig } from '../constants.ts';
+import { Movie, Category, FestivalConfig, FestivalDay } from '../types';
+import { moviesData as initialMovies, categoriesData as initialCategories, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig } from '../constants';
 
 let db: firebase.firestore.Firestore;
 

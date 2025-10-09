@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import Header from './Header.tsx';
-import Footer from './Footer.tsx';
-import BackToTopButton from './BackToTopButton.tsx';
-import LoadingSpinner from './LoadingSpinner.tsx';
-import StagingBanner from './StagingBanner.tsx';
-import FestivalView from './FestivalView.tsx';
-import { fetchAndCacheLiveData } from '../services/dataService.ts';
-import { Movie, FestivalDay, FestivalConfig } from '../types.ts';
+import Header from './Header';
+import Footer from './Footer';
+import BackToTopButton from './BackToTopButton';
+import LoadingSpinner from './LoadingSpinner';
+import StagingBanner from './StagingBanner';
+// FIX: Changed to a named import as FestivalView does not have a default export.
+import { FestivalView } from './FestivalView';
+import { fetchAndCacheLiveData } from '../services/dataService';
+import { Movie, FestivalDay, FestivalConfig } from '../types';
 
 const FestivalPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);

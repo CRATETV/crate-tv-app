@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Movie, FestivalDay, FestivalConfig } from '../types.ts';
+import { Movie, FestivalDay, FestivalConfig } from '../types';
 
 interface FestivalViewProps {
     festivalData: FestivalDay[];
@@ -8,7 +8,8 @@ interface FestivalViewProps {
     showHero?: boolean;
 }
 
-const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfig, allMovies, showHero = true }) => {
+// FIX: Added 'export' to create a named export for this component, as it was not being exported before.
+export const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfig, allMovies, showHero = true }) => {
   const [activeDay, setActiveDay] = useState(1);
   
   // This is a placeholder. In a real app, this would redirect to a checkout page.
@@ -78,41 +79,33 @@ const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfi
                                 <div className="p-6 bg-black/20">
                                    <div className="flex flex-col sm:flex-row justify-between sm:items-center">
                                      <div>
-                                      <h2 className="text-2xl md:text-3xl font-bold text-white">{block.title}</h2>
-                                      <p className="text-purple-300 font-semibold">{block.time}</p>
-                                     </div>
-                                      <div 
-                                        className="mt-4 sm:mt-0 w-full sm:w-auto text-center flex-shrink-0 bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-5 rounded-lg transition-transform hover:scale-105 cursor-not-allowed shadow-md"
-                                        title="Payments are temporarily unavailable"
-                                        onClick={handlePurchaseClick}
-                                      >
-                                          Buy Block Pass - $10.00
-                                      </div>
+                                      <h2 className="text-3xl sm:text-4xl font-bold text-white mb-2">{block.title}</h2>
+                                      <p className="font-semibold text-purple-300">{block.time}</p>
+                                    </div>
+                                    <div 
+                                      className="flex-shrink-0 bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg transition-transform hover:scale-105 cursor-not-allowed shadow-md text-sm"
+                                      title="Payments are temporarily unavailable"
+                                      onClick={handlePurchaseClick}
+                                    >
+                                      Unlock Block - $10.00
+                                    </div>
                                    </div>
                                 </div>
-                                <div className="p-6 space-y-4">
-                                  {blockMovies.map(movie => (
-                                    <div key={movie.key} className="flex flex-col sm:flex-row items-center gap-4 bg-gray-800/50 p-3 rounded-lg">
-                                      <div className="flex-shrink-0 w-24 aspect-[3/4] rounded-md overflow-hidden">
-                                        <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />
-                                      </div>
-                                      <div className="flex-grow text-center sm:text-left">
-                                        <h4 className="text-white text-lg font-semibold">{movie.title}</h4>
-                                        <p className="text-sm text-gray-400">Directed by {movie.director}</p>
-                                      </div>
-                                      <div 
-                                        className="w-full sm:w-auto text-center flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-gray-200 font-bold py-2 px-4 rounded-lg transition-colors cursor-not-allowed"
-                                        title="Payments are temporarily unavailable"
-                                        onClick={handlePurchaseClick}
-                                      >
-                                        Buy Ticket - $5.00
-                                      </div>
+                                <div className="p-6">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                        {blockMovies.map(movie => (
+                                            <div key={movie.key} className="group relative aspect-[3/4] rounded-md overflow-hidden bg-gray-800 cursor-pointer" onClick={() => window.location.href = `/movie/${movie.key}`}>
+                                                <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                                                    <h4 className="text-white text-sm font-semibold">{movie.title}</h4>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                  ))}
                                 </div>
                               </div>
-                          );
-                      })}
+                          )
+                        })}
                   </div>
               ))}
           </div>

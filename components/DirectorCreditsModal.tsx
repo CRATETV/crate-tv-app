@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect } from 'react';
-import { Movie } from '../types.ts';
+import { Movie } from '../types';
 
 interface DirectorCreditsModalProps {
   directorName: string;

@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import Header from './Header.tsx';
-import Footer from './Footer.tsx';
-import BackToTopButton from './BackToTopButton.tsx';
-import LoadingSpinner from './LoadingSpinner.tsx';
-import MovieCard from './MovieCard.tsx';
-import MovieDetailsModal from './MovieDetailsModal.tsx';
-import ActorBioModal from './ActorBioModal.tsx';
-import { fetchAndCacheLiveData } from '../services/dataService.ts';
-import { Movie, Actor, Category } from '../types.ts';
-import { useAuth } from '../contexts/AuthContext.tsx';
+import Header from './Header';
+import Footer from './Footer';
+import BackToTopButton from './BackToTopButton';
+import LoadingSpinner from './LoadingSpinner';
+import MovieCard from './MovieCard';
+import MovieDetailsModal from './MovieDetailsModal';
+import ActorBioModal from './ActorBioModal';
+import { fetchAndCacheLiveData } from '../services/dataService';
+import { Movie, Actor, Category } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 const PremiumPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
