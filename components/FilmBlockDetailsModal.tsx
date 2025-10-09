@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Movie, FilmBlock } from '../types.ts';
+import { Movie, FilmBlock } from '../types';
 
 interface FilmBlockDetailsModalProps {
     block: FilmBlock;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Movie } from '../types.ts';
+import { Movie } from '../types';
 
 interface FilmBlockCardProps {
     movie: Movie;

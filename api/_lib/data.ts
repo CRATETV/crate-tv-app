@@ -1,4 +1,4 @@
-// FIX: Changed from a namespace import to named imports for the AWS S3 client. This resolves a TypeScript type conflict that was preventing the 'send' method from being found on the S3Client instance.
+// FIX: Changed to named imports for the AWS S3 client. This resolves a TypeScript type conflict that was preventing the 'send' method from being found on the S3Client instance.
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { moviesData as fallbackMovies, categoriesData as fallbackCategories, festivalData as fallbackFestival, festivalConfigData as fallbackConfig } from '../../constants'; // relative path
 

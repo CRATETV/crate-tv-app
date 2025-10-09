@@ -171,4 +171,21 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Valentine Paul",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/valentine_paul.jpg",
+        "bio": "An American actor of the silent film era, known for his role in the 1913 thriller 'Suspense'.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/valentine_paul.jpg"
+      }
+    ],
+    "director": "Lois Weber, Phillips Smalley",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Suspense+(1913)+-+A+Film+by+Lois+Weber+%26+Phillips+Smalley.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Suspense_(1913_film)_poster.jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Suspense_(1913_film)_poster.jpg",
+    "likes": 0,
+    "releaseDateTime": "1913-07-06T00:00"
+  }
+};
+
+// Placeholder for festival data, assuming it might be defined elsewhere or is empty.
+// This ensures the file is valid even if this data isn't provided in the prompt.
+export const festivalData: FestivalDay[] = [];

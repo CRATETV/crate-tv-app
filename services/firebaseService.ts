@@ -1,4 +1,4 @@
-// FIX: The triple-slash directive `/// <reference types="vite/client" />` must be at the very top of the file for TypeScript to correctly process it and recognize Vite's client-side types for `import.meta.env`, which resolves the compilation errors.
+// FIX: Moved the triple-slash directive to the very top of the file to be processed by TypeScript. This ensures Vite's client-side types for `import.meta.env` are recognized, resolving compilation errors.
 /// <reference types="vite/client" />
 
 import firebase from 'firebase/compat/app';

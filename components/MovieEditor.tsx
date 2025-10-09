@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Movie, Actor } from '../types.ts';
-import S3Uploader from './S3Uploader.tsx';
+import { Movie, Actor } from '../types';
+import S3Uploader from './S3Uploader';
 
 interface MovieEditorProps {
   movie: Movie;
