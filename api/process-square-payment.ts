@@ -13,9 +13,10 @@ export async function POST(request: Request) {
   try {
     const { sourceId, amount, movieTitle, directorName, paymentType } = await request.json();
     const accessToken = process.env.SQUARE_ACCESS_TOKEN;
+    const locationId = process.env.SQUARE_LOCATION_ID;
 
-    if (!accessToken) {
-      throw new Error("Square Access Token is not configured on the server.");
+    if (!accessToken || !locationId) {
+      throw new Error("Square Access Token or Location ID is not configured on the server.");
     }
 
     if (!sourceId || !paymentType) {
@@ -58,6 +59,7 @@ export async function POST(request: Request) {
     const body = JSON.stringify({
       source_id: sourceId,
       idempotency_key: idempotencyKey,
+      location_id: locationId, // FIX: Added the required location_id to the request body.
       amount_money: {
         amount: amountInCents,
         currency: 'USD',
