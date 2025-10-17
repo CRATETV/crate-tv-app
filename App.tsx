@@ -1,0 +1,413 @@
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { fetchAndCacheLiveData } from './services/dataService';
+import { Movie, Actor, Category, FestivalConfig, LiveData, FetchResult } from './types';
+import Header from './components/Header';
+import Hero from './components/Hero';
+import MovieCarousel from './components/MovieCarousel';
+import MovieDetailsModal from './components/MovieDetailsModal';
+import ActorBioModal from './components/ActorBioModal';
+import Footer from './components/Footer';
+import LoadingSpinner from './components/LoadingSpinner';
+import BackToTopButton from './components/BackToTopButton';
+import SearchOverlay from './components/SearchOverlay';
+import StagingBanner from './components/StagingBanner';
+import FeatureModal from './components/FeatureModal';
+import DataStatusIndicator from './components/DataStatusIndicator';
+
+const CACHE_KEY = 'cratetv-live-data';
+const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
+
+interface BroadcastMessage {
+  type: string;
+  payload: LiveData;
+}
+
+// FIX: Define a specific type for displayed categories to resolve TypeScript inference issues in the useMemo hook.
+type DisplayedCategory = {
+  key: string;
+  title: React.ReactNode;
+  movies: Movie[];
+};
+
+const App: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
+  const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
+  const [movies, setMovies] = useState<Record<string, Movie>>({});
+  const [categories, setCategories] = useState<Record<string, Category>>({});
+  const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [isStaging, setIsStaging] = useState(false);
+  const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
+  const [showFeatureModal, setShowFeatureModal] = useState(false);
+
+  const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  
+  // Simplified state update function. This is now the single point of truth for updating app data.
+  const applyData = useCallback((result: FetchResult) => {
+    setDataSource(result.source);
+    setMovies(result.data.movies);
+    setCategories(result.data.categories);
+    setFestivalConfig(result.data.festivalConfig);
+  }, []);
+
+  const loadAppData = useCallback(async (options?: { force?: boolean }) => {
+    try {
+      const result = await fetchAndCacheLiveData({ force: options?.force });
+      applyData(result);
+    } catch (error) {
+      console.error("Failed to load app data", error);
+    }
+  }, [applyData]);
+
+  // Effect for initial load and one-time setup
+  useEffect(() => {
+    setIsLoading(true);
+    const params = new URLSearchParams(window.location.search);
+    const env = params.get('env');
+    const stagingSession = sessionStorage.getItem('crateTvStaging');
+    const isStagingActive = env === 'staging' || stagingSession === 'true';
+
+    if (isStagingActive) {
+      sessionStorage.setItem('crateTvStaging', 'true');
+      setIsStaging(true);
+      loadAppData({ force: true }).finally(() => setIsLoading(false));
+    } else {
+      loadAppData().finally(() => setIsLoading(false));
+    }
+    
+    const hasSeenFeatureModal = sessionStorage.getItem('hasSeenActorAiFeature');
+    if (!hasSeenFeatureModal) {
+      setShowFeatureModal(true);
+      sessionStorage.setItem('hasSeenActorAiFeature', 'true');
+    }
+    
+    const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
+    if (storedLikedMovies) {
+      setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
+    }
+
+    const handleScroll = () => setIsScrolled(window.pageYOffset > 10);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
+    };
+  }, [loadAppData]);
+
+  // This single, robust effect manages all real-time data synchronization.
+  // It replaces the unstable polling and complex timestamp logic.
+  useEffect(() => {
+    // --- BROADCAST CHANNEL for instant, reliable updates from the admin panel ---
+    const channel = new BroadcastChannel('cratetv-data-channel');
+    const handleMessage = (event: MessageEvent<BroadcastMessage>) => {
+      if (event.data?.type === 'DATA_PUBLISHED' && event.data.payload) {
+        const liveData = event.data.payload;
+        const now = Date.now();
+        console.log(`[Broadcast] Received new data. Applying immediately.`);
+
+        // Apply the new data directly to the state
+        applyData({ data: liveData, source: 'live', timestamp: now });
+
+        // CRITICAL: Overwrite the local cache with the guaranteed fresh data from the broadcast.
+        // This prevents a race condition where a subsequent visibility change could fetch stale data from S3.
+        try {
+            const cachePayload = { data: liveData, source: 'live' };
+            localStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload));
+            localStorage.setItem(CACHE_TIMESTAMP_KEY, now.toString());
+        } catch(e) {
+            console.warn("[Broadcast] Could not write new data to localStorage cache.", e);
+        }
+      }
+    };
+    channel.addEventListener('message', handleMessage);
+
+    // --- VISIBILITY CHANGE for smart, efficient background updates ---
+    const handleVisibilityChange = () => {
+      // When the user returns to the tab, check for fresh data.
+      if (document.visibilityState === 'visible') {
+        console.log('[Visibility] Tab is now visible. Checking for fresh data.');
+        loadAppData({ force: true });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // --- CLEANUP ---
+    return () => {
+      channel.removeEventListener('message', handleMessage);
+      channel.close();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loadAppData, applyData]);
+  
+  // Logic for the hero banner auto-scroll
+  const heroMovies = useMemo(() => {
+    if (!categories.featured?.movieKeys) return [];
+    return categories.featured.movieKeys.map(key => movies[key]).filter(Boolean);
+  }, [movies, categories.featured]);
+
+  useEffect(() => {
+    if (heroMovies.length > 1) {
+      heroIntervalRef.current = setInterval(() => {
+        setHeroIndex(prevIndex => (prevIndex + 1) % heroMovies.length);
+      }, 7000); // Change hero image every 7 seconds
+    }
+    return () => {
+      if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
+    };
+  }, [heroMovies.length]);
+
+  const handleSetHeroIndex = (index: number) => {
+    setHeroIndex(index);
+    if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
+  };
+  
+  // Memoize visible movies to avoid re-calculation
+  const visibleMovies = useMemo(() => {
+    const now = new Date();
+    return Object.values(movies).filter((movie: Movie) => {
+        if (!movie) return false;
+        const expiryDate = movie.mainPageExpiry ? new Date(movie.mainPageExpiry) : null;
+        return !expiryDate || expiryDate > now;
+    });
+  }, [movies]);
+
+  // Re-architected category rendering logic for stability and mobile visibility.
+  // 1. Memoize festival movies separately for dedicated rendering.
+  const festivalLiveMovies = useMemo(() => {
+    if (!festivalConfig?.isFestivalLive || !categories.pwff12thAnnual) {
+        return null;
+    }
+    const festivalMovies = categories.pwff12thAnnual.movieKeys
+        .map(movieKey => visibleMovies.find(m => m.key === movieKey))
+        .filter((m): m is Movie => !!m);
+    
+    return festivalMovies.length > 0 ? festivalMovies : null;
+  }, [festivalConfig, categories, visibleMovies]);
+
+  // 2. Memoize the remaining standard categories for the main display list.
+  const displayedCategories = useMemo(() => {
+    const baseCategoryOrder: string[] = ["newReleases", "awardWinners", "pwff12thAnnual", "comedy", "drama", "documentary", "exploreTitles"];
+    
+    return baseCategoryOrder
+      .map((key): DisplayedCategory | null => {
+        const category = categories[key];
+        if (!category) return null;
+        
+        // Always skip the standard festival category if the live one will be shown separately.
+        if (key === 'pwff12thAnnual' && festivalConfig?.isFestivalLive) {
+            return null;
+        }
+
+        const categoryMovies = category.movieKeys
+            .map(movieKey => visibleMovies.find(m => m.key === movieKey))
+            .filter((m): m is Movie => !!m);
+
+        if (categoryMovies.length === 0) return null;
+
+        let title: React.ReactNode = category.title;
+
+        // Hide the title for "New Releases" on mobile
+        if (key === 'newReleases') {
+            const TitleComponent = () => (
+                <h2 className="hidden md:block text-lg md:text-2xl font-bold mb-4 text-white">
+                    {category.title}
+                </h2>
+            );
+            title = <TitleComponent />;
+        }
+        
+        return {
+            key: key,
+            title: title,
+            movies: categoryMovies,
+        };
+      })
+      .filter((c): c is DisplayedCategory => !!c); // Filter out nulls
+
+  }, [categories, festivalConfig, visibleMovies]);
+  
+  // Filter movies based on search query
+  const searchResults = useMemo(() => {
+    if (!searchQuery) return [];
+    const lowercasedQuery = searchQuery.toLowerCase();
+    return visibleMovies.filter(movie =>
+      (movie.title || '').toLowerCase().includes(lowercasedQuery) ||
+      (movie.director || '').toLowerCase().includes(lowercasedQuery) ||
+      (movie.cast || []).some(actor => (actor.name || '').toLowerCase().includes(lowercasedQuery))
+    );
+  }, [searchQuery, visibleMovies]);
+
+  const handleSelectMovie = useCallback((movie: Movie) => {
+    setDetailsMovie(movie);
+  }, []);
+  
+  const handleCloseDetailsModal = useCallback(() => {
+    setDetailsMovie(null);
+  }, []);
+
+  const handleSelectActor = (actor: Actor) => {
+    setDetailsMovie(null); // Close movie modal first
+    setSelectedActor(actor);
+  };
+  
+  const handleCloseActorModal = () => {
+    setSelectedActor(null);
+  };
+  
+  const toggleLikeMovie = useCallback((movieKey: string) => {
+    const newLikedMovies = new Set(likedMovies);
+    let likesChange = 0;
+
+    if (newLikedMovies.has(movieKey)) {
+      newLikedMovies.delete(movieKey);
+      likesChange = -1;
+    } else {
+      newLikedMovies.add(movieKey);
+      likesChange = 1;
+    }
+
+    setLikedMovies(newLikedMovies);
+    localStorage.setItem('cratetv-likedMovies', JSON.stringify(Array.from(newLikedMovies)));
+
+    // Update the likes count in the main movies state
+    setMovies(prevMovies => {
+      const updatedMovie = { 
+        ...prevMovies[movieKey], 
+        likes: Math.max(0, (prevMovies[movieKey].likes || 0) + likesChange) 
+      };
+      localStorage.setItem(`cratetv-${movieKey}-likes`, updatedMovie.likes.toString());
+      return { ...prevMovies, [movieKey]: updatedMovie };
+    });
+  }, [likedMovies]);
+  
+  const exitStaging = () => {
+    sessionStorage.removeItem('crateTvStaging');
+    const params = new URLSearchParams(window.location.search);
+    params.delete('env');
+    window.location.search = params.toString();
+  };
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen bg-[#141414]">
+      {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
+      <DataStatusIndicator source={dataSource} />
+      <Header
+        searchQuery={searchQuery}
+        onSearch={setSearchQuery}
+        isScrolled={isScrolled}
+        onMobileSearchClick={() => setIsMobileSearchOpen(true)}
+        isStaging={isStaging}
+        isOffline={dataSource === 'fallback'}
+        isFestivalLive={festivalConfig?.isFestivalLive}
+      />
+      
+      <main className="flex-grow">
+        {searchQuery ? (
+           <div className="pt-24 px-4 md:px-12">
+            <h2 className="text-2xl font-bold mb-6 text-white">Search Results for "{searchQuery}"</h2>
+            {searchResults.length > 0 ? (
+                <MovieCarousel
+                    title=""
+                    movies={searchResults}
+                    onSelectMovie={handleSelectMovie}
+                />
+            ) : (
+                <p className="text-gray-400">No results found.</p>
+            )}
+           </div>
+        ) : (
+          <>
+            <Hero
+              movies={heroMovies}
+              currentIndex={heroIndex}
+              onSetCurrentIndex={handleSetHeroIndex}
+              onSelectMovie={handleSelectMovie}
+            />
+            <div className="relative z-10 -mt-12 px-4 md:px-12">
+              <div>
+                {/* Dedicated, stable rendering block for the live festival carousel */}
+                {festivalLiveMovies && (
+                    <MovieCarousel
+                        key="festivalLive"
+                        title={(() => {
+                            const handleNavigateToFestival = () => {
+                                window.history.pushState({}, '', '/festival');
+                                window.dispatchEvent(new Event('pushstate'));
+                            };
+                            return (
+                                <div className="flex items-center gap-4 mb-4 cursor-pointer" onClick={handleNavigateToFestival}>
+                                    <h2 className="text-lg md:text-2xl font-bold text-white hover:text-gray-300 transition-colors">
+                                        Film Festival
+                                    </h2>
+                                    <div className="flex items-center gap-2 bg-red-600 text-white font-bold text-sm px-3 py-1 rounded-md">
+                                        <span className="relative flex h-2 w-2">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                                        </span>
+                                        <span>LIVE NOW</span>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                        movies={festivalLiveMovies}
+                        onSelectMovie={handleSelectMovie}
+                    />
+                )}
+                {/* Map over the remaining, standard categories */}
+                {displayedCategories.map(cat => (
+                  <MovieCarousel
+                    key={cat.key}
+                    title={cat.title}
+                    movies={cat.movies}
+                    onSelectMovie={handleSelectMovie}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </main>
+      
+      <Footer />
+      <BackToTopButton />
+
+      {detailsMovie && (
+        <MovieDetailsModal
+            movie={movies[detailsMovie.key] || detailsMovie} // Use updated movie from state
+            isLiked={likedMovies.has(detailsMovie.key)}
+            onToggleLike={toggleLikeMovie}
+            onClose={handleCloseDetailsModal}
+            onSelectActor={handleSelectActor}
+            allMovies={movies}
+            allCategories={categories}
+            onSelectRecommendedMovie={handleSelectMovie}
+        />
+      )}
+      {selectedActor && (
+          <ActorBioModal actor={selectedActor} onClose={handleCloseActorModal} />
+      )}
+      {isMobileSearchOpen && (
+        <SearchOverlay
+          searchQuery={searchQuery}
+          onSearch={setSearchQuery}
+          onClose={() => setIsMobileSearchOpen(false)}
+        />
+      )}
+      {showFeatureModal && (
+        <FeatureModal onClose={() => setShowFeatureModal(false)} />
+      )}
+    </div>
+  );
+};
+
+export default App;

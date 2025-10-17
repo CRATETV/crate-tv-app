@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="HomeScene" extends="Scene">
+    <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
+    <children>
+        <!-- Dark background to match webapp -->
+        <Rectangle id="background" color="#141414" width="1920" height="1080" />
+        <Label id="loadingLabel" text="Loading..." translation="[960, 540]" horizAlign="center" vertAlign="center" />
+        
+        <!-- Main content group -->
+        <Group id="mainGroup" visible="false">
+            <!-- Details area for the focused movie -->
+            <Group id="detailsGroup" translation="[90, 40]">
+                <Label
+                    id="movieTitleLabel"
+                    text=""
+                    width="1000"
+                    horizAlign="left"
+                >
+                    <font role="font" size="42" />
+                </Label>
+                <Label
+                    id="movieDescriptionLabel"
+                    text=""
+                    translation="[0, 60]"
+                    width="800"
+                    height="120"
+                    wrap="true"
+                    maxLines="3"
+                >
+                    <font role="font" size="24" />
+                </Label>
+            </Group>
+            
+            <!-- Group to dynamically hold the carousels -->
+            <Group id="carouselsGroup" translation="[0, 250]" />
+        </Group>
+    </children>
+</component>
+        
