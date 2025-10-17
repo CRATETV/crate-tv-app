@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Movie, FestivalDay, FestivalConfig } from '../types';
 
 interface MovieSelectorModalProps {
@@ -70,38 +70,31 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
 
 
 interface FestivalEditorProps {
-    initialData: FestivalDay[];
-    initialConfig: FestivalConfig;
+    data: FestivalDay[];
+    config: FestivalConfig;
     allMovies: Record<string, Movie>;
-    onSave: (data: FestivalDay[], config: FestivalConfig) => void;
-    onPublishLiveStatus: (isLive: boolean) => void;
+    onDataChange: (data: FestivalDay[]) => void;
+    onConfigChange: (config: FestivalConfig) => void;
+    onSave: () => void;
+    onPublishLiveStatus: (isLive: boolean, config: FestivalConfig, data: FestivalDay[]) => void;
 }
 
 // The FestivalEditor component for managing festival data
-const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialConfig, allMovies, onSave, onPublishLiveStatus }) => {
-  const [data, setData] = useState(initialData);
-  const [config, setConfig] = useState(initialConfig);
+const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies, onDataChange, onConfigChange, onSave, onPublishLiveStatus }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const [isLiveStatusSaving, setIsLiveStatusSaving] = useState(false);
 
-  useEffect(() => {
-    setData(initialData);
-    setConfig(initialConfig);
-  }, [initialData, initialConfig]);
-
   const handleDayChange = (dayIndex: number, field: keyof FestivalDay, value: string) => {
-    setData(currentData => 
-      currentData.map((day, index) => 
-        index === dayIndex ? { ...day, [field]: value } : day
-      )
+    const newData = data.map((day, index) => 
+      index === dayIndex ? { ...day, [field]: value } : day
     );
+    onDataChange(newData);
   };
   
   const handleBlockChange = (dayIndex: number, blockIndex: number, field: string, value: string) => {
-    setData(currentData =>
-      currentData.map((day, i) => {
+    const newData = data.map((day, i) => {
         if (i === dayIndex) {
           const updatedBlocks = day.blocks.map((block, j) => {
             if (j === blockIndex) {
@@ -112,8 +105,8 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
           return { ...day, blocks: updatedBlocks };
         }
         return day;
-      })
-    );
+    });
+    onDataChange(newData);
   };
   
   const handleMovieSelectionSave = (dayIndex: number, blockIndex: number, newMovieKeys: string[]) => {
@@ -129,21 +122,19 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
       }
       return day;
     });
-
-    setData(newData);
+    onDataChange(newData);
     setEditingBlock(null);
   };
 
   const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setConfig(prev => ({ ...(prev || {}), [name]: value }) as FestivalConfig);
+    onConfigChange({ ...config, [name]: value });
   };
   
   const handleLiveStatusToggle = async () => {
-    if (!config) return;
     setIsLiveStatusSaving(true);
     try {
-      await onPublishLiveStatus(!config.isFestivalLive);
+      await onPublishLiveStatus(!config.isFestivalLive, config, data);
     } catch (error) {
       console.error("Failed to update live status", error);
     } finally {
@@ -152,23 +143,19 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
   };
 
   const addDay = () => {
-    setData(currentData => {
-      const newDay: FestivalDay = {
-        day: currentData.length + 1,
-        date: `New Day Date`,
-        blocks: [],
-      };
-      return [...currentData, newDay];
-    });
+    const newDay: FestivalDay = {
+      day: data.length + 1,
+      date: `New Day Date`,
+      blocks: [],
+    };
+    onDataChange([...data, newDay]);
   };
 
   const removeDay = (dayIndex: number) => {
-    // Replaced window.confirm with a custom modal logic (or, in this case, just removed it to adhere to a single-file structure without complex modals)
-    setData(currentData => 
-      currentData
-        .filter((_, i) => i !== dayIndex)
-        .map((day, index) => ({ ...day, day: index + 1 }))
-    );
+    const newData = data
+      .filter((_, i) => i !== dayIndex)
+      .map((day, index) => ({ ...day, day: index + 1 }));
+    onDataChange(newData);
   };
   
   const addBlock = (dayIndex: number) => {
@@ -178,31 +165,28 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ initialData, initialCon
       time: 'TBD',
       movieKeys: [],
     };
-    setData(currentData => 
-      currentData.map((day, index) => {
-        if (index === dayIndex) {
-          return { ...day, blocks: [...day.blocks, newBlock] };
-        }
-        return day;
-      })
-    );
+    const newData = data.map((day, index) => {
+      if (index === dayIndex) {
+        return { ...day, blocks: [...day.blocks, newBlock] };
+      }
+      return day;
+    });
+    onDataChange(newData);
   };
   
   const removeBlock = (dayIndex: number, blockIndex: number) => {
-     setData(currentData =>
-        currentData.map((day, index) => {
-          if (index === dayIndex) {
-            return { ...day, blocks: day.blocks.filter((_, i) => i !== blockIndex) };
-          }
-          return day;
-        })
-      );
+     const newData = data.map((day, index) => {
+        if (index === dayIndex) {
+          return { ...day, blocks: day.blocks.filter((_, i) => i !== blockIndex) };
+        }
+        return day;
+      });
+      onDataChange(newData);
   };
 
   const handleSave = () => {
-    if (!config) return;
     setIsSaving(true);
-    onSave(data, config);
+    onSave();
     setTimeout(() => {
       setIsSaving(false);
       setShowSuccess(true);

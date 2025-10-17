@@ -219,11 +219,12 @@ const AdminPage: React.FC = () => {
     }
   };
   
-  const handleSaveFestival = async (updatedFestivalData: FestivalDay[], updatedFestivalConfig: FestivalConfig) => {
+  const handleSaveFestival = async () => {
+    if (!festivalConfig) return;
     showSaveStatus('saving');
     try {
-        await saveFestivalConfig(updatedFestivalConfig);
-        await saveFestivalDays(updatedFestivalData);
+        await saveFestivalConfig(festivalConfig);
+        await saveFestivalDays(festivalData);
         showSaveStatus('success');
     } catch (error) {
         const msg = error instanceof Error ? error.message : 'Failed to save festival data.';
@@ -231,25 +232,33 @@ const AdminPage: React.FC = () => {
     }
   };
   
-  const handleSetLiveStatus = async (isLive: boolean) => {
-    if (!festivalConfig) return;
+  const handleSetLiveStatus = async (isLive: boolean, currentConfig: FestivalConfig, currentData: FestivalDay[]) => {
+    // The config and data are passed directly from the editor, ensuring we use the latest state.
+    if (!currentConfig) return;
     
     setPublishStatus('publishing');
     setPublishError('');
 
-    const updatedConfig = { ...festivalConfig, isFestivalLive: isLive };
+    const updatedConfig = { ...currentConfig, isFestivalLive: isLive };
     
     try {
+        // Save the latest data to Firebase
         await saveFestivalConfig(updatedConfig);
+        await saveFestivalDays(currentData);
+        
+        // Update the state locally for immediate UI responsiveness.
+        setFestivalConfig(updatedConfig);
+        setFestivalData(currentData);
         
         const adminPassword = sessionStorage.getItem('adminPassword');
         if (!adminPassword) throw new Error('Authentication error. Please log in again.');
-
+        
+        // Prepare the payload for S3 and broadcast with the latest data.
         const dataToPublish = { 
             movies, 
             categories, 
-            festivalData, 
-            festivalConfig: updatedConfig 
+            festivalData: currentData, // Use the latest data from the editor
+            festivalConfig: updatedConfig // Use the new updated config
         };
 
         const response = await fetch('/api/publish-data', {
@@ -265,13 +274,11 @@ const AdminPage: React.FC = () => {
 
         const timestamp = Date.now();
         localStorage.setItem('cratetv-last-publish-timestamp', timestamp.toString());
-        console.log(`[Admin] Set last publish timestamp in localStorage: ${new Date(timestamp).toLocaleString()}`);
         
         const channel = new BroadcastChannel('cratetv-data-channel');
         channel.postMessage({ type: 'DATA_PUBLISHED', payload: dataToPublish });
         channel.close();
-        console.log(`[Admin] Sent DATA_PUBLISHED broadcast to other tabs. Festival live status: ${isLive}`);
-
+        console.log(`[Admin] Sent DATA_PUBLISHED broadcast. Festival live status: ${isLive}`);
 
         setPublishStatus('success');
         setTimeout(() => setPublishStatus('idle'), 3000);
@@ -449,9 +456,11 @@ const AdminPage: React.FC = () => {
             {activeTab === 'festival' && festivalConfig && (
                 <div className="bg-gray-800 p-6 rounded-lg">
                     <FestivalEditor 
-                        initialData={festivalData}
-                        initialConfig={festivalConfig}
+                        data={festivalData}
+                        config={festivalConfig}
                         allMovies={movies}
+                        onDataChange={setFestivalData}
+                        onConfigChange={setFestivalConfig}
                         onSave={handleSaveFestival}
                         onPublishLiveStatus={handleSetLiveStatus}
                     />
