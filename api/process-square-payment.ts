@@ -1,6 +1,14 @@
 // This is a Vercel Serverless Function to process payments with Square.
 import { randomUUID } from 'crypto';
 
+// Server-side price map in cents for security.
+// This prevents users from manipulating prices on the client-side.
+const priceMap: Record<string, number> = {
+  subscription: 499,  // $4.99
+  pass: 5000,         // $50.00
+  block: 1000,        // $10.00
+};
+
 export async function POST(request: Request) {
   try {
     const { sourceId, amount, movieTitle, directorName, paymentType } = await request.json();
@@ -10,7 +18,7 @@ export async function POST(request: Request) {
       throw new Error("Square Access Token is not configured on the server.");
     }
 
-    if (!sourceId || !amount) {
+    if (!sourceId || !paymentType) {
       return new Response(JSON.stringify({ error: "Missing required payment information." }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -18,15 +26,33 @@ export async function POST(request: Request) {
     }
 
     const idempotencyKey = randomUUID();
-    
-    // Convert amount from dollars to the smallest currency unit (cents)
-    const amountInCents = Math.round(Number(amount) * 100);
+    let amountInCents: number;
+    let note: string;
 
-    let note = "Crate TV Transaction";
-    if (paymentType === 'donation' && movieTitle) {
+    // Determine amount and note based on payment type, using server-side pricing.
+    if (paymentType === 'donation') {
+        amountInCents = Math.round(Number(amount) * 100);
+        if (amountInCents < 100) { // Minimum $1.00 donation
+            throw new Error("Donation amount must be at least $1.00.");
+        }
         note = `Support for film: ${movieTitle} by ${directorName}`;
-    } else if (paymentType === 'subscription') {
-        note = 'Crate TV Premium Subscription';
+    } else if (priceMap[paymentType]) {
+        amountInCents = priceMap[paymentType];
+        switch(paymentType) {
+            case 'subscription':
+                note = 'Crate TV Premium Subscription';
+                break;
+            case 'pass':
+                note = 'Crate TV Film Festival - All-Access Pass';
+                break;
+            case 'block':
+                note = 'Crate TV Film Festival - Film Block Access';
+                break;
+            default:
+                note = "Crate TV Purchase";
+        }
+    } else {
+        throw new Error("Invalid payment type specified.");
     }
 
     const body = JSON.stringify({
