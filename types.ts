@@ -48,3 +48,19 @@ export interface User {
   email: string;
   isPremiumSubscriber: boolean;
 }
+
+export interface FilmmakerPayout {
+    movieTitle: string;
+    director: string;
+    totalDonations: number; // in cents
+    crateTvCut: number; // in cents
+    filmmakerPayout: number; // in cents
+}
+
+export interface AnalyticsData {
+    totalRevenue: number;
+    totalDonations: number;
+    totalSales: number;
+    salesByType: Record<string, number>;
+    filmmakerPayouts: FilmmakerPayout[];
+}

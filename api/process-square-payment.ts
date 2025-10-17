@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         if (amountInCents < 100) { // Minimum $1.00 donation
             throw new Error("Donation amount must be at least $1.00.");
         }
-        note = `Support for film: ${movieTitle} by ${directorName}`;
+        note = `Support for film: "${movieTitle}" by ${directorName}`;
     } else if (priceMap[paymentType]) {
         amountInCents = priceMap[paymentType];
         switch(paymentType) {

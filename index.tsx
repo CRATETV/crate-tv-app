@@ -21,6 +21,7 @@ import RokuGuidePage from './components/RokuGuidePage';
 import FestivalPage from './components/FestivalPage';
 import FilmFestivalModule from './FilmFestivalModule';
 import DeveloperGuidePage from './components/DeveloperGuidePage';
+import AnalyticsPage from './components/AnalyticsPage';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -67,6 +68,8 @@ const AppRouter: React.FC = () => {
       return <MerchPage />;
     case '/admin':
       return <AdminPage />;
+    case '/analytics':
+      return <AnalyticsPage />;
     case '/contact':
       return <ContactPage />;
     case '/premium':
