@@ -16,6 +16,7 @@ interface FetchResult {
 let cachedData: FetchResult | null = null;
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
+const PUBLISH_TIMESTAMP_KEY = 'cratetv-last-publish-timestamp';
 // Cache data for 1 minute to reduce network requests and improve performance.
 const CACHE_DURATION = 60 * 1000; // 1 minute
 
@@ -39,7 +40,35 @@ export const invalidateCache = () => {
     }
 };
 
-export const fetchAndCacheLiveData = async (): Promise<FetchResult> => {
+export const fetchAndCacheLiveData = async (options?: { force?: boolean }): Promise<FetchResult> => {
+    if (options?.force) {
+        console.log("Forcing cache invalidation due to signal.");
+        invalidateCache();
+    }
+    
+    // Robust Cache Invalidation: Check if a publish event has occurred since
+    // the current session cache was created. This uses localStorage as a cross-tab
+    // communication channel to ensure new tabs always get the latest data.
+    try {
+        const lastPublishTime = parseInt(localStorage.getItem(PUBLISH_TIMESTAMP_KEY) || '0', 10);
+        const cachedTimestampStr = sessionStorage.getItem(CACHE_TIMESTAMP_KEY);
+        
+        console.log(`[Cache Check] Last Publish Time: ${lastPublishTime > 0 ? new Date(lastPublishTime).toLocaleString() : 'N/A'}`);
+        console.log(`[Cache Check] Current Cache Time: ${cachedTimestampStr ? new Date(parseInt(cachedTimestampStr, 10)).toLocaleString() : 'N/A'}`);
+
+        if (cachedTimestampStr) {
+            const cacheTime = parseInt(cachedTimestampStr, 10);
+            if (lastPublishTime > cacheTime) {
+                console.warn('[Cache Check] Cache is STALE due to a recent publish. Invalidating.');
+                invalidateCache();
+            } else {
+                console.log('[Cache Check] Cache is considered fresh.');
+            }
+        }
+    } catch (e) {
+        console.warn("Could not perform robust cache check.", e);
+    }
+
     // Check session storage first for quick loads across page navigations
     try {
         const cachedTimestampStr = sessionStorage.getItem(CACHE_TIMESTAMP_KEY);
@@ -71,7 +100,7 @@ export const fetchAndCacheLiveData = async (): Promise<FetchResult> => {
         return inMemoryCache;
     }
 
-    console.log('Fetching fresh data...');
+    console.log('Fetching fresh data from network...');
 
     try {
         // Fetch the config to find where the live data is

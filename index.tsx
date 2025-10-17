@@ -4,12 +4,14 @@ import { AuthProvider } from './contexts/AuthContext';
 
 // Import all page components
 import App from './App';
-// FIX: Changed to a named import to resolve the "no default export" error.
-import { AdminPage } from './AdminPage';
+// FIX: Changed to a default import to match the refactored AdminPage component.
+import AdminPage from './AdminPage';
 import Intro from './components/Intro';
-import ClassicsPage from './ClassicsPage';
+// FIX: Corrected path to import ClassicsPage from the components directory.
+import ClassicsPage from './components/ClassicsPage';
 import SubmitPage from './components/SubmitPage';
-import MoviePage from './MoviePage';
+// FIX: Corrected path to import MoviePage from the components directory.
+import MoviePage from './components/MoviePage';
 import MerchPage from './components/MerchPage';
 import ContactPage from './components/ContactPage';
 import PremiumPage from './components/PremiumPage';

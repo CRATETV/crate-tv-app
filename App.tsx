@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { fetchAndCacheLiveData, invalidateCache } from './services/dataService';
+import { fetchAndCacheLiveData } from './services/dataService';
 import { Movie, Actor, Category, FestivalConfig, FestivalDay } from './types';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -31,19 +31,15 @@ const App: React.FC = () => {
   const [isStaging, setIsStaging] = useState(false);
   const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
   const [showFeatureModal, setShowFeatureModal] = useState(false);
-  const [showFestivalModal, setShowFestivalModal] = useState(false);
+  const [isFestivalModalOpen, setIsFestivalModalOpen] = useState(false);
 
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
-  const loadAppData = useCallback(async (options?: { initialLoad?: boolean }) => {
+  const loadAppData = useCallback(async (options?: { initialLoad?: boolean, force?: boolean }) => {
     if (options?.initialLoad) setIsLoading(true);
     try {
-      // Invalidate cache only for background updates, not the very first load
-      if (!options?.initialLoad) {
-        invalidateCache();
-      }
-
-      const { data: liveData, source } = await fetchAndCacheLiveData();
+      const { data: liveData, source } = await fetchAndCacheLiveData({ force: options?.force });
+      
       setDataSource(source);
       
       const newMoviesState = { ...liveData.movies };
@@ -56,8 +52,14 @@ const App: React.FC = () => {
       setCategories(liveData.categories);
       setFestivalConfig(liveData.festivalConfig);
       setFestivalData(liveData.festivalData);
-      setShowFestivalModal(liveData.festivalConfig?.isFestivalLive ?? false);
-
+      
+      // On initial load, check if the modal should be open.
+      if (options?.initialLoad && liveData.festivalConfig?.isFestivalLive) {
+        setIsFestivalModalOpen(true);
+      } else if (!liveData.festivalConfig?.isFestivalLive) {
+        setIsFestivalModalOpen(false);
+      }
+      
       if (options?.initialLoad) {
         const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
         if (storedLikedMovies) {
@@ -81,7 +83,10 @@ const App: React.FC = () => {
     if (isStagingActive) {
       sessionStorage.setItem('crateTvStaging', 'true');
       setIsStaging(true);
-      invalidateCache();
+      // Force a fresh load for staging to ensure latest data is seen
+      loadAppData({ initialLoad: true, force: true });
+    } else {
+      loadAppData({ initialLoad: true });
     }
     
     const hasSeenFeatureModal = sessionStorage.getItem('hasSeenActorAiFeature');
@@ -89,8 +94,6 @@ const App: React.FC = () => {
       setShowFeatureModal(true);
       sessionStorage.setItem('hasSeenActorAiFeature', 'true');
     }
-
-    loadAppData({ initialLoad: true });
 
     const handleScroll = () => setIsScrolled(window.pageYOffset > 10);
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -105,9 +108,49 @@ const App: React.FC = () => {
   useEffect(() => {
     const channel = new BroadcastChannel('cratetv-data-channel');
     
-    const handleMessage = () => {
-      console.log('Data update broadcast received. Refreshing data instantly.');
-      loadAppData({ initialLoad: false });
+    const handleMessage = (event: MessageEvent) => {
+      console.log('[Broadcast] Message received from admin panel.', event.data);
+      try {
+        if (event.data && event.data.type === 'DATA_PUBLISHED' && event.data.payload) {
+          console.log('[Broadcast] Event is DATA_PUBLISHED with a payload. Processing...');
+          const liveData = event.data.payload;
+          
+          if (!liveData || typeof liveData !== 'object' || !liveData.movies || !liveData.categories || !liveData.festivalConfig) {
+            console.error('[Broadcast] Received an invalid or incomplete data payload.', liveData);
+            return;
+          }
+
+          // Update all data directly
+          setDataSource('live');
+          setMovies(liveData.movies || {});
+          setCategories(liveData.categories || {});
+          setFestivalConfig(liveData.festivalConfig || null);
+          setFestivalData(liveData.festivalData || []);
+
+          // Explicitly set modal visibility based on the incoming payload
+          const isFestivalLive = !!liveData.festivalConfig?.isFestivalLive;
+          console.log(`[Broadcast] Festival live status from payload: ${isFestivalLive}.`);
+          if (isFestivalLive) {
+              console.log('[Broadcast] Action: Opening festival modal.');
+              setIsFestivalModalOpen(true);
+          } else {
+              console.log('[Broadcast] Action: Closing festival modal.');
+              setIsFestivalModalOpen(false);
+          }
+
+          // Also update the session storage cache to keep it consistent
+          try {
+              const result = { data: liveData, source: 'live' };
+              sessionStorage.setItem('cratetv-live-data', JSON.stringify(result));
+              sessionStorage.setItem('cratetv-live-data-timestamp', Date.now().toString());
+              console.log('[Broadcast] Updated sessionStorage cache with new live data.');
+          } catch(e) {
+              console.warn("Could not write to session storage cache on broadcast.", e);
+          }
+        }
+      } catch (err) {
+        console.error("Error processing broadcast message in App.tsx:", err);
+      }
     };
 
     channel.addEventListener('message', handleMessage);
@@ -116,7 +159,7 @@ const App: React.FC = () => {
       channel.removeEventListener('message', handleMessage);
       channel.close();
     };
-  }, [loadAppData]);
+  }, []);
   
   // Logic for the hero banner auto-scroll
   const heroMovies = useMemo(() => {
@@ -213,7 +256,7 @@ const App: React.FC = () => {
   };
 
   const handleCloseFestivalModal = () => {
-    setShowFestivalModal(false);
+    setIsFestivalModalOpen(false);
   };
 
   if (isLoading) {
@@ -310,7 +353,7 @@ const App: React.FC = () => {
           onClose={() => setIsMobileSearchOpen(false)}
         />
       )}
-      {showFestivalModal && festivalConfig && festivalData.length > 0 && (
+      {isFestivalModalOpen && festivalConfig && festivalData.length > 0 && (
         <FestivalModal
             festivalData={festivalData}
             festivalConfig={festivalConfig}

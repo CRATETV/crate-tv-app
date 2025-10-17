@@ -15,7 +15,7 @@ const getLocalDatetimeString = () => {
     return now.toISOString().slice(0, 16);
 };
 
-export const AdminPage: React.FC = () => {
+const AdminPage: React.FC = () => {
   const [movies, setMovies] = useState<Record<string, Movie>>({});
   const [categories, setCategories] = useState<Record<string, Category>>({});
   const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
@@ -134,11 +134,14 @@ export const AdminPage: React.FC = () => {
             throw new Error(errorData.error || 'Publishing failed.');
         }
 
-        invalidateCache();
-        // Notify other tabs that data has been updated
+        const timestamp = Date.now();
+        localStorage.setItem('cratetv-last-publish-timestamp', timestamp.toString());
+        console.log(`[Admin] Set last publish timestamp in localStorage: ${new Date(timestamp).toLocaleString()}`);
+        
         const channel = new BroadcastChannel('cratetv-data-channel');
-        channel.postMessage({ type: 'DATA_UPDATED' });
+        channel.postMessage({ type: 'DATA_PUBLISHED', payload: dataToPublish });
         channel.close();
+        console.log('[Admin] Sent DATA_PUBLISHED broadcast to other tabs.');
 
         setPublishStatus('success');
         setTimeout(() => setPublishStatus('idle'), 3000);
@@ -237,10 +240,8 @@ export const AdminPage: React.FC = () => {
     const updatedConfig = { ...festivalConfig, isFestivalLive: isLive };
     
     try {
-        // First, save the change to Firestore to keep the drafts consistent.
         await saveFestivalConfig(updatedConfig);
         
-        // Then, immediately publish all current data to S3 to make the change live.
         const adminPassword = sessionStorage.getItem('adminPassword');
         if (!adminPassword) throw new Error('Authentication error. Please log in again.');
 
@@ -262,11 +263,15 @@ export const AdminPage: React.FC = () => {
             throw new Error(errorData.error || 'Publishing live status failed.');
         }
 
-        // Invalidate cache and notify other tabs for an instant update.
-        invalidateCache();
+        const timestamp = Date.now();
+        localStorage.setItem('cratetv-last-publish-timestamp', timestamp.toString());
+        console.log(`[Admin] Set last publish timestamp in localStorage: ${new Date(timestamp).toLocaleString()}`);
+        
         const channel = new BroadcastChannel('cratetv-data-channel');
-        channel.postMessage({ type: 'DATA_UPDATED' });
+        channel.postMessage({ type: 'DATA_PUBLISHED', payload: dataToPublish });
         channel.close();
+        console.log(`[Admin] Sent DATA_PUBLISHED broadcast to other tabs. Festival live status: ${isLive}`);
+
 
         setPublishStatus('success');
         setTimeout(() => setPublishStatus('idle'), 3000);
@@ -460,3 +465,5 @@ export const AdminPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminPage;
