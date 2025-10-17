@@ -51,14 +51,17 @@ export const fetchAndCacheLiveData = async (): Promise<FetchResult> => {
     
     // Check session storage first for quick loads across page navigations
     try {
-        const cachedTimestamp = sessionStorage.getItem(CACHE_TIMESTAMP_KEY);
-        const cachedJson = sessionStorage.getItem(CACHE_KEY);
-        if (cachedJson && cachedTimestamp) {
-            const age = Date.now() - parseInt(cachedTimestamp, 10);
+        const cachedTimestampStr = sessionStorage.getItem(CACHE_TIMESTAMP_KEY);
+        const cachedJsonStr = sessionStorage.getItem(CACHE_KEY);
+
+        // Explicitly check for non-null strings to satisfy TypeScript's strict null checks.
+        if (typeof cachedJsonStr === 'string' && typeof cachedTimestampStr === 'string') {
+            const age = Date.now() - parseInt(cachedTimestampStr, 10);
             if (age < CACHE_DURATION) {
                 console.log('Using fresh data from session storage cache.');
-                cachedData = JSON.parse(cachedJson);
-                return cachedData as FetchResult;
+                const parsedData: FetchResult = JSON.parse(cachedJsonStr);
+                cachedData = parsedData; // Update the in-memory cache as well
+                return parsedData;
             } else {
                 console.log('Session storage cache is stale.');
                 invalidateCache();
@@ -66,13 +69,15 @@ export const fetchAndCacheLiveData = async (): Promise<FetchResult> => {
         }
     } catch (e) {
         console.warn("Could not read from session storage cache.", e);
-        invalidateCache();
+        invalidateCache(); // Also invalidate if JSON parsing fails
     }
 
-    // If session cache is stale or invalid, check in-memory cache
-    if (cachedData) {
+    // If session cache is stale or invalid, check in-memory cache.
+    // Assigning to a local constant helps TypeScript's control flow analysis.
+    const inMemoryCache = cachedData;
+    if (inMemoryCache) {
         console.log('Using in-memory cached data.');
-        return cachedData;
+        return inMemoryCache;
     }
 
     console.log('Fetching fresh data...');

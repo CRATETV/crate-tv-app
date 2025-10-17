@@ -17,7 +17,7 @@ import LoginPage from './components/LoginPage';
 import AccountPage from './components/AccountPage';
 import RokuGuidePage from './components/RokuGuidePage';
 import FestivalPage from './components/FestivalPage';
-import FilmFestivalModule from './FilmpFestivalModule';
+import FilmFestivalModule from './FilmFestivalModule';
 import DeveloperGuidePage from './components/DeveloperGuidePage';
 
 const rootElement = document.getElementById('root');

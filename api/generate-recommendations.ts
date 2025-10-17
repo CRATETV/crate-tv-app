@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from '@google/genai';
+import { Movie } from '../types';
 
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/generate-recommendations
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
     
     // Create a string representation of the available movies catalog
     const availableMoviesCatalog = Object.entries(allMovies)
-      .map(([key, title]) => `"${key}": "${title}"`)
+      .map(([key, movie]: [string, any]) => `"${key}": "${movie.title}"`)
       .join(',\n');
 
     const prompt = `
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
         ${availableMoviesCatalog}
       }
 
-      Respond ONLY with a JSON array of the recommended movie keys. For example: ["juniper", "lifeless", "autumn"].
+      Respond with a JSON object that matches this schema: { "recommendedKeys": ["key1", "key2"] }.
     `;
 
     const response = await ai.models.generateContent({
