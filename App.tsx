@@ -34,7 +34,44 @@ const App: React.FC = () => {
   const [showFestivalModal, setShowFestivalModal] = useState(false);
 
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  
+  const loadAppData = useCallback(async (options?: { initialLoad?: boolean }) => {
+    if (options?.initialLoad) setIsLoading(true);
+    try {
+      // Invalidate cache only for background updates, not the very first load
+      if (!options?.initialLoad) {
+        invalidateCache();
+      }
 
+      const { data: liveData, source } = await fetchAndCacheLiveData();
+      setDataSource(source);
+      
+      const newMoviesState = { ...liveData.movies };
+      Object.keys(newMoviesState).forEach((key: string) => {
+        const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
+        if (storedLikes) newMoviesState[key].likes = parseInt(storedLikes, 10);
+      });
+      setMovies(newMoviesState);
+      
+      setCategories(liveData.categories);
+      setFestivalConfig(liveData.festivalConfig);
+      setFestivalData(liveData.festivalData);
+      setShowFestivalModal(liveData.festivalConfig?.isFestivalLive ?? false);
+
+      if (options?.initialLoad) {
+        const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
+        if (storedLikedMovies) {
+          setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load app data", error);
+    } finally {
+      if (options?.initialLoad) setIsLoading(false);
+    }
+  }, []);
+
+  // Effect for initial load and one-time setup
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const env = params.get('env');
@@ -53,44 +90,7 @@ const App: React.FC = () => {
       sessionStorage.setItem('hasSeenActorAiFeature', 'true');
     }
 
-    setIsLoading(true);
-
-    const loadAppData = async () => {
-      try {
-        const { data: liveData, source } = await fetchAndCacheLiveData();
-        setDataSource(source);
-        
-        // MOVIES
-        const newMoviesState = { ...liveData.movies };
-        Object.keys(newMoviesState).forEach((key: string) => {
-          const storedLikes = localStorage.getItem(`cratetv-${key}-likes`);
-          if (storedLikes) newMoviesState[key].likes = parseInt(storedLikes, 10);
-        });
-        setMovies(newMoviesState);
-        
-        // CATEGORIES
-        setCategories(liveData.categories);
-        
-        // FESTIVAL DATA
-        setFestivalConfig(liveData.festivalConfig);
-        setFestivalData(liveData.festivalData);
-
-        // Set modal visibility based on live status
-        setShowFestivalModal(liveData.festivalConfig?.isFestivalLive ?? false);
-
-        // LIKES
-        const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
-        if (storedLikedMovies) {
-          setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
-        }
-      } catch (error) {
-        console.error("Failed to load S3 app data", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadAppData();
+    loadAppData({ initialLoad: true });
 
     const handleScroll = () => setIsScrolled(window.pageYOffset > 10);
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -99,22 +99,24 @@ const App: React.FC = () => {
       window.removeEventListener('scroll', handleScroll);
       if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
     };
-  }, []);
+  }, [loadAppData]);
   
-  // Polling for festival status changes
+  // Effect to listen for instant updates from the admin panel
   useEffect(() => {
-    const checkFestivalStatus = async () => {
-        invalidateCache(); // Invalidate cache to force a re-fetch
-        const { data: liveData } = await fetchAndCacheLiveData();
-        setFestivalConfig(liveData.festivalConfig);
-        setFestivalData(liveData.festivalData);
-        setShowFestivalModal(liveData.festivalConfig?.isFestivalLive ?? false);
+    const channel = new BroadcastChannel('cratetv-data-channel');
+    
+    const handleMessage = () => {
+      console.log('Data update broadcast received. Refreshing data instantly.');
+      loadAppData({ initialLoad: false });
     };
 
-    const intervalId = setInterval(checkFestivalStatus, 30000); // Poll every 30 seconds
+    channel.addEventListener('message', handleMessage);
 
-    return () => clearInterval(intervalId); // Cleanup on component unmount
-  }, []);
+    return () => {
+      channel.removeEventListener('message', handleMessage);
+      channel.close();
+    };
+  }, [loadAppData]);
   
   // Logic for the hero banner auto-scroll
   const heroMovies = useMemo(() => {

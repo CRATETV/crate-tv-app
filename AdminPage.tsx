@@ -135,6 +135,11 @@ export const AdminPage: React.FC = () => {
         }
 
         invalidateCache();
+        // Notify other tabs that data has been updated
+        const channel = new BroadcastChannel('cratetv-data-channel');
+        channel.postMessage({ type: 'DATA_UPDATED' });
+        channel.close();
+
         setPublishStatus('success');
         setTimeout(() => setPublishStatus('idle'), 3000);
 
@@ -257,8 +262,12 @@ export const AdminPage: React.FC = () => {
             throw new Error(errorData.error || 'Publishing live status failed.');
         }
 
-        // Invalidate the browser's cache and show a success message.
+        // Invalidate cache and notify other tabs for an instant update.
         invalidateCache();
+        const channel = new BroadcastChannel('cratetv-data-channel');
+        channel.postMessage({ type: 'DATA_UPDATED' });
+        channel.close();
+
         setPublishStatus('success');
         setTimeout(() => setPublishStatus('idle'), 3000);
 
