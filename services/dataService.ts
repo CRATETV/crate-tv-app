@@ -40,21 +40,12 @@ export const invalidateCache = () => {
 };
 
 export const fetchAndCacheLiveData = async (): Promise<FetchResult> => {
-    // DEVELOPER NOTE: The live data fetching from S3 has been temporarily disabled
-    // by forcing the function to return local fallback data. This is a temporary
-    // measure to restore site content. To re-enable fetching from the live S3 bucket,
-    // simply remove the following two lines.
-    console.warn("Forcing fallback data to restore content. Live data fetch is skipped.");
-    return getFallbackData();
-
-    // The original logic for fetching and caching is preserved below but is currently unreachable.
-    
     // Check session storage first for quick loads across page navigations
     try {
         const cachedTimestampStr = sessionStorage.getItem(CACHE_TIMESTAMP_KEY);
         const cachedJsonStr = sessionStorage.getItem(CACHE_KEY);
 
-        // Explicitly check for non-null strings to satisfy TypeScript's strict null checks.
+        // FIX: Explicitly check for non-null strings to satisfy TypeScript's strict null checks.
         if (typeof cachedJsonStr === 'string' && typeof cachedTimestampStr === 'string') {
             const age = Date.now() - parseInt(cachedTimestampStr, 10);
             if (age < CACHE_DURATION) {
@@ -73,7 +64,7 @@ export const fetchAndCacheLiveData = async (): Promise<FetchResult> => {
     }
 
     // If session cache is stale or invalid, check in-memory cache.
-    // Assigning to a local constant helps TypeScript's control flow analysis.
+    // FIX: Assigning to a local constant helps TypeScript's control flow analysis.
     const inMemoryCache = cachedData;
     if (inMemoryCache) {
         console.log('Using in-memory cached data.');
