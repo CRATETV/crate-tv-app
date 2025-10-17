@@ -160,6 +160,40 @@ const App: React.FC = () => {
       channel.close();
     };
   }, []);
+
+  // Effect to handle data refresh when tab becomes visible again (e.g., on mobile)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[Visibility] Tab is now visible. Checking for data updates.');
+        try {
+          const lastPublishTimeStr = localStorage.getItem('cratetv-last-publish-timestamp');
+          const lastCacheTimeStr = sessionStorage.getItem('cratetv-live-data-timestamp');
+
+          if (lastPublishTimeStr && lastCacheTimeStr) {
+            const lastPublishTime = parseInt(lastPublishTimeStr, 10);
+            const lastCacheTime = parseInt(lastCacheTimeStr, 10);
+            
+            if (lastPublishTime > lastCacheTime) {
+              console.warn('[Visibility] Data is stale. A publish event occurred while tab was in background. Forcing data refresh.');
+              // We don't want to show the main loading spinner, just refresh in the background.
+              loadAppData({ force: true });
+            } else {
+              console.log('[Visibility] Data is fresh. No refresh needed.');
+            }
+          }
+        } catch (e) {
+          console.error('[Visibility] Error checking for stale data:', e);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loadAppData]);
   
   // Logic for the hero banner auto-scroll
   const heroMovies = useMemo(() => {
