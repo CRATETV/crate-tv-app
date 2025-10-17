@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AnalyticsData, Movie } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
-import Header from './Header';
-import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
 
 // Helper to format currency from cents
@@ -90,6 +88,12 @@ const AnalyticsPage: React.FC = () => {
             setIsLoading(false);
         }
     };
+    
+    const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+        e.preventDefault();
+        window.history.pushState({}, '', path);
+        window.dispatchEvent(new Event('pushstate'));
+    };
 
     if (isLoading) {
         return <LoadingSpinner />;
@@ -129,11 +133,19 @@ const AnalyticsPage: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-900 text-white">
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
+            <header className="bg-gray-800 p-4 flex justify-between items-center shadow-md sticky top-0 z-10">
+                <h1 className="text-xl font-bold">Crate TV Analytics</h1>
+                <a 
+                    href="/admin" 
+                    onClick={(e) => handleNavigate(e, '/admin')}
+                    className="text-sm bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md transition-colors"
+                >
+                    Back to Admin Panel
+                </a>
+            </header>
 
-            <main className="flex-grow pt-24 px-4 md:px-12">
+            <main className="flex-grow p-4 md:p-8">
                 <div className="max-w-7xl mx-auto">
-                    <h1 className="text-4xl font-bold text-white mb-8">Analytics Dashboard</h1>
                     
                     {error && (
                         <div className="bg-red-800 border border-red-600 text-white p-4 rounded-lg mb-8">
@@ -235,7 +247,6 @@ const AnalyticsPage: React.FC = () => {
                     )}
                 </div>
             </main>
-            <Footer />
         </div>
     );
 };

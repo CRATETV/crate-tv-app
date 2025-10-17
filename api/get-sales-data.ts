@@ -70,6 +70,10 @@ export async function POST(request: Request) {
         // Paginate through all payments from Square
         do {
             const url = new URL('https://connect.squareup.com/v2/payments');
+            // FIX: The Square ListPayments API requires a begin_time. Set it to a date
+            // in the past to ensure all payments are retrieved.
+            url.searchParams.append('begin_time', '2020-01-01T00:00:00Z');
+
             if (cursor) url.searchParams.append('cursor', cursor);
 
             const response = await fetch(url.toString(), {
