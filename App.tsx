@@ -49,16 +49,24 @@ const App: React.FC = () => {
       setMovies(newMoviesState);
       
       setCategories(liveData.categories);
-      setFestivalConfig(liveData.festivalConfig);
       
-      // On initial load, check if the festival is live to show the announcement modal
-      if (options?.initialLoad && liveData.festivalConfig?.isFestivalLive) {
-        const hasSeenAnnouncement = sessionStorage.getItem('seenFestivalAnnouncement');
-        if (!hasSeenAnnouncement) {
-          setShowFestivalLiveModal(true);
-          sessionStorage.setItem('seenFestivalAnnouncement', 'true');
+      // Use a functional update to compare the new data with the previous state.
+      // This allows us to detect when the festival *changes* to live, which is crucial
+      // for the polling and visibility-change refresh mechanisms.
+      setFestivalConfig(currentConfig => {
+        const wasFestivalLive = currentConfig?.isFestivalLive;
+        const isNowFestivalLive = liveData.festivalConfig?.isFestivalLive;
+
+        // Trigger the announcement modal only if the festival just went live.
+        if (isNowFestivalLive && !wasFestivalLive) {
+          const hasSeenAnnouncement = sessionStorage.getItem('seenFestivalAnnouncement');
+          if (!hasSeenAnnouncement) {
+            setShowFestivalLiveModal(true);
+            sessionStorage.setItem('seenFestivalAnnouncement', 'true');
+          }
         }
-      }
+        return liveData.festivalConfig;
+      });
       
       if (options?.initialLoad) {
         const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
@@ -185,6 +193,23 @@ const App: React.FC = () => {
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loadAppData]);
+  
+  // Effect for periodic data refresh to catch live updates across devices
+  useEffect(() => {
+    // This interval ensures that the app periodically checks for new data from the server.
+    // A very short interval is crucial for making admin updates (like making the festival live)
+    // feel "immediate" to users on other devices, especially mobile.
+    // NOTE: For a very large user base, a more scalable solution like WebSockets would be
+    // preferable to reduce server load, but aggressive polling is effective for this use case.
+    const pollingInterval = setInterval(() => {
+      console.log('[Polling] Periodically checking for live data updates.');
+      loadAppData({ force: true });
+    }, 1000); // Poll every 1 second for an "immediate" experience
+
+    return () => {
+      clearInterval(pollingInterval); // Cleanup on component unmount
     };
   }, [loadAppData]);
   

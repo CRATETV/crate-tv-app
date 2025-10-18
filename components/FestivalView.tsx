@@ -111,15 +111,19 @@ const FestivalView: React.FC<FestivalViewProps> = ({ festivalData, festivalConfi
                                             <div
                                                 key={movie.key}
                                                 className="group relative aspect-[3/4] rounded-md overflow-hidden bg-gray-800 cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                onClick={() => navigateToMovie(movie.key)}
+                                                onClick={() => handlePurchaseClick('block')}
                                                 role="button"
                                                 tabIndex={0}
-                                                aria-label={`View details for ${movie.title}`}
-                                                onKeyPress={(e) => e.key === 'Enter' && navigateToMovie(movie.key)}
+                                                aria-label={`Unlock block to watch ${movie.title}`}
+                                                onKeyPress={(e) => e.key === 'Enter' && handlePurchaseClick('block')}
                                             >
                                                 <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-2 sm:p-3">
-                                                    <h4 className="text-white text-xs sm:text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300">{movie.title}</h4>
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent flex flex-col items-center justify-center p-2 sm:p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-center">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white mb-2" viewBox="0 0 20 20" fill="currentColor">
+                                                      <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+                                                    </svg>
+                                                    <h4 className="text-white text-xs sm:text-sm font-semibold mb-1">{movie.title}</h4>
+                                                    <p className="text-purple-300 text-xs font-bold">Click to Unlock Block</p>
                                                 </div>
                                             </div>
                                         ))}
