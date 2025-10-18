@@ -19,6 +19,7 @@ import LoginPage from './components/LoginPage';
 import AccountPage from './components/AccountPage';
 import RokuGuidePage from './components/RokuGuidePage';
 import FestivalPage from './components/FestivalPage';
+// FIX: Corrected typo in the import path from './FilmpFestivalModule' to './FilmFestivalModule'.
 import FilmFestivalModule from './FilmFestivalModule';
 import DeveloperGuidePage from './components/DeveloperGuidePage';
 import AnalyticsPage from './components/AnalyticsPage';
