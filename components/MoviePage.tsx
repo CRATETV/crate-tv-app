@@ -14,6 +14,8 @@ import CastButton from './CastButton';
 import RokuBanner from './RokuBanner';
 import SquarePaymentModal from './SquarePaymentModal';
 
+declare const google: any; // Declare Google IMA SDK global
+
 interface MoviePageProps {
   movieKey: string;
 }
@@ -75,7 +77,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   
   // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
-  const [isVideoLoading, setIsVideoLoading] = useState(false);
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,16 +90,102 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [showSupportSuccess, setShowSupportSuccess] = useState(false);
 
+  // Ad State
+  const adContainerRef = useRef<HTMLDivElement>(null);
+  const adsManagerRef = useRef<any>(null);
+  const [isAdPlaying, setIsAdPlaying] = useState(false);
+  const [adError, setAdError] = useState<string | null>(null);
+
+  const playContent = useCallback(() => {
+    setIsAdPlaying(false);
+    if (videoRef.current) {
+        if (!hasTrackedViewRef.current && movie?.key) {
+            hasTrackedViewRef.current = true;
+            fetch('/api/track-view', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey: movie.key }),
+            }).catch(err => console.error("Failed to track view:", err));
+        }
+        videoRef.current.play().catch(e => console.error("Content play failed", e));
+    }
+  }, [videoRef, movie?.key]);
+  
+  const initializeAds = useCallback(() => {
+    if (!videoRef.current || !adContainerRef.current || playerMode !== 'full' || !isReleased || adsManagerRef.current || typeof google === 'undefined') {
+        if (playerMode === 'full') playContent(); // Play content directly if ads can't be initialized
+        return;
+    }
+    
+    const videoElement = videoRef.current;
+    const adContainer = adContainerRef.current;
+    setIsAdPlaying(true);
+    setAdError(null);
+
+    const adDisplayContainer = new google.ima.AdDisplayContainer(adContainer, videoElement);
+    const adsLoader = new google.ima.AdsLoader(adDisplayContainer);
+
+    adsLoader.addEventListener(
+        google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
+        (adsManagerLoadedEvent: any) => {
+            const adsManager = adsManagerLoadedEvent.getAdsManager(videoElement);
+            adsManagerRef.current = adsManager;
+
+            adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED, () => videoElement.pause());
+            adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED, playContent);
+            adsManager.addEventListener(google.ima.AdEvent.Type.ALL_ADS_COMPLETED, playContent);
+            adsManager.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, (adErrorEvent: any) => {
+                console.error('Ad Error:', adErrorEvent.getError());
+                setAdError('An ad could not be loaded. Starting film...');
+                playContent();
+            });
+            
+            try {
+                adsManager.init(videoElement.clientWidth, videoElement.clientHeight, google.ima.ViewMode.NORMAL);
+                adsManager.start();
+            } catch (adError) {
+                console.error("AdsManager could not be started", adError);
+                playContent();
+            }
+        },
+        false
+    );
+    
+    adsLoader.addEventListener(
+        google.ima.AdErrorEvent.Type.AD_ERROR,
+        (adErrorEvent: any) => {
+            console.error('Ad Loader Error:', adErrorEvent.getError());
+            setAdError('An ad could not be loaded. Starting film...');
+            playContent();
+        },
+        false
+    );
+
+    const adsRequest = new google.ima.AdsRequest();
+    // Using a sample skippable pre-roll tag. This would come from AdSense.
+    adsRequest.adTagUrl = 'https://storage.googleapis.com/interactive-media-ads/ad-tags/unknown/vast_skippable.xml';
+    adsRequest.linearAdSlotWidth = videoElement.clientWidth;
+    adsRequest.linearAdSlotHeight = videoElement.clientHeight;
+
+    adsLoader.requestAds(adsRequest);
+  }, [playerMode, isReleased, playContent]);
+  
+  useEffect(() => {
+    return () => {
+        if (adsManagerRef.current) {
+            adsManagerRef.current.destroy();
+            adsManagerRef.current = null;
+        }
+    };
+  }, []);
+
   useEffect(() => {
     setIsLoading(true);
     const params = new URLSearchParams(window.location.search);
     const env = params.get('env');
     const stagingSession = sessionStorage.getItem('crateTvStaging');
     const stagingActive = env === 'staging' || stagingSession === 'true';
-
-    if (stagingActive) {
-      setIsStaging(true);
-    }
+    if (stagingActive) setIsStaging(true);
     
     const loadMovieData = async () => {
         try {
@@ -106,46 +193,25 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             setDataSource(source);
             setAllMovies(liveData.movies);
             setAllCategories(liveData.categories);
-
             const sourceMovie = liveData.movies[movieKey];
+
             if (sourceMovie) {
-              const movieData = { ...sourceMovie };
-               // Check if movie should be visible
-              const releaseDateTime = movieData.releaseDateTime ? new Date(movieData.releaseDateTime) : null;
+              const releaseDateTime = sourceMovie.releaseDateTime ? new Date(sourceMovie.releaseDateTime) : null;
               const released = !releaseDateTime || releaseDateTime <= new Date();
+              setIsReleased(released);
     
-              if (!released && !stagingActive) {
-                setIsReleased(false);
-              } else {
-                setIsReleased(true);
-              }
-    
-              // Initialize likes from local storage for this specific movie
-              const storedLikes = localStorage.getItem(`cratetv-${movieKey}-likes`);
-              if (storedLikes) {
-                movieData.likes = parseInt(storedLikes, 10);
-              } else {
-                movieData.likes = movieData.likes || 0;
-              }
-              setMovie(movieData);
-    
-              // Initialize liked set from local storage
               const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
-              if (storedLikedMovies) {
-                setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
-              }
+              if (storedLikedMovies) setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
     
-              // Handle play from URL
-              if (params.get('play') === 'true' && movieData.fullMovie && released) {
+              setMovie({ ...sourceMovie });
+    
+              if (params.get('play') === 'true' && sourceMovie.fullMovie && (released || stagingActive)) {
                 setPlayerMode('full');
-                setIsVideoLoading(true);
               } else {
                 setPlayerMode('poster');
               }
             } else {
-              // Handle movie not found, redirect to homepage
               window.location.href = '/';
-              return;
             }
         } catch (error) {
             console.error("Failed to load movie data:", error);
@@ -154,16 +220,26 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             setIsLoading(false);
         }
     };
-
     loadMovieData();
   }, [movieKey]);
+  
+  useEffect(() => {
+    if (playerMode === 'full' && isReleased) {
+        const timer = setTimeout(() => initializeAds(), 100);
+        return () => clearTimeout(timer);
+    } else {
+        if (adsManagerRef.current) {
+            adsManagerRef.current.destroy();
+            adsManagerRef.current = null;
+        }
+        setIsAdPlaying(false);
+    }
+  }, [playerMode, isReleased, initializeAds]);
 
   // SEO
   useEffect(() => {
     if (movie) {
         document.title = `${movie.title || 'Untitled Film'} | Crate TV`;
-        
-        // SEO update logic
         const synopsisText = (movie.synopsis || '').replace(/<br\s*\/?>/gi, ' ').trim();
         const pageUrl = window.location.href;
         setMetaTag('property', 'og:title', movie.title || 'Crate TV Film');
@@ -175,41 +251,25 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
  }, [movie]);
 
- // Effect to handle exiting full player with Escape key
  useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
-        if (event.key === 'Escape' && playerMode === 'full') {
-            handleExitPlayer();
-        }
+        if (event.key === 'Escape' && playerMode === 'full') handleExitPlayer();
     };
-
     document.addEventListener('keydown', handleEscKey);
-
-    return () => {
-        document.removeEventListener('keydown', handleEscKey);
-    };
+    return () => document.removeEventListener('keydown', handleEscKey);
 }, [playerMode]);
 
 
     const recommendedMovies = useMemo(() => {
         if (!movie) return [];
         const recommendedKeys = new Set<string>();
-        // FIX: Add explicit type 'Category' to the 'cat' parameter to resolve TS errors.
         const currentMovieCategories = Object.values(allCategories).filter((cat: Category) => cat.movieKeys.includes(movie.key));
-        
-        // FIX: Add explicit type 'Category' to the 'cat' parameter to resolve TS errors.
         currentMovieCategories.forEach((cat: Category) => {
           cat.movieKeys.forEach((key: string) => {
-            if (key !== movie.key) {
-              recommendedKeys.add(key);
-            }
+            if (key !== movie.key) recommendedKeys.add(key);
           });
         });
-
-        return Array.from(recommendedKeys)
-          .map(key => allMovies[key])
-          .filter(Boolean)
-          .slice(0, 7);
+        return Array.from(recommendedKeys).map(key => allMovies[key]).filter(Boolean).slice(0, 7);
       }, [movie, allMovies, allCategories]);
       
     const exitStaging = () => {
@@ -220,40 +280,21 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
 
     const handleSearchSubmit = (query: string) => {
-        if (query) {
-          window.location.href = `/?search=${encodeURIComponent(query)}`;
-        }
+        if (query) window.location.href = `/?search=${encodeURIComponent(query)}`;
     };
     
     const handleMovieEnd = () => {
-      // Navigate to the homepage
       window.history.pushState({}, '', '/');
       window.dispatchEvent(new Event('pushstate'));
     };
 
     const handleExitPlayer = () => {
         setPlayerMode('poster');
-        setIsVideoLoading(false);
     };
     
     const handlePaymentSuccess = () => {
         setShowSupportSuccess(true);
         setTimeout(() => setShowSupportSuccess(false), 3000);
-    };
-
-    const handlePlay = () => {
-        if (!hasTrackedViewRef.current && movie?.key) {
-            hasTrackedViewRef.current = true; // Set immediately to prevent multiple calls
-            // Fire-and-forget the tracking request
-            fetch('/api/track-view', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ movieKey: movie.key }),
-            }).catch(err => {
-                // Log silently, don't bother the user if tracking fails
-                console.error("Failed to track view:", err);
-            });
-        }
     };
 
     if (isLoading || !movie) {
@@ -274,55 +315,31 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
             <main className="flex-grow pt-16">
                 <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container">
-                    {/* If the video is playing, just show the video player. */}
-                    {isReleased && playerMode === 'full' ? (
+                    <div ref={adContainerRef} className="absolute inset-0 z-20 pointer-events-none" />
+                    
+                    {playerMode === 'full' && (
+                        <video 
+                            ref={videoRef} 
+                            src={movie.fullMovie} 
+                            className="w-full h-full"
+                            controls={!isAdPlaying}
+                            playsInline
+                            onContextMenu={(e) => e.preventDefault()} 
+                            controlsList="nodownload"
+                            onEnded={handleMovieEnd}
+                        />
+                    )}
+
+                    {playerMode !== 'full' && (
                         <>
-                            <video 
-                                ref={videoRef} 
-                                src={movie.fullMovie} 
-                                className={`w-full h-full transition-opacity ${isVideoLoading ? 'opacity-0' : 'opacity-100'}`}
-                                controls 
-                                autoPlay 
-                                playsInline
-                                preload="metadata"
-                                onPlay={handlePlay}
-                                onContextMenu={(e) => e.preventDefault()} 
-                                controlsList="nodownload"
-                                onEnded={handleMovieEnd}
-                                onCanPlay={() => setIsVideoLoading(false)}
-                            />
-                             {isVideoLoading && (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-md animate-[fadeIn_0.3s_ease-out]">
-                                    <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" />
-                                    <div className="relative text-center">
-                                        <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-white mb-4"></div>
-                                        <p className="text-white text-lg font-semibold">Preparing your film...</p>
-                                    </div>
-                                </div>
-                            )}
-                            <CastButton videoElement={videoRef.current} />
-                            <button
-                                onClick={handleExitPlayer}
-                                className="absolute top-4 right-16 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white z-10"
-                                aria-label="Exit video player"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            {/* In all other cases (poster mode or 'coming soon'), show the blurred background and the content. */}
                             <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" onContextMenu={(e) => e.preventDefault()} />
                             
                             {isReleased ? (
-                                // This is the POSTER mode state
                                 <div className="relative w-full h-full flex items-center justify-center">
                                     <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                                     <button 
-                                        onClick={() => { setPlayerMode('full'); setIsVideoLoading(true); }}
+                                        onClick={() => setPlayerMode('full')}
                                         className="absolute text-white bg-black/50 rounded-full p-4 hover:bg-black/70 transition-colors"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" viewBox="0 0 20 20" fill="currentColor">
@@ -331,7 +348,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     </button>
                                 </div>
                             ) : (
-                                // This is the COMING SOON state
                                 <div className="relative w-full h-full flex flex-col items-center justify-center text-center p-4">
                                     <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Coming Soon</h2>
                                     {movie.releaseDateTime && (
@@ -346,6 +362,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 </div>
                             )}
                         </>
+                    )}
+                    
+                    {playerMode === 'full' && <CastButton videoElement={videoRef.current} />}
+                    {playerMode === 'full' && (
+                        <button
+                            onClick={handleExitPlayer}
+                            className="absolute top-4 right-16 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white z-30"
+                            aria-label="Exit video player"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
                     )}
                 </div>
 

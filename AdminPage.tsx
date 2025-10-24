@@ -8,6 +8,7 @@ import { listenToAllAdminData, saveMovie, deleteMovie, saveFestivalConfig, saveF
 import LoadingSpinner from './components/LoadingSpinner';
 import CategoryEditor from './components/CategoryEditor';
 import AboutEditor from './components/AboutEditor';
+import FallbackGenerator from './components/FallbackGenerator';
 
 // Helper to format the current date/time for a datetime-local input
 const getLocalDatetimeString = () => {
@@ -38,6 +39,10 @@ const AdminPage: React.FC = () => {
   
   const [dataSource, setDataSource] = useState<'firebase' | 'fallback' | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  
+  // State for Tools tab
+  const [isGeneratingRoku, setIsGeneratingRoku] = useState(false);
+  const [rokuGenerationError, setRokuGenerationError] = useState('');
 
   useEffect(() => {
     const isLocalDev = window.location.hostname === 'localhost';
@@ -326,6 +331,31 @@ const AdminPage: React.FC = () => {
         setPublishError(msg);
     }
   };
+  
+  const handleGenerateRokuPackage = async () => {
+        setIsGeneratingRoku(true);
+        setRokuGenerationError('');
+        try {
+            const response = await fetch('/api/generate-roku-zip');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate Roku package.');
+            }
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cratv.zip';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            setRokuGenerationError(error instanceof Error ? error.message : 'An unknown error occurred.');
+        } finally {
+            setIsGeneratingRoku(false);
+        }
+    };
 
   if (!isAuthenticated) {
     return (
@@ -455,8 +485,11 @@ const AdminPage: React.FC = () => {
                         <button onClick={() => setActiveTab('festival')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'festival' ? 'border-red-500 text-red-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'}`}>
                             Film Festival
                         </button>
+                        <button onClick={() => setActiveTab('tools')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'tools' ? 'border-red-500 text-red-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'}`}>
+                            Tools
+                        </button>
                         <button onClick={() => navigate('/analytics')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'}`}>
-                            Analytics & Tools
+                            Analytics
                         </button>
                     </nav>
                 </div>
@@ -520,6 +553,32 @@ const AdminPage: React.FC = () => {
                         onConfigChange={setFestivalConfig}
                         onSave={handleSaveFestival}
                         onPublishLiveStatus={handleSetLiveStatus}
+                    />
+                </div>
+            )}
+            
+            {activeTab === 'tools' && (
+                 <div className="space-y-8">
+                    <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
+                        <h2 className="text-2xl font-bold text-purple-400 mb-3">Automated Roku Channel Packager</h2>
+                        <p className="text-sm text-gray-400 mb-4 max-w-3xl">
+                        Generate a complete, ready-to-upload Roku channel ZIP file. The channel will be automatically configured to pull movie data from your live website, ensuring they always stay in sync.
+                        </p>
+                        <button
+                        onClick={handleGenerateRokuPackage}
+                        disabled={isGeneratingRoku}
+                        className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white font-bold py-2 px-6 rounded-md transition-colors"
+                        >
+                        {isGeneratingRoku ? 'Generating...' : 'Generate & Download Roku ZIP'}
+                        </button>
+                        {rokuGenerationError && <p className="text-red-500 text-sm mt-2">{rokuGenerationError}</p>}
+                    </div>
+
+                    <FallbackGenerator
+                        movies={movies}
+                        categories={categories}
+                        festivalData={festivalData}
+                        festivalConfig={festivalConfig}
                     />
                 </div>
             )}

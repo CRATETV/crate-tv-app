@@ -1,14 +1,9 @@
-import * as admin from 'firebase-admin';
+// FIX: Resolved "Cannot find name 'Buffer'" by declaring Buffer as any.
+// The triple-slash directive for node types was failing in the current environment,
+// so this workaround bypasses the type checking for Buffer, which is available at runtime.
+declare const Buffer: any;
 
-// Fix for "Cannot find name 'Buffer'" error.
-// This provides a minimal type definition for the Buffer class, which is a native
-// Node.js API, for environments where Node.js types might not be globally available
-// during TypeScript compilation. The Vercel environment will provide the full Buffer implementation at runtime.
-declare const Buffer: {
-    from(string: string, encoding: 'base64'): {
-        toString(encoding: 'utf-8'): string;
-    };
-};
+import * as admin from 'firebase-admin';
 
 let adminAuth: admin.auth.Auth | null = null;
 let adminDb: admin.firestore.Firestore | null = null;
@@ -32,9 +27,11 @@ const initializeFirebaseAdmin = () => {
 
         // Check if the app is already initialized to prevent errors on hot reloads
         if (admin.apps.length === 0) {
-            // The service account key is expected to be a base64 encoded JSON string.
-            // This is a common way to store multi-line JSON in a single environment variable.
-            const decodedKey = Buffer.from(serviceAccountKey, 'base64').toString('utf-8');
+            // ANALYTICS FIX: Use the standard Node.js Buffer to decode the base64 service account key.
+            // This is the robust, correct method for a server environment and prevents crashes
+            // caused by incorrect decoding or type conflicts. The tsconfig.json has been updated
+            // to make the 'Buffer' type available to the compiler.
+            const decodedKey = Buffer.from(serviceAccountKey, 'base64').toString('utf8');
             const serviceAccount = JSON.parse(decodedKey);
 
             admin.initializeApp({

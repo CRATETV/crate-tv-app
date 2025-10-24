@@ -1,5 +1,5 @@
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
+import { getAuth, Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, Firestore } from 'firebase/firestore';
 import { User } from '../types';
 
@@ -28,6 +28,9 @@ export const initializeFirebaseAuth = async (): Promise<Auth | null> => {
         }
         
         authInstance = getAuth(app);
+        // Set persistence to 'local' to keep users signed in across sessions.
+        await setPersistence(authInstance, browserLocalPersistence);
+        
         db = getFirestore(app); // Initialize Firestore
         return authInstance;
     } catch (error) {

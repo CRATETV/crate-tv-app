@@ -121,7 +121,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Oskar Pierre Castro",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/That+Loud+.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/That%20Loud-web-optimized.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/That%20Loud.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/That%20Loud.png",
     "likes": 0
@@ -160,7 +160,7 @@ export const moviesData: Record<string, Movie> = {
   "almasvows": {
     "key": "almasvows",
     "title": "Alma's Vows",
-    "synopsis": "Alma struggles to move on after the death of her fiancé..",
+    "synopsis": "Alma struggles to move on after the death of her fiancé.",
     "cast": [
       {
         "name": "Alana Hill",
@@ -965,7 +965,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Michelle Reale-Opalesky",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results+.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results-web-optimized.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results.png",
     "likes": 0
@@ -986,6 +986,36 @@ export const moviesData: Record<string, Movie> = {
         "photo": "",
         "bio": "",
         "highResPhoto": ""
+      },
+      {
+        "name": "Alana Hill",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana+Hill+2+.png",
+        "bio": "Actress Alana Hill has deeply moved audiences with her compelling performances, showcasing a beautiful blend of emotional depth and impressive versatility.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana+Hill+2+.png"
+      },
+      {
+        "name": "Tev",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Daniel J. River",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Eric Brizuela",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Ajinkya Dhage",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/AJ+Photo.png",
+        "bio": "With a strong foundation in the Meisner technique, Ajinkya has honed his craft through years of dedicated study and practice, becoming a prominent figure in the local theater scene.",
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Aj+bio+photo.png"
       }
     ],
     "director": "Shaunpaul Costello, Seth Sharpe",
@@ -1011,11 +1041,13 @@ export const moviesData: Record<string, Movie> = {
         "photo": "",
         "bio": "",
         "highResPhoto": ""
-      }
-      "name": "Shaunpaul Costello",
+      },
+      {
+        "name": "Shaunpaul Costello",
         "photo": "",
         "bio": "",
         "highResPhoto": ""
+      }
     ],
     "director": "Seth Sharpe",
     "trailer": "",
@@ -1040,11 +1072,13 @@ export const moviesData: Record<string, Movie> = {
         "photo": "",
         "bio": "",
         "highResPhoto": ""
-      }
-      "name": "Tevin La'Vea",
+      },
+      {
+        "name": "Tevin La'Vea",
         "photo": "",
         "bio": "",
         "highResPhoto": ""
+      }
     ],
     "director": "Shaunpaul Costello",
     "trailer": "",

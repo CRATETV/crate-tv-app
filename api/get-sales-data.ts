@@ -93,17 +93,13 @@ export async function POST(request: Request) {
                 },
             });
             
-            // ROBUSTNESS FIX: Check if the response is OK before attempting to parse JSON.
-            // This prevents the function from crashing on non-JSON error responses (like HTML pages).
             if (!response.ok) {
                 let errorMsg = 'Failed to fetch payments from Square.';
                 try {
-                    // Try to get a structured error message from Square's API
                     const errorData = await response.json();
                     errorMsg = errorData.errors?.[0]?.detail || errorMsg;
                 } catch (e) {
-                    // If parsing fails, it means Square sent a non-JSON response (e.g., HTML error)
-                    errorMsg = `Square API returned a non-JSON error (Status: ${response.status}).`;
+                    errorMsg = `Square API returned a non-JSON error (Status: ${response.status}). This often means the API token is invalid or expired.`;
                 }
                 throw new Error(errorMsg);
             }
@@ -131,6 +127,10 @@ export async function POST(request: Request) {
             viewsSnapshot.forEach(doc => {
                 viewCounts[doc.id] = doc.data().count || 0;
             });
+        }
+        
+        if (!adminAuth) {
+            throw new Error("Could not connect to Firebase to fetch user data. This is likely due to a missing or misconfigured FIREBASE_SERVICE_ACCOUNT_KEY environment variable. Please check your server configuration.");
         }
 
         if (adminAuth) {

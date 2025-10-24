@@ -78,7 +78,15 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
       style={{ top: `${topOffset}px` }}
     >
       <div className="flex items-center gap-2 md:gap-4">
-        {isLoginPage ? (
+        {isLandingPage ? (
+            <a 
+              href="/about" 
+              onClick={(e) => handleNavigate(e, '/about')} 
+              className={`${linkBaseStyles} ${inactiveLinkStyles}`}
+            >
+              About Us
+            </a>
+        ) : isLoginPage ? (
             <a 
               href="/about" 
               onClick={(e) => handleNavigate(e, '/about')} 

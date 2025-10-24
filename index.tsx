@@ -115,9 +115,25 @@ const AppRouter: React.FC = () => {
 
 // Manages the intro video display logic.
 const Root: React.FC = () => {
-  const [showIntro, setShowIntro] = useState(true);
+  // Initialize state based on whether the user has seen the intro before.
+  const [showIntro, setShowIntro] = useState(() => {
+    try {
+      // If 'hasSeenIntro' is in localStorage, we don't show the intro.
+      return !localStorage.getItem('hasSeenIntro');
+    } catch (e) {
+      // If localStorage is unavailable (e.g., private browsing), default to showing intro.
+      console.warn("Could not read from localStorage, showing intro by default.", e);
+      return true;
+    }
+  });
 
   const handleIntroEnd = () => {
+    try {
+      // Set the flag in localStorage so the intro doesn't show on future visits.
+      localStorage.setItem('hasSeenIntro', 'true');
+    } catch (e) {
+      console.warn("Could not write to localStorage to save intro state.", e);
+    }
     setShowIntro(false);
   };
 

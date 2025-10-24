@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { AnalyticsData, Movie, Category, FestivalDay, FestivalConfig } from '../types';
+import { AnalyticsData, Movie } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
-import FallbackGenerator from './FallbackGenerator';
 
 // Helper to format currency from cents
 const formatCurrency = (amountInCents: number) => {
@@ -25,15 +24,10 @@ const AnalyticsPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [isGeneratingRoku, setIsGeneratingRoku] = useState(false);
-    const [rokuGenerationError, setRokuGenerationError] = useState('');
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
-    // State for all live data needed by child components
+    // State for movie data needed for the performance table
     const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
-    const [allCategories, setAllCategories] = useState<Record<string, Category>>({});
-    const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
-    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
 
     useEffect(() => {
         const checkAuthAndFetchData = async () => {
@@ -43,19 +37,14 @@ const AnalyticsPage: React.FC = () => {
             if (isAuthed && storedPassword) {
                 setIsAuthenticated(true);
 
-                // Fetch live data first, as it's needed for tools regardless of analytics
+                // Fetch live movie data first for the performance table
                 try {
                     const liveDataRes = await fetchAndCacheLiveData();
-                    const liveData = liveDataRes.data;
-                    setAllMovies(liveData.movies);
-                    setAllCategories(liveData.categories);
-                    setFestivalData(liveData.festivalData);
-                    setFestivalConfig(liveData.festivalConfig);
+                    setAllMovies(liveDataRes.data.movies);
                 } catch (liveDataError) {
-                    const message = liveDataError instanceof Error ? liveDataError.message : "Failed to load core application data.";
-                    setError(message);
+                    setError(liveDataError instanceof Error ? liveDataError.message : "Failed to load movie data.");
                     setIsLoading(false);
-                    return; // Stop if core data fails, as tools depend on it
+                    return;
                 }
 
                 // Then, fetch analytics data
@@ -122,31 +111,6 @@ const AnalyticsPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
-    const handleGenerateRokuPackage = async () => {
-        setIsGeneratingRoku(true);
-        setRokuGenerationError('');
-        try {
-            const response = await fetch('/api/generate-roku-zip');
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to generate Roku package.');
-            }
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'cratv.zip';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-        } catch (error) {
-            setRokuGenerationError(error instanceof Error ? error.message : 'An unknown error occurred.');
-        } finally {
-            setIsGeneratingRoku(false);
-        }
-    };
-
     if (isLoading) {
         return <LoadingSpinner />;
     }
@@ -155,7 +119,7 @@ const AnalyticsPage: React.FC = () => {
         return (
             <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
                 <div className="w-full max-w-sm bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
-                    <h1 className="text-2xl font-bold mb-6 text-center text-white">Analytics & Tools Access</h1>
+                    <h1 className="text-2xl font-bold mb-6 text-center text-white">Analytics Access</h1>
                     <form onSubmit={handleAuth}>
                         <div className="relative">
                             <input
@@ -186,7 +150,7 @@ const AnalyticsPage: React.FC = () => {
                         </div>
                         {loginError && <p className="mt-2 text-sm text-red-500">{loginError}</p>}
                         <button type="submit" className="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
-                            Access Dashboard
+                            Access Analytics
                         </button>
                     </form>
                 </div>
@@ -206,7 +170,7 @@ const AnalyticsPage: React.FC = () => {
     return (
         <div className="flex flex-col min-h-screen bg-gray-900 text-white">
             <header className="bg-gray-800 p-4 flex justify-between items-center shadow-md sticky top-0 z-10">
-                <h1 className="text-xl font-bold">Analytics & Tools</h1>
+                <h1 className="text-xl font-bold">Analytics Dashboard</h1>
                 <a 
                     href="/admin" 
                     onClick={(e) => handleNavigate(e, '/admin')}
@@ -221,12 +185,12 @@ const AnalyticsPage: React.FC = () => {
                     
                     {error && (
                         <div className="bg-red-800 border border-red-600 text-white p-4 rounded-lg mb-8">
-                            <h2 className="font-bold">Error Loading Data</h2>
+                            <h2 className="font-bold">Error Loading Analytics Data</h2>
                             <p>{error}</p>
                         </div>
                     )}
                     
-                    {analyticsData && (
+                    {analyticsData ? (
                         <>
                             {/* Stat Cards */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
@@ -344,33 +308,12 @@ const AnalyticsPage: React.FC = () => {
                                 </div>
                             </div>
                         </>
-                    )}
-                     {/* Tools Section */}
-                    <div className="mt-8 space-y-8">
-                        {/* Roku Packager */}
-                        <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
-                            <h2 className="text-2xl font-bold text-purple-400 mb-3">Automated Roku Channel Packager</h2>
-                            <p className="text-sm text-gray-400 mb-4 max-w-3xl">
-                            Generate a complete, ready-to-upload Roku channel ZIP file. The channel will be automatically configured to pull movie data from your live website, ensuring they always stay in sync.
-                            </p>
-                            <button
-                            onClick={handleGenerateRokuPackage}
-                            disabled={isGeneratingRoku}
-                            className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white font-bold py-2 px-6 rounded-md transition-colors"
-                            >
-                            {isGeneratingRoku ? 'Generating...' : 'Generate & Download Roku ZIP'}
-                            </button>
-                            {rokuGenerationError && <p className="text-red-500 text-sm mt-2">{rokuGenerationError}</p>}
+                    ) : (
+                         <div className="text-center py-16">
+                            <h2 className="text-2xl font-bold">No Analytics Data to Display</h2>
+                            <p className="text-gray-400 mt-2">There is no sales or user data to report yet.</p>
                         </div>
-
-                        {/* Fallback Generator */}
-                        <FallbackGenerator
-                            movies={allMovies}
-                            categories={allCategories}
-                            festivalData={festivalData}
-                            festivalConfig={festivalConfig}
-                        />
-                    </div>
+                    )}
                 </div>
             </main>
         </div>

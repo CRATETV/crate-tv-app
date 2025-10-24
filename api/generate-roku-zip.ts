@@ -65,7 +65,7 @@ export async function GET(request: Request) {
 title=Crate TV
 major_version=1
 minor_version=0
-build_version=2
+build_version=3
 # Channel Artwork
 mm_icon_focus_hd=pkg:/images/logo_400x90.png
 mm_icon_side_hd=pkg:/images/logo_400x90.png
@@ -127,11 +127,22 @@ End Sub
         <Group id="mainGroup" visible="false">
             <Group id="heroGroup">
                 <Poster id="heroPoster" width="1920" height="600" />
-                <Rectangle id="gradientOverlay" width="1920" height="600" color="0x00000000">
-                    <color stopOffset="0.0" color="0x00000000" />
-                    <color stopOffset="0.4" color="0x00000000" />
-                    <color stopOffset="1.0" color="0x141414FF" />
-                </Rectangle>
+                
+                <!-- ROKU FIX: Replaced the invalid gradient implementation with a standard, safe one. -->
+                <!-- This poster provides a semi-transparent black overlay for text readability. -->
+                <Poster
+                    width="1200"
+                    height="600"
+                    color="0x000000B3" />
+
+                <!-- This poster provides a vertical gradient to blend the hero into the background. -->
+                <Poster
+                    width="1920"
+                    height="250"
+                    translation="[0, 350]"
+                    color="0x14141400"
+                    blendColor="0x141414FF" />
+
                 <Group id="heroTextGroup" translation="[90, 350]">
                     <Label id="heroTitle" text="" width="1000">
                         <font role="font" size="52" />
@@ -210,7 +221,7 @@ Sub ProcessData(data as String)
                 row.itemSpacing = [20, 0]
                 row.showRowLabel = false
                 row.vertFocusAnimationStyle = "fixedFocus"
-                row.rowFocusAnimationStyle = "fixedFocus"
+                row.rowFocusAnimationStyle = "floatingFocus"
                 
                 rowContent = CreateObject("roSGNode", "ContentNode")
                 for each movie in category.movies
@@ -227,8 +238,11 @@ Sub ProcessData(data as String)
                 row.observeField("itemFocused", "onItemFocused")
                 row.observeField("itemSelected", "onCarouselItemSelected")
                 
+                ' ROKU FIX: Use a custom field to reliably identify the hero controller row.
+                ' Direct object comparison (e.g., if rowlist = m.heroControllerRow) is not reliable.
                 if i = 0
                     m.heroControllerRow = row
+                    row.addFields({isHeroController: true})
                 end if
                 
                 yOffset = yOffset + 420
@@ -257,21 +271,30 @@ End Sub
 
 Sub UpdateHero(movieData as object)
     if movieData <> invalid
-        m.heroPoster.uri = movieData.heroImage
+        if movieData.heroImage <> invalid AND movieData.heroImage <> ""
+            m.heroPoster.uri = movieData.heroImage
+        else 
+            m.heroPoster.uri = ""
+        end if
         m.heroTitle.text = movieData.title
         m.heroSynopsis.text = movieData.description
+    else
+        m.heroPoster.uri = ""
+        m.heroTitle.text = ""
+        m.heroSynopsis.text = ""
     end if
 End Sub
 
 Sub onItemFocused(event as object)
     rowlist = event.getRoSGNode()
-    focusedIndex = event.getData()
-    focusedMovie = rowlist.content.getChild(focusedIndex[1])
-
-    if focusedMovie <> invalid
-      if rowlist = m.heroControllerRow
-          UpdateHero(focusedMovie)
-      end if
+    
+    ' ROKU FIX: Check the custom boolean field for a reliable match.
+    if rowlist.isHeroController = true
+        focusedIndex = event.getData()
+        focusedMovie = rowlist.content.getChild(focusedIndex[1])
+        if focusedMovie <> invalid
+            UpdateHero(focusedMovie)
+        end if
     end if
 End Sub
 
@@ -409,6 +432,10 @@ End Sub
 
 Function onKeyEvent(key as String, press as Boolean) as Boolean
     if press and key = "back"
+        if m.fetcher <> invalid
+            ' Stop any pending network request to prevent callbacks on a closed scene
+            m.fetcher.cancel()
+        end if
         m.top.close = true
         return true
     end if
@@ -417,48 +444,29 @@ End Function
         `.trim();
         componentsFolder?.file('VideoPlayerScene.brs', videoPlayerSceneBrs);
         
+        // ROKU FIX: Replace the complex MoviePoster component with a super simple, robust version
+        // that extends Poster directly. This eliminates the Group/scaling/focus logic that was
+        // the likely source of a silent SceneGraph crash.
         const moviePosterXml = `
 <?xml version="1.0" encoding="utf-8" ?>
-<component name="MoviePoster" extends="Group">
+<component name="MoviePoster" extends="Poster">
     <script type="text/brightscript" uri="pkg:/components/MoviePoster.brs" />
     <interface>
         <field id="itemContent" type="node" onChange="onContentChange" />
     </interface>
-    <children>
-        <Poster
-            id="poster"
-            width="240"
-            height="360"
-            loadDisplayMode="scaleToFit"
-        />
-    </children>
 </component>
         `.trim();
         componentsFolder?.file('MoviePoster.xml', moviePosterXml);
         
         const moviePosterBrs = `
-Sub init()
-    m.poster = m.top.findNode("poster")
-    ' Observe the focusPercent field, which is a value from 0.0 to 1.0
-    ' indicating if the item has focus in a RowList.
-    m.top.observeField("focusPercent", "onFocusChange")
-End Sub
-
+' ROKU FIX: This is a minimal, robust implementation to prevent crashes.
+' It simply takes the data from the RowList and sets its own URI.
 Sub onContentChange()
     itemContent = m.top.itemContent
     if itemContent <> invalid AND itemContent.HDPosterUrl <> invalid
-        m.poster.uri = itemContent.HDPosterUrl
-    end if
-End Sub
-
-Sub onFocusChange()
-    focusPercent = m.top.focusPercent
-    ' A simple, robust scale effect applied directly to the component's group.
-    ' This replaces the more complex and error-prone Animation node.
-    if focusPercent = 1.0
-        m.top.scale = [1.05, 1.05]
+        m.top.uri = itemContent.HDPosterUrl
     else
-        m.top.scale = [1.0, 1.0]
+        m.top.uri = "" ' Explicitly clear if no poster is available
     end if
 End Sub
         `.trim();

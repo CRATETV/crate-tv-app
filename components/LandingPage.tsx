@@ -63,7 +63,7 @@ const LandingPage: React.FC = () => {
       <Header
         searchQuery=""
         onSearch={() => {}}
-        isScrolled={false}
+        isScrolled={true}
         onMobileSearchClick={() => {}}
         showSearch={false}
         isLandingPage={true}

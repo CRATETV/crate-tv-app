@@ -260,29 +260,39 @@ const App: React.FC = () => {
     setSelectedActor(null);
   };
   
+  // BUG FIX: Moved localStorage side effect into a dedicated useEffect hook.
+  // This is the correct React pattern for synchronizing state with external systems,
+  // preventing race conditions and ensuring reliable data persistence.
+  useEffect(() => {
+    try {
+      localStorage.setItem('cratetv-likedMovies', JSON.stringify(Array.from(likedMovies)));
+    } catch (e) {
+      console.warn("Could not write liked movies to localStorage.", e);
+    }
+  }, [likedMovies]);
+
   const toggleLikeMovie = useCallback((movieKey: string) => {
     const newLikedMovies = new Set(likedMovies);
     let likesChange = 0;
 
     if (newLikedMovies.has(movieKey)) {
-      newLikedMovies.delete(movieKey);
-      likesChange = -1;
+        newLikedMovies.delete(movieKey);
+        likesChange = -1;
     } else {
-      newLikedMovies.add(movieKey);
-      likesChange = 1;
+        newLikedMovies.add(movieKey);
+        likesChange = 1;
     }
-
     setLikedMovies(newLikedMovies);
-    localStorage.setItem('cratetv-likedMovies', JSON.stringify(Array.from(newLikedMovies)));
 
-    // Update the likes count in the main movies state
+    // Update the likes count in the main movies state for immediate UI feedback.
+    // This state change is temporary and not persisted; the 'likedMovies' set is the source of truth.
     setMovies(prevMovies => {
-      const updatedMovie = { 
-        ...prevMovies[movieKey], 
-        likes: Math.max(0, (prevMovies[movieKey].likes || 0) + likesChange) 
-      };
-      localStorage.setItem(`cratetv-${movieKey}-likes`, updatedMovie.likes.toString());
-      return { ...prevMovies, [movieKey]: updatedMovie };
+        if (!prevMovies[movieKey]) return prevMovies;
+        const updatedMovie = { 
+            ...prevMovies[movieKey], 
+            likes: Math.max(0, (prevMovies[movieKey].likes || 0) + likesChange) 
+        };
+        return { ...prevMovies, [movieKey]: updatedMovie };
     });
   }, [likedMovies]);
   
