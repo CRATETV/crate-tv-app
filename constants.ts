@@ -121,7 +121,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Oskar Pierre Castro",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/That%20Loud-web-optimized.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/That+Loud+.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/That%20Loud.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/That%20Loud.png",
     "likes": 0
@@ -160,7 +160,7 @@ export const moviesData: Record<string, Movie> = {
   "almasvows": {
     "key": "almasvows",
     "title": "Alma's Vows",
-    "synopsis": "Alma struggles to move on after the death of her fiancé.",
+    "synopsis": "Alma struggles to move on after the death of her fiancé..",
     "cast": [
       {
         "name": "Alana Hill",
@@ -965,7 +965,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Michelle Reale-Opalesky",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results-web-optimized.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results+.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results.png",
     "likes": 0
@@ -973,49 +973,53 @@ export const moviesData: Record<string, Movie> = {
   "slap": {
     "key": "slap",
     "title": "Slap",
-    "synopsis": "A moment of frustration leads to an impulsive act, forcing two people to confront the unspoken tensions in their relationship.",
+    "synopsis": "One unforgettable night of debauchery, poor decisions,  comes to an abrupt, stinging end with a single, perfectly-timed SLAP.",
     "cast": [
       {
-        "name": "Michelle Reale-Opalesky",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg",
-        "bio": "Michelle Reale-Opalesky is a captivating actor with a remarkable range. She effortlessly inhabits diverse roles and seamlessly transitions between drama and comedy.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg"
+        "name": "Shaunpaul Costello",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
       },
       {
-        "name": "David Auspitz",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png",
-        "bio": "David Auspitz is a versatile actor with a knack for both comedic and dramatic roles. He brings a unique charm to every character he portrays, making him a beloved figure in the industry.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png"
+        "name": "Seth Sharpe",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
       }
     ],
-    "director": "Sarah Morrison-Cleary",
+    "director": "Shaunpaul Costello, Seth Sharpe",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/SLAP+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap+poster.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Slap.png",
     "likes": 0
   },
   "theneighbours": {
     "key": "theneighbours",
-    "title": "The Neighbours",
-    "synopsis": "A young woman's quiet evening takes a terrifying turn when she's drawn into a domestic dispute in the apartment next door.",
+    "title": " Neighbours",
+    "synopsis": "A comedic drama with a dark twist.",
     "cast": [
       {
-        "name": "Alana Hill",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana+Hill+2+.png",
-        "bio": "Actress Alana Hill has deeply moved audiences with her compelling performances, showcasing a beautiful blend of emotional depth and impressive versatility.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana+Hill+2+.png"
+        "name": "Auden Wyle",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
       },
       {
-        "name": "David Auspitz",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png",
-        "bio": "David Auspitz is a versatile actor with a knack for both comedic and dramatic roles. He brings a unique charm to every character he portrays, making him a beloved figure in the industry.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png"
+        "name": "Julia Davo",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
       }
+      "name": "Shaunpaul Costello",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
     ],
-    "director": "Alana Hill",
+    "director": "Seth Sharpe",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/the+neighbours.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/NEIGHBORS+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/the+neighbors+poster+.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/The+Neighbours.png",
     "likes": 0
@@ -1023,22 +1027,26 @@ export const moviesData: Record<string, Movie> = {
   "twopeasinapod": {
     "key": "twopeasinapod",
     "title": "Two Peas in a Pod",
-    "synopsis": "Two quirky individuals find an unexpected connection, proving that sometimes the oddest pairs are the most perfect fit.",
+    "synopsis": "If you want to smoke with the big dogs, you have to bark with the big dogs first.",
     "cast": [
       {
-        "name": "Salome Denoon",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png",
-        "bio": "Salome Denoon is a versatile artist whose creative pursuits span performance, writing, editing, and digital media. As an actress, she has graced both stage and screen. She also brings her talents to the digital realm as the developer of Crate TV.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
+        "name": "Shaunpaul Costello",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
       },
       {
-        "name": "Joshua Daniel",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png",
-        "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png"
+        "name": "Cal Plohoros",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
       }
+      "name": "Tevin La'Vea",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
     ],
-    "director": "Joshua Daniel",
+    "director": "Shaunpaul Costello",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+in+a+Pod.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+peas+in+a+pod+poster+.png",
@@ -1070,6 +1078,7 @@ export const moviesData: Record<string, Movie> = {
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/TedAndNatalie.png",
     "likes": 0
   },
+  
   "atriptothemoon": {
     "key": "atriptothemoon",
     "title": "A Trip to the Moon",
