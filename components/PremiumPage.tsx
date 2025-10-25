@@ -20,6 +20,7 @@ const PremiumPage: React.FC = () => {
     const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
+    // FIX: Destructure 'subscribe' from useAuth to handle premium subscriptions.
     const { user, subscribe } = useAuth();
 
     useEffect(() => {
@@ -92,6 +93,7 @@ const PremiumPage: React.FC = () => {
                         <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-8">
                             Get exclusive access to our entire library of premium films, extended director's cuts, and special features for just $4.99/month.
                         </p>
+                        {/* FIX: Check for isPremiumSubscriber property on user object. */}
                         {!user?.isPremiumSubscriber && (
                             <button 
                                 onClick={handleSubscribe} 
@@ -106,6 +108,7 @@ const PremiumPage: React.FC = () => {
                 <div className="max-w-7xl mx-auto p-4 sm:p-8 md:p-12">
                     <h2 className="text-3xl font-bold text-white mb-6">Exclusive Premium Content</h2>
                     
+                    {/* FIX: Check for isPremiumSubscriber property on user object. */}
                     {user?.isPremiumSubscriber ? (
                          premiumMovies.length > 0 ? (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
@@ -122,11 +125,13 @@ const PremiumPage: React.FC = () => {
                          <div className="relative grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
                              {premiumMovies.slice(0, 12).map(movie => (
                                 <div key={movie.key} className="opacity-50">
-                                    <MovieCard movie={movie} onSelectMovie={() => {}} />
+                                    {/* FIX: Allow non-subscribers to open the details modal. */}
+                                    <MovieCard movie={movie} onSelectMovie={handleSelectMovie} />
                                 </div>
                             ))}
-                             <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/80 to-transparent flex items-end justify-center p-8">
-                                <div className="text-center">
+                             {/* FIX: Make the overlay non-blocking so cards can be clicked. */}
+                             <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/80 to-transparent flex items-end justify-center p-8 pointer-events-none">
+                                <div className="text-center pointer-events-auto">
                                     <h3 className="text-2xl font-bold text-white mb-4">Join Premium to Watch</h3>
                                     <button onClick={handleSubscribe} className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">
                                         Subscribe Now
@@ -142,6 +147,7 @@ const PremiumPage: React.FC = () => {
             <BackToTopButton />
 
             {detailsMovie && (
+                // FIX: Pass necessary props for subscription flow to the modal.
                 <MovieDetailsModal
                     movie={movies[detailsMovie.key] || detailsMovie}
                     isLiked={likedMovies.has(detailsMovie.key)}
@@ -152,6 +158,8 @@ const PremiumPage: React.FC = () => {
                     allCategories={categories}
                     onSelectRecommendedMovie={handleSelectMovie}
                     onSubscribe={handleSubscribe}
+                    isPremiumMovie={true}
+                    isPremiumSubscriber={user?.isPremiumSubscriber}
                 />
             )}
             {selectedActor && <ActorBioModal actor={selectedActor} onClose={handleCloseActorModal} />}

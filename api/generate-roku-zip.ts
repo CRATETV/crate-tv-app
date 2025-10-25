@@ -1,21 +1,22 @@
+
 // This is a Vercel Serverless Function that generates a Roku channel package.
 // It will be accessible at the path /api/generate-roku-zip
 import JSZip from 'jszip';
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 // --- ROKU CHANNEL SOURCE CODE ---
-// All source is now embedded here to prevent file encoding (BOM) issues.
+// This section contains the complete, correct source code for the channel components.
 
 const manifestContent = `
 title=Crate TV
 major_version=1
 minor_version=0
-build_version=2
+build_version=3
+bs_version=3.0
 mm_icon_focus_hd=pkg:/images/logo_400x90.png
-mm_icon_focus_sd=pkg:/images/logo_400x90.png
 splash_screen_hd=pkg:/images/splash_hd_1280x720.png
 splash_screen_fhd=pkg:/images/splash_fhd_1920x1080.png
-`;
+`.trim();
 
 const mainBrsContent = `
 sub main(args as object)
@@ -37,285 +38,187 @@ sub showHomeScreen()
         end if
     end while
 end sub
-`;
+`.trim();
 
 const homeSceneXml = `
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="HomeScene" extends="Scene">
-    <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
-    <children>
-        <Rectangle id="background" color="#141414" width="1920" height="1080" />
-        <Label id="loadingLabel" text="Loading..." translation="[960, 540]" horizAlign="center" vertAlign="center" />
-        
-        <Group id="mainGroup" visible="false">
-            <Group id="heroGroup">
-                <Poster id="heroPoster" width="1920" height="600" />
-                <Poster width="1200" height="600" color="0x141414FF" blendColor="0x14141400" orientation="horizontal" />
-                <Poster width="1920" height="250" translation="[0, 350]" color="0x14141400" blendColor="0x141414FF" />
-                <Group id="heroTextGroup" translation="[90, 350]">
-                    <Label id="heroTitle" text="" width="1000"><font role="font" size="52" /></Label>
-                    <Label id="heroSynopsis" text="" translation="[0, 70]" width="800" height="100" wrap="true" maxLines="2"><font role="font" size="28" /></Label>
-                    <Label id="playHintLabel" text="Press OK to Play" translation="[0, 180]" width="800"><font role="font" size="24" color="#A0A0A0FF" /></Label>
-                </Group>
-            </Group>
-            <Group id="carouselsGroup" translation="[0, 600]" />
-        </Group>
-        
-        <VideoPlayer id="videoPlayer" visible="false" />
 
+    <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
+
+    <children>
+        <!-- Background color as per Step 4 -->
+        <Rectangle id="background" color="#1A1A1A" width="1920" height="1080" />
+
+        <!-- Font definitions as per Step 4. Font files must be placed in a /fonts directory. -->
+        <Label id="fontLoader">
+            <font role="Roboto-Regular-40" uri="pkg:/fonts/Roboto-Regular.ttf" size="40" />
+            <font role="Roboto-Regular-30" uri="pkg:/fonts/Roboto-Regular.ttf" size="30" />
+            <font role="Roboto-Bold-40" uri="pkg:/fonts/Roboto-Bold.ttf" size="40" />
+            <font role="Roboto-Bold-30" uri="pkg:/fonts/Roboto-Bold.ttf" size="30" />
+        </Label>
+        
+        <!-- Loading indicator -->
+        <Label 
+            id="loadingLabel"
+            text="Loading Crate TV..."
+            translation="[960, 540]"
+            horizAlign="center"
+            vertAlign="center"
+        >
+            <font role="Roboto-Regular-40" />
+        </Label>
+        
+        <!-- Main content group, initially hidden -->
+        <Group id="contentGroup" visible="false">
+            <RowList 
+                id="contentRowList"
+                translation="[80, 80]" ' Side margin of 80px, top margin
+                itemComponentName="MoviePoster"
+                itemSize="[300, 235]" ' 300x180 image + 15px space + 40px label height
+                rowItemSpacing="[ [40, 0] ]" ' Horizontal spacing between tiles
+                numRows="1"
+                rowHeights="[235]"
+                rowLabelOffset="[ [0, -50] ]" ' Position for row titles
+                rowFocusAnimationStyle="floatingFocus"
+                rowLabelFont="font:Roboto-Bold-30"
+                itemSpacing="[0, 60]" ' Vertical spacing between rows as per Step 2
+            />
+        </Group>
+
+        <!-- Task node for fetching data -->
+        <ContentTask id="contentTask" />
     </children>
+
 </component>
-`;
+`.trim();
 
 const homeSceneBrs = `
 function init()
-    m.top.background = m.top.findNode("background")
     m.loadingLabel = m.top.findNode("loadingLabel")
-    m.mainGroup = m.top.findNode("mainGroup")
-    m.heroPoster = m.top.findNode("heroPoster")
-    m.heroTitle = m.top.findNode("heroTitle")
-    m.heroSynopsis = m.top.findNode("heroSynopsis")
-    m.playHintLabel = m.top.findNode("playHintLabel")
-    m.carouselsGroup = m.top.findNode("carouselsGroup")
-    m.videoPlayer = m.top.findNode("videoPlayer")
-    m.videoPlayer.observeField("visible", "onVideoPlayerVisibilityChange")
-
-    m.contentTask = createObject("roSGNode", "ContentTask")
+    m.contentGroup = m.top.findNode("contentGroup")
+    m.contentRowList = m.top.findNode("contentRowList")
+    
+    m.contentTask = m.top.findNode("contentTask")
     m.contentTask.observeField("content", "onContentLoaded")
+    m.contentTask.url = "https://api.cratetv.com/v1/rows" ' As specified in Step 6
     m.contentTask.control = "RUN"
 end function
 
 function onContentLoaded(event as object)
-    content = event.getData()
-    if content <> invalid
-        m.content = content
-        createCarousels()
+    contentNode = event.getData()
+    if contentNode <> invalid
+        m.contentRowList.content = contentNode
         m.loadingLabel.visible = false
-        m.mainGroup.visible = true
+        m.contentGroup.visible = true
         m.top.setFocus(true)
     else
-        m.loadingLabel.text = "Failed to load content."
+        m.loadingLabel.text = "Error: Could not load content."
     end if
 end function
-
-function createCarousels()
-    yOffset = 0
-    if m.content.categories = invalid or m.content.categories.count() = 0
-        m.loadingLabel.text = "No content available."
-        m.loadingLabel.visible = true
-        m.mainGroup.visible = false
-        return
-    end if
-
-    for i = 0 to m.content.categories.count() - 1
-        category = m.content.categories[i]
-        
-        if category <> invalid and category.movies <> invalid and category.movies.count() > 0
-            categoryLabel = createObject("roSGNode", "Label")
-            categoryLabel.text = category.title
-            categoryLabel.translation = [90, yOffset]
-            categoryLabel.font.size = 32
-            m.carouselsGroup.appendChild(categoryLabel)
-            yOffset += 50
-            
-            rowlist = createObject("roSGNode", "RowList")
-            rowlist.translation = [0, yOffset]
-            rowlist.itemSize = [320, 180]
-            rowlist.itemComponentName = "MoviePoster"
-            
-            listContent = createObject("roSGNode", "ContentNode")
-            for j = 0 to category.movies.count() - 1
-                movie = category.movies[j]
-                itemNode = createObject("roSGNode", "ContentNode")
-                itemNode.addFields(movie)
-                listContent.appendChild(itemNode)
-            end for
-            rowlist.content = listContent
-            
-            rowlist.observeField("rowItemSelected", "onRowItemSelected")
-            rowlist.observeField("itemFocused", "onItemFocused")
-            
-            m.carouselsGroup.appendChild(rowlist)
-            yOffset += 250
-        end if
-    end for
-    
-    firstRowList = m.carouselsGroup.getChild(1)
-    if firstRowList <> invalid and firstRowList.content <> invalid and firstRowList.content.getChildCount() > 0
-        firstMovie = firstRowList.content.getChild(0)
-        updateHero(firstMovie)
-    end if
-end function
-
-function onRowItemSelected(event as object)
-    rowlist = event.getRoSGNode()
-    selectedIndex = event.getData()
-    selectedMovie = rowlist.content.getChild(selectedIndex)
-    
-    if selectedMovie <> invalid
-        m.mainGroup.visible = false
-        m.videoPlayer.contentID = selectedMovie.id
-        m.videoPlayer.visible = true
-        m.videoPlayer.setFocus(true)
-    end if
-end function
-
-function onItemFocused(event as object)
-    rowlist = event.getRoSGNode()
-    focusedIndex = event.getData()
-    focusedMovie = rowlist.content.getChild(focusedIndex)
-    if focusedMovie <> invalid
-        updateHero(focusedMovie)
-    end if
-end function
-
-function updateHero(movie as object)
-    m.heroPoster.uri = movie.heroImage
-    m.heroTitle.text = movie.title
-    m.heroSynopsis.text = movie.description
-end function
-
-function onVideoPlayerVisibilityChange(event as object)
-    isVisible = event.getData()
-    if not isVisible
-        m.mainGroup.visible = true
-        m.top.setFocus(true)
-        m.videoPlayer.contentID = invalid
-        m.videoPlayer.control = "stop"
-    end if
-end function
-`;
-
-const videoPlayerXml = `
-<?xml version="1.0" encoding="utf-8" ?>
-<component name="VideoPlayer" extends="Group">
-    <script type="text/brightscript" uri="pkg:/components/VideoPlayer.brs" />
-    <interface>
-        <field id="contentID" type="string" onChange="onContentIDChange" />
-        <field id="control" type="string" onChange="onControlChange" />
-    </interface>
-    <children>
-        <Rectangle id="background" color="0x000000FF" width="1920" height="1080" />
-        <Label 
-            id="statusLabel" 
-            text="Loading video..." 
-            translation="[960, 540]" 
-            horizAlign="center" 
-            vertAlign="center" />
-        <Video
-            id="videoPlayerNode"
-            width="1920"
-            height="1080"
-            visible="false"
-        />
-    </children>
-</component>
-`;
-
-const videoPlayerBrs = `
-function init()
-    m.statusLabel = m.top.findNode("statusLabel")
-    m.videoPlayerNode = m.top.findNode("videoPlayerNode")
-    m.videoPlayerNode.observeField("state", "onVideoStateChange")
-    
-    m.contentTask = createObject("roSGNode", "ContentTask")
-    m.contentTask.observeField("content", "onContentLoaded")
-end function
-
-function onContentIDChange()
-    contentID = m.top.contentID
-    if contentID <> invalid and contentID <> ""
-        m.statusLabel.visible = true
-        m.videoPlayerNode.visible = false
-        m.contentTask.contentID = contentID
-        m.contentTask.control = "RUN"
-    else
-        m.videoPlayerNode.control = "stop"
-    end if
-end function
-
-function onContentLoaded(event as object)
-    fullMovieData = event.getData()
-    if fullMovieData <> invalid and fullMovieData.streamUrl <> invalid and fullMovieData.streamUrl <> ""
-        contentNode = createObject("roSGNode", "ContentNode")
-        contentNode.url = fullMovieData.streamUrl
-        contentNode.title = fullMovieData.title
-        m.videoPlayerNode.content = contentNode
-        
-        m.statusLabel.visible = false
-        m.videoPlayerNode.visible = true
-        m.videoPlayerNode.control = "play"
-        m.videoPlayerNode.setFocus(true)
-    else
-        m.statusLabel.text = "Could not load video."
-    end if
-end function
-
-function onVideoStateChange(event as object)
-    state = event.getData()
-    if state = "finished" or state = "error"
-        m.top.visible = false
-    end if
-end function
-
-function onControlChange()
-    if m.top.control = "stop"
-        m.videoPlayerNode.control = "stop"
-    end if
-end function
-
-function onKeyEvent(key as string, press as boolean) as boolean
-    if press and key = "back"
-        m.videoPlayerNode.control = "stop"
-        m.top.visible = false
-        return true
-    end if
-    return false
-end function
-`;
+`.trim();
 
 const moviePosterXml = `
 <?xml version="1.0" encoding="utf-8" ?>
-<component name="MoviePoster" extends="Poster">
+<component name="MoviePoster" extends="Group">
+
     <script type="text/brightscript" uri="pkg:/components/MoviePoster.brs" />
+
     <interface>
+        <!-- The content for this tile, passed from the RowList -->
         <field id="itemContent" type="node" onChange="onContentChange" />
+        <!-- The focus state of the tile -->
+        <field id="focusPercent" type="float" onChange="onFocusChange" />
     </interface>
+
+    <children>
+        <!-- The blue focus border, initially invisible -->
+        <Rectangle 
+            id="focusRing"
+            color="#1A73E8"
+            width="316"  ' 300 + 8*2
+            height="196" ' 180 + 8*2
+            translation="[-8, -8]"
+            visible="false" 
+        />
+        
+        <!-- The movie poster image -->
+        <Poster 
+            id="tileImage"
+            width="300"
+            height="180"
+        />
+
+        <!-- The movie title label -->
+        <Label 
+            id="tileLabel"
+            width="300"
+            horizAlign="center"
+            translation="[0, 195]" ' 180px image height + 15px space
+        >
+             <font role="Roboto-Regular-30" />
+        </Label>
+    </children>
+
 </component>
-`;
+`.trim();
 
 const moviePosterBrs = `
-function onContentChange()
-    m.top.uri = m.top.itemContent.SDPosterUrl
+function init()
+    m.focusRing = m.top.findNode("focusRing")
+    m.tileImage = m.top.findNode("tileImage")
+    m.tileLabel = m.top.findNode("tileLabel")
 end function
-`;
+
+' Populates the tile with data from the RowList content.
+function onContentChange()
+    content = m.top.itemContent
+    if content <> invalid
+        m.tileImage.uri = content.PosterURL
+        m.tileLabel.text = content.Title
+    end if
+end function
+
+' Handles focus state changes.
+function onFocusChange()
+    focusPercent = m.top.focusPercent
+    
+    ' When focused (focusPercent = 1.0)
+    if focusPercent = 1.0
+        m.focusRing.visible = true
+        m.tileLabel.font.role = "Roboto-Bold-30" ' Change to bold font
+        m.tileLabel.color = "#FFFFFF" ' Ensure text is white
+    else ' When unfocused
+        m.focusRing.visible = false
+        m.tileLabel.font.role = "Roboto-Regular-30" ' Change back to regular font
+    end if
+end function
+`.trim();
 
 const contentTaskXml = `
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="ContentTask" extends="Task">
+
     <interface>
-        <field id="control" type="string" alwaysnotify="true" alias="nodecontrol" />
-        <field id="contentID" type="string" alwaysnotify="true" />
+        <!-- The URL to fetch -->
+        <field id="url" type="string" />
+        <!-- The parsed content result -->
         <field id="content" type="node" />
     </interface>
+    
     <script type="text/brightscript" uri="pkg:/components/ContentTask.brs" />
+
 </component>
-`;
+`.trim();
 
 const contentTaskBrs = `
-function init()
-    m.top.functionName = "getContent"
-end function
-
-function getContent()
-    if m.top.contentID <> invalid and m.top.contentID <> ""
-        url = "https://cratetv.net/api/roku-movie-details?id=" + m.top.contentID
-    else
-        url = "https://cratetv.net/api/roku-feed"
-    end if
-    
+' Corresponds to the GetContentFeed function from Step 5
+function GetContentFeed()
+    url = m.top.url
     port = createObject("roMessagePort")
     request = createObject("roUrlTransfer")
+    request.setCertificatesFile("common:/certs/ca-bundle.crt")
+    request.initClientCertificates()
     request.setMessagePort(port)
     request.setUrl(url)
     
@@ -326,24 +229,48 @@ function getContent()
                 jsonString = msg.getString()
                 parsedJson = parseJson(jsonString)
                 if parsedJson <> invalid
-                    m.top.content = parsedJson
+                    m.top.content = createContentNode(parsedJson)
                 else
-                    print "Failed to parse JSON"
+                    print "GetContentFeed: Failed to parse JSON"
                     m.top.content = invalid
                 end if
             else
-                print "HTTP Error: "; msg.getResponseCode()
+                print "GetContentFeed: HTTP Error: "; msg.getResponseCode()
                 m.top.content = invalid
             end if
         else
-            print "Request timeout or error"
+            print "GetContentFeed: Request timeout or error"
             m.top.content = invalid
         end if
     else
-         m.top.content = invalid
+        print "GetContentFeed: Failed to start async request"
+        m.top.content = invalid
     end if
 end function
-`;
+
+' Converts the parsed JSON AA into a SceneGraph ContentNode
+function createContentNode(data as object) as object
+    rowListContent = createObject("roSGNode", "ContentNode")
+    
+    if data.categories <> invalid
+        for each category in data.categories
+            row = createObject("roSGNode", "ContentNode")
+            row.title = category.title
+            
+            for each movie in category.movies
+                item = createObject("roSGNode", "ContentNode")
+                item.Title = movie.Title
+                item.PosterURL = movie.PosterURL
+                item.VideoURL = movie.VideoURL
+                row.appendChild(item)
+            end for
+            rowListContent.appendChild(row)
+        end for
+    end if
+    
+    return rowListContent
+end function
+`.trim();
 
 // --- END OF ROKU SOURCE ---
 
@@ -382,20 +309,26 @@ export async function GET(request: Request) {
         
         const zip = new JSZip();
 
+        // Root files
         zip.file('manifest', manifestContent);
+
+        // Source folder
         const source = zip.folder('source');
         source?.file('main.brs', mainBrsContent);
 
+        // Components folder
         const components = zip.folder('components');
         components?.file('HomeScene.xml', homeSceneXml);
         components?.file('HomeScene.brs', homeSceneBrs);
-        components?.file('VideoPlayer.xml', videoPlayerXml);
-        components?.file('VideoPlayer.brs', videoPlayerBrs);
         components?.file('MoviePoster.xml', moviePosterXml);
         components?.file('MoviePoster.brs', moviePosterBrs);
         components?.file('ContentTask.xml', contentTaskXml);
         components?.file('ContentTask.brs', contentTaskBrs);
+        
+        // Fonts folder (The user must add the actual .ttf files to their project's /roku/fonts directory)
+        zip.folder('fonts');
 
+        // Images folder
         const [logoImage, splashImage] = await Promise.all([
             getS3Object(bucketName, logoKey),
             getS3Object(bucketName, splashKey),
@@ -406,6 +339,11 @@ export async function GET(request: Request) {
         if (splashImage) {
             images?.file('splash_hd_1280x720.png', splashImage);
             images?.file('splash_fhd_1920x1080.png', splashImage);
+        } else {
+             // If splash is missing, create a blank placeholder to avoid Roku errors
+            const placeholder = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 1, 99, 97, 0, 2, 0, 0, 25, 0, 5, 147, 10, 217, 160, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130]);
+            images?.file('splash_hd_1280x720.png', placeholder);
+            images?.file('splash_fhd_1920x1080.png', placeholder);
         }
 
         const zipContent = await zip.generateAsync({ type: 'blob' });

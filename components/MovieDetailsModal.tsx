@@ -15,6 +15,10 @@ interface MovieDetailsModalProps {
   allCategories: Record<string, Category>;
   onSelectRecommendedMovie: (movie: Movie) => void;
   showSupportButton?: boolean;
+  // FIX: Add props to handle premium content subscription flow.
+  onSubscribe?: () => void;
+  isPremiumMovie?: boolean;
+  isPremiumSubscriber?: boolean;
 }
 
 const RecommendedMovieCard: React.FC<{ movie: Movie; onClick: (movie: Movie) => void; }> = ({ movie, onClick }) => {
@@ -45,7 +49,11 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   allMovies,
   allCategories,
   onSelectRecommendedMovie,
-  showSupportButton = true
+  showSupportButton = true,
+  // FIX: Destructure new props for subscription flow.
+  onSubscribe,
+  isPremiumMovie,
+  isPremiumSubscriber
 }) => {
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
@@ -207,7 +215,16 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
               {movie.title || 'Untitled Film'}
             </h2>
             <div className="flex flex-wrap items-center gap-3">
-              {released ? (
+              {/* FIX: Conditionally render Subscribe button for premium content if user is not subscribed. */}
+              {isPremiumMovie && !isPremiumSubscriber ? (
+                <button
+                  onClick={onSubscribe}
+                  className="flex items-center justify-center px-4 py-2 bg-red-600 text-white font-bold rounded-md hover:bg-red-700 transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                  Subscribe to Watch
+                </button>
+              ) : released ? (
                 <>
                   {movie.fullMovie && (
                     <button onClick={handlePlayMovie} className="flex items-center justify-center px-4 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">

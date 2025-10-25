@@ -48,6 +48,8 @@ export interface User {
   uid: string;
   email: string;
   avatar?: string;
+  // FIX: Added isPremiumSubscriber to the User type to track subscription status.
+  isPremiumSubscriber?: boolean;
 }
 
 export interface FilmmakerPayout {

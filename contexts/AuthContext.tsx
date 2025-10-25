@@ -16,6 +16,8 @@ interface AuthContextType {
     signUp: (email: string, password: string) => Promise<void>;
     logout: () => void;
     setAvatar: (avatarId: string) => void;
+    // FIX: Add 'subscribe' to the context type for handling premium subscriptions.
+    subscribe: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -119,7 +121,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
     
-    const value = { user, authInitialized, signIn, signUp, logout, setAvatar };
+    // FIX: Implement the 'subscribe' function to update user's premium status.
+    const subscribe = async () => {
+        if (user) {
+            // Optimistically update the UI
+            const updatedUser = { ...user, isPremiumSubscriber: true };
+            setUser(updatedUser);
+
+            // Persist the change to Firestore
+            try {
+                await updateUserProfile(user.uid, { isPremiumSubscriber: true });
+                // Also track this for analytics purposes
+                await fetch('/api/track-subscription', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: user.email }),
+                });
+            } catch (error) {
+                console.error("Failed to save subscription to Firestore:", error);
+                // Optionally, revert the UI change if the save fails
+                setUser(user); 
+            }
+        }
+    };
+    
+    // FIX: Add 'subscribe' to the context value provided to children components.
+    const value = { user, authInitialized, signIn, signUp, logout, setAvatar, subscribe };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

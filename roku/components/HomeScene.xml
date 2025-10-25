@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="HomeScene" extends="Scene">
+
+    <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
+
+    <children>
+        <!-- Background color as per Step 4 -->
+        <Rectangle id="background" color="#1A1A1A" width="1920" height="1080" />
+
+        <!-- Font definitions as per Step 4. Font files must be placed in a /fonts directory. -->
+        <Label id="fontLoader">
+            <font role="Roboto-Regular-40" uri="pkg:/fonts/Roboto-Regular.ttf" size="40" />
+            <font role="Roboto-Regular-30" uri="pkg:/fonts/Roboto-Regular.ttf" size="30" />
+            <font role="Roboto-Bold-40" uri="pkg:/fonts/Roboto-Bold.ttf" size="40" />
+            <font role="Roboto-Bold-30" uri="pkg:/fonts/Roboto-Bold.ttf" size="30" />
+        </Label>
+        
+        <!-- Loading indicator -->
+        <Label 
+            id="loadingLabel"
+            text="Loading Crate TV..."
+            translation="[960, 540]"
+            horizAlign="center"
+            vertAlign="center"
+        >
+            <font role="Roboto-Regular-40" />
+        </Label>
+        
+        <!-- Main content group, initially hidden -->
+        <Group id="contentGroup" visible="false">
+            <RowList 
+                id="contentRowList"
+                translation="[80, 80]" ' Side margin of 80px, top margin
+                itemComponentName="MoviePoster"
+                itemSize="[300, 235]" ' 300x180 image + 15px space + 40px label height
+                rowItemSpacing="[ [40, 0] ]" ' Horizontal spacing between tiles
+                numRows="1"
+                rowHeights="[235]"
+                rowLabelOffset="[ [0, -50] ]" ' Position for row titles
+                rowFocusAnimationStyle="floatingFocus"
+                rowLabelFont="font:Roboto-Bold-30"
+                itemSpacing="[0, 60]" ' Vertical spacing between rows as per Step 2
+            />
+        </Group>
+
+        <!-- Task node for fetching data -->
+        <ContentTask id="contentTask" />
+    </children>
+
+</component>

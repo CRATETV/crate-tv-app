@@ -67,9 +67,11 @@ export const createUserProfile = async (uid: string, email: string): Promise<Use
         throw new Error("Firestore is not initialized. Cannot create user profile.");
     }
     const userDocRef = doc(db, 'users', uid);
+    // FIX: Initialize new users with 'isPremiumSubscriber' set to false.
     const newUser: Omit<User, 'uid'> = { // Storing without the UID inside the document itself
         email,
-        avatar: 'fox' // A default avatar
+        avatar: 'fox', // A default avatar
+        isPremiumSubscriber: false
     };
     await setDoc(userDocRef, newUser);
     return { uid, ...newUser };

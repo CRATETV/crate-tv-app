@@ -1,5 +1,5 @@
-// FIX: Changed to a namespace import for the AWS S3 client. This resolves a TypeScript type conflict that was preventing the 'send' method from being found on the S3Client instance.
-import * as AWS_S3 from "@aws-sdk/client-s3";
+// FIX: Reverted from a non-working namespace import to a standard named import for the AWS S3 client. This resolves the TypeScript type error where the 'send' method was not found.
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { moviesData as fallbackMovies, categoriesData as fallbackCategories, festivalData as fallbackFestival, festivalConfigData as fallbackConfig } from '../../constants'; // relative path
 
 let cachedData: any = null;
@@ -7,7 +7,7 @@ let lastFetchTime = 0;
 const CACHE_DURATION = 60 * 1000; // 1 minute
 
 // Create a singleton S3 client to avoid re-instantiation on every call
-let s3Client: AWS_S3.S3Client | null = null;
+let s3Client: S3Client | null = null;
 const getS3Client = () => {
     if (s3Client) return s3Client;
 
@@ -26,7 +26,7 @@ const getS3Client = () => {
         region = 'us-east-1';
     }
 
-    s3Client = new AWS_S3.S3Client({
+    s3Client = new S3Client({
         region: region,
         credentials: {
             accessKeyId,
@@ -59,7 +59,7 @@ export const getApiData = async () => {
     }
     
     try {
-        const command = new AWS_S3.GetObjectCommand({
+        const command = new GetObjectCommand({
             Bucket: bucketName,
             Key: 'live-data.json',
         });
