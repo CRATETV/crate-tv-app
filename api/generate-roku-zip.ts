@@ -77,7 +77,8 @@ export async function GET(request: Request) {
         const componentFiles = [
             'HomeScene.xml', 'HomeScene.brs',
             'VideoPlayerScene.xml', 'VideoPlayerScene.brs',
-            'MoviePoster.xml', 'MoviePoster.brs'
+            'MoviePoster.xml', 'MoviePoster.brs',
+            'ContentTask.xml', 'ContentTask.brs'
         ];
         componentFiles.forEach(fileName => {
             componentsFolder?.file(fileName, readRokuFile(`components/${fileName}`));
