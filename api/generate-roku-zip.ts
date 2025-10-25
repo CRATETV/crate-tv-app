@@ -7,6 +7,8 @@ import path from 'path';
 // FIX: The `process` global was not correctly typed in this environment, causing an error on `process.cwd()`.
 // Importing `cwd` directly from the `node:process` module resolves this typing issue.
 import { cwd } from 'node:process';
+// FIX: Resolve "Cannot find name 'Buffer'" error by importing `Buffer` from `node:buffer`.
+import { Buffer } from 'node:buffer';
 
 const splashKey = "Crate TV Splash.png";
 const logoKey = "ruko logo .webp";
@@ -54,14 +56,20 @@ const getS3Object = async (bucket: string, key: string): Promise<Uint8Array | nu
     }
 };
 
-// Helper to read a file from the 'roku' directory and strip the BOM
-const readRokuFile = (filePath: string): string => {
-    let content = fs.readFileSync(path.join(cwd(), 'roku', filePath), 'utf-8');
-    // Strip the BOM (Byte Order Mark) if it exists. This is a common cause for Roku compilation errors on line 1.
-    if (content.charCodeAt(0) === 0xFEFF) {
-        content = content.slice(1);
+// Helper to read a file as a Buffer and strip the UTF-8 BOM.
+// This is the definitive fix for the Roku "Syntax Error on line 1" issue.
+const readRokuFile = (filePath: string): Buffer => {
+    // Read the file as a raw buffer, not a string.
+    const buffer = fs.readFileSync(path.join(cwd(), 'roku', filePath));
+    
+    // Check for the three-byte UTF-8 BOM sequence (0xEF, 0xBB, 0xBF).
+    if (buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) {
+        // If the BOM is present, return a new buffer that slices it off.
+        return buffer.slice(3);
     }
-    return content;
+    
+    // If no BOM is found, return the original buffer.
+    return buffer;
 };
 
 
@@ -74,7 +82,7 @@ export async function GET(request: Request) {
         
         const zip = new JSZip();
 
-        // Add core files by reading them from the filesystem
+        // Add core files by reading them from the filesystem. The function now returns clean Buffers.
         zip.file('manifest', readRokuFile('manifest'));
         zip.folder('source')?.file('main.brs', readRokuFile('source/main.brs'));
 
