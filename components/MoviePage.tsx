@@ -13,6 +13,7 @@ import Countdown from './Countdown';
 import CastButton from './CastButton';
 import RokuBanner from './RokuBanner';
 import SquarePaymentModal from './SquarePaymentModal';
+import { isMovieReleased } from '../constants';
 
 declare const google: any; // Declare Google IMA SDK global
 
@@ -68,7 +69,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
-  const [isReleased, setIsReleased] = useState(false);
+  const [released, setReleased] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const hasTrackedViewRef = useRef(false);
 
@@ -112,7 +113,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   }, [videoRef, movie?.key]);
   
   const initializeAds = useCallback(() => {
-    if (!videoRef.current || !adContainerRef.current || playerMode !== 'full' || !isReleased || adsManagerRef.current || typeof google === 'undefined') {
+    if (!videoRef.current || !adContainerRef.current || playerMode !== 'full' || !released || adsManagerRef.current || typeof google === 'undefined') {
         if (playerMode === 'full') playContent(); // Play content directly if ads can't be initialized
         return;
     }
@@ -168,7 +169,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     adsRequest.linearAdSlotHeight = videoElement.clientHeight;
 
     adsLoader.requestAds(adsRequest);
-  }, [playerMode, isReleased, playContent]);
+  }, [playerMode, released, playContent]);
   
   useEffect(() => {
     return () => {
@@ -196,16 +197,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             const sourceMovie = liveData.movies[movieKey];
 
             if (sourceMovie) {
-              const releaseDateTime = sourceMovie.releaseDateTime ? new Date(sourceMovie.releaseDateTime) : null;
-              const released = !releaseDateTime || releaseDateTime <= new Date();
-              setIsReleased(released);
+              setReleased(isMovieReleased(sourceMovie));
     
               const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
               if (storedLikedMovies) setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
     
               setMovie({ ...sourceMovie });
     
-              if (params.get('play') === 'true' && sourceMovie.fullMovie && released) {
+              if (params.get('play') === 'true' && sourceMovie.fullMovie && isMovieReleased(sourceMovie)) {
                 setPlayerMode('full');
               } else {
                 setPlayerMode('poster');
@@ -222,9 +221,22 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
     loadMovieData();
   }, [movieKey]);
+
+  useEffect(() => {
+    if (released) return;
+
+    const interval = setInterval(() => {
+        if (isMovieReleased(movie)) {
+            setReleased(true);
+            clearInterval(interval);
+        }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [movie, released]);
   
   useEffect(() => {
-    if (playerMode === 'full' && isReleased) {
+    if (playerMode === 'full' && released) {
         const timer = setTimeout(() => initializeAds(), 100);
         return () => clearTimeout(timer);
     } else {
@@ -234,7 +246,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         }
         setIsAdPlaying(false);
     }
-  }, [playerMode, isReleased, initializeAds]);
+  }, [playerMode, released, initializeAds]);
 
   // SEO
   useEffect(() => {
@@ -337,7 +349,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         <>
                             <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" onContextMenu={(e) => e.preventDefault()} />
                             
-                            {isReleased ? (
+                            {released ? (
                                 <div className="relative w-full h-full flex items-center justify-center">
                                     <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
@@ -357,7 +369,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                         <div className="bg-black/50 rounded-lg p-4">
                                             <Countdown 
                                                 targetDate={movie.releaseDateTime} 
-                                                onEnd={() => setIsReleased(true)} 
+                                                onEnd={() => setReleased(true)} 
                                                 className="text-xl md:text-3xl text-white" 
                                             />
                                         </div>

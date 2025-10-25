@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Movie } from '../types';
 import Countdown from './Countdown';
+import { isMovieReleased } from '../constants';
 
 interface MovieCardProps {
   movie: Movie;
@@ -8,23 +9,39 @@ interface MovieCardProps {
 }
 
 const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie }) => {
-  const [isReleased, setIsReleased] = useState(() => {
-    const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
-    return !releaseDate || releaseDate <= new Date();
-  });
-
-  const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
-  const isHalloweenRelease = releaseDate ? releaseDate.getMonth() === 9 && releaseDate.getDate() === 31 : false;
+  const [released, setReleased] = useState(() => isMovieReleased(movie));
 
   useEffect(() => {
-    const newReleaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
-    setIsReleased(!newReleaseDate || newReleaseDate <= new Date());
-  }, [movie.releaseDateTime]);
+    // If it's already released, no need to check again.
+    if (released) return;
+
+    // Check immediately on mount in case the initial state was calculated on the server
+    // or was stale from a previous render.
+    if (isMovieReleased(movie)) {
+      setReleased(true);
+      return;
+    }
+    
+    // Set up an interval to poll for the release time. This is a robust way to ensure
+    // the UI updates even if the countdown timer is throttled by the browser.
+    const interval = setInterval(() => {
+      if (isMovieReleased(movie)) {
+        setReleased(true);
+        clearInterval(interval);
+      }
+    }, 1000); // Check every second
+
+    return () => clearInterval(interval);
+  }, [movie, released]);
+
 
   const handleCountdownEnd = () => {
     // A little delay to ensure the date comparison is correct and avoid flicker
-    setTimeout(() => setIsReleased(true), 1000);
+    setTimeout(() => setReleased(true), 1000);
   };
+  
+  const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
+  const isHalloweenRelease = releaseDate ? releaseDate.getMonth() === 9 && releaseDate.getDate() === 31 : false;
   
   return (
     <div
@@ -45,7 +62,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie }) => {
       
       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-      {!isReleased && movie.releaseDateTime && (
+      {!released && movie.releaseDateTime && (
          <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center p-2 text-center backdrop-blur-sm animate-[fadeIn_0.5s_ease-out]">
             {isHalloweenRelease ? (
               <>

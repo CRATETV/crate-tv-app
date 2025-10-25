@@ -3,6 +3,7 @@ import { Movie, Actor, Category } from '../types';
 import DirectorCreditsModal from './DirectorCreditsModal';
 import Countdown from './Countdown';
 import SquarePaymentModal from './SquarePaymentModal';
+import { isMovieReleased } from '../constants';
 
 interface MovieDetailsModalProps {
   movie: Movie;
@@ -53,15 +54,30 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [showSupportSuccess, setShowSupportSuccess] = useState(false);
 
-  const [isReleased, setIsReleased] = useState(() => {
-    const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
-    return !releaseDate || releaseDate <= new Date();
-  });
+  const [released, setReleased] = useState(() => isMovieReleased(movie));
+
+  useEffect(() => {
+    if (released) return;
+
+    if (isMovieReleased(movie)) {
+      setReleased(true);
+      return;
+    }
+    
+    const interval = setInterval(() => {
+      if (isMovieReleased(movie)) {
+        setReleased(true);
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [movie, released]);
+
 
   // Reset modal state when the movie prop changes
   useEffect(() => {
-    const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
-    setIsReleased(!releaseDate || releaseDate <= new Date());
+    setReleased(isMovieReleased(movie));
     
     // Scroll to the top of the modal content when a new movie is selected
     if (modalContentRef.current) {
@@ -191,7 +207,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
               {movie.title || 'Untitled Film'}
             </h2>
             <div className="flex flex-wrap items-center gap-3">
-              {isReleased ? (
+              {released ? (
                 <>
                   {movie.fullMovie && (
                     <button onClick={handlePlayMovie} className="flex items-center justify-center px-4 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
@@ -211,7 +227,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
               ) : (
                 <div className="bg-red-900/50 text-red-200 border border-red-700 rounded-md px-4 py-2 text-center">
                   <p className="font-bold">Coming Soon!</p>
-                  {movie.releaseDateTime && <Countdown targetDate={movie.releaseDateTime} onEnd={() => setIsReleased(true)} className="text-sm" />}
+                  {movie.releaseDateTime && <Countdown targetDate={movie.releaseDateTime} onEnd={() => setReleased(true)} className="text-sm" />}
                 </div>
               )}
               <button onClick={handleToggleLike} className={`h-10 w-10 flex items-center justify-center rounded-full border-2 border-gray-400 text-white hover:border-white transition ${isAnimatingLike ? 'animate-heartbeat' : ''}`}>

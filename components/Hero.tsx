@@ -1,6 +1,7 @@
 import React from 'react';
 import { Movie } from '../types';
 import Countdown from './Countdown';
+import { isMovieReleased } from '../constants';
 
 interface HeroProps {
   movies: Movie[];
@@ -17,8 +18,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
     return <div className="h-[56.25vw] max-h-[85vh] w-full bg-black" />;
   }
   
-  const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
-  const isReleased = !releaseDate || releaseDate <= new Date();
+  const released = isMovieReleased(movie);
 
   return (
     <div
@@ -33,7 +33,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
         <div key={movie.key} className="max-w-xl animate-fadeInHeroContent p-6 rounded-lg" style={{ background: 'linear-gradient(90deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 100%)' }}>
           <h1 className="text-3xl md:text-5xl font-bold text-white drop-shadow-lg mb-4">{movie.title}</h1>
           
-          {!isReleased && movie.releaseDateTime && (
+          {!released && movie.releaseDateTime && (
             <div className="mb-4 bg-red-600/80 text-white font-bold py-2 px-4 rounded-md inline-flex items-center gap-2">
                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

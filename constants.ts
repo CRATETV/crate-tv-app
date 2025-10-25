@@ -1,13 +1,23 @@
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
 
+// Utility function to robustly check if a movie is past its release time.
+export const isMovieReleased = (movie: Movie | undefined | null): boolean => {
+    if (!movie || !movie.releaseDateTime) {
+        return true; // No release date means it's always available
+    }
+    // Compare the release time with the current time
+    return new Date(movie.releaseDateTime) <= new Date();
+};
+
 export const categoriesData: Record<string, Category> = {
   featured: {
     title: 'Featured Films',
-    movieKeys: ['newmovie1756741314485', 'lifeless', 'foodiecalldirectorscut', 'juniper']
+    movieKeys: ['consumed', 'newmovie1756741314485', 'lifeless', 'foodiecalldirectorscut', 'juniper']
   },
   newReleases: {
     title: 'New Releases',
     movieKeys: [
+        'consumed',
         'thatloud',
         'results',
         'newmovie1756741314485', // What If
@@ -95,6 +105,32 @@ export const categoriesData: Record<string, Category> = {
 };
 
 export const moviesData: Record<string, Movie> = {
+  "consumed": {
+    "key": "consumed",
+    "title": "Consumed",
+    "synopsis": "She gave everything to make her love complete, but a woman learns that her monumental act of self-sacrifice wasn't a noble gesture; it was the final permission her toxic relationship needed to devour her soul.",
+    "cast": [
+      {
+        "name": "Lucie Paige Krovatin",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Allison Ferguson",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Richard Frohman, Akil Logan-Haye",
+    "trailer": "",
+    "fullMovie": "",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
+    "likes": 0,
+    "releaseDateTime": "2024-10-31T23:00:00Z"
+  },
   "thatloud": {
     "key": "thatloud",
     "title": "That Loud",
@@ -121,7 +157,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Oskar Pierre Castro",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/That+Loud+.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/That%20Loud-web-optimized.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/That%20Loud.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/That%20Loud.png",
     "likes": 0
@@ -965,7 +1001,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Michelle Reale-Opalesky",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results+.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results-web-optimized.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results.png",
     "likes": 0
@@ -1021,8 +1057,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Shaunpaul Costello, Seth Sharpe",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/SLAP+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap+poster.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Slap.png",
     "likes": 0
   },
   "theneighbours": {
@@ -1052,8 +1088,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Seth Sharpe",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/NEIGHBORS+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Neighbors.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Neighbors.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/the+neighbors+poster+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/The+Neighbours.png",
     "likes": 0
   },
   "twopeasinapod": {
@@ -1083,8 +1119,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Shaunpaul Costello",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+in+a+Pod.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+pod+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+pod+.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+peas+in+a+pod+poster+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/TwoPeasInAPod.png",
     "likes": 0
   },
   "tedandnatalie": {
@@ -1093,23 +1129,23 @@ export const moviesData: Record<string, Movie> = {
     "synopsis": "A chance encounter between two strangers, Ted and Natalie, sparks an immediate and intense connection, but their time together is fleeting.",
     "cast": [
       {
-        "name": "Salome Denoon",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png",
-        "bio": "Salome Denoon is a versatile artist whose creative pursuits span performance, writing, editing, and digital media. As an actress, she has graced both stage and screen. She also brings her talents to the digital realm as the developer of Crate TV.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
+        "name": "Dana Godfrey",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
-        "name": "David Auspitz",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png",
-        "bio": "David Auspitz is a versatile actor with a knack for both comedic and dramatic roles. He brings a unique charm to every character he portrays, making him a beloved figure in the industry.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png"
+        "name": "Patrick Thomas Kasey",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
     "director": "David Auspitz",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Natalie.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Natalie+poster.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/TedAndNatalie.png",
     "likes": 0
   },
   
@@ -1344,4 +1380,3 @@ export const festivalData: FestivalDay[] = [
     ]
   }
 ];
-
