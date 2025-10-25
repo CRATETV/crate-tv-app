@@ -10,7 +10,7 @@ const manifestContent = `
 title=Crate TV
 major_version=1
 minor_version=0
-build_version=4
+build_version=5
 bs_version=3.0
 mm_icon_focus_hd=pkg:/images/logo_400x90.png
 splash_screen_hd=pkg:/images/splash_hd_1280x720.png
@@ -18,11 +18,7 @@ splash_screen_fhd=pkg:/images/splash_fhd_1920x1080.png
 `.trim();
 
 const mainBrsContent = `
-sub main(args as object)
-    showHomeScreen()
-end sub
-
-sub showHomeScreen()
+sub main()
     screen = CreateObject("roSGScreen")
     port = CreateObject("roMessagePort")
     screen.setMessagePort(port)
@@ -61,8 +57,10 @@ const homeSceneXml = `
             translation="[960, 540]"
             horizAlign="center"
             vertAlign="center"
-            font="font:Roboto-Regular-40"
-        />
+            color="0xFFFFFFFF"
+        >
+            <font role="Roboto-Regular-40" />
+        </Label>
         
         <Group id="contentGroup" visible="false">
             <RowList 
@@ -104,7 +102,6 @@ function onContentLoaded(event as object)
         m.contentRowList.content = contentNode
         m.loadingLabel.visible = false
         m.contentGroup.visible = true
-        ' FIX: Set focus on the RowList, not the scene itself
         m.contentRowList.setFocus(true)
     else
         m.loadingLabel.text = "Error: Could not load content."
@@ -144,8 +141,10 @@ const moviePosterXml = `
             width="300"
             horizAlign="center"
             translation="[0, 195]"
-            font="font:Roboto-Regular-30"
-        />
+            color="0xFFFFFFFF"
+        >
+             <font role="Roboto-Regular-30" />
+        </Label>
     </children>
 
 </component>
@@ -174,12 +173,9 @@ function onFocusChange()
     ' When focused (focusPercent = 1.0)
     if focusPercent = 1.0
         m.focusRing.visible = true
-        ' FIX: Re-assign the entire font field to change style
         m.tileLabel.font = "font:Roboto-Bold-30"
-        m.tileLabel.color = "0xFFFFFFFF"
     else ' When unfocused
         m.focusRing.visible = false
-        ' FIX: Re-assign the entire font field to change style
         m.tileLabel.font = "font:Roboto-Regular-30"
     end if
 end function
