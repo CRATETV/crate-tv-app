@@ -31,24 +31,18 @@ const AnalyticsPage: React.FC = () => {
 
     useEffect(() => {
         const checkAuthAndFetchData = async () => {
-            const isAuthed = sessionStorage.getItem('isAnalyticsAuthenticated') === 'true';
-            const storedPassword = sessionStorage.getItem('analyticsPassword');
+            const isAuthed = sessionStorage.getItem('isAdminAuthenticated') === 'true';
+            const storedPassword = sessionStorage.getItem('adminPassword');
 
             if (isAuthed && storedPassword) {
                 setIsAuthenticated(true);
 
-                // Fetch live movie data first for the performance table
                 try {
+                    // Fetch live movie data first for the performance table
                     const liveDataRes = await fetchAndCacheLiveData();
                     setAllMovies(liveDataRes.data.movies);
-                } catch (liveDataError) {
-                    setError(liveDataError instanceof Error ? liveDataError.message : "Failed to load movie data.");
-                    setIsLoading(false);
-                    return;
-                }
 
-                // Then, fetch analytics data
-                try {
+                    // Then, fetch analytics data
                     const analyticsRes = await fetch('/api/get-sales-data', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -56,20 +50,36 @@ const AnalyticsPage: React.FC = () => {
                     });
 
                     if (!analyticsRes.ok) {
-                        const errorData = await analyticsRes.json();
+                        let errorMessage = `The server responded with an error (Status: ${analyticsRes.status}).`;
+                        try {
+                            const errorData = await analyticsRes.json();
+                            errorMessage = errorData.error || errorMessage;
+                        } catch (e) {
+                            try {
+                                const errorText = await analyticsRes.text();
+                                if (errorText.includes('500') && errorText.includes('INTERNAL_SERVER_ERROR')) {
+                                     errorMessage = "A critical server error occurred. This is often caused by misconfigured environment variables (like the Firebase Service Account Key) on Vercel. Please double-check your project settings.";
+                                } else {
+                                     errorMessage = errorText.substring(0, 300) || errorMessage;
+                                }
+                            } catch (textErr) {
+                                errorMessage = 'Failed to fetch analytics and could not read the error response from the server.';
+                            }
+                        }
+                    
                         if (analyticsRes.status === 401) {
-                            sessionStorage.removeItem('isAnalyticsAuthenticated');
-                            sessionStorage.removeItem('analyticsPassword');
+                            sessionStorage.removeItem('isAdminAuthenticated');
+                            sessionStorage.removeItem('adminPassword');
                             setIsAuthenticated(false);
                         }
-                        throw new Error(errorData.error || "Failed to fetch analytics data.");
+                        throw new Error(errorMessage);
                     }
                     
                     const analytics = await analyticsRes.json();
                     setAnalyticsData(analytics);
 
-                } catch (analyticsError) {
-                    const message = analyticsError instanceof Error ? analyticsError.message : "An unknown error occurred while fetching analytics.";
+                } catch (apiError) {
+                    const message = apiError instanceof Error ? apiError.message : "An unknown error occurred while fetching analytics.";
                     setError(message);
                 } finally {
                     setIsLoading(false);
@@ -94,8 +104,8 @@ const AnalyticsPage: React.FC = () => {
             });
             const data = await response.json();
             if (response.ok) {
-                sessionStorage.setItem('isAnalyticsAuthenticated', 'true');
-                sessionStorage.setItem('analyticsPassword', password);
+                sessionStorage.setItem('isAdminAuthenticated', 'true');
+                sessionStorage.setItem('adminPassword', password);
                 window.location.reload();
             } else {
                 setLoginError(data.error || 'Login failed.');

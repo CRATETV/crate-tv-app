@@ -35,7 +35,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
     if (isStaging) offset += 32;
     setTopOffset(offset);
   }, [isStaging]);
-  
+
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(event.target.value);
   };

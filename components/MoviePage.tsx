@@ -304,16 +304,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     return (
         <div className="flex flex-col min-h-screen bg-black text-white">
             {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
-            <Header
-                searchQuery={searchQuery}
-                onSearch={setSearchQuery}
-                isScrolled={true}
-                onMobileSearchClick={() => setIsMobileSearchOpen(true)}
-                onSearchSubmit={handleSearchSubmit}
-                isStaging={isStaging}
-            />
+            
+            {playerMode !== 'full' && (
+                <Header
+                    searchQuery={searchQuery}
+                    onSearch={setSearchQuery}
+                    isScrolled={true}
+                    onMobileSearchClick={() => setIsMobileSearchOpen(true)}
+                    onSearchSubmit={handleSearchSubmit}
+                    isStaging={isStaging}
+                />
+            )}
 
-            <main className="flex-grow pt-16">
+            <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
                 <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container">
                     <div ref={adContainerRef} className="absolute inset-0 z-20 pointer-events-none" />
                     
@@ -378,66 +381,72 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     )}
                 </div>
 
-                <div className="max-w-6xl mx-auto p-4 md:p-8">
-                    <h1 className="text-3xl md:text-5xl font-bold text-white">{movie.title || 'Untitled Film'}</h1>
-                    <div className="mt-4 flex flex-wrap items-center gap-4">
-                        <button onClick={() => setIsSupportModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors">
-                           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                              <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" />
-                           </svg>
-                           Support Filmmaker
-                        </button>
-                        {showSupportSuccess && (
-                          <div className="bg-green-500/80 text-white font-bold py-2 px-4 rounded-md inline-block animate-[fadeIn_0.5s_ease-out]">
-                              Thank you for your support!
+                {playerMode !== 'full' && (
+                  <div className="max-w-6xl mx-auto p-4 md:p-8">
+                      <h1 className="text-3xl md:text-5xl font-bold text-white">{movie.title || 'Untitled Film'}</h1>
+                      <div className="mt-4 flex flex-wrap items-center gap-4">
+                          <button onClick={() => setIsSupportModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors">
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" />
+                             </svg>
+                             Support Filmmaker
+                          </button>
+                          {showSupportSuccess && (
+                            <div className="bg-green-500/80 text-white font-bold py-2 px-4 rounded-md inline-block animate-[fadeIn_0.5s_ease-out]">
+                                Thank you for your support!
+                            </div>
+                          )}
+                      </div>
+                      <div className="mt-4 text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: movie.synopsis || '' }}></div>
+                       
+                      <RokuBanner />
+
+                      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+                          <div className="md:col-span-2">
+                               <div className="mt-6 bg-gradient-to-r from-red-500/10 to-blue-500/10 p-3 rounded-lg text-center border border-gray-700">
+                                  <p className="text-sm text-white">✨ Click an actor's name for their bio & an AI-generated fun fact!</p>
+                              </div>
                           </div>
-                        )}
-                    </div>
-                    <div className="mt-4 text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: movie.synopsis || '' }}></div>
-                     
-                    <RokuBanner />
+                          <div>
+                               <h3 className="text-lg font-semibold text-gray-400 mb-2">Cast</h3>
+                              <div className="space-y-2 text-white">
+                                  {movie.cast.map((actor: Actor) => (
+                                  <p key={actor.name} className="group cursor-pointer" onClick={() => setSelectedActor(actor)}>
+                                      <span className="group-hover:text-red-400 transition">{actor.name}</span>
+                                  </p>
+                                  ))}
+                              </div>
+                              <h3 className="text-lg font-semibold text-gray-400 mt-4 mb-2">Director</h3>
+                              <div className="space-y-2 text-white">
+                                  {movie.director.split(',').map((directorName: string) => directorName.trim()).filter(Boolean).map(directorName => (
+                                      <p key={directorName} className="group cursor-pointer" onClick={() => setSelectedDirector(directorName)}>
+                                          <span className="group-hover:text-red-400 transition">{directorName}</span>
+                                      </p>
+                                  ))}
+                              </div>
+                          </div>
+                      </div>
 
-                    <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div className="md:col-span-2">
-                             <div className="mt-6 bg-gradient-to-r from-red-500/10 to-blue-500/10 p-3 rounded-lg text-center border border-gray-700">
-                                <p className="text-sm text-white">✨ Click an actor's name for their bio & an AI-generated fun fact!</p>
-                            </div>
-                        </div>
-                        <div>
-                             <h3 className="text-lg font-semibold text-gray-400 mb-2">Cast</h3>
-                            <div className="space-y-2 text-white">
-                                {movie.cast.map((actor: Actor) => (
-                                <p key={actor.name} className="group cursor-pointer" onClick={() => setSelectedActor(actor)}>
-                                    <span className="group-hover:text-red-400 transition">{actor.name}</span>
-                                </p>
-                                ))}
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-400 mt-4 mb-2">Director</h3>
-                            <div className="space-y-2 text-white">
-                                {movie.director.split(',').map((directorName: string) => directorName.trim()).filter(Boolean).map(directorName => (
-                                    <p key={directorName} className="group cursor-pointer" onClick={() => setSelectedDirector(directorName)}>
-                                        <span className="group-hover:text-red-400 transition">{directorName}</span>
-                                    </p>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    {recommendedMovies.length > 0 && (
-                        <div className="mt-12 pt-8 border-t border-gray-700">
-                            <h2 className="text-2xl font-bold text-white mb-4">More Like This</h2>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-4">
-                                {recommendedMovies.map(recMovie => (
-                                    <RecommendedMovieLink key={recMovie.key} movie={recMovie} />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
+                      {recommendedMovies.length > 0 && (
+                          <div className="mt-12 pt-8 border-t border-gray-700">
+                              <h2 className="text-2xl font-bold text-white mb-4">More Like This</h2>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-4">
+                                  {recommendedMovies.map(recMovie => (
+                                      <RecommendedMovieLink key={recMovie.key} movie={recMovie} />
+                                  ))}
+                              </div>
+                          </div>
+                      )}
+                  </div>
+                )}
             </main>
             
-            <Footer />
-            <BackToTopButton />
+            {playerMode !== 'full' && (
+              <>
+                <Footer />
+                <BackToTopButton />
+              </>
+            )}
 
             {selectedActor && (
                 <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />

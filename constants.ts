@@ -8,6 +8,7 @@ export const categoriesData: Record<string, Category> = {
   newReleases: {
     title: 'New Releases',
     movieKeys: [
+        'consumed',
         'thatloud',
         'results',
         'newmovie1756741314485', // What If
@@ -95,6 +96,32 @@ export const categoriesData: Record<string, Category> = {
 };
 
 export const moviesData: Record<string, Movie> = {
+  "consumed": {
+    "key": "consumed",
+    "title": "Consumed",
+    "synopsis": "A gripping psychological thriller that delves into the minds of two women caught in a web of suspense and paranoia.",
+    "cast": [
+      {
+        "name": "Lucie Paige Krovatin",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Allison Ferguson",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Richard Frohman, Akil Logan-Haye",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/consumed+.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
+    "likes": 0,
+    "releaseDateTime": "2024-10-31T04:00:00Z"
+  },
   "thatloud": {
     "key": "thatloud",
     "title": "That Loud",
@@ -1093,16 +1120,16 @@ export const moviesData: Record<string, Movie> = {
     "synopsis": "A chance encounter between two strangers, Ted and Natalie, sparks an immediate and intense connection, but their time together is fleeting.",
     "cast": [
       {
-        "name": "Salome Denoon",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png",
-        "bio": "Salome Denoon is a versatile artist whose creative pursuits span performance, writing, editing, and digital media. As an actress, she has graced both stage and screen. She also brings her talents to the digital realm as the developer of Crate TV.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
+        "name": "Dana Godfrey",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
-        "name": "David Auspitz",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png",
-        "bio": "David Auspitz is a versatile actor with a knack for both comedic and dramatic roles. He brings a unique charm to every character he portrays, making him a beloved figure in the industry.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png"
+        "name": "Patrick Thomas Kasey",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
     "director": "David Auspitz",
