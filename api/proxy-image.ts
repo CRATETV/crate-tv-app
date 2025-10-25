@@ -1,4 +1,3 @@
-
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/proxy-image
 export async function GET(request: Request) {
@@ -26,6 +25,8 @@ export async function GET(request: Request) {
         'Content-Type': contentType,
         // Allow caching to reduce server load and improve performance
         'Cache-Control': 'public, max-age=604800, immutable', // Cache for 1 week
+        // FIX: Add this header to allow cross-origin use in canvases (for html2canvas)
+        'Access-Control-Allow-Origin': '*',
       },
     });
 

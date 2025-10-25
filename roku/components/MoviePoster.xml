@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="MoviePoster" extends="Poster">
+    <script type="text/brightscript" uri="pkg:/components/MoviePoster.brs" />
+    <interface>
+        <field id="itemContent" type="node" onChange="onContentChange" />
+    </interface>
+</component>

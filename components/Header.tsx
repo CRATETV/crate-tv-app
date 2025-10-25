@@ -86,14 +86,6 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
             >
               About Us
             </a>
-        ) : isLoginPage ? (
-            <a 
-              href="/about" 
-              onClick={(e) => handleNavigate(e, '/about')} 
-              className={`${linkBaseStyles} ${pathname.startsWith('/about') ? activeLinkStyles : inactiveLinkStyles}`}
-            >
-              About Us
-            </a>
         ) : (
           <>
             {user && (
@@ -112,15 +104,6 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
                 className={`${linkBaseStyles} ${pathname.startsWith('/classics') ? activeLinkStyles : inactiveLinkStyles}`}
               >
                 Classics
-              </a>
-            )}
-            {!isAboutPage && !isHomePage && (
-              <a 
-                href="/about" 
-                onClick={(e) => handleNavigate(e, '/about')} 
-                className={`${linkBaseStyles} ${pathname.startsWith('/about') ? activeLinkStyles : inactiveLinkStyles}`}
-              >
-                About Us
               </a>
             )}
             {isFestivalLive && !isHomePage && (

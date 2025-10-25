@@ -79,7 +79,8 @@ export const categoriesData: Record<string, Category> = {
       'theneighbours',
       'tedandnatalie',
       'slap',
-      'unhinged'
+      'unhinged',
+      'itsinyou'
     ]
   },
   documentary: {
@@ -128,7 +129,7 @@ export const moviesData: Record<string, Movie> = {
   "consumed": {
     "key": "consumed",
     "title": "Consumed",
-    "synopsis": "She gave everything to make her love complete, but a woman learns that her monumental act of self-sacrifice wasn't a noble gesture; it was the final permission her toxic relationship needed to devour her soul.",
+    "synopsis": "She gave everything to make her love complete, but a woman learns that her monumental act of self-sacrifice wasn't a noble gesture; it was the final permission her toxic relationship needed to devour her soul.<br/><br/>Coming October 31st.",
     "cast": [
       {
         "name": "Lucie Paige Krovatin",
@@ -1033,15 +1034,15 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Shaunpaul Costello",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
         "name": "Seth Sharpe",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
         "name": "Alana Hill",
@@ -1088,21 +1089,21 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Auden Wyle",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
         "name": "Julia Davo",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
         "name": "Shaunpaul Costello",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
     "director": "Seth Sharpe",
@@ -1119,21 +1120,21 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Shaunpaul Costello",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
         "name": "Cal Plohoros",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
         "name": "Tevin La'Vea",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
     "director": "Shaunpaul Costello",

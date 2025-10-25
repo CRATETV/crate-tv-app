@@ -579,6 +579,7 @@ const AdminPage: React.FC = () => {
                         categories={categories}
                         festivalData={festivalData}
                         festivalConfig={festivalConfig}
+                        aboutData={aboutData}
                     />
                 </div>
             )}

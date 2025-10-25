@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Movie, Category, FestivalDay, FestivalConfig } from '../types';
+import { Movie, Category, FestivalDay, FestivalConfig, AboutData } from '../types';
+import { moviesData as currentFallbackMovies } from '../constants';
 
 interface FallbackGeneratorProps {
   movies: Record<string, Movie>;
   categories: Record<string, Category>;
   festivalData: FestivalDay[];
   festivalConfig: FestivalConfig | null;
+  aboutData: AboutData | null;
 }
 
 const FallbackGenerator: React.FC<FallbackGeneratorProps> = ({
@@ -13,23 +15,53 @@ const FallbackGenerator: React.FC<FallbackGeneratorProps> = ({
   categories,
   festivalData,
   festivalConfig,
+  aboutData,
 }) => {
   const [generatedCode, setGeneratedCode] = useState('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
 
   const generateConstantsFileContent = () => {
-    if (!festivalConfig) {
-        setGeneratedCode('Error: Festival configuration is missing. Cannot generate code.');
-        return;
+    if (!festivalConfig || !aboutData) {
+      setGeneratedCode('Error: Festival or About configuration is missing. Cannot generate code.');
+      return;
     }
-    const header = `import { Category, Movie, FestivalDay, FestivalConfig } from './types';\n\n`;
+    
+    // Defensive merge: Preserve poster URLs from the old fallback if they are missing in the new live data.
+    const mergedMovies: Record<string, Movie> = JSON.parse(JSON.stringify(movies));
+    for (const key in currentFallbackMovies) {
+        const liveMovie = mergedMovies[key];
+        const fallbackMovie = currentFallbackMovies[key];
 
+        if (liveMovie && fallbackMovie) {
+            if (!liveMovie.poster && fallbackMovie.poster) {
+                liveMovie.poster = fallbackMovie.poster;
+            }
+            if (!liveMovie.tvPoster && fallbackMovie.tvPoster) {
+                liveMovie.tvPoster = fallbackMovie.tvPoster;
+            }
+        }
+    }
+
+    const header = `import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';\n\n`;
+    
+    // Re-add the isMovieReleased utility function to the generated file
+    const utilityFunction = `
+// Utility function to robustly check if a movie is past its release time.
+export const isMovieReleased = (movie: Movie | undefined | null): boolean => {
+    if (!movie || !movie.releaseDateTime) {
+        return true; // No release date means it's always available
+    }
+    // Compare the release time with the current time
+    return new Date(movie.releaseDateTime) <= new Date();
+};\n\n`;
+    
     const categoriesString = `export const categoriesData: Record<string, Category> = ${JSON.stringify(categories, null, 2)};\n\n`;
-    const moviesString = `export const moviesData: Record<string, Movie> = ${JSON.stringify(movies, null, 2)};\n\n`;
+    const moviesString = `export const moviesData: Record<string, Movie> = ${JSON.stringify(mergedMovies, null, 2)};\n\n`;
+    const aboutDataString = `export const aboutData: AboutData = ${JSON.stringify(aboutData, null, 2)};\n\n`;
     const festivalConfigString = `export const festivalConfigData: FestivalConfig = ${JSON.stringify(festivalConfig, null, 2)};\n\n`;
     const festivalDataString = `export const festivalData: FestivalDay[] = ${JSON.stringify(festivalData, null, 2)};\n`;
 
-    const fullCode = header + categoriesString + moviesString + festivalConfigString + festivalDataString;
+    const fullCode = header + utilityFunction + categoriesString + moviesString + aboutDataString + festivalConfigString + festivalDataString;
     setGeneratedCode(fullCode);
   };
 
