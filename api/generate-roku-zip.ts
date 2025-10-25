@@ -1,4 +1,3 @@
-
 // This is a Vercel Serverless Function that generates a Roku channel package.
 // It will be accessible at the path /api/generate-roku-zip
 import JSZip from 'jszip';
@@ -11,7 +10,7 @@ const manifestContent = `
 title=Crate TV
 major_version=1
 minor_version=0
-build_version=3
+build_version=4
 bs_version=3.0
 mm_icon_focus_hd=pkg:/images/logo_400x90.png
 splash_screen_hd=pkg:/images/splash_hd_1280x720.png
@@ -47,10 +46,8 @@ const homeSceneXml = `
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
 
     <children>
-        <!-- Background color corrected to Roku format -->
         <Rectangle id="background" color="0x1A1A1AFF" width="1920" height="1080" />
 
-        <!-- Font definitions. Font files must be placed in a /fonts directory. -->
         <Label id="fontLoader">
             <font role="Roboto-Regular-40" uri="pkg:/fonts/Roboto-Regular.ttf" size="40" />
             <font role="Roboto-Regular-30" uri="pkg:/fonts/Roboto-Regular.ttf" size="30" />
@@ -58,18 +55,15 @@ const homeSceneXml = `
             <font role="Roboto-Bold-30" uri="pkg:/fonts/Roboto-Bold.ttf" size="30" />
         </Label>
         
-        <!-- Loading indicator -->
         <Label 
             id="loadingLabel"
             text="Loading Crate TV..."
             translation="[960, 540]"
             horizAlign="center"
             vertAlign="center"
-        >
-            <font role="Roboto-Regular-40" />
-        </Label>
+            font="font:Roboto-Regular-40"
+        />
         
-        <!-- Main content group, initially hidden -->
         <Group id="contentGroup" visible="false">
             <RowList 
                 id="contentRowList"
@@ -86,7 +80,6 @@ const homeSceneXml = `
             />
         </Group>
 
-        <!-- Task node for fetching data -->
         <ContentTask id="contentTask" />
     </children>
 
@@ -111,7 +104,8 @@ function onContentLoaded(event as object)
         m.contentRowList.content = contentNode
         m.loadingLabel.visible = false
         m.contentGroup.visible = true
-        m.top.setFocus(true)
+        ' FIX: Set focus on the RowList, not the scene itself
+        m.contentRowList.setFocus(true)
     else
         m.loadingLabel.text = "Error: Could not load content."
     end if
@@ -130,7 +124,6 @@ const moviePosterXml = `
     </interface>
 
     <children>
-        <!-- The blue focus border, initially invisible. Color format corrected. -->
         <Rectangle 
             id="focusRing"
             color="0x1A73E8FF"
@@ -140,22 +133,19 @@ const moviePosterXml = `
             visible="false" 
         />
         
-        <!-- The movie poster image -->
         <Poster 
             id="tileImage"
             width="300"
             height="180"
         />
 
-        <!-- The movie title label -->
         <Label 
             id="tileLabel"
             width="300"
             horizAlign="center"
             translation="[0, 195]"
-        >
-             <font role="Roboto-Regular-30" />
-        </Label>
+            font="font:Roboto-Regular-30"
+        />
     </children>
 
 </component>
@@ -184,11 +174,13 @@ function onFocusChange()
     ' When focused (focusPercent = 1.0)
     if focusPercent = 1.0
         m.focusRing.visible = true
-        m.tileLabel.font.role = "Roboto-Bold-30" ' Change to bold font
-        m.tileLabel.color = "0xFFFFFFFF" ' Ensure text is white
+        ' FIX: Re-assign the entire font field to change style
+        m.tileLabel.font = "font:Roboto-Bold-30"
+        m.tileLabel.color = "0xFFFFFFFF"
     else ' When unfocused
         m.focusRing.visible = false
-        m.tileLabel.font.role = "Roboto-Regular-30" ' Change back to regular font
+        ' FIX: Re-assign the entire font field to change style
+        m.tileLabel.font = "font:Roboto-Regular-30"
     end if
 end function
 `.trim();
@@ -198,9 +190,7 @@ const contentTaskXml = `
 <component name="ContentTask" extends="Task">
 
     <interface>
-        <!-- The URL to fetch -->
         <field id="url" type="string" />
-        <!-- The parsed content result -->
         <field id="content" type="node" />
     </interface>
     
@@ -210,7 +200,6 @@ const contentTaskXml = `
 `.trim();
 
 const contentTaskBrs = `
-' Corresponds to the GetContentFeed function from Step 5
 function GetContentFeed()
     url = m.top.url
     port = createObject("roMessagePort")
@@ -246,7 +235,6 @@ function GetContentFeed()
     end if
 end function
 
-' Converts the parsed JSON AA into a SceneGraph ContentNode
 function createContentNode(data as object) as object
     rowListContent = createObject("roSGNode", "ContentNode")
     
@@ -256,7 +244,6 @@ function createContentNode(data as object) as object
             row.title = category.title
             
             for each movie in category.movies
-                ' Use the fields from our /api/roku-feed
                 item = createObject("roSGNode", "ContentNode")
                 item.title = movie.title
                 item.HDPosterUrl = movie.HDPosterUrl
@@ -309,14 +296,11 @@ export async function GET(request: Request) {
         
         const zip = new JSZip();
 
-        // Root files
         zip.file('manifest', manifestContent);
 
-        // Source folder
         const source = zip.folder('source');
         source?.file('main.brs', mainBrsContent);
 
-        // Components folder
         const components = zip.folder('components');
         components?.file('HomeScene.xml', homeSceneXml);
         components?.file('HomeScene.brs', homeSceneBrs);
@@ -325,10 +309,8 @@ export async function GET(request: Request) {
         components?.file('ContentTask.xml', contentTaskXml);
         components?.file('ContentTask.brs', contentTaskBrs);
         
-        // Fonts folder (The user must add the actual .ttf files to their project's /roku/fonts directory)
         zip.folder('fonts');
 
-        // Images folder
         const [logoImage, splashImage] = await Promise.all([
             getS3Object(bucketName, logoKey),
             getS3Object(bucketName, splashKey),
@@ -340,7 +322,6 @@ export async function GET(request: Request) {
             images?.file('splash_hd_1280x720.png', splashImage);
             images?.file('splash_fhd_1920x1080.png', splashImage);
         } else {
-             // If splash is missing, create a blank placeholder to avoid Roku errors
             const placeholder = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 1, 99, 97, 0, 2, 0, 0, 25, 0, 5, 147, 10, 217, 160, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130]);
             images?.file('splash_hd_1280x720.png', placeholder);
             images?.file('splash_fhd_1920x1080.png', placeholder);
