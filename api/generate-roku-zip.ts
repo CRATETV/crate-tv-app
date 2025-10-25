@@ -54,10 +54,16 @@ const getS3Object = async (bucket: string, key: string): Promise<Uint8Array | nu
     }
 };
 
-// Helper to read a file from the 'roku' directory
-const readRokuFile = (filePath: string) => {
-    return fs.readFileSync(path.join(cwd(), 'roku', filePath), 'utf-8');
+// Helper to read a file from the 'roku' directory and strip the BOM
+const readRokuFile = (filePath: string): string => {
+    let content = fs.readFileSync(path.join(cwd(), 'roku', filePath), 'utf-8');
+    // Strip the BOM (Byte Order Mark) if it exists. This is a common cause for Roku compilation errors on line 1.
+    if (content.charCodeAt(0) === 0xFEFF) {
+        content = content.slice(1);
+    }
+    return content;
 };
+
 
 export async function GET(request: Request) {
     try {
