@@ -99,7 +99,7 @@ export const moviesData: Record<string, Movie> = {
   "consumed": {
     "key": "consumed",
     "title": "Consumed",
-    "synopsis": "A gripping psychological thriller that delves into the minds of two women caught in a web of suspense and paranoia.",
+    "synopsis": "She gave everything to make her love complete, but a woman learns that her monumental act of self-sacrifice wasn't a noble gesture; it was the final permission her toxic relationship needed to devour her soul.",
     "cast": [
       {
         "name": "Lucie Paige Krovatin",
@@ -148,7 +148,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Oskar Pierre Castro",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/That+Loud+.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/That%20Loud-web-optimized.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/That%20Loud.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/That%20Loud.png",
     "likes": 0
@@ -992,7 +992,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Michelle Reale-Opalesky",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results+.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results-web-optimized.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results.png",
     "likes": 0
@@ -1048,8 +1048,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Shaunpaul Costello, Seth Sharpe",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/SLAP+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap+poster.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Slap.png",
     "likes": 0
   },
   "theneighbours": {
@@ -1079,8 +1079,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Seth Sharpe",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/NEIGHBORS+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Neighbors.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Neighbors.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/the+neighbors+poster+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/The+Neighbours.png",
     "likes": 0
   },
   "twopeasinapod": {
@@ -1110,8 +1110,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Shaunpaul Costello",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+in+a+Pod.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+pod+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+pod+.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+peas+in+a+pod+poster+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/TwoPeasInAPod.png",
     "likes": 0
   },
   "tedandnatalie": {
@@ -1135,8 +1135,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "David Auspitz",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Natalie.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Natalie+poster.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/TedAndNatalie.png",
     "likes": 0
   },
   

@@ -189,7 +189,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     
     const loadMovieData = async () => {
         try {
-            const { data: liveData, source } = await fetchAndCacheLiveData();
+            const { data: liveData, source } = await fetchAndCacheLiveData({ force: stagingActive });
             setDataSource(source);
             setAllMovies(liveData.movies);
             setAllCategories(liveData.categories);
@@ -205,7 +205,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     
               setMovie({ ...sourceMovie });
     
-              if (params.get('play') === 'true' && sourceMovie.fullMovie && (released || stagingActive)) {
+              if (params.get('play') === 'true' && sourceMovie.fullMovie && released) {
                 setPlayerMode('full');
               } else {
                 setPlayerMode('poster');
