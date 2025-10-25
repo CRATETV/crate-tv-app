@@ -19,6 +19,9 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
   }
   
   const released = isMovieReleased(movie);
+  const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
+  const isHalloweenRelease = releaseDate ? releaseDate.getMonth() === 9 && releaseDate.getDate() === 31 : false;
+
 
   return (
     <div
@@ -34,11 +37,21 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
           <h1 className="text-3xl md:text-5xl font-bold text-white drop-shadow-lg mb-4">{movie.title}</h1>
           
           {!released && movie.releaseDateTime && (
-            <div className="mb-4 bg-red-600/80 text-white font-bold py-2 px-4 rounded-md inline-flex items-center gap-2">
-               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-               </svg>
-               <Countdown targetDate={movie.releaseDateTime} className="text-sm" />
+            <div className="mb-4 inline-flex flex-col items-start gap-2">
+                {isHalloweenRelease && (
+                    <div className="inline-flex items-center gap-2 rounded-md bg-orange-600/90 px-4 py-2 font-bold text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2c5.52 0 10 4.48 10 10s-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2zm-1 2v4h2V4h-2zm-3.5 7.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zm7 0c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zm-3.5 6c-1.33 0-2.67-.83-3.5-2v1.5h7V17c-.83 1.17-2.17 2-3.5 2z" />
+                        </svg>
+                        <span className="text-lg">Premieres Halloween!</span>
+                    </div>
+                )}
+                <div className="inline-flex items-center gap-2 rounded-md bg-red-600/80 px-4 py-2 font-bold text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <Countdown targetDate={movie.releaseDateTime} className="text-sm" />
+                </div>
             </div>
           )}
           

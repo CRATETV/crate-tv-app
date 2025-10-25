@@ -78,7 +78,8 @@ export const categoriesData: Record<string, Category> = {
       'newmovie1756487215116',
       'theneighbours',
       'tedandnatalie',
-      'slap'
+      'slap',
+      'unhinged'
     ]
   },
   documentary: {
@@ -105,6 +106,25 @@ export const categoriesData: Record<string, Category> = {
 };
 
 export const moviesData: Record<string, Movie> = {
+  "unhinged": {
+    "key": "unhinged",
+    "title": "The Unhinged",
+    "synopsis": "Information regarding this film is currently unavailable. A film by Robert Graves & Philaye Films.",
+    "cast": [
+      {
+        "name": "Information currently unavailable.",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Robert Graves",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+Unhinged-+A+film+by+Robert+Graves+%26+Philaye+Films.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+unhinged+Movie+poster+.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+unhinged+Movie+poster+.JPG",
+    "likes": 0
+  },
   "consumed": {
     "key": "consumed",
     "title": "Consumed",
@@ -1057,8 +1077,13 @@ export const moviesData: Record<string, Movie> = {
     "director": "Shaunpaul Costello, Seth Sharpe",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/SLAP+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
+<<<<<<< HEAD
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results+.mp4",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Slap.png",
+=======
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
+>>>>>>> f0d0a88 (fix:)
     "likes": 0
   },
   "theneighbours": {
@@ -1088,8 +1113,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Seth Sharpe",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/NEIGHBORS+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/the+neighbors+poster+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/The+Neighbours.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Neighbors.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Neighbors.png",
     "likes": 0
   },
   "twopeasinapod": {
@@ -1119,8 +1144,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Shaunpaul Costello",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+in+a+Pod.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+peas+in+a+pod+poster+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/TwoPeasInAPod.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+pod+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+pod+.png",
     "likes": 0
   },
   "tedandnatalie": {
@@ -1144,8 +1169,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "David Auspitz",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Natalie.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Natalie+poster.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/TedAndNatalie.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
     "likes": 0
   },
   
