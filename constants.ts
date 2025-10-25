@@ -581,7 +581,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Bubacarr Sarge",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
-        "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
@@ -898,7 +898,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Bubacarr Sarge",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
-        "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
@@ -972,7 +972,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Bubacarr Sarge",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
-        "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
@@ -998,7 +998,7 @@ export const moviesData: Record<string, Movie> = {
   "results": {
     "key": "results",
     "title": "Results",
-    "synopsis": "Confined to a sterile medical waiting room, three women await life-altering results—but only one of them seems to have a handle on everything. A short film created for the Playhouse West-Philadelphia 3-3-3 film festival.",
+    "synopsis":"Confined to a sterile medical waiting room, three women await life-altering results—but only one of them seems to have a handle on everything. A short film created for the Playhouse West-Philadelphia 3-3-3 film festival.",
     "cast": [
       {
         "name": "Michelle Reale-Opalesky",
@@ -1077,13 +1077,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Shaunpaul Costello, Seth Sharpe",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/SLAP+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
-<<<<<<< HEAD
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results+.mp4",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Slap.png",
-=======
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
->>>>>>> f0d0a88 (fix:)
     "likes": 0
   },
   "theneighbours": {
