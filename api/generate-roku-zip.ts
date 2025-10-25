@@ -1,4 +1,3 @@
-
 // This is a Vercel Serverless Function that generates a Roku channel package.
 // It will be accessible at the path /api/generate-roku-zip
 import JSZip from 'jszip';
@@ -11,7 +10,7 @@ const manifestContent = `
 title=Crate TV
 major_version=1
 minor_version=0
-build_version=1
+build_version=2
 mm_icon_focus_hd=pkg:/images/logo_400x90.png
 mm_icon_focus_sd=pkg:/images/logo_400x90.png
 splash_screen_hd=pkg:/images/splash_hd_1280x720.png
@@ -20,25 +19,7 @@ splash_screen_fhd=pkg:/images/splash_fhd_1920x1080.png
 
 const mainBrsContent = `
 sub main(args as object)
-    if args <> invalid and args.contentid <> invalid
-        screen = CreateObject("roSGScreen")
-        port = CreateObject("roMessagePort")
-        screen.setMessagePort(port)
-        
-        scene = screen.createScene("VideoPlayerScene")
-        scene.contentID = args.contentid
-        screen.control = "RUN"
-        screen.show()
-
-        while true
-            msg = wait(0, port)
-            if type(msg) = "roSGScreenEvent"
-                if msg.isScreenClosed() then return
-            end if
-        end while
-    else
-        showHomeScreen()
-    end if
+    showHomeScreen()
 end sub
 
 sub showHomeScreen()
@@ -79,6 +60,9 @@ const homeSceneXml = `
             </Group>
             <Group id="carouselsGroup" translation="[0, 600]" />
         </Group>
+        
+        <VideoPlayer id="videoPlayer" visible="false" />
+
     </children>
 </component>
 `;
@@ -93,6 +77,8 @@ function init()
     m.heroSynopsis = m.top.findNode("heroSynopsis")
     m.playHintLabel = m.top.findNode("playHintLabel")
     m.carouselsGroup = m.top.findNode("carouselsGroup")
+    m.videoPlayer = m.top.findNode("videoPlayer")
+    m.videoPlayer.observeField("visible", "onVideoPlayerVisibilityChange")
 
     m.contentTask = createObject("roSGNode", "ContentTask")
     m.contentTask.observeField("content", "onContentLoaded")
@@ -114,10 +100,17 @@ end function
 
 function createCarousels()
     yOffset = 0
-    for i = 0 to m.content.categories.getChildCount() - 1
-        category = m.content.categories.getChild(i)
+    if m.content.categories = invalid or m.content.categories.count() = 0
+        m.loadingLabel.text = "No content available."
+        m.loadingLabel.visible = true
+        m.mainGroup.visible = false
+        return
+    end if
+
+    for i = 0 to m.content.categories.count() - 1
+        category = m.content.categories[i]
         
-        if category <> invalid and category.movies <> invalid and category.movies.getChildCount() > 0
+        if category <> invalid and category.movies <> invalid and category.movies.count() > 0
             categoryLabel = createObject("roSGNode", "Label")
             categoryLabel.text = category.title
             categoryLabel.translation = [90, yOffset]
@@ -131,8 +124,8 @@ function createCarousels()
             rowlist.itemComponentName = "MoviePoster"
             
             listContent = createObject("roSGNode", "ContentNode")
-            for j = 0 to category.movies.getChildCount() - 1
-                movie = category.movies.getChild(j)
+            for j = 0 to category.movies.count() - 1
+                movie = category.movies[j]
                 itemNode = createObject("roSGNode", "ContentNode")
                 itemNode.addFields(movie)
                 listContent.appendChild(itemNode)
@@ -147,10 +140,9 @@ function createCarousels()
         end if
     end for
     
-    ' Set initial hero
-    firstRow = m.carouselsGroup.getChild(1)
-    if firstRow <> invalid and firstRow.content <> invalid and firstRow.content.getChildCount() > 0
-        firstMovie = firstRow.content.getChild(0)
+    firstRowList = m.carouselsGroup.getChild(1)
+    if firstRowList <> invalid and firstRowList.content <> invalid and firstRowList.content.getChildCount() > 0
+        firstMovie = firstRowList.content.getChild(0)
         updateHero(firstMovie)
     end if
 end function
@@ -161,12 +153,10 @@ function onRowItemSelected(event as object)
     selectedMovie = rowlist.content.getChild(selectedIndex)
     
     if selectedMovie <> invalid
-        ' Launch video player scene
-        scene = m.top.getScene()
-        videoScene = scene.createScene("VideoPlayerScene")
-        videoScene.contentID = selectedMovie.id
-        videoScene.control = "RUN"
-        scene.show(videoScene)
+        m.mainGroup.visible = false
+        m.videoPlayer.contentID = selectedMovie.id
+        m.videoPlayer.visible = true
+        m.videoPlayer.setFocus(true)
     end if
 end function
 
@@ -184,16 +174,28 @@ function updateHero(movie as object)
     m.heroTitle.text = movie.title
     m.heroSynopsis.text = movie.description
 end function
+
+function onVideoPlayerVisibilityChange(event as object)
+    isVisible = event.getData()
+    if not isVisible
+        m.mainGroup.visible = true
+        m.top.setFocus(true)
+        m.videoPlayer.contentID = invalid
+        m.videoPlayer.control = "stop"
+    end if
+end function
 `;
 
-const videoPlayerSceneXml = `
+const videoPlayerXml = `
 <?xml version="1.0" encoding="utf-8" ?>
-<component name="VideoPlayerScene" extends="Scene">
-    <script type="text/brightscript" uri="pkg:/components/VideoPlayerScene.brs" />
+<component name="VideoPlayer" extends="Group">
+    <script type="text/brightscript" uri="pkg:/components/VideoPlayer.brs" />
     <interface>
-        <field id="contentID" type="string" />
+        <field id="contentID" type="string" onChange="onContentIDChange" />
+        <field id="control" type="string" onChange="onControlChange" />
     </interface>
     <children>
+        <Rectangle id="background" color="0x000000FF" width="1920" height="1080" />
         <Label 
             id="statusLabel" 
             text="Loading video..." 
@@ -201,7 +203,7 @@ const videoPlayerSceneXml = `
             horizAlign="center" 
             vertAlign="center" />
         <Video
-            id="videoPlayer"
+            id="videoPlayerNode"
             width="1920"
             height="1080"
             visible="false"
@@ -210,37 +212,40 @@ const videoPlayerSceneXml = `
 </component>
 `;
 
-const videoPlayerSceneBrs = `
+const videoPlayerBrs = `
 function init()
     m.statusLabel = m.top.findNode("statusLabel")
-    m.videoPlayer = m.top.findNode("videoPlayer")
-    m.videoPlayer.observeField("state", "onVideoStateChange")
+    m.videoPlayerNode = m.top.findNode("videoPlayerNode")
+    m.videoPlayerNode.observeField("state", "onVideoStateChange")
     
     m.contentTask = createObject("roSGNode", "ContentTask")
     m.contentTask.observeField("content", "onContentLoaded")
-
-    m.top.observeField("wasClosed", "onSceneClosed")
 end function
 
-function onControlFieldChange()
-    if m.top.control = "RUN"
-        m.contentTask.contentID = m.top.contentID
+function onContentIDChange()
+    contentID = m.top.contentID
+    if contentID <> invalid and contentID <> ""
+        m.statusLabel.visible = true
+        m.videoPlayerNode.visible = false
+        m.contentTask.contentID = contentID
         m.contentTask.control = "RUN"
+    else
+        m.videoPlayerNode.control = "stop"
     end if
 end function
 
 function onContentLoaded(event as object)
-    movieData = event.getData()
-    if movieData <> invalid and movieData.streamUrl <> invalid and movieData.streamUrl <> ""
-        content = createObject("roSGNode", "ContentNode")
-        content.url = movieData.streamUrl
-        content.title = movieData.title
-        m.videoPlayer.content = content
+    fullMovieData = event.getData()
+    if fullMovieData <> invalid and fullMovieData.streamUrl <> invalid and fullMovieData.streamUrl <> ""
+        contentNode = createObject("roSGNode", "ContentNode")
+        contentNode.url = fullMovieData.streamUrl
+        contentNode.title = fullMovieData.title
+        m.videoPlayerNode.content = contentNode
         
         m.statusLabel.visible = false
-        m.videoPlayer.visible = true
-        m.videoPlayer.control = "play"
-        m.videoPlayer.setFocus(true)
+        m.videoPlayerNode.visible = true
+        m.videoPlayerNode.control = "play"
+        m.videoPlayerNode.setFocus(true)
     else
         m.statusLabel.text = "Could not load video."
     end if
@@ -248,17 +253,24 @@ end function
 
 function onVideoStateChange(event as object)
     state = event.getData()
-    if state = "finished"
-        m.top.close = true
-    else if state = "error"
-        m.statusLabel.text = "Video playback error."
-        m.statusLabel.visible = true
-        m.videoPlayer.visible = false
+    if state = "finished" or state = "error"
+        m.top.visible = false
     end if
 end function
 
-function onSceneClosed()
-    m.videoPlayer.control = "stop"
+function onControlChange()
+    if m.top.control = "stop"
+        m.videoPlayerNode.control = "stop"
+    end if
+end function
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    if press and key = "back"
+        m.videoPlayerNode.control = "stop"
+        m.top.visible = false
+        return true
+    end if
+    return false
 end function
 `;
 
@@ -317,13 +329,18 @@ function getContent()
                     m.top.content = parsedJson
                 else
                     print "Failed to parse JSON"
+                    m.top.content = invalid
                 end if
             else
                 print "HTTP Error: "; msg.getResponseCode()
+                m.top.content = invalid
             end if
         else
             print "Request timeout or error"
+            m.top.content = invalid
         end if
+    else
+         m.top.content = invalid
     end if
 end function
 `;
@@ -372,8 +389,8 @@ export async function GET(request: Request) {
         const components = zip.folder('components');
         components?.file('HomeScene.xml', homeSceneXml);
         components?.file('HomeScene.brs', homeSceneBrs);
-        components?.file('VideoPlayerScene.xml', videoPlayerSceneXml);
-        components?.file('VideoPlayerScene.brs', videoPlayerSceneBrs);
+        components?.file('VideoPlayer.xml', videoPlayerXml);
+        components?.file('VideoPlayer.brs', videoPlayerBrs);
         components?.file('MoviePoster.xml', moviePosterXml);
         components?.file('MoviePoster.brs', moviePosterBrs);
         components?.file('ContentTask.xml', contentTaskXml);

@@ -66,7 +66,6 @@ const LandingPage: React.FC = () => {
         isScrolled={true}
         onMobileSearchClick={() => {}}
         showSearch={false}
-        isLandingPage={true}
       />
       <main className="flex-grow">
         <Hero

@@ -22,10 +22,9 @@ interface HeaderProps {
   isOffline?: boolean;
   showSearch?: boolean;
   isFestivalLive?: boolean;
-  isLandingPage?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit, isStaging, isOffline, showSearch = true, isFestivalLive, isLandingPage = false }) => {
+const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit, isStaging, isOffline, showSearch = true, isFestivalLive }) => {
   const [topOffset, setTopOffset] = useState(0);
   const { user, logout } = useAuth();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -65,30 +64,23 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
   };
 
   const pathname = window.location.pathname;
-  const isLoginPage = pathname.startsWith('/login');
-  const isAboutPage = pathname.startsWith('/about');
-  const isHomePage = pathname === '/';
   const linkBaseStyles = "px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200";
   const activeLinkStyles = "bg-white/10 text-white";
   const inactiveLinkStyles = "text-gray-300 hover:bg-white/20 hover:text-white";
+  
+  // Determine if the header should have a solid background. It's solid if scrolled, on login/about pages,
+  // or if the user is logged out on the landing page.
+  const hasSolidBg = isScrolled || pathname.startsWith('/login') || pathname.startsWith('/about') || (pathname === '/' && !user);
 
   return (
     <header 
-      className={`fixed left-0 w-full z-40 px-4 md:px-8 py-3 flex justify-between items-center transition-all duration-300 ${isScrolled || isLoginPage || isAboutPage || isLandingPage ? 'bg-[#141414]/80 backdrop-blur-sm border-b border-gray-800' : 'bg-gradient-to-b from-black/70 to-transparent'}`}
+      className={`fixed left-0 w-full z-40 px-4 md:px-8 py-3 flex justify-between items-center transition-all duration-300 ${hasSolidBg ? 'bg-[#141414]/80 backdrop-blur-sm border-b border-gray-800' : 'bg-gradient-to-b from-black/70 to-transparent'}`}
       style={{ top: `${topOffset}px` }}
     >
       <div className="flex items-center gap-2 md:gap-4">
-        {isLandingPage ? (
-            <a 
-              href="/about" 
-              onClick={(e) => handleNavigate(e, '/about')} 
-              className={`${linkBaseStyles} ${inactiveLinkStyles}`}
-            >
-              About Us
-            </a>
-        ) : (
-          <>
-            {user && (
+        {user ? (
+            // --- Logged-in view ---
+            <>
                 <a 
                   href="/" 
                   onClick={(e) => handleNavigate(e, '/')} 
@@ -96,26 +88,35 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
                 >
                   Home
                 </a>
-            )}
-            {!isAboutPage && !isLandingPage && (
-              <a 
-                href="/classics" 
-                onClick={(e) => handleNavigate(e, '/classics')} 
-                className={`${linkBaseStyles} ${pathname.startsWith('/classics') ? activeLinkStyles : inactiveLinkStyles}`}
-              >
-                Classics
-              </a>
-            )}
-            {isFestivalLive && !isHomePage && (
                 <a 
-                  href="/festival" 
-                  onClick={(e) => handleNavigate(e, '/festival')} 
-                  className={`${linkBaseStyles} ${pathname.startsWith('/festival') ? activeLinkStyles : inactiveLinkStyles}`}
+                  href="/classics" 
+                  onClick={(e) => handleNavigate(e, '/classics')} 
+                  className={`${linkBaseStyles} ${pathname.startsWith('/classics') ? activeLinkStyles : inactiveLinkStyles}`}
                 >
-                  Festival
+                  Classics
                 </a>
-            )}
-          </>
+                {isFestivalLive && (
+                    <a 
+                      href="/festival" 
+                      onClick={(e) => handleNavigate(e, '/festival')} 
+                      className={`${linkBaseStyles} ${pathname.startsWith('/festival') ? activeLinkStyles : inactiveLinkStyles}`}
+                    >
+                      Festival
+                    </a>
+                )}
+            </>
+        ) : (pathname === '/') ? (
+            // --- Logged-out Landing Page view ---
+            <a 
+                href="/about" 
+                onClick={(e) => handleNavigate(e, '/about')} 
+                className={`${linkBaseStyles} ${inactiveLinkStyles}`}
+            >
+                About Us
+            </a>
+        ) : (
+            // --- Logged-out view on other pages (show nothing on the left) ---
+            null
         )}
       </div>
       <div className="flex items-center gap-2 sm:gap-4">
@@ -165,7 +166,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
             )}
           </div>
         ) : (
-          !isLoginPage && !isLandingPage && (
+          !pathname.startsWith('/login') && (
              <a href="/login" onClick={(e) => handleNavigate(e, '/login')} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors">
               Sign In
             </a>
