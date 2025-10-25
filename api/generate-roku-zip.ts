@@ -47,10 +47,10 @@ const homeSceneXml = `
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
 
     <children>
-        <!-- Background color as per Step 4 -->
-        <Rectangle id="background" color="#1A1A1A" width="1920" height="1080" />
+        <!-- Background color corrected to Roku format -->
+        <Rectangle id="background" color="0x1A1A1AFF" width="1920" height="1080" />
 
-        <!-- Font definitions as per Step 4. Font files must be placed in a /fonts directory. -->
+        <!-- Font definitions. Font files must be placed in a /fonts directory. -->
         <Label id="fontLoader">
             <font role="Roboto-Regular-40" uri="pkg:/fonts/Roboto-Regular.ttf" size="40" />
             <font role="Roboto-Regular-30" uri="pkg:/fonts/Roboto-Regular.ttf" size="30" />
@@ -73,16 +73,16 @@ const homeSceneXml = `
         <Group id="contentGroup" visible="false">
             <RowList 
                 id="contentRowList"
-                translation="[80, 80]" ' Side margin of 80px, top margin
+                translation="[80, 80]"
                 itemComponentName="MoviePoster"
-                itemSize="[300, 235]" ' 300x180 image + 15px space + 40px label height
-                rowItemSpacing="[ [40, 0] ]" ' Horizontal spacing between tiles
+                itemSize="[300, 235]"
+                rowItemSpacing="[ [40, 0] ]"
                 numRows="1"
                 rowHeights="[235]"
-                rowLabelOffset="[ [0, -50] ]" ' Position for row titles
+                rowLabelOffset="[ [0, -50] ]"
                 rowFocusAnimationStyle="floatingFocus"
                 rowLabelFont="font:Roboto-Bold-30"
-                itemSpacing="[0, 60]" ' Vertical spacing between rows as per Step 2
+                itemSpacing="[0, 60]"
             />
         </Group>
 
@@ -101,13 +101,13 @@ function init()
     
     m.contentTask = m.top.findNode("contentTask")
     m.contentTask.observeField("content", "onContentLoaded")
-    m.contentTask.url = "https://api.cratetv.com/v1/rows" ' As specified in Step 6
+    m.contentTask.url = "https://cratetv.net/api/roku-feed"
     m.contentTask.control = "RUN"
 end function
 
 function onContentLoaded(event as object)
     contentNode = event.getData()
-    if contentNode <> invalid
+    if contentNode <> invalid and contentNode.getChildCount() > 0
         m.contentRowList.content = contentNode
         m.loadingLabel.visible = false
         m.contentGroup.visible = true
@@ -125,19 +125,17 @@ const moviePosterXml = `
     <script type="text/brightscript" uri="pkg:/components/MoviePoster.brs" />
 
     <interface>
-        <!-- The content for this tile, passed from the RowList -->
         <field id="itemContent" type="node" onChange="onContentChange" />
-        <!-- The focus state of the tile -->
         <field id="focusPercent" type="float" onChange="onFocusChange" />
     </interface>
 
     <children>
-        <!-- The blue focus border, initially invisible -->
+        <!-- The blue focus border, initially invisible. Color format corrected. -->
         <Rectangle 
             id="focusRing"
-            color="#1A73E8"
-            width="316"  ' 300 + 8*2
-            height="196" ' 180 + 8*2
+            color="0x1A73E8FF"
+            width="316"
+            height="196"
             translation="[-8, -8]"
             visible="false" 
         />
@@ -154,7 +152,7 @@ const moviePosterXml = `
             id="tileLabel"
             width="300"
             horizAlign="center"
-            translation="[0, 195]" ' 180px image height + 15px space
+            translation="[0, 195]"
         >
              <font role="Roboto-Regular-30" />
         </Label>
@@ -174,8 +172,8 @@ end function
 function onContentChange()
     content = m.top.itemContent
     if content <> invalid
-        m.tileImage.uri = content.PosterURL
-        m.tileLabel.text = content.Title
+        m.tileImage.uri = content.HDPosterUrl
+        m.tileLabel.text = content.title
     end if
 end function
 
@@ -187,7 +185,7 @@ function onFocusChange()
     if focusPercent = 1.0
         m.focusRing.visible = true
         m.tileLabel.font.role = "Roboto-Bold-30" ' Change to bold font
-        m.tileLabel.color = "#FFFFFF" ' Ensure text is white
+        m.tileLabel.color = "0xFFFFFFFF" ' Ensure text is white
     else ' When unfocused
         m.focusRing.visible = false
         m.tileLabel.font.role = "Roboto-Regular-30" ' Change back to regular font
@@ -258,10 +256,12 @@ function createContentNode(data as object) as object
             row.title = category.title
             
             for each movie in category.movies
+                ' Use the fields from our /api/roku-feed
                 item = createObject("roSGNode", "ContentNode")
-                item.Title = movie.Title
-                item.PosterURL = movie.PosterURL
-                item.VideoURL = movie.VideoURL
+                item.title = movie.title
+                item.HDPosterUrl = movie.HDPosterUrl
+                item.description = movie.description
+                item.streamUrl = movie.streamUrl
                 row.appendChild(item)
             end for
             rowListContent.appendChild(row)
