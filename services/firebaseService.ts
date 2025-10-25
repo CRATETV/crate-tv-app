@@ -17,7 +17,8 @@ import {
     limit, 
     query, 
     orderBy,
-    Firestore
+    Firestore,
+    getDoc
 } from 'firebase/firestore';
 
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData } from '../types';
@@ -109,29 +110,67 @@ const notifyLocalListeners = () => {
 
 // --- Fallback and Migration ---
 const migrateInitialData = async (firestoreDb: Firestore) => {
-    const moviesQuery = query(collection(firestoreDb, 'movies'), limit(1));
-    const moviesSnapshot = await getDocs(moviesQuery);
+    console.log("Checking for missing initial data in Firestore...");
+    const batch = writeBatch(firestoreDb);
+    let operationsCount = 0;
 
-    if (moviesSnapshot.empty) {
-        console.log("Database is empty. Migrating initial data to Firestore...");
-        const batch = writeBatch(firestoreDb);
-        
-        Object.entries(initialMovies).forEach(([key, movie]) => {
+    // 1. Check for missing MOVIES
+    const moviesSnapshot = await getDocs(collection(firestoreDb, 'movies'));
+    const existingMovieKeys = new Set(moviesSnapshot.docs.map(doc => doc.id));
+    for (const [key, movie] of Object.entries(initialMovies)) {
+        if (!existingMovieKeys.has(key)) {
+            console.log(`- Adding missing movie: ${key}`);
             batch.set(doc(firestoreDb, 'movies', key), movie);
-        });
-        Object.entries(initialCategories).forEach(([key, category]) => {
+            operationsCount++;
+        }
+    }
+
+    // 2. Check for missing CATEGORIES
+    const categoriesSnapshot = await getDocs(collection(firestoreDb, 'categories'));
+    const existingCategoryKeys = new Set(categoriesSnapshot.docs.map(doc => doc.id));
+    for (const [key, category] of Object.entries(initialCategories)) {
+        if (!existingCategoryKeys.has(key)) {
+            console.log(`- Adding missing category: ${key}`);
             batch.set(doc(firestoreDb, 'categories', key), category);
-        });
+            operationsCount++;
+        }
+    }
+
+    // 3. Check for FESTIVAL CONFIG
+    const festivalConfigDoc = await getDoc(doc(firestoreDb, 'festival', 'config'));
+    if (!festivalConfigDoc.exists()) {
+        console.log("- Adding missing festival config.");
         batch.set(doc(firestoreDb, 'festival', 'config'), initialFestivalConfig);
+        operationsCount++;
+    }
+
+    // 4. Check for FESTIVAL DAYS
+    const festivalDaysSnapshot = await getDocs(collection(firestoreDb, 'festival/schedule/days'));
+    if (festivalDaysSnapshot.empty) {
+        console.log("- Adding missing festival schedule days.");
         initialFestivalData.forEach(day => {
             batch.set(doc(firestoreDb, 'festival/schedule/days', `day-${day.day}`), day);
+            operationsCount++;
         });
+    }
+    
+    // 5. Check for ABOUT CONTENT
+    const aboutContentDoc = await getDoc(doc(firestoreDb, 'content', 'about'));
+    if (!aboutContentDoc.exists()) {
+        console.log("- Adding missing 'About Us' content.");
         batch.set(doc(firestoreDb, 'content', 'about'), initialAboutData);
-        
+        operationsCount++;
+    }
+
+    // Commit the batch only if there are new operations to perform
+    if (operationsCount > 0) {
         await batch.commit();
-        console.log("Initial data migration complete.");
+        console.log(`Initial data sync complete. Added ${operationsCount} missing item(s).`);
+    } else {
+        console.log("Firestore data is already in sync with initial constants.");
     }
 };
+
 
 // --- Main Data Service ---
 export const listenToAllAdminData = (
