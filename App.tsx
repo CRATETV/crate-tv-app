@@ -192,7 +192,7 @@ const App: React.FC = () => {
 
   // 2. Memoize the remaining standard categories for the main display list.
   const displayedCategories = useMemo(() => {
-    const baseCategoryOrder: string[] = ["newReleases", "awardWinners", "pwff12thAnnual", "comedy", "drama", "documentary", "exploreTitles"];
+    const baseCategoryOrder: string[] = ["newReleases", "filmsOver20Minutes", "awardWinners", "pwff12thAnnual", "comedy", "drama", "documentary", "exploreTitles"];
     
     return baseCategoryOrder
       .map((key): DisplayedCategory | null => {

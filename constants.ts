@@ -29,6 +29,10 @@ export const categoriesData: Record<string, Category> = {
         'newmovie1756485973547', // Burst
     ]
   },
+  filmsOver20Minutes: {
+    title: 'Twenty Minutes or Longer',
+    movieKeys: ['streeteatstheboot', 'lifeless', 'thepawnshop', 'theimmigrant']
+  },
   awardWinners: {
     title: 'Award-Winning Films',
     movieKeys: ['lifeless', 'foodiecalldirectorscut', 'iloveyoublack', 'hair', 'juniper']
@@ -124,7 +128,8 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+Unhinged-+A+film+by+Robert+Graves+%26+Philaye+Films.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+unhinged+Movie+poster+.JPG",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+unhinged+Movie+poster+.JPG",
-    "likes": 0
+    "likes": 0,
+    durationInMinutes: 9,
   },
   "consumed": {
     "key": "consumed",
@@ -150,7 +155,8 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
     "likes": 0,
-    "releaseDateTime": "2024-10-31T23:00:00Z"
+    "releaseDateTime": "2024-10-31T23:00:00Z",
+    durationInMinutes: 11,
   },
   "thatloud": {
     "key": "thatloud",
@@ -212,7 +218,8 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/LIFELESS.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/Lifeless+poster+remake+.jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Lifeless.png",
-    "likes": 0
+    "likes": 0,
+    durationInMinutes: 22,
   },
   "almasvows": {
     "key": "almasvows",
@@ -243,7 +250,8 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/Almas+Vows+-+Alana+Hill.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/Alma%27s+vows+poster+remake+.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/AlmasVows.png",
-    "likes": 0
+    "likes": 0,
+    durationInMinutes: 12,
   },
   "foodiecalldirectorscut": {
     "key": "foodiecalldirectorscut",
@@ -286,7 +294,8 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Paycut.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Director's+cut+poster+.jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
-    "likes": 0
+    "likes": 0,
+    durationInMinutes: 18,
   },
   "foodiecalltheatricalcut": {
     "key": "foodiecalltheatricalcut",
@@ -329,7 +338,8 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Lasley+cut.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
-    "likes": 0
+    "likes": 0,
+    durationInMinutes: 15,
   },
   "finallycaught": {
     "key": "finallycaught",
@@ -416,7 +426,8 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/HAIR.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/Hair+poster+209+X+209++(2).jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Hair.png",
-    "likes": 0
+    "likes": 0,
+    durationInMinutes: 8,
   },
   "eharmonycs": {
     "key": "eharmonycs",
@@ -516,7 +527,8 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/Street+Eats+THE+BOOT-A+Louisiana+Food+Truck+Journey.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/street+Eats+the+Boot+trailer+overlay++(1).jpeg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/StreetEats.png",
-    "likes": 0
+    "likes": 0,
+    durationInMinutes: 30,
   },
   "silentlove": {
     "key": "silentlove",
@@ -1188,7 +1200,8 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "likes": 0,
-    "releaseDateTime": "1902-09-01T12:00:00Z"
+    "releaseDateTime": "1902-09-01T12:00:00Z",
+    durationInMinutes: 13,
   },
   "suspense": {
     "key": "suspense",
@@ -1208,7 +1221,8 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/suspense+movie+poster+.jpeg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/suspense+movie+poster+.jpeg",
     "likes": 0,
-    "releaseDateTime": "1913-07-06T12:00:00Z"
+    "releaseDateTime": "1913-07-06T12:00:00Z",
+    durationInMinutes: 10,
   },
   "thepawnshop": {
     "key": "thepawnshop",
@@ -1234,7 +1248,8 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/'The_Pawnshop'.jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/'The_Pawnshop'.jpg",
     "likes": 0,
-    "releaseDateTime": "1916-10-02T12:00:00Z"
+    "releaseDateTime": "1916-10-02T12:00:00Z",
+    durationInMinutes: 25,
   },
   "theimmigrant": {
     "key": "theimmigrant",
@@ -1260,7 +1275,8 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The_Immigrant_1917.JPG",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The_Immigrant_1917.JPG",
     "likes": 0,
-    "releaseDateTime": "1917-06-17T12:00:00Z"
+    "releaseDateTime": "1917-06-17T12:00:00Z",
+    durationInMinutes: 25,
   },
   "thefallofthehouseofusher": {
     "key": "thefallofthehouseofusher",
@@ -1273,7 +1289,8 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Fall+of+House+Of+Usher+.jpeg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Fall+of+House+Of+Usher+.jpeg",
     "likes": 0,
-    "releaseDateTime": "1928-10-28T12:00:00Z"
+    "releaseDateTime": "1928-10-28T12:00:00Z",
+    durationInMinutes: 13,
   },
   "unchienandalou": {
     "key": "unchienandalou",
@@ -1286,7 +1303,8 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Un+Chien+Andalou.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Un+Chien+Andalou.webp",
     "likes": 0,
-    "releaseDateTime": "1929-06-06T12:00:00Z"
+    "releaseDateTime": "1929-06-06T12:00:00Z",
+    durationInMinutes: 16,
   },
   "meshesofafternoon": {
     "key": "meshesofafternoon",
@@ -1306,7 +1324,8 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Meshes_of_the_Afternoon_1.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Meshes_of_the_Afternoon_1.png",
     "likes": 0,
-    "releaseDateTime": "1943-01-01T12:00:00Z"
+    "releaseDateTime": "1943-01-01T12:00:00Z",
+    durationInMinutes: 14,
   },
   "bridelessgroom": {
     "key": "bridelessgroom",
@@ -1326,7 +1345,8 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Bridelessgroom_1sht.jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Bridelessgroom_1sht.jpg",
     "likes": 0,
-    "releaseDateTime": "1947-09-11T12:00:00Z"
+    "releaseDateTime": "1947-09-11T12:00:00Z",
+    durationInMinutes: 16,
   }
 };
 

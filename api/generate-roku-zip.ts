@@ -10,7 +10,7 @@ const manifestContent = `
 title=Crate TV
 major_version=1
 minor_version=0
-build_version=5
+build_version=7
 bs_version=3.0
 mm_icon_focus_hd=pkg:/images/logo_400x90.png
 splash_screen_hd=pkg:/images/splash_hd_1280x720.png
@@ -73,7 +73,6 @@ const homeSceneXml = `
                 rowHeights="[235]"
                 rowLabelOffset="[ [0, -50] ]"
                 rowFocusAnimationStyle="floatingFocus"
-                rowLabelFont="font:Roboto-Bold-30"
                 itemSpacing="[0, 60]"
             />
         </Group>
@@ -89,6 +88,11 @@ function init()
     m.loadingLabel = m.top.findNode("loadingLabel")
     m.contentGroup = m.top.findNode("contentGroup")
     m.contentRowList = m.top.findNode("contentRowList")
+    
+    ' Correctly assign the font object for row labels
+    fontLoader = m.top.findNode("fontLoader")
+    boldFont = fontLoader.fonts.find("Roboto-Bold-30")
+    if boldFont <> invalid then m.contentRowList.rowLabelFont = boldFont
     
     m.contentTask = m.top.findNode("contentTask")
     m.contentTask.observeField("content", "onContentLoaded")
@@ -155,6 +159,14 @@ function init()
     m.focusRing = m.top.findNode("focusRing")
     m.tileImage = m.top.findNode("tileImage")
     m.tileLabel = m.top.findNode("tileLabel")
+    
+    ' Pre-load the fonts to avoid lookup during focus change
+    fontLoader = m.top.getScene().findNode("fontLoader")
+    if fontLoader <> invalid
+        m.regularFont = fontLoader.fonts.find("Roboto-Regular-30")
+        m.boldFont = fontLoader.fonts.find("Roboto-Bold-30")
+    end if
+    
 end function
 
 ' Populates the tile with data from the RowList content.
@@ -170,13 +182,12 @@ end function
 function onFocusChange()
     focusPercent = m.top.focusPercent
     
-    ' When focused (focusPercent = 1.0)
-    if focusPercent = 1.0
+    if focusPercent = 1.0 ' When focused
         m.focusRing.visible = true
-        m.tileLabel.font = "font:Roboto-Bold-30"
+        if m.boldFont <> invalid then m.tileLabel.font = m.boldFont
     else ' When unfocused
         m.focusRing.visible = false
-        m.tileLabel.font = "font:Roboto-Regular-30"
+        if m.regularFont <> invalid then m.tileLabel.font = m.regularFont
     end if
 end function
 `.trim();
@@ -196,7 +207,8 @@ const contentTaskXml = `
 `.trim();
 
 const contentTaskBrs = `
-function GetContentFeed()
+' The main entry point for the Task node.
+function main()
     url = m.top.url
     port = createObject("roMessagePort")
     request = createObject("roUrlTransfer")
@@ -214,19 +226,19 @@ function GetContentFeed()
                 if parsedJson <> invalid
                     m.top.content = createContentNode(parsedJson)
                 else
-                    print "GetContentFeed: Failed to parse JSON"
+                    print "ContentTask: Failed to parse JSON"
                     m.top.content = invalid
                 end if
             else
-                print "GetContentFeed: HTTP Error: "; msg.getResponseCode()
+                print "ContentTask: HTTP Error: "; msg.getResponseCode()
                 m.top.content = invalid
             end if
         else
-            print "GetContentFeed: Request timeout or error"
+            print "ContentTask: Request timeout or error"
             m.top.content = invalid
         end if
     else
-        print "GetContentFeed: Failed to start async request"
+        print "ContentTask: Failed to start async request"
         m.top.content = invalid
     end if
 end function

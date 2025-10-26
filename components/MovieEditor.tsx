@@ -88,6 +88,17 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
           <p className="text-xs text-gray-500 mt-1">Movie will be hidden from carousels after this date.</p>
         </div>
       </div>
+
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="director" className="block text-sm font-medium text-gray-300">Director</label>
+          <input type="text" name="director" value={formData.director} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+        </div>
+        <div>
+          <label htmlFor="durationInMinutes" className="block text-sm font-medium text-gray-300">Duration (in minutes)</label>
+          <input type="number" name="durationInMinutes" value={formData.durationInMinutes || ''} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+        </div>
+      </div>
       
       {/* URLs */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -100,10 +111,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
             <label htmlFor="tvPoster" className="block text-sm font-medium text-gray-300">TV Poster URL (Portrait 2:3)</label>
             <input type="text" name="tvPoster" value={formData.tvPoster || ''} onChange={handleChange} className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
             <S3Uploader label="Or Upload TV Poster" onUploadSuccess={(url) => handleUrlUpdate('tvPoster', url)} />
-        </div>
-        <div className="space-y-2">
-          <label htmlFor="director" className="block text-sm font-medium text-gray-300">Director</label>
-          <input type="text" name="director" value={formData.director} onChange={handleChange} className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
         </div>
          <div className="space-y-2">
           <label htmlFor="trailer" className="block text-sm font-medium text-gray-300">Trailer URL</label>

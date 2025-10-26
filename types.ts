@@ -18,6 +18,7 @@ export interface Movie {
   likes: number;
   releaseDateTime?: string;
   mainPageExpiry?: string;
+  durationInMinutes?: number;
 }
 
 export interface Category {

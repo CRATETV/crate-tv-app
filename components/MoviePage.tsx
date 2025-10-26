@@ -420,6 +420,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                               </div>
                           </div>
                           <div>
+                               {movie.durationInMinutes && movie.durationInMinutes > 0 && (
+                                <div className="mb-4">
+                                    <h3 className="text-lg font-semibold text-gray-400 mb-1">Duration</h3>
+                                    <p className="text-white">{movie.durationInMinutes} minutes</p>
+                                </div>
+                              )}
                                <h3 className="text-lg font-semibold text-gray-400 mb-2">Cast</h3>
                               <div className="space-y-2 text-white">
                                   {movie.cast.map((actor: Actor) => (

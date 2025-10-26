@@ -179,6 +179,7 @@ const AdminPage: React.FC = () => {
       likes: 0,
       releaseDateTime: getLocalDatetimeString(),
       mainPageExpiry: '',
+      durationInMinutes: 0,
     };
     setSelectedMovie(newMovie);
     setIsAddingNew(true);
