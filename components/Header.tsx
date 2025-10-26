@@ -114,18 +114,15 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
                     </a>
                 )}
             </>
-        ) : (pathname === '/') ? (
-            // --- Logged-out Landing Page view ---
+        ) : (
+            // --- Logged-out view (All pages) ---
             <a 
                 href="/about" 
                 onClick={(e) => handleNavigate(e, '/about')} 
-                className={`${linkBaseStyles} ${inactiveLinkStyles}`}
+                className={`${linkBaseStyles} ${pathname.startsWith('/about') ? activeLinkStyles : inactiveLinkStyles}`}
             >
                 About Us
             </a>
-        ) : (
-            // --- Logged-out view on other pages (show nothing on the left) ---
-            null
         )}
       </div>
       <div className="flex items-center gap-2 sm:gap-4">
