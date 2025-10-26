@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import { Buffer } from 'buffer';
 
 let adminAuth: admin.auth.Auth | null = null;
 let adminDb: admin.firestore.Firestore | null = null;
@@ -27,8 +28,8 @@ const initializeFirebaseAdmin = () => {
         if (admin.apps.length === 0) {
             let decodedKey: string;
             try {
-                // Use the web-standard atob function for universal compatibility
-                decodedKey = atob(serviceAccountKey);
+                // Use Node.js Buffer to decode the Base64 string.
+                decodedKey = Buffer.from(serviceAccountKey, 'base64').toString('utf8');
             } catch (bufferError) {
                 throw new Error("Failed to decode FIREBASE_SERVICE_ACCOUNT_KEY from Base64. Ensure the key is a valid, single-line Base64 string.");
             }

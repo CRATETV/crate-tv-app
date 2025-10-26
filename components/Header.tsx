@@ -154,7 +154,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
         )}
 
         {user ? (
-          <div className="relative" ref={menuRef} onMouseLeave={() => setIsAccountMenuOpen(false)}>
+          <div className="relative" ref={menuRef}>
             <button onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)} className="flex items-center justify-center h-8 w-8 rounded-full text-white bg-gray-700 hover:bg-white/10" aria-label="Open user menu">
               {user.avatar && avatars[user.avatar] ? (
                 <div className="h-full w-full p-1" dangerouslySetInnerHTML={{ __html: avatars[user.avatar] }} />
