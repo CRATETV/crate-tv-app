@@ -29,10 +29,6 @@ export const categoriesData: Record<string, Category> = {
         'newmovie1756485973547', // Burst
     ]
   },
-  filmsOver20Minutes: {
-    title: 'Twenty Minutes or Longer',
-    movieKeys: ['streeteatstheboot', 'lifeless', 'thepawnshop', 'theimmigrant']
-  },
   awardWinners: {
     title: 'Award-Winning Films',
     movieKeys: ['lifeless', 'foodiecalldirectorscut', 'iloveyoublack', 'hair', 'juniper']

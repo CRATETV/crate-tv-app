@@ -10,7 +10,7 @@ const manifestContent = `
 title=Crate TV
 major_version=1
 minor_version=0
-build_version=7
+build_version=8
 bs_version=3.0
 mm_icon_focus_hd=pkg:/images/logo_400x90.png
 splash_screen_hd=pkg:/images/splash_hd_1280x720.png
@@ -23,7 +23,7 @@ sub main()
     port = CreateObject("roMessagePort")
     screen.setMessagePort(port)
     
-    scene = screen.createScene("HomeScene")
+    screen.createScene("HomeScene")
     screen.show()
 
     while true
@@ -89,10 +89,11 @@ function init()
     m.contentGroup = m.top.findNode("contentGroup")
     m.contentRowList = m.top.findNode("contentRowList")
     
-    ' Correctly assign the font object for row labels
-    fontLoader = m.top.findNode("fontLoader")
-    boldFont = fontLoader.fonts.find("Roboto-Bold-30")
-    if boldFont <> invalid then m.contentRowList.rowLabelFont = boldFont
+    ' Create a font object programmatically for the row labels. This is the correct method.
+    rowFont = createObject("roSGNode", "Font")
+    rowFont.uri = "pkg:/fonts/Roboto-Bold.ttf"
+    rowFont.size = 30
+    m.contentRowList.rowLabelFont = rowFont
     
     m.contentTask = m.top.findNode("contentTask")
     m.contentTask.observeField("content", "onContentLoaded")
@@ -160,13 +161,14 @@ function init()
     m.tileImage = m.top.findNode("tileImage")
     m.tileLabel = m.top.findNode("tileLabel")
     
-    ' Pre-load the fonts to avoid lookup during focus change
-    fontLoader = m.top.getScene().findNode("fontLoader")
-    if fontLoader <> invalid
-        m.regularFont = fontLoader.fonts.find("Roboto-Regular-30")
-        m.boldFont = fontLoader.fonts.find("Roboto-Bold-30")
-    end if
-    
+    ' Create and store valid font objects for focus changes.
+    m.regularFont = createObject("roSGNode", "Font")
+    m.regularFont.uri = "pkg:/fonts/Roboto-Regular.ttf"
+    m.regularFont.size = 30
+
+    m.boldFont = createObject("roSGNode", "Font")
+    m.boldFont.uri = "pkg:/fonts/Roboto-Bold.ttf"
+    m.boldFont.size = 30
 end function
 
 ' Populates the tile with data from the RowList content.
@@ -184,10 +186,10 @@ function onFocusChange()
     
     if focusPercent = 1.0 ' When focused
         m.focusRing.visible = true
-        if m.boldFont <> invalid then m.tileLabel.font = m.boldFont
+        m.tileLabel.font = m.boldFont
     else ' When unfocused
         m.focusRing.visible = false
-        if m.regularFont <> invalid then m.tileLabel.font = m.regularFont
+        m.tileLabel.font = m.regularFont
     end if
 end function
 `.trim();
