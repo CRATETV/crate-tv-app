@@ -188,6 +188,12 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
                 </div>
             </div>
         </div>
+        <img
+            src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png"
+            alt="Crate TV Logo"
+            crossOrigin="anonymous"
+            className="absolute bottom-4 right-6 w-24 h-auto opacity-50 pointer-events-none"
+        />
       </div>
     </div>
   );
