@@ -2,7 +2,7 @@
 // It will be accessible at the path /api/get-sales-data
 import * as admin from 'firebase-admin';
 import { AnalyticsData, FilmmakerPayout } from '../types';
-import { getAdminDb, getAdminAuth } from './_lib/firebaseAdmin';
+import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin';
 
 interface SquarePayment {
   id: string;
@@ -114,6 +114,12 @@ export async function POST(request: Request) {
         } while (cursor);
         
         // --- Firebase Data Fetching ---
+        const initError = getInitializationError();
+        if (initError) {
+            // This will now provide a detailed error from the admin SDK initialization
+            throw new Error(`Could not connect to Firebase. Reason: ${initError}`);
+        }
+
         let viewCounts: Record<string, number> = {};
         let totalUsers = 0;
         let recentUsers: { email: string; creationTime: string; }[] = [];
@@ -130,27 +136,25 @@ export async function POST(request: Request) {
         }
         
         if (!adminAuth) {
-            throw new Error("Could not connect to Firebase to fetch user data. This is likely due to a missing or misconfigured FIREBASE_SERVICE_ACCOUNT_KEY environment variable. Please check your server configuration.");
+            throw new Error("Firebase Authentication service is not available after initialization. Please check server logs.");
         }
 
-        if (adminAuth) {
-            let allAuthUsers = [];
-            let nextPageToken;
-            do {
-                const listUsersResult: admin.auth.ListUsersResult = await adminAuth.listUsers(1000, nextPageToken);
-                allAuthUsers.push(...listUsersResult.users);
-                nextPageToken = listUsersResult.pageToken;
-            } while (nextPageToken);
-            
-            totalUsers = allAuthUsers.length;
-            
-            allAuthUsers.sort((a, b) => new Date(b.metadata.creationTime).getTime() - new Date(a.metadata.creationTime).getTime());
+        let allAuthUsers: admin.auth.UserRecord[] = [];
+        let nextPageToken;
+        do {
+            const listUsersResult: admin.auth.ListUsersResult = await adminAuth.listUsers(1000, nextPageToken);
+            allAuthUsers.push(...listUsersResult.users);
+            nextPageToken = listUsersResult.pageToken;
+        } while (nextPageToken);
+        
+        totalUsers = allAuthUsers.length;
+        
+        allAuthUsers.sort((a, b) => new Date(b.metadata.creationTime).getTime() - new Date(a.metadata.creationTime).getTime());
 
-            recentUsers = allAuthUsers.slice(0, 100).map(user => ({
-                email: user.email || 'N/A',
-                creationTime: new Date(user.metadata.creationTime).toLocaleString(),
-            }));
-        }
+        recentUsers = allAuthUsers.slice(0, 100).map(user => ({
+            email: user.email || 'N/A',
+            creationTime: new Date(user.metadata.creationTime).toLocaleString(),
+        }));
 
         // --- Data Processing ---
         const analytics: AnalyticsData = {

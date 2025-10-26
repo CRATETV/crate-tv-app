@@ -411,6 +411,8 @@ const AdminPage: React.FC = () => {
     window.history.pushState({}, '', path);
     window.dispatchEvent(new Event('pushstate'));
   }
+  
+  const movieValues = Object.values(movies);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -514,14 +516,23 @@ const AdminPage: React.FC = () => {
                   <button onClick={handleAddNewMovie} disabled={isDemoMode} className="mb-6 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md disabled:bg-gray-600 disabled:cursor-not-allowed">
                       + Add New Movie
                   </button>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      {Object.values(movies).sort((a: Movie, b: Movie) => (a.title || '').localeCompare(b.title || '')).map((movie: Movie) => (
-                          <div key={movie.key} onClick={() => handleSelectMovie(movie)} className="cursor-pointer group">
-                              <img src={movie.poster} alt={movie.title} className="w-full aspect-[3/4] object-cover rounded-md group-hover:ring-2 ring-red-500 transition"/>
-                              <p className="text-sm mt-2 text-gray-300 group-hover:text-white">{movie.title}</p>
-                          </div>
-                      ))}
-                  </div>
+                  {movieValues.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                          {movieValues.sort((a: Movie, b: Movie) => (a.title || '').localeCompare(b.title || '')).map((movie: Movie) => (
+                              <div key={movie.key} onClick={() => handleSelectMovie(movie)} className="cursor-pointer group">
+                                  <img src={movie.poster} alt={movie.title} className="w-full aspect-[3/4] object-cover rounded-md group-hover:ring-2 ring-red-500 transition"/>
+                                  <p className="text-sm mt-2 text-gray-300 group-hover:text-white">{movie.title}</p>
+                              </div>
+                          ))}
+                      </div>
+                  ) : (
+                    <div className="text-center py-16 bg-gray-800/50 rounded-lg">
+                        <h3 className="text-xl font-bold text-white">No Movies Found</h3>
+                        <p className="text-gray-400 mt-2">
+                            There are no movies in your draft collection. Click "+ Add New Movie" to get started.
+                        </p>
+                    </div>
+                  )}
               </div>
             )}
             
