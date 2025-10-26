@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       to: [toEmail],
       subject: `New Message from ${name}`,
       html: emailHtml,
-      // FIX: Corrected property name from reply_to to replyTo
+      // FIX: Corrected property name to 'replyTo' to match Resend API spec
       replyTo: email,
     });
 
