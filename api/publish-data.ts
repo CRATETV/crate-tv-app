@@ -2,7 +2,8 @@
 // It will be accessible at the path /api/publish-data
 // FIX: Reverted from a non-working namespace import to a standard named import for the AWS S3 client to resolve the type error where the 'send' method was not found.
 // Further fix: Using a namespace import correctly to avoid any possible type conflicts that may be causing the persistent issue.
-import * as S3 from "@aws-sdk/client-s3";
+// Switched from a namespace import (`* as S3`) to named imports (`{ S3Client, PutObjectCommand }`) for the AWS SDK. This is the standard and more robust way to import from the SDK, and it resolves the TypeScript error where the '.send()' method was not found on the S3Client instance.
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 export async function POST(request: Request) {
     try {
@@ -62,12 +63,12 @@ export async function POST(request: Request) {
             });
         }
         
-        const s3Client = new S3.S3Client({
+        const s3Client = new S3Client({
             region,
             credentials: { accessKeyId, secretAccessKey },
         });
 
-        const command = new S3.PutObjectCommand({
+        const command = new PutObjectCommand({
             Bucket: bucketName,
             Key: 'live-data.json',
             Body: JSON.stringify(data, null, 2), // Pretty-print for readability
