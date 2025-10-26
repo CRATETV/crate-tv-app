@@ -15,7 +15,6 @@ import ContactPage from './components/ContactPage';
 import AboutPage from './components/AboutPage';
 import LoginPage from './components/LoginPage';
 import AccountPage from './components/AccountPage';
-import RokuGuidePage from './components/RokuGuidePage';
 import FestivalPage from './components/FestivalPage';
 import FilmFestivalModule from './FilmFestivalModule';
 import DeveloperGuidePage from './components/DeveloperGuidePage';
@@ -101,8 +100,6 @@ const AppRouter: React.FC = () => {
       return <ContactPage />;
     case '/about':
       return <AboutPage />;
-    case '/roku-guide':
-      return <RokuGuidePage />;
     case '/filmfestivalmodule':
       return <FilmFestivalModule />;
     case '/developer-guide':

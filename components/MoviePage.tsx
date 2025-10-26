@@ -11,7 +11,6 @@ import StagingBanner from './StagingBanner';
 import DirectorCreditsModal from './DirectorCreditsModal';
 import Countdown from './Countdown';
 import CastButton from './CastButton';
-import RokuBanner from './RokuBanner';
 import SquarePaymentModal from './SquarePaymentModal';
 import { isMovieReleased } from '../constants';
 
@@ -410,8 +409,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                           )}
                       </div>
                       <div className="mt-4 text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: movie.synopsis || '' }}></div>
-                       
-                      <RokuBanner />
 
                       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
                           <div className="md:col-span-2">

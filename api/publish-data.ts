@@ -1,7 +1,8 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/publish-data
 // FIX: Reverted from a non-working namespace import to a standard named import for the AWS S3 client to resolve the type error where the 'send' method was not found.
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+// Further fix: Using a namespace import correctly to avoid any possible type conflicts that may be causing the persistent issue.
+import * as S3 from "@aws-sdk/client-s3";
 
 export async function POST(request: Request) {
     try {
@@ -61,12 +62,12 @@ export async function POST(request: Request) {
             });
         }
         
-        const s3Client = new S3Client({
+        const s3Client = new S3.S3Client({
             region,
             credentials: { accessKeyId, secretAccessKey },
         });
 
-        const command = new PutObjectCommand({
+        const command = new S3.PutObjectCommand({
             Bucket: bucketName,
             Key: 'live-data.json',
             Body: JSON.stringify(data, null, 2), // Pretty-print for readability

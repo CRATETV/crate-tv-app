@@ -127,6 +127,8 @@ The web application includes an amazing feature: an automated packager that crea
 
 **Prerequisite**: You must complete the deployment steps above first. The Roku channel needs a public URL to fetch movie data from.
 
+**Note**: The Roku channel's source code (BrightScript and XML) is contained entirely within the `/api/generate-roku-zip.ts` serverless function. The files located in the `/roku` directory of this repository are placeholders and are not used in the final packaged channel. All development for the Roku channel should happen by editing the string contents within the API file.
+
 ### Step 1: Enable Developer Mode on Your Roku
 1.  On your Roku remote, press: **Home (3x), Up (2x), Right, Left, Right, Left, Right**.
 2.  Follow the on-screen instructions to enable Developer Mode and accept the terms.

@@ -111,11 +111,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
             <input type="text" name="poster" value={formData.poster} onChange={handleChange} className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
             <S3Uploader label="Or Upload Poster" onUploadSuccess={(url) => handleUrlUpdate('poster', url)} />
         </div>
-        <div className="space-y-2">
-            <label htmlFor="tvPoster" className="block text-sm font-medium text-gray-300">TV Poster URL (Portrait 2:3)</label>
-            <input type="text" name="tvPoster" value={formData.tvPoster || ''} onChange={handleChange} className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
-            <S3Uploader label="Or Upload TV Poster" onUploadSuccess={(url) => handleUrlUpdate('tvPoster', url)} />
-        </div>
          <div className="space-y-2">
           <label htmlFor="trailer" className="block text-sm font-medium text-gray-300">Trailer URL</label>
           <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />

@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+// FIX: Using a namespace import for the AWS S3 client to avoid potential type conflicts that may be causing the 'send' method error.
+import * as S3 from "@aws-sdk/client-s3";
 
 // --- ROKU CHANNEL SOURCE CODE ---
 // This section contains the complete, correct source code for the channel components.
@@ -7,15 +8,16 @@ import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 const manifestContent = `
 title=Crate TV
 major_version=1
-minor_version=0
-build_version=9
-bs_version=3.0
+minor_version=1
+build_version=1
 mm_icon_focus_hd=pkg:/images/logo_400x90.png
 splash_screen_hd=pkg:/images/splash_hd_1280x720.png
 splash_screen_fhd=pkg:/images/splash_fhd_1920x1080.png
 `.trim();
 
 const mainBrsContent = `
+' Crate TV Roku Channel
+' Version 2.0 - Stability Update
 sub main()
     screen = CreateObject("roSGScreen")
     port = CreateObject("roMessagePort")
@@ -42,10 +44,11 @@ const homeSceneXml = `
     <children>
         <Rectangle id="background" color="0x141414FF" width="1920" height="1080" />
 
-        <Label id="fontLoader">
+        <Label id="fontLoader" visible="false">
             <font role="Roboto-Regular-30" uri="pkg:/fonts/Roboto-Regular.ttf" size="30" />
             <font role="Roboto-Bold-30" uri="pkg:/fonts/Roboto-Bold.ttf" size="30" />
             <font role="Roboto-Regular-40" uri="pkg:/fonts/Roboto-Regular.ttf" size="40" />
+            <font role="Roboto-Bold-60" uri="pkg:/fonts/Roboto-Bold.ttf" size="60" />
         </Label>
         
         <Label 
@@ -62,15 +65,15 @@ const homeSceneXml = `
         <Group id="contentGroup" visible="false">
             <RowList 
                 id="contentRowList"
-                translation="[80, 80]"
+                translation="[80, 120]"
                 itemComponentName="MoviePoster"
-                itemSize="[300, 235]"
-                rowItemSpacing="[ [40, 0] ]"
+                itemSize="[250, 215]"
+                rowItemSpacing="[ [30, 0] ]"
                 numRows="1"
-                rowHeights="[235]"
+                rowHeights="[215]"
                 rowLabelOffset="[ [0, -50] ]"
                 rowFocusAnimationStyle="floatingFocus"
-                itemSpacing="[0, 60]"
+                itemSpacing="[0, 100]"
             />
         </Group>
 
@@ -81,7 +84,6 @@ const homeSceneXml = `
 `.trim();
 
 const homeSceneBrs = `
-' Helper function to find a pre-loaded font object by its role
 function getFontByRole(role as string) as object
     fontLoader = m.top.findNode("fontLoader")
     if fontLoader <> invalid
@@ -99,7 +101,6 @@ function init()
     m.contentGroup = m.top.findNode("contentGroup")
     m.contentRowList = m.top.findNode("contentRowList")
     
-    ' Assign the pre-loaded font object to the RowList's label
     m.contentRowList.rowLabelFont = getFontByRole("Roboto-Bold-30")
     
     m.contentTask = m.top.findNode("contentTask")
@@ -114,10 +115,33 @@ function onContentLoaded(event as object)
         m.contentRowList.content = contentNode
         m.loadingLabel.visible = false
         m.contentGroup.visible = true
-        m.contentRowList.setFocus(true)
+        m.top.setFocus(m.contentRowList)
     else
-        m.loadingLabel.text = "Error: Could not load content."
+        m.loadingLabel.text = "Error: Could not load content from the server."
     end if
+end function
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    if press
+        if key = "OK"
+            if m.contentRowList.hasFocus()
+                selectedIndices = m.contentRowList.rowItemSelected
+                if selectedIndices <> invalid and selectedIndices.count() = 2
+                    rowIndex = selectedIndices[0]
+                    itemIndex = selectedIndices[1]
+                    movieData = m.contentRowList.content.getChild(rowIndex).getChild(itemIndex)
+                    
+                    if movieData <> invalid
+                        detailsScene = createObject("roSGNode", "DetailsScene")
+                        detailsScene.content = movieData
+                        m.top.getScene().showScene(detailsScene)
+                        return true
+                    end if
+                end if
+            end if
+        end if
+    end if
+    return false
 end function
 `.trim();
 
@@ -131,28 +155,37 @@ const moviePosterXml = `
         <field id="itemContent" type="node" onChange="onContentChange" />
         <field id="focusPercent" type="float" onChange="onFocusChange" />
     </interface>
+    
+    <animations>
+        <Animation id="scaleUp" duration="0.2" easeFunction="linear" >
+            <Vector2DFieldInterpolator key="[0.0, 1.0]" field="scale" value="[ [1.0, 1.0], [1.1, 1.1] ]" />
+        </Animation>
+        <Animation id="scaleDown" duration="0.2" easeFunction="linear" >
+            <Vector2DFieldInterpolator key="[0.0, 1.0]" field="scale" value="[ [1.1, 1.1], [1.0, 1.0] ]" />
+        </Animation>
+    </animations>
 
     <children>
         <Rectangle 
             id="focusRing"
             color="0x8b5cf6FF"
-            width="316"
-            height="196"
+            width="266"
+            height="166"
             translation="[-8, -8]"
             visible="false" 
         />
         
         <Poster 
             id="tileImage"
-            width="300"
-            height="180"
+            width="250"
+            height="150"
         />
 
         <Label 
             id="tileLabel"
-            width="300"
+            width="250"
             horizAlign="center"
-            translation="[0, 195]"
+            translation="[0, 165]"
             color="0xFFFFFFFF"
         >
              <font role="Roboto-Regular-30" />
@@ -163,7 +196,6 @@ const moviePosterXml = `
 `.trim();
 
 const moviePosterBrs = `
-' Helper function to find a pre-loaded font object from the main scene
 function getFontByRole(role as string) as object
     scene = getScene()
     if scene = invalid then return invalid
@@ -184,12 +216,13 @@ function init()
     m.tileImage = m.top.findNode("tileImage")
     m.tileLabel = m.top.findNode("tileLabel")
     
-    ' Get and store the font objects from the main scene
     m.regularFont = getFontByRole("Roboto-Regular-30")
     m.boldFont = getFontByRole("Roboto-Bold-30")
+    
+    m.scaleUp = m.top.findNode("scaleUp")
+    m.scaleDown = m.top.findNode("scaleDown")
 end function
 
-' Populates the tile with data from the RowList content.
 function onContentChange()
     content = m.top.itemContent
     if content <> invalid
@@ -198,16 +231,17 @@ function onContentChange()
     end if
 end function
 
-' Handles focus state changes.
 function onFocusChange()
     focusPercent = m.top.focusPercent
     
-    if focusPercent = 1.0 ' When focused
+    if focusPercent = 1.0
         m.focusRing.visible = true
         if m.boldFont <> invalid then m.tileLabel.font = m.boldFont
-    else ' When unfocused
+        m.scaleUp.start()
+    else
         m.focusRing.visible = false
         if m.regularFont <> invalid then m.tileLabel.font = m.regularFont
+        m.scaleDown.start()
     end if
 end function
 `.trim();
@@ -273,10 +307,9 @@ function createContentNode(data as object) as object
             
             for each movie in category.movies
                 item = createObject("roSGNode", "ContentNode")
-                item.title = movie.title
-                item.HDPosterUrl = movie.HDPosterUrl
-                item.description = movie.description
-                item.streamUrl = movie.streamUrl
+                for each field in movie
+                    item.setField(field, movie[field])
+                end for
                 row.appendChild(item)
             end for
             rowListContent.appendChild(row)
@@ -284,6 +317,130 @@ function createContentNode(data as object) as object
     end if
     
     return rowListContent
+end function
+`.trim();
+
+const detailsSceneXml = `
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="DetailsScene" extends="Scene">
+    <script type="text/brightscript" uri="pkg:/components/DetailsScene.brs" />
+    <interface>
+        <field id="content" type="node" onChange="onContentChange" />
+    </interface>
+    <children>
+        <Rectangle id="background" color="0x141414FF" width="1920" height="1080" />
+        <Poster id="heroImage" width="1920" height="1080" loadDisplayMode="scaleToFill" />
+        <Rectangle id="vignette" color="0x000000FF" width="1920" height="1080" opacity="0.8">
+            <Gradient id="fade" gradient="linear" startColor="0x00000000" endColor="0x141414FF" direction="up" />
+        </Rectangle>
+        <Group translation="[80, 500]">
+            <Label id="titleLabel" width="1200" wrap="true">
+                <font role="Roboto-Bold-60" />
+            </Label>
+            <Label id="descriptionLabel" width="1000" wrap="true" translation="[0, 90]" maxLines="5" color="0xC8C8C8FF">
+                <font role="Roboto-Regular-30" />
+            </Label>
+            <ButtonGroup id="buttonGroup" translation="[0, 280]" itemSpacings="[20]">
+                <Button id="playButton" text="Play" />
+                <Button id="backButton" text="Back" />
+            </ButtonGroup>
+        </Group>
+    </children>
+</component>
+`.trim();
+
+const detailsSceneBrs = `
+function init()
+    m.heroImage = m.top.findNode("heroImage")
+    m.titleLabel = m.top.findNode("titleLabel")
+    m.descriptionLabel = m.top.findNode("descriptionLabel")
+    m.buttonGroup = m.top.findNode("buttonGroup")
+    m.top.setFocus(m.buttonGroup)
+end function
+
+function onContentChange()
+    content = m.top.content
+    if content <> invalid
+        m.heroImage.uri = content.heroImage
+        m.titleLabel.text = content.title
+        m.descriptionLabel.text = content.description
+    end if
+end function
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    if press
+        if key = "OK"
+            focusedButton = m.buttonGroup.focusedChild
+            if focusedButton <> invalid
+                if focusedButton.id = "playButton"
+                    videoScene = createObject("roSGNode", "VideoScene")
+                    videoScene.content = m.top.content
+                    m.top.getScene().showScene(videoScene)
+                    return true
+                else if focusedButton.id = "backButton"
+                    m.top.close = true
+                    return true
+                end if
+            end if
+        else if key = "back"
+            m.top.close = true
+            return true
+        end if
+    end if
+    return false
+end function
+`.trim();
+
+const videoSceneXml = `
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="VideoScene" extends="Scene">
+    <script type="text/brightscript" uri="pkg:/components/VideoScene.brs" />
+    <interface>
+        <field id="content" type="node" onChange="onContentChange" />
+    </interface>
+    <children>
+        <Video id="videoPlayer" width="1920" height="1080" />
+    </children>
+</component>
+`.trim();
+
+const videoSceneBrs = `
+function init()
+    m.videoPlayer = m.top.findNode("videoPlayer")
+    m.videoPlayer.observeField("state", "onVideoStateChange")
+    m.top.setFocus(m.videoPlayer)
+end function
+
+function onContentChange()
+    content = m.top.content
+    if content <> invalid and content.streamUrl <> invalid and content.streamUrl <> ""
+        videoContent = createObject("roSGNode", "ContentNode")
+        videoContent.url = content.streamUrl
+        videoContent.streamformat = "mp4"
+        
+        m.videoPlayer.content = videoContent
+        m.videoPlayer.control = "play"
+    else
+        print "VideoScene: No valid streamUrl provided. Closing scene."
+        m.top.close = true
+    end if
+end function
+
+function onVideoStateChange(event as object)
+    state = event.getData()
+    if state = "finished" or state = "error"
+        m.videoPlayer.control = "stop"
+        m.top.close = true
+    end if
+end function
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    if press and key = "back"
+        m.videoPlayer.control = "stop"
+        m.top.close = true
+        return true
+    end if
+    return false
 end function
 `.trim();
 
@@ -296,28 +453,29 @@ const fontRegularKey = "roku-fonts/Roboto-Regular.ttf";
 const fontBoldKey = "roku-fonts/Roboto-Bold.ttf";
 
 
-let s3Client: S3Client | null = null;
+let s3Client: S3.S3Client | null = null;
 const getS3Client = () => {
     if (s3Client) return s3Client;
     const { AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_REGION } = process.env;
     if (!AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY || !AWS_S3_REGION) return null;
-    s3Client = new S3Client({
+    s3Client = new S3.S3Client({
         region: AWS_S3_REGION === 'global' ? 'us-east-1' : AWS_S3_REGION,
         credentials: { accessKeyId: AWS_ACCESS_KEY_ID, secretAccessKey: AWS_SECRET_ACCESS_KEY },
     });
     return s3Client;
 }
 
-const getS3Object = async (bucket: string, key: string): Promise<Uint8Array | null> => {
+const getS3Object = async (bucket: string, key: string): Promise<Uint8Array> => {
     const client = getS3Client();
-    if (!client) return null;
+    if (!client) throw new Error("S3 client could not be initialized. Check server environment variables.");
     try {
-        const command = new GetObjectCommand({ Bucket: bucket, Key: key });
+        const command = new S3.GetObjectCommand({ Bucket: bucket, Key: key });
         const response = await client.send(command);
-        return response.Body ? await response.Body.transformToByteArray() : null;
+        if (!response.Body) throw new Error(`S3 object body is empty for key: ${key}`);
+        return await response.Body.transformToByteArray();
     } catch (error) {
         console.error(`Failed to fetch S3 object '${key}':`, error);
-        return null;
+        throw new Error(`Could not download required channel asset: ${key}. Please check if the file exists in the S3 bucket and that bucket permissions are correct.`);
     }
 };
 
@@ -340,6 +498,11 @@ export async function GET(request: Request) {
         components?.file('MoviePoster.brs', moviePosterBrs);
         components?.file('ContentTask.xml', contentTaskXml);
         components?.file('ContentTask.brs', contentTaskBrs);
+        components?.file('DetailsScene.xml', detailsSceneXml);
+        components?.file('DetailsScene.brs', detailsSceneBrs);
+        components?.file('VideoScene.xml', videoSceneXml);
+        components?.file('VideoScene.brs', videoSceneBrs);
+
         
         const fontsFolder = zip.folder('fonts');
 
@@ -350,20 +513,13 @@ export async function GET(request: Request) {
             getS3Object(bucketName, fontBoldKey)
         ]);
         
-        if (fontRegular) fontsFolder?.file('Roboto-Regular.ttf', fontRegular);
-        if (fontBold) fontsFolder?.file('Roboto-Bold.ttf', fontBold);
+        fontsFolder?.file('Roboto-Regular.ttf', fontRegular);
+        fontsFolder?.file('Roboto-Bold.ttf', fontBold);
 
         const images = zip.folder('images');
-        if (logoImage) images?.file('logo_400x90.png', logoImage);
-        if (splashImage) {
-            images?.file('splash_hd_1280x720.png', splashImage);
-            images?.file('splash_fhd_1920x1080.png', splashImage);
-        } else {
-            // Provide a minimal placeholder if the splash screen fails to load to prevent packaging errors
-            const placeholder = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 1, 99, 97, 0, 2, 0, 0, 25, 0, 5, 147, 10, 217, 160, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130]);
-            images?.file('splash_hd_1280x720.png', placeholder);
-            images?.file('splash_fhd_1920x1080.png', placeholder);
-        }
+        images?.file('logo_400x90.png', logoImage);
+        images?.file('splash_hd_1280x720.png', splashImage);
+        images?.file('splash_fhd_1920x1080.png', splashImage);
 
         const zipContent = await zip.generateAsync({ type: 'blob' });
         
