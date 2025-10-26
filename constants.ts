@@ -195,8 +195,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Alana Hill",
     "trailer": "https://cratetelevision.s3.amazonaws.com/Almas+vow+cut+trailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/Almas+Vows+-+Alana+Hill.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Almas+Vows.jpeg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/AlmasVows.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Alma's+vows+poster+remake+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Alma's+vows+poster+remake+.png",
     "likes": 0
   },
   "foodiecalldirectorscut": {
@@ -443,8 +443,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "David Auspitz",
     "trailer": "https://cratetelevision.s3.amazonaws.com/AutumnTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn+-+Alana+Hill.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Autumn.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn+poster+remake+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn+poster+remake+.png",
     "likes": 0
   },
   "streeteatstheboot": {
@@ -468,8 +468,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Andrew W Trimble",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/Street+Eats+THE+BOOT-A+Louisiana+Food+Truck+Journey.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Street+Eats+the+Boot.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/StreetEats.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/street+Eats+the+Boot+trailer+overlay++(1).jpeg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/street+Eats+the+Boot+trailer+overlay++(1).jpeg",
     "likes": 0
   },
   "silentlove": {
