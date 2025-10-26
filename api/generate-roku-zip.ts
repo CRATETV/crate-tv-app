@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
-// FIX: Using a namespace import for the AWS S3 client to avoid potential type conflicts that may be causing the 'send' method error.
-import * as S3 from "@aws-sdk/client-s3";
+// FIX: Switched to named imports for the AWS SDK to correctly resolve the S3Client type and its methods, fixing an error where `.send()` was not found.
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 // --- FONT DATA ---
 // By embedding the fonts as Base64, we remove the fragile dependency on external CDNs,
@@ -18,7 +18,7 @@ const getS3Client = () => {
     if (!accessKeyId || !secretAccessKey || !region) return null;
     if (region === 'global') region = 'us-east-1';
 
-    return new S3.S3Client({
+    return new S3Client({
         region,
         credentials: { accessKeyId, secretAccessKey },
     });
@@ -36,7 +36,6 @@ export async function GET(request: Request) {
         const zip = new JSZip();
 
         // --- ROKU SOURCE FILES ---
-        // By defining the files here, we keep the Roku channel entirely self-contained within this API route.
         const manifest = `
 title=Crate TV
 major_version=1
@@ -129,4 +128,160 @@ end function
     <children>
         <Rectangle id="focusRing" color="0x8b5cf6FF" width="316" height="196" translation="[-8, -8]" visible="false" />
         <Poster id="tileImage" width="300" height="180" />
-        <Label id="tileLabel" width
+        <Label id="tileLabel" width="300" horizAlign="center" translation="[0, 195]" color="0xFFFFFFFF">
+             <font role="sans" uri="pkg:/fonts/Roboto-Regular.ttf" size="24" />
+        </Label>
+    </children>
+</component>
+`;
+        const moviePosterBrs = `
+function init()
+    m.focusRing = m.top.findNode("focusRing")
+    m.tileImage = m.top.findNode("tileImage")
+    m.tileLabel = m.top.findNode("tileLabel")
+end function
+
+function onContentChange()
+    item = m.top.itemContent
+    if item <> invalid
+        m.tileImage.uri = item.hdposterurl
+        m.tileLabel.text = item.title
+    end if
+end function
+
+function onFocusChange()
+    focusPercent = m.top.focusPercent
+    m.focusRing.visible = (focusPercent > 0)
+    
+    ' Scale animation on focus
+    scale = 1 + (0.05 * focusPercent)
+    m.top.scale = [scale, scale]
+end function
+`;
+
+        const contentTaskXml = `
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="ContentTask" extends="Task">
+    <interface>
+        <field id="content" type="node" />
+    </interface>
+    <script type="text/brightscript" uri="pkg:/components/ContentTask.brs" />
+</component>
+`;
+        const feedUrl = `${new URL(request.url).protocol}//${new URL(request.url).host}/api/roku-feed`;
+        const contentTaskBrs = `
+function init()
+    m.top.functionName = "getContent"
+end function
+
+function getContent()
+    url = "${feedUrl}"
+    port = CreateObject("roMessagePort")
+    request = CreateObject("roUrlTransfer")
+    request.SetMessagePort(port)
+    request.SetUrl(url)
+    
+    if request.AsyncGetToString()
+        while true
+            msg = wait(0, port)
+            if type(msg) = "roUrlEvent"
+                if msg.GetResponseCode() = 200
+                    json = msg.GetString()
+                    parsed = ParseJson(json)
+                    if parsed <> invalid
+                        m.top.content = createContent(parsed)
+                    else
+                        m.top.content = invalid
+                    end if
+                    return
+                else
+                    m.top.content = invalid
+                    return
+                end if
+            end if
+        end while
+    end if
+    m.top.content = invalid
+end function
+
+function createContent(data) as object
+    content = createObject("roSGNode", "ContentNode")
+    
+    for each category in data.categories
+        row = createObject("roSGNode", "ContentNode")
+        row.title = category.title
+        
+        children = createObject("roSGNode", "ContentNode")
+        for each movie in category.movies
+            item = createObject("roSGNode", "ContentNode")
+            item.HDPosterUrl = movie.HDPosterUrl
+            item.title = movie.title
+            children.appendChild(item)
+        end for
+        
+        row.children = children
+        content.appendChild(row)
+    end for
+    
+    return content
+end function
+`;
+        
+        // --- ADD FILES TO ZIP ---
+        zip.file('manifest', manifest);
+        zip.file('source/main.brs', mainBrs);
+        zip.folder('components');
+        zip.file('components/HomeScene.xml', homeSceneXml);
+        zip.file('components/HomeScene.brs', homeSceneBrs);
+        zip.file('components/MoviePoster.xml', moviePosterXml);
+        zip.file('components/MoviePoster.brs', moviePosterBrs);
+        zip.file('components/ContentTask.xml', contentTaskXml);
+        zip.file('components/ContentTask.brs', contentTaskBrs);
+
+        zip.folder('fonts');
+        zip.file('fonts/Roboto-Regular.ttf', ROBOTO_REGULAR_BASE64, { base64: true });
+        zip.file('fonts/Roboto-Bold.ttf', ROBOTO_BOLD_BASE64, { base64: true });
+
+        zip.folder('images');
+        // --- FETCH AND ADD IMAGE ASSETS ---
+        const imageKeys = [
+            'roku-assets/channel-icon-hd.png',
+            'roku-assets/channel-icon-sd.png',
+            'roku-assets/splash-screen-hd.png',
+            'roku-assets/splash-screen-sd.png'
+        ];
+        
+        const imagePromises = imageKeys.map(async (key) => {
+            const command = new GetObjectCommand({ Bucket: bucketName, Key: key });
+            const response = await s3.send(command);
+            const buffer = await response.Body?.transformToByteArray();
+            if (buffer) {
+                const fileName = key.split('/').pop();
+                if (fileName) {
+                   zip.file(`images/${fileName}`, buffer);
+                }
+            }
+        });
+
+        await Promise.all(imagePromises);
+
+        // --- GENERATE AND SEND ZIP ---
+        const content = await zip.generateAsync({ type: 'nodebuffer' });
+
+        return new Response(content, {
+            status: 200,
+            headers: {
+                'Content-Type': 'application/zip',
+                'Content-Disposition': 'attachment; filename="cratv.zip"',
+            },
+        });
+
+    } catch (error) {
+        console.error("Error generating Roku ZIP:", error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return new Response(JSON.stringify({ error: `Failed to generate Roku package: ${errorMessage}` }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
+}

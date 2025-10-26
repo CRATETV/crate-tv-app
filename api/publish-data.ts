@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/publish-data
-// FIX: Switched to a namespace import for the AWS SDK. In some environments, this helps TypeScript correctly resolve the types and find methods like '.send()' on the S3Client instance.
-import * as S3 from "@aws-sdk/client-s3";
+// FIX: Switched to named imports for the AWS SDK to correctly resolve the S3Client type and its methods, fixing an error where `.send()` was not found.
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 export async function POST(request: Request) {
     try {
@@ -61,12 +61,12 @@ export async function POST(request: Request) {
             });
         }
         
-        const s3Client = new S3.S3Client({
+        const s3Client = new S3Client({
             region,
             credentials: { accessKeyId, secretAccessKey },
         });
 
-        const command = new S3.PutObjectCommand({
+        const command = new PutObjectCommand({
             Bucket: bucketName,
             Key: 'live-data.json',
             Body: JSON.stringify(data, null, 2), // Pretty-print for readability
