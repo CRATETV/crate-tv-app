@@ -18,8 +18,6 @@ export const categoriesData: Record<string, Category> = {
     title: 'New Releases',
     movieKeys: [
         'consumed',
-        'thatloud',
-        'results',
         'newmovie1756741314485', // What If
         'newmovie1756501125076', // of Bees and Boobs
         'newmovie1756487626529', // Strange Encounters

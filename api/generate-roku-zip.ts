@@ -40,13 +40,12 @@ const homeSceneXml = `
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
 
     <children>
-        <Rectangle id="background" color="0x1A1A1AFF" width="1920" height="1080" />
+        <Rectangle id="background" color="0x141414FF" width="1920" height="1080" />
 
         <Label id="fontLoader">
-            <font role="Roboto-Regular-40" uri="pkg:/fonts/Roboto-Regular.ttf" size="40" />
             <font role="Roboto-Regular-30" uri="pkg:/fonts/Roboto-Regular.ttf" size="30" />
-            <font role="Roboto-Bold-40" uri="pkg:/fonts/Roboto-Bold.ttf" size="40" />
             <font role="Roboto-Bold-30" uri="pkg:/fonts/Roboto-Bold.ttf" size="30" />
+            <font role="Roboto-Regular-40" uri="pkg:/fonts/Roboto-Regular.ttf" size="40" />
         </Label>
         
         <Label 
@@ -136,7 +135,7 @@ const moviePosterXml = `
     <children>
         <Rectangle 
             id="focusRing"
-            color="0x1A73E8FF"
+            color="0x8b5cf6FF"
             width="316"
             height="196"
             translation="[-8, -8]"
@@ -225,7 +224,11 @@ const contentTaskXml = `
 `.trim();
 
 const contentTaskBrs = `
-function main()
+function init()
+    m.top.functionName = "fetchContent"
+end function
+
+function fetchContent()
     url = m.top.url
     port = createObject("roMessagePort")
     request = createObject("roUrlTransfer")
@@ -240,10 +243,10 @@ function main()
             if msg.getResponseCode() = 200
                 jsonString = msg.getString()
                 parsedJson = parseJson(jsonString)
-                if parsedJson <> invalid
+                if parsedJson <> invalid and parsedJson.categories <> invalid
                     m.top.content = createContentNode(parsedJson)
                 else
-                    print "ContentTask: Failed to parse JSON"
+                    print "ContentTask: Failed to parse JSON or 'categories' key missing"
                     m.top.content = invalid
                 end if
             else
@@ -288,6 +291,10 @@ end function
 
 const splashKey = "Crate TV Splash.png";
 const logoKey = "ruko logo .webp";
+// Font files stored on S3 for easy access
+const fontRegularKey = "roku-fonts/Roboto-Regular.ttf";
+const fontBoldKey = "roku-fonts/Roboto-Bold.ttf";
+
 
 let s3Client: S3Client | null = null;
 const getS3Client = () => {
@@ -334,12 +341,17 @@ export async function GET(request: Request) {
         components?.file('ContentTask.xml', contentTaskXml);
         components?.file('ContentTask.brs', contentTaskBrs);
         
-        zip.folder('fonts');
+        const fontsFolder = zip.folder('fonts');
 
-        const [logoImage, splashImage] = await Promise.all([
+        const [logoImage, splashImage, fontRegular, fontBold] = await Promise.all([
             getS3Object(bucketName, logoKey),
             getS3Object(bucketName, splashKey),
+            getS3Object(bucketName, fontRegularKey),
+            getS3Object(bucketName, fontBoldKey)
         ]);
+        
+        if (fontRegular) fontsFolder?.file('Roboto-Regular.ttf', fontRegular);
+        if (fontBold) fontsFolder?.file('Roboto-Bold.ttf', fontBold);
 
         const images = zip.folder('images');
         if (logoImage) images?.file('logo_400x90.png', logoImage);

@@ -11,12 +11,12 @@
     </interface>
 
     <children>
-        <!-- The blue focus border, initially invisible -->
+        <!-- The focus border, initially invisible -->
         <Rectangle 
             id="focusRing"
-            color="#1A73E8"
-            width="316"  ' 300 + 8*2
-            height="196" ' 180 + 8*2
+            color="0x8b5cf6FF" ' A vibrant purple for focus
+            width="316"
+            height="196"
             translation="[-8, -8]"
             visible="false" 
         />
@@ -33,7 +33,8 @@
             id="tileLabel"
             width="300"
             horizAlign="center"
-            translation="[0, 195]" ' 180px image height + 15px space
+            translation="[0, 195]"
+            color="0xFFFFFFFF"
         >
              <font role="Roboto-Regular-30" />
         </Label>

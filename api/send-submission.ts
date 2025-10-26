@@ -55,7 +55,8 @@ export async function POST(request: Request) {
         to: [toEmail],
         subject: `New Film Submission: ${filmTitle}`,
         html: emailHtml,
-        reply_to: email,
+        // FIX: Corrected the 'reply_to' property to 'replyTo' to match the expected type definition.
+        replyTo: email,
     });
 
     if (error) {
