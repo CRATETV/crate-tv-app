@@ -266,7 +266,7 @@ end function
         await Promise.all(imagePromises);
 
         // --- GENERATE AND SEND ZIP ---
-        const content = await zip.generateAsync({ type: 'nodebuffer' });
+        const content = await zip.generateAsync({ type: 'arraybuffer' });
 
         return new Response(content, {
             status: 200,

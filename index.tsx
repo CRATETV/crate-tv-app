@@ -69,7 +69,8 @@ const AppRouter: React.FC = () => {
 
   const movieMatch = route.match(/^\/movie\/([a-zA-Z0-9_-]+)/);
   if (movieMatch && movieMatch[1]) {
-    return user ? <MoviePage movieKey={movieMatch[1]} /> : <RedirectToLogin />;
+    // Make the MoviePage public; it will handle its own auth checks internally.
+    return <MoviePage movieKey={movieMatch[1]} />;
   }
 
   // Handle static routes with authentication checks

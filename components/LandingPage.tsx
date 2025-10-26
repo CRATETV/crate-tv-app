@@ -73,10 +73,10 @@ const LandingPage: React.FC = () => {
           currentIndex={heroIndex}
           onSetCurrentIndex={handleSetHeroIndex}
           onSelectMovie={(movie) => {
-            // For logged-out users, clicking "More Info" on hero goes to login
-            const loginUrl = new URL('/login', window.location.origin);
-            loginUrl.searchParams.set('redirect', `/movie/${movie.key}`);
-            window.location.href = loginUrl.toString();
+            // For logged-out users, go to the public movie page
+            const path = `/movie/${movie.key}`;
+            window.history.pushState({}, '', path);
+            window.dispatchEvent(new Event('pushstate'));
           }}
         />
         <div className="relative z-10 mt-[-2rem] md:mt-[-4rem] text-center px-4 pb-16">
