@@ -448,10 +448,6 @@ end function
 
 const splashKey = "Crate TV Splash.png";
 const logoKey = "ruko logo .webp";
-// Font files stored on S3 for easy access
-const fontRegularKey = "roku-fonts/Roboto-Regular.ttf";
-const fontBoldKey = "roku-fonts/Roboto-Bold.ttf";
-
 
 let s3Client: S3.S3Client | null = null;
 const getS3Client = () => {
@@ -478,6 +474,21 @@ const getS3Object = async (bucket: string, key: string): Promise<Uint8Array> => 
         throw new Error(`Could not download required channel asset: ${key}. Please check if the file exists in the S3 bucket and that bucket permissions are correct.`);
     }
 };
+
+const getHttpObject = async (url: string): Promise<Uint8Array> => {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error fetching asset! status: ${response.status}`);
+        }
+        const buffer = await response.arrayBuffer();
+        return new Uint8Array(buffer);
+    } catch (error) {
+        console.error(`Failed to fetch HTTP object from '${url}':`, error);
+        throw new Error(`Could not download required channel asset from URL: ${url}.`);
+    }
+};
+
 
 export async function GET(request: Request) {
     try {
@@ -506,11 +517,16 @@ export async function GET(request: Request) {
         
         const fontsFolder = zip.folder('fonts');
 
+        // Fetch fonts from a public CDN to remove S3 dependency
+        const fontRegularUrl = "https://cdn.jsdelivr.net/gh/google/fonts@main/apache/roboto/Roboto-Regular.ttf";
+        const fontBoldUrl = "https://cdn.jsdelivr.net/gh/google/fonts@main/apache/roboto/Roboto-Bold.ttf";
+
+        // Fetch assets. Logo/splash from S3, fonts from CDN.
         const [logoImage, splashImage, fontRegular, fontBold] = await Promise.all([
             getS3Object(bucketName, logoKey),
             getS3Object(bucketName, splashKey),
-            getS3Object(bucketName, fontRegularKey),
-            getS3Object(bucketName, fontBoldKey)
+            getHttpObject(fontRegularUrl),
+            getHttpObject(fontBoldUrl)
         ]);
         
         fontsFolder?.file('Roboto-Regular.ttf', fontRegular);

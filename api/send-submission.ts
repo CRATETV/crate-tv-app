@@ -55,7 +55,7 @@ export async function POST(request: Request) {
         to: [toEmail],
         subject: `New Film Submission: ${filmTitle}`,
         html: emailHtml,
-        // FIX: Corrected the 'reply_to' property to 'replyTo' in the resend.emails.send call to match the expected type 'CreateEmailOptions'.
+        // FIX: Changed 'reply_to' to 'replyTo' to match the Resend SDK's expected property name.
         replyTo: email,
     });
 
