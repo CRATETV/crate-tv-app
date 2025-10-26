@@ -166,7 +166,8 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/LIFELESS.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/Lifeless+poster+remake+.jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Lifeless.png",
-    "likes": 0
+    "likes": 0,
+    "rating": 8.8
   },
   "almasvows": {
     "key": "almasvows",
@@ -240,7 +241,8 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Paycut.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Director's+cut+poster+.jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
-    "likes": 0
+    "likes": 0,
+    "rating": 9.2
   },
   "foodiecalltheatricalcut": {
     "key": "foodiecalltheatricalcut",
@@ -520,7 +522,8 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Juniper+.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Juniper.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Juniper.png",
-    "likes": 0
+    "likes": 0,
+    "rating": 9.5
   },
   "drive": {
     "key": "drive",

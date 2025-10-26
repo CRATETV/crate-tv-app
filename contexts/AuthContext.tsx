@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, AuthError } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, AuthError, sendPasswordResetEmail } from 'firebase/auth';
 import { User } from '../types';
 import { 
     initializeFirebaseAuth, 
@@ -18,6 +18,7 @@ interface AuthContextType {
     setAvatar: (avatarId: string) => void;
     // FIX: Add 'subscribe' to the context type for handling premium subscriptions.
     subscribe: () => void;
+    sendPasswordReset: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,8 +57,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     const handleAuthError = (error: any): string => {
-        const authError = error as AuthError;
-        switch (authError.code) {
+        // FIX: Directly access properties on the 'error' object to avoid type resolution issues with AuthError.
+        switch (error.code) {
             case 'auth/wrong-password':
             case 'auth/invalid-credential':
                 return 'Incorrect email or password.';
@@ -67,8 +68,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 return 'An account with this email already exists. Please sign in.';
             case 'auth/weak-password':
                 return 'Password should be at least 6 characters.';
+            case 'auth/invalid-email':
+                return 'Please enter a valid email address.';
             default:
-                return authError.message || 'An unknown error occurred.';
+                // FIX: Directly access properties on the 'error' object.
+                return error.message || 'An unknown error occurred.';
         }
     };
 
@@ -89,6 +93,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             // After user is created in Auth, create their profile in Firestore.
             await createUserProfile(userCredential.user.uid, email);
+        } catch (error) {
+            throw new Error(handleAuthError(error));
+        }
+    };
+
+    const sendPasswordReset = async (email: string) => {
+        const auth = getAuthInstance();
+        if (!auth) throw new Error("Authentication service is not available.");
+        try {
+            await sendPasswordResetEmail(auth, email);
         } catch (error) {
             throw new Error(handleAuthError(error));
         }
@@ -146,7 +160,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     
     // FIX: Add 'subscribe' to the context value provided to children components.
-    const value = { user, authInitialized, signIn, signUp, logout, setAvatar, subscribe };
+    const value = { user, authInitialized, signIn, signUp, logout, setAvatar, subscribe, sendPasswordReset };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

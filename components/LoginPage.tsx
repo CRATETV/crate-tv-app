@@ -6,13 +6,16 @@ import { Movie, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import Hero from './Hero';
 
+type View = 'signin' | 'signup' | 'forgotpassword';
+
 const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [isSignUp, setIsSignUp] = useState(false);
-    const { signIn, signUp, user } = useAuth();
+    const [view, setView] = useState<View>('signin');
+    const { signIn, signUp, user, sendPasswordReset } = useAuth();
     const [authLoading, setAuthLoading] = useState(false);
     const [error, setError] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
 
     // State for Hero background
     const [isLoading, setIsLoading] = useState(true);
@@ -71,18 +74,29 @@ const LoginPage: React.FC = () => {
         e.preventDefault();
         setAuthLoading(true);
         setError('');
+        setSuccessMessage('');
 
         try {
-            if (isSignUp) {
+            if (view === 'signup') {
                 await signUp(email, password);
-            } else {
+            } else if (view === 'signin') {
                 await signIn(email, password);
+            } else if (view === 'forgotpassword') {
+                await sendPasswordReset(email);
+                setSuccessMessage('Password reset link sent! Please check your email inbox.');
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred.');
         } finally {
             setAuthLoading(false);
         }
+    };
+    
+    const switchView = (newView: View) => {
+        setView(newView);
+        setError('');
+        setSuccessMessage('');
+        setPassword('');
     };
 
     const formInputClasses = "form-input";
@@ -119,7 +133,7 @@ const LoginPage: React.FC = () => {
                 <main className="flex-grow flex items-center justify-center p-4">
                     <div className="w-full max-w-md bg-black/70 backdrop-blur-md border border-gray-700 rounded-lg shadow-2xl p-8 animate-[fadeIn_0.5s_ease-out]">
                         <h1 className="text-3xl font-bold text-white text-center mb-6">
-                            {isSignUp ? 'Create an Account' : 'Sign In'}
+                            {view === 'signup' ? 'Create an Account' : view === 'forgotpassword' ? 'Reset Password' : 'Sign In'}
                         </h1>
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div>
@@ -135,30 +149,52 @@ const LoginPage: React.FC = () => {
                                     placeholder="you@example.com"
                                 />
                             </div>
-                            <div>
-                                <label htmlFor="password" className="block text-sm font-medium text-gray-400 mb-2">Password</label>
-                                <input
-                                    type="password"
-                                    id="password"
-                                    name="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className={formInputClasses}
-                                    required
-                                    placeholder="••••••••"
-                                />
-                            </div>
+                            {view !== 'forgotpassword' && (
+                                <div>
+                                    <label htmlFor="password" className="block text-sm font-medium text-gray-400 mb-2">Password</label>
+                                    <input
+                                        type="password"
+                                        id="password"
+                                        name="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className={formInputClasses}
+                                        required
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                            )}
+
+                             {view === 'signin' && (
+                                <div className="text-right -mt-4">
+                                    <button type="button" onClick={() => switchView('forgotpassword')} className="text-sm text-red-400 hover:underline font-medium">
+                                        Forgot Password?
+                                    </button>
+                                </div>
+                            )}
+                            
                             {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+                            {successMessage && <p className="text-green-400 text-sm text-center">{successMessage}</p>}
+                            
                             <button type="submit" className="submit-btn w-full" disabled={authLoading}>
-                                {authLoading ? 'Processing...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+                                {authLoading ? 'Processing...' : (view === 'signup' ? 'Sign Up' : view === 'forgotpassword' ? 'Send Reset Link' : 'Sign In')}
                             </button>
                         </form>
-                        <p className="text-center text-sm text-gray-400 mt-6">
-                            {isSignUp ? 'Already have an account?' : "Don't have an account?"}
-                            <button onClick={() => { setIsSignUp(!isSignUp); setError(''); }} className="font-medium text-red-400 hover:underline ml-2">
-                                {isSignUp ? 'Sign In' : 'Sign Up'}
-                            </button>
-                        </p>
+                         {view !== 'forgotpassword' ? (
+                            <p className="text-center text-sm text-gray-400 mt-6">
+                                {view === 'signup' ? 'Already have an account?' : "Don't have an account?"}
+                                <button onClick={() => switchView(view === 'signup' ? 'signin' : 'signup')} className="font-medium text-red-400 hover:underline ml-2">
+                                    {view === 'signup' ? 'Sign In' : 'Sign Up'}
+                                </button>
+                            </p>
+                        ) : (
+                             <p className="text-center text-sm text-gray-400 mt-6">
+                                Remembered your password?
+                                <button onClick={() => switchView('signin')} className="font-medium text-red-400 hover:underline ml-2">
+                                    Back to Sign In
+                                </button>
+                            </p>
+                        )}
                     </div>
                 </main>
             </div>

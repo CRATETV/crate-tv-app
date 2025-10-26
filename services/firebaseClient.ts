@@ -57,7 +57,8 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
     const userDoc = await getDoc(userDocRef);
     if (userDoc.exists()) {
         // The document data will not include the ID, so we add it manually.
-        return { uid, ...userDoc.data() } as User;
+        // FIX: Replaced object spread with Object.assign to work around a TypeScript issue with the generic DocumentData type.
+        return Object.assign({ uid }, userDoc.data()) as User;
     }
     return null;
 };

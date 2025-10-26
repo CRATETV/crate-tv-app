@@ -18,7 +18,10 @@ import {
     query, 
     orderBy,
     Firestore,
-    getDoc
+    getDoc,
+    // FIX: Import QuerySnapshot and DocumentData to explicitly type snapshot parameters.
+    QuerySnapshot,
+    DocumentData
 } from 'firebase/firestore';
 
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData } from '../types';
@@ -213,14 +216,16 @@ export const listenToAllAdminData = (
                 }
             };
 
-            unsubs.push(onSnapshot(collection(firestoreDb, 'movies'), (snapshot) => {
+            // FIX: Explicitly type the snapshot parameter to resolve the type error.
+            unsubs.push(onSnapshot(collection(firestoreDb, 'movies'), (snapshot: QuerySnapshot<DocumentData>) => {
                 const movies: Record<string, Movie> = {};
                 snapshot.forEach(doc => { movies[doc.id] = doc.data() as Movie; });
                 adminData.movies = movies;
                 checkInitialLoadAndCallback();
             }));
 
-            unsubs.push(onSnapshot(collection(firestoreDb, 'categories'), (snapshot) => {
+            // FIX: Explicitly type the snapshot parameter to resolve the type error.
+            unsubs.push(onSnapshot(collection(firestoreDb, 'categories'), (snapshot: QuerySnapshot<DocumentData>) => {
                 const categories: Record<string, Category> = {};
                 snapshot.forEach(doc => { categories[doc.id] = doc.data() as Category; });
                 adminData.categories = categories;
@@ -233,7 +238,8 @@ export const listenToAllAdminData = (
             }));
             
             const daysQuery = query(collection(firestoreDb, 'festival/schedule/days'), orderBy('day'));
-            unsubs.push(onSnapshot(daysQuery, (snapshot) => {
+            // FIX: Explicitly type the snapshot parameter to resolve the type error.
+            unsubs.push(onSnapshot(daysQuery, (snapshot: QuerySnapshot<DocumentData>) => {
                 const days: FestivalDay[] = [];
                 snapshot.forEach(doc => days.push(doc.data() as FestivalDay));
                 adminData.festivalData = days;

@@ -19,6 +19,7 @@ export interface Movie {
   releaseDateTime?: string;
   mainPageExpiry?: string;
   durationInMinutes?: number;
+  rating?: number;
 }
 
 export interface Category {

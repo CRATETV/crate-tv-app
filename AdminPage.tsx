@@ -180,6 +180,7 @@ const AdminPage: React.FC = () => {
       releaseDateTime: getLocalDatetimeString(),
       mainPageExpiry: '',
       durationInMinutes: 0,
+      rating: 0,
     };
     setSelectedMovie(newMovie);
     setIsAddingNew(true);
