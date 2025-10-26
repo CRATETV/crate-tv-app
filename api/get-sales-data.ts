@@ -50,6 +50,7 @@ export async function POST(request: Request) {
             }
         }
         
+        // FIX: Add check for "first-time setup" mode (when no admin passwords are set)
         const anyPasswordSet = primaryAdminPassword || masterPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
         if (!anyPasswordSet) {
              isAuthenticated = true;

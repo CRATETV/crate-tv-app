@@ -13,6 +13,7 @@ import SearchOverlay from './components/SearchOverlay';
 import StagingBanner from './components/StagingBanner';
 import FeatureModal from './components/FeatureModal';
 import DataStatusIndicator from './components/DataStatusIndicator';
+import FestivalLiveModal from './components/FestivalLiveModal';
 
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
@@ -44,6 +45,7 @@ const App: React.FC = () => {
   const [isStaging, setIsStaging] = useState(false);
   const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
   const [showFeatureModal, setShowFeatureModal] = useState(false);
+  const [showFestivalLiveModal, setShowFestivalLiveModal] = useState(false);
 
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
@@ -144,6 +146,17 @@ const App: React.FC = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [loadAppData, applyData]);
+
+  // Effect to show the Festival Live modal once per session
+  useEffect(() => {
+    if (!isLoading && festivalConfig?.isFestivalLive) {
+      const hasSeenModal = sessionStorage.getItem('hasSeenFestivalLiveModal');
+      if (!hasSeenModal) {
+        setShowFestivalLiveModal(true);
+        sessionStorage.setItem('hasSeenFestivalLiveModal', 'true');
+      }
+    }
+  }, [isLoading, festivalConfig]);
   
   // Logic for the hero banner auto-scroll
   const heroMovies = useMemo(() => {
@@ -415,6 +428,16 @@ const App: React.FC = () => {
       )}
       {showFeatureModal && (
         <FeatureModal onClose={() => setShowFeatureModal(false)} />
+      )}
+      {showFestivalLiveModal && (
+        <FestivalLiveModal
+          onClose={() => setShowFestivalLiveModal(false)}
+          onNavigate={() => {
+            setShowFestivalLiveModal(false);
+            window.history.pushState({}, '', '/festival');
+            window.dispatchEvent(new Event('pushstate'));
+          }}
+        />
       )}
     </div>
   );

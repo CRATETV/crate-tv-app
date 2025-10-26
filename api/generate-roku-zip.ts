@@ -1,5 +1,3 @@
-// This is a Vercel Serverless Function that generates a Roku channel package.
-// It will be accessible at the path /api/generate-roku-zip
 import JSZip from 'jszip';
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
@@ -10,7 +8,7 @@ const manifestContent = `
 title=Crate TV
 major_version=1
 minor_version=0
-build_version=8
+build_version=9
 bs_version=3.0
 mm_icon_focus_hd=pkg:/images/logo_400x90.png
 splash_screen_hd=pkg:/images/splash_hd_1280x720.png
@@ -84,16 +82,26 @@ const homeSceneXml = `
 `.trim();
 
 const homeSceneBrs = `
+' Helper function to find a pre-loaded font object by its role
+function getFontByRole(role as string) as object
+    fontLoader = m.top.findNode("fontLoader")
+    if fontLoader <> invalid
+        for each font in fontLoader.fonts
+            if font.role = role
+                return font
+            end if
+        end for
+    end if
+    return invalid
+end function
+
 function init()
     m.loadingLabel = m.top.findNode("loadingLabel")
     m.contentGroup = m.top.findNode("contentGroup")
     m.contentRowList = m.top.findNode("contentRowList")
     
-    ' Create a font object programmatically for the row labels. This is the correct method.
-    rowFont = createObject("roSGNode", "Font")
-    rowFont.uri = "pkg:/fonts/Roboto-Bold.ttf"
-    rowFont.size = 30
-    m.contentRowList.rowLabelFont = rowFont
+    ' Assign the pre-loaded font object to the RowList's label
+    m.contentRowList.rowLabelFont = getFontByRole("Roboto-Bold-30")
     
     m.contentTask = m.top.findNode("contentTask")
     m.contentTask.observeField("content", "onContentLoaded")
@@ -156,19 +164,30 @@ const moviePosterXml = `
 `.trim();
 
 const moviePosterBrs = `
+' Helper function to find a pre-loaded font object from the main scene
+function getFontByRole(role as string) as object
+    scene = getScene()
+    if scene = invalid then return invalid
+    
+    fontLoader = scene.findNode("fontLoader")
+    if fontLoader <> invalid
+        for each font in fontLoader.fonts
+            if font.role = role
+                return font
+            end if
+        end for
+    end if
+    return invalid
+end function
+
 function init()
     m.focusRing = m.top.findNode("focusRing")
     m.tileImage = m.top.findNode("tileImage")
     m.tileLabel = m.top.findNode("tileLabel")
     
-    ' Create and store valid font objects for focus changes.
-    m.regularFont = createObject("roSGNode", "Font")
-    m.regularFont.uri = "pkg:/fonts/Roboto-Regular.ttf"
-    m.regularFont.size = 30
-
-    m.boldFont = createObject("roSGNode", "Font")
-    m.boldFont.uri = "pkg:/fonts/Roboto-Bold.ttf"
-    m.boldFont.size = 30
+    ' Get and store the font objects from the main scene
+    m.regularFont = getFontByRole("Roboto-Regular-30")
+    m.boldFont = getFontByRole("Roboto-Bold-30")
 end function
 
 ' Populates the tile with data from the RowList content.
@@ -186,10 +205,10 @@ function onFocusChange()
     
     if focusPercent = 1.0 ' When focused
         m.focusRing.visible = true
-        m.tileLabel.font = m.boldFont
+        if m.boldFont <> invalid then m.tileLabel.font = m.boldFont
     else ' When unfocused
         m.focusRing.visible = false
-        m.tileLabel.font = m.regularFont
+        if m.regularFont <> invalid then m.tileLabel.font = m.regularFont
     end if
 end function
 `.trim();
@@ -197,19 +216,15 @@ end function
 const contentTaskXml = `
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="ContentTask" extends="Task">
-
     <interface>
         <field id="url" type="string" />
         <field id="content" type="node" />
     </interface>
-    
     <script type="text/brightscript" uri="pkg:/components/ContentTask.brs" />
-
 </component>
 `.trim();
 
 const contentTaskBrs = `
-' The main entry point for the Task node.
 function main()
     url = m.top.url
     port = createObject("roMessagePort")
@@ -332,6 +347,7 @@ export async function GET(request: Request) {
             images?.file('splash_hd_1280x720.png', splashImage);
             images?.file('splash_fhd_1920x1080.png', splashImage);
         } else {
+            // Provide a minimal placeholder if the splash screen fails to load to prevent packaging errors
             const placeholder = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 1, 99, 97, 0, 2, 0, 0, 25, 0, 5, 147, 10, 217, 160, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130]);
             images?.file('splash_hd_1280x720.png', placeholder);
             images?.file('splash_fhd_1920x1080.png', placeholder);

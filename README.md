@@ -16,6 +16,7 @@ Crate TV is a sleek, professional, and fully-featured streaming web application 
 - **Secure Admin Panel**: A password-protected page (`/admin`) for content management. Authentication is handled by a secure, serverless API endpoint, and the password is stored safely as an environment variable.
 - **Integrated Secure File Uploader**: Upload movie files, trailers, and posters directly to Amazon S3 from the admin panel. The system uses secure presigned URLs for fast, direct-to-S3 uploads.
 - **Automated Roku Channel Packager**: A one-click tool in the Admin Panel that generates a complete, ready-to-upload Roku channel ZIP file, automatically configured to pull data from your live web app.
+- **NEW: Analytics Dashboard**: A secure page to view total users, recent sign-ups, sales data from Square, filmmaker payout reports, and movie view counts.
 
 ---
 
@@ -66,13 +67,47 @@ This application supports both Square's Sandbox (for testing on `localhost`) and
 -   `SQUARE_SANDBOX_ACCESS_TOKEN`: Your **Sandbox** Square Access Token (secret).
 
 **Required for File Uploads & Live Data Publishing:**
-You need an AWS account and an S3 bucket to use the file uploader and the new live data publishing feature. The bucket must have public read access enabled and CORS configured to allow PUT requests from your website's domain.
+You need an AWS account and an S3 bucket to use the file uploader and the new live data publishing feature.
 -   `AWS_ACCESS_KEY_ID`: Your AWS IAM user's access key ID.
 -   `AWS_SECRET_ACCESS_KEY`: Your AWS IAM user's secret access key.
 -   `AWS_S3_REGION`: The region of your S3 bucket (e.g., `us-east-1`).
 -   `AWS_S3_BUCKET_NAME`: The name of your S3 bucket.
 
-### 2. Deploy to Vercel
+### 2. Configure AWS S3 Bucket for Uploads (CRITICAL STEP)
+For the file uploader in the admin panel to work, your S3 bucket must be configured to allow public read access and accept uploads from your website.
+
+**Step A: Create an IAM User (if you haven't already)**
+1.  In your AWS Console, go to IAM > Users > Create user.
+2.  Give it a name (e.g., `cratetv-s3-uploader`).
+3.  Attach the `AmazonS3FullAccess` policy directly to the user for simplicity.
+4.  After the user is created, go to the "Security credentials" tab and create an access key. **Save the Access Key ID and Secret Access Key immediately.** These are your `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables.
+
+**Step B: Configure Your S3 Bucket**
+1.  Go to the S3 service in your AWS Console and create a new bucket or use an existing one.
+2.  **Permissions Tab:**
+    *   Under "Block public access (bucket settings)", **uncheck** "Block all public access" and save the changes. This is required so that the uploaded files can be viewed on your website.
+3.  **Permissions Tab > Cross-origin resource sharing (CORS):**
+    *   Click "Edit" and paste the following JSON. Replace `https://your-live-domain.com` with your actual Vercel deployment URL. For local development, add your localhost URL (e.g., `http://localhost:3000`).
+    ```json
+    [
+        {
+            "AllowedHeaders": [
+                "Content-Type",
+                "Authorization"
+            ],
+            "AllowedMethods": [
+                "PUT"
+            ],
+            "AllowedOrigins": [
+                "https://your-live-domain.com",
+                "http://localhost:3000"
+            ],
+            "ExposeHeaders": []
+        }
+    ]
+    ```
+
+### 3. Deploy to Vercel
 The simplest way to get started is to deploy this repository directly to Vercel.
 
 <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fexample%2Fcratetv-repo" target="_blank">
@@ -81,7 +116,7 @@ The simplest way to get started is to deploy this repository directly to Vercel.
 
 During the import process, Vercel will prompt you to enter the Environment Variables listed above.
 
-### 3. Access Your Live App
+### 4. Access Your Live App
 Once deployed, Vercel will provide you with a public URL (e.g., `https://your-project-name.vercel.app`). You can now access your live Crate TV application. To manage content, simply navigate to `/admin`. Changes saved in the admin panel can be published to the live site instantly with the "Publish" button.
 
 ---
@@ -100,7 +135,8 @@ The web application includes an amazing feature: an automated packager that crea
 ### Step 2: Generate the Roku Channel Package
 1.  Navigate to the Admin Panel of your **live, deployed** web application (e.g., `https://your-project-name.vercel.app/admin`).
 2.  Enter the admin password you set in your environment variables.
-3.  In the "Automated Roku Channel Packager" section, click the **"Generate & Download Roku ZIP"** button. A file named `cratv.zip` will be downloaded.
+3.  Go to the **"Tools"** tab.
+4.  In the "Automated Roku Channel Packager" section, click the **"Generate & Download Roku ZIP"** button. A file named `cratv.zip` will be downloaded.
 
 ### Step 3: Install the Channel on Your Roku
 1.  On your computer (which must be on the same Wi-Fi network as your Roku), open a web browser and go to the Roku URL from Step 1.
