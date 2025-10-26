@@ -89,14 +89,10 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
         </div>
       </div>
 
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label htmlFor="director" className="block text-sm font-medium text-gray-300">Director</label>
           <input type="text" name="director" value={formData.director} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
-        </div>
-        <div>
-          <label htmlFor="durationInMinutes" className="block text-sm font-medium text-gray-300">Duration (in minutes)</label>
-          <input type="number" name="durationInMinutes" value={formData.durationInMinutes || ''} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
         </div>
         <div>
           <label htmlFor="rating" className="block text-sm font-medium text-gray-300">Rating (out of 10)</label>

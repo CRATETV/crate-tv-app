@@ -116,6 +116,13 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
           </svg>
         </button>
         
+        <img
+            src="https://cratetelevision.s3.us-east-1.amazonaws.com/transparent+background+of+crate+logo+for+website.png"
+            alt="Crate TV Logo"
+            crossOrigin="anonymous"
+            className="absolute top-4 left-6 w-24 h-auto opacity-50 pointer-events-none"
+        />
+        
         <div className="grid grid-cols-1 md:grid-cols-3">
             <div className="md:col-span-1 p-4 sm:p-6 flex flex-col items-center justify-center">
                  <img
@@ -188,12 +195,6 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
                 </div>
             </div>
         </div>
-        <img
-            src="https://cratetelevision.s3.us-east-1.amazonaws.com/transparent+background+of+crate+logo+for+website.png"
-            alt="Crate TV Logo"
-            crossOrigin="anonymous"
-            className="absolute bottom-4 right-6 w-24 h-auto opacity-50 pointer-events-none"
-        />
       </div>
     </div>
   );
