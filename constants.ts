@@ -619,7 +619,7 @@ export const moviesData: Record<string, Movie> = {
    "consumed": {
     "key": "consumed",
     "title": "Consumed",
-    "synopsis": "She gave everything to make her love complete, but a woman learns that her monumental act of self-sacrifice wasn't a noble gesture; it was the final permission her toxic relationship needed to devour her.<br/><br/>Coming October 31st.",
+    "synopsis": "She gave everything to make her love complete, but a woman learns that her monumental act of self-sacrifice wasn't a noble gesture; it was the final permission her toxic relationship needed to devour her.<br/><br/>Coming October 31st.<br/><br/>Director: Richard Frohman<br/>Assistant Director: Akil Logan-Haye",
     "cast": [
       {
         "name": "Lucie Paige Krovatin",
@@ -634,8 +634,7 @@ export const moviesData: Record<string, Movie> = {
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
-    "director": "Richard FrohmanDirector: Richard Frohman
-Assistant Director: Akil Logan-Haye",
+    "director": "Oskar Pierre Castro",
     "trailer": "",
     "fullMovie": "",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
@@ -1157,21 +1156,21 @@ Assistant Director: Akil Logan-Haye",
     "synopsis": "A chance encounter between two strangers, Ted and Natalie, sparks an immediate and intense connection, but their time together is fleeting.",
     "cast": [
       {
-        "name": "Salome Denoon",
+        "name": "Dana Godfrey",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png",
         "bio": "Salome Denoon is a versatile artist whose creative pursuits span performance, writing, editing, and digital media. As an actress, she has graced both stage and screen. She also brings her talents to the digital realm as the developer of Crate TV.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
       },
       {
-        "name": "David Auspitz",
+        "name": "Patrick Thomas Kasey",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png",
         "bio": "David Auspitz is a versatile actor with a knack for both comedic and dramatic roles. He brings a unique charm to every character he portrays, making him a beloved figure in the industry.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png"
       }
     ],
-    "director": "David Auspitz",
+    "director": "Michelle M. Charles",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Natalie.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/TED+AND+NATALIE+-+Lotus+Blossom+Productions+(1080p%2C+h264%2C+youtube).mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
     "likes": 0
