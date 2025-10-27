@@ -79,7 +79,10 @@ export const categoriesData: Record<string, Category> = {
       'newmovie1756487215116',
       'theneighbours',
       'tedandnatalie',
-      'slap'
+      'slap',
+      'consumed',
+      'itsinyou',
+      'unhinged'
     ]
   },
   documentary: {
@@ -612,6 +615,32 @@ export const moviesData: Record<string, Movie> = {
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Crossroads.png",
     "likes": 12
   },
+   "consumed": {
+    "key": "consumed",
+    "title": "Consumed",
+    "synopsis": "She gave everything to make her love complete, but a woman learns that her monumental act of self-sacrifice wasn't a noble gesture; it was the final permission her toxic relationship needed to devour her.<br/><br/>Coming October 31st.",
+    "cast": [
+      {
+        "name": "Lucie Paige Krovatin",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Allison Ferguson",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Oskar Pierre Castro",
+    "trailer": "",
+    "fullMovie": "",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.png",
+    "likes": 0,
+    "releaseDateTime": "2024-10-31T12:00:00Z"
+  },
   "fatherdaughterdance": {
     "key": "fatherdaughterdance",
     "title": "Father Daughter Dance",
@@ -655,6 +684,25 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+poster+jpeg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/ItsInYou.png",
     "likes": 1
+  },
+  "unhinged": {
+    "key": "unhinged",
+    "title": "Unhinged",
+    "synopsis": "",
+    "cast": [
+      {
+        "name": "Robert Graves",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": " Information regarding this actor is currently unavailable",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Robert Graves",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+Unhinged-+A+film+by+Robert+Graves+%26+Philaye+Films.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+unhinged+Movie+poster+.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+unhinged+Movie+poster+.JPG",
+    "likes": 0
   },
   "smirk": {
     "key": "smirk",
