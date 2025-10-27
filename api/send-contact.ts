@@ -35,13 +35,13 @@ export async function POST(request: Request) {
     `;
 
     // Send email using Resend
+    // FIX: Corrected 'reply_to' to 'replyTo' to match the Resend API's expected property name.
     const { data, error } = await resend.emails.send({
       from: `Crate TV Contact Form <${fromEmail}>`,
       to: [toEmail],
       subject: `New Message from ${name}`,
       html: emailHtml,
-      // FIX: The 'reply_to' property is not a valid property for Resend's 'send' method. It has been corrected to 'replyTo'.
-      replyTo: email,
+      reply_to: email,
     });
 
     if (error) {
