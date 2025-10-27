@@ -634,11 +634,7 @@ export const moviesData: Record<string, Movie> = {
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
-<<<<<<< HEAD
     "director": "Oskar Pierre Castro",
-=======
-    "director": "Richard Frohman",
->>>>>>> 83f393fd80c4067e10533224257c61afab789fd8
     "trailer": "",
     "fullMovie": "",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
