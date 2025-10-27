@@ -1,5 +1,5 @@
+
 import JSZip from 'jszip';
-// FIX: Switched to named imports for the AWS SDK to correctly resolve the S3Client type and its methods, fixing an error where `.send()` was not found.
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 // --- FONT DATA ---
@@ -8,6 +8,21 @@ import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 const ROBOTO_REGULAR_BASE64 = 'AAEAAAAQAQAABAAAR0RFRgB4AfwAABH4AAAAHkdQT1MAj//+AAAStAAAAGxHU1VCABCw+gAAFIwAAAaYT1MvMmg5/4IAAAoEAAAAVmNtYXAADgEAAAALVAAABKZjdnQgEGgYRAAAELQAAAAaZnBnbQ/QCaMAAAzMAAABimdhc3AAAAAQAAAR9AAAAAxnbHlmCA94MQAAACwAABVgaGVhZB6q8yIAAADcAAAANmhoZWEHEgOFAAABFAAAACRobXR4BEQAAAAAAbAAAAAgbG9jYQG8AWQAAAMoAAAAEm1heHAAEgAoAAABOAAAACBuYW1l4R_XBAAADWAAAAJFwb3N0/5wAMgAAESQAAAAgcHJlcGgGjIUDAAAMCwAAACEAAQAAAAIAAHcAjAABAAAAAAACAAEAAgAWAAQAAgAAAAEAAQAAAEAALgE8AAAAAQUBEAAAAAAAAAABAQAAAAAAAAAAAAAFBAADBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHx8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/wABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktM';
 const ROBOTO_BOLD_BASE64 = 'AAEAAAAQAQAABAAAR0RFRgB4AfwAABH4AAAAHkdQT1MAj//+AAAStAAAAGxHU1VCABCw+gAAFIwAAAaYT1MvMmg5/4IAAAoEAAAAVmNtYXAADgEAAAALVAAABKZjdnQgEGgYRAAAELQAAAAaZnBnbQ/QCaMAAAzMAAABimdhc3AAAAAQAAAR9AAAAAxnbHlmCA94MQAAACwAABVgaGVhZB6q8yIAAADcAAAANmhoZWEHEgOFAAABFAAAACRobXR4BEQAAAAAAbAAAAAgbG9jYQG8AWQAAAMoAAAAEm1heHAAEgAoAAABOAAAACBuYW1l4R_XBAAADWAAAAJFwb3N0/5wAMgAAESQAAAAgcHJlcGgGjIUDAAAMCwAAACEAAQAAAAIAAHcAjAABAAAAAAACAAEAAgAWAAQAAgAAAAEAAQAAAEAALgE8AAAAAQUBEAAAAAAAAAABAQAAAAAAAAAAAAAFBAADBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHx8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/wABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktM';
+
+// --- ROBUST PLACEHOLDER IMAGES ---
+// Base64 encoded, correctly-sized, dark gray PNGs to use as fallbacks.
+const PLACEHOLDER_ICON_HD_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAVwAAADSCAMAAAC1olQJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURRQURA3h17wAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABTSURBVHja7cEBDQAAAMKg9P+tYwVBERVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX1JAGwAAGI6Q0aAAAAAElFTkSuQmCC';
+const PLACEHOLDER_ICON_SD_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAPgAAACuCAMAAABUoCHLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURRQURA3h17wAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABJSURBVHja7cEBDQAAAMKg9P+tYwVBERVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX1IAGwAAE0hLg4AAAAAElFTkSuQmCC';
+const PLACEHOLDER_SPLASH_HD_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAABQAAAALQCAMAAACl/3daAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURRQURA3h17wAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACLSURBVHja7cExAQAAAMKg9P+tYwVBERVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX1ASwAAGeGqE/mAAAAAElFTkSuQmCC';
+const PLACEHOLDER_SPLASH_SD_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAtAAAAEACAMAAAANM40OAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURRQURA3h17wAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABqSURBVHja7cExAQAAAMKg9P+tYwVBERVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX1ASwAAE1R3p6gAAAAAElFTkSuQmCC';
+
+const placeholderMap: Record<string, string> = {
+    'roku-assets/channel-icon-hd.png': PLACEHOLDER_ICON_HD_BASE64,
+    'roku-assets/channel-icon-sd.png': PLACEHOLDER_ICON_SD_BASE64,
+    'roku-assets/splash-screen-hd.png': PLACEHOLDER_SPLASH_HD_BASE64,
+    'roku-assets/splash-screen-sd.png': PLACEHOLDER_SPLASH_SD_BASE64,
+};
+
 
 // Helper to get S3 client
 const getS3Client = () => {
@@ -244,26 +259,28 @@ end function
 
         zip.folder('images');
         // --- FETCH AND ADD IMAGE ASSETS ---
-        const imageKeys = [
-            'roku-assets/channel-icon-hd.png',
-            'roku-assets/channel-icon-sd.png',
-            'roku-assets/splash-screen-hd.png',
-            'roku-assets/splash-screen-sd.png'
-        ];
+        const imageKeys = Object.keys(placeholderMap);
         
-        const imagePromises = imageKeys.map(async (key) => {
-            const command = new GetObjectCommand({ Bucket: bucketName, Key: key });
-            const response = await s3.send(command);
-            const buffer = await response.Body?.transformToByteArray();
-            if (buffer) {
-                const fileName = key.split('/').pop();
-                if (fileName) {
-                   zip.file(`images/${fileName}`, buffer);
-                }
-            }
-        });
+        for (const key of imageKeys) {
+            const fileName = key.split('/').pop();
+            if (!fileName) continue;
 
-        await Promise.all(imagePromises);
+            try {
+                const command = new GetObjectCommand({ Bucket: bucketName, Key: key });
+                const response = await s3.send(command);
+                const buffer = await response.Body?.transformToByteArray();
+                
+                if (buffer && buffer.length > 0) {
+                   zip.file(`images/${fileName}`, buffer);
+                } else {
+                    console.warn(`S3 object for ${key} was empty. Using fallback placeholder.`);
+                    zip.file(`images/${fileName}`, placeholderMap[key], { base64: true });
+                }
+            } catch (error) {
+                console.warn(`Failed to fetch S3 asset '${key}'. Using fallback placeholder. Error: ${error}`);
+                zip.file(`images/${fileName}`, placeholderMap[key], { base64: true });
+            }
+        }
 
         // --- GENERATE AND SEND ZIP ---
         const content = await zip.generateAsync({ type: 'arraybuffer' });
