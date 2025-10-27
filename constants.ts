@@ -634,7 +634,8 @@ export const moviesData: Record<string, Movie> = {
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
-    "director": "Oskar Pierre Castro",
+    "director": "Richard FrohmanDirector: Richard Frohman
+Assistant Director: Akil Logan-Haye",
     "trailer": "",
     "fullMovie": "",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
