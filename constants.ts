@@ -675,11 +675,7 @@ export const moviesData: Record<string, Movie> = {
         "name": "",
         "photo": "",
         "bio": " Information regarding cast is currently unavailable",
-<<<<<<< HEAD
         "highResPhoto": ""
-=======
-        ""
->>>>>>> de52600ae6cf734549bc5f233bf2305843401a58
       }
     ],
     "director": "Robert Graves",
@@ -1178,7 +1174,6 @@ export const moviesData: Record<string, Movie> = {
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
     "likes": 0
   },
-  
   "atriptothemoon": {
     "key": "atriptothemoon",
     "title": "A Trip to the Moon",
@@ -1408,8 +1403,4 @@ export const festivalData: FestivalDay[] = [
       }
     ]
   }
-<<<<<<< HEAD
 ];
-=======
-];
->>>>>>> de52600ae6cf734549bc5f233bf2305843401a58
