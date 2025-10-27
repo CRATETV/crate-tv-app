@@ -675,7 +675,11 @@ export const moviesData: Record<string, Movie> = {
         "name": "",
         "photo": "",
         "bio": " Information regarding cast is currently unavailable",
+<<<<<<< HEAD
         "highResPhoto": ""
+=======
+        ""
+>>>>>>> de52600ae6cf734549bc5f233bf2305843401a58
       }
     ],
     "director": "Robert Graves",
@@ -1404,4 +1408,8 @@ export const festivalData: FestivalDay[] = [
       }
     ]
   }
+<<<<<<< HEAD
 ];
+=======
+];
+>>>>>>> de52600ae6cf734549bc5f233bf2305843401a58
