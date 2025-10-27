@@ -15,7 +15,6 @@ interface MovieDetailsModalProps {
   allCategories: Record<string, Category>;
   onSelectRecommendedMovie: (movie: Movie) => void;
   showSupportButton?: boolean;
-  // FIX: Add props to handle premium content subscription flow.
   onSubscribe?: () => void;
   isPremiumMovie?: boolean;
   isPremiumSubscriber?: boolean;
@@ -50,7 +49,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   allCategories,
   onSelectRecommendedMovie,
   showSupportButton = true,
-  // FIX: Destructure new props for subscription flow.
   onSubscribe,
   isPremiumMovie,
   isPremiumSubscriber
@@ -213,25 +211,22 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
           <div className="absolute bottom-6 left-6 text-white z-10">
             <h2 className="text-2xl md:text-4xl font-bold drop-shadow-lg mb-4 flex items-center gap-3">
               {movie.title || 'Untitled Film'}
+              {isPremiumMovie && <span className="text-sm font-bold bg-yellow-500 text-black px-2 py-0.5 rounded-md">PREMIUM</span>}
             </h2>
             <div className="flex flex-wrap items-center gap-3">
-              {/* FIX: Conditionally render Subscribe button for premium content if user is not subscribed. */}
-              {isPremiumMovie && !isPremiumSubscriber ? (
-                <button
-                  onClick={onSubscribe}
-                  className="flex items-center justify-center px-4 py-2 bg-red-600 text-white font-bold rounded-md hover:bg-red-700 transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
-                  Subscribe to Watch
-                </button>
-              ) : released ? (
+              {released ? (
                 <>
-                  {movie.fullMovie && (
+                  {isPremiumMovie && !isPremiumSubscriber ? (
+                    <button onClick={onSubscribe} className="flex items-center justify-center px-4 py-2 bg-yellow-500 text-black font-bold rounded-md hover:bg-yellow-400 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                        Join Premium to Watch
+                    </button>
+                  ) : movie.fullMovie ? (
                     <button onClick={handlePlayMovie} className="flex items-center justify-center px-4 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                         Play Full Movie
                     </button>
-                  )}
+                  ) : null}
                   {showSupportButton && (
                     <button onClick={() => setIsSupportModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors">
                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">

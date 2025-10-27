@@ -18,5 +18,11 @@
     "types": ["node"]
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "vite.config.ts", "components/PremiumPage.tsx", "MoviePage.tsx", "ClassicsPage.tsx"]
+  "exclude": [
+    "node_modules", 
+    "vite.config.ts", 
+    "MoviePage.tsx", 
+    "ClassicsPage.tsx",
+    "components/PremiumPage.tsx"
+  ]
 }

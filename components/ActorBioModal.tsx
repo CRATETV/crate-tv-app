@@ -117,7 +117,7 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
         </button>
         
         <img
-            src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png"
+            src={`/api/proxy-image?url=${encodeURIComponent("https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png")}`}
             alt="Crate TV Logo"
             crossOrigin="anonymous"
             className="absolute top-4 left-6 w-32 h-auto opacity-50 pointer-events-none"

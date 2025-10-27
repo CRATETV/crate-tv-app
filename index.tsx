@@ -21,6 +21,7 @@ import DeveloperGuidePage from './components/DeveloperGuidePage';
 import AnalyticsPage from './components/AnalyticsPage';
 import LandingPage from './components/LandingPage';
 import ThankYouPage from './components/ThankYouPage';
+// import PremiumPage from './components/PremiumPage'; // Reverted
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
