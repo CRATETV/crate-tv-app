@@ -565,9 +565,9 @@ export const moviesData: Record<string, Movie> = {
     "synopsis": "A passive-aggressive war unfolds between Mark, the supporting actor, and the director. Their every line and directorial choice is a thinly veiled barb.",
     "cast": [
       {
-        "name": "Akil Logan Haye",
+        "name": "Akil Logan-Haye",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil+Logan+Haye.png",
-        "bio": "Akil Logan Haye is a stage and film actor and the driving force behind Pursuit of Excellence, a production company where he serves as CEO. His creative vision informs both his performances and his leadership.",
+        "bio": "Akil Logan-Haye is a stage and film actor and the driving force behind Pursuit of Excellence, a production company where he serves as CEO. His creative vision informs both his performances and his leadership.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil+Logan+Haye.png"
       },
       {
@@ -608,7 +608,7 @@ export const moviesData: Record<string, Movie> = {
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
-    "director": "Akil Logan Haye",
+    "director": "Akil Logan-Haye",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/CROSSROADS-OFFICIAL-FILM_360p.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/crossroads(Mobile+Video).jpg",
@@ -633,7 +633,7 @@ export const moviesData: Record<string, Movie> = {
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
-    "director": "Oskar Pierre Castro",
+    "director": "Richard Frohman",
     "trailer": "",
     "fullMovie": "",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
@@ -672,10 +672,10 @@ export const moviesData: Record<string, Movie> = {
     "synopsis": "A problematic pastor must fight for his life when he is invaded by a violent and vengeful spirit.",
     "cast": [
       {
-        "name": "Robert Graves",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": " Information regarding this actor is currently unavailable",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "name": "",
+        "photo": "",
+        "bio": " Information regarding cast is currently unavailable",
+        ""
       }
     ],
     "director": "Robert Graves",
@@ -691,8 +691,8 @@ export const moviesData: Record<string, Movie> = {
     "synopsis": "",
     "cast": [
       {
-        "name": "Robert Graves",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "name": "",
+        "photo": "",
         "bio": " Information regarding this actor is currently unavailable",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
@@ -817,7 +817,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Bubacarr Sarge",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
-        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
@@ -904,7 +904,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Bubacarr Sarge",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
-        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
@@ -978,7 +978,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Bubacarr Sarge",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
-        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
@@ -1004,7 +1004,7 @@ export const moviesData: Record<string, Movie> = {
   "results": {
     "key": "results",
     "title": "Results",
-    "synopsis":"Confined to a sterile medical waiting room, three women await life-altering results—but only one of them seems to have a handle on everything. A short film created for the Playhouse West-Philadelphia 3-3-3 film festival.",
+    "synopsis": "Confined to a sterile medical waiting room, three women await life-altering results—but only one of them seems to have a handle on everything. A short film created for the Playhouse West-Philadelphia 3-3-3 film festival.",
     "cast": [
       {
         "name": "Michelle Reale-Opalesky",
@@ -1152,22 +1152,22 @@ export const moviesData: Record<string, Movie> = {
   "tedandnatalie": {
     "key": "tedandnatalie",
     "title": "Ted and Natalie",
-    "synopsis": "A chance encounter between two strangers, Ted and Natalie, sparks an immediate and intense connection, but their time together is fleeting.",
+    "synopsis": "A loving boyfriend confronts his avoidant girlfriend after multiple failed attempts to be seen together in public.",
     "cast": [
       {
-        "name": "Salome Denoon",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png",
-        "bio": "Salome Denoon is a versatile artist whose creative pursuits span performance, writing, editing, and digital media. As an actress, she has graced both stage and screen. She also brings her talents to the digital realm as the developer of Crate TV.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
+        "name": "Dana Godfrey",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
       },
       {
-        "name": "David Auspitz",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png",
-        "bio": "David Auspitz is a versatile actor with a knack for both comedic and dramatic roles. He brings a unique charm to every character he portrays, making him a beloved figure in the industry.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png"
+        "name": "Patrick Thomas Kasey",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
       }
     ],
-    "director": "David Auspitz",
+    "director": "Michelle M. Williams",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Natalie.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
