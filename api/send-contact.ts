@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       subject: `New Message from ${name}`,
       html: emailHtml,
       // FIX: Corrected property to 'replyTo' to match the 'CreateEmailOptions' type and resolve build error.
-      reply_to: email,
+      replyTo: email,
     });
 
     if (error) {

@@ -205,14 +205,24 @@ const App: React.FC = () => {
 
   // 2. Memoize the remaining standard categories for the main display list.
   const displayedCategories = useMemo(() => {
+    // Create Top 10 category
+    const topTenMovies = visibleMovies
+        .sort((a, b) => (b.likes || 0) - (a.likes || 0))
+        .slice(0, 10);
+    
+    const topTenCategory: DisplayedCategory | null = topTenMovies.length > 0 && topTenMovies.some(m => (m.likes || 0) > 0) ? {
+        key: 'topTen',
+        title: 'Top 10 Most Liked Films',
+        movies: topTenMovies,
+    } : null;
+
     const baseCategoryOrder: string[] = ["newReleases", "awardWinners", "pwff12thAnnual", "comedy", "drama", "documentary", "exploreTitles"];
     
-    return baseCategoryOrder
+    const standardCategories = baseCategoryOrder
       .map((key): DisplayedCategory | null => {
         const category = categories[key];
         if (!category) return null;
         
-        // Always skip the standard festival category if the live one will be shown separately.
         if (key === 'pwff12thAnnual' && festivalConfig?.isFestivalLive) {
             return null;
         }
@@ -225,7 +235,6 @@ const App: React.FC = () => {
 
         let title: React.ReactNode = category.title;
 
-        // Hide the title for "New Releases" on mobile
         if (key === 'newReleases') {
             const TitleComponent = () => (
                 <h2 className="hidden md:block text-lg md:text-2xl font-bold mb-4 text-white">
@@ -241,7 +250,9 @@ const App: React.FC = () => {
             movies: categoryMovies,
         };
       })
-      .filter((c): c is DisplayedCategory => !!c); // Filter out nulls
+      .filter((c): c is DisplayedCategory => !!c);
+      
+      return [topTenCategory, ...standardCategories].filter((c): c is DisplayedCategory => !!c);
 
   }, [categories, festivalConfig, visibleMovies]);
   
@@ -273,9 +284,6 @@ const App: React.FC = () => {
     setSelectedActor(null);
   };
   
-  // BUG FIX: Moved localStorage side effect into a dedicated useEffect hook.
-  // This is the correct React pattern for synchronizing state with external systems,
-  // preventing race conditions and ensuring reliable data persistence.
   useEffect(() => {
     try {
       localStorage.setItem('cratetv-likedMovies', JSON.stringify(Array.from(likedMovies)));
@@ -284,11 +292,12 @@ const App: React.FC = () => {
     }
   }, [likedMovies]);
 
-  const toggleLikeMovie = useCallback((movieKey: string) => {
+  const toggleLikeMovie = useCallback(async (movieKey: string) => {
     const newLikedMovies = new Set(likedMovies);
     let likesChange = 0;
+    const action = newLikedMovies.has(movieKey) ? 'unlike' : 'like';
 
-    if (newLikedMovies.has(movieKey)) {
+    if (action === 'unlike') {
         newLikedMovies.delete(movieKey);
         likesChange = -1;
     } else {
@@ -297,8 +306,7 @@ const App: React.FC = () => {
     }
     setLikedMovies(newLikedMovies);
 
-    // Update the likes count in the main movies state for immediate UI feedback.
-    // This state change is temporary and not persisted; the 'likedMovies' set is the source of truth.
+    // Optimistically update the UI for immediate feedback.
     setMovies(prevMovies => {
         if (!prevMovies[movieKey]) return prevMovies;
         const updatedMovie = { 
@@ -307,6 +315,21 @@ const App: React.FC = () => {
         };
         return { ...prevMovies, [movieKey]: updatedMovie };
     });
+
+    // Persist the like to the server.
+    try {
+        const response = await fetch('/api/toggle-like', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ movieKey, action }),
+        });
+        if (!response.ok) {
+            // Optional: Handle server error, e.g., revert optimistic update.
+            console.error("Failed to sync like with server.");
+        }
+    } catch (error) {
+        console.error("Failed to send like update to server:", error);
+    }
   }, [likedMovies]);
   
   const exitStaging = () => {

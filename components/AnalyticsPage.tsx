@@ -170,10 +170,11 @@ const AnalyticsPage: React.FC = () => {
 
     const topEarningFilm = analyticsData?.filmmakerPayouts[0]?.movieTitle || 'N/A';
     
-    // Use real view counts from analyticsData
+    // Combine live movie data with real-time analytics data
     const moviePerformanceData = Object.values(allMovies).map((movie: Movie) => ({
         ...movie,
         views: analyticsData?.viewCounts[movie.key] || 0,
+        likes: analyticsData?.movieLikes?.[movie.key] ?? movie.likes ?? 0,
         donations: analyticsData?.filmmakerPayouts.find(p => p.movieTitle === movie.title)?.totalDonations || 0
     })).sort((a,b) => b.views - a.views);
 
@@ -309,7 +310,7 @@ const AnalyticsPage: React.FC = () => {
                                                 <tr key={movie.key} className="border-b border-gray-700 last:border-b-0">
                                                     <td className="py-3 font-medium text-white">{movie.title}</td>
                                                     <td className="py-3 text-center">{movie.views.toLocaleString()}</td>
-                                                    <td className="py-3 text-center">{movie.likes.toLocaleString()}</td>
+                                                    <td className="py-3 text-center">{(movie.likes || 0).toLocaleString()}</td>
                                                     <td className="py-3 text-center">{formatCurrency(movie.donations)}</td>
                                                 </tr>
                                             ))}

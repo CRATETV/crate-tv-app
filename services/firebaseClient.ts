@@ -75,6 +75,17 @@ export const createUserProfile = async (uid: string, email: string): Promise<Use
         isPremiumSubscriber: false
     };
     await setDoc(userDocRef, newUser);
+
+    // Send signup notification email. This is a non-blocking "fire and forget" call.
+    fetch('/api/send-signup-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+    }).catch(error => {
+        // We log the error but don't block the user's signup flow if the notification fails.
+        console.warn('Failed to send signup notification email:', error);
+    });
+    
     return { uid, ...newUser };
 };
 

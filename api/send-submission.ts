@@ -56,7 +56,7 @@ export async function POST(request: Request) {
         subject: `New Film Submission: ${filmTitle}`,
         html: emailHtml,
         // FIX: Corrected property to 'replyTo' to match the 'CreateEmailOptions' type and resolve build error.
-        reply_to: email,
+        replyTo: email,
     });
 
     if (error) {

@@ -12,11 +12,12 @@ export const isMovieReleased = (movie: Movie | undefined | null): boolean => {
 export const categoriesData: Record<string, Category> = {
   featured: {
     title: 'Featured Films',
-    movieKeys: ['newmovie1756741314485', 'lifeless', 'foodiecalldirectorscut', 'juniper']
+    movieKeys: ['consumed', 'newmovie1756741314485', 'lifeless', 'foodiecalldirectorscut', 'juniper']
   },
   newReleases: {
     title: 'New Releases',
     movieKeys: [
+        'consumed',
         'thatloud',
         'results',
         'newmovie1756741314485', // What If
@@ -79,7 +80,10 @@ export const categoriesData: Record<string, Category> = {
       'newmovie1756487215116',
       'theneighbours',
       'tedandnatalie',
-      'slap'
+      'slap',
+      'consumed',
+      'itsinyou',
+      'unhinged'
     ]
   },
   documentary: {
@@ -612,6 +616,32 @@ export const moviesData: Record<string, Movie> = {
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Crossroads.png",
     "likes": 12
   },
+   "consumed": {
+    "key": "consumed",
+    "title": "Consumed",
+    "synopsis": "She gave everything to make her love complete, but a woman learns that her monumental act of self-sacrifice wasn't a noble gesture; it was the final permission her toxic relationship needed to devour her.<br/><br/>Coming October 31st.<br/><br/>Director: Richard Frohman<br/>Assistant Director: Akil Logan-Haye",
+    "cast": [
+      {
+        "name": "Lucie Paige Krovatin",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Allison Ferguson",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Oskar Pierre Castro",
+    "trailer": "",
+    "fullMovie": "",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
+    "likes": 0,
+    "releaseDateTime": "2024-10-31T12:00:00Z"
+  },
   "fatherdaughterdance": {
     "key": "fatherdaughterdance",
     "title": "Father Daughter Dance",
@@ -655,6 +685,25 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+poster+jpeg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/ItsInYou.png",
     "likes": 1
+  },
+  "unhinged": {
+    "key": "unhinged",
+    "title": "Unhinged",
+    "synopsis": "",
+    "cast": [
+      {
+        "name": "Robert Graves",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": " Information regarding this actor is currently unavailable",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Robert Graves",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+Unhinged-+A+film+by+Robert+Graves+%26+Philaye+Films.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+unhinged+Movie+poster+.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+unhinged+Movie+poster+.JPG",
+    "likes": 0
   },
   "smirk": {
     "key": "smirk",
@@ -1107,21 +1156,21 @@ export const moviesData: Record<string, Movie> = {
     "synopsis": "A chance encounter between two strangers, Ted and Natalie, sparks an immediate and intense connection, but their time together is fleeting.",
     "cast": [
       {
-        "name": "Salome Denoon",
+        "name": "Dana Godfrey",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png",
         "bio": "Salome Denoon is a versatile artist whose creative pursuits span performance, writing, editing, and digital media. As an actress, she has graced both stage and screen. She also brings her talents to the digital realm as the developer of Crate TV.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
       },
       {
-        "name": "David Auspitz",
+        "name": "Patrick Thomas Kasey",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png",
         "bio": "David Auspitz is a versatile actor with a knack for both comedic and dramatic roles. He brings a unique charm to every character he portrays, making him a beloved figure in the industry.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png"
       }
     ],
-    "director": "David Auspitz",
+    "director": "Michelle M. Charles",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Natalie.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/TED+AND+NATALIE+-+Lotus+Blossom+Productions+(1080p%2C+h264%2C+youtube).mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
     "likes": 0

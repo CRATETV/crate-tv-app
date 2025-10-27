@@ -116,11 +116,11 @@ export async function POST(request: Request) {
         // --- Firebase Data Fetching ---
         const initError = getInitializationError();
         if (initError) {
-            // This will now provide a detailed error from the admin SDK initialization
             throw new Error(`Could not connect to Firebase. Reason: ${initError}`);
         }
 
         let viewCounts: Record<string, number> = {};
+        let movieLikes: Record<string, number> = {};
         let totalUsers = 0;
         let recentUsers: { email: string; creationTime: string; }[] = [];
 
@@ -132,6 +132,12 @@ export async function POST(request: Request) {
             const viewsSnapshot = await viewsCollectionRef.get();
             viewsSnapshot.forEach(doc => {
                 viewCounts[doc.id] = doc.data().count || 0;
+            });
+
+            const moviesCollectionRef = db.collection("movies");
+            const moviesSnapshot = await moviesCollectionRef.get();
+            moviesSnapshot.forEach(doc => {
+                movieLikes[doc.id] = doc.data().likes || 0;
             });
         }
         
@@ -164,6 +170,7 @@ export async function POST(request: Request) {
             salesByType: {},
             filmmakerPayouts: [],
             viewCounts: viewCounts,
+            movieLikes: movieLikes,
             totalUsers: totalUsers,
             recentUsers: recentUsers,
         };

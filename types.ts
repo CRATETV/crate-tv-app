@@ -69,6 +69,7 @@ export interface AnalyticsData {
     salesByType: Record<string, number>;
     filmmakerPayouts: FilmmakerPayout[];
     viewCounts: Record<string, number>;
+    movieLikes: Record<string, number>;
     totalUsers: number;
     recentUsers: { email: string; creationTime: string; }[];
 }
