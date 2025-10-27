@@ -12,7 +12,7 @@ export const isMovieReleased = (movie: Movie | undefined | null): boolean => {
 export const categoriesData: Record<string, Category> = {
   featured: {
     title: 'Featured Films',
-    movieKeys: ['newmovie1756741314485', 'lifeless', 'foodiecalldirectorscut', 'juniper']
+    movieKeys: ['consumed', 'newmovie1756741314485', 'lifeless', 'foodiecalldirectorscut', 'juniper']
   },
   newReleases: {
     title: 'New Releases',
@@ -636,8 +636,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Oskar Pierre Castro",
     "trailer": "",
     "fullMovie": "",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
     "likes": 0,
     "releaseDateTime": "2024-10-31T12:00:00Z"
   },
