@@ -365,9 +365,9 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Joshua Daniel",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png",
-        "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png"
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
       }
     ],
     "director": "Joshua Daniel",
@@ -409,9 +409,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Joshua Daniel",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png",
-        "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png"
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
       },
       {
         "name": "Darrah Lashley",
@@ -490,9 +490,9 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Joshua Daniel",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png",
-        "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png"
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
       }
     ],
     "director": "Salome Denoon",
@@ -970,10 +970,10 @@ export const moviesData: Record<string, Movie> = {
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
       },
       {
-        "name": "Joshua Daniel",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png",
-        "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png"
+        "name": "",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
       },
       {
         "name": "Bubacarr Sarge",
