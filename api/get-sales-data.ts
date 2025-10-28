@@ -14,6 +14,14 @@ interface SquarePayment {
   note?: string;
 }
 
+interface FirebaseData {
+    viewCounts: Record<string, number>;
+    movieLikes: Record<string, number>;
+    totalUsers: number;
+    recentUsers: { email: string; creationTime: string; }[];
+}
+
+
 const parseNote = (note: string | undefined): { type: string, title?: string, director?: string } => {
     if (!note) return { type: 'unknown' };
 
@@ -75,7 +83,7 @@ async function fetchSquareData(accessToken: string, locationId: string | undefin
     return allPayments;
 }
 
-async function fetchFirebaseData() {
+async function fetchFirebaseData(): Promise<FirebaseData> {
     console.log("[Analytics API] Starting Firebase data fetch.");
     const initError = getInitializationError();
     if (initError) throw new Error(`Could not connect to Firebase. Reason: ${initError}`);
@@ -120,7 +128,7 @@ export async function POST(request: Request) {
     let squareError: string | null = null;
     let firebaseError: string | null = null;
     let allPayments: SquarePayment[] = [];
-    let firebaseData = { viewCounts: {}, movieLikes: {}, totalUsers: 0, recentUsers: [] };
+    let firebaseData: FirebaseData = { viewCounts: {}, movieLikes: {}, totalUsers: 0, recentUsers: [] };
 
     try {
         const { password } = await request.json();
