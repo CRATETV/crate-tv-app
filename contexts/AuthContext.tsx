@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 // FIX: Removed direct imports from 'firebase/auth' as they are causing module resolution errors.
 // Auth functions will be accessed via the auth instance from firebaseClient (compat mode).
@@ -97,7 +98,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // FIX: Use v8 createUserWithEmailAndPassword syntax
             const userCredential = await auth.createUserWithEmailAndPassword(email, password);
             // After user is created in Auth, create their profile in Firestore.
-            await createUserProfile(userCredential.user.uid, email);
+            if (userCredential.user) {
+                await createUserProfile(userCredential.user.uid, email);
+            } else {
+                throw new Error("User was not created successfully.");
+            }
         } catch (error) {
             throw new Error(handleAuthError(error));
         }
