@@ -74,7 +74,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
           className="flex overflow-x-auto overflow-y-visible space-x-2 md:space-x-4 py-4 scrollbar-hide"
         >
           {movies.map((movie, index) => (
-            <div key={movie.key} className={`flex-shrink-0 ${showRankings ? 'w-48 md:w-64' : 'w-40 md:w-48'}`}>
+            <div key={movie.key} className={`flex-shrink-0 ${showRankings ? 'w-44 md:w-56' : 'w-40 md:w-48'}`}>
                 <MovieCard
                   movie={movie}
                   onSelectMovie={onSelectMovie}
