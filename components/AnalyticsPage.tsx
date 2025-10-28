@@ -49,35 +49,33 @@ const AnalyticsPage: React.FC = () => {
                         body: JSON.stringify({ password: storedPassword }),
                     });
 
+                    // The new API should always return 200, but we check for network errors.
                     if (!analyticsRes.ok) {
-                        let errorMessage = `The server responded with an error (Status: ${analyticsRes.status}).`;
-                        try {
-                            const errorData = await analyticsRes.json();
-                            errorMessage = errorData.error || errorMessage;
-                        } catch (e) {
-                             // This block handles cases where the server returns non-JSON errors, like Vercel's crash pages.
-                            try {
-                                const errorText = await analyticsRes.text();
-                                if (errorText.includes('500') && errorText.includes('INTERNAL_SERVER_ERROR')) {
-                                     errorMessage = "A critical server error occurred. This is often caused by misconfigured environment variables (like the Firebase Service Account Key) on Vercel. Please double-check your project settings.";
-                                } else {
-                                     errorMessage = errorText.substring(0, 300) || errorMessage;
-                                }
-                            } catch (textErr) {
-                                errorMessage = 'Failed to fetch analytics and could not read the error response from the server.';
-                            }
-                        }
-                    
                         if (analyticsRes.status === 401) {
                             sessionStorage.removeItem('isAdminAuthenticated');
                             sessionStorage.removeItem('adminPassword');
                             setIsAuthenticated(false);
                         }
-                        throw new Error(errorMessage);
+                        throw new Error(`Failed to connect to the analytics API endpoint (Status: ${analyticsRes.status}).`);
                     }
                     
-                    const analytics = await analyticsRes.json();
-                    setAnalyticsData(analytics);
+                    const responseData = await analyticsRes.json();
+
+                    if (responseData.analyticsData) {
+                        setAnalyticsData(responseData.analyticsData);
+                    }
+
+                    const errorMessages = [];
+                    if (responseData.errors?.square) {
+                        errorMessages.push(`Square Error: ${responseData.errors.square}`);
+                    }
+                    if (responseData.errors?.firebase) {
+                        errorMessages.push(`Firebase Error: ${responseData.errors.firebase}`);
+                    }
+
+                    if (errorMessages.length > 0) {
+                        setError(errorMessages.join('\n\n'));
+                    }
 
                 } catch (apiError) {
                     const message = apiError instanceof Error ? apiError.message : "An unknown error occurred while fetching analytics.";
@@ -217,7 +215,7 @@ const AnalyticsPage: React.FC = () => {
                                     <p className="text-sm text-red-200 mt-1">This is usually caused by missing or incorrect environment variables in your Vercel project settings. Please check the keys for Firebase and Square.</p>
                                     <details className="mt-3 text-xs">
                                         <summary className="cursor-pointer text-red-300 hover:text-white">Show Technical Details</summary>
-                                        <div className="mt-2 p-3 bg-red-900/50 rounded-md font-mono text-red-200">{error}</div>
+                                        <div className="mt-2 p-3 bg-red-900/50 rounded-md font-mono text-red-200 whitespace-pre-wrap">{error}</div>
                                     </details>
                                 </div>
                             </div>
@@ -270,9 +268,9 @@ const AnalyticsPage: React.FC = () => {
                                     {/* Recent User Sign-ups */}
                                     <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
                                         <h2 className="text-2xl font-bold text-white mb-4">Recent User Sign-Ups</h2>
-                                        <div className="overflow-x-auto">
+                                        <div className="overflow-x-auto max-h-96">
                                             <table className="w-full text-left">
-                                                <thead>
+                                                <thead className="sticky top-0 bg-gray-800">
                                                     <tr className="border-b border-gray-600 text-sm text-gray-400">
                                                         <th className="py-3 pr-4">Email</th>
                                                         <th className="py-3 pl-4">Date Joined</th>

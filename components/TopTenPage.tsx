@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import { Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
+import html2canvas from 'html2canvas';
 
 const TopTenPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [movies, setMovies] = useState<Record<string, Movie>>({});
+    const [isDownloading, setIsDownloading] = useState(false);
+    const captureRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const loadData = async () => {
@@ -23,12 +26,42 @@ const TopTenPage: React.FC = () => {
 
     const topTenMovies = useMemo(() => {
         return Object.values(movies)
-            // FIX: Add explicit type to the 'movie' parameter to resolve TypeScript inference issue.
-            .filter((movie: Movie) => (movie.likes || 0) > 0) // Only include movies with at least one like
-            // FIX: Add explicit types to 'a' and 'b' parameters to resolve TypeScript inference issues.
+            .filter((movie: Movie) => (movie.likes || 0) > 0)
             .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
             .slice(0, 10);
     }, [movies]);
+
+    const handleDownload = async () => {
+        if (!captureRef.current || isDownloading) return;
+
+        setIsDownloading(true);
+
+        try {
+            // Temporarily add a border for better framing, then remove it
+            captureRef.current.style.border = '1px solid #374151';
+            const canvas = await html2canvas(captureRef.current, {
+                backgroundColor: '#000000',
+                useCORS: true, 
+                scale: 2, // Increase resolution for better quality
+            });
+            captureRef.current.style.border = 'none';
+
+            const image = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = image;
+            const date = new Date().toISOString().split('T')[0];
+            link.download = `crate-tv-top-10-${date}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error("Failed to download image:", error);
+            alert("Sorry, there was an error creating the image. Please try again.");
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
 
     if (isLoading) {
         return <LoadingSpinner />;
@@ -37,44 +70,54 @@ const TopTenPage: React.FC = () => {
     return (
         <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans">
             <div className="max-w-2xl mx-auto">
-                <header className="text-center mb-8">
-                    <img
-                        src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png"
-                        alt="Crate TV Logo"
-                        className="mx-auto w-48 h-auto mb-2"
-                        onContextMenu={(e) => e.preventDefault()}
-                    />
-                    <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">Top 10 Most Liked Films</h1>
-                    <p className="text-sm text-gray-400 mt-2">As of {new Date().toLocaleDateString()}</p>
-                </header>
+                <div className="text-center mb-6">
+                    <button
+                        onClick={handleDownload}
+                        disabled={isDownloading}
+                        className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-6 rounded-md transition-colors"
+                    >
+                        {isDownloading ? 'Generating...' : 'Download as Image'}
+                    </button>
+                </div>
 
-                {topTenMovies.length > 0 ? (
-                    <div className="space-y-4">
-                        {topTenMovies.map((movie, index) => (
-                            <div key={movie.key} className="flex items-center gap-4 p-4 bg-gray-900/50 border border-gray-700 rounded-lg">
-                                <span className="text-4xl sm:text-5xl font-black text-gray-600 w-16 text-center">{index + 1}</span>
-                                <img src={movie.poster} alt={movie.title} className="w-16 h-24 object-cover rounded-md flex-shrink-0" onContextMenu={(e) => e.preventDefault()} />
-                                <div className="flex-grow">
-                                    <h2 className="text-lg font-bold text-white leading-tight">{movie.title}</h2>
-                                    <p className="text-sm text-gray-400">{movie.director}</p>
+                <div ref={captureRef} className="bg-black p-4 sm:p-6">
+                    <header className="text-center mb-8">
+                        <img
+                            src={`/api/proxy-image?url=${encodeURIComponent("https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png")}`}
+                            alt="Crate TV Logo"
+                            crossOrigin="anonymous"
+                            className="mx-auto w-48 h-auto mb-2"
+                            onContextMenu={(e) => e.preventDefault()}
+                        />
+                        <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">Top 10 Most Liked Films</h1>
+                        <p className="text-sm text-gray-400 mt-2">As of {new Date().toLocaleDateString()}</p>
+                    </header>
+
+                    {topTenMovies.length > 0 ? (
+                        <div className="space-y-4">
+                            {topTenMovies.map((movie, index) => (
+                                <div key={movie.key} className="flex items-center gap-4 p-4 bg-gray-900/50 border border-gray-700 rounded-lg">
+                                    <span className="text-4xl sm:text-5xl font-black text-gray-600 w-16 text-center">{index + 1}</span>
+                                    <img 
+                                        src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
+                                        alt={movie.title} 
+                                        crossOrigin="anonymous"
+                                        className="w-16 h-24 object-cover rounded-md flex-shrink-0" 
+                                        onContextMenu={(e) => e.preventDefault()} 
+                                    />
+                                    <div className="flex-grow">
+                                        <h2 className="text-lg font-bold text-white leading-tight">{movie.title}</h2>
+                                        <p className="text-sm text-gray-400">{movie.director}</p>
+                                    </div>
                                 </div>
-                                <div className="text-right flex-shrink-0">
-                                    <p className="font-bold text-white flex items-center gap-1.5">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                                        </svg>
-                                        {(movie.likes || 0).toLocaleString()}
-                                    </p>
-                                    <p className="text-xs text-gray-500">Likes</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-16 text-gray-500">
-                        <p>No liked movies yet. Be the first to like a film!</p>
-                    </div>
-                )}
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-16 text-gray-500">
+                            <p>No liked movies yet. Be the first to like a film!</p>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
