@@ -107,7 +107,9 @@ export async function POST(request: Request) {
                 }
 
                 const data = await response.json();
-                if (data.payments) allPayments.push(...data.payments);
+                if (data.payments && Array.isArray(data.payments)) {
+                    allPayments.push(...data.payments);
+                }
                 cursor = data.cursor;
             } while (cursor);
             console.log(`[Analytics API] Fetched ${allPayments.length} payments from Square.`);
@@ -207,8 +209,12 @@ export async function POST(request: Request) {
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         console.error("[Analytics API] A critical error occurred:", error);
-        return new Response(JSON.stringify({ error: errorMessage }), {
-            status: 500,
+        // This outer catch now returns a 200 OK with the error in the body, preventing a 500.
+        return new Response(JSON.stringify({ 
+            analyticsData: null,
+            errors: { square: null, firebase: null, critical: errorMessage }
+        }), {
+            status: 200,
             headers: { 'Content-Type': 'application/json' },
         });
     }

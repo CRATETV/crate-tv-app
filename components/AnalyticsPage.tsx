@@ -23,7 +23,7 @@ const AnalyticsPage: React.FC = () => {
     const [loginError, setLoginError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    const [apiError, setApiError] = useState<string | null>(null);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
     // State for movie data needed for the performance table
@@ -49,23 +49,31 @@ const AnalyticsPage: React.FC = () => {
                         body: JSON.stringify({ password: storedPassword }),
                     });
 
-                    // The new API should always return 200, but we check for network errors.
+                    // Handle authentication error specifically
+                    if (analyticsRes.status === 401) {
+                        sessionStorage.removeItem('isAdminAuthenticated');
+                        sessionStorage.removeItem('adminPassword');
+                        setIsAuthenticated(false);
+                        setIsLoading(false);
+                        return;
+                    }
+                    
                     if (!analyticsRes.ok) {
-                        if (analyticsRes.status === 401) {
-                            sessionStorage.removeItem('isAdminAuthenticated');
-                            sessionStorage.removeItem('adminPassword');
-                            setIsAuthenticated(false);
-                        }
-                        throw new Error(`Failed to connect to the analytics API endpoint (Status: ${analyticsRes.status}).`);
+                        throw new Error(`The analytics API returned an unexpected error (Status: ${analyticsRes.status}).`);
                     }
                     
                     const responseData = await analyticsRes.json();
 
+                    // Set data if available
                     if (responseData.analyticsData) {
                         setAnalyticsData(responseData.analyticsData);
                     }
 
+                    // Collect and display any errors reported by the API
                     const errorMessages = [];
+                    if (responseData.errors?.critical) {
+                        errorMessages.push(`A critical server error occurred: ${responseData.errors.critical}`);
+                    }
                     if (responseData.errors?.square) {
                         errorMessages.push(`Square Error: ${responseData.errors.square}`);
                     }
@@ -74,12 +82,12 @@ const AnalyticsPage: React.FC = () => {
                     }
 
                     if (errorMessages.length > 0) {
-                        setError(errorMessages.join('\n\n'));
+                        setApiError(errorMessages.join('\n\n'));
                     }
 
-                } catch (apiError) {
-                    const message = apiError instanceof Error ? apiError.message : "An unknown error occurred while fetching analytics.";
-                    setError(message);
+                } catch (fetchError) {
+                    const message = fetchError instanceof Error ? fetchError.message : "An unknown error occurred while fetching analytics.";
+                    setApiError(message);
                 } finally {
                     setIsLoading(false);
                 }
@@ -202,7 +210,7 @@ const AnalyticsPage: React.FC = () => {
             <main className="flex-grow p-4 md:p-8">
                 <div className="max-w-7xl mx-auto">
                     
-                    {error && (
+                    {apiError && (
                         <div className="bg-red-800 border border-red-600 text-white p-6 rounded-lg mb-8 animate-[fadeIn_0.3s_ease-out]">
                             <div className="flex items-start gap-4">
                                 <div className="flex-shrink-0 w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
@@ -211,11 +219,11 @@ const AnalyticsPage: React.FC = () => {
                                     </svg>
                                 </div>
                                 <div>
-                                    <h2 className="font-bold text-lg">Could Not Load Analytics Data</h2>
+                                    <h2 className="font-bold text-lg">Could Not Load All Analytics Data</h2>
                                     <p className="text-sm text-red-200 mt-1">This is usually caused by missing or incorrect environment variables in your Vercel project settings. Please check the keys for Firebase and Square.</p>
                                     <details className="mt-3 text-xs">
                                         <summary className="cursor-pointer text-red-300 hover:text-white">Show Technical Details</summary>
-                                        <div className="mt-2 p-3 bg-red-900/50 rounded-md font-mono text-red-200 whitespace-pre-wrap">{error}</div>
+                                        <div className="mt-2 p-3 bg-red-900/50 rounded-md font-mono text-red-200 whitespace-pre-wrap">{apiError}</div>
                                     </details>
                                 </div>
                             </div>
@@ -277,8 +285,8 @@ const AnalyticsPage: React.FC = () => {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {analyticsData.recentUsers.length > 0 ? analyticsData.recentUsers.map(user => (
-                                                        <tr key={user.email} className="border-b border-gray-700 last:border-b-0">
+                                                    {analyticsData.recentUsers.length > 0 ? analyticsData.recentUsers.map((user, index) => (
+                                                        <tr key={`${user.email}-${index}`} className="border-b border-gray-700 last:border-b-0">
                                                             <td className="py-3 pr-4 font-medium text-white">{user.email}</td>
                                                             <td className="py-3 pl-4 text-gray-300">{user.creationTime}</td>
                                                         </tr>
@@ -372,7 +380,7 @@ const AnalyticsPage: React.FC = () => {
                             </div>
                         </>
                     ) : (
-                         !error && (
+                         !apiError && (
                             <div className="text-center py-16">
                                 <h2 className="text-2xl font-bold">No Analytics Data to Display</h2>
                                 <p className="text-gray-400 mt-2">There is no sales or user data to report yet.</p>
