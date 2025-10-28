@@ -62,8 +62,8 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
               className="hidden md:flex items-center justify-center px-6 py-2.5 rounded-md bg-gray-500/50 text-white font-bold hover:bg-gray-400/50 transition-colors shadow-lg backdrop-blur-sm"
               aria-label={`More information about ${movie.title}`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24" stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16V11M12 8h.01" />
               </svg>
               <span>More Info</span>
             </button>
@@ -73,8 +73,8 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
               className="flex md:hidden items-center justify-center w-12 h-12 rounded-full bg-gray-500/50 text-white font-bold hover:bg-gray-400/50 transition-colors shadow-lg backdrop-blur-sm"
               aria-label={`More information about ${movie.title}`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24" stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16V11M12 8h.01" />
               </svg>
             </button>
           </div>

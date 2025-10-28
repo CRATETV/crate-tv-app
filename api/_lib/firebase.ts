@@ -1,8 +1,10 @@
-import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
 
-let db: Firestore | null = null;
-let firebaseInitializationPromise: Promise<Firestore | null> | null = null;
+// FIX: Refactor to use Firebase v9 compat libraries to fix module export errors.
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
+
+let db: firebase.firestore.Firestore | null = null;
+let firebaseInitializationPromise: Promise<firebase.firestore.Firestore | null> | null = null;
 
 const initializeFirebase = () => {
     if (firebaseInitializationPromise) {
@@ -24,13 +26,13 @@ const initializeFirebase = () => {
                 throw new Error("Firebase server environment variables are not set.");
             }
             
-            let app: FirebaseApp;
-            if (getApps().length === 0) {
-                app = initializeApp(firebaseConfig);
+            let app: firebase.app.App;
+            if (firebase.apps.length === 0) {
+                app = firebase.initializeApp(firebaseConfig);
             } else {
-                app = getApp();
+                app = firebase.app();
             }
-            db = getFirestore(app);
+            db = firebase.firestore(app);
             console.log("Firebase initialized for API route.");
             return db;
         } catch (error) {

@@ -1,37 +1,17 @@
-import { FirebaseApp, initializeApp, getApps, getApp } from 'firebase/app';
-import { 
-    getAuth, 
-    signInAnonymously, 
-    Auth 
-} from 'firebase/auth';
-import { 
-    getFirestore, 
-    collection, 
-    doc, 
-    onSnapshot, 
-    getDocs, 
-    setDoc, 
-    deleteDoc, 
-    writeBatch, 
-    arrayRemove, 
-    limit, 
-    query, 
-    orderBy,
-    where,
-    Firestore,
-    getDoc, 
-    QuerySnapshot,
-    DocumentData
-} from 'firebase/firestore';
+
+// FIX: Refactor to use Firebase v9 compat libraries to fix module export errors.
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import 'firebase/compat/firestore';
 
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData, ActorSubmission, PayoutRequest } from '../types';
 import { moviesData as initialMovies, categoriesData as initialCategories, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
 
 // --- Asynchronous Firebase Initialization ---
 
-let db: Firestore | null = null;
-let auth: Auth | null = null;
-let app: FirebaseApp | null = null;
+let db: firebase.firestore.Firestore | null = null;
+let auth: firebase.auth.Auth | null = null;
+let app: firebase.app.App | null = null;
 
 let firebaseInitializationPromise: Promise<void> | null = null;
 let firebaseInitializationError: string | null = null;
@@ -56,14 +36,14 @@ const initializeFirebase = () => {
             }
             
             console.log("Firebase config fetched successfully. Initializing Firebase...");
-            if (getApps().length === 0) {
-                app = initializeApp(firebaseConfig);
+            if (firebase.apps.length === 0) {
+                app = firebase.initializeApp(firebaseConfig);
             } else {
-                app = getApp();
+                app = firebase.app();
             }
-            db = getFirestore(app);
-            auth = getAuth(app);
-            await signInAnonymously(auth);
+            db = firebase.firestore(app);
+            auth = firebase.auth(app);
+            await auth.signInAnonymously();
             console.log("Firebase initialized successfully.");
 
         } catch (error) {
@@ -116,56 +96,56 @@ const notifyLocalListeners = () => {
 };
 
 // --- Fallback and Migration ---
-const migrateInitialData = async (firestoreDb: Firestore) => {
+const migrateInitialData = async (firestoreDb: firebase.firestore.Firestore) => {
     console.log("Checking for missing initial data in Firestore...");
-    const batch = writeBatch(firestoreDb);
+    const batch = firestoreDb.batch();
     let operationsCount = 0;
 
     // 1. Check for missing MOVIES
-    const moviesSnapshot = await getDocs(collection(firestoreDb, 'movies'));
+    const moviesSnapshot = await firestoreDb.collection('movies').get();
     const existingMovieKeys = new Set(moviesSnapshot.docs.map(doc => doc.id));
     for (const [key, movie] of Object.entries(initialMovies)) {
         if (!existingMovieKeys.has(key)) {
             console.log(`- Adding missing movie: ${key}`);
-            batch.set(doc(firestoreDb, 'movies', key), movie);
+            batch.set(firestoreDb.collection('movies').doc(key), movie);
             operationsCount++;
         }
     }
 
     // 2. Check for missing CATEGORIES
-    const categoriesSnapshot = await getDocs(collection(firestoreDb, 'categories'));
+    const categoriesSnapshot = await firestoreDb.collection('categories').get();
     const existingCategoryKeys = new Set(categoriesSnapshot.docs.map(doc => doc.id));
     for (const [key, category] of Object.entries(initialCategories)) {
         if (!existingCategoryKeys.has(key)) {
             console.log(`- Adding missing category: ${key}`);
-            batch.set(doc(firestoreDb, 'categories', key), category);
+            batch.set(firestoreDb.collection('categories').doc(key), category);
             operationsCount++;
         }
     }
 
     // 3. Check for FESTIVAL CONFIG
-    const festivalConfigDoc = await getDoc(doc(firestoreDb, 'festival', 'config'));
-    if (!festivalConfigDoc.exists()) {
+    const festivalConfigDoc = await firestoreDb.collection('festival').doc('config').get();
+    if (!festivalConfigDoc.exists) {
         console.log("- Adding missing festival config.");
-        batch.set(doc(firestoreDb, 'festival', 'config'), initialFestivalConfig);
+        batch.set(firestoreDb.collection('festival').doc('config'), initialFestivalConfig);
         operationsCount++;
     }
 
     // 4. Check for FESTIVAL DAYS
-    const festivalDaysSnapshot = await getDocs(collection(firestoreDb, 'festival/schedule/days'));
+    const festivalDaysSnapshot = await firestoreDb.collection('festival/schedule/days').get();
     if (festivalDaysSnapshot.empty) {
         console.log("- Adding missing festival schedule days.");
         initialFestivalData.forEach(day => {
-            batch.set(doc(firestoreDb, 'festival/schedule/days', `day-${day.day}`), day);
+            batch.set(firestoreDb.collection('festival/schedule/days').doc(`day-${day.day}`), day);
             operationsCount++;
         });
     }
     
     // 5. Check for ABOUT CONTENT
-    const aboutContentDoc = await getDoc(doc(firestoreDb, 'content', 'about'));
-    if (!aboutContentDoc.exists()) {
+    const aboutContentDoc = await firestoreDb.collection('content').doc('about').get();
+    if (!aboutContentDoc.exists) {
         console.log("- Adding missing 'About Us' content.");
-        batch.set(doc(firestoreDb, 'content', 'about'), initialAboutData);
+        batch.set(firestoreDb.collection('content').doc('about'), initialAboutData);
         operationsCount++;
     }
 
@@ -229,48 +209,51 @@ export const listenToAllAdminData = (
                 callback({ data: getFallbackData(), source: 'fallback', error: `Real-time listener failed on ${collectionName}. The app is now in read-only fallback mode. Please check Firestore permissions and refresh. Error: ${error.message}` });
             };
 
-            unsubs.push(onSnapshot(collection(firestoreDb, 'movies'), (snapshot: QuerySnapshot<DocumentData>) => {
+            unsubs.push(firestoreDb.collection('movies').onSnapshot((snapshot) => {
                 const movies: Record<string, Movie> = {};
                 snapshot.forEach(doc => { movies[doc.id] = doc.data() as Movie; });
                 adminData.movies = movies;
                 checkInitialLoadAndCallback();
             }, (error) => handleError(error, 'movies')));
 
-            unsubs.push(onSnapshot(collection(firestoreDb, 'categories'), (snapshot: QuerySnapshot<DocumentData>) => {
+            unsubs.push(firestoreDb.collection('categories').onSnapshot((snapshot) => {
                 const categories: Record<string, Category> = {};
                 snapshot.forEach(doc => { categories[doc.id] = doc.data() as Category; });
                 adminData.categories = categories;
                 checkInitialLoadAndCallback();
             }, (error) => handleError(error, 'categories')));
 
-            unsubs.push(onSnapshot(doc(firestoreDb, 'festival', 'config'), (doc) => {
-                adminData.festivalConfig = doc.exists() ? (doc.data() as FestivalConfig) : initialFestivalConfig;
+            unsubs.push(firestoreDb.collection('festival').doc('config').onSnapshot((doc) => {
+                adminData.festivalConfig = doc.exists ? (doc.data() as FestivalConfig) : initialFestivalConfig;
                 checkInitialLoadAndCallback();
             }, (error) => handleError(error, 'festival/config')));
             
-            const daysQuery = query(collection(firestoreDb, 'festival/schedule/days'), orderBy('day'));
-            unsubs.push(onSnapshot(daysQuery, (snapshot: QuerySnapshot<DocumentData>) => {
+            unsubs.push(firestoreDb.collection('festival/schedule/days').orderBy('day').onSnapshot((snapshot) => {
                 const days: FestivalDay[] = [];
                 snapshot.forEach(doc => days.push(doc.data() as FestivalDay));
                 adminData.festivalData = days;
                 checkInitialLoadAndCallback();
             }, (error) => handleError(error, 'festival/schedule/days')));
 
-            unsubs.push(onSnapshot(doc(firestoreDb, 'content', 'about'), (doc) => {
-                adminData.aboutData = doc.exists() ? (doc.data() as AboutData) : initialAboutData;
+            unsubs.push(firestoreDb.collection('content').doc('about').onSnapshot((doc) => {
+                adminData.aboutData = doc.exists ? (doc.data() as AboutData) : initialAboutData;
                 checkInitialLoadAndCallback();
             }, (error) => handleError(error, 'content/about')));
 
-            const submissionsQuery = query(collection(firestoreDb, 'actorSubmissions'), where('status', '==', 'pending'), orderBy('submissionDate', 'desc'));
-            unsubs.push(onSnapshot(submissionsQuery, (snapshot: QuerySnapshot<DocumentData>) => {
+            unsubs.push(firestoreDb.collection('actorSubmissions').where('status', '==', 'pending').onSnapshot((snapshot) => {
                 const submissions: ActorSubmission[] = [];
                 snapshot.forEach(doc => { submissions.push({ id: doc.id, ...doc.data() } as ActorSubmission); });
+                // Sort submissions on the client-side to avoid needing a composite index
+                submissions.sort((a, b) => {
+                    const dateA = a.submissionDate?.seconds || 0;
+                    const dateB = b.submissionDate?.seconds || 0;
+                    return dateB - dateA;
+                });
                 adminData.actorSubmissions = submissions;
                 checkInitialLoadAndCallback();
             }, (error) => handleError(error, 'actorSubmissions')));
             
-            const payoutsQuery = query(collection(firestoreDb, 'payout_requests'), orderBy('requestDate', 'desc'));
-            unsubs.push(onSnapshot(payoutsQuery, (snapshot: QuerySnapshot<DocumentData>) => {
+            unsubs.push(firestoreDb.collection('payout_requests').orderBy('requestDate', 'desc').onSnapshot((snapshot) => {
                 const requests: PayoutRequest[] = [];
                 snapshot.forEach(doc => { requests.push({ id: doc.id, ...doc.data() } as PayoutRequest); });
                 adminData.payoutRequests = requests;
@@ -299,7 +282,7 @@ export const saveMovie = async (movie: Movie) => {
         notifyLocalListeners();
         return;
     }
-    await setDoc(doc(firestoreDb, 'movies', movie.key), movie);
+    await firestoreDb.collection('movies').doc(movie.key).set(movie);
 };
 
 export const deleteMovie = async (movieKey: string) => {
@@ -313,15 +296,15 @@ export const deleteMovie = async (movieKey: string) => {
         notifyLocalListeners();
         return;
     }
-    await deleteDoc(doc(firestoreDb, 'movies', movieKey));
+    await firestoreDb.collection('movies').doc(movieKey).delete();
     
-    const categoriesSnapshot = await getDocs(collection(firestoreDb, 'categories'));
-    const batch = writeBatch(firestoreDb);
+    const categoriesSnapshot = await firestoreDb.collection('categories').get();
+    const batch = firestoreDb.batch();
     categoriesSnapshot.forEach(categoryDoc => {
         const categoryData = categoryDoc.data() as Category;
         if (categoryData.movieKeys.includes(movieKey)) {
             batch.update(categoryDoc.ref, {
-                movieKeys: arrayRemove(movieKey)
+                movieKeys: firebase.firestore.FieldValue.arrayRemove(movieKey)
             });
         }
     });
@@ -336,12 +319,12 @@ export const saveCategories = async (categories: Record<string, Category>) => {
         notifyLocalListeners();
         return;
     }
-    const batch = writeBatch(firestoreDb);
+    const batch = firestoreDb.batch();
     Object.entries(categories).forEach(([key, category]) => {
-        batch.set(doc(firestoreDb, 'categories', key), category);
+        batch.set(firestoreDb.collection('categories').doc(key), category);
     });
     
-    const existingCategoriesSnapshot = await getDocs(collection(firestoreDb, 'categories'));
+    const existingCategoriesSnapshot = await firestoreDb.collection('categories').get();
     existingCategoriesSnapshot.forEach(doc => {
         if (!categories[doc.id]) {
             batch.delete(doc.ref);
@@ -358,7 +341,7 @@ export const saveFestivalConfig = async (config: FestivalConfig) => {
         notifyLocalListeners();
         return;
     }
-    await setDoc(doc(firestoreDb, 'festival', 'config'), config);
+    await firestoreDb.collection('festival').doc('config').set(config);
 };
 
 export const saveFestivalDays = async (days: FestivalDay[]) => {
@@ -369,14 +352,14 @@ export const saveFestivalDays = async (days: FestivalDay[]) => {
         notifyLocalListeners();
         return;
     }
-    const batch = writeBatch(firestoreDb);
-    const collectionRef = collection(firestoreDb, 'festival/schedule/days');
+    const batch = firestoreDb.batch();
+    const collectionRef = firestoreDb.collection('festival/schedule/days');
     
-    const existingDaysSnapshot = await getDocs(collectionRef);
+    const existingDaysSnapshot = await collectionRef.get();
     existingDaysSnapshot.forEach(doc => batch.delete(doc.ref));
 
     days.forEach(day => {
-        batch.set(doc(collectionRef, `day-${day.day}`), day);
+        batch.set(collectionRef.doc(`day-${day.day}`), day);
     });
     await batch.commit();
 };
@@ -389,7 +372,7 @@ export const saveAboutData = async (aboutData: AboutData) => {
         notifyLocalListeners();
         return;
     }
-    await setDoc(doc(firestoreDb, 'content', 'about'), aboutData);
+    await firestoreDb.collection('content').doc('about').set(aboutData);
 };
 
 // --- Actor Submission Functions ---

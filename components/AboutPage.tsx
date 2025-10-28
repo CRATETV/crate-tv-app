@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
@@ -9,6 +9,8 @@ import { fetchAndCacheLiveData } from '../services/dataService';
 const AboutPage: React.FC = () => {
     const [aboutData, setAboutData] = useState<AboutData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const footerRef = useRef<HTMLDivElement>(null);
+    const timeoutRef = useRef<number | null>(null);
 
     useEffect(() => {
         const loadAboutData = async () => {
@@ -23,6 +25,47 @@ const AboutPage: React.FC = () => {
         };
         loadAboutData();
     }, []);
+
+    // Effect to automatically navigate to landing page when user scrolls to the bottom
+    useEffect(() => {
+        if (isLoading) return; // Don't run until content is loaded
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    // If the footer is visible and no timer is set, start one
+                    if (!timeoutRef.current) {
+                        timeoutRef.current = window.setTimeout(() => {
+                            // After a delay, navigate to the landing page
+                            window.history.pushState({}, '', '/');
+                            window.dispatchEvent(new Event('pushstate'));
+                        }, 2500); // 2.5-second delay
+                    }
+                } else {
+                    // If the footer is not visible, clear any existing timer
+                    if (timeoutRef.current) {
+                        clearTimeout(timeoutRef.current);
+                        timeoutRef.current = null;
+                    }
+                }
+            },
+            { threshold: 0.5 } // Trigger when 50% of the footer is visible
+        );
+
+        const currentFooter = footerRef.current;
+        if (currentFooter) {
+            observer.observe(currentFooter);
+        }
+
+        return () => {
+            if (currentFooter) {
+                observer.unobserve(currentFooter);
+            }
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, [isLoading]);
 
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
         e.preventDefault();
@@ -135,6 +178,9 @@ const AboutPage: React.FC = () => {
                     </div>
                 </div>
             </main>
+            <div ref={footerRef}>
+                <Footer />
+            </div>
             <BackToTopButton />
         </div>
     );
