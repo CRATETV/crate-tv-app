@@ -171,13 +171,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
               </div>
             )}
           </div>
-        ) : (
-          !pathname.startsWith('/login') && (
-             <a href="/login" onClick={(e) => handleNavigate(e, '/login')} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors">
-              Sign In
-            </a>
-          )
-        )}
+        ) : null}
       </div>
     </header>
   );

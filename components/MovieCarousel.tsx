@@ -34,15 +34,21 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
       )}
       <div className="relative group">
         <div ref={scrollRef} className="flex overflow-x-auto space-x-4 pb-4 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8">
-          {movies.map((movie, index) => (
-            <div key={movie.key} className="flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw]">
-              <MovieCard
-                movie={movie}
-                onSelectMovie={onSelectMovie}
-                showRank={showRankings ? index + 1 : undefined}
-              />
-            </div>
-          ))}
+          {movies.map((movie, index) => {
+            const containerClasses = showRankings
+              ? 'flex-shrink-0 w-80 h-40 md:w-96 md:h-48' // A landscape-oriented box for the new design
+              : 'flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw]';
+
+            return (
+              <div key={movie.key} className={containerClasses}>
+                <MovieCard
+                  movie={movie}
+                  onSelectMovie={onSelectMovie}
+                  rank={showRankings ? index + 1 : undefined}
+                />
+              </div>
+            );
+          })}
         </div>
         
         {/* Scroll Buttons */}

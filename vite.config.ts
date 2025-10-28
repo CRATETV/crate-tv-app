@@ -6,6 +6,6 @@ export default defineConfig({
   appType: 'spa',
   plugins: [react()],
   server: {
-    port: 5173,
+    port: 5373,
   }
 })
