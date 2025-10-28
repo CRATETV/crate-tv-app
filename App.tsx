@@ -14,6 +14,7 @@ import StagingBanner from './components/StagingBanner';
 import FeatureModal from './components/FeatureModal';
 import DataStatusIndicator from './components/DataStatusIndicator';
 import FestivalLiveModal from './components/FestivalLiveModal';
+import { useAuth } from './contexts/AuthContext';
 
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
@@ -31,6 +32,7 @@ type DisplayedCategory = {
 };
 
 const App: React.FC = () => {
+  const { user, toggleWatchlist } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
@@ -244,6 +246,17 @@ const App: React.FC = () => {
 
   // 2. Memoize the remaining standard categories for the main display list.
   const displayedCategories = useMemo(() => {
+    // Create My List category
+    const watchlistMovies = (user?.watchlist || [])
+        .map(key => movies[key])
+        .filter((m): m is Movie => !!m);
+
+    const myListCategory: DisplayedCategory | null = watchlistMovies.length > 0 ? {
+        key: 'myList',
+        title: 'My List',
+        movies: watchlistMovies,
+    } : null;
+
     // Create Top 10 category
     const topTenMovies = visibleMovies
         .sort((a, b) => (b.likes || 0) - (a.likes || 0))
@@ -291,9 +304,9 @@ const App: React.FC = () => {
       })
       .filter((c): c is DisplayedCategory => !!c);
       
-      return [topTenCategory, ...standardCategories].filter((c): c is DisplayedCategory => !!c);
+      return [myListCategory, topTenCategory, ...standardCategories].filter((c): c is DisplayedCategory => !!c);
 
-  }, [categories, festivalConfig, visibleMovies]);
+  }, [categories, festivalConfig, visibleMovies, user, movies]);
   
   // Filter movies based on search query
   const searchResults = useMemo(() => {

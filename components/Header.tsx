@@ -98,6 +98,13 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
                   Home
                 </a>
                 <a 
+                  href="/watchlist" 
+                  onClick={(e) => handleNavigate(e, '/watchlist')} 
+                  className={`${linkBaseStyles} ${pathname.startsWith('/watchlist') ? activeLinkStyles : inactiveLinkStyles}`}
+                >
+                  My List
+                </a>
+                <a 
                   href="/classics" 
                   onClick={(e) => handleNavigate(e, '/classics')} 
                   className={`${linkBaseStyles} ${pathname.startsWith('/classics') ? activeLinkStyles : inactiveLinkStyles}`}

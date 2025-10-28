@@ -18,6 +18,7 @@ interface AuthContextType {
     setAvatar: (avatarId: string) => void;
     sendPasswordReset: (email: string) => Promise<void>;
     subscribe: () => Promise<void>;
+    toggleWatchlist: (movieKey: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -158,8 +159,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         }
     };
+
+    const toggleWatchlist = async (movieKey: string) => {
+        if (!user) return;
+
+        const currentWatchlist = user.watchlist || [];
+        const isOnWatchlist = currentWatchlist.includes(movieKey);
+        const newWatchlist = isOnWatchlist
+            ? currentWatchlist.filter(key => key !== movieKey)
+            : [...currentWatchlist, movieKey];
+
+        // Optimistic UI update
+        setUser({ ...user, watchlist: newWatchlist });
+
+        try {
+            await updateUserProfile(user.uid, { watchlist: newWatchlist });
+        } catch (error) {
+            console.error("Failed to update watchlist:", error);
+            // Revert on failure
+            setUser({ ...user, watchlist: currentWatchlist });
+            throw new Error("Could not update your list. Please try again.");
+        }
+    };
     
-    const value = { user, authInitialized, signIn, signUp, logout, setAvatar, sendPasswordReset, subscribe };
+    const value = { user, authInitialized, signIn, signUp, logout, setAvatar, sendPasswordReset, subscribe, toggleWatchlist };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

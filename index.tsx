@@ -22,7 +22,13 @@ import AnalyticsPage from './components/AnalyticsPage';
 import LandingPage from './components/LandingPage';
 import ThankYouPage from './components/ThankYouPage';
 import TopTenPage from './components/TopTenPage';
-// import PremiumPage from './components/PremiumPage'; // Reverted
+import ActorPortalPage from './components/ActorPortalPage';
+import ActorSignupPage from './components/ActorSignupPage';
+import ActorsDirectoryPage from './components/ActorsDirectoryPage';
+import ActorProfilePage from './components/ActorProfilePage';
+import WatchlistPage from './components/WatchlistPage';
+import FilmmakerSignupPage from './components/FilmmakerSignupPage';
+import FilmmakerPortalPage from './components/FilmmakerPortalPage';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -75,6 +81,12 @@ const AppRouter: React.FC = () => {
     return <MoviePage movieKey={movieMatch[1]} />;
   }
 
+  const actorProfileMatch = route.match(/^\/actors\/([a-zA-Z0-9_-]+)/);
+  if (actorProfileMatch && actorProfileMatch[1]) {
+    return <ActorProfilePage slug={actorProfileMatch[1]} />;
+  }
+
+
   // Handle static routes with authentication checks
   switch (route) {
     case '/':
@@ -83,6 +95,8 @@ const AppRouter: React.FC = () => {
       return user ? <AccountPage /> : <RedirectToLogin />;
     case '/festival':
        return user ? <FestivalPage /> : <RedirectToLogin />;
+    case '/watchlist':
+      return user ? <WatchlistPage /> : <RedirectToLogin />;
     
     // Public Routes
     case '/login':
@@ -93,6 +107,16 @@ const AppRouter: React.FC = () => {
       return <TopTenPage />;
     case '/submit':
       return <SubmitPage />;
+    case '/actor-signup':
+      return <ActorSignupPage />;
+    case '/actor-portal':
+      return <ActorPortalPage />;
+    case '/actors':
+      return <ActorsDirectoryPage />;
+    case '/filmmaker-signup':
+      return <FilmmakerSignupPage />;
+    case '/filmmaker-portal':
+      return <FilmmakerPortalPage />;
     case '/thank-you':
       return <ThankYouPage />;
     case '/merch':

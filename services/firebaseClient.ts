@@ -72,6 +72,7 @@ export const createUserProfile = async (uid: string, email: string): Promise<Use
         email,
         avatar: 'fox', // A default avatar
         isPremiumSubscriber: false,
+        watchlist: [], // Initialize watchlist
     };
     await setDoc(userDocRef, newUser);
 

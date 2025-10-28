@@ -1,14 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Movie, Category, FestivalDay, FestivalConfig, AboutData } from './types';
+import { Movie, Category, FestivalDay, FestivalConfig, AboutData, ActorSubmission, PayoutRequest } from './types';
 import MovieEditor from './components/MovieEditor';
 import Footer from './components/Footer';
 import FestivalEditor from './components/FestivalEditor';
 import { invalidateCache } from './services/dataService';
-import { listenToAllAdminData, saveMovie, deleteMovie, saveFestivalConfig, saveFestivalDays, saveCategories, saveAboutData } from './services/firebaseService';
+import { 
+    listenToAllAdminData, 
+    saveMovie, 
+    deleteMovie, 
+    saveFestivalConfig, 
+    saveFestivalDays, 
+    saveCategories, 
+    saveAboutData,
+    approveActorSubmission,
+    rejectActorSubmission,
+    completePayoutRequest
+} from './services/firebaseService';
 import LoadingSpinner from './components/LoadingSpinner';
 import CategoryEditor from './components/CategoryEditor';
 import AboutEditor from './components/AboutEditor';
 import FallbackGenerator from './components/FallbackGenerator';
+import ActorSubmissionsTab from './components/ActorSubmissionsTab';
+import PayoutsTab from './components/PayoutsTab';
 
 // Helper to format the current date/time for a datetime-local input
 const getLocalDatetimeString = () => {
@@ -23,6 +36,8 @@ const AdminPage: React.FC = () => {
   const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
   const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
   const [aboutData, setAboutData] = useState<AboutData | null>(null);
+  const [actorSubmissions, setActorSubmissions] = useState<ActorSubmission[]>([]);
+  const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -63,6 +78,8 @@ const AdminPage: React.FC = () => {
             setFestivalConfig(result.data.festivalConfig);
             setFestivalData(result.data.festivalData);
             setAboutData(result.data.aboutData);
+            setActorSubmissions(result.data.actorSubmissions);
+            setPayoutRequests(result.data.payoutRequests);
             setDataSource(result.source);
             if (result.error) {
                 setConnectionError(result.error);
@@ -359,6 +376,39 @@ const AdminPage: React.FC = () => {
         }
     };
 
+    const handleApproveSubmission = async (submissionId: string) => {
+        showSaveStatus('saving');
+        try {
+            await approveActorSubmission(submissionId);
+            showSaveStatus('success');
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Failed to approve submission.';
+            showSaveStatus('error', msg);
+        }
+    };
+
+    const handleRejectSubmission = async (submissionId: string) => {
+        showSaveStatus('saving');
+        try {
+            await rejectActorSubmission(submissionId);
+            showSaveStatus('success');
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Failed to reject submission.';
+            showSaveStatus('error', msg);
+        }
+    };
+    
+    const handleCompletePayout = async (requestId: string) => {
+        showSaveStatus('saving');
+        try {
+            await completePayoutRequest(requestId);
+            showSaveStatus('success');
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Failed to complete payout.';
+            showSaveStatus('error', msg);
+        }
+    };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
@@ -414,6 +464,7 @@ const AdminPage: React.FC = () => {
   }
   
   const movieValues = Object.values(movies);
+  const pendingPayouts = payoutRequests.filter(p => p.status === 'pending');
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -480,6 +531,18 @@ const AdminPage: React.FC = () => {
                         <button onClick={() => setActiveTab('movies')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'movies' ? 'border-red-500 text-red-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'}`}>
                             Movies
                         </button>
+                        <button onClick={() => setActiveTab('submissions')} className={`relative whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'submissions' ? 'border-red-500 text-red-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'}`}>
+                            Actor Submissions
+                            {actorSubmissions.length > 0 && (
+                                <span className="absolute top-2 -right-3 ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">{actorSubmissions.length}</span>
+                            )}
+                        </button>
+                        <button onClick={() => setActiveTab('payouts')} className={`relative whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'payouts' ? 'border-red-500 text-red-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'}`}>
+                            Payouts
+                            {pendingPayouts.length > 0 && (
+                                <span className="absolute top-2 -right-3 ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">{pendingPayouts.length}</span>
+                            )}
+                        </button>
                         <button onClick={() => setActiveTab('categories')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'categories' ? 'border-red-500 text-red-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'}`}>
                             Categories
                         </button>
@@ -535,6 +598,22 @@ const AdminPage: React.FC = () => {
                     </div>
                   )}
               </div>
+            )}
+
+            {activeTab === 'submissions' && (
+                <ActorSubmissionsTab
+                    submissions={actorSubmissions}
+                    allMovies={movies}
+                    onApprove={handleApproveSubmission}
+                    onReject={handleRejectSubmission}
+                />
+            )}
+
+            {activeTab === 'payouts' && (
+                <PayoutsTab
+                    payoutRequests={payoutRequests}
+                    onCompletePayout={handleCompletePayout}
+                />
             )}
             
             {activeTab === 'categories' && festivalConfig && (

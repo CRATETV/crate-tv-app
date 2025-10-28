@@ -4,6 +4,7 @@ import DirectorCreditsModal from './DirectorCreditsModal';
 import Countdown from './Countdown';
 import SquarePaymentModal from './SquarePaymentModal';
 import { isMovieReleased } from '../constants';
+import { useAuth } from '../contexts/AuthContext';
 
 interface MovieDetailsModalProps {
   movie: Movie;
@@ -53,7 +54,9 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   isPremiumMovie,
   isPremiumSubscriber
 }) => {
+  const { user, toggleWatchlist } = useAuth();
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
+  const [isTogglingWatchlist, setIsTogglingWatchlist] = useState(false);
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -61,6 +64,8 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const [showSupportSuccess, setShowSupportSuccess] = useState(false);
 
   const [released, setReleased] = useState(() => isMovieReleased(movie));
+  
+  const isOnWatchlist = useMemo(() => user?.watchlist?.includes(movie.key), [user, movie.key]);
 
   useEffect(() => {
     if (released) return;
@@ -140,6 +145,19 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
   const handleToggleLike = () => {
     onToggleLike(movie.key);
+  };
+
+  const handleToggleWatchlist = async () => {
+      if (isTogglingWatchlist) return;
+      setIsTogglingWatchlist(true);
+      try {
+          await toggleWatchlist(movie.key);
+      } catch (error) {
+          console.error(error);
+          // Optionally show an error to the user
+      } finally {
+          setIsTogglingWatchlist(false);
+      }
   };
   
   const handleSelectMovieFromDirector = (selectedMovie: Movie) => {
@@ -242,6 +260,13 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                   {movie.releaseDateTime && <Countdown targetDate={movie.releaseDateTime} onEnd={() => setReleased(true)} className="text-sm" />}
                 </div>
               )}
+              <button onClick={handleToggleWatchlist} disabled={isTogglingWatchlist} className="h-10 w-10 flex items-center justify-center rounded-full border-2 border-gray-400 text-white hover:border-white transition">
+                {isOnWatchlist ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                )}
+              </button>
               <button onClick={handleToggleLike} className={`h-10 w-10 flex items-center justify-center rounded-full border-2 border-gray-400 text-white hover:border-white transition ${isAnimatingLike ? 'animate-heartbeat' : ''}`}>
                 <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors ${isLiked ? 'text-red-500' : 'text-inherit'}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />

@@ -1,3 +1,6 @@
+
+// FIX: Removed circular import from './types'. The types are defined in this file and should not be imported from themselves.
+
 export interface Actor {
   name: string;
   photo: string;
@@ -51,6 +54,7 @@ export interface User {
   email: string;
   avatar?: string;
   isPremiumSubscriber?: boolean;
+  watchlist?: string[];
 }
 
 export interface FilmmakerPayout {
@@ -100,4 +104,62 @@ export interface FetchResult {
   data: LiveData;
   source: 'live' | 'fallback';
   timestamp: number;
+}
+
+export interface ActorSubmission {
+  id: string; // Document ID
+  actorName: string;
+  email: string;
+  bio: string;
+  photoUrl: string;
+  highResPhotoUrl: string;
+  imdbUrl?: string;
+  submissionDate: any; // Firestore timestamp
+  status: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+}
+
+export interface ActorProfile {
+  name: string;
+  slug: string;
+  bio: string;
+  photo: string;
+  highResPhoto: string;
+  imdbUrl?: string;
+}
+
+export interface ActorPost {
+  id: string;
+  actorName: string;
+  actorPhoto: string;
+  content: string;
+  imageUrl?: string;
+  timestamp: any; // Firestore timestamp
+  likes: string[]; // Array of actor names who liked it
+}
+
+export interface FilmmakerFilmPerformance {
+    key: string;
+    title: string;
+    views: number;
+    likes: number;
+    donations: number; // in cents
+}
+
+export interface FilmmakerAnalytics {
+    totalDonations: number; // in cents
+    totalPaidOut: number; // in cents
+    balance: number; // in cents
+    films: FilmmakerFilmPerformance[];
+}
+
+export interface PayoutRequest {
+    id: string;
+    directorName: string;
+    amount: number; // in cents
+    payoutMethod: 'PayPal' | 'Venmo' | 'Other';
+    payoutDetails: string;
+    status: 'pending' | 'completed';
+    requestDate: any; // Firestore timestamp
+    completionDate?: any;
 }

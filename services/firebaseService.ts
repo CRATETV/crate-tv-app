@@ -17,6 +17,7 @@ import {
     limit, 
     query, 
     orderBy,
+    where,
     Firestore,
     getDoc,
     // FIX: Import QuerySnapshot and DocumentData to explicitly type snapshot parameters.
@@ -24,7 +25,7 @@ import {
     DocumentData
 } from 'firebase/firestore';
 
-import { Movie, Category, FestivalConfig, FestivalDay, AboutData } from '../types';
+import { Movie, Category, FestivalConfig, FestivalDay, AboutData, ActorSubmission, PayoutRequest } from '../types';
 import { moviesData as initialMovies, categoriesData as initialCategories, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
 
 // --- Asynchronous Firebase Initialization ---
@@ -86,6 +87,8 @@ interface AdminData {
     festivalConfig: FestivalConfig;
     festivalData: FestivalDay[];
     aboutData: AboutData;
+    actorSubmissions: ActorSubmission[];
+    payoutRequests: PayoutRequest[];
 }
 
 interface AdminDataResult {
@@ -101,6 +104,8 @@ const getFallbackData = (): AdminData => ({
     festivalConfig: JSON.parse(JSON.stringify(initialFestivalConfig)),
     festivalData: JSON.parse(JSON.stringify(initialFestivalData)),
     aboutData: JSON.parse(JSON.stringify(initialAboutData)),
+    actorSubmissions: [],
+    payoutRequests: [],
 });
 
 let localStore: AdminData = getFallbackData();
@@ -199,7 +204,7 @@ export const listenToAllAdminData = (
 
             const adminData: AdminData = getFallbackData();
             let initialLoadComplete = false;
-            const expectedLoads = 5;
+            const expectedLoads = 7; // movies, categories, festivalConfig, festivalData, aboutData, actorSubmissions, payoutRequests
             let receivedLoads = 0;
             const unsubs: (() => void)[] = [];
 
@@ -248,6 +253,22 @@ export const listenToAllAdminData = (
 
             unsubs.push(onSnapshot(doc(firestoreDb, 'content', 'about'), (doc) => {
                 adminData.aboutData = doc.exists() ? (doc.data() as AboutData) : initialAboutData;
+                checkInitialLoadAndCallback();
+            }));
+
+            const submissionsQuery = query(collection(firestoreDb, 'actorSubmissions'), where('status', '==', 'pending'), orderBy('submissionDate', 'desc'));
+            unsubs.push(onSnapshot(submissionsQuery, (snapshot: QuerySnapshot<DocumentData>) => {
+                const submissions: ActorSubmission[] = [];
+                snapshot.forEach(doc => { submissions.push({ id: doc.id, ...doc.data() } as ActorSubmission); });
+                adminData.actorSubmissions = submissions;
+                checkInitialLoadAndCallback();
+            }));
+            
+            const payoutsQuery = query(collection(firestoreDb, 'payout_requests'), orderBy('requestDate', 'desc'));
+            unsubs.push(onSnapshot(payoutsQuery, (snapshot: QuerySnapshot<DocumentData>) => {
+                const requests: PayoutRequest[] = [];
+                snapshot.forEach(doc => { requests.push({ id: doc.id, ...doc.data() } as PayoutRequest); });
+                adminData.payoutRequests = requests;
                 checkInitialLoadAndCallback();
             }));
 
@@ -364,4 +385,48 @@ export const saveAboutData = async (aboutData: AboutData) => {
         return;
     }
     await setDoc(doc(firestoreDb, 'content', 'about'), aboutData);
+};
+
+// --- Actor Submission Functions ---
+const callSubmissionApi = async (endpoint: string, submissionId: string) => {
+    const password = sessionStorage.getItem('adminPassword');
+    if (!password) throw new Error("Admin password not found in session.");
+    
+    const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submissionId, password }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'API call failed.');
+    }
+    return await response.json();
+}
+
+export const approveActorSubmission = async (submissionId: string) => {
+    return callSubmissionApi('/api/approve-actor-submission', submissionId);
+}
+
+export const rejectActorSubmission = async (submissionId: string) => {
+    return callSubmissionApi('/api/reject-actor-submission', submissionId);
+}
+
+// --- Payout Functions ---
+export const completePayoutRequest = async (requestId: string) => {
+    const password = sessionStorage.getItem('adminPassword');
+    if (!password) throw new Error("Admin password not found in session.");
+
+    const response = await fetch('/api/complete-payout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId, password }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to complete payout.');
+    }
+    return await response.json();
 };

@@ -56,15 +56,26 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
           )}
           
           <div className="flex flex-wrap gap-4 mt-4">
+            {/* Desktop Button */}
             <button
               onClick={() => onSelectMovie(movie)}
-              className="flex items-center justify-center px-6 py-2.5 rounded-md bg-white/90 text-black font-bold hover:bg-white transition-colors shadow-lg"
+              className="hidden md:flex items-center justify-center px-6 py-2.5 rounded-md bg-white/90 text-black font-bold hover:bg-white transition-colors shadow-lg"
               aria-label={`More information about ${movie.title}`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span>More Info</span>
+            </button>
+            {/* Mobile Button */}
+            <button
+              onClick={() => onSelectMovie(movie)}
+              className="flex md:hidden items-center justify-center w-12 h-12 rounded-full bg-white/90 text-black font-bold hover:bg-white transition-colors shadow-lg"
+              aria-label={`More information about ${movie.title}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </button>
           </div>
         </div>
