@@ -70,10 +70,10 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
             {/* Mobile Button */}
             <button
               onClick={() => onSelectMovie(movie)}
-              className="flex md:hidden items-center justify-center w-12 h-12 rounded-full bg-gray-500/50 text-white font-bold hover:bg-gray-400/50 transition-colors shadow-lg backdrop-blur-sm"
+              className="flex md:hidden items-center justify-center w-10 h-10 rounded-full bg-gray-500/50 text-white font-bold hover:bg-gray-400/50 transition-colors shadow-lg backdrop-blur-sm"
               aria-label={`More information about ${movie.title}`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16V11M12 8h.01" />
               </svg>
             </button>

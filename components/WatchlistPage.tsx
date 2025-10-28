@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
-import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import LoadingSpinner from './LoadingSpinner';
 import MovieCard from './MovieCard';
@@ -83,7 +82,6 @@ const WatchlistPage: React.FC = () => {
                     )}
                 </div>
             </main>
-            <Footer />
             <BackToTopButton />
 
             {detailsMovie && (

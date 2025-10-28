@@ -4,16 +4,22 @@ import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
 import { Movie } from '../types';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
 const portalPassword = 'cratebio';
 
 export async function POST(request: Request) {
   try {
+    // --- Configuration & Client Initialization ---
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (!resendApiKey) {
+        throw new Error("Server is not configured for sending emails: RESEND_API_KEY is missing.");
+    }
+    const resend = new Resend(resendApiKey);
+
     const { name, email } = await request.json();
 
     if (!name || !email) {
-      return new Response(JSON.stringify({ error: 'Name and email are required.' }), { status: 400 });
+      return new Response(JSON.stringify({ error: 'Name and email are required.' }), { status: 400, headers: {'Content-Type': 'application/json'} });
     }
 
     // --- Validate actor name against Firestore ---
@@ -35,7 +41,7 @@ export async function POST(request: Request) {
     });
 
     if (!actorFound) {
-      return new Response(JSON.stringify({ error: 'Actor name not found in our records. Please ensure it matches the film credits exactly.' }), { status: 404 });
+      return new Response(JSON.stringify({ error: 'Actor name not found in our records. Please ensure it matches the film credits exactly.' }), { status: 404, headers: {'Content-Type': 'application/json'} });
     }
     
     // --- Send Email with Resend ---
@@ -55,7 +61,7 @@ export async function POST(request: Request) {
       </div>
     `;
 
-    const { data, error } = await resend.emails.send({
+    const { error } = await resend.emails.send({
         from: `Crate TV <${fromEmail}>`,
         to: [email],
         subject: `Your Crate TV Actor Portal Access`,
@@ -67,11 +73,11 @@ export async function POST(request: Request) {
         throw new Error('Could not send the access email. Please try again later.');
     }
 
-    return new Response(JSON.stringify({ success: true, message: 'Verification successful. Email sent.' }), { status: 200 });
+    return new Response(JSON.stringify({ success: true, message: 'Verification successful. Email sent.' }), { status: 200, headers: {'Content-Type': 'application/json'} });
 
   } catch (error) {
     console.error("Error in actor-signup API:", error);
     const errorMessage = error instanceof Error ? error.message : "An unknown server error occurred.";
-    return new Response(JSON.stringify({ error: errorMessage }), { status: 500 });
+    return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: {'Content-Type': 'application/json'} });
   }
 }
