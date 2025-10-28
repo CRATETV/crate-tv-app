@@ -416,6 +416,7 @@ const App: React.FC = () => {
                     title={cat.title}
                     movies={cat.movies}
                     onSelectMovie={handleSelectMovie}
+                    showRankings={cat.key === 'topTen'}
                   />
                 ))}
               </div>

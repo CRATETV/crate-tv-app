@@ -6,9 +6,10 @@ interface MovieCarouselProps {
   title: React.ReactNode;
   movies: Movie[];
   onSelectMovie: (movie: Movie) => void;
+  showRankings?: boolean;
 }
 
-const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie }) => {
+const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, showRankings }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isAtStart, setIsAtStart] = useState(true);
   const [isAtEnd, setIsAtEnd] = useState(false);
@@ -72,11 +73,12 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
           ref={scrollContainerRef}
           className="flex overflow-x-auto overflow-y-visible space-x-2 md:space-x-4 py-4 scrollbar-hide"
         >
-          {movies.map((movie) => (
-            <div key={movie.key} className="flex-shrink-0 w-40 md:w-48">
+          {movies.map((movie, index) => (
+            <div key={movie.key} className={`flex-shrink-0 ${showRankings ? 'w-48 md:w-64' : 'w-40 md:w-48'}`}>
                 <MovieCard
                   movie={movie}
                   onSelectMovie={onSelectMovie}
+                  rank={showRankings ? index + 1 : undefined}
                 />
             </div>
           ))}

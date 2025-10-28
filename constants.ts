@@ -694,7 +694,7 @@ export const moviesData: Record<string, Movie> = {
         "name": "",
         "photo": "",
         "bio": " Information regarding this actor is currently unavailable",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": ""
       }
     ],
     "director": "Robert Graves",
