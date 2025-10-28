@@ -44,6 +44,6 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("Error creating actor post:", error);
-    return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
+    return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }

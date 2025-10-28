@@ -19,8 +19,7 @@ import {
     orderBy,
     where,
     Firestore,
-    getDoc,
-    // FIX: Import QuerySnapshot and DocumentData to explicitly type snapshot parameters.
+    getDoc, 
     QuerySnapshot,
     DocumentData
 } from 'firebase/firestore';
@@ -220,41 +219,47 @@ export const listenToAllAdminData = (
                     callback({ data: { ...adminData }, source: 'firebase' });
                 }
             };
+            
+            const handleError = (error: Error, collectionName: string) => {
+                console.error(`Firebase listener error on collection '${collectionName}':`, error);
+                // If a listener fails, we can no longer trust the data sync.
+                // We'll switch to fallback mode to un-stick the UI and show an error.
+                // Stop all other listeners to prevent inconsistent state.
+                unsubs.forEach(unsub => unsub());
+                callback({ data: getFallbackData(), source: 'fallback', error: `Real-time listener failed on ${collectionName}. The app is now in read-only fallback mode. Please check Firestore permissions and refresh. Error: ${error.message}` });
+            };
 
-            // FIX: Explicitly type the snapshot parameter to resolve the type error.
             unsubs.push(onSnapshot(collection(firestoreDb, 'movies'), (snapshot: QuerySnapshot<DocumentData>) => {
                 const movies: Record<string, Movie> = {};
                 snapshot.forEach(doc => { movies[doc.id] = doc.data() as Movie; });
                 adminData.movies = movies;
                 checkInitialLoadAndCallback();
-            }));
+            }, (error) => handleError(error, 'movies')));
 
-            // FIX: Explicitly type the snapshot parameter to resolve the type error.
             unsubs.push(onSnapshot(collection(firestoreDb, 'categories'), (snapshot: QuerySnapshot<DocumentData>) => {
                 const categories: Record<string, Category> = {};
                 snapshot.forEach(doc => { categories[doc.id] = doc.data() as Category; });
                 adminData.categories = categories;
                 checkInitialLoadAndCallback();
-            }));
+            }, (error) => handleError(error, 'categories')));
 
             unsubs.push(onSnapshot(doc(firestoreDb, 'festival', 'config'), (doc) => {
                 adminData.festivalConfig = doc.exists() ? (doc.data() as FestivalConfig) : initialFestivalConfig;
                 checkInitialLoadAndCallback();
-            }));
+            }, (error) => handleError(error, 'festival/config')));
             
             const daysQuery = query(collection(firestoreDb, 'festival/schedule/days'), orderBy('day'));
-            // FIX: Explicitly type the snapshot parameter to resolve the type error.
             unsubs.push(onSnapshot(daysQuery, (snapshot: QuerySnapshot<DocumentData>) => {
                 const days: FestivalDay[] = [];
                 snapshot.forEach(doc => days.push(doc.data() as FestivalDay));
                 adminData.festivalData = days;
                 checkInitialLoadAndCallback();
-            }));
+            }, (error) => handleError(error, 'festival/schedule/days')));
 
             unsubs.push(onSnapshot(doc(firestoreDb, 'content', 'about'), (doc) => {
                 adminData.aboutData = doc.exists() ? (doc.data() as AboutData) : initialAboutData;
                 checkInitialLoadAndCallback();
-            }));
+            }, (error) => handleError(error, 'content/about')));
 
             const submissionsQuery = query(collection(firestoreDb, 'actorSubmissions'), where('status', '==', 'pending'), orderBy('submissionDate', 'desc'));
             unsubs.push(onSnapshot(submissionsQuery, (snapshot: QuerySnapshot<DocumentData>) => {
@@ -262,7 +267,7 @@ export const listenToAllAdminData = (
                 snapshot.forEach(doc => { submissions.push({ id: doc.id, ...doc.data() } as ActorSubmission); });
                 adminData.actorSubmissions = submissions;
                 checkInitialLoadAndCallback();
-            }));
+            }, (error) => handleError(error, 'actorSubmissions')));
             
             const payoutsQuery = query(collection(firestoreDb, 'payout_requests'), orderBy('requestDate', 'desc'));
             unsubs.push(onSnapshot(payoutsQuery, (snapshot: QuerySnapshot<DocumentData>) => {
@@ -270,7 +275,7 @@ export const listenToAllAdminData = (
                 snapshot.forEach(doc => { requests.push({ id: doc.id, ...doc.data() } as PayoutRequest); });
                 adminData.payoutRequests = requests;
                 checkInitialLoadAndCallback();
-            }));
+            }, (error) => handleError(error, 'payout_requests')));
 
             resolve(() => {
                 console.log("Unsubscribing from all Firebase listeners.");
