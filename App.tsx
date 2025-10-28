@@ -46,6 +46,7 @@ const App: React.FC = () => {
   const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
   const [showFeatureModal, setShowFeatureModal] = useState(false);
   const [showFestivalLiveModal, setShowFestivalLiveModal] = useState(false);
+  const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
 
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
@@ -146,6 +147,44 @@ const App: React.FC = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [loadAppData, applyData]);
+
+  // Effect to fetch AI-powered recommendations when liked movies change.
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+        if (likedMovies.size === 0 || Object.keys(movies).length === 0) {
+            setRecommendedMovies([]);
+            return;
+        }
+
+        try {
+            const likedTitles = Array.from(likedMovies).map(key => movies[key]?.title).filter(Boolean);
+            if (likedTitles.length === 0) return;
+
+            const response = await fetch('/api/generate-recommendations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ likedTitles, allMovies: movies }),
+            });
+
+            if (!response.ok) {
+                console.error("Failed to fetch recommendations.");
+                return;
+            }
+
+            const { recommendedKeys } = await response.json();
+            if (recommendedKeys && recommendedKeys.length > 0) {
+                const recommended = recommendedKeys
+                    .map((key: string) => movies[key])
+                    .filter((movie: Movie | undefined): movie is Movie => !!movie);
+                setRecommendedMovies(recommended);
+            }
+        } catch (error) {
+            console.error("Error fetching recommendations:", error);
+        }
+    };
+    fetchRecommendations();
+  }, [likedMovies, movies]);
+
 
   // Effect to show the Festival Live modal once per session
   useEffect(() => {
@@ -406,6 +445,22 @@ const App: React.FC = () => {
                             );
                         })()}
                         movies={festivalLiveMovies}
+                        onSelectMovie={handleSelectMovie}
+                    />
+                )}
+                {/* AI-Powered "For You" Carousel */}
+                {recommendedMovies.length > 0 && (
+                    <MovieCarousel
+                        key="recommended"
+                        title={
+                            <h2 className="text-lg md:text-2xl font-bold mb-4 text-white flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                </svg>
+                                Recommended For You
+                            </h2>
+                        }
+                        movies={recommendedMovies}
                         onSelectMovie={handleSelectMovie}
                     />
                 )}

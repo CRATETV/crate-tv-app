@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { AnalyticsData, Movie } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
@@ -121,6 +121,23 @@ const AnalyticsPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    // Combine live movie data with real-time analytics data
+    const moviePerformanceData = useMemo(() => {
+      if (!analyticsData) return [];
+      return Object.values(allMovies).map((movie: Movie) => ({
+          ...movie,
+          views: analyticsData.viewCounts[movie.key] || 0,
+          likes: analyticsData.movieLikes?.[movie.key] ?? movie.likes ?? 0,
+          donations: analyticsData.filmmakerPayouts.find(p => p.movieTitle === movie.title)?.totalDonations || 0
+      }));
+    }, [allMovies, analyticsData]);
+
+    const topTenByLikes = useMemo(() => {
+        return [...moviePerformanceData]
+            .sort((a, b) => (b.likes || 0) - (a.likes || 0))
+            .slice(0, 10);
+    }, [moviePerformanceData]);
+
     if (isLoading) {
         return <LoadingSpinner />;
     }
@@ -170,14 +187,6 @@ const AnalyticsPage: React.FC = () => {
 
     const topEarningFilm = analyticsData?.filmmakerPayouts[0]?.movieTitle || 'N/A';
     
-    // Combine live movie data with real-time analytics data
-    const moviePerformanceData = Object.values(allMovies).map((movie: Movie) => ({
-        ...movie,
-        views: analyticsData?.viewCounts[movie.key] || 0,
-        likes: analyticsData?.movieLikes?.[movie.key] ?? movie.likes ?? 0,
-        donations: analyticsData?.filmmakerPayouts.find(p => p.movieTitle === movie.title)?.totalDonations || 0
-    })).sort((a,b) => b.views - a.views);
-
     return (
         <div className="flex flex-col min-h-screen bg-gray-900 text-white">
             <header className="bg-gray-800 p-4 flex justify-between items-center shadow-md sticky top-0 z-10">
@@ -270,23 +279,54 @@ const AnalyticsPage: React.FC = () => {
                                     </div>
                                 </div>
                                 
-                                {/* Revenue Breakdown */}
-                                <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-                                    <h2 className="text-2xl font-bold text-white mb-4">Revenue Breakdown</h2>
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-gray-300">Donations</span>
-                                            <span className="font-bold text-white">{formatCurrency(analyticsData.totalDonations)}</span>
-                                        </div>
-                                        {Object.entries(analyticsData.salesByType).map(([type, amount]: [string, number]) => (
-                                            <div key={type} className="flex justify-between items-center">
-                                                <span className="text-gray-300 capitalize">{type}s</span>
-                                                <span className="font-bold text-white">{formatCurrency(amount)}</span>
+                                <div className="space-y-8">
+                                    {/* Revenue Breakdown */}
+                                    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
+                                        <h2 className="text-2xl font-bold text-white mb-4">Revenue Breakdown</h2>
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-300">Donations</span>
+                                                <span className="font-bold text-white">{formatCurrency(analyticsData.totalDonations)}</span>
                                             </div>
-                                        ))}
-                                        <div className="border-t border-gray-600 pt-4 flex justify-between items-center">
-                                            <span className="font-bold text-lg text-purple-400">Total</span>
-                                            <span className="font-bold text-lg text-purple-400">{formatCurrency(analyticsData.totalRevenue)}</span>
+                                            {Object.entries(analyticsData.salesByType).map(([type, amount]: [string, number]) => (
+                                                <div key={type} className="flex justify-between items-center">
+                                                    <span className="text-gray-300 capitalize">{type}s</span>
+                                                    <span className="font-bold text-white">{formatCurrency(amount)}</span>
+                                                </div>
+                                            ))}
+                                            <div className="border-t border-gray-600 pt-4 flex justify-between items-center">
+                                                <span className="font-bold text-lg text-purple-400">Total</span>
+                                                <span className="font-bold text-lg text-purple-400">{formatCurrency(analyticsData.totalRevenue)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Top 10 Social Media List */}
+                                    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
+                                        <h2 className="text-2xl font-bold text-white mb-4">Top 10 Films Readout</h2>
+                                        <p className="text-sm text-gray-400 mb-4">A clean list for social media screenshots.</p>
+                                        <div className="space-y-2">
+                                            {topTenByLikes.length > 0 ? topTenByLikes.map((movie, index) => (
+                                                <div key={movie.key} className="flex items-center gap-4 p-3 bg-gray-900/50 rounded-md">
+                                                    <span className="text-3xl font-black text-gray-500 w-10 text-center">{index + 1}</span>
+                                                    <img src={movie.poster} alt="" className="w-12 aspect-[2/3] object-cover rounded-sm flex-shrink-0" />
+                                                    <div className="flex-grow">
+                                                        <p className="font-bold text-white leading-tight">{movie.title}</p>
+                                                        <p className="text-xs text-gray-400">{movie.director}</p>
+                                                    </div>
+                                                    <div className="text-right flex-shrink-0">
+                                                        <p className="font-bold text-white flex items-center gap-1.5">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                                                            </svg>
+                                                            {movie.likes.toLocaleString()}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500">Likes</p>
+                                                    </div>
+                                                </div>
+                                            )) : (
+                                                <p className="text-center py-8 text-gray-500">Not enough like data to generate a list.</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -306,7 +346,7 @@ const AnalyticsPage: React.FC = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {moviePerformanceData.map(movie => (
+                                            {moviePerformanceData.sort((a,b) => b.views - a.views).map(movie => (
                                                 <tr key={movie.key} className="border-b border-gray-700 last:border-b-0">
                                                     <td className="py-3 font-medium text-white">{movie.title}</td>
                                                     <td className="py-3 text-center">{movie.views.toLocaleString()}</td>
