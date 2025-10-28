@@ -81,13 +81,13 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
         onKeyPress={(e) => e.key === 'Enter' && onSelectMovie(movie)}
       >
         <div 
-          className="text-[7rem] sm:text-[8.5rem] md:text-[10rem] font-black text-white transition-transform duration-300 ease-in-out group-hover:scale-110"
+          className="text-[6rem] sm:text-[7rem] md:text-[8rem] font-black text-white transition-transform duration-300 ease-in-out group-hover:scale-110"
           style={{ textShadow: '0 2px 8px rgba(0,0,0,0.7)', WebkitTextStroke: '3px #141414', paintOrder: 'stroke fill' }}
           aria-hidden="true"
         >
           {rank}
         </div>
-        <div className="relative w-28 sm:w-32 md:w-40 aspect-[3/4] rounded-md overflow-hidden bg-gray-900 transition-transform duration-300 ease-in-out group-hover:scale-110 -ml-8 sm:-ml-10 md:-ml-12 shadow-lg">
+        <div className="relative w-28 sm:w-32 md:w-40 aspect-[3/4] rounded-md overflow-hidden bg-gray-900 transition-transform duration-300 ease-in-out group-hover:scale-110 -ml-4 sm:-ml-5 md:-ml-6 shadow-lg">
           {posterContent}
         </div>
       </div>
