@@ -30,6 +30,7 @@ const parseNote = (note: string | undefined): { type: string, title?: string, di
 }
 
 export async function POST(request: Request) {
+    console.log("[Analytics API] Received request.");
     try {
         const { password } = await request.json();
 
@@ -56,10 +57,13 @@ export async function POST(request: Request) {
         }
 
         if (!isAuthenticated) {
+            console.warn("[Analytics API] Authentication failed.");
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
         }
+        console.log("[Analytics API] Authentication successful.");
         
         // --- Square API Fetching ---
+        console.log("[Analytics API] Checking Square configuration...");
         const isProduction = process.env.VERCEL_ENV === 'production';
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
         const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
@@ -68,6 +72,7 @@ export async function POST(request: Request) {
             const missingVar = isProduction ? 'Production' : 'Sandbox';
             throw new Error(`Square ${missingVar} Access Token is not configured on the server.`);
         }
+        console.log("[Analytics API] Square configuration check passed.");
 
         const squareUrlBase = isProduction
             ? 'https://connect.squareup.com'
@@ -112,12 +117,16 @@ export async function POST(request: Request) {
             cursor = data.cursor;
 
         } while (cursor);
+        console.log(`[Analytics API] Fetched ${allPayments.length} payments from Square.`);
         
         // --- Firebase Data Fetching ---
+        console.log("[Analytics API] Checking Firebase Admin configuration...");
         const initError = getInitializationError();
         if (initError) {
+            console.error("[Analytics API] Firebase Admin initialization error:", initError);
             throw new Error(`Could not connect to Firebase. Reason: ${initError}`);
         }
+        console.log("[Analytics API] Firebase Admin configuration check passed.");
 
         let viewCounts: Record<string, number> = {};
         let movieLikes: Record<string, number> = {};
@@ -161,8 +170,10 @@ export async function POST(request: Request) {
             email: user.email || 'N/A',
             creationTime: new Date(user.metadata.creationTime).toLocaleString(),
         }));
+        console.log("[Analytics API] Fetched data from Firebase successfully.");
 
         // --- Data Processing ---
+        console.log("[Analytics API] Processing data...");
         const analytics: AnalyticsData = {
             totalRevenue: 0,
             totalDonations: 0,
@@ -210,6 +221,7 @@ export async function POST(request: Request) {
         
         analytics.filmmakerPayouts.sort((a, b) => b.totalDonations - a.totalDonations);
 
+        console.log("[Analytics API] Request completed successfully.");
         return new Response(JSON.stringify(analytics), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
@@ -217,7 +229,7 @@ export async function POST(request: Request) {
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        console.error("Get Sales Data Error:", errorMessage);
+        console.error("[Analytics API] An error occurred:", error);
         return new Response(JSON.stringify({ error: errorMessage }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },

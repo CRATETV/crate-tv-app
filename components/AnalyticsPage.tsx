@@ -55,6 +55,7 @@ const AnalyticsPage: React.FC = () => {
                             const errorData = await analyticsRes.json();
                             errorMessage = errorData.error || errorMessage;
                         } catch (e) {
+                             // This block handles cases where the server returns non-JSON errors, like Vercel's crash pages.
                             try {
                                 const errorText = await analyticsRes.text();
                                 if (errorText.includes('500') && errorText.includes('INTERNAL_SERVER_ERROR')) {
@@ -204,9 +205,22 @@ const AnalyticsPage: React.FC = () => {
                 <div className="max-w-7xl mx-auto">
                     
                     {error && (
-                        <div className="bg-red-800 border border-red-600 text-white p-4 rounded-lg mb-8">
-                            <h2 className="font-bold">Error Loading Analytics Data</h2>
-                            <p>{error}</p>
+                        <div className="bg-red-800 border border-red-600 text-white p-6 rounded-lg mb-8 animate-[fadeIn_0.3s_ease-out]">
+                            <div className="flex items-start gap-4">
+                                <div className="flex-shrink-0 w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 3.001-1.742 3.001H4.42c-1.53 0-2.493-1.667-1.743-3.001l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1.75-5.25a.75.75 0 00-1.5 0v3.5a.75.75 0 001.5 0v-3.5z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 className="font-bold text-lg">Could Not Load Analytics Data</h2>
+                                    <p className="text-sm text-red-200 mt-1">This is usually caused by missing or incorrect environment variables in your Vercel project settings. Please check the keys for Firebase and Square.</p>
+                                    <details className="mt-3 text-xs">
+                                        <summary className="cursor-pointer text-red-300 hover:text-white">Show Technical Details</summary>
+                                        <div className="mt-2 p-3 bg-red-900/50 rounded-md font-mono text-red-200">{error}</div>
+                                    </details>
+                                </div>
+                            </div>
                         </div>
                     )}
                     
@@ -303,7 +317,7 @@ const AnalyticsPage: React.FC = () => {
                                     
                                     {/* Top 10 Social Media List */}
                                     <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-                                        <h2 className="text-2xl font-bold text-white mb-4">Top 10 Films Readout</h2>
+                                        <h2 className="text-2xl font-bold text-white mb-4">Top 10 Films - Social Media Readout</h2>
                                         <p className="text-sm text-gray-400 mb-4">A clean list for social media screenshots.</p>
                                         <div className="space-y-2">
                                             {topTenByLikes.length > 0 ? topTenByLikes.map((movie, index) => (
@@ -360,10 +374,12 @@ const AnalyticsPage: React.FC = () => {
                             </div>
                         </>
                     ) : (
-                         <div className="text-center py-16">
-                            <h2 className="text-2xl font-bold">No Analytics Data to Display</h2>
-                            <p className="text-gray-400 mt-2">There is no sales or user data to report yet.</p>
-                        </div>
+                         !error && (
+                            <div className="text-center py-16">
+                                <h2 className="text-2xl font-bold">No Analytics Data to Display</h2>
+                                <p className="text-gray-400 mt-2">There is no sales or user data to report yet.</p>
+                            </div>
+                         )
                     )}
                 </div>
             </main>
