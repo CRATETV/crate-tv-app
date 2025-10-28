@@ -21,6 +21,7 @@ import DeveloperGuidePage from './components/DeveloperGuidePage';
 import AnalyticsPage from './components/AnalyticsPage';
 import LandingPage from './components/LandingPage';
 import ThankYouPage from './components/ThankYouPage';
+import TopTenPage from './components/TopTenPage';
 // import PremiumPage from './components/PremiumPage'; // Reverted
 
 const rootElement = document.getElementById('root');
@@ -88,6 +89,8 @@ const AppRouter: React.FC = () => {
       return <LoginPage />;
     case '/classics':
       return <ClassicsPage />;
+    case '/top-ten':
+      return <TopTenPage />;
     case '/submit':
       return <SubmitPage />;
     case '/thank-you':
