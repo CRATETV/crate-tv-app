@@ -2,8 +2,8 @@
 // It will be accessible at the path /api/roku-feed
 
 import { getApiData } from './_lib/data';
-// FIX: Import the 'Actor' type to correctly type cast members.
-import { Movie, Category, FestivalConfig, FestivalDay, Actor } from '../types';
+// FIX: Import the 'Actor' and 'FilmBlock' types to correctly type cast members.
+import { Movie, Category, FestivalConfig, FestivalDay, Actor, FilmBlock } from '../types';
 
 const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Movie> => {
     const visibleMovies: Record<string, Movie> = {};
@@ -84,8 +84,8 @@ export async function GET(request: Request) {
     // 1. Handle the Live Festival Category
     // If the festival is live, create a special category for it at the top.
     if (festivalConfig?.isFestivalLive && festivalData && festivalData.length > 0) {
-        const festivalMovieKeys = Array.from(new Set(
-            festivalData.flatMap(day => day.blocks.flatMap(block => block.movieKeys))
+        const festivalMovieKeys: string[] = Array.from(new Set(
+            festivalData.flatMap((day: FestivalDay) => day.blocks.flatMap((block: FilmBlock) => block.movieKeys))
         ));
 
         const liveFestivalCategory: Category = {
