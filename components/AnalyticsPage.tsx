@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { AnalyticsData, Movie } from '../types';
-import { fetchAndCacheLiveData } from '../services/dataService';
-import LoadingSpinner from './LoadingSpinner';
+import { AnalyticsData, Movie } from '../types.ts';
+import { fetchAndCacheLiveData } from '../services/dataService.ts';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 // Helper to format currency from cents
 const formatCurrency = (amountInCents: number) => {

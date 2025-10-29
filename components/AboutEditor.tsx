@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
-import { AboutData } from '../types';
-import S3Uploader from './S3Uploader';
+import { AboutData } from '../types.ts';
+import S3Uploader from './S3Uploader.tsx';
 
 interface AboutEditorProps {
     initialData: AboutData;

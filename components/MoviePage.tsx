@@ -1,20 +1,21 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Movie, Actor, Category } from '../types';
-import { fetchAndCacheLiveData } from '../services/dataService';
-import ActorBioModal from './ActorBioModal';
-import Header from './Header';
-import Footer from './Footer';
-import LoadingSpinner from './LoadingSpinner';
-import BackToTopButton from './BackToTopButton';
-import SearchOverlay from './SearchOverlay';
-import StagingBanner from './StagingBanner';
-import DirectorCreditsModal from './DirectorCreditsModal';
-import Countdown from './Countdown';
-import CastButton from './CastButton';
-import RokuBanner from './RokuBanner';
-import SquarePaymentModal from './SquarePaymentModal';
-import { isMovieReleased } from '../constants';
-import { useAuth } from '../contexts/AuthContext';
+import { Movie, Actor, Category } from '../types.ts';
+import { fetchAndCacheLiveData } from '../services/dataService.ts';
+import ActorBioModal from './ActorBioModal.tsx';
+import Header from './Header.tsx';
+import Footer from './Footer.tsx';
+import LoadingSpinner from './LoadingSpinner.tsx';
+import BackToTopButton from './BackToTopButton.tsx';
+import SearchOverlay from './SearchOverlay.tsx';
+import StagingBanner from './StagingBanner.tsx';
+import DirectorCreditsModal from './DirectorCreditsModal.tsx';
+import Countdown from './Countdown.tsx';
+import CastButton from './CastButton.tsx';
+import RokuBanner from './RokuBanner.tsx';
+import SquarePaymentModal from './SquarePaymentModal.tsx';
+import { isMovieReleased } from '../constants.ts';
+import { useAuth } from '../contexts/AuthContext.tsx';
 
 declare const google: any; // Declare Google IMA SDK global
 

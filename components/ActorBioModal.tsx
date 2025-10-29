@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Actor } from '../types';
+import { Actor } from '../types.ts';
 
 interface ActorBioModalProps {
     actor: Actor;

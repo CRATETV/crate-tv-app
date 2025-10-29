@@ -1,5 +1,6 @@
-import { LiveData, FetchResult } from '../types';
-import { moviesData, categoriesData, festivalData, festivalConfigData, aboutData } from '../constants';
+
+import { LiveData, FetchResult } from '../types.ts';
+import { moviesData, categoriesData, festivalData, festivalConfigData, aboutData } from '../constants.ts';
 
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';

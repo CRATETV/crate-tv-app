@@ -2,7 +2,8 @@
 // It will be accessible at the path /api/instant-tv-feed
 
 import { getApiData } from './_lib/data.ts';
-import { Movie, Category } from '../types.ts';
+// FIX: Import the 'Actor' type to correctly type cast members.
+import { Movie, Category, Actor } from '../types.ts';
 
 // Helper function to get movies that are currently released
 const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Movie> => {
@@ -77,7 +78,8 @@ export async function GET(request: Request) {
               genres: movieGenreMap.get(movie.key) || [],
               credits: [
                 { name: movie.director || '', role: "director" },
-                ...(movie.cast ? movie.cast.map(c => ({ name: c.name, role: "actor" })) : [])
+                // FIX: Explicitly type the 'c' parameter as 'Actor' to resolve potential TypeScript inference errors.
+                ...(movie.cast ? movie.cast.map((c: Actor) => ({ name: c.name, role: "actor" })) : [])
               ]
             };
           });
