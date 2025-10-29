@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { avatars } from './avatars';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { avatars } from './avatars.ts';
 
 interface HeaderProps {
   searchQuery: string;
