@@ -21,8 +21,9 @@ export async function POST(request: Request) {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Create a string representation of the available movies catalog
+    // FIX: Correctly type `movie` as `Movie` instead of `any` for improved type safety.
     const availableMoviesCatalog = Object.entries(allMovies)
-      .map(([key, movie]: [string, any]) => `"${key}": "${movie.title}"`)
+      .map(([key, movie]: [string, Movie]) => `"${key}": "${movie.title}"`)
       .join(',\n');
 
     const prompt = `

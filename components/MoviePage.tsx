@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types.ts';
 import { fetchAndCacheLiveData } from '../services/dataService.ts';
@@ -76,8 +77,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [isLoading, setIsLoading] = useState(true);
   const hasTrackedViewRef = useRef(false);
 
-  // Like state
-  const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
+  // FIX: Removed unused 'likedMovies' state variable and its corresponding initialization logic from loadMovieData.
   
   // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
@@ -201,9 +201,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
             if (sourceMovie) {
               setReleased(isMovieReleased(sourceMovie));
-    
-              const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
-              if (storedLikedMovies) setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
     
               setMovie({ ...sourceMovie });
     

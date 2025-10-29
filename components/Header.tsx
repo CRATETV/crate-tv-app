@@ -9,12 +9,12 @@ interface HeaderProps {
   onMobileSearchClick: () => void;
   onSearchSubmit?: (query: string) => void;
   isStaging?: boolean;
-  isOffline?: boolean;
   showSearch?: boolean;
   isFestivalLive?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit, isStaging, isOffline, showSearch = true, isFestivalLive }) => {
+// FIX: Removed the unused `isOffline` prop.
+const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit, isStaging, showSearch = true, isFestivalLive }) => {
   const [topOffset, setTopOffset] = useState(0);
   const { user, logout } = useAuth();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
