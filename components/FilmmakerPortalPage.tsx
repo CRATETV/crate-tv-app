@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import Header from './Header';
-import Footer from './Footer';
-import LoadingSpinner from './LoadingSpinner';
-import { FilmmakerAnalytics, PayoutRequest } from '../types';
+import Header from './Header.tsx';
+import Footer from './Footer.tsx';
+import LoadingSpinner from './LoadingSpinner.tsx';
+import { FilmmakerAnalytics, PayoutRequest } from '../types.ts';
 
 const DIRECTOR_PASSWORD = 'cratedirector';
 

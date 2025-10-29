@@ -1,7 +1,7 @@
 import React from 'react';
-import Header from './Header';
-import Footer from './Footer';
-import BackToTopButton from './BackToTopButton';
+import Header from './Header.tsx';
+import Footer from './Footer.tsx';
+import BackToTopButton from './BackToTopButton.tsx';
 
 const ThankYouPage: React.FC = () => {
     const dropboxLink = "https://www.dropbox.com/scl/fo/y70i8ce1muwlrwpp10ipj/AIeiyA9JJUAtQEUXBxhHU2k?rlkey=06ah0cg3cmd24933u1wcyr8gq&st=fnvy5rd2&dl=0";

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ActorPost } from '../types';
-import PublicS3Uploader from './PublicS3Uploader';
-import LoadingSpinner from './LoadingSpinner';
+import { ActorPost } from '../types.ts';
+import PublicS3Uploader from './PublicS3Uploader.tsx';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 const ACTOR_PASSWORD = 'cratebio';
 

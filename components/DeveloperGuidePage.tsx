@@ -1,7 +1,7 @@
 import React from 'react';
-import Header from './Header';
-import Footer from './Footer';
-import BackToTopButton from './BackToTopButton';
+import Header from './Header.tsx';
+import Footer from './Footer.tsx';
+import BackToTopButton from './BackToTopButton.tsx';
 
 const CodeBlock: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <pre className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 my-4 overflow-x-auto">

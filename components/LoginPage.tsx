@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import Header from './Header';
-import LoadingSpinner from './LoadingSpinner';
-import { Movie, Category } from '../types';
-import { fetchAndCacheLiveData } from '../services/dataService';
-import Hero from './Hero';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import Header from './Header.tsx';
+import LoadingSpinner from './LoadingSpinner.tsx';
+import { Movie, Category } from '../types.ts';
+import { fetchAndCacheLiveData } from '../services/dataService.ts';
+import Hero from './Hero.tsx';
 
 type View = 'signin' | 'signup' | 'forgotpassword';
 

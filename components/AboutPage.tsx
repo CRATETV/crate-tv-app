@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Header from './Header';
-import Footer from './Footer';
-import BackToTopButton from './BackToTopButton';
-import LoadingSpinner from './LoadingSpinner';
-import { AboutData } from '../types';
-import { fetchAndCacheLiveData } from '../services/dataService';
+import Header from './Header.tsx';
+import Footer from './Footer.tsx';
+import BackToTopButton from './BackToTopButton.tsx';
+import LoadingSpinner from './LoadingSpinner.tsx';
+import { AboutData } from '../types.ts';
+import { fetchAndCacheLiveData } from '../services/dataService.ts';
 
 const AboutPage: React.FC = () => {
     const [aboutData, setAboutData] = useState<AboutData | null>(null);
@@ -186,5 +186,4 @@ const AboutPage: React.FC = () => {
     );
 };
 
-// FIX: Add default export to allow the component to be imported correctly.
 export default AboutPage;

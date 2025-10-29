@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Movie, Category, FestivalDay, FestivalConfig, AboutData } from '../types';
-import { moviesData as currentFallbackMovies } from '../constants';
+import { Movie, Category, FestivalDay, FestivalConfig, AboutData } from '../types.ts';
+import { moviesData as currentFallbackMovies } from '../constants.ts';
 
 interface FallbackGeneratorProps {
   movies: Record<string, Movie>;
@@ -42,7 +42,7 @@ const FallbackGenerator: React.FC<FallbackGeneratorProps> = ({
         }
     }
 
-    const header = `import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';\n\n`;
+    const header = `import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types.ts';\n\n`;
     
     // Re-add the isMovieReleased utility function to the generated file
     const utilityFunction = `

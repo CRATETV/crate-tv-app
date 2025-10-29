@@ -1,5 +1,3 @@
-// FIX: Removed circular import from './types'. The types are defined in this file and should not be imported from themselves.
-
 export interface Actor {
   name: string;
   photo: string;

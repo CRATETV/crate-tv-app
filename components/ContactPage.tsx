@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import Header from './Header';
-import Footer from './Footer';
-import BackToTopButton from './BackToTopButton';
+import Header from './Header.tsx';
+import Footer from './Footer.tsx';
+import BackToTopButton from './BackToTopButton.tsx';
 
 const ContactPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);

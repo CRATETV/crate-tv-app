@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import Header from './Header';
-import Footer from './Footer';
-import LoadingSpinner from './LoadingSpinner';
-import BackToTopButton from './BackToTopButton';
-import { ActorProfile, Movie } from '../types';
-import MovieCard from './MovieCard';
-import MovieDetailsModal from './MovieDetailsModal'; // To reuse its detailed view
+import Header from './Header.tsx';
+import Footer from './Footer.tsx';
+import LoadingSpinner from './LoadingSpinner.tsx';
+import BackToTopButton from './BackToTopButton.tsx';
+import { ActorProfile, Movie } from '../types.ts';
+import MovieCard from './MovieCard.tsx';
+import MovieDetailsModal from './MovieDetailsModal.tsx'; // To reuse its detailed view
 
 interface ActorProfilePageProps {
     slug: string;

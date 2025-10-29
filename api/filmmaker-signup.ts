@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // Path: /api/filmmaker-signup
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
-import { Movie } from '../types';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.ts';
+import { Movie } from '../types.ts';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("Error in filmmaker-signup API:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unknown server error occurred.";
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
     return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: {'Content-Type': 'application/json'} });
   }
 }

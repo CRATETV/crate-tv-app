@@ -1,19 +1,20 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Movie, Actor, Category } from '../types';
-import { fetchAndCacheLiveData } from '../services/dataService';
-import ActorBioModal from './ActorBioModal';
-import Header from './Header';
-import Footer from './Footer';
-import LoadingSpinner from './LoadingSpinner';
-import BackToTopButton from './BackToTopButton';
-import SearchOverlay from './SearchOverlay';
-import StagingBanner from './StagingBanner';
-import DirectorCreditsModal from './DirectorCreditsModal';
-import Countdown from './Countdown';
-import CastButton from './CastButton';
-import RokuBanner from './RokuBanner';
-import SquarePaymentModal from './SquarePaymentModal';
-import { isMovieReleased } from '../constants';
+import { Movie, Actor, Category } from '../types.ts';
+import { fetchAndCacheLiveData } from '../services/dataService.ts';
+import ActorBioModal from './ActorBioModal.tsx';
+import Header from './Header.tsx';
+import Footer from './Footer.tsx';
+import LoadingSpinner from './LoadingSpinner.tsx';
+import BackToTopButton from './BackToTopButton.tsx';
+import SearchOverlay from './SearchOverlay.tsx';
+import StagingBanner from './StagingBanner.tsx';
+import DirectorCreditsModal from './DirectorCreditsModal.tsx';
+import Countdown from './Countdown.tsx';
+import CastButton from './CastButton.tsx';
+import RokuBanner from './RokuBanner.tsx';
+import SquarePaymentModal from './SquarePaymentModal.tsx';
+import { isMovieReleased } from '../constants.ts';
+import { useAuth } from '../contexts/AuthContext.tsx';
 
 declare const google: any; // Declare Google IMA SDK global
 
@@ -62,6 +63,7 @@ const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
 }
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
+  const { user } = useAuth();
   const [movie, setMovie] = useState<Movie | null>(null);
   const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
   const [allCategories, setAllCategories] = useState<Record<string, Category>>({});
@@ -204,23 +206,41 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     
               setMovie({ ...sourceMovie });
     
+              // Check for 'play=true' but don't automatically trigger if user is not logged in yet.
+              // The requireAuthAndExecute function will handle the login redirect if needed.
               if (params.get('play') === 'true' && sourceMovie.fullMovie && isMovieReleased(sourceMovie)) {
-                setPlayerMode('full');
+                // We'll trigger play via an effect that depends on the `user` object
               } else {
                 setPlayerMode('poster');
               }
             } else {
-              window.location.href = '/';
+              // Movie not found, redirect to home.
+              window.history.pushState({}, '', '/');
+              window.dispatchEvent(new Event('pushstate'));
             }
         } catch (error) {
             console.error("Failed to load movie data:", error);
-            window.location.href = '/';
+            window.history.pushState({}, '', '/');
+            window.dispatchEvent(new Event('pushstate'));
         } finally {
             setIsLoading(false);
         }
     };
     loadMovieData();
   }, [movieKey]);
+
+  // Effect to handle auto-play after a login redirect
+  useEffect(() => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('play') === 'true' && movie && isMovieReleased(movie) && user) {
+          setPlayerMode('full');
+          // Clean up the URL
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('play');
+          window.history.replaceState({}, '', newUrl.toString());
+      }
+  }, [movie, user]); // This effect runs when the user object becomes available
+
 
   useEffect(() => {
     if (released) return;
@@ -292,7 +312,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
 
     const handleSearchSubmit = (query: string) => {
-        if (query) window.location.href = `/?search=${encodeURIComponent(query)}`;
+        if (query) {
+            const searchUrl = new URL(user ? '/' : '/', window.location.origin);
+            searchUrl.searchParams.set('search', query);
+            window.location.href = searchUrl.toString();
+        }
     };
     
     const handleMovieEnd = () => {
@@ -302,11 +326,32 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
     const handleExitPlayer = () => {
         setPlayerMode('poster');
+        // Clean up the URL if it still has play=true
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('play')) {
+            url.searchParams.delete('play');
+            window.history.replaceState({}, '', url.toString());
+        }
     };
     
     const handlePaymentSuccess = () => {
         setShowSupportSuccess(true);
         setTimeout(() => setShowSupportSuccess(false), 3000);
+    };
+
+    const requireAuthAndExecute = (callback: () => void, intent: 'play' | 'support' = 'play') => {
+        if (user) {
+            callback();
+        } else {
+            const loginUrl = new URL('/login', window.location.origin);
+            const redirectPath = new URL(window.location.href);
+            // If the intent is to play, add the play=true param for after login
+            if (intent === 'play') {
+                 redirectPath.searchParams.set('play', 'true');
+            }
+            loginUrl.searchParams.set('redirect', redirectPath.pathname + redirectPath.search);
+            window.location.href = loginUrl.toString();
+        }
     };
 
     if (isLoading || !movie) {
@@ -354,7 +399,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                                     <button 
-                                        onClick={() => setPlayerMode('full')}
+                                        onClick={() => requireAuthAndExecute(() => setPlayerMode('full'), 'play')}
                                         className="absolute text-white bg-black/50 rounded-full p-4 hover:bg-black/70 transition-colors"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" viewBox="0 0 20 20" fill="currentColor">
@@ -397,7 +442,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                   <div className="max-w-6xl mx-auto p-4 md:p-8">
                       <h1 className="text-3xl md:text-5xl font-bold text-white">{movie.title || 'Untitled Film'}</h1>
                       <div className="mt-4 flex flex-wrap items-center gap-4">
-                          <button onClick={() => setIsSupportModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors">
+                          <button onClick={() => requireAuthAndExecute(() => setIsSupportModalOpen(true), 'support')} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors">
                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" />
                              </svg>

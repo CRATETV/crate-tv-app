@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import Header from './Header';
-import Footer from './Footer';
+import Header from './Header.tsx';
+import Footer from './Footer.tsx';
 
 const FilmmakerSignupPage: React.FC = () => {
     const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
@@ -71,14 +71,10 @@ const FilmmakerSignupPage: React.FC = () => {
                                 <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-2">Your Email Address</label>
                                 <input type="email" id="email" name="email" className="form-input" required placeholder="Where we can send your password" />
                             </div>
-                            
                             <button type="submit" className="submit-btn w-full mt-8" disabled={status === 'submitting'}>
                                 {status === 'submitting' ? 'Verifying...' : 'Request Access'}
                             </button>
-
-                            {status === 'error' && (
-                                <p className="mt-4 text-center text-red-400">{error}</p>
-                            )}
+                            {status === 'error' && <p className="text-red-400 text-sm mt-4 text-center">{error}</p>}
                         </form>
                     </div>
                 </div>

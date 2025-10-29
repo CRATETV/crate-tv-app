@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import Header from './Header';
-import Footer from './Footer';
-import LoadingSpinner from './LoadingSpinner';
-import BackToTopButton from './BackToTopButton';
-import { ActorProfile } from '../types';
+import Header from './Header.tsx';
+import Footer from './Footer.tsx';
+import LoadingSpinner from './LoadingSpinner.tsx';
+import BackToTopButton from './BackToTopButton.tsx';
+import { ActorProfile } from '../types.ts';
 
 const ActorCard: React.FC<{ actor: ActorProfile }> = ({ actor }) => {
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>) => {

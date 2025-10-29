@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import Header from './Header';
-import Hero from './Hero';
-import { Movie, Category } from '../types';
-import { fetchAndCacheLiveData } from '../services/dataService';
-import LoadingSpinner from './LoadingSpinner';
+import Header from './Header.tsx';
+import Hero from './Hero.tsx';
+import { Movie, Category } from '../types.ts';
+import { fetchAndCacheLiveData } from '../services/dataService.ts';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 const LandingPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);

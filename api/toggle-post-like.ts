@@ -1,4 +1,4 @@
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.ts';
 import * as admin from 'firebase-admin';
 
 export async function POST(request: Request) {

@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { fetchAndCacheLiveData } from '../services/dataService';
-import { Movie, Actor, Category } from '../types';
-import Header from './Header';
-import BackToTopButton from './BackToTopButton';
-import MovieDetailsModal from './MovieDetailsModal';
-import ActorBioModal from './ActorBioModal';
-import MovieCard from './MovieCard';
-import StagingBanner from './StagingBanner';
-import LoadingSpinner from './LoadingSpinner';
+import { fetchAndCacheLiveData } from '../services/dataService.ts';
+import { Movie, Actor, Category } from '../types.ts';
+import Header from './Header.tsx';
+import BackToTopButton from './BackToTopButton.tsx';
+import MovieDetailsModal from './MovieDetailsModal.tsx';
+import ActorBioModal from './ActorBioModal.tsx';
+import MovieCard from './MovieCard.tsx';
+import StagingBanner from './StagingBanner.tsx';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 // Data for new features
 const classicGenreMap: Record<string, string> = {

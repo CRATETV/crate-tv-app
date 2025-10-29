@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Movie, Category, FestivalDay, FestivalConfig, AboutData, ActorSubmission, PayoutRequest } from './types';
-import MovieEditor from './components/MovieEditor';
-import Footer from './components/Footer';
-import FestivalEditor from './components/FestivalEditor';
-import { invalidateCache } from './services/dataService';
+import { Movie, Category, FestivalDay, FestivalConfig, AboutData, ActorSubmission, PayoutRequest } from './types.ts';
+import MovieEditor from './components/MovieEditor.tsx';
+import Footer from './components/Footer.tsx';
+import FestivalEditor from './components/FestivalEditor.tsx';
+import { invalidateCache } from './services/dataService.ts';
 import { 
     listenToAllAdminData, 
     saveMovie, 
@@ -15,13 +15,13 @@ import {
     approveActorSubmission,
     rejectActorSubmission,
     completePayoutRequest
-} from './services/firebaseService';
-import LoadingSpinner from './components/LoadingSpinner';
-import CategoryEditor from './components/CategoryEditor';
-import AboutEditor from './components/AboutEditor';
-import FallbackGenerator from './components/FallbackGenerator';
-import ActorSubmissionsTab from './components/ActorSubmissionsTab';
-import PayoutsTab from './components/PayoutsTab';
+} from './services/firebaseService.ts';
+import LoadingSpinner from './components/LoadingSpinner.tsx';
+import CategoryEditor from './components/CategoryEditor.tsx';
+import AboutEditor from './components/AboutEditor.tsx';
+import FallbackGenerator from './components/FallbackGenerator.tsx';
+import ActorSubmissionsTab from './components/ActorSubmissionsTab.tsx';
+import PayoutsTab from './components/PayoutsTab.tsx';
 
 // Helper to format the current date/time for a datetime-local input
 const getLocalDatetimeString = () => {

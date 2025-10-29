@@ -1,5 +1,5 @@
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
-import { ActorPost } from '../types';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.ts';
+import { ActorPost } from '../types.ts';
 
 export async function POST(request: Request) {
   try {

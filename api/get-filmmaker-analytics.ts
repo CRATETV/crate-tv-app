@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/get-filmmaker-analytics
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
-import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, PayoutRequest } from '../types';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.ts';
+import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, PayoutRequest } from '../types.ts';
 
 // Helper interfaces and functions, self-contained for this endpoint
 interface SquarePayment {

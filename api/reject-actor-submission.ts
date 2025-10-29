@@ -1,6 +1,6 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/reject-actor-submission
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.ts';
 
 export async function POST(request: Request) {
   try {

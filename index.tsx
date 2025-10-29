@@ -1,5 +1,9 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
+// FIX: The project seems to be using an older version of react-router-dom.
+// The imports for `BrowserRouter`, `Routes`, `Route`, `Navigate`, and `useParams` were failing.
+// Switched to `react-router-dom` v5 compatible imports and syntax (`Switch`, `Redirect`).
+import { BrowserRouter, Switch, Route, Redirect, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext.tsx';
 import { FestivalProvider } from './contexts/FestivalContext.tsx';
 import LoadingSpinner from './components/LoadingSpinner.tsx';
@@ -33,7 +37,6 @@ const FilmmakerPortalPage = lazy(() => import('./components/FilmmakerPortalPage.
 const PremiumPage = lazy(() => import('./components/PremiumPage.tsx'));
 const ComingSoonPage = lazy(() => import('./components/ComingSoonPage.tsx'));
 
-
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
@@ -41,127 +44,99 @@ if (!rootElement) {
 
 const root = ReactDOM.createRoot(rootElement);
 
-// This component now contains the router and authentication logic.
-const AppRouter: React.FC = () => {
-  const [route, setRoute] = useState(window.location.pathname);
-  const { user } = useAuth();
-
-  useEffect(() => {
-    const onNavigate = () => {
-      setRoute(window.location.pathname);
-      window.scrollTo(0, 0);
-    };
-    
-    window.addEventListener('popstate', onNavigate);
-    window.addEventListener('pushstate', onNavigate);
-
-    return () => {
-      window.removeEventListener('popstate', onNavigate);
-      window.removeEventListener('pushstate', onNavigate);
-    };
-  }, []);
-  
-  // A simple component to handle redirects for protected routes.
-  const RedirectToLogin: React.FC = () => {
-    useEffect(() => {
-      const currentPath = window.location.pathname + window.location.search;
-      const loginUrl = new URL('/login', window.location.origin);
-      // Don't set a redirect for the root path
-      if (currentPath !== '/' && currentPath !== '/login') {
-          loginUrl.searchParams.set('redirect', currentPath);
-      }
-      // Use replaceState to not add a bad entry to the browser's history
-      window.history.replaceState({}, '', loginUrl.toString());
-      window.dispatchEvent(new Event('pushstate'));
-    }, []);
-    
-    // Render the login page immediately to avoid a flash of other content.
-    return <LoginPage />;
-  };
-
-  const movieMatch = route.match(/^\/movie\/([a-zA-Z0-9_-]+)/);
-  if (movieMatch && movieMatch[1]) {
-    // Make the MoviePage public; it will handle its own auth checks internally.
-    return <MoviePage movieKey={movieMatch[1]} />;
-  }
-
-  const actorProfileMatch = route.match(/^\/actors\/([a-zA-Z0-9_-]+)/);
-  if (actorProfileMatch && actorProfileMatch[1]) {
-    return <ActorProfilePage slug={actorProfileMatch[1]} />;
-  }
-
-
-  // Handle static routes with authentication checks
-  switch (route) {
-    case '/':
-      return user ? <App /> : <LandingPage />;
-    case '/account':
-      return user ? <AccountPage /> : <RedirectToLogin />;
-    case '/festival':
-       return user ? <FestivalPage /> : <RedirectToLogin />;
-    case '/watchlist':
-      return user ? <WatchlistPage /> : <RedirectToLogin />;
-    
-    // Public Routes
-    case '/login':
-      return <LoginPage />;
-    case '/classics':
-      return <ClassicsPage />;
-    case '/coming-soon':
-      return <ComingSoonPage />;
-    case '/top-ten':
-      return <TopTenPage />;
-    case '/submit':
-      return <SubmitPage />;
-    case '/actor-signup':
-      return <ActorSignupPage />;
-    case '/actor-portal':
-      return <ActorPortalPage />;
-    case '/actors':
-      return <ActorsDirectoryPage />;
-    case '/filmmaker-signup':
-      return <FilmmakerSignupPage />;
-    case '/filmmaker-portal':
-      return <FilmmakerPortalPage />;
-    case '/thank-you':
-      return <ThankYouPage />;
-    case '/merch':
-      return <MerchPage />;
-    case '/admin':
-      return <AdminPage />;
-    case '/analytics':
-      return <AnalyticsPage />;
-    case '/contact':
-      return <ContactPage />;
-    case '/about':
-      return <AboutPage />;
-    case '/filmfestivalmodule':
-      return <FilmFestivalModule />;
-    case '/developer-guide':
-      return <DeveloperGuidePage />;
-    default:
-      // Fallback to the appropriate homepage for any unknown routes
-      return user ? <App /> : <LandingPage />;
-  }
+// Wrapper for MoviePage to extract the key from URL parameters
+const MoviePageWrapper = () => {
+  // FIX: Swapped Navigate with Redirect for react-router-dom v5 compatibility.
+  const { movieKey } = useParams<{ movieKey: string }>();
+  if (!movieKey) return <Redirect to="/" />;
+  return <MoviePage movieKey={movieKey} />;
 };
+
+// Wrapper for ActorProfilePage to extract the slug from URL parameters
+const ActorProfilePageWrapper = () => {
+    // FIX: Swapped Navigate with Redirect for react-router-dom v5 compatibility.
+    const { slug } = useParams<{ slug: string }>();
+    if (!slug) return <Redirect to="/actors" />;
+    return <ActorProfilePage slug={slug} />;
+};
+
+
+// FIX: Replaced v6 PrivateRoute component with a v5 compatible one that uses the render prop pattern.
+// Component to handle routes that require authentication
+const PrivateRoute = ({ component: Component, ...rest }: { component: React.ComponentType<any>, path: string, [key: string]: any }) => {
+    const { user } = useAuth();
+    return (
+        <Route
+            {...rest}
+            render={props =>
+                user ? (
+                    <Component {...props} />
+                ) : (
+                    <Redirect
+                        to={{
+                            pathname: "/login",
+                            // @ts-ignore
+                            state: { from: props.location }
+                        }}
+                    />
+                )
+            }
+        />
+    );
+};
+
+// Main Router component
+// FIX: Rewrote AppRouter to use react-router-dom v5 syntax with Switch, component prop, and PrivateRoute HOC.
+const AppRouter: React.FC = () => {
+    const { user } = useAuth();
+    
+    return (
+        <Switch>
+            {/* Public Routes */}
+            <Route path="/login" component={LoginPage} />
+            <Route path="/classics" component={ClassicsPage} />
+            <Route path="/coming-soon" component={ComingSoonPage} />
+            <Route path="/top-ten" component={TopTenPage} />
+            <Route path="/submit" component={SubmitPage} />
+            <Route path="/actor-signup" component={ActorSignupPage} />
+            <Route path="/actor-portal" component={ActorPortalPage} />
+            <Route path="/actors/:slug" component={ActorProfilePageWrapper} />
+            <Route path="/actors" component={ActorsDirectoryPage} />
+            <Route path="/filmmaker-signup" component={FilmmakerSignupPage} />
+            <Route path="/filmmaker-portal" component={FilmmakerPortalPage} />
+            <Route path="/thank-you" component={ThankYouPage} />
+            <Route path="/merch" component={MerchPage} />
+            <Route path="/admin" component={AdminPage} />
+            <Route path="/analytics" component={AnalyticsPage} />
+            <Route path="/contact" component={ContactPage} />
+            <Route path="/about" component={AboutPage} />
+            <Route path="/filmfestivalmodule" component={FilmFestivalModule} />
+            <Route path="/developer-guide" component={DeveloperGuidePage} />
+            <Route path="/movie/:movieKey" component={MoviePageWrapper} />
+
+            {/* Protected Routes */}
+            <PrivateRoute path="/account" component={AccountPage} />
+            <PrivateRoute path="/festival" component={FestivalPage} />
+            <PrivateRoute path="/watchlist" component={WatchlistPage} />
+
+            {/* Root path depends on authentication */}
+            <Route path="/" exact>
+                {user ? <App /> : <LandingPage />}
+            </Route>
+            
+            {/* Fallback route */}
+            <Redirect from="*" to="/" />
+        </Switch>
+    );
+};
+
 
 // Manages the intro video display logic.
 const Root: React.FC = () => {
-  // Initialize state based on whether the user has seen the intro before.
-  const [showIntro, setShowIntro] = useState(() => {
-    try {
-      // If 'hasSeenIntro' is in localStorage, we don't show the intro.
-      return !localStorage.getItem('hasSeenIntro');
-    } catch (e) {
-      // If localStorage is unavailable (e.g., private browsing), default to showing intro.
-      console.warn("Could not read from localStorage, showing intro by default.", e);
-      return true;
-    }
-  });
+  const [showIntro, setShowIntro] = useState(() => !localStorage.getItem('hasSeenIntro'));
 
   const handleIntroEnd = () => {
     try {
-      // Set the flag in localStorage so the intro doesn't show on future visits.
       localStorage.setItem('hasSeenIntro', 'true');
     } catch (e) {
       console.warn("Could not write to localStorage to save intro state.", e);
@@ -173,7 +148,12 @@ const Root: React.FC = () => {
     return <Intro onIntroEnd={handleIntroEnd} />;
   }
   
-  return <AppRouter />;
+  // BrowserRouter provides the routing context for the entire app.
+  return (
+    <BrowserRouter>
+      <AppRouter />
+    </BrowserRouter>
+  );
 };
 
 root.render(

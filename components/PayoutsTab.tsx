@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PayoutRequest } from '../types';
+import { PayoutRequest } from '../types.ts';
 
 interface PayoutsTabProps {
     payoutRequests: PayoutRequest[];
