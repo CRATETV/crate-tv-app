@@ -12,7 +12,7 @@ const priceMap: Record<string, number> = {
 
 export async function POST(request: Request) {
   try {
-    const { sourceId, amount, movieTitle, directorName, paymentType, itemId, blockTitle, filmTitle } = await request.json();
+    const { sourceId, amount, movieTitle, directorName, paymentType, itemId, blockTitle } = await request.json();
     
     console.log('--- [API /process-square-payment] Diagnostic Start ---');
     console.log('VERCEL_ENV:', process.env.VERCEL_ENV);
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
                 note = `Crate TV Film Festival - Unlock Block: "${blockTitle || itemId}"`;
                 break;
             case 'film':
-                note = `Crate TV Film Festival - Unlock Film: "${filmTitle || itemId}"`;
+                note = `Crate TV Film Festival - Unlock Film: "${movieTitle || itemId}"`;
                 break;
             default:
                 note = "Crate TV Purchase";

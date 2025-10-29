@@ -21,8 +21,8 @@ const FilmBlockCard: React.FC<FilmBlockCardProps> = ({ movie, isUnlocked, onWatc
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col justify-end p-2 sm:p-3">
                 <h3 className="text-xs sm:text-sm font-bold text-white mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 line-clamp-2">{movie.title}</h3>
-                <div className="w-full bg-black/30 backdrop-blur-sm rounded-md text-white font-bold py-2 px-3 text-xs sm:text-sm transition-all duration-300 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 text-center
-                    ${isUnlocked ? 'bg-red-600 group-hover:bg-red-700' : 'bg-white/20 group-hover:bg-white/30'}`">
+                <div className={`w-full bg-black/30 backdrop-blur-sm rounded-md text-white font-bold py-2 px-3 text-xs sm:text-sm transition-all duration-300 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 text-center
+                    ${isUnlocked ? 'bg-red-600 group-hover:bg-red-700' : 'bg-white/20 group-hover:bg-white/30'}`}>
                     {isUnlocked ? (
                         <>
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
