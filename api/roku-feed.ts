@@ -2,7 +2,8 @@
 // It will be accessible at the path /api/roku-feed
 
 import { getApiData } from './_lib/data';
-import { Movie, Category, FestivalConfig } from '../types';
+// FIX: Import the 'Actor' type to correctly type cast members.
+import { Movie, Category, FestivalConfig, FestivalDay, Actor } from '../types';
 
 const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Movie> => {
     const visibleMovies: Record<string, Movie> = {};
@@ -24,7 +25,7 @@ const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Mov
 
 export async function GET(request: Request) {
   try {
-    const { movies: moviesData, categories: categoriesData, festivalConfig } = await getApiData();
+    const { movies: moviesData, categories: categoriesData, festivalConfig, festivalData } = await getApiData();
     const visibleMovies = getVisibleMovies(moviesData);
     const visibleMovieKeys = new Set(Object.keys(visibleMovies));
     
@@ -63,7 +64,8 @@ export async function GET(request: Request) {
                     heroImage: movie.poster || movie.tvPoster || '',
                     streamUrl: movie.fullMovie || '',
                     director: movie.director || '',
-                    actors: movie.cast ? movie.cast.map(c => c.name || '') : [],
+                    // FIX: Explicitly type the 'c' parameter as 'Actor' to resolve the TypeScript inference error.
+                    actors: movie.cast ? movie.cast.map((c: Actor) => c.name || '') : [],
                     genres: movieGenreMap.get(movie.key) || [],
                 };
             });
@@ -81,10 +83,14 @@ export async function GET(request: Request) {
 
     // 1. Handle the Live Festival Category
     // If the festival is live, create a special category for it at the top.
-    if (festivalConfig?.isFestivalLive && categoriesData['pwff12thAnnual']) {
+    if (festivalConfig?.isFestivalLive && festivalData && festivalData.length > 0) {
+        const festivalMovieKeys = Array.from(new Set(
+            festivalData.flatMap(day => day.blocks.flatMap(block => block.movieKeys))
+        ));
+
         const liveFestivalCategory: Category = {
             title: "Film Festival - LIVE NOW",
-            movieKeys: categoriesData['pwff12thAnnual'].movieKeys,
+            movieKeys: festivalMovieKeys,
         };
         const processedLiveFestival = processCategory(liveFestivalCategory, visibleMovies, visibleMovieKeys);
         if (processedLiveFestival) {

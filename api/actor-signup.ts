@@ -34,9 +34,18 @@ export async function POST(request: Request) {
     const trimmedName = name.trim().toLowerCase();
 
     moviesSnapshot.forEach(movieDoc => {
+        // If actor is already found, no need to continue iterating.
+        if (actorFound) return;
+
         const movieData = movieDoc.data() as Movie;
-        if (movieData.cast && movieData.cast.some(actor => actor.name.trim().toLowerCase() === trimmedName)) {
-            actorFound = true;
+        // Robust check: ensure cast is an array before trying to iterate.
+        if (Array.isArray(movieData.cast)) {
+            if (movieData.cast.some(actor => 
+                // ensure actor object exists, has a name property, and it's a string
+                actor && typeof actor.name === 'string' && actor.name.trim().toLowerCase() === trimmedName
+            )) {
+                actorFound = true;
+            }
         }
     });
 

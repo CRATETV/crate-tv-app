@@ -245,15 +245,21 @@ const App: React.FC = () => {
   // Re-architected category rendering logic for stability and mobile visibility.
   // 1. Memoize festival movies separately for dedicated rendering.
   const festivalLiveMovies = useMemo(() => {
-    if (!festivalConfig?.isFestivalLive || !categories.pwff12thAnnual) {
+    if (!festivalConfig?.isFestivalLive || !festivalData || festivalData.length === 0) {
         return null;
     }
-    const festivalMovies = categories.pwff12thAnnual.movieKeys
+
+    // Flatten all movie keys from all blocks in the festival data
+    const festivalMovieKeys = Array.from(new Set(
+        festivalData.flatMap(day => day.blocks.flatMap(block => block.movieKeys))
+    ));
+    
+    const festivalMovies = festivalMovieKeys
         .map(movieKey => visibleMovies.find(m => m.key === movieKey))
         .filter((m): m is Movie => !!m);
     
     return festivalMovies.length > 0 ? festivalMovies : null;
-  }, [festivalConfig, categories, visibleMovies]);
+  }, [festivalConfig, festivalData, visibleMovies]);
 
   // 2. Memoize the remaining standard categories for the main display list.
   const displayedCategories = useMemo(() => {
