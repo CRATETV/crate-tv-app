@@ -1,18 +1,9 @@
 // This is a Vercel Serverless Function
 // Path: /api/verify-actor
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
+import { Movie } from '../types';
 
 const portalPassword = 'cratebio';
-
-// Helper to create a URL-friendly slug from a name, consistent with the approval process
-const slugify = (name: string): string => {
-    return name
-        .toLowerCase()
-        .trim()
-        .replace(/[^\w\s-]/g, '') // remove non-word chars
-        .replace(/[\s_-]+/g, '-') // collapse whitespace and replace with -
-        .replace(/^-+|-+$/g, ''); // remove leading/trailing dashes
-};
 
 export async function POST(request: Request) {
   try {
@@ -32,29 +23,42 @@ export async function POST(request: Request) {
       });
     }
 
-    // --- New, Efficient Verification Logic ---
-    
+    // --- Verification Logic using Admin SDK ---
     const initError = getInitializationError();
-    if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
-    
+    if (initError) {
+        throw new Error(`Firebase Admin connection failed: ${initError}`);
+    }
     const db = getAdminDb();
-    if (!db) throw new Error("Database connection failed.");
+    if (!db) {
+        throw new Error("Database connection failed. Cannot verify actor.");
+    }
 
-    // Generate the slug from the provided name
-    const actorSlug = slugify(name);
+    const moviesSnapshot = await db.collection('movies').get();
+    let actorFound = false;
+    const trimmedName = name.trim().toLowerCase();
 
-    // Directly look up the actor's profile document using the slug
-    const actorProfileRef = db.collection('actor_profiles').doc(actorSlug);
-    const actorProfileDoc = await actorProfileRef.get();
+    // Iterate through all movies to check the cast list
+    moviesSnapshot.forEach(movieDoc => {
+        if (actorFound) return; // Stop searching if found
 
-    if (!actorProfileDoc.exists) {
-      return new Response(JSON.stringify({ error: 'Actor profile not found. If you have submitted your profile, it may be pending approval. Please use the Actor Signup page to get started.' }), {
+        const movieData = movieDoc.data() as Movie;
+        if (Array.isArray(movieData.cast)) {
+            if (movieData.cast.some(actor => 
+                actor && typeof actor.name === 'string' && actor.name.trim().toLowerCase() === trimmedName
+            )) {
+                actorFound = true;
+            }
+        }
+    });
+    
+    if (!actorFound) {
+      return new Response(JSON.stringify({ error: 'Actor name not found in our records. Please ensure it matches the film credits exactly.' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    // Actor is verified if their profile exists
+    // Actor is verified if their name is in any film's cast list
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

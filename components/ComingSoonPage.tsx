@@ -42,7 +42,8 @@ const ComingSoonPage: React.FC = () => {
   const upcomingMovies = useMemo(() => {
     return Object.values(allMovies)
       .filter(movie => !isMovieReleased(movie))
-      .sort((a, b) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
+      // FIX: Add explicit types to the sort function parameters to resolve TypeScript inference errors.
+      .sort((a: Movie, b: Movie) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
   }, [allMovies]);
 
   const handleSelectMovie = useCallback((movie: Movie) => {
