@@ -1,14 +1,13 @@
-import { GoogleGenAI, Type } from '@google/genai';
-import { Movie } from '../types.ts';
-
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/generate-recommendations
+import { GoogleGenAI, Type } from '@google/genai';
+
 export async function POST(request: Request) {
   try {
-    const { likedTitles, allMovies } = await request.json();
+    const { movieTitle, movieSynopsis } = await request.json();
 
-    if (!Array.isArray(likedTitles) || likedTitles.length === 0 || !allMovies) {
-      return new Response(JSON.stringify({ error: 'likedTitles (array) and allMovies (object) are required.' }), {
+    if (!movieTitle || !movieSynopsis) {
+      return new Response(JSON.stringify({ error: 'Movie title and synopsis are required.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -18,29 +17,10 @@ export async function POST(request: Request) {
       throw new Error("API_KEY environment variable is not set.");
     }
 
+    // FIX: Replaced placeholder content with a full implementation for generating movie recommendations using the Gemini API.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Create a string representation of the available movies catalog
-    // FIX: Correctly type `movie` as `Movie` instead of `any` for improved type safety.
-    const availableMoviesCatalog = Object.entries(allMovies)
-      .map(([key, movie]: [string, Movie]) => `"${key}": "${movie.title}"`)
-      .join(',\n');
-
-    const prompt = `
-      You are a film recommendation expert for an indie streaming service called Crate TV.
-      A user likes the following movies: ${JSON.stringify(likedTitles)}.
-
-      Based on these preferences, recommend up to 7 other movies from the available catalog below.
-      Prioritize movies that share similar genres, themes, directors, or actors.
-      Do not recommend movies that are already in the user's liked list.
-
-      Available movie catalog (as a JSON object of "key": "title"):
-      {
-        ${availableMoviesCatalog}
-      }
-
-      Respond with a JSON object that matches this schema: { "recommendedKeys": ["key1", "key2"] }.
-    `;
+    const prompt = `Based on the movie "${movieTitle}" with the synopsis: "${movieSynopsis}", recommend 5 similar movies. Provide only the movie titles.`;
 
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
@@ -50,20 +30,28 @@ export async function POST(request: Request) {
             responseSchema: {
                 type: Type.OBJECT,
                 properties: {
-                    recommendedKeys: {
+                    recommendations: {
                         type: Type.ARRAY,
-                        items: { type: Type.STRING }
+                        description: "A list of 5 recommended movie titles.",
+                        items: {
+                            type: Type.STRING,
+                            description: "The title of a recommended movie."
+                        }
                     }
-                }
+                },
+                required: ["recommendations"]
             }
         }
     });
     
-    // Since we expect a JSON response, parse the text
-    const responseJson = JSON.parse(response.text || '{}');
-    const recommendedKeys = responseJson.recommendedKeys || [];
+    const text = response.text;
+    if (!text) {
+        throw new Error("The model did not return any recommendations.");
+    }
+    
+    const recommendations = JSON.parse(text);
 
-    return new Response(JSON.stringify({ recommendedKeys }), {
+    return new Response(JSON.stringify(recommendations), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
