@@ -2,11 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import PublicS3Uploader from './PublicS3Uploader';
-import { fetchAndCacheLiveData } from '../services/dataService';
-import { Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
-
-const ACTOR_PASSWORD = 'cratebio'; // Shared password for all actors
 
 const ActorPortalPage: React.FC = () => {
     // Auth state
@@ -15,10 +11,6 @@ const ActorPortalPage: React.FC = () => {
     const [passwordInput, setPasswordInput] = useState('');
     const [authError, setAuthError] = useState('');
     const [authLoading, setAuthLoading] = useState(false);
-
-    // Data state
-    const [isLoadingData, setIsLoadingData] = useState(true);
-    const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
 
     // Form submission state
     const [submitStatus, setSubmitStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
@@ -39,51 +31,33 @@ const ActorPortalPage: React.FC = () => {
             setFormState(prev => ({ ...prev, actorName: authenticatedActorName }));
         }
     }, []);
-
-    useEffect(() => {
-        const loadMovieData = async () => {
-            try {
-                const { data } = await fetchAndCacheLiveData();
-                setAllMovies(data.movies);
-            } catch (e) {
-                setAuthError("Could not connect to server to verify actor data. Please try again later.");
-            } finally {
-                setIsLoadingData(false);
-            }
-        };
-        loadMovieData();
-    }, []);
-
+    
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setAuthLoading(true);
         setAuthError('');
 
-        if (passwordInput !== ACTOR_PASSWORD) {
-            setAuthError('Incorrect password.');
-            setAuthLoading(false);
-            return;
-        }
+        try {
+            const response = await fetch('/api/verify-actor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: actorNameInput, password: passwordInput }),
+            });
 
-        const trimmedName = actorNameInput.trim().toLowerCase();
-        if (!trimmedName) {
-            setAuthError('Please enter your full name.');
-            setAuthLoading(false);
-            return;
-        }
-        
-        const actorFound = Object.values(allMovies).some(movie => 
-            (movie as Movie).cast.some(actor => actor.name.trim().toLowerCase() === trimmedName)
-        );
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Login failed.');
+            }
 
-        if (actorFound) {
             sessionStorage.setItem('authenticatedActorName', actorNameInput.trim());
             setIsAuthenticated(true);
             setFormState(prev => ({ ...prev, actorName: actorNameInput.trim() }));
-        } else {
-            setAuthError('Actor name not found in our records. Please ensure it matches film credits exactly.');
+
+        } catch (err) {
+            setAuthError(err instanceof Error ? err.message : 'An unknown error occurred.');
+        } finally {
+            setAuthLoading(false);
         }
-        setAuthLoading(false);
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -106,10 +80,11 @@ const ActorPortalPage: React.FC = () => {
         }
 
         try {
+            // Re-use the portal password for the submission API
             const response = await fetch('/api/submit-actor-bio', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...formState, password: ACTOR_PASSWORD }),
+                body: JSON.stringify({ ...formState, password: passwordInput }),
             });
             if (!response.ok) throw new Error((await response.json()).error || 'Failed to submit profile.');
             setSubmitStatus('success');
@@ -120,8 +95,6 @@ const ActorPortalPage: React.FC = () => {
     };
     
     // RENDER LOGIC
-    if (isLoadingData) return <LoadingSpinner />;
-
     if (!isAuthenticated) {
         return (
             <div className="flex flex-col min-h-screen bg-[#141414] text-white">

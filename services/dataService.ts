@@ -3,20 +3,37 @@ import { moviesData, categoriesData, festivalData, festivalConfigData, aboutData
 
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
+const LAST_KNOWN_LIVE_STATUS_KEY = 'cratetv-last-known-live-status';
 const CACHE_DURATION = 60 * 1000; // 1 minute
 
-// Updated to include a timestamp.
-const getFallbackData = (): FetchResult => ({
-  data: {
-    movies: moviesData,
-    categories: categoriesData,
-    festivalData: festivalData,
-    festivalConfig: festivalConfigData,
-    aboutData: aboutData,
-  },
-  source: 'fallback',
-  timestamp: Date.now(),
-});
+// Updated to include a timestamp and sticky festival status.
+const getFallbackData = (): FetchResult => {
+  const fallbackResult: FetchResult = {
+    data: {
+      movies: moviesData,
+      categories: categoriesData,
+      festivalData: festivalData,
+      festivalConfig: { ...festivalConfigData }, // Create a copy to make it mutable
+      aboutData: aboutData,
+    },
+    source: 'fallback',
+    timestamp: Date.now(),
+  };
+
+  // "STICKY" LOGIC: If the app fails to fetch live data, use the last known
+  // 'isFestivalLive' status to prevent the festival from disappearing on a network blip.
+  try {
+    const lastKnownLiveStatus = localStorage.getItem(LAST_KNOWN_LIVE_STATUS_KEY);
+    if (lastKnownLiveStatus === 'true' && fallbackResult.data.festivalConfig) {
+      fallbackResult.data.festivalConfig.isFestivalLive = true;
+      console.log("[Fallback] Applied sticky live status to fallback data.");
+    }
+  } catch (e) {
+    console.warn("Could not apply sticky live status to fallback data.", e);
+  }
+
+  return fallbackResult;
+};
 
 export const invalidateCache = () => {
     try {
@@ -89,6 +106,11 @@ export const fetchAndCacheLiveData = async (options?: { force?: boolean }): Prom
             const cachePayload = { data, source: 'live' };
             localStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload));
             localStorage.setItem(CACHE_TIMESTAMP_KEY, now.toString());
+
+            // Store the last known live status to make the UI "sticky"
+            if (data.festivalConfig) {
+                localStorage.setItem(LAST_KNOWN_LIVE_STATUS_KEY, JSON.stringify(data.festivalConfig.isFestivalLive));
+            }
         } catch(e) {
             console.warn("Could not write to localStorage cache.", e);
         }
