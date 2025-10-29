@@ -59,7 +59,7 @@ const Footer: React.FC = () => {
                   <a href="/submit" onClick={(e) => handleNavigate(e, '/submit')} className="hover:text-white transition">Submit Film</a>
                 </li>
                  <li>
-                  <a href="/actor-signup" onClick={(e) => handleNavigate(e, '/actor-signup')} className="hover:text-white transition">Actors' Green Room</a>
+                  <a href="/actor-signup" onClick={(e) => handleNavigate(e, '/actor-signup')} className="hover:text-white transition">Actor Portal</a>
                 </li>
                 <li>
                   <a href="/contact" onClick={(e) => handleNavigate(e, '/contact')} className="hover:text-white transition">Contact</a>

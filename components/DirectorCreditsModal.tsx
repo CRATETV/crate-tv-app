@@ -41,7 +41,6 @@ const DirectorCreditsModal: React.FC<DirectorCreditsModalProps> = ({ directorNam
     const directedMovies: Movie[] = [];
     const actedInMovies: Movie[] = [];
     
-    // FIX: Use forEach with an explicit type for 'movie' to resolve TypeScript inference errors.
     Object.values(allMovies).forEach((movie: Movie) => {
       // Check directed movies
       if (movie.director.split(',').map(d => d.trim()).includes(directorName)) {

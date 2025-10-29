@@ -2,7 +2,6 @@
 // It will be accessible at the path /api/instant-tv-feed
 
 import { getApiData } from './_lib/data';
-// FIX: Imported the Category type to ensure type safety when processing category data.
 import { Movie, Category } from '../types';
 
 // Helper function to get movies that are currently released
@@ -36,7 +35,6 @@ export async function GET(request: Request) {
     Object.keys(visibleMovies).forEach(movieKey => {
         movieGenreMap.set(movieKey, []);
     });
-    // FIX: Cast the result of Object.values to ensure the 'category' parameter is correctly typed.
     (Object.values(categoriesData) as Category[]).forEach((category) => {
         if (category && Array.isArray(category.movieKeys)) {
             category.movieKeys.forEach(movieKey => {

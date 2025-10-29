@@ -35,14 +35,22 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         setUnlockedBlockIds(prevIds => {
             const newIds = new Set(prevIds);
             newIds.add(blockId);
-            localStorage.setItem(UNLOCKED_BLOCKS_KEY, JSON.stringify(Array.from(newIds)));
+            try {
+                localStorage.setItem(UNLOCKED_BLOCKS_KEY, JSON.stringify(Array.from(newIds)));
+            } catch (e) {
+                console.error("Could not save unlocked blocks to localStorage", e);
+            }
             return newIds;
         });
     };
 
     const grantAllAccess = () => {
         setHasAllAccessPass(true);
-        localStorage.setItem(ALL_ACCESS_PASS_KEY, 'true');
+        try {
+            localStorage.setItem(ALL_ACCESS_PASS_KEY, 'true');
+        } catch (e) {
+            console.error("Could not save all-access pass to localStorage", e);
+        }
     };
     
     const value = { unlockedBlockIds, hasAllAccessPass, unlockBlock, grantAllAccess };

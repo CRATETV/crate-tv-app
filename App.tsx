@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData } from './services/dataService';
-import { Movie, Actor, Category, FestivalConfig, LiveData, FetchResult } from './types';
+import { Movie, Actor, Category, FestivalConfig, LiveData, FetchResult, FestivalDay } from './types';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import MovieCarousel from './components/MovieCarousel';
@@ -13,7 +13,7 @@ import SearchOverlay from './components/SearchOverlay';
 import StagingBanner from './components/StagingBanner';
 import FeatureModal from './components/FeatureModal';
 import DataStatusIndicator from './components/DataStatusIndicator';
-import FestivalLiveModal from './components/FestivalLiveModal';
+import FestivalModal from './components/FestivalModal';
 import ComingSoonBanner from './components/ComingSoonBanner';
 import { useAuth } from './contexts/AuthContext';
 import { isMovieReleased } from './constants';
@@ -41,6 +41,7 @@ const App: React.FC = () => {
   const [movies, setMovies] = useState<Record<string, Movie>>({});
   const [categories, setCategories] = useState<Record<string, Category>>({});
   const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+  const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
@@ -49,7 +50,7 @@ const App: React.FC = () => {
   const [isStaging, setIsStaging] = useState(false);
   const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
   const [showFeatureModal, setShowFeatureModal] = useState(false);
-  const [showFestivalLiveModal, setShowFestivalLiveModal] = useState(false);
+  const [showFestivalModal, setShowFestivalModal] = useState(false);
   const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
 
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -60,6 +61,7 @@ const App: React.FC = () => {
     setMovies(result.data.movies);
     setCategories(result.data.categories);
     setFestivalConfig(result.data.festivalConfig);
+    setFestivalData(result.data.festivalData);
   }, []);
 
   const loadAppData = useCallback(async (options?: { force?: boolean }) => {
@@ -195,7 +197,7 @@ const App: React.FC = () => {
     if (!isLoading && festivalConfig?.isFestivalLive) {
       const hasSeenModal = sessionStorage.getItem('hasSeenFestivalLiveModal');
       if (!hasSeenModal) {
-        setShowFestivalLiveModal(true);
+        setShowFestivalModal(true);
         sessionStorage.setItem('hasSeenFestivalLiveModal', 'true');
       }
     }
@@ -531,14 +533,12 @@ const App: React.FC = () => {
       {showFeatureModal && (
         <FeatureModal onClose={() => setShowFeatureModal(false)} />
       )}
-      {showFestivalLiveModal && (
-        <FestivalLiveModal
-          onClose={() => setShowFestivalLiveModal(false)}
-          onNavigate={() => {
-            setShowFestivalLiveModal(false);
-            window.history.pushState({}, '', '/festival');
-            window.dispatchEvent(new Event('pushstate'));
-          }}
+      {showFestivalModal && festivalConfig && festivalData && (
+        <FestivalModal
+            festivalData={festivalData}
+            festivalConfig={festivalConfig}
+            allMovies={movies}
+            onClose={() => setShowFestivalModal(false)}
         />
       )}
     </div>

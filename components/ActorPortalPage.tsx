@@ -109,7 +109,7 @@ const ActorPortalPage: React.FC = () => {
             const response = await fetch('/api/submit-actor-bio', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formState),
+                body: JSON.stringify({ ...formState, password: ACTOR_PASSWORD }),
             });
             if (!response.ok) throw new Error((await response.json()).error || 'Failed to submit profile.');
             setSubmitStatus('success');

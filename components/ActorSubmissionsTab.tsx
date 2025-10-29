@@ -12,9 +12,9 @@ const ActorSubmissionsTab: React.FC<ActorSubmissionsTabProps> = ({ submissions, 
     const [processingId, setProcessingId] = useState<string | null>(null);
 
     const findCurrentActorInfo = (actorName: string) => {
-        for (const movie of Object.values(allMovies)) {
-            // FIX: Explicitly cast `movie` to type `Movie` to resolve a TypeScript error where it was inferred as `unknown`.
-            const actor = (movie as Movie).cast.find(c => c.name.toLowerCase() === actorName.toLowerCase());
+        for (const movieKey in allMovies) {
+            const movie = allMovies[movieKey];
+            const actor = movie.cast.find(c => c.name.toLowerCase() === actorName.toLowerCase());
             if (actor) {
                 return actor;
             }

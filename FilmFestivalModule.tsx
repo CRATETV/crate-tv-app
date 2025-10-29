@@ -14,13 +14,12 @@ const FilmFestivalModule: React.FC = () => {
       </h2>
       <FestivalView
         festivalData={festivalData}
-        festivalConfig={festivalConfigData}
+        festivalConfig={{...festivalConfigData, isFestivalLive: true}}
         allMovies={moviesData}
-        // FIX: Provide dummy props for access control to satisfy the component's interface for this preview module.
         unlockedBlockIds={new Set()}
         hasAllAccessPass={false}
-        onUnlockBlock={() => {}}
-        onGrantAllAccess={() => {}}
+        onUnlockBlock={() => { alert('Purchase would be initiated.'); }}
+        onGrantAllAccess={() => { alert('All-access purchase would be initiated.'); }}
       />
     </div>
   );
