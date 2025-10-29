@@ -1,8 +1,8 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/roku-movie-details
 
-import { getApiData } from './_lib/data';
-import { Movie, Category } from '../types';
+import { getApiData } from './_lib/data.ts';
+import { Movie, Category } from '../types.ts';
 
 // Helper function to format a single movie for Roku
 const formatMovieForRoku = (movie: Movie, categoriesData: Record<string, Category>) => {

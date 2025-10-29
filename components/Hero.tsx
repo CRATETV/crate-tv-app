@@ -1,7 +1,7 @@
 import React from 'react';
-import { Movie } from '../types';
-import Countdown from './Countdown';
-import { isMovieReleased } from '../constants';
+import { Movie } from '../types.ts';
+import Countdown from './Countdown.tsx';
+import { isMovieReleased } from '../constants.ts';
 
 interface HeroProps {
   movies: Movie[];

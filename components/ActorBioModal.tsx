@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Actor } from '../types';
-import { generateActorFact, findImdbUrl } from '../services/geminiService';
+import { Actor } from '../types.ts';
+import { generateActorFact, findImdbUrl } from '../services/geminiService.ts';
 import html2canvas from 'html2canvas';
 
 interface ActorBioModalProps {

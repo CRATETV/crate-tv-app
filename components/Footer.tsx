@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import InstallInstructionsModal from './InstallInstructionsModal';
+import InstallInstructionsModal from './InstallInstructionsModal.tsx';
 
 const Footer: React.FC = () => {
   const [installPrompt, setInstallPrompt] = useState<any>(null);

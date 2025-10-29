@@ -1,9 +1,9 @@
 // This is a Vercel Serverless Function that generates a feed for the custom Roku channel.
 // It will be accessible at the path /api/roku-feed
 
-import { getApiData } from './_lib/data';
+import { getApiData } from './_lib/data.ts';
 // FIX: Import the 'Actor' and 'FilmBlock' types to correctly type cast members.
-import { Movie, Category, FestivalConfig, FestivalDay, Actor, FilmBlock } from '../types';
+import { Movie, Category, FestivalConfig, FestivalDay, Actor, FilmBlock } from '../types.ts';
 
 const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Movie> => {
     const visibleMovies: Record<string, Movie> = {};

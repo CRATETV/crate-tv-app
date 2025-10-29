@@ -1,4 +1,4 @@
-import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
+import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types.ts';
 
 // Utility function to robustly check if a movie is past its release time.
 export const isMovieReleased = (movie: Movie | undefined | null): boolean => {

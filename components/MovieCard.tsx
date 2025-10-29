@@ -1,6 +1,6 @@
 import React from 'react';
-import { Movie } from '../types';
-import { isMovieReleased } from '../constants';
+import { Movie } from '../types.ts';
+import { isMovieReleased } from '../constants.ts';
 
 interface MovieCardProps {
   movie: Movie;

@@ -1,8 +1,8 @@
 // This is a Vercel Serverless Function that generates a feed for Instant TV Channel.
 // It will be accessible at the path /api/instant-tv-feed
 
-import { getApiData } from './_lib/data';
-import { Movie, Category } from '../types';
+import { getApiData } from './_lib/data.ts';
+import { Movie, Category } from '../types.ts';
 
 // Helper function to get movies that are currently released
 const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Movie> => {
