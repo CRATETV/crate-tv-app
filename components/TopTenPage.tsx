@@ -157,7 +157,7 @@ const TopTenPage: React.FC = () => {
                         <div className="space-y-4">
                             {topTenMovies.map((movie, index) => (
                                 <div key={movie.key} className="flex items-center gap-4 p-4 bg-gray-900/50 border border-gray-700 rounded-lg">
-                                    <span className="text-4xl sm:text-5xl font-black text-gray-600 w-16 text-center">{index + 1}</span>
+                                    <span className="text-4xl sm:text-5xl font-black text-purple-400 w-16 text-center">{index + 1}</span>
                                     <img 
                                         src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
                                         alt={movie.title} 

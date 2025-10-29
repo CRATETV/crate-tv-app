@@ -32,7 +32,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
       <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent"></div>
       <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent"></div>
       
-      <div className="absolute inset-0 flex flex-col justify-end p-4 md:p-12 lg:p-24">
+      <div className="absolute inset-0 flex flex-col justify-end p-4 pb-10 md:p-12 md:pb-16 lg:p-24">
         <div key={movie.key} className="max-w-xl animate-fadeInHeroContent p-6 rounded-lg" style={{ background: 'linear-gradient(90deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 100%)' }}>
           <h1 className="text-3xl md:text-5xl font-bold text-white drop-shadow-lg mb-4">{movie.title}</h1>
           

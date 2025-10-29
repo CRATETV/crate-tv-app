@@ -14,7 +14,10 @@ import StagingBanner from './components/StagingBanner';
 import FeatureModal from './components/FeatureModal';
 import DataStatusIndicator from './components/DataStatusIndicator';
 import FestivalLiveModal from './components/FestivalLiveModal';
+import ComingSoonBanner from './components/ComingSoonBanner';
+import ComingSoonModal from './components/ComingSoonModal';
 import { useAuth } from './contexts/AuthContext';
+import { isMovieReleased } from './constants';
 
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
@@ -49,6 +52,7 @@ const App: React.FC = () => {
   const [showFeatureModal, setShowFeatureModal] = useState(false);
   const [showFestivalLiveModal, setShowFestivalLiveModal] = useState(false);
   const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
 
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
@@ -223,13 +227,20 @@ const App: React.FC = () => {
   
   // Memoize visible movies to avoid re-calculation
   const visibleMovies = useMemo(() => {
-    const now = new Date();
     return Object.values(movies).filter((movie: Movie) => {
         if (!movie) return false;
-        const expiryDate = movie.mainPageExpiry ? new Date(movie.mainPageExpiry) : null;
-        return !expiryDate || expiryDate > now;
+        return isMovieReleased(movie);
     });
   }, [movies]);
+
+  const upcomingMovies = useMemo(() => {
+    return Object.values(movies).filter((movie: Movie) => {
+        if (!movie) return false;
+        return !isMovieReleased(movie);
+// FIX: Add explicit types to the `.sort()` method's parameters within the `upcomingMovies` memoized calculation to resolve a TypeScript inference error where `a` and `b` were being treated as `unknown`.
+    }).sort((a: Movie, b: Movie) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
+  }, [movies]);
+
 
   // Re-architected category rendering logic for stability and mobile visibility.
   // 1. Memoize festival movies separately for dedicated rendering.
@@ -396,7 +407,8 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#141414]">
+    <div className={`flex flex-col min-h-screen bg-[#141414] ${upcomingMovies.length > 0 ? 'pb-16' : ''}`}>
+      {upcomingMovies.length > 0 && <ComingSoonBanner onClick={() => setShowComingSoonModal(true)} />}
       {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
       <DataStatusIndicator source={dataSource} />
       <Header
@@ -494,7 +506,7 @@ const App: React.FC = () => {
       </main>
       
       <Footer />
-      <BackToTopButton />
+      <BackToTopButton isBannerVisible={upcomingMovies.length > 0} />
 
       {detailsMovie && (
         <MovieDetailsModal
@@ -529,6 +541,16 @@ const App: React.FC = () => {
             window.history.pushState({}, '', '/festival');
             window.dispatchEvent(new Event('pushstate'));
           }}
+        />
+      )}
+      {showComingSoonModal && (
+        <ComingSoonModal
+            movies={upcomingMovies}
+            onClose={() => setShowComingSoonModal(false)}
+            onSelectMovie={(movie) => {
+                setShowComingSoonModal(false);
+                handleSelectMovie(movie);
+            }}
         />
       )}
     </div>

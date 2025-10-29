@@ -1,34 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { FestivalProvider } from './contexts/FestivalContext';
+import LoadingSpinner from './components/LoadingSpinner';
 
-// Import all page components
-import App from './App';
-import AdminPage from './AdminPage';
-import Intro from './components/Intro';
-import ClassicsPage from './components/ClassicsPage';
-import SubmitPage from './components/SubmitPage';
-import MoviePage from './components/MoviePage';
-import MerchPage from './components/MerchPage';
-import ContactPage from './components/ContactPage';
-import AboutPage from './components/AboutPage';
-import LoginPage from './components/LoginPage';
-import AccountPage from './components/AccountPage';
-import FestivalPage from './components/FestivalPage';
-import FilmFestivalModule from './FilmFestivalModule';
-import DeveloperGuidePage from './components/DeveloperGuidePage';
-import AnalyticsPage from './components/AnalyticsPage';
-import LandingPage from './components/LandingPage';
-import ThankYouPage from './components/ThankYouPage';
-import TopTenPage from './components/TopTenPage';
-import ActorPortalPage from './components/ActorPortalPage';
-import ActorSignupPage from './components/ActorSignupPage';
-import ActorsDirectoryPage from './components/ActorsDirectoryPage';
-import ActorProfilePage from './components/ActorProfilePage';
-import WatchlistPage from './components/WatchlistPage';
-import FilmmakerSignupPage from './components/FilmmakerSignupPage';
-import FilmmakerPortalPage from './components/FilmmakerPortalPage';
+// Dynamically import page components for code splitting
+const App = lazy(() => import('./App'));
+const AdminPage = lazy(() => import('./AdminPage'));
+const Intro = lazy(() => import('./components/Intro'));
+const ClassicsPage = lazy(() => import('./components/ClassicsPage'));
+const SubmitPage = lazy(() => import('./components/SubmitPage'));
+const MoviePage = lazy(() => import('./components/MoviePage'));
+const MerchPage = lazy(() => import('./components/MerchPage'));
+const ContactPage = lazy(() => import('./components/ContactPage'));
+const AboutPage = lazy(() => import('./components/AboutPage'));
+const LoginPage = lazy(() => import('./components/LoginPage'));
+const AccountPage = lazy(() => import('./components/AccountPage'));
+const FestivalPage = lazy(() => import('./components/FestivalPage'));
+const FilmFestivalModule = lazy(() => import('./FilmFestivalModule'));
+const DeveloperGuidePage = lazy(() => import('./components/DeveloperGuidePage'));
+const AnalyticsPage = lazy(() => import('./components/AnalyticsPage'));
+const LandingPage = lazy(() => import('./components/LandingPage'));
+const ThankYouPage = lazy(() => import('./components/ThankYouPage'));
+const TopTenPage = lazy(() => import('./components/TopTenPage'));
+const ActorPortalPage = lazy(() => import('./components/ActorPortalPage'));
+const ActorSignupPage = lazy(() => import('./components/ActorSignupPage'));
+const ActorsDirectoryPage = lazy(() => import('./components/ActorsDirectoryPage'));
+const ActorProfilePage = lazy(() => import('./components/ActorProfilePage'));
+const WatchlistPage = lazy(() => import('./components/WatchlistPage'));
+const FilmmakerSignupPage = lazy(() => import('./components/FilmmakerSignupPage'));
+const FilmmakerPortalPage = lazy(() => import('./components/FilmmakerPortalPage'));
+const PremiumPage = lazy(() => import('./components/PremiumPage'));
+
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -174,7 +177,9 @@ root.render(
   <React.StrictMode>
     <AuthProvider>
       <FestivalProvider>
-        <Root />
+        <Suspense fallback={<LoadingSpinner />}>
+          <Root />
+        </Suspense>
       </FestivalProvider>
     </AuthProvider>
   </React.StrictMode>

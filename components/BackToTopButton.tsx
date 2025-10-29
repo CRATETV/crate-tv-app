@@ -1,7 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 
-const BackToTopButton: React.FC = () => {
+interface BackToTopButtonProps {
+  isBannerVisible?: boolean;
+}
+
+const BackToTopButton: React.FC<BackToTopButtonProps> = ({ isBannerVisible = false }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   const toggleVisibility = () => {
@@ -26,8 +30,10 @@ const BackToTopButton: React.FC = () => {
     };
   }, []);
 
+  const bottomClass = isBannerVisible ? 'bottom-20' : 'bottom-5';
+
   return (
-    <div className="fixed bottom-5 right-5 z-50">
+    <div className={`fixed right-5 z-50 ${bottomClass} transition-all duration-300`}>
       {isVisible && (
         <button
           onClick={scrollToTop}
