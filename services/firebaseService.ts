@@ -1,4 +1,5 @@
 
+
 // FIX: Refactor to use Firebase v9 compat libraries to fix module export errors.
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';

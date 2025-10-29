@@ -5,14 +5,7 @@ import * as admin from 'firebase-admin';
 
 export async function POST(request: Request) {
   try {
-    const { actorName, email, bio, photoUrl, highResPhotoUrl, imdbUrl, password } = await request.json();
-
-    if (password !== 'cratebio') {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' },
-        });
-    }
+    const { actorName, email, bio, photoUrl, highResPhotoUrl, imdbUrl } = await request.json();
 
     if (!actorName || !email || !bio || !photoUrl || !highResPhotoUrl) {
       return new Response(JSON.stringify({ error: 'Missing required fields.' }), {

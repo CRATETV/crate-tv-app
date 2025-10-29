@@ -65,7 +65,7 @@ export async function POST(request: Request) {
           <li><strong>Portal Login Page:</strong> <a href="${portalUrl}">${portalUrl}</a></li>
           <li><strong>Password:</strong> ${portalPassword}</li>
         </ul>
-        <p>We look forward to seeing your updates!</p>
+        <p>We're excited to have you with us!</p>
         <p>- The Crate TV Team</p>
       </div>
     `;

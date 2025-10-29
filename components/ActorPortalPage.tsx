@@ -60,6 +60,13 @@ const ActorPortalPage: React.FC = () => {
         }
     };
 
+    const handleLogout = () => {
+        sessionStorage.removeItem('authenticatedActorName');
+        setIsAuthenticated(false);
+        setActorNameInput('');
+        setPasswordInput('');
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormState(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
@@ -83,7 +90,7 @@ const ActorPortalPage: React.FC = () => {
             const response = await fetch('/api/submit-actor-bio', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...formState, password: passwordInput }),
+                body: JSON.stringify(formState), // Removed password from payload
             });
             if (!response.ok) throw new Error((await response.json()).error || 'Failed to submit profile.');
             setSubmitStatus('success');
@@ -136,16 +143,26 @@ const ActorPortalPage: React.FC = () => {
                 <div className="max-w-4xl mx-auto">
                     {submitStatus === 'success' ? (
                         <div className="text-center py-16 bg-gray-800/50 border border-gray-700 rounded-lg p-8 sm:p-12 animate-[fadeIn_0.5s_ease-out]">
+                             <div className="mb-6">
+                                <svg className="w-16 h-16 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
                             <h1 className="text-3xl sm:text-4xl font-bold text-green-400 mb-4">Submission Received!</h1>
-                            <p className="text-gray-300">Thank you for updating your profile. Our team will review your submission shortly.</p>
+                            <p className="text-gray-300 mb-8">Thank you for updating your profile. Our team will review your submission shortly and publish the changes to the site.</p>
+                             <button onClick={handleLogout} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-md transition-colors">
+                                Log Out
+                            </button>
                         </div>
                     ) : (
                         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-8">
                             <form onSubmit={handleSubmit} className="space-y-6">
-                                <h2 className="text-3xl font-bold text-white mb-4">Update Your Profile</h2>
-                                <div>
-                                    <label htmlFor="actorName" className="block text-sm font-medium text-gray-400 mb-2">Your Full Name</label>
-                                    <input type="text" id="actorName" name="actorName" value={formState.actorName} className="form-input bg-gray-700" readOnly />
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h2 className="text-3xl font-bold text-white mb-1">Update Your Profile</h2>
+                                        <p className="text-gray-400">Welcome, {formState.actorName}.</p>
+                                    </div>
+                                    <button onClick={handleLogout} type="button" className="text-sm text-gray-400 hover:text-white transition-colors">Log Out</button>
                                 </div>
                                 <div>
                                     <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-2">Your Email Address</label>

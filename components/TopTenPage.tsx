@@ -4,14 +4,7 @@ import { Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import html2canvas from 'html2canvas';
 
-const CORRECT_PASSWORD = 'crate'; // The password to access the page
-
 const TopTenPage: React.FC = () => {
-    // Auth state
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [password, setPassword] = useState('');
-    const [authError, setAuthError] = useState('');
-
     // Page content state
     const [isLoading, setIsLoading] = useState(true);
     const [movies, setMovies] = useState<Record<string, Movie>>({});
@@ -19,43 +12,19 @@ const TopTenPage: React.FC = () => {
     const captureRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // Check session storage to see if user is already authenticated
-        const isAuthed = sessionStorage.getItem('topTenAuthenticated') === 'true';
-        if (isAuthed) {
-            setIsAuthenticated(true);
-        } else {
-            setIsLoading(false); // If not authed, we don't need to load movie data yet
-        }
+        const loadData = async () => {
+            setIsLoading(true);
+            try {
+                const { data } = await fetchAndCacheLiveData();
+                setMovies(data.movies);
+            } catch (error) {
+                console.error("Failed to load data for Top Ten page:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadData();
     }, []);
-
-    useEffect(() => {
-        // Only load movie data if authenticated
-        if (isAuthenticated) {
-            const loadData = async () => {
-                setIsLoading(true);
-                try {
-                    const { data } = await fetchAndCacheLiveData();
-                    setMovies(data.movies);
-                } catch (error) {
-                    console.error("Failed to load data for Top Ten page:", error);
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            loadData();
-        }
-    }, [isAuthenticated]);
-    
-    const handleLogin = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (password === CORRECT_PASSWORD) {
-            sessionStorage.setItem('topTenAuthenticated', 'true');
-            setIsAuthenticated(true);
-            setAuthError('');
-        } else {
-            setAuthError('Incorrect password. Please try again.');
-        }
-    };
 
     const topTenMovies = useMemo(() => {
         return Object.values(movies)
@@ -93,35 +62,6 @@ const TopTenPage: React.FC = () => {
             setIsDownloading(false);
         }
     };
-
-    // --- RENDER LOGIC ---
-
-    if (!isAuthenticated) {
-        return (
-            <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
-                <div className="w-full max-w-sm bg-gray-900 p-8 rounded-lg shadow-lg border border-gray-700">
-                    <h1 className="text-2xl font-bold mb-6 text-center text-white">Enter Password</h1>
-                    <p className="text-center text-sm text-gray-400 mb-6">
-                        This page is protected. Please enter the password to view the Top 10 list.
-                    </p>
-                    <form onSubmit={handleLogin}>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Password"
-                            className="form-input w-full bg-gray-800 border border-gray-600 rounded-md py-2 px-4 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                            autoFocus
-                        />
-                        {authError && <p className="mt-2 text-sm text-red-500 text-center">{authError}</p>}
-                        <button type="submit" className="submit-btn w-full mt-6">
-                            Enter
-                        </button>
-                    </form>
-                </div>
-            </div>
-        );
-    }
 
     if (isLoading) {
         return <LoadingSpinner />;
