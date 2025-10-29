@@ -80,7 +80,6 @@ const ActorPortalPage: React.FC = () => {
         }
 
         try {
-            // Re-use the portal password for the submission API
             const response = await fetch('/api/submit-actor-bio', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -94,7 +93,6 @@ const ActorPortalPage: React.FC = () => {
         }
     };
     
-    // RENDER LOGIC
     if (!isAuthenticated) {
         return (
             <div className="flex flex-col min-h-screen bg-[#141414] text-white">
@@ -106,7 +104,16 @@ const ActorPortalPage: React.FC = () => {
                         <form onSubmit={handleLogin} className="space-y-4">
                             <div>
                                 <label htmlFor="actorName" className="block text-sm font-medium text-gray-400 mb-2">Full Name</label>
-                                <input type="text" id="actorName" value={actorNameInput} onChange={(e) => setActorNameInput(e.target.value)} className="form-input" required autoFocus />
+                                <input 
+                                    type="text" 
+                                    id="actorName" 
+                                    value={actorNameInput} 
+                                    onChange={(e) => setActorNameInput(e.target.value)}
+                                    className="form-input" 
+                                    required 
+                                    autoFocus 
+                                    autoComplete="name"
+                                />
                             </div>
                             <div>
                                 <label htmlFor="password" className="block text-sm font-medium text-gray-400 mb-2">Password</label>

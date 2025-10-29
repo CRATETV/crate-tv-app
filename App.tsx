@@ -16,7 +16,7 @@ import DataStatusIndicator from './components/DataStatusIndicator';
 import FestivalModal from './components/FestivalModal';
 import ComingSoonBanner from './components/ComingSoonBanner';
 import { useAuth } from './contexts/AuthContext';
-import { isMovieReleased } from './constants';
+import { isMovieReleased, isFestivalLiveNow } from './constants';
 
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
@@ -191,17 +191,18 @@ const App: React.FC = () => {
     fetchRecommendations();
   }, [likedMovies, movies]);
 
+  const isFestivalLive = useMemo(() => isFestivalLiveNow(festivalConfig), [festivalConfig]);
 
   // Effect to show the Festival Live modal once per session
   useEffect(() => {
-    if (!isLoading && festivalConfig?.isFestivalLive) {
+    if (!isLoading && isFestivalLive) {
       const hasSeenModal = sessionStorage.getItem('hasSeenFestivalLiveModal');
       if (!hasSeenModal) {
         setShowFestivalModal(true);
         sessionStorage.setItem('hasSeenFestivalLiveModal', 'true');
       }
     }
-  }, [isLoading, festivalConfig]);
+  }, [isLoading, isFestivalLive]);
   
   // Logic for the hero banner auto-scroll
   const heroMovies = useMemo(() => {
@@ -245,7 +246,7 @@ const App: React.FC = () => {
   // Re-architected category rendering logic for stability and mobile visibility.
   // 1. Memoize festival movies separately for dedicated rendering.
   const festivalLiveMovies = useMemo(() => {
-    if (!festivalConfig?.isFestivalLive || !festivalData || festivalData.length === 0) {
+    if (!isFestivalLive || !festivalData || festivalData.length === 0) {
         return null;
     }
 
@@ -259,7 +260,7 @@ const App: React.FC = () => {
         .filter((m): m is Movie => !!m);
     
     return festivalMovies.length > 0 ? festivalMovies : null;
-  }, [festivalConfig, festivalData, visibleMovies]);
+  }, [isFestivalLive, festivalData, visibleMovies]);
 
   // 2. Memoize the remaining standard categories for the main display list.
   const displayedCategories = useMemo(() => {
@@ -285,16 +286,12 @@ const App: React.FC = () => {
         movies: topTenMovies,
     } : null;
 
-    const baseCategoryOrder: string[] = ["newReleases", "awardWinners", "pwff12thAnnual", "comedy", "drama", "documentary", "exploreTitles"];
+    const baseCategoryOrder: string[] = ["newReleases", "awardWinners", "comedy", "drama", "documentary", "exploreTitles"];
     
     const standardCategories = baseCategoryOrder
       .map((key): DisplayedCategory | null => {
         const category = categories[key];
         if (!category) return null;
-        
-        if (key === 'pwff12thAnnual' && festivalConfig?.isFestivalLive) {
-            return null;
-        }
 
         const categoryMovies = category.movieKeys
             .map(movieKey => visibleMovies.find(m => m.key === movieKey))
@@ -323,7 +320,7 @@ const App: React.FC = () => {
       
       return [myListCategory, topTenCategory, ...standardCategories].filter((c): c is DisplayedCategory => !!c);
 
-  }, [categories, festivalConfig, visibleMovies, user, movies]);
+  }, [categories, visibleMovies, user, movies]);
   
   // Filter movies based on search query
   const searchResults = useMemo(() => {
@@ -424,7 +421,7 @@ const App: React.FC = () => {
         onMobileSearchClick={() => setIsMobileSearchOpen(true)}
         isStaging={isStaging}
         isOffline={dataSource === 'fallback'}
-        isFestivalLive={festivalConfig?.isFestivalLive}
+        isFestivalLive={isFestivalLive}
       />
       
       <main className="flex-grow">

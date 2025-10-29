@@ -292,65 +292,6 @@ const AdminPage: React.FC = () => {
     }
   };
   
-  const handleSetLiveStatus = async (isLive: boolean, currentConfig: FestivalConfig, currentData: FestivalDay[]) => {
-    // The config and data are passed directly from the editor, ensuring we use the latest state.
-    if (!currentConfig || !aboutData) return;
-    
-    setPublishStatus('publishing');
-    setPublishError('');
-
-    const updatedConfig = { ...currentConfig, isFestivalLive: isLive };
-    
-    try {
-        // Save the latest data to Firebase
-        await saveFestivalConfig(updatedConfig);
-        await saveFestivalDays(currentData);
-        
-        // Update the state locally for immediate UI responsiveness.
-        setFestivalConfig(updatedConfig);
-        setFestivalData(currentData);
-        
-        const adminPassword = sessionStorage.getItem('adminPassword');
-        if (!adminPassword) throw new Error('Authentication error. Please log in again.');
-        
-        // Prepare the payload for S3 and broadcast with the latest data.
-        const dataToPublish = { 
-            movies, 
-            categories, 
-            festivalData: currentData, // Use the latest data from the editor
-            festivalConfig: updatedConfig, // Use the new updated config
-            aboutData
-        };
-
-        const response = await fetch('/api/publish-data', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: adminPassword, data: dataToPublish }),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Publishing live status failed.');
-        }
-
-        const timestamp = Date.now();
-        localStorage.setItem('cratetv-last-publish-timestamp', timestamp.toString());
-        
-        const channel = new BroadcastChannel('cratetv-data-channel');
-        channel.postMessage({ type: 'DATA_PUBLISHED', payload: dataToPublish });
-        channel.close();
-        console.log(`[Admin] Sent DATA_PUBLISHED broadcast. Festival live status: ${isLive}`);
-
-        setPublishStatus('success');
-        setTimeout(() => setPublishStatus('idle'), 3000);
-
-    } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Failed to update and publish live status.';
-        setPublishStatus('error');
-        setPublishError(msg);
-    }
-  };
-  
   const handleGenerateRokuPackage = async () => {
         setIsGeneratingRoku(true);
         setRokuGenerationError('');
@@ -644,7 +585,6 @@ const AdminPage: React.FC = () => {
                         onDataChange={setFestivalData}
                         onConfigChange={setFestivalConfig}
                         onSave={handleSaveFestival}
-                        onPublishLiveStatus={handleSetLiveStatus}
                     />
                 </div>
             )}

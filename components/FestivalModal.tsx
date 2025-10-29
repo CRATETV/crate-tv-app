@@ -11,8 +11,7 @@ interface FestivalModalProps {
 }
 
 const FestivalModal: React.FC<FestivalModalProps> = ({ festivalData, festivalConfig, allMovies, onClose }) => {
-    // FIX: Use the FestivalAccess context to get unlock status and functions.
-    const { unlockedBlockIds, hasAllAccessPass, unlockBlock, grantAllAccess } = useFestivalAccess();
+    const { unlockedItemIds, hasAllAccessPass, unlockItem, grantAllAccess } = useFestivalAccess();
 
     useEffect(() => {
         const handleEsc = (event: KeyboardEvent) => {
@@ -39,7 +38,7 @@ const FestivalModal: React.FC<FestivalModalProps> = ({ festivalData, festivalCon
                 onClick={(e) => e.stopPropagation()}
             >
                 <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 bg-black/50 rounded-full p-1.5 hover:text-white z-50">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
@@ -49,9 +48,9 @@ const FestivalModal: React.FC<FestivalModalProps> = ({ festivalData, festivalCon
                     festivalConfig={festivalConfig}
                     allMovies={allMovies}
                     showHero={true}
-                    unlockedBlockIds={unlockedBlockIds}
+                    unlockedItemIds={unlockedItemIds}
                     hasAllAccessPass={hasAllAccessPass}
-                    onUnlockBlock={unlockBlock}
+                    onUnlockItem={unlockItem}
                     onGrantAllAccess={grantAllAccess}
                 />
             </div>

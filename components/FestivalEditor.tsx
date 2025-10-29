@@ -76,15 +76,13 @@ interface FestivalEditorProps {
     onDataChange: (data: FestivalDay[]) => void;
     onConfigChange: (config: FestivalConfig) => void;
     onSave: () => void;
-    onPublishLiveStatus: (isLive: boolean, config: FestivalConfig, data: FestivalDay[]) => void;
 }
 
 // The FestivalEditor component for managing festival data
-const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies, onDataChange, onConfigChange, onSave, onPublishLiveStatus }) => {
+const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies, onDataChange, onConfigChange, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
-  const [isLiveStatusSaving, setIsLiveStatusSaving] = useState(false);
 
   const handleDayChange = (dayIndex: number, field: keyof FestivalDay, value: string) => {
     const newData = data.map((day, index) => 
@@ -131,17 +129,6 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
     onConfigChange({ ...config, [name]: value });
   };
   
-  const handleLiveStatusToggle = async () => {
-    setIsLiveStatusSaving(true);
-    try {
-      await onPublishLiveStatus(!config.isFestivalLive, config, data);
-    } catch (error) {
-      console.error("Failed to update live status", error);
-    } finally {
-      setIsLiveStatusSaving(false);
-    }
-  };
-
   const addDay = () => {
     const newDay: FestivalDay = {
       day: data.length + 1,
@@ -227,31 +214,26 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                 className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               ></textarea>
           </div>
-          <div className="bg-gray-800 p-3 rounded-md">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div>
-                <h4 className="font-medium text-white">Festival Visibility</h4>
-                <p className="text-sm text-gray-400">
-                  {config.isFestivalLive 
-                    ? "The festival is currently LIVE and visible to the public."
-                    : "The festival is OFFLINE and hidden from the public."
-                  }
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleLiveStatusToggle}
-                disabled={isLiveStatusSaving}
-                className={`font-bold py-2 px-5 rounded-md transition-colors w-full sm:w-auto ${
-                  isLiveStatusSaving
-                    ? 'bg-yellow-700 cursor-not-allowed'
-                    : config.isFestivalLive
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-green-600 hover:bg-green-700'
-                }`}
-              >
-                {isLiveStatusSaving ? 'Updating...' : config.isFestivalLive ? 'Take Festival Offline' : 'Make Festival Live'}
-              </button>
+          <div className="bg-gray-800 p-3 rounded-md grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="startDate" className="block text-sm font-medium text-gray-300">Festival Start Date</label>
+              <input 
+                type="datetime-local" 
+                name="startDate" 
+                value={config.startDate || ''} 
+                onChange={handleConfigChange} 
+                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" 
+              />
+            </div>
+             <div>
+              <label htmlFor="endDate" className="block text-sm font-medium text-gray-300">Festival End Date</label>
+              <input 
+                type="datetime-local" 
+                name="endDate" 
+                value={config.endDate || ''} 
+                onChange={handleConfigChange} 
+                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" 
+              />
             </div>
           </div>
       </div>

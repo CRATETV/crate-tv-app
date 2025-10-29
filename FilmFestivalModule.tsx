@@ -14,11 +14,11 @@ const FilmFestivalModule: React.FC = () => {
       </h2>
       <FestivalView
         festivalData={festivalData}
-        festivalConfig={{...festivalConfigData, isFestivalLive: true}}
+        festivalConfig={festivalConfigData}
         allMovies={moviesData}
-        unlockedBlockIds={new Set()}
+        unlockedItemIds={new Set()}
         hasAllAccessPass={false}
-        onUnlockBlock={() => { alert('Purchase would be initiated.'); }}
+        onUnlockItem={() => { alert('Purchase would be initiated.'); }}
         onGrantAllAccess={() => { alert('All-access purchase would be initiated.'); }}
       />
     </div>

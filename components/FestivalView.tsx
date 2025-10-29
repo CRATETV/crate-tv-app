@@ -7,9 +7,9 @@ interface FestivalViewProps {
     festivalData: FestivalDay[];
     festivalConfig: FestivalConfig;
     allMovies: Record<string, Movie>;
-    unlockedBlockIds: Set<string>;
+    unlockedItemIds: Set<string>;
     hasAllAccessPass: boolean;
-    onUnlockBlock: (blockId: string) => void;
+    onUnlockItem: (itemId: string) => void;
     onGrantAllAccess: () => void;
     showHero?: boolean;
 }
@@ -18,26 +18,30 @@ const FestivalView: React.FC<FestivalViewProps> = ({
     festivalData, 
     festivalConfig, 
     allMovies,
-    unlockedBlockIds,
+    unlockedItemIds,
     hasAllAccessPass,
-    onUnlockBlock,
+    onUnlockItem,
     onGrantAllAccess,
     showHero = true 
 }) => {
   const [activeDay, setActiveDay] = useState(1);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [paymentItem, setPaymentItem] = useState<{ type: 'pass' | 'block'; block?: FilmBlock } | null>(null);
+  const [paymentItem, setPaymentItem] = useState<{ type: 'pass' | 'block' | 'film'; block?: FilmBlock, movie?: Movie } | null>(null);
 
-  const handlePurchaseClick = (type: 'pass' | 'block', block?: FilmBlock) => {
-    setPaymentItem({ type, block });
+  const handlePurchaseClick = (type: 'pass' | 'block' | 'film', item?: FilmBlock | Movie) => {
+    if (type === 'film') {
+        setPaymentItem({ type, movie: item as Movie });
+    } else { // 'pass' or 'block'
+        setPaymentItem({ type, block: item as FilmBlock });
+    }
     setIsPaymentModalOpen(true);
   };
   
-  const handlePaymentSuccess = (details: { paymentType: 'pass' | 'block' | 'subscription' | 'donation', itemId?: string }) => {
+  const handlePaymentSuccess = (details: { paymentType: 'pass' | 'block' | 'subscription' | 'donation' | 'film', itemId?: string }) => {
     if (details.paymentType === 'pass') {
       onGrantAllAccess();
-    } else if (details.paymentType === 'block' && details.itemId) {
-      onUnlockBlock(details.itemId);
+    } else if ((details.paymentType === 'block' || details.paymentType === 'film') && details.itemId) {
+      onUnlockItem(details.itemId);
     }
   };
 
@@ -105,7 +109,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
                   <div key={day.day} className="space-y-12 animate-fadeIn">
                       {day.blocks.map(block => {
                           const blockMovies = block.movieKeys.map(key => allMovies[key]).filter(Boolean);
-                          const isBlockUnlocked = hasAllAccessPass || unlockedBlockIds.has(block.id);
+                          const isBlockUnlocked = hasAllAccessPass || unlockedItemIds.has(block.id);
                           return (
                               <div key={block.id} className="bg-gradient-to-br from-gray-900 to-[#101010] border border-gray-800 rounded-xl shadow-lg overflow-hidden">
                                 <div className="p-4 sm:p-6 bg-black/20">
@@ -115,26 +119,29 @@ const FestivalView: React.FC<FestivalViewProps> = ({
                                       <p className="font-semibold text-purple-300">{block.time}</p>
                                     </div>
                                     {!isBlockUnlocked && (
-                                      <button
-                                        onClick={() => handlePurchaseClick('block', block)}
-                                        className="w-full sm:w-auto flex-shrink-0 bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg transition-transform hover:scale-105 shadow-md text-sm"
-                                      >
-                                        Unlock Block - $10.00
-                                      </button>
+                                        <button
+                                            onClick={() => handlePurchaseClick('block', block)}
+                                            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-5 rounded-lg transition-colors text-sm shadow-md flex-shrink-0"
+                                        >
+                                            Unlock Block - $10.00
+                                        </button>
                                     )}
                                    </div>
                                 </div>
                                 <div className="p-4 sm:p-6">
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-                                        {blockMovies.map(movie => (
-                                            <FilmBlockCard
-                                                key={movie.key}
-                                                movie={movie}
-                                                isUnlocked={isBlockUnlocked}
-                                                onWatch={() => navigateToMovie(movie.key)}
-                                                onUnlock={() => handlePurchaseClick('block', block)}
-                                            />
-                                        ))}
+                                        {blockMovies.map(movie => {
+                                            const isMovieUnlocked = isBlockUnlocked || unlockedItemIds.has(movie.key);
+                                            return (
+                                                <FilmBlockCard
+                                                    key={movie.key}
+                                                    movie={movie}
+                                                    isUnlocked={isMovieUnlocked}
+                                                    onWatch={() => navigateToMovie(movie.key)}
+                                                    onUnlockMovie={() => handlePurchaseClick('film', movie)}
+                                                />
+                                            );
+                                        })}
                                     </div>
                                 </div>
                               </div>
@@ -148,6 +155,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
         <SquarePaymentModal
             paymentType={paymentItem.type}
             block={paymentItem.block}
+            movie={paymentItem.movie}
             onClose={() => setIsPaymentModalOpen(false)}
             onPaymentSuccess={handlePaymentSuccess}
         />

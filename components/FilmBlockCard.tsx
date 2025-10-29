@@ -5,13 +5,13 @@ interface FilmBlockCardProps {
     movie: Movie;
     isUnlocked: boolean;
     onWatch: () => void;
-    onUnlock: () => void;
+    onUnlockMovie: () => void;
 }
 
-const FilmBlockCard: React.FC<FilmBlockCardProps> = ({ movie, isUnlocked, onWatch, onUnlock }) => {
+const FilmBlockCard: React.FC<FilmBlockCardProps> = ({ movie, isUnlocked, onWatch, onUnlockMovie }) => {
     return (
         <div 
-            onClick={isUnlocked ? onWatch : onUnlock}
+            onClick={isUnlocked ? onWatch : onUnlockMovie}
             className="group relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-800 border-2 border-transparent hover:border-purple-500 focus-within:border-purple-500 transition-all duration-300 cursor-pointer"
         >
             <img
@@ -35,7 +35,7 @@ const FilmBlockCard: React.FC<FilmBlockCardProps> = ({ movie, isUnlocked, onWatc
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                               <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                             </svg>
-                            Details
+                            Unlock Film
                         </>
                     )}
                 </div>

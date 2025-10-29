@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
@@ -8,6 +8,7 @@ import FestivalView from './FestivalView';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import { Movie, FestivalDay, FestivalConfig } from '../types';
 import { useFestivalAccess } from '../contexts/FestivalContext';
+import { isFestivalLiveNow } from '../constants';
 
 const FestivalPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -17,7 +18,7 @@ const FestivalPage: React.FC = () => {
     const [isStaging, setIsStaging] = useState(false);
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
     
-    const { unlockedBlockIds, hasAllAccessPass, unlockBlock, grantAllAccess } = useFestivalAccess();
+    const { unlockedItemIds, hasAllAccessPass, unlockItem, grantAllAccess } = useFestivalAccess();
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -54,11 +55,13 @@ const FestivalPage: React.FC = () => {
         window.location.search = params.toString();
     };
 
+    const isLive = useMemo(() => isFestivalLiveNow(festivalConfig), [festivalConfig]);
+
     if (isLoading) {
         return <LoadingSpinner />;
     }
 
-    if (!festivalConfig || !festivalConfig.isFestivalLive) {
+    if (!isLive) {
         return (
              <div className="flex flex-col min-h-screen bg-[#141414] text-white">
                 <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
@@ -76,17 +79,17 @@ const FestivalPage: React.FC = () => {
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
             {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} isFestivalLive={festivalConfig?.isFestivalLive} />
+            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} isFestivalLive={isLive} />
             
             <main className="flex-grow pt-16">
                  <div className="max-w-7xl mx-auto p-4 sm:p-8 md:p-12">
                      <FestivalView 
                         festivalData={festivalData}
-                        festivalConfig={festivalConfig}
+                        festivalConfig={festivalConfig!}
                         allMovies={movies}
-                        unlockedBlockIds={unlockedBlockIds}
+                        unlockedItemIds={unlockedItemIds}
                         hasAllAccessPass={hasAllAccessPass}
-                        onUnlockBlock={unlockBlock}
+                        onUnlockItem={unlockItem}
                         onGrantAllAccess={grantAllAccess}
                      />
                  </div>

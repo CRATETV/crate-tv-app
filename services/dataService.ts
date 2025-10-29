@@ -3,7 +3,7 @@ import { moviesData, categoriesData, festivalData, festivalConfigData, aboutData
 
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
-const LAST_KNOWN_LIVE_STATUS_KEY = 'cratetv-last-known-live-status';
+const LAST_KNOWN_FESTIVAL_DATES_KEY = 'cratetv-last-known-festival-dates';
 const CACHE_DURATION = 60 * 1000; // 1 minute
 
 // Updated to include a timestamp and sticky festival status.
@@ -21,15 +21,17 @@ const getFallbackData = (): FetchResult => {
   };
 
   // "STICKY" LOGIC: If the app fails to fetch live data, use the last known
-  // 'isFestivalLive' status to prevent the festival from disappearing on a network blip.
+  // festival dates to prevent the festival from disappearing on a network blip.
   try {
-    const lastKnownLiveStatus = localStorage.getItem(LAST_KNOWN_LIVE_STATUS_KEY);
-    if (lastKnownLiveStatus === 'true' && fallbackResult.data.festivalConfig) {
-      fallbackResult.data.festivalConfig.isFestivalLive = true;
-      console.log("[Fallback] Applied sticky live status to fallback data.");
+    const lastKnownDates = localStorage.getItem(LAST_KNOWN_FESTIVAL_DATES_KEY);
+    if (lastKnownDates && fallbackResult.data.festivalConfig) {
+      const { startDate, endDate } = JSON.parse(lastKnownDates);
+      fallbackResult.data.festivalConfig.startDate = startDate;
+      fallbackResult.data.festivalConfig.endDate = endDate;
+      console.log("[Fallback] Applied sticky festival dates to fallback data.");
     }
   } catch (e) {
-    console.warn("Could not apply sticky live status to fallback data.", e);
+    console.warn("Could not apply sticky festival dates to fallback data.", e);
   }
 
   return fallbackResult;
@@ -107,9 +109,13 @@ export const fetchAndCacheLiveData = async (options?: { force?: boolean }): Prom
             localStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload));
             localStorage.setItem(CACHE_TIMESTAMP_KEY, now.toString());
 
-            // Store the last known live status to make the UI "sticky"
+            // Store the last known festival dates to make the UI "sticky"
             if (data.festivalConfig) {
-                localStorage.setItem(LAST_KNOWN_LIVE_STATUS_KEY, JSON.stringify(data.festivalConfig.isFestivalLive));
+                const datesToStore = {
+                    startDate: data.festivalConfig.startDate,
+                    endDate: data.festivalConfig.endDate,
+                };
+                localStorage.setItem(LAST_KNOWN_FESTIVAL_DATES_KEY, JSON.stringify(datesToStore));
             }
         } catch(e) {
             console.warn("Could not write to localStorage cache.", e);

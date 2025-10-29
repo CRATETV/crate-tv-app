@@ -1,26 +1,26 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 
 interface FestivalContextType {
-    unlockedBlockIds: Set<string>;
+    unlockedItemIds: Set<string>;
     hasAllAccessPass: boolean;
-    unlockBlock: (blockId: string) => void;
+    unlockItem: (itemId: string) => void;
     grantAllAccess: () => void;
 }
 
 const FestivalContext = createContext<FestivalContextType | undefined>(undefined);
 
-const UNLOCKED_BLOCKS_KEY = 'cratetv-unlockedBlocks';
+const UNLOCKED_ITEMS_KEY = 'cratetv-unlockedItems-v2';
 const ALL_ACCESS_PASS_KEY = 'cratetv-allAccessPass';
 
 export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [unlockedBlockIds, setUnlockedBlockIds] = useState<Set<string>>(new Set());
+    const [unlockedItemIds, setUnlockedItemIds] = useState<Set<string>>(new Set());
     const [hasAllAccessPass, setHasAllAccessPass] = useState(false);
 
     useEffect(() => {
         try {
-            const storedBlocks = localStorage.getItem(UNLOCKED_BLOCKS_KEY);
-            if (storedBlocks) {
-                setUnlockedBlockIds(new Set(JSON.parse(storedBlocks)));
+            const storedItems = localStorage.getItem(UNLOCKED_ITEMS_KEY);
+            if (storedItems) {
+                setUnlockedItemIds(new Set(JSON.parse(storedItems)));
             }
             const storedPass = localStorage.getItem(ALL_ACCESS_PASS_KEY);
             if (storedPass === 'true') {
@@ -31,14 +31,14 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
     }, []);
 
-    const unlockBlock = (blockId: string) => {
-        setUnlockedBlockIds(prevIds => {
+    const unlockItem = (itemId: string) => {
+        setUnlockedItemIds(prevIds => {
             const newIds = new Set(prevIds);
-            newIds.add(blockId);
+            newIds.add(itemId);
             try {
-                localStorage.setItem(UNLOCKED_BLOCKS_KEY, JSON.stringify(Array.from(newIds)));
+                localStorage.setItem(UNLOCKED_ITEMS_KEY, JSON.stringify(Array.from(newIds)));
             } catch (e) {
-                console.error("Could not save unlocked blocks to localStorage", e);
+                console.error("Could not save unlocked items to localStorage", e);
             }
             return newIds;
         });
@@ -53,7 +53,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
     };
     
-    const value = { unlockedBlockIds, hasAllAccessPass, unlockBlock, grantAllAccess };
+    const value = { unlockedItemIds, hasAllAccessPass, unlockItem, grantAllAccess };
 
     return <FestivalContext.Provider value={value}>{children}</FestivalContext.Provider>;
 };

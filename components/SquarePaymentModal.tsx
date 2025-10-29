@@ -6,9 +6,9 @@ declare const Square: any; // Allow use of Square global from the SDK script
 interface SquarePaymentModalProps {
     movie?: Movie;
     block?: FilmBlock;
-    paymentType: 'donation' | 'subscription' | 'pass' | 'block';
+    paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'film';
     onClose: () => void;
-    onPaymentSuccess: (details: { paymentType: 'pass' | 'block' | 'subscription' | 'donation', itemId?: string }) => void;
+    onPaymentSuccess: (details: { paymentType: 'pass' | 'block' | 'subscription' | 'donation' | 'film', itemId?: string }) => void;
 }
 
 const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, paymentType, onClose, onPaymentSuccess }) => {
@@ -26,6 +26,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                 return { title: "All-Access Festival Pass", description: "Enjoy all film blocks for the entire festival.", amount: '50.00', isCustomAmount: false, itemId: 'all_access_pass' };
             case 'block':
                 return { title: `Unlock Block: "${block?.title}"`, description: "Watch all films in this specific block.", amount: '10.00', isCustomAmount: false, itemId: block?.id };
+            case 'film':
+                 return { title: `Unlock Film: "${movie?.title}"`, description: "Get permanent access to watch this festival film.", amount: '5.00', isCustomAmount: false, itemId: movie?.key };
             case 'donation':
             default:
                 return { title: `Support "${movie?.title}"`, description: "Your contribution directly supports the filmmakers.", amount: '10.00', isCustomAmount: true, itemId: movie?.key };

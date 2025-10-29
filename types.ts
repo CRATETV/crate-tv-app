@@ -45,7 +45,8 @@ export interface FestivalDay {
 export interface FestivalConfig {
   title: string;
   description: string;
-  isFestivalLive?: boolean;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface User {
