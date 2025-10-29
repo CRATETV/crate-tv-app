@@ -30,7 +30,7 @@ const BackToTopButton: React.FC<BackToTopButtonProps> = ({ isBannerVisible = fal
     };
   }, []);
 
-  const bottomClass = isBannerVisible ? 'bottom-20' : 'bottom-5';
+  const bottomClass = isBannerVisible ? 'bottom-24' : 'bottom-5';
 
   return (
     <div className={`fixed right-5 z-50 ${bottomClass} transition-all duration-300`}>

@@ -5,7 +5,6 @@ import PublicS3Uploader from './PublicS3Uploader';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import { Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
-import GreenRoomFeed from './GreenRoomFeed';
 
 const ACTOR_PASSWORD = 'cratebio'; // Shared password for all actors
 
@@ -16,7 +15,6 @@ const ActorPortalPage: React.FC = () => {
     const [passwordInput, setPasswordInput] = useState('');
     const [authError, setAuthError] = useState('');
     const [authLoading, setAuthLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState('greenroom');
 
     // Data state
     const [isLoadingData, setIsLoadingData] = useState(true);
@@ -131,7 +129,7 @@ const ActorPortalPage: React.FC = () => {
                 <main className="flex-grow flex items-center justify-center p-4">
                     <div className="w-full max-w-md bg-gray-900 p-8 rounded-lg shadow-lg border border-gray-700">
                         <h1 className="text-2xl font-bold mb-4 text-center text-white">Actor Portal Login</h1>
-                        <p className="text-center text-sm text-gray-400 mb-6">Enter your name and the provided password to access the Green Room.</p>
+                        <p className="text-center text-sm text-gray-400 mb-6">Enter your name and the provided password to access the portal.</p>
                         <form onSubmit={handleLogin} className="space-y-4">
                             <div>
                                 <label htmlFor="actorName" className="block text-sm font-medium text-gray-400 mb-2">Full Name</label>
@@ -151,59 +149,44 @@ const ActorPortalPage: React.FC = () => {
         );
     }
     
-    const tabButtonClasses = (tabName: string) => `whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors ${activeTab === tabName ? 'border-purple-500 text-purple-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'}`;
-
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
             <main className="flex-grow pt-24 px-4 md:px-12">
                 <div className="max-w-4xl mx-auto">
-                    <div className="border-b border-gray-700 mb-8">
-                        <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-                            <button onClick={() => setActiveTab('greenroom')} className={tabButtonClasses('greenroom')}>Green Room</button>
-                            <button onClick={() => setActiveTab('profile')} className={tabButtonClasses('profile')}>Update My Profile</button>
-                        </nav>
-                    </div>
-
-                    {activeTab === 'greenroom' && (
-                        <GreenRoomFeed actorName={formState.actorName} />
-                    )}
-
-                    {activeTab === 'profile' && (
-                        submitStatus === 'success' ? (
-                            <div className="text-center py-16 bg-gray-800/50 border border-gray-700 rounded-lg p-8 sm:p-12 animate-[fadeIn_0.5s_ease-out]">
-                                <h1 className="text-3xl sm:text-4xl font-bold text-green-400 mb-4">Submission Received!</h1>
-                                <p className="text-gray-300">Thank you for updating your profile. Our team will review your submission shortly.</p>
-                            </div>
-                        ) : (
-                            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-8">
-                                <form onSubmit={handleSubmit} className="space-y-6">
-                                    <h2 className="text-3xl font-bold text-white mb-4">Update Your Profile</h2>
-                                    <div>
-                                        <label htmlFor="actorName" className="block text-sm font-medium text-gray-400 mb-2">Your Full Name</label>
-                                        <input type="text" id="actorName" name="actorName" value={formState.actorName} className="form-input bg-gray-700" readOnly />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-2">Your Email Address</label>
-                                        <input type="email" id="email" name="email" onChange={handleChange} className="form-input" required />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="bio" className="block text-sm font-medium text-gray-400 mb-2">Your Biography</label>
-                                        <textarea id="bio" name="bio" rows={5} onChange={handleChange} className="form-input" required></textarea>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="imdbUrl" className="block text-sm font-medium text-gray-400 mb-2">IMDb Profile Link (Optional)</label>
-                                        <input type="url" id="imdbUrl" name="imdbUrl" onChange={handleChange} className="form-input" placeholder="https://www.imdb.com/name/nm..." />
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <PublicS3Uploader label="Upload Headshot (Small)" onUploadSuccess={(url) => handleUrlUpdate('photoUrl', url)} />
-                                        <PublicS3Uploader label="Upload High-Res Photo" onUploadSuccess={(url) => handleUrlUpdate('highResPhotoUrl', url)} />
-                                    </div>
-                                    <button type="submit" className="submit-btn w-full mt-8" disabled={submitStatus === 'submitting'}>{submitStatus === 'submitting' ? 'Submitting...' : 'Submit for Review'}</button>
-                                    {submitStatus === 'error' && <p className="mt-4 text-center text-red-400">{submitError}</p>}
-                                </form>
-                            </div>
-                        )
+                    {submitStatus === 'success' ? (
+                        <div className="text-center py-16 bg-gray-800/50 border border-gray-700 rounded-lg p-8 sm:p-12 animate-[fadeIn_0.5s_ease-out]">
+                            <h1 className="text-3xl sm:text-4xl font-bold text-green-400 mb-4">Submission Received!</h1>
+                            <p className="text-gray-300">Thank you for updating your profile. Our team will review your submission shortly.</p>
+                        </div>
+                    ) : (
+                        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-8">
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <h2 className="text-3xl font-bold text-white mb-4">Update Your Profile</h2>
+                                <div>
+                                    <label htmlFor="actorName" className="block text-sm font-medium text-gray-400 mb-2">Your Full Name</label>
+                                    <input type="text" id="actorName" name="actorName" value={formState.actorName} className="form-input bg-gray-700" readOnly />
+                                </div>
+                                <div>
+                                    <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-2">Your Email Address</label>
+                                    <input type="email" id="email" name="email" onChange={handleChange} className="form-input" required />
+                                </div>
+                                <div>
+                                    <label htmlFor="bio" className="block text-sm font-medium text-gray-400 mb-2">Your Biography</label>
+                                    <textarea id="bio" name="bio" rows={5} onChange={handleChange} className="form-input" required></textarea>
+                                </div>
+                                <div>
+                                    <label htmlFor="imdbUrl" className="block text-sm font-medium text-gray-400 mb-2">IMDb Profile Link (Optional)</label>
+                                    <input type="url" id="imdbUrl" name="imdbUrl" onChange={handleChange} className="form-input" placeholder="https://www.imdb.com/name/nm..." />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <PublicS3Uploader label="Upload Headshot (Small)" onUploadSuccess={(url) => handleUrlUpdate('photoUrl', url)} />
+                                    <PublicS3Uploader label="Upload High-Res Photo" onUploadSuccess={(url) => handleUrlUpdate('highResPhotoUrl', url)} />
+                                </div>
+                                <button type="submit" className="submit-btn w-full mt-8" disabled={submitStatus === 'submitting'}>{submitStatus === 'submitting' ? 'Submitting...' : 'Submit for Review'}</button>
+                                {submitStatus === 'error' && <p className="mt-4 text-center text-red-400">{submitError}</p>}
+                            </form>
+                        </div>
                     )}
                 </div>
             </main>

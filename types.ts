@@ -1,4 +1,3 @@
-
 // FIX: Removed circular import from './types'. The types are defined in this file and should not be imported from themselves.
 
 export interface Actor {
@@ -128,6 +127,7 @@ export interface ActorProfile {
   imdbUrl?: string;
 }
 
+// FIX: Add the missing ActorPost interface to resolve import errors in GreenRoomFeed.tsx and get-actor-feed.ts.
 export interface ActorPost {
   id: string;
   actorName: string;
@@ -135,7 +135,7 @@ export interface ActorPost {
   content: string;
   imageUrl?: string;
   timestamp: any; // Firestore timestamp
-  likes: string[]; // Array of actor names who liked it
+  likes: string[];
 }
 
 export interface FilmmakerFilmPerformance {

@@ -31,6 +31,7 @@ const WatchlistPage = lazy(() => import('./components/WatchlistPage'));
 const FilmmakerSignupPage = lazy(() => import('./components/FilmmakerSignupPage'));
 const FilmmakerPortalPage = lazy(() => import('./components/FilmmakerPortalPage'));
 const PremiumPage = lazy(() => import('./components/PremiumPage'));
+const ComingSoonPage = lazy(() => import('./components/ComingSoonPage'));
 
 
 const rootElement = document.getElementById('root');
@@ -106,6 +107,8 @@ const AppRouter: React.FC = () => {
       return <LoginPage />;
     case '/classics':
       return <ClassicsPage />;
+    case '/coming-soon':
+      return <ComingSoonPage />;
     case '/top-ten':
       return <TopTenPage />;
     case '/submit':

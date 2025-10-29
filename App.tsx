@@ -15,7 +15,6 @@ import FeatureModal from './components/FeatureModal';
 import DataStatusIndicator from './components/DataStatusIndicator';
 import FestivalLiveModal from './components/FestivalLiveModal';
 import ComingSoonBanner from './components/ComingSoonBanner';
-import ComingSoonModal from './components/ComingSoonModal';
 import { useAuth } from './contexts/AuthContext';
 import { isMovieReleased } from './constants';
 
@@ -52,7 +51,6 @@ const App: React.FC = () => {
   const [showFeatureModal, setShowFeatureModal] = useState(false);
   const [showFestivalLiveModal, setShowFestivalLiveModal] = useState(false);
   const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
-  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
 
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
@@ -408,7 +406,7 @@ const App: React.FC = () => {
 
   return (
     <div className={`flex flex-col min-h-screen bg-[#141414] ${upcomingMovies.length > 0 ? 'pb-16' : ''}`}>
-      {upcomingMovies.length > 0 && <ComingSoonBanner onClick={() => setShowComingSoonModal(true)} />}
+      {upcomingMovies.length > 0 && <ComingSoonBanner />}
       {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
       <DataStatusIndicator source={dataSource} />
       <Header
@@ -541,16 +539,6 @@ const App: React.FC = () => {
             window.history.pushState({}, '', '/festival');
             window.dispatchEvent(new Event('pushstate'));
           }}
-        />
-      )}
-      {showComingSoonModal && (
-        <ComingSoonModal
-            movies={upcomingMovies}
-            onClose={() => setShowComingSoonModal(false)}
-            onSelectMovie={(movie) => {
-                setShowComingSoonModal(false);
-                handleSelectMovie(movie);
-            }}
         />
       )}
     </div>
