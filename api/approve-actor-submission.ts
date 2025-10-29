@@ -70,5 +70,41 @@ export async function POST(request: Request) {
     };
     batch.set(actorProfileRef, actorProfileData, { merge: true });
 
+    // 2. Find all movies this actor is in and update their details
+    const moviesSnapshot = await db.collection('movies').get();
+    moviesSnapshot.forEach(doc => {
+        const movie = doc.data() as Movie;
+        if (Array.isArray(movie.cast)) {
+            let castUpdated = false;
+            const updatedCast = movie.cast.map(actor => {
+                if (actor.name === actorName) {
+                    castUpdated = true;
+                    // Update with new data from submission
+                    return { ...actor, bio, photo: photoUrl, highResPhoto: highResPhotoUrl };
+                }
+                return actor;
+            });
 
-    // 
+            if (castUpdated) {
+                batch.update(doc.ref, { cast: updatedCast });
+            }
+        }
+    });
+
+    // 3. Mark the submission as approved
+    batch.update(submissionRef, { status: 'approved' });
+
+    // 4. Commit all batch operations
+    await batch.commit();
+
+    return new Response(JSON.stringify({ success: true, message: 'Submission approved and all profiles updated.' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error("Error approving submission:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
+}
