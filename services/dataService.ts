@@ -13,6 +13,7 @@ const getFallbackData = (): FetchResult => ({
     festivalData: festivalData,
     festivalConfig: festivalConfigData,
     aboutData: aboutData,
+    actorSubmissions: [],
   },
   source: 'fallback',
   timestamp: Date.now(),
