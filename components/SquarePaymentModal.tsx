@@ -40,7 +40,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
         const initializeSquare = async () => {
             setStatus('loading');
             try {
-                const configRes = await fetch('/api/square-config', { method: 'POST' });
+                // The API endpoint now correctly determines whether to use Sandbox or Production keys.
+                const configRes = await fetch('/api/square-config', { method: 'GET' });
                 if (!configRes.ok) throw new Error('Could not load payment configuration.');
                 const { applicationId, locationId } = await configRes.json();
 

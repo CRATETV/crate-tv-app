@@ -82,6 +82,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 });
                 return () => unsubscribe();
             } else {
+                // Auth service is not available, run in guest mode
+                 try {
+                    const storedWatchlist = localStorage.getItem(WATCHLIST_KEY);
+                    setAnonymousWatchlist(storedWatchlist ? JSON.parse(storedWatchlist) : []);
+                    const storedMovies = localStorage.getItem(PURCHASED_MOVIES_KEY);
+                    if (storedMovies) setPurchasedMovies(JSON.parse(storedMovies));
+                    const storedBlocks = localStorage.getItem(UNLOCKED_BLOCKS_KEY);
+                    if (storedBlocks) setUnlockedFestivalBlockIds(new Set(JSON.parse(storedBlocks)));
+                    const storedPass = localStorage.getItem(ALL_ACCESS_PASS_KEY);
+                    if (storedPass === 'true') setHasFestivalAllAccess(true);
+                } catch (error) {
+                    console.error("Failed to load guest data from localStorage", error);
+                }
                 setAuthInitialized(true);
             }
         });
@@ -133,7 +146,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const logout = () => {
         const auth = getAuthInstance();
         if (auth) signOut(auth);
-        window.history.pushState({}, '', '/');
+        window.history.pushState({}, '', '/login');
         window.dispatchEvent(new Event('pushstate'));
     };
 

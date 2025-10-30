@@ -17,7 +17,6 @@ import AccountPage from './components/AccountPage';
 import FestivalPage from './components/FestivalPage';
 import FilmFestivalModule from './FilmFestivalModule';
 import DeveloperGuidePage from './components/DeveloperGuidePage';
-import LandingPage from './components/LandingPage';
 import ThankYouPage from './components/ThankYouPage';
 import TopTenPage from './components/TopTenPage';
 import ActorPortalPage from './components/ActorPortalPage';
@@ -25,6 +24,10 @@ import ActorSignupPage from './components/ActorSignupPage';
 import ActorsDirectoryPage from './components/ActorsDirectoryPage';
 import ActorProfilePage from './components/ActorProfilePage';
 import WatchlistPage from './components/WatchlistPage';
+import AnalyticsPage from './components/AnalyticsPage';
+import FilmmakerPortalPage from './components/FilmmakerPortalPage';
+import FilmmakerSignupPage from './components/FilmmakerSignupPage';
+import RokuGuidePage from './components/RokuGuidePage';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -73,8 +76,7 @@ const AppRouter: React.FC = () => {
 
   const movieMatch = route.match(/^\/movie\/([a-zA-Z0-9_-]+)/);
   if (movieMatch && movieMatch[1]) {
-    // Make the MoviePage public; it will handle its own auth checks internally.
-    return <MoviePage movieKey={movieMatch[1]} />;
+    return user ? <MoviePage movieKey={movieMatch[1]} /> : <RedirectToLogin />;
   }
 
   const actorProfileMatch = route.match(/^\/actors\/([a-zA-Z0-9_-]+)/);
@@ -86,21 +88,21 @@ const AppRouter: React.FC = () => {
   // Handle static routes with authentication checks
   switch (route) {
     case '/':
-      return user ? <App /> : <LandingPage />;
+      return user ? <App /> : <RedirectToLogin />;
     case '/account':
       return user ? <AccountPage /> : <RedirectToLogin />;
     case '/festival':
        return user ? <FestivalPage /> : <RedirectToLogin />;
     case '/watchlist':
       return user ? <WatchlistPage /> : <RedirectToLogin />;
+    case '/classics':
+      return user ? <ClassicsPage /> : <RedirectToLogin />;
+    case '/top-ten': // Made public per user request
+      return <TopTenPage />;
     
     // Public Routes
     case '/login':
       return <LoginPage />;
-    case '/classics':
-      return <ClassicsPage />;
-    case '/top-ten':
-      return <TopTenPage />;
     case '/submit':
       return <SubmitPage />;
     case '/actor-signup':
@@ -109,23 +111,33 @@ const AppRouter: React.FC = () => {
       return <ActorPortalPage />;
     case '/actors':
       return <ActorsDirectoryPage />;
+    case '/filmmaker-signup':
+      return <FilmmakerSignupPage />;
+    case '/filmmaker-portal':
+      return <FilmmakerPortalPage />;
     case '/thank-you':
       return <ThankYouPage />;
     case '/merch':
       return <MerchPage />;
-    case '/admin':
-      return <AdminPage />;
     case '/contact':
       return <ContactPage />;
     case '/about':
       return <AboutPage />;
+    case '/roku-guide':
+      return <RokuGuidePage />;
+      
+    // Admin & Dev routes
+    case '/admin':
+      return <AdminPage />;
+    case '/analytics':
+      return <AnalyticsPage />;
     case '/filmfestivalmodule':
       return <FilmFestivalModule />;
     case '/developer-guide':
       return <DeveloperGuidePage />;
     default:
       // Fallback to the appropriate homepage for any unknown routes
-      return user ? <App /> : <LandingPage />;
+      return user ? <App /> : <RedirectToLogin />;
   }
 };
 

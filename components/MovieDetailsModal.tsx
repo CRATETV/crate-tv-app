@@ -54,7 +54,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   isPremiumMovie,
   isPremiumSubscriber
 }) => {
-  const { user, toggleWatchlist } = useAuth();
+  const { user, watchlist, toggleWatchlist } = useAuth();
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
   const [isTogglingWatchlist, setIsTogglingWatchlist] = useState(false);
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
@@ -65,7 +65,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
   const [released, setReleased] = useState(() => isMovieReleased(movie));
   
-  const isOnWatchlist = useMemo(() => user?.watchlist?.includes(movie.key), [user, movie.key]);
+  const isOnWatchlist = useMemo(() => watchlist.includes(movie.key), [watchlist, movie.key]);
 
   useEffect(() => {
     if (released) return;

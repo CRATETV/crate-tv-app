@@ -272,17 +272,6 @@ const App: React.FC = () => {
         movies: watchlistMovies,
     } : null;
 
-    // Create Top 10 category
-    const topTenMovies = visibleMovies
-        .sort((a, b) => (b.likes || 0) - (a.likes || 0))
-        .slice(0, 10);
-    
-    const topTenCategory: DisplayedCategory | null = topTenMovies.length > 0 && topTenMovies.some(m => (m.likes || 0) > 0) ? {
-        key: 'topTen',
-        title: 'Top 10 Most Liked Films',
-        movies: topTenMovies,
-    } : null;
-
     const baseCategoryOrder: string[] = ["newReleases", "awardWinners", "pwff12thAnnual", "comedy", "drama", "documentary", "exploreTitles"];
     
     const standardCategories = baseCategoryOrder
@@ -319,7 +308,7 @@ const App: React.FC = () => {
       })
       .filter((c): c is DisplayedCategory => !!c);
       
-      return [myListCategory, topTenCategory, ...standardCategories].filter((c): c is DisplayedCategory => !!c);
+      return [myListCategory, ...standardCategories].filter((c): c is DisplayedCategory => !!c);
 
   }, [categories, isFestivalLive, visibleMovies, watchlist, movies]);
   
@@ -499,7 +488,6 @@ const App: React.FC = () => {
                     title={cat.title}
                     movies={cat.movies}
                     onSelectMovie={handleSelectMovie}
-                    showRankings={cat.key === 'topTen'}
                   />
                 ))}
               </div>
