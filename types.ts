@@ -57,7 +57,6 @@ export interface User {
   avatar?: string;
   isPremiumSubscriber?: boolean;
   watchlist?: string[];
-  purchasedMovies?: string[];
 }
 
 // FIX: Added missing type definitions for Filmmaker Analytics and Payouts.

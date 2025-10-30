@@ -18,7 +18,7 @@ const WatchlistPage: React.FC = () => {
     const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
     const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
 
-    const { user, toggleWatchlist } = useAuth();
+    const { user, watchlist } = useAuth();
 
     useEffect(() => {
         const loadData = async () => {
@@ -40,9 +40,9 @@ const WatchlistPage: React.FC = () => {
     }, []);
     
     const watchlistMovies = useMemo(() => {
-        if (!user?.watchlist) return [];
-        return user.watchlist.map(key => allMovies[key]).filter(Boolean);
-    }, [user, allMovies]);
+        if (!watchlist) return [];
+        return watchlist.map(key => allMovies[key]).filter(Boolean);
+    }, [watchlist, allMovies]);
 
     const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
     const handleCloseDetailsModal = () => setDetailsMovie(null);

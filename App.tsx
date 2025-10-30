@@ -32,7 +32,7 @@ type DisplayedCategory = {
 };
 
 const App: React.FC = () => {
-  const { user, toggleWatchlist } = useAuth();
+  const { watchlist } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
@@ -190,11 +190,18 @@ const App: React.FC = () => {
 
   // Effect to show the Festival Live modal once per session
   useEffect(() => {
-    if (!isLoading && festivalConfig?.isFestivalLive) {
-      const hasSeenModal = sessionStorage.getItem('hasSeenFestivalLiveModal');
-      if (!hasSeenModal) {
-        setShowFestivalLiveModal(true);
-        sessionStorage.setItem('hasSeenFestivalLiveModal', 'true');
+    if (!isLoading && festivalConfig?.startDate && festivalConfig?.endDate) {
+      const now = new Date();
+      const start = new Date(festivalConfig.startDate);
+      const end = new Date(festivalConfig.endDate);
+      const isLive = now >= start && now < end;
+
+      if (isLive) {
+        const hasSeenModal = sessionStorage.getItem('hasSeenFestivalLiveModal');
+        if (!hasSeenModal) {
+          setShowFestivalLiveModal(true);
+          sessionStorage.setItem('hasSeenFestivalLiveModal', 'true');
+        }
       }
     }
   }, [isLoading, festivalConfig]);
@@ -231,10 +238,18 @@ const App: React.FC = () => {
     });
   }, [movies]);
 
+  const isFestivalLive = useMemo(() => {
+      if (!festivalConfig?.startDate || !festivalConfig?.endDate) return false;
+      const now = new Date();
+      const start = new Date(festivalConfig.startDate);
+      const end = new Date(festivalConfig.endDate);
+      return now >= start && now < end;
+  }, [festivalConfig]);
+
   // Re-architected category rendering logic for stability and mobile visibility.
   // 1. Memoize festival movies separately for dedicated rendering.
   const festivalLiveMovies = useMemo(() => {
-    if (!festivalConfig?.isFestivalLive || !categories.pwff12thAnnual) {
+    if (!isFestivalLive || !categories.pwff12thAnnual) {
         return null;
     }
     const festivalMovies = categories.pwff12thAnnual.movieKeys
@@ -242,12 +257,12 @@ const App: React.FC = () => {
         .filter((m): m is Movie => !!m);
     
     return festivalMovies.length > 0 ? festivalMovies : null;
-  }, [festivalConfig, categories, visibleMovies]);
+  }, [isFestivalLive, categories, visibleMovies]);
 
   // 2. Memoize the remaining standard categories for the main display list.
   const displayedCategories = useMemo(() => {
     // Create My List category
-    const watchlistMovies = (user?.watchlist || [])
+    const watchlistMovies = (watchlist || [])
         .map(key => movies[key])
         .filter((m): m is Movie => !!m);
 
@@ -275,7 +290,7 @@ const App: React.FC = () => {
         const category = categories[key];
         if (!category) return null;
         
-        if (key === 'pwff12thAnnual' && festivalConfig?.isFestivalLive) {
+        if (key === 'pwff12thAnnual' && isFestivalLive) {
             return null;
         }
 
@@ -306,7 +321,7 @@ const App: React.FC = () => {
       
       return [myListCategory, topTenCategory, ...standardCategories].filter((c): c is DisplayedCategory => !!c);
 
-  }, [categories, festivalConfig, visibleMovies, user, movies]);
+  }, [categories, isFestivalLive, visibleMovies, watchlist, movies]);
   
   // Filter movies based on search query
   const searchResults = useMemo(() => {
@@ -406,7 +421,7 @@ const App: React.FC = () => {
         onMobileSearchClick={() => setIsMobileSearchOpen(true)}
         isStaging={isStaging}
         isOffline={dataSource === 'fallback'}
-        isFestivalLive={festivalConfig?.isFestivalLive}
+        isFestivalLive={isFestivalLive}
       />
       
       <main className="flex-grow">

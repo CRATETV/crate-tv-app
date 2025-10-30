@@ -9,6 +9,12 @@ import {
     updateUserProfile
 } from '../services/firebaseClient';
 
+// --- LOCAL STORAGE KEYS ---
+const WATCHLIST_KEY = 'cratetv-watchlist';
+const PURCHASED_MOVIES_KEY = 'cratetv-purchasedMovies';
+const UNLOCKED_BLOCKS_KEY = 'cratetv-unlockedBlocks';
+const ALL_ACCESS_PASS_KEY = 'cratetv-allAccessPass';
+
 interface AuthContextType {
     user: User | null;
     authInitialized: boolean;
@@ -18,61 +24,78 @@ interface AuthContextType {
     setAvatar: (avatarId: string) => void;
     sendPasswordReset: (email: string) => Promise<void>;
     subscribe: () => Promise<void>;
+    // Combined watchlist and device-local state
+    watchlist: string[];
+    purchasedMovies: string[];
+    unlockedFestivalBlockIds: Set<string>;
+    hasFestivalAllAccess: boolean;
     toggleWatchlist: (movieKey: string) => Promise<void>;
+    purchaseMovie: (movieKey: string) => void;
+    unlockFestivalBlock: (blockId: string) => void;
+    grantFestivalAllAccess: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    // --- User Authentication State ---
     const [user, setUser] = useState<User | null>(null);
     const [authInitialized, setAuthInitialized] = useState(false);
 
+    // --- State for GUEST users (device-local) ---
+    const [anonymousWatchlist, setAnonymousWatchlist] = useState<string[]>([]);
+    const [purchasedMovies, setPurchasedMovies] = useState<string[]>([]);
+    const [unlockedFestivalBlockIds, setUnlockedFestivalBlockIds] = useState<Set<string>>(new Set());
+    const [hasFestivalAllAccess, setHasFestivalAllAccess] = useState(false);
+
+    // Effect for initializing Firebase Auth and handling user state changes
     useEffect(() => {
         initializeFirebaseAuth().then(auth => {
             if (auth) {
                 const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
                     if (firebaseUser) {
-                        // User is signed in, fetch their profile from Firestore.
                         let userProfile = await getUserProfile(firebaseUser.uid);
-                        if (!userProfile) {
-                            // This might happen if profile creation failed after sign-up.
-                            // We can create it here as a fallback.
-                            if (firebaseUser.email) {
-                                userProfile = await createUserProfile(firebaseUser.uid, firebaseUser.email);
-                            }
+                        if (!userProfile && firebaseUser.email) {
+                            userProfile = await createUserProfile(firebaseUser.uid, firebaseUser.email);
                         }
                         setUser(userProfile);
+                        // When user logs in, clear any guest data from memory and storage
+                        setAnonymousWatchlist([]);
+                        localStorage.removeItem(WATCHLIST_KEY);
                     } else {
-                        // User is signed out.
                         setUser(null);
+                        // When user logs out or is a guest, load device-local data
+                        try {
+                            const storedWatchlist = localStorage.getItem(WATCHLIST_KEY);
+                            setAnonymousWatchlist(storedWatchlist ? JSON.parse(storedWatchlist) : []);
+                            const storedMovies = localStorage.getItem(PURCHASED_MOVIES_KEY);
+                            if (storedMovies) setPurchasedMovies(JSON.parse(storedMovies));
+                            const storedBlocks = localStorage.getItem(UNLOCKED_BLOCKS_KEY);
+                            if (storedBlocks) setUnlockedFestivalBlockIds(new Set(JSON.parse(storedBlocks)));
+                            const storedPass = localStorage.getItem(ALL_ACCESS_PASS_KEY);
+                            if (storedPass === 'true') setHasFestivalAllAccess(true);
+                        } catch (error) {
+                            console.error("Failed to load guest data from localStorage", error);
+                        }
                     }
                     setAuthInitialized(true);
                 });
                 return () => unsubscribe();
             } else {
-                // Firebase failed to initialize
                 setAuthInitialized(true);
             }
         });
     }, []);
 
+
     const handleAuthError = (error: any): string => {
-        // FIX: Directly access properties on the 'error' object to avoid type resolution issues with AuthError.
         switch (error.code) {
-            case 'auth/wrong-password':
-            case 'auth/invalid-credential':
-                return 'Incorrect email or password.';
-            case 'auth/user-not-found':
-                 return 'No account found with this email. Please sign up.';
-            case 'auth/email-already-in-use':
-                return 'An account with this email already exists. Please sign in.';
-            case 'auth/weak-password':
-                return 'Password should be at least 6 characters.';
-            case 'auth/invalid-email':
-                return 'Please enter a valid email address.';
-            default:
-                // FIX: Directly access properties on the 'error' object.
-                return error.message || 'An unknown error occurred.';
+            case 'auth/wrong-password': case 'auth/invalid-credential': return 'Incorrect email or password.';
+            case 'auth/user-not-found': return 'No account found with this email. Please sign up.';
+            case 'auth/email-already-in-use': return 'An account with this email already exists. Please sign in.';
+            case 'auth/weak-password': return 'Password should be at least 6 characters.';
+            case 'auth/invalid-email': return 'Please enter a valid email address.';
+            default: return error.message || 'An unknown error occurred.';
         }
     };
 
@@ -91,7 +114,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!auth) throw new Error("Authentication service is not available.");
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            // After user is created in Auth, create their profile in Firestore.
             await createUserProfile(userCredential.user.uid, email);
         } catch (error) {
             throw new Error(handleAuthError(error));
@@ -108,81 +130,105 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-
     const logout = () => {
         const auth = getAuthInstance();
-        if (auth) {
-          signOut(auth);
-        }
+        if (auth) signOut(auth);
         window.history.pushState({}, '', '/');
         window.dispatchEvent(new Event('pushstate'));
     };
 
     const setAvatar = async (avatarId: string) => {
         if (user) {
-            // Optimistically update the UI
             const updatedUser = { ...user, avatar: avatarId };
             setUser(updatedUser);
-
-            // Persist the change to Firestore
             try {
                 await updateUserProfile(user.uid, { avatar: avatarId });
             } catch (error) {
-                console.error("Failed to save avatar to Firestore:", error);
-                // Optionally, revert the UI change if the save fails
+                console.error("Failed to save avatar:", error);
                 setUser(user); 
             }
         }
     };
+    
+    // --- Watchlist and Entitlement Functions ---
 
+    const toggleWatchlist = async (movieKey: string) => {
+        if (user) {
+            // User is logged in: sync with Firestore
+            const currentWatchlist = user.watchlist || [];
+            const isOnList = currentWatchlist.includes(movieKey);
+            const newList = isOnList
+                ? currentWatchlist.filter(key => key !== movieKey)
+                : [...currentWatchlist, movieKey];
+
+            // Optimistically update local state for instant UI feedback
+            setUser(prevUser => prevUser ? { ...prevUser, watchlist: newList } : null);
+            
+            try {
+                await updateUserProfile(user.uid, { watchlist: newList });
+            } catch (error) {
+                console.error("Failed to update watchlist in Firestore:", error);
+                // Revert UI on failure
+                setUser(prevUser => prevUser ? { ...prevUser, watchlist: currentWatchlist } : null);
+            }
+        } else {
+            // User is a guest: use device local storage
+            setAnonymousWatchlist(prev => {
+                const isOnList = prev.includes(movieKey);
+                const newList = isOnList ? prev.filter(key => key !== movieKey) : [...prev, movieKey];
+                localStorage.setItem(WATCHLIST_KEY, JSON.stringify(newList));
+                return newList;
+            });
+        }
+    };
+
+    const purchaseMovie = (movieKey: string) => {
+        setPurchasedMovies(prev => {
+            if (prev.includes(movieKey)) return prev;
+            const newList = [...prev, movieKey];
+            localStorage.setItem(PURCHASED_MOVIES_KEY, JSON.stringify(newList));
+            return newList;
+        });
+    };
+    
+    const unlockFestivalBlock = (blockId: string) => {
+        setUnlockedFestivalBlockIds(prev => {
+            const newIds = new Set(prev);
+            newIds.add(blockId);
+            localStorage.setItem(UNLOCKED_BLOCKS_KEY, JSON.stringify(Array.from(newIds)));
+            return newIds;
+        });
+    };
+
+    const grantFestivalAllAccess = () => {
+        setHasFestivalAllAccess(true);
+        localStorage.setItem(ALL_ACCESS_PASS_KEY, 'true');
+    };
+    
+    // This function is for premium subscriptions, which are tied to the account.
     const subscribe = async () => {
         if (user) {
-            // Optimistically update the UI
             const updatedUser = { ...user, isPremiumSubscriber: true };
             setUser(updatedUser);
-    
             try {
                 await updateUserProfile(user.uid, { isPremiumSubscriber: true });
-                // Also track subscription for analytics in a non-blocking way
-                fetch('/api/track-subscription', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: user.email }),
-                }).catch(error => {
-                    console.warn('Failed to track subscription:', error);
-                });
             } catch (error) {
-                console.error("Failed to save premium status to Firestore:", error);
-                // Revert the UI change if the save fails
+                console.error("Failed to save premium status:", error);
                 setUser(user);
                 throw error;
             }
         }
     };
-
-    const toggleWatchlist = async (movieKey: string) => {
-        if (!user) return;
-
-        const currentWatchlist = user.watchlist || [];
-        const isOnWatchlist = currentWatchlist.includes(movieKey);
-        const newWatchlist = isOnWatchlist
-            ? currentWatchlist.filter(key => key !== movieKey)
-            : [...currentWatchlist, movieKey];
-
-        // Optimistic UI update
-        setUser({ ...user, watchlist: newWatchlist });
-
-        try {
-            await updateUserProfile(user.uid, { watchlist: newWatchlist });
-        } catch (error) {
-            console.error("Failed to update watchlist:", error);
-            // Revert on failure
-            setUser({ ...user, watchlist: currentWatchlist });
-            throw new Error("Could not update your list. Please try again.");
-        }
-    };
     
-    const value = { user, authInitialized, signIn, signUp, logout, setAvatar, sendPasswordReset, subscribe, toggleWatchlist };
+    // The unified watchlist value: uses the account's list if logged in, otherwise the device's list.
+    const unifiedWatchlist = user?.watchlist ?? anonymousWatchlist;
+
+    const value = { 
+        user, authInitialized, signIn, signUp, logout, setAvatar, sendPasswordReset, subscribe,
+        watchlist: unifiedWatchlist,
+        purchasedMovies, unlockedFestivalBlockIds, hasFestivalAllAccess,
+        toggleWatchlist, purchaseMovie, unlockFestivalBlock, grantFestivalAllAccess
+    };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { FestivalProvider } from './contexts/FestivalContext';
 
 // Import all page components
 import App from './App';
@@ -164,9 +163,7 @@ const Root: React.FC = () => {
 root.render(
   <React.StrictMode>
     <AuthProvider>
-      <FestivalProvider>
-        <Root />
-      </FestivalProvider>
+      <Root />
     </AuthProvider>
   </React.StrictMode>
 );

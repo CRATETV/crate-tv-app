@@ -16,11 +16,6 @@ const FilmFestivalModule: React.FC = () => {
         festivalData={festivalData}
         festivalConfig={festivalConfigData}
         allMovies={moviesData}
-        // FIX: Provide dummy props for access control to satisfy the component's interface for this preview module.
-        unlockedBlockIds={new Set()}
-        hasAllAccessPass={false}
-        onUnlockBlock={() => { console.log('Unlock block clicked in preview module.'); }}
-        onGrantAllAccess={() => { console.log('Grant all access clicked in preview module.'); }}
       />
     </div>
   );

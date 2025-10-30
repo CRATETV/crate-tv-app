@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { Movie, FestivalDay, FestivalConfig } from '../types';
 import FestivalView from './FestivalView';
-import { useFestivalAccess } from '../contexts/FestivalContext';
 
 interface FestivalModalProps {
     festivalData: FestivalDay[];
@@ -11,9 +10,6 @@ interface FestivalModalProps {
 }
 
 const FestivalModal: React.FC<FestivalModalProps> = ({ festivalData, festivalConfig, allMovies, onClose }) => {
-    // FIX: Use the FestivalAccess context to get unlock status and functions.
-    const { unlockedBlockIds, hasAllAccessPass, unlockBlock, grantAllAccess } = useFestivalAccess();
-
     useEffect(() => {
         const handleEsc = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
@@ -49,10 +45,6 @@ const FestivalModal: React.FC<FestivalModalProps> = ({ festivalData, festivalCon
                     festivalConfig={festivalConfig}
                     allMovies={allMovies}
                     showHero={true}
-                    unlockedBlockIds={unlockedBlockIds}
-                    hasAllAccessPass={hasAllAccessPass}
-                    onUnlockBlock={unlockBlock}
-                    onGrantAllAccess={grantAllAccess}
                 />
             </div>
         </div>

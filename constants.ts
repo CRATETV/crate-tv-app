@@ -1345,8 +1345,8 @@ export const aboutData: AboutData = {
 export const festivalConfigData: FestivalConfig = {
   title: "Playhouse West-Philadelphia Film Festival - 12th Annual",
   description: "Join us for a celebration of independent cinema, showcasing the best short films from emerging and established filmmakers. Explore a diverse lineup of comedies, dramas, and more.",
-  startDate: "",
-  endDate: "",
+  startDate: "2024-09-05T19:00:00-04:00",
+  endDate: "2024-09-08T23:59:00-04:00",
 };
 
 export const festivalData: FestivalDay[] = [
