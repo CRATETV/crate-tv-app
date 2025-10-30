@@ -16,6 +16,10 @@ const FilmFestivalModule: React.FC = () => {
         festivalData={festivalData}
         festivalConfig={festivalConfigData}
         allMovies={moviesData}
+        unlockedBlockIds={new Set()}
+        hasAllAccessPass={false}
+        onUnlockBlock={() => console.log("Unlock Block action.")}
+        onGrantAllAccess={() => console.log("Grant All-Access action.")}
       />
     </div>
   );

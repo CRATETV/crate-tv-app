@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Movie, FestivalDay, FestivalConfig } from '../types';
 import FestivalView from './FestivalView';
+import { useAuth } from '../contexts/AuthContext';
 
 interface FestivalModalProps {
     festivalData: FestivalDay[];
@@ -10,6 +11,13 @@ interface FestivalModalProps {
 }
 
 const FestivalModal: React.FC<FestivalModalProps> = ({ festivalData, festivalConfig, allMovies, onClose }) => {
+    const { 
+        unlockedFestivalBlockIds, 
+        hasFestivalAllAccess, 
+        unlockFestivalBlock, 
+        grantFestivalAllAccess 
+    } = useAuth();
+    
     useEffect(() => {
         const handleEsc = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
@@ -45,6 +53,10 @@ const FestivalModal: React.FC<FestivalModalProps> = ({ festivalData, festivalCon
                     festivalConfig={festivalConfig}
                     allMovies={allMovies}
                     showHero={true}
+                    unlockedBlockIds={unlockedFestivalBlockIds}
+                    hasAllAccessPass={hasFestivalAllAccess}
+                    onUnlockBlock={unlockFestivalBlock}
+                    onGrantAllAccess={grantFestivalAllAccess}
                 />
             </div>
         </div>

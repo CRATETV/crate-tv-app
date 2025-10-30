@@ -3,10 +3,11 @@ import Header from './Header';
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import LoadingSpinner from './LoadingSpinner';
-import StagingBanner from './components/StagingBanner';
-import FestivalView from './components/FestivalView';
+import StagingBanner from './StagingBanner';
+import FestivalView from './FestivalView';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import { Movie, FestivalDay, FestivalConfig } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 const FestivalPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -16,6 +17,13 @@ const FestivalPage: React.FC = () => {
     const [isStaging, setIsStaging] = useState(false);
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
     
+    const { 
+        unlockedFestivalBlockIds, 
+        hasFestivalAllAccess, 
+        unlockFestivalBlock, 
+        grantFestivalAllAccess 
+    } = useAuth();
+
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const env = params.get('env');
@@ -89,6 +97,10 @@ const FestivalPage: React.FC = () => {
                         festivalData={festivalData}
                         festivalConfig={festivalConfig!}
                         allMovies={movies}
+                        unlockedBlockIds={unlockedFestivalBlockIds}
+                        hasAllAccessPass={hasFestivalAllAccess}
+                        onUnlockBlock={unlockFestivalBlock}
+                        onGrantAllAccess={grantFestivalAllAccess}
                      />
                  </div>
             </main>
