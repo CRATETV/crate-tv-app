@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext.tsx';
-import { avatars } from './avatars.ts';
+import { useAuth } from '../contexts/AuthContext';
+import { avatars } from './avatars';
 
 interface HeaderProps {
   searchQuery: string;
@@ -9,12 +9,12 @@ interface HeaderProps {
   onMobileSearchClick: () => void;
   onSearchSubmit?: (query: string) => void;
   isStaging?: boolean;
+  isOffline?: boolean;
   showSearch?: boolean;
   isFestivalLive?: boolean;
 }
 
-// FIX: Removed the unused `isOffline` prop.
-const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit, isStaging, showSearch = true, isFestivalLive }) => {
+const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit, isStaging, isOffline, showSearch = true, isFestivalLive }) => {
   const [topOffset, setTopOffset] = useState(0);
   const { user, logout } = useAuth();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);

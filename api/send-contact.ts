@@ -40,7 +40,8 @@ export async function POST(request: Request) {
       to: [toEmail],
       subject: `New Message from ${name}`,
       html: emailHtml,
-      reply_to: email,
+      // FIX: Changed `reply_to` to `replyTo` to match the Resend API type.
+      replyTo: email,
     });
 
     if (error) {

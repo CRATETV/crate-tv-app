@@ -4,10 +4,9 @@ import { randomUUID } from 'crypto';
 // Server-side price map in cents for security.
 // This prevents users from manipulating prices on the client-side.
 const priceMap: Record<string, number> = {
-  subscription: 499,
-  pass: 5000,
-  block: 1000,
-  film: 500, // New: $5.00 for a single film
+  subscription: 499,  // $4.99
+  pass: 5000,         // $50.00
+  block: 1000,        // $10.00
 };
 
 export async function POST(request: Request) {
@@ -65,9 +64,6 @@ export async function POST(request: Request) {
                 break;
             case 'block':
                 note = `Crate TV Film Festival - Unlock Block: "${blockTitle || itemId}"`;
-                break;
-            case 'film':
-                note = `Crate TV Film Festival - Unlock Film: "${movieTitle || itemId}"`;
                 break;
             default:
                 note = "Crate TV Purchase";

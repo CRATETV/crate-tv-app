@@ -1,9 +1,8 @@
 // This is a Vercel Serverless Function that generates a feed for the custom Roku channel.
 // It will be accessible at the path /api/roku-feed
 
-import { getApiData } from './_lib/data.ts';
-// FIX: Import the 'Actor' and 'FilmBlock' types to correctly type cast members.
-import { Movie, Category, FestivalConfig, FestivalDay, Actor, FilmBlock } from '../types.ts';
+import { getApiData } from './_lib/data';
+import { Movie, Category, FestivalConfig } from '../types';
 
 const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Movie> => {
     const visibleMovies: Record<string, Movie> = {};
@@ -25,7 +24,7 @@ const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Mov
 
 export async function GET(request: Request) {
   try {
-    const { movies: moviesData, categories: categoriesData, festivalConfig, festivalData } = await getApiData();
+    const { movies: moviesData, categories: categoriesData, festivalConfig } = await getApiData();
     const visibleMovies = getVisibleMovies(moviesData);
     const visibleMovieKeys = new Set(Object.keys(visibleMovies));
     
@@ -34,6 +33,7 @@ export async function GET(request: Request) {
     Object.keys(visibleMovies).forEach(movieKey => {
         movieGenreMap.set(movieKey, []);
     });
+    // FIX: Cast the result of Object.values to ensure the 'category' parameter is correctly typed.
     (Object.values(categoriesData) as Category[]).forEach((category) => {
         if (category && Array.isArray(category.movieKeys)) {
             category.movieKeys.forEach(movieKey => {
@@ -64,8 +64,7 @@ export async function GET(request: Request) {
                     heroImage: movie.poster || movie.tvPoster || '',
                     streamUrl: movie.fullMovie || '',
                     director: movie.director || '',
-                    // FIX: Explicitly type the 'c' parameter as 'Actor' to resolve the TypeScript inference error.
-                    actors: movie.cast ? movie.cast.map((c: Actor) => c.name || '') : [],
+                    actors: movie.cast ? movie.cast.map(c => c.name || '') : [],
                     genres: movieGenreMap.get(movie.key) || [],
                 };
             });
@@ -82,16 +81,11 @@ export async function GET(request: Request) {
     const finalCategories = [];
 
     // 1. Handle the Live Festival Category
-    const isFestivalLive = festivalConfig?.startDate && festivalConfig?.endDate && new Date() >= new Date(festivalConfig.startDate) && new Date() <= new Date(festivalConfig.endDate);
-
-    if (isFestivalLive && festivalData && festivalData.length > 0) {
-        const festivalMovieKeys: string[] = Array.from(new Set(
-            festivalData.flatMap((day: FestivalDay) => day.blocks.flatMap((block: FilmBlock) => block.movieKeys))
-        ));
-
+    // If the festival is live, create a special category for it at the top.
+    if (festivalConfig?.isFestivalLive && categoriesData['pwff12thAnnual']) {
         const liveFestivalCategory: Category = {
             title: "Film Festival - LIVE NOW",
-            movieKeys: festivalMovieKeys,
+            movieKeys: categoriesData['pwff12thAnnual'].movieKeys,
         };
         const processedLiveFestival = processCategory(liveFestivalCategory, visibleMovies, visibleMovieKeys);
         if (processedLiveFestival) {
@@ -114,7 +108,7 @@ export async function GET(request: Request) {
         .filter(([key]) => {
             const isFeatured = key === 'featured';
             // If the festival is live, also exclude the standard PWFF category to avoid duplicates
-            const isRedundantFestivalCategory = isFestivalLive && key === 'pwff12thAnnual';
+            const isRedundantFestivalCategory = festivalConfig?.isFestivalLive && key === 'pwff12thAnnual';
             return !isFeatured && !isRedundantFestivalCategory;
         })
         .forEach(([key, categoryData]) => {

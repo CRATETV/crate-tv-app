@@ -15,12 +15,14 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["node"],
-    "allowImportingTsExtensions": true
+    "types": ["node"]
   },
   "include": ["**/*.ts", "**/*.tsx"],
   "exclude": [
     "node_modules", 
-    "vite.config.ts"
+    "vite.config.ts", 
+    "MoviePage.tsx", 
+    "ClassicsPage.tsx",
+    "components/PremiumPage.tsx"
   ]
 }

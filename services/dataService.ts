@@ -1,42 +1,22 @@
-
-import { LiveData, FetchResult } from '../types.ts';
-import { moviesData, categoriesData, festivalData, festivalConfigData, aboutData } from '../constants.ts';
+import { LiveData, FetchResult } from '../types';
+import { moviesData, categoriesData, festivalData, festivalConfigData, aboutData } from '../constants';
 
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
-const LAST_KNOWN_FESTIVAL_DATES_KEY = 'cratetv-last-known-festival-dates';
 const CACHE_DURATION = 60 * 1000; // 1 minute
 
-// Updated to include a timestamp and sticky festival status.
-const getFallbackData = (): FetchResult => {
-  const fallbackResult: FetchResult = {
-    data: {
-      movies: moviesData,
-      categories: categoriesData,
-      festivalData: festivalData,
-      festivalConfig: { ...festivalConfigData }, // Create a copy to make it mutable
-      aboutData: aboutData,
-    },
-    source: 'fallback',
-    timestamp: Date.now(),
-  };
-
-  // "STICKY" LOGIC: If the app fails to fetch live data, use the last known
-  // festival dates to prevent the festival from disappearing on a network blip.
-  try {
-    const lastKnownDates = localStorage.getItem(LAST_KNOWN_FESTIVAL_DATES_KEY);
-    if (lastKnownDates && fallbackResult.data.festivalConfig) {
-      const { startDate, endDate } = JSON.parse(lastKnownDates);
-      fallbackResult.data.festivalConfig.startDate = startDate;
-      fallbackResult.data.festivalConfig.endDate = endDate;
-      console.log("[Fallback] Applied sticky festival dates to fallback data.");
-    }
-  } catch (e) {
-    console.warn("Could not apply sticky festival dates to fallback data.", e);
-  }
-
-  return fallbackResult;
-};
+// Updated to include a timestamp.
+const getFallbackData = (): FetchResult => ({
+  data: {
+    movies: moviesData,
+    categories: categoriesData,
+    festivalData: festivalData,
+    festivalConfig: festivalConfigData,
+    aboutData: aboutData,
+  },
+  source: 'fallback',
+  timestamp: Date.now(),
+});
 
 export const invalidateCache = () => {
     try {
@@ -109,15 +89,6 @@ export const fetchAndCacheLiveData = async (options?: { force?: boolean }): Prom
             const cachePayload = { data, source: 'live' };
             localStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload));
             localStorage.setItem(CACHE_TIMESTAMP_KEY, now.toString());
-
-            // Store the last known festival dates to make the UI "sticky"
-            if (data.festivalConfig) {
-                const datesToStore = {
-                    startDate: data.festivalConfig.startDate,
-                    endDate: data.festivalConfig.endDate,
-                };
-                localStorage.setItem(LAST_KNOWN_FESTIVAL_DATES_KEY, JSON.stringify(datesToStore));
-            }
         } catch(e) {
             console.warn("Could not write to localStorage cache.", e);
         }

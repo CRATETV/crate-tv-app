@@ -1,8 +1,8 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/approve-actor-submission
 import * as admin from 'firebase-admin';
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.ts';
-import { Movie, ActorProfile } from '../types.ts';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
+import { Movie, ActorProfile } from '../types';
 
 // Helper to create a URL-friendly slug from a name
 const slugify = (name: string): string => {
@@ -70,37 +70,44 @@ export async function POST(request: Request) {
     };
     batch.set(actorProfileRef, actorProfileData, { merge: true });
 
-    // 2. Find all movies this actor is in and update their details
-    const moviesSnapshot = await db.collection('movies').get();
-    moviesSnapshot.forEach(doc => {
-        const movie = doc.data() as Movie;
-        if (Array.isArray(movie.cast)) {
-            let castUpdated = false;
-            const updatedCast = movie.cast.map(actor => {
-                if (actor.name === actorName) {
-                    castUpdated = true;
-                    // Update with new data from submission
-                    return { ...actor, bio, photo: photoUrl, highResPhoto: highResPhotoUrl };
-                }
-                return actor;
-            });
 
-            if (castUpdated) {
-                batch.update(doc.ref, { cast: updatedCast });
+    // 2. Update the actor's info across all movies they appear in
+    const moviesSnapshot = await db.collection('movies').get();
+    let moviesUpdatedCount = 0;
+
+    moviesSnapshot.forEach(movieDoc => {
+        const movieData = movieDoc.data() as Movie;
+        const cast = movieData.cast;
+        let actorFound = false;
+
+        const updatedCast = cast.map(actor => {
+            if (actor.name.toLowerCase() === actorName.toLowerCase()) {
+                actorFound = true;
+                return {
+                    ...actor,
+                    bio,
+                    photo: photoUrl,
+                    highResPhoto: highResPhotoUrl
+                };
             }
+            return actor;
+        });
+
+        if (actorFound) {
+            batch.update(movieDoc.ref, { cast: updatedCast });
+            moviesUpdatedCount++;
         }
     });
 
-    // 3. Mark the submission as approved
+    // 3. Mark submission as approved
     batch.update(submissionRef, { status: 'approved' });
 
-    // 4. Commit all batch operations
     await batch.commit();
 
-    return new Response(JSON.stringify({ success: true, message: 'Submission approved and all profiles updated.' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new Response(JSON.stringify({ 
+        success: true, 
+        message: `Approved ${actorName}. Created/updated public profile and updated ${moviesUpdatedCount} film(s).` 
+    }), { status: 200, headers: { 'Content-Type': 'application/json' }});
 
   } catch (error) {
     console.error("Error approving submission:", error);

@@ -1,3 +1,5 @@
+// FIX: Removed circular import from './types'. The types are defined in this file and should not be imported from themselves.
+
 export interface Actor {
   name: string;
   photo: string;
@@ -20,6 +22,8 @@ export interface Movie {
   mainPageExpiry?: string;
   durationInMinutes?: number;
   rating?: number;
+  isForSale?: boolean;
+  price?: number; // in cents
 }
 
 export interface Category {
@@ -53,6 +57,34 @@ export interface User {
   avatar?: string;
   isPremiumSubscriber?: boolean;
   watchlist?: string[];
+  purchasedMovies?: string[];
+}
+
+// FIX: Added missing type definitions for Filmmaker Analytics and Payouts.
+export interface FilmmakerFilmPerformance {
+    key: string;
+    title: string;
+    views: number;
+    likes: number;
+    donations: number; // in cents
+}
+
+export interface FilmmakerAnalytics {
+    totalDonations: number; // in cents
+    totalPaidOut: number; // in cents
+    balance: number; // in cents
+    films: FilmmakerFilmPerformance[];
+}
+
+export interface PayoutRequest {
+    id: string;
+    directorName: string;
+    amount: number; // in cents
+    payoutMethod: 'PayPal' | 'Venmo' | 'Other';
+    payoutDetails: string;
+    status: 'pending' | 'completed';
+    requestDate: any; // Firestore timestamp
+    completionDate?: any; // Firestore timestamp
 }
 
 export interface FilmmakerPayout {
@@ -126,6 +158,7 @@ export interface ActorProfile {
   imdbUrl?: string;
 }
 
+// FIX: Added missing ActorPost interface.
 export interface ActorPost {
   id: string;
   actorName: string;
@@ -133,31 +166,5 @@ export interface ActorPost {
   content: string;
   imageUrl?: string;
   timestamp: any; // Firestore timestamp
-  likes: string[]; // Array of actor names who liked it
-}
-
-export interface FilmmakerFilmPerformance {
-    key: string;
-    title: string;
-    views: number;
-    likes: number;
-    donations: number; // in cents
-}
-
-export interface FilmmakerAnalytics {
-    totalDonations: number; // in cents
-    totalPaidOut: number; // in cents
-    balance: number; // in cents
-    films: FilmmakerFilmPerformance[];
-}
-
-export interface PayoutRequest {
-    id: string;
-    directorName: string;
-    amount: number; // in cents
-    payoutMethod: 'PayPal' | 'Venmo' | 'Other';
-    payoutDetails: string;
-    status: 'pending' | 'completed';
-    requestDate: any; // Firestore timestamp
-    completionDate?: any;
+  likes: string[];
 }

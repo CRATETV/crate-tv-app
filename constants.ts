@@ -1,4 +1,4 @@
-import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types.ts';
+import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
 
 // Utility function to robustly check if a movie is past its release time.
 export const isMovieReleased = (movie: Movie | undefined | null): boolean => {
@@ -7,17 +7,6 @@ export const isMovieReleased = (movie: Movie | undefined | null): boolean => {
     }
     // Compare the release time with the current time
     return new Date(movie.releaseDateTime) <= new Date();
-};
-
-// Utility function to determine if the festival is currently active based on dates.
-export const isFestivalLiveNow = (config: FestivalConfig | null): boolean => {
-    if (!config || !config.startDate || !config.endDate) {
-        return false;
-    }
-    const now = new Date();
-    const startDate = new Date(config.startDate);
-    const endDate = new Date(config.endDate);
-    return now >= startDate && now <= endDate;
 };
 
 export const categoriesData: Record<string, Category> = {
@@ -45,14 +34,7 @@ export const categoriesData: Record<string, Category> = {
   },
   pwff12thAnnual: {
     title: 'PWFF-12th Annual Selections',
-    movieKeys: [
-      'newmovie1756487626529', // Strange Encounters
-      'newmovie1756501125076', // of Bees and Boobs
-      'newmovie1756487215116', // Fling
-      'newmovie1756487390550', // I Still Love Her
-      'newmovie1756485973547',  // Burst
-      'newmovie1756486933392' // Power Trip
-    ]
+    movieKeys: []
   },
   comedy: {
     title: 'Comedies',
@@ -576,9 +558,9 @@ export const moviesData: Record<string, Movie> = {
     "synopsis": "A passive-aggressive war unfolds between Mark, the supporting actor, and the director. Their every line and directorial choice is a thinly veiled barb.",
     "cast": [
       {
-        "name": "Akil Logan Haye",
+        "name": "Akil Logan-Haye",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil+Logan+Haye.png",
-        "bio": "Akil Logan Haye is a stage and film actor and the driving force behind Pursuit of Excellence, a production company where he serves as CEO. His creative vision informs both his performances and his leadership.",
+        "bio": "Akil Logan-Haye is a stage and film actor and the driving force behind Pursuit of Excellence, a production company where he serves as CEO. His creative vision informs both his performances and his leadership.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil+Logan+Haye.png"
       },
       {
@@ -619,7 +601,7 @@ export const moviesData: Record<string, Movie> = {
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
-    "director": "Akil Logan Haye",
+    "director": "Akil Logan-Haye",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/CROSSROADS-OFFICIAL-FILM_360p.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/crossroads(Mobile+Video).jpg",
@@ -644,7 +626,7 @@ export const moviesData: Record<string, Movie> = {
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
-    "director": "Oskar Pierre Castro",
+    "director": "Richard Frohman",
     "trailer": "",
     "fullMovie": "",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
@@ -683,10 +665,10 @@ export const moviesData: Record<string, Movie> = {
     "synopsis": "A problematic pastor must fight for his life when he is invaded by a violent and vengeful spirit.",
     "cast": [
       {
-        "name": "Robert Graves",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": " Information regarding this actor is currently unavailable",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "name": "",
+        "photo": "",
+        "bio": " Information regarding cast is currently unavailable",
+        "highResPhoto": ""
       }
     ],
     "director": "Robert Graves",
@@ -702,10 +684,10 @@ export const moviesData: Record<string, Movie> = {
     "synopsis": "",
     "cast": [
       {
-        "name": "Robert Graves",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "name": "",
+        "photo": "",
         "bio": " Information regarding this actor is currently unavailable",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": ""
       }
     ],
     "director": "Robert Graves",
@@ -828,7 +810,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Bubacarr Sarge",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
-        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
@@ -915,7 +897,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Bubacarr Sarge",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
-        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
@@ -989,7 +971,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Bubacarr Sarge",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
-        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
@@ -1015,7 +997,7 @@ export const moviesData: Record<string, Movie> = {
   "results": {
     "key": "results",
     "title": "Results",
-    "synopsis":"Confined to a sterile medical waiting room, three women await life-altering results—but only one of them seems to have a handle on everything. A short film created for the Playhouse West-Philadelphia 3-3-3 film festival.",
+    "synopsis": "Confined to a sterile medical waiting room, three women await life-altering results—but only one of them seems to have a handle on everything. A short film created for the Playhouse West-Philadelphia 3-3-3 film festival.",
     "cast": [
       {
         "name": "Michelle Reale-Opalesky",
@@ -1163,29 +1145,28 @@ export const moviesData: Record<string, Movie> = {
   "tedandnatalie": {
     "key": "tedandnatalie",
     "title": "Ted and Natalie",
-    "synopsis": "A chance encounter between two strangers, Ted and Natalie, sparks an immediate and intense connection, but their time together is fleeting.",
+    "synopsis": "A loving boyfriend confronts his avoidant girlfriend after multiple failed attempts to be seen together in public.",
     "cast": [
       {
-        "name": "Salome Denoon",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png",
-        "bio": "Salome Denoon is a versatile artist whose creative pursuits span performance, writing, editing, and digital media. As an actress, she has graced both stage and screen. She also brings her talents to the digital realm as the developer of Crate TV.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
+        "name": "Dana Godfrey",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
       },
       {
-        "name": "David Auspitz",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png",
-        "bio": "David Auspitz is a versatile actor with a knack for both comedic and dramatic roles. He brings a unique charm to every character he portrays, making him a beloved figure in the industry.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png"
+        "name": "Patrick Thomas Kasey",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
       }
     ],
-    "director": "David Auspitz",
+    "director": "Michelle M. Williams",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Natalie.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
     "likes": 0
   },
-  
   "atriptothemoon": {
     "key": "atriptothemoon",
     "title": "A Trip to the Moon",
@@ -1364,8 +1345,8 @@ export const aboutData: AboutData = {
 export const festivalConfigData: FestivalConfig = {
   title: "Playhouse West-Philadelphia Film Festival - 12th Annual",
   description: "Join us for a celebration of independent cinema, showcasing the best short films from emerging and established filmmakers. Explore a diverse lineup of comedies, dramas, and more.",
-  startDate: "2024-09-05T23:00:00Z", // Corresponds to 7:00 PM EST
-  endDate: "2024-09-07T03:00:00Z"    // Corresponds to 11:00 PM EST on Sep 6th
+  startDate: "",
+  endDate: "",
 };
 
 export const festivalData: FestivalDay[] = [
@@ -1377,19 +1358,13 @@ export const festivalData: FestivalDay[] = [
         id: "day1-block1",
         title: "Opening Night Shorts",
         time: "7:00 PM EST",
-        movieKeys: [
-          'newmovie1756487626529', // Strange Encounters
-          'newmovie1756487215116', // Fling
-        ]
+        movieKeys: []
       },
       {
         id: "day1-block2",
         title: "Comedy Showcase",
         time: "9:00 PM EST",
-        movieKeys: [
-          'newmovie1756501125076', // of Bees and Boobs
-          'newmovie1756487390550', // I Still Love Her
-        ]
+        movieKeys: []
       }
     ]
   },
@@ -1401,18 +1376,13 @@ export const festivalData: FestivalDay[] = [
         id: "day2-block1",
         title: "Dramatic Features",
         time: "6:00 PM EST",
-        movieKeys: [
-          'newmovie1756486933392' // Power Trip
-        ]
+        movieKeys: []
       },
       {
         id: "day2-block2",
         title: "Late Night Laughs",
         time: "8:30 PM EST",
-        movieKeys: [
-          'newmovie1756485973547',  // Burst
-          'foodiecalldirectorscut'
-        ]
+        movieKeys: []
       }
     ]
   }

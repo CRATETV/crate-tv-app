@@ -1,6 +1,6 @@
 // This is a Vercel Serverless Function
 // Path: /api/complete-payout
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.ts';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
 import * as admin from 'firebase-admin';
 
 export async function POST(request: Request) {
@@ -35,6 +35,6 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("Error completing payout:", error);
-    return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
   }
 }

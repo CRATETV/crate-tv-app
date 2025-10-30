@@ -1,10 +1,8 @@
-// FIX: Refactor to use Firebase v9 compat libraries to fix module export errors.
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/auth'; // Added for anonymous sign-in
-import 'firebase/compat/firestore';
+import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
-let db: firebase.firestore.Firestore | null = null;
-let firebaseInitializationPromise: Promise<firebase.firestore.Firestore | null> | null = null;
+let db: Firestore | null = null;
+let firebaseInitializationPromise: Promise<Firestore | null> | null = null;
 
 const initializeFirebase = () => {
     if (firebaseInitializationPromise) {
@@ -26,19 +24,14 @@ const initializeFirebase = () => {
                 throw new Error("Firebase server environment variables are not set.");
             }
             
-            let app: firebase.app.App;
-            if (firebase.apps.length === 0) {
-                app = firebase.initializeApp(firebaseConfig);
+            let app: FirebaseApp;
+            if (getApps().length === 0) {
+                app = initializeApp(firebaseConfig);
             } else {
-                app = firebase.app();
+                app = getApp();
             }
-            db = firebase.firestore(app);
-            
-            // Sign in anonymously to ensure read access if rules require it
-            const auth = firebase.auth(app);
-            await auth.signInAnonymously();
-
-            console.log("Firebase initialized for API route with anonymous auth.");
+            db = getFirestore(app);
+            console.log("Firebase initialized for API route.");
             return db;
         } catch (error) {
             console.error("Firebase initialization failed for API route:", error);

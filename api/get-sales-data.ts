@@ -1,8 +1,8 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/get-sales-data
 import * as admin from 'firebase-admin';
-import { AnalyticsData, FilmmakerPayout } from '../types.ts';
-import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.ts';
+import { AnalyticsData, FilmmakerPayout } from '../types';
+import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin';
 
 interface SquarePayment {
   id: string;
@@ -39,17 +39,9 @@ const parseNote = (note: string | undefined): { type: string, title?: string, di
 
 // --- Data Fetching Functions ---
 
-async function fetchSquareData(): Promise<SquarePayment[]> {
+async function fetchSquareData(accessToken: string, locationId: string | undefined): Promise<SquarePayment[]> {
     console.log("[Analytics API] Starting Square data fetch.");
-    const isProduction = process.env.VERCEL_ENV === 'production';
-    const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
-    const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
-
-    if (!accessToken) {
-      throw new Error(`Square ${isProduction ? 'Production' : 'Sandbox'} Access Token is not configured on the server.`);
-    }
-
-    const squareUrlBase = isProduction ? 'https://connect.squareup.com' : 'https://connect.squareupsandbox.com';
+    const squareUrlBase = process.env.VERCEL_ENV === 'production' ? 'https://connect.squareup.com' : 'https://connect.squareupsandbox.com';
     let allPayments: SquarePayment[] = [];
     let cursor: string | undefined = undefined;
 
@@ -80,6 +72,7 @@ async function fetchSquareData(): Promise<SquarePayment[]> {
         }
 
         const data = await response.json();
+        // This is a robust check to ensure data.payments exists and is an array before spreading
         if (data.payments && Array.isArray(data.payments)) {
             allPayments.push(...data.payments);
         }
@@ -144,9 +137,9 @@ export async function POST(request: Request) {
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
         let isAuthenticated = false;
-        if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
-            isAuthenticated = true;
-        } else {
+        if (primaryAdminPassword && password === primaryAdminPassword) isAuthenticated = true;
+        else if (masterPassword && password === masterPassword) isAuthenticated = true;
+        if (!isAuthenticated) {
             for (const key in process.env) {
                 if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
                     isAuthenticated = true;
@@ -161,11 +154,16 @@ export async function POST(request: Request) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
         }
         
-        // --- Parallel Data Fetching with individual error handling ---
-        const results = await Promise.allSettled([
-            fetchSquareData(), 
-            fetchFirebaseData()
-        ]);
+        // --- Parallel Data Fetching ---
+        const isProduction = process.env.VERCEL_ENV === 'production';
+        const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
+        const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
+        
+        const squarePromise = accessToken
+            ? fetchSquareData(accessToken, locationId)
+            : Promise.reject(new Error(`Square ${isProduction ? 'Production' : 'Sandbox'} Access Token is not configured.`));
+
+        const results = await Promise.allSettled([squarePromise, fetchFirebaseData()]);
 
         const squareResult = results[0];
         if (squareResult.status === 'fulfilled') {
@@ -183,7 +181,7 @@ export async function POST(request: Request) {
             console.error("[Analytics API] Firebase Fetching Promise Rejected:", firebaseError);
         }
 
-        // --- Data Processing (always runs, even with partial data) ---
+        // --- Data Processing ---
         const analyticsData: AnalyticsData = {
             totalRevenue: 0, totalDonations: 0, totalSales: 0,
             salesByType: {}, filmmakerPayouts: [],
@@ -224,12 +222,11 @@ export async function POST(request: Request) {
         });
 
     } catch (error) {
-        // This catch block now only handles critical, unexpected errors (like a JSON parsing issue in the request body).
         const errorMessage = error instanceof Error ? error.message : "A critical error occurred before data fetching could start.";
         console.error("[Analytics API] A critical, unhandled error occurred:", error);
         return new Response(JSON.stringify({ 
             analyticsData: null,
-            errors: { critical: errorMessage, square: squareError, firebase: firebaseError }
+            errors: { critical: errorMessage }
         }), {
             status: 200, // Still return 200 OK to prevent a hard crash on the frontend
             headers: { 'Content-Type': 'application/json' },

@@ -1,9 +1,9 @@
 // This is a Vercel Serverless Function that generates a feed for Instant TV Channel.
 // It will be accessible at the path /api/instant-tv-feed
 
-import { getApiData } from './_lib/data.ts';
-// FIX: Import the 'Actor' type to correctly type cast members.
-import { Movie, Category, Actor } from '../types.ts';
+import { getApiData } from './_lib/data';
+// FIX: Imported the Category type to ensure type safety when processing category data.
+import { Movie, Category } from '../types';
 
 // Helper function to get movies that are currently released
 const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Movie> => {
@@ -36,6 +36,7 @@ export async function GET(request: Request) {
     Object.keys(visibleMovies).forEach(movieKey => {
         movieGenreMap.set(movieKey, []);
     });
+    // FIX: Cast the result of Object.values to ensure the 'category' parameter is correctly typed.
     (Object.values(categoriesData) as Category[]).forEach((category) => {
         if (category && Array.isArray(category.movieKeys)) {
             category.movieKeys.forEach(movieKey => {
@@ -78,8 +79,7 @@ export async function GET(request: Request) {
               genres: movieGenreMap.get(movie.key) || [],
               credits: [
                 { name: movie.director || '', role: "director" },
-                // FIX: Explicitly type the 'c' parameter as 'Actor' to resolve potential TypeScript inference errors.
-                ...(movie.cast ? movie.cast.map((c: Actor) => ({ name: c.name, role: "actor" })) : [])
+                ...(movie.cast ? movie.cast.map(c => ({ name: c.name, role: "actor" })) : [])
               ]
             };
           });

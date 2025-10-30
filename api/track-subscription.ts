@@ -1,5 +1,5 @@
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
-import * as admin from 'firebase-admin';
+import { getDb } from './_lib/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export async function POST(request: Request) {
   try {
@@ -8,25 +8,17 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: "A valid email is required." }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const initError = getInitializationError();
-    if (initError) {
-        // Log the error but don't fail the request, as this is a non-critical tracking event.
-        console.warn(`Firebase Admin connection failed, subscription not tracked: ${initError}`);
-        return new Response(JSON.stringify({ success: true, warning: "Subscription tracking failed on server due to DB connection issue." }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-    }
-    const db = getAdminDb();
+    const db = await getDb();
     if (!db) {
-      // Don't throw, just warn and exit gracefully.
-      console.warn("Database connection failed. Subscription not tracked.");
-      return new Response(JSON.stringify({ success: true, warning: "Subscription tracking failed on server." }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      throw new Error("Database connection failed. Subscription not tracked.");
     }
     
     // Use the email as the document ID to prevent duplicate entries for the same user
-    const subscriptionDocRef = db.collection('subscriptions').doc(email);
+    const subscriptionDocRef = doc(db, 'subscriptions', email);
     
     // Set the document with a timestamp. If it already exists, it will be overwritten with a new timestamp.
-    await subscriptionDocRef.set({ 
-      subscribedAt: admin.firestore.FieldValue.serverTimestamp()
+    await setDoc(subscriptionDocRef, { 
+      subscribedAt: serverTimestamp()
     }, { merge: true });
 
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });

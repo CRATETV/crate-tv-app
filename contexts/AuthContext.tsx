@@ -1,8 +1,5 @@
-
-
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-// FIX: Removed direct imports from 'firebase/auth' as they are causing module resolution errors.
-// Auth functions will be accessed via the auth instance from firebaseClient (compat mode).
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, AuthError, sendPasswordResetEmail } from 'firebase/auth';
 import { User } from '../types';
 import { 
     initializeFirebaseAuth, 
@@ -33,8 +30,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         initializeFirebaseAuth().then(auth => {
             if (auth) {
-                // FIX: Use v8 onAuthStateChanged syntax
-                const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+                const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
                     if (firebaseUser) {
                         // User is signed in, fetch their profile from Firestore.
                         let userProfile = await getUserProfile(firebaseUser.uid);
@@ -84,8 +80,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const auth = getAuthInstance();
         if (!auth) throw new Error("Authentication service is not available.");
         try {
-            // FIX: Use v8 signInWithEmailAndPassword syntax
-            await auth.signInWithEmailAndPassword(email, password);
+            await signInWithEmailAndPassword(auth, email, password);
         } catch (error) {
             throw new Error(handleAuthError(error));
         }
@@ -95,14 +90,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const auth = getAuthInstance();
         if (!auth) throw new Error("Authentication service is not available.");
         try {
-            // FIX: Use v8 createUserWithEmailAndPassword syntax
-            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             // After user is created in Auth, create their profile in Firestore.
-            if (userCredential.user) {
-                await createUserProfile(userCredential.user.uid, email);
-            } else {
-                throw new Error("User was not created successfully.");
-            }
+            await createUserProfile(userCredential.user.uid, email);
         } catch (error) {
             throw new Error(handleAuthError(error));
         }
@@ -112,8 +102,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const auth = getAuthInstance();
         if (!auth) throw new Error("Authentication service is not available.");
         try {
-            // FIX: Use v8 sendPasswordResetEmail syntax
-            await auth.sendPasswordResetEmail(email);
+            await sendPasswordResetEmail(auth, email);
         } catch (error) {
             throw new Error(handleAuthError(error));
         }
@@ -123,8 +112,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const logout = () => {
         const auth = getAuthInstance();
         if (auth) {
-          // FIX: Use v8 signOut syntax
-          auth.signOut();
+          signOut(auth);
         }
         window.history.pushState({}, '', '/');
         window.dispatchEvent(new Event('pushstate'));
