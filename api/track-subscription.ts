@@ -1,4 +1,4 @@
-import { getDb } from './_lib/firebase.ts';
+import { getDb } from './_lib/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export async function POST(request: Request) {

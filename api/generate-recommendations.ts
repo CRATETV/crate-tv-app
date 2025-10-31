@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { Movie } from '../types.ts';
+import { Movie } from '../types';
 
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/generate-recommendations

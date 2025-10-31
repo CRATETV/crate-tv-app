@@ -1,8 +1,8 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/approve-actor-submission
 import * as admin from 'firebase-admin';
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.ts';
-import { Movie, ActorProfile } from '../types.ts';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
+import { Movie, ActorProfile } from '../types';
 
 // Helper to create a URL-friendly slug from a name
 const slugify = (name: string): string => {

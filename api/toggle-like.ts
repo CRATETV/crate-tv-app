@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/toggle-like
 import * as admin from 'firebase-admin';
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.ts';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
 
 export async function POST(request: Request) {
   try {

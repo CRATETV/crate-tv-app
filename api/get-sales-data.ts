@@ -2,7 +2,7 @@
 // It will be accessible at the path /api/get-sales-data
 import * as admin from 'firebase-admin';
 import { AnalyticsData, FilmmakerPayout } from '../types';
-import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.ts';
+import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin';
 
 interface SquarePayment {
   id: string;
