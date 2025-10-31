@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="MoviePoster" extends="Group">
+
+    <script type="text/brightscript" uri="pkg:/components/MoviePoster.brs" />
+
+    <interface>
+        <!-- The content for this tile, passed from the RowList -->
+        <field id="itemContent" type="node" onChange="onContentChange" />
+        <!-- The focus state of the tile -->
+        <field id="focusPercent" type="float" onChange="onFocusChange" />
+    </interface>
+
+    <children>
+        <!-- The focus border, initially invisible -->
+        <Rectangle 
+            id="focusRing"
+            color="0x8b5cf6FF" ' A vibrant purple for focus
+            width="316"
+            height="196"
+            translation="[-8, -8]"
+            visible="false" 
+        />
+        
+        <!-- The movie poster image -->
+        <Poster 
+            id="tileImage"
+            width="300"
+            height="180"
+        />
+
+        <!-- The movie title label -->
+        <Label 
+            id="tileLabel"
+            width="300"
+            horizAlign="center"
+            translation="[0, 195]"
+            color="0xFFFFFFFF"
+        >
+             <font role="Roboto-Regular-30" />
+        </Label>
+    </children>
+
+</component>

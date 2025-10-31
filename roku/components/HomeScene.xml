@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="HomeScene" extends="Scene">
+
+    <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
+
+    <children>
+        <!-- Background color matching the web app -->
+        <Rectangle id="background" color="0x141414FF" width="1920" height="1080" />
+
+        <!-- Font definitions. Font files must be placed in a /fonts directory. -->
+        <Label id="fontLoader">
+            <font role="Roboto-Regular-30" uri="pkg:/fonts/Roboto-Regular.ttf" size="30" />
+            <font role="Roboto-Bold-30" uri="pkg:/fonts/Roboto-Bold.ttf" size="30" />
+            <font role="Roboto-Regular-40" uri="pkg:/fonts/Roboto-Regular.ttf" size="40" />
+        </Label>
+        
+        <!-- Loading indicator -->
+        <Label 
+            id="loadingLabel"
+            text="Loading Crate TV..."
+            translation="[960, 540]"
+            horizAlign="center"
+            vertAlign="center"
+            color="0xFFFFFFFF"
+        >
+            <font role="Roboto-Regular-40" />
+        </Label>
+        
+        <!-- Main content group, initially hidden -->
+        <Group id="contentGroup" visible="false">
+            <RowList 
+                id="contentRowList"
+                translation="[80, 80]"
+                itemComponentName="MoviePoster"
+                itemSize="[300, 235]"
+                rowItemSpacing="[ [40, 0] ]"
+                numRows="1"
+                rowHeights="[235]"
+                rowLabelOffset="[ [0, -50] ]"
+                rowFocusAnimationStyle="floatingFocus"
+                itemSpacing="[0, 60]"
+            />
+        </Group>
+
+        <!-- Task node for fetching data -->
+        <ContentTask id="contentTask" />
+    </children>
+
+</component>
