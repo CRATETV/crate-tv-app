@@ -113,7 +113,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onSe
         </a>
         {showNavLinks && (
           <nav className="hidden md:flex items-center gap-2 md:gap-4">
-            <a href="/classics" onClick={(e) => handleNavigate(e, '/classics')} className={`${linkBaseStyles} ${pathname.startsWith('/classics') ? activeLinkStyles : inactiveLinkStyles}`}>Classics</a>
+            {user && <a href="/classics" onClick={(e) => handleNavigate(e, '/classics')} className={`${linkBaseStyles} ${pathname.startsWith('/classics') ? activeLinkStyles : inactiveLinkStyles}`}>Classics</a>}
             {isFestivalLive && <a href="/festival" onClick={(e) => handleNavigate(e, '/festival')} className={`${linkBaseStyles} ${pathname.startsWith('/festival') ? activeLinkStyles : inactiveLinkStyles}`}>Festival</a>}
           </nav>
         )}

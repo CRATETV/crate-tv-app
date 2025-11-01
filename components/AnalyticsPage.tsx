@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { AnalyticsData, Movie } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -189,8 +191,10 @@ const AnalyticsPage: React.FC = () => {
                                 <StatCard title="Individual Blocks" value={analyticsData.festivalBlockSales.units} />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                <StatCard title="Crate TV's Share (30%)" value={formatCurrency(analyticsData.totalFestivalRevenue * 0.30)} />
-                                <StatCard title="Playhouse West's Share (70%)" value={formatCurrency(analyticsData.totalFestivalRevenue * 0.70)} />
+                                {/* FIX: Cast `analyticsData.totalFestivalRevenue` to number to resolve arithmetic operation error. */}
+                                <StatCard title="Crate TV's Share (30%)" value={formatCurrency((analyticsData.totalFestivalRevenue as number) * 0.30)} />
+                                {/* FIX: Cast `analyticsData.totalFestivalRevenue` to number to resolve arithmetic operation error. */}
+                                <StatCard title="Playhouse West's Share (70%)" value={formatCurrency((analyticsData.totalFestivalRevenue as number) * 0.70)} />
                             </div>
                             <h3 className="text-xl font-bold text-white mb-4">Sales by Item</h3>
                             <div className="overflow-x-auto"><table className="w-full text-left">
@@ -211,4 +215,4 @@ const AnalyticsPage: React.FC = () => {
     );
 };
 
-export default
+export default AnalyticsPage;

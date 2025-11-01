@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Header from './Header';
 import Hero from './Hero';
-import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
 import { Movie, AboutData, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -130,7 +129,6 @@ const LandingPage: React.FC = () => {
                         )}
                     </div>
                 </main>
-                <Footer showActorLinks={true} />
             </div>
             {isAuthModalOpen && (
                 <AuthModal
