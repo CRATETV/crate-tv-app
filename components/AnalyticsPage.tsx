@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { AnalyticsData, Movie } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -239,9 +240,9 @@ const AnalyticsPage: React.FC = () => {
                                 <StatCard title="Individual Blocks" value={analyticsData.festivalBlockSales.units} />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                {/* FIX: The value from analyticsData.totalFestivalRevenue can be inferred as 'any' or 'unknown' from a JSON response. Explicitly cast to Number before performing arithmetic to ensure type safety and prevent runtime errors. */}
-                                <StatCard title="Crate TV's Share (30%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.30)} />
-                                <StatCard title="Playhouse West's Share (70%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.70)} />
+                                {/* FIX: Use a type assertion to fix TypeScript inference issue with arithmetic operations. */}
+                                <StatCard title="Crate TV's Share (30%)" value={formatCurrency((analyticsData.totalFestivalRevenue as number) * 0.30)} />
+                                <StatCard title="Playhouse West's Share (70%)" value={formatCurrency((analyticsData.totalFestivalRevenue as number) * 0.70)} />
                             </div>
                             <h3 className="text-xl font-bold text-white mb-4">Sales by Item</h3>
                             <div className="overflow-x-auto"><table className="w-full text-left">

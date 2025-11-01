@@ -150,7 +150,7 @@ const AppRouter: React.FC = () => {
     }
 
     // Protected Filmmaker Route
-    case '/filmmaker-portal': {
+    case '/filmmaker-dashboard': {
         if (!authInitialized) return <LoadingSpinner />;
         if (!user) return <RedirectToLogin />;
         if (!user.isFilmmaker) {

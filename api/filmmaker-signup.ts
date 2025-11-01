@@ -65,13 +65,13 @@ export async function POST(request: Request) {
 
     // --- Step 4: Generate password creation link ---
     const actionCodeSettings = {
-        url: new URL('/filmmaker-portal', request.url).href, // Redirect to portal after password set
+        url: new URL('/filmmaker-dashboard', request.url).href, // Redirect to portal after password set
         handleCodeInApp: false,
     };
     const link = await auth.generatePasswordResetLink(email, actionCodeSettings);
 
     // --- Step 5: Send Email with Resend ---
-    const portalUrl = new URL('/filmmaker-portal', request.url).href;
+    const portalUrl = new URL('/filmmaker-dashboard', request.url).href;
 
     const emailHtml = `
       <div>

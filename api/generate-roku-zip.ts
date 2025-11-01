@@ -362,6 +362,9 @@ end function
             try {
                 const command = new GetObjectCommand({ Bucket: bucketName, Key: key });
                 const response = await s3.send(command);
+                if (!response.Body) {
+                    throw new Error(`S3 object body is undefined for key: ${key}`);
+                }
                 const buffer = await response.Body.transformToByteArray();
                 zip.file(`images/${fileName}`, buffer);
             } catch (error) {
@@ -373,7 +376,7 @@ end function
             }
         }));
 
-        const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+        const zipBuffer = await zip.generateAsync({ type: 'arraybuffer' });
 
         return new Response(zipBuffer, {
             status: 200,
