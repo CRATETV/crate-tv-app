@@ -32,15 +32,15 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
   };
 
   return (
-    <div className={`fixed bottom-0 left-0 right-0 z-30 transition-all duration-500 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-[calc(100%-3rem)] md:translate-y-[calc(100%-4rem)]'}`}>
+    <div className={`fixed bottom-0 left-0 right-0 z-30 transition-all duration-500 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-[calc(100%-2rem)] md:translate-y-[calc(100%-2.5rem)]'}`}>
         {/* Toggle Button */}
         <div className="flex justify-center">
              <button 
                 onClick={() => setIsOpen(!isOpen)}
-                className="bg-gray-800 hover:bg-gray-700 text-gray-300 w-24 h-12 md:h-16 rounded-t-lg flex items-center justify-center transition-colors"
+                className="bg-gray-800 hover:bg-gray-700 text-gray-300 w-20 h-8 md:h-10 rounded-t-lg flex items-center justify-center transition-colors"
                 aria-label={isOpen ? "Hide footer" : "Show footer"}
             >
-                <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                 </svg>
             </button>

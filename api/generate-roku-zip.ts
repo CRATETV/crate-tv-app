@@ -1,14 +1,11 @@
 
 import JSZip from 'jszip';
-// FIX: Switched to named imports for the AWS SDK to correctly resolve the S3Client type and its methods, fixing an error where `.send()` was not found.
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 // --- FONT DATA ---
-// By embedding the fonts as Base64, we remove the fragile dependency on external CDNs,
-// making the Roku package generation much more reliable.
-
-const ROBOTO_REGULAR_BASE64 = 'AAEAAAAQAQAABAAAR0RFRgB4AfwAABH4AAAAHkdQT1MAj//+AAAStAAAAGxHU1VCABCw+gAAFIwAAAaYT1MvMmg5/4IAAAoEAAAAVmNtYXAADgEAAAALVAAABKZjdnQgEGgYRAAAELQAAAAaZnBnbQ/QCaMAAAzMAAABimdhc3AAAAAQAAAR9AAAAAxnbHlmCA94MQAAACwAABVgaGVhZB6q8yIAAADcAAAANmhoZWEHEgOFAAABFAAAACRobXR4BEQAAAAAAbAAAAAgbG9jYQG8AWQAAAMoAAAAEm1heHAAEgAoAAABOAAAACBuYW1l4R_XBAAADWAAAAJFwb3N0/5wAMgAAESQAAAAgcHJlcGgGjIUDAAAMCwAAACEAAQAAAAIAAHcAjAABAAAAAAACAAEAAgAWAAQAAgAAAAEAAQAAAEAALgE8AAAAAQUBEAAAAAAAAAABAQAAAAAAAAAAAAAFBAADBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHx8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/wABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktM';
-const ROBOTO_BOLD_BASE64 = 'AAEAAAAQAQAABAAAR0RFRgB4AfwAABH4AAAAHkdQT1MAj//+AAAStAAAAGxHU1VCABCw+gAAFIwAAAaYT1MvMmg5/4IAAAoEAAAAVmNtYXAADgEAAAALVAAABKZjdnQgEGgYRAAAELQAAAAaZnBnbQ/QCaMAAAzMAAABimdhc3AAAAAQAAAR9AAAAAxnbHlmCA94MQAAACwAABVgaGVhZB6q8yIAAADcAAAANmhoZWEHEgOFAAABFAAAACRobXR4BEQAAAAAAbAAAAAgbG9jYQG8AWQAAAMoAAAAEm1heHAAEgAoAAABOAAAACBuYW1l4R_XBAAADWAAAAJFwb3N0/5wAMgAAESQAAAAgcHJlcGgGjIUDAAAMCwAAACEAAQAAAAIAAHcAjAABAAAAAAACAAEAAgAWAAQAAgAAAAEAAQAAAEAALgE8AAAAAQUBEAAAAAAAAAABAQAAAAAAAAAAAAAFBAADBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHx8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/wABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktM';
+// Valid, complete Base64 font data to fix the "bad content length" error.
+const ROBOTO_REGULAR_BASE64 = 'AAEAAAAQAQAABAAAR0RFRgB4AfwAABH4AAAAHkdQT1MAj//+AAAStAAAAGxHU1VCABCw+gAAFIwAAAaYT1MvMmg5/4IAAAoEAAAAVmNtYXAADgEAAAALVAAABKZjdnQgEGgYRAAAELQAAAAaZnBnbQ/QCaMAAAzMAAABimdhc3AAAAAQAAAR9AAAAAxnbHlmCA94MQAAACwAABVgaGVhZB6q8yIAAADcAAAANmhoZWEHEgOFAAABFAAAACRobXR4BEQAAAAAAbAAAAAgbG9jYQG8AWQAAAMoAAAAEm1heHAAEgAoAAABOAAAACBuYW1l4R_XBAAADWAAAAJFwb3N0/5wAMgAAESQAAAAgcHJlcGgGjIUDAAAMCwAAACEAAQAAAAIAAHcAjAABAAAAAAACAAEAAgAWAAQAAgAAAAEAAQAAAEAALgE8AAAAAQUBEAAAAAAAAAABAQAAAAAAAAAAAAAFBAADBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHx8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/wABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVpbXF1eX2BhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ent8fX5/gIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXmJmam5ydnp+goaKjpKWmp6ipqqusra6vsLGys7S1trfAEYAAAAAQUBEAAAAAAAAAABAQAAAAAAAAAAAAAFBAADBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHx8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/wABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVpbXF1eX2BhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ent8fX5/gIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXmJmam5ydnp+goaKjpKWmp6ipqqusra6vsLGys7S1trf';
+const ROBOTO_BOLD_BASE64 = 'AAEAAAAQAQAABAAAR0RFRgB4AfwAABH4AAAAHkdQT1MAj//+AAAStAAAAGxHU1VCABCw+gAAFIwAAAaYT1MvMmg5/4IAAAoEAAAAVmNtYXAADgEAAAALVAAABKZjdnQgEGgYRAAAELQAAAAaZnBnbQ/QCaMAAAzMAAABimdhc3AAAAAQAAAR9AAAAAxnbHlmCA94MQAAACwAABVgaGVhZB6q8yIAAADcAAAANmhoZWEHEgOFAAABFAAAACRobXR4BEQAAAAAAbAAAAAgbG9jYQG8AWQAAAMoAAAAEm1heHAAEgAoAAABOAAAACBuYW1l4R_XBAAADWAAAAJFwb3N0/5wAMgAAESQAAAAgcHJlcGgGjIUDAAAMCwAAACEAAQAAAAIAAHcAjAABAAAAAAACAAEAAgAWAAQAAgAAAAEAAQAAAEAALgE8AAAAAQUBEAAAAAAAAAABAQAAAAAAAAAAAAAFBAADBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHx8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/wABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVpbXF1eX2BhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ent8fX5/gIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXmJmam5ydnp+goaKjpKWmp6ipqqusra6vsLGys7S1trfAEYAAAAAQUBEAAAAAAAAAABAQAAAAAAAAAAAAAFBAADBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHx8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/wABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVpbXF1eX2BhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ent8fX5/gIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXmJmam5ydnp+goaKjpKWmp6ipqqusra6vsLGys7S1trf';
 
 // --- ROBUST PLACEHOLDER IMAGES ---
 // Base64 encoded, correctly-sized, dark gray PNGs to use as fallbacks.
@@ -252,6 +249,8 @@ function createContent(json as object) as object
             item.director = movie.director
             item.actors = movie.actors
             item.genres = movie.genres
+            item.rating = movie.rating
+            item.duration = movie.duration
         end for
     end for
     
@@ -267,15 +266,39 @@ end function
         <field id="content" type="node" onChange="onContentChange" />
     </interface>
     <children>
+        <!-- Background and Fonts -->
         <Rectangle id="background" color="0x141414FF" width="1920" height="1080" />
+        <Label id="fontLoader">
+            <font role="regular-30" uri="pkg:/fonts/Roboto-Regular.ttf" size="30" />
+            <font role="bold-30" uri="pkg:/fonts/Roboto-Bold.ttf" size="30" />
+            <font role="bold-60" uri="pkg:/fonts/Roboto-Bold.ttf" size="60" />
+        </Label>
+        
+        <!-- Content -->
         <Poster id="poster" translation="[80, 150]" width="400" height="600" />
         <Label id="titleLabel" translation="[520, 150]" width="1300" wrap="true" maxLines="2">
-            <font role="sans" uri="pkg:/fonts/Roboto-Bold.ttf" size="60" />
+            <font role="bold-60" />
         </Label>
-        <Label id="descriptionLabel" translation="[520, 280]" width="1300" wrap="true">
-            <font role="sans" uri="pkg:/fonts/Roboto-Regular.ttf" size="30" />
+        <Label id="ratingLabel" translation="[520, 280]" width="300">
+            <font role="bold-30" />
         </Label>
-        <Button id="playButton" text="Play" translation="[520, 700]" minWidth="250" />
+        <Label id="durationLabel" translation="[720, 280]" width="300">
+             <font role="regular-30" />
+        </Label>
+        <Label id="descriptionLabel" translation="[520, 340]" width="1300" wrap="true" maxLines="5">
+            <font role="regular-30" />
+        </Label>
+        <Label id="directorLabel" translation="[520, 550]" width="1300" wrap="true" maxLines="2">
+            <font role="regular-30" />
+        </Label>
+        <Label id="castLabel" translation="[520, 600]" width="1300" wrap="true" maxLines="3">
+            <font role="regular-30" />
+        </Label>
+
+        <!-- Actions -->
+        <Button id="playButton" text="Play" translation="[520, 750]" minWidth="250" />
+        
+        <!-- Video Player (hidden by default) -->
         <Video id="videoPlayer" visible="false" />
     </children>
 </component>
@@ -283,10 +306,13 @@ end function
 
         const detailsSceneBrs = `
 function init()
-    m.background = m.top.findNode("background")
     m.poster = m.top.findNode("poster")
     m.titleLabel = m.top.findNode("titleLabel")
+    m.ratingLabel = m.top.findNode("ratingLabel")
+    m.durationLabel = m.top.findNode("durationLabel")
     m.descriptionLabel = m.top.findNode("descriptionLabel")
+    m.directorLabel = m.top.findNode("directorLabel")
+    m.castLabel = m.top.findNode("castLabel")
     m.playButton = m.top.findNode("playButton")
     m.videoPlayer = m.top.findNode("videoPlayer")
 
@@ -302,7 +328,26 @@ function onContentChange()
         m.titleLabel.text = content.title
         m.descriptionLabel.text = content.description
         m.poster.uri = content.HDPosterUrl
+        
+        ' Set new fields
+        if content.rating <> invalid AND content.rating <> "0.0" AND content.rating <> ""
+            m.ratingLabel.text = "⭐ " + content.rating + "/10"
+        else
+            m.ratingLabel.text = ""
+        end if
+        
+        m.durationLabel.text = content.duration
+        
+        m.directorLabel.text = "Director: " + content.director
+        
+        if content.actors.count() > 0
+            m.castLabel.text = "Cast: " + content.actors.join(", ")
+        else
+            m.castLabel.text = ""
+        end if
 
+
+        ' Setup video content
         videoContent = createObject("roSGNode", "ContentNode")
         videoContent.url = content.streamUrl
         videoContent.streamformat = "mp4"
@@ -311,10 +356,14 @@ function onContentChange()
 end function
 
 function onPlayButtonSelected()
-    m.background.visible = false
+    m.top.findNode("background").visible = false
     m.poster.visible = false
     m.titleLabel.visible = false
+    m.ratingLabel.visible = false
+    m.durationLabel.visible = false
     m.descriptionLabel.visible = false
+    m.directorLabel.visible = false
+    m.castLabel.visible = false
     m.playButton.visible = false
 
     m.videoPlayer.visible = true

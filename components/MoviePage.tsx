@@ -95,9 +95,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   // Ad State
   const adContainerRef = useRef<HTMLDivElement>(null);
+  const adsLoaderRef = useRef<any>(null);
   const adsManagerRef = useRef<any>(null);
   const [isAdPlaying, setIsAdPlaying] = useState(false);
   const [adError, setAdError] = useState<string | null>(null);
+  const [isPostRollPlaying, setIsPostRollPlaying] = useState(false);
+
 
   const playContent = useCallback(() => {
     setIsAdPlaying(false);
@@ -113,10 +116,17 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         videoRef.current.play().catch(e => console.error("Content play failed", e));
     }
   }, [videoRef, movie?.key]);
+
+  const handleAllAdsCompleted = useCallback(() => {
+    if (isPostRollPlaying) {
+      window.history.pushState({}, '', '/');
+      window.dispatchEvent(new Event('pushstate'));
+    }
+  }, [isPostRollPlaying]);
   
   const initializeAds = useCallback(() => {
     if (!videoRef.current || !adContainerRef.current || playerMode !== 'full' || !released || adsManagerRef.current || typeof google === 'undefined') {
-        if (playerMode === 'full') playContent(); // Play content directly if ads can't be initialized
+        if (playerMode === 'full') playContent();
         return;
     }
     
@@ -127,6 +137,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
     const adDisplayContainer = new google.ima.AdDisplayContainer(adContainer, videoElement);
     const adsLoader = new google.ima.AdsLoader(adDisplayContainer);
+    adsLoaderRef.current = adsLoader;
 
     adsLoader.addEventListener(
         google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
@@ -136,7 +147,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
             adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED, () => videoElement.pause());
             adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED, playContent);
-            adsManager.addEventListener(google.ima.AdEvent.Type.ALL_ADS_COMPLETED, playContent);
+            adsManager.addEventListener(google.ima.AdEvent.Type.ALL_ADS_COMPLETED, handleAllAdsCompleted);
             adsManager.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, (adErrorEvent: any) => {
                 console.error('Ad Error:', adErrorEvent.getError());
                 setAdError('An ad could not be loaded. Starting film...');
@@ -163,15 +174,37 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         },
         false
     );
+    
+    // Use VMAP to schedule pre-roll and post-roll ads
+    const descriptionUrl = encodeURIComponent(window.location.href);
+    const pubId = "ca-video-pub-5748304047766155";
+    const preRollTag = `https://googleads.g.doubleclick.net/pagead/ads?ad_type=video&client=${pubId}&description_url=${descriptionUrl}&videoad_start_delay=0`;
+    const postRollTag = `https://googleads.g.doubleclick.net/pagead/ads?ad_type=video&client=${pubId}&description_url=${descriptionUrl}&videoad_start_delay=-1`;
+
+    const vmapXml = `
+      <vmap:VMAP xmlns:vmap="http://www.iab.net/videosuite/vmap" version="1.0">
+        <vmap:AdBreak timeOffset="start" breakType="linear" breakId="preroll">
+          <vmap:AdSource id="preroll-ad" allowMultipleAds="false" followRedirects="true">
+            <vmap:AdTagURI templateType="vast3"><![CDATA[${preRollTag}]]></vmap:AdTagURI>
+          </vmap:AdSource>
+        </vmap:AdBreak>
+        <vmap:AdBreak timeOffset="end" breakType="linear" breakId="postroll">
+          <vmap:AdSource id="postroll-ad" allowMultipleAds="false" followRedirects="true">
+            <vmap:AdTagURI templateType="vast3"><![CDATA[${postRollTag}]]></vmap:AdTagURI>
+          </vmap:AdSource>
+        </vmap:AdBreak>
+      </vmap:VMAP>
+    `.trim();
+
+    const vmapDataUri = `data:text/xml;charset=utf-8,${encodeURIComponent(vmapXml)}`;
 
     const adsRequest = new google.ima.AdsRequest();
-    // Using a sample skippable pre-roll tag. This would come from AdSense.
-    adsRequest.adTagUrl = 'https://storage.googleapis.com/interactive-media-ads/ad-tags/unknown/vast_skippable.xml';
+    adsRequest.adTagUrl = vmapDataUri;
     adsRequest.linearAdSlotWidth = videoElement.clientWidth;
     adsRequest.linearAdSlotHeight = videoElement.clientHeight;
 
     adsLoader.requestAds(adsRequest);
-  }, [playerMode, released, playContent]);
+  }, [playerMode, released, playContent, handleAllAdsCompleted]);
   
   useEffect(() => {
     return () => {
@@ -298,8 +331,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
     
     const handleMovieEnd = () => {
-      window.history.pushState({}, '', '/');
-      window.dispatchEvent(new Event('pushstate'));
+      if (adsLoaderRef.current) {
+        setIsPostRollPlaying(true);
+        adsLoaderRef.current.contentComplete();
+      } else {
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new Event('pushstate'));
+      }
     };
 
     const handleExitPlayer = () => {
@@ -333,7 +371,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
             <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
                 <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container">
-                    <div ref={adContainerRef} className="absolute inset-0 z-20 pointer-events-none" />
+                    <div ref={adContainerRef} className="absolute inset-0 z-20" />
                     
                     {playerMode === 'full' && (
                         <video 
@@ -345,6 +383,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             onContextMenu={(e) => e.preventDefault()} 
                             controlsList="nodownload"
                             onEnded={handleMovieEnd}
+                            autoPlay
                         />
                     )}
 

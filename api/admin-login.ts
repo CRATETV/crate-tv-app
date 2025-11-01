@@ -13,46 +13,55 @@ export async function POST(request: Request) {
 
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
+        const festivalAdminPassword = 'PWFF1218';
 
-        // --- Standard Admin Password Checks ---
+        // --- Role-Based Password Checks ---
 
-        // 1. Check against the primary password
+        // 1. Check for Festival Admin Role
+        if (password === festivalAdminPassword) {
+            return new Response(JSON.stringify({ success: true, role: 'festival_admin' }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+        
+        // 2. Check against the primary password for Super Admin
         if (primaryAdminPassword && password === primaryAdminPassword) {
-            return new Response(JSON.stringify({ success: true }), {
+            return new Response(JSON.stringify({ success: true, role: 'super_admin' }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
             });
         }
 
-        // 2. Check against the master password override
+        // 3. Check against the master password override for Super Admin
         if (masterPassword && password === masterPassword) {
-            return new Response(JSON.stringify({ success: true }), {
+            return new Response(JSON.stringify({ success: true, role: 'super_admin' }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
             });
         }
 
-        // 3. Check against the list of additional user passwords
+        // 4. Check against the list of additional user passwords for Super Admin
         for (const key in process.env) {
             if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
-                 return new Response(JSON.stringify({ success: true }), {
+                 return new Response(JSON.stringify({ success: true, role: 'super_admin' }), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' },
                 });
             }
         }
         
-        // 4. First-Time Setup Mode (if no passwords of any kind are set)
+        // 5. First-Time Setup Mode (if no passwords of any kind are set)
         const anyPasswordSet = primaryAdminPassword || masterPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
         if (!anyPasswordSet) {
             console.log("No admin passwords set. Activating first-time setup mode for the session.");
-            return new Response(JSON.stringify({ success: true, firstLogin: true }), {
+            return new Response(JSON.stringify({ success: true, firstLogin: true, role: 'super_admin' }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
             });
         }
 
-        // 5. If all checks fail, deny access
+        // 6. If all checks fail, deny access
         return new Response(JSON.stringify({ error: 'Incorrect password.' }), {
             status: 401,
             headers: { 'Content-Type': 'application/json' },

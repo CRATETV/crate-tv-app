@@ -15,38 +15,48 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
 
   const released = isMovieReleased(movie);
 
-  // Special layout for ranked "Top 10" movies, inspired by Hulu/Netflix
+  // Special layout for ranked "Top 10" movies, inspired by the user's request.
   if (rank) {
     return (
       <div
-        className="group relative h-full w-full cursor-pointer flex items-stretch bg-black rounded-lg overflow-hidden transition-transform duration-300 hover:scale-105"
+        className="group relative h-full w-full cursor-pointer flex items-stretch bg-black rounded-lg overflow-hidden transition-transform duration-300 hover:scale-105 shadow-lg"
         onClick={() => onSelectMovie(movie)}
         role="button"
         aria-label={`View details for ${movie.title}, ranked number ${rank}`}
         tabIndex={0}
         onKeyPress={(e) => { if (e.key === 'Enter') onSelectMovie(movie)}}
       >
-        <img
+        {/* Background gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-gray-900/80 to-transparent z-10"></div>
+        
+        {/* Left Side: Rank and Title */}
+        <div className="relative z-20 flex-shrink-0 w-2/5 flex flex-col justify-between p-4">
+          <span 
+            className="font-black text-8xl lg:text-9xl text-gray-800 select-none"
+            style={{ WebkitTextStroke: '2px rgba(150,150,150,0.2)' }}
+            aria-hidden="true"
+          >
+            {rank}
+          </span>
+          <div>
+            <h3 className="text-xl lg:text-2xl font-bold text-white transition-transform duration-300 transform group-hover:-translate-y-1">
+              {movie.title}
+            </h3>
+            <p className="text-sm text-gray-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              Click to view
+            </p>
+          </div>
+        </div>
+
+        {/* Right Side: Poster */}
+        <div className="relative w-3/5">
+          <img
             src={movie.poster}
             alt="" // Decorative
             className="w-full h-full object-cover"
             loading="lazy"
             onContextMenu={(e) => e.preventDefault()}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity"></div>
-        <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-          <div className="flex items-end gap-2">
-             <span 
-                className="font-black text-6xl leading-none select-none text-white/80"
-                style={{ WebkitTextStroke: '1px rgba(0,0,0,0.5)' }}
-                aria-hidden="true"
-            >
-                {rank}
-            </span>
-             <h3 className="text-lg font-bold leading-tight opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:translate-y-0 translate-y-2">
-                {movie.title}
-             </h3>
-          </div>
+          />
         </div>
       </div>
     );

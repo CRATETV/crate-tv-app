@@ -33,7 +33,6 @@ export async function GET(request: Request) {
     Object.keys(visibleMovies).forEach(movieKey => {
         movieGenreMap.set(movieKey, []);
     });
-    // FIX: Cast the result of Object.values to ensure the 'category' parameter is correctly typed.
     (Object.values(categoriesData) as Category[]).forEach((category) => {
         if (category && Array.isArray(category.movieKeys)) {
             category.movieKeys.forEach(movieKey => {
@@ -66,6 +65,8 @@ export async function GET(request: Request) {
                     director: movie.director || '',
                     actors: movie.cast ? movie.cast.map(c => c.name || '') : [],
                     genres: movieGenreMap.get(movie.key) || [],
+                    rating: movie.rating ? movie.rating.toFixed(1) : "",
+                    duration: movie.durationInMinutes ? `${movie.durationInMinutes} min` : "",
                 };
             });
           

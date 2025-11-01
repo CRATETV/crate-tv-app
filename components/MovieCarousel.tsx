@@ -27,7 +27,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
   
   // Custom styling for the Top 10 carousel specifically
   const carouselClasses = showRankings 
-    ? "flex overflow-x-auto space-x-8 pb-4 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8"
+    ? "flex overflow-x-auto space-x-4 md:space-x-6 pb-4 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8"
     : "flex overflow-x-auto space-x-4 pb-4 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8";
 
   return (
@@ -41,7 +41,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
         <div ref={scrollRef} className={carouselClasses}>
           {movies.map((movie, index) => {
             const containerClasses = showRankings
-              ? 'flex-shrink-0 w-[45vw] h-auto sm:w-[30vw] md:w-[25vw] lg:w-[20vw] aspect-[16/9]' // A landscape-oriented box for the new design
+              ? 'flex-shrink-0 w-[70vw] sm:w-[50vw] md:w-[40vw] lg:w-[35vw] aspect-[16/9]' // A wider, landscape-oriented box for the new design
               : 'flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw]';
 
             return (

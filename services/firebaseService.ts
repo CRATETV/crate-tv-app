@@ -22,11 +22,13 @@ import {
     getDoc,
     // FIX: Import QuerySnapshot and DocumentData to explicitly type snapshot parameters.
     QuerySnapshot,
-    DocumentData
+    DocumentData,
+    addDoc,
+    serverTimestamp
 } from 'firebase/firestore';
 
 // FIX: Corrected type imports to use the new types.ts file
-import { Movie, Category, FestivalConfig, FestivalDay, AboutData, ActorSubmission } from '../types';
+import { Movie, Category, FestivalConfig, FestivalDay, AboutData, ActorSubmission, MoviePipelineEntry, LiveData } from '../types';
 import { moviesData as initialMovies, categoriesData as initialCategories, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
 
 // --- Asynchronous Firebase Initialization ---
@@ -82,32 +84,24 @@ const initializeFirebase = () => {
 initializeFirebase();
 
 // --- Data Structures ---
-interface AdminData {
-    movies: Record<string, Movie>;
-    categories: Record<string, Category>;
-    festivalConfig: FestivalConfig;
-    festivalData: FestivalDay[];
-    aboutData: AboutData;
-    actorSubmissions: ActorSubmission[];
-}
-
 interface AdminDataResult {
-    data: AdminData;
+    data: LiveData;
     source: 'firebase' | 'fallback';
     error?: string;
 }
 
 // --- Local In-Memory Store for Fallback Mode ---
-const getFallbackData = (): AdminData => ({
+const getFallbackData = (): LiveData => ({
     movies: JSON.parse(JSON.stringify(initialMovies)),
     categories: JSON.parse(JSON.stringify(initialCategories)),
     festivalConfig: JSON.parse(JSON.stringify(initialFestivalConfig)),
     festivalData: JSON.parse(JSON.stringify(initialFestivalData)),
     aboutData: JSON.parse(JSON.stringify(initialAboutData)),
     actorSubmissions: [],
+    moviePipeline: [],
 });
 
-let localStore: AdminData = getFallbackData();
+let localStore: LiveData = getFallbackData();
 let localListeners: ((result: AdminDataResult) => void)[] = [];
 
 const notifyLocalListeners = () => {
@@ -201,12 +195,12 @@ export const listenToAllAdminData = (
         try {
             await migrateInitialData(firestoreDb);
 
-            const adminData: AdminData = getFallbackData();
+            const adminData: LiveData = getFallbackData();
             
             // This closure-based counter is more robust for handling the initial load.
             const checkInitialLoadAndCallback = (() => {
                 let loads = 0;
-                const expected = 6;
+                const expected = 7; // Increased for the new moviePipeline listener
                 let initialLoadDone = false;
                 
                 return (error?: { collection: string, message: string }) => {
@@ -273,6 +267,14 @@ export const listenToAllAdminData = (
                 adminData.actorSubmissions = submissions;
                 checkInitialLoadAndCallback();
             }, (err) => onError(err, 'actorSubmissions')));
+
+            const pipelineQuery = query(collection(firestoreDb, 'movie_pipeline'), where('status', '==', 'pending'), orderBy('submittedAt', 'desc'));
+            unsubs.push(onSnapshot(pipelineQuery, (snapshot: QuerySnapshot<DocumentData>) => {
+                const pipeline: MoviePipelineEntry[] = [];
+                snapshot.forEach(doc => { pipeline.push({ id: doc.id, ...doc.data() } as MoviePipelineEntry); });
+                adminData.moviePipeline = pipeline;
+                checkInitialLoadAndCallback();
+            }, (err) => onError(err, 'movie_pipeline')));
 
             resolve(() => {
                 console.log("Unsubscribing from all Firebase listeners.");
@@ -414,3 +416,30 @@ export const approveActorSubmission = async (submissionId: string) => {
 export const rejectActorSubmission = async (submissionId: string, reason?: string) => {
     return callSubmissionApi('/api/reject-actor-submission', { submissionId, reason });
 }
+
+// --- Movie Pipeline Functions ---
+export const addMoviePipelineEntry = async (entry: Omit<MoviePipelineEntry, 'id' | 'submittedAt' | 'status'>) => {
+    await initializeFirebase();
+    const firestoreDb = db;
+    if (!firestoreDb) {
+        console.warn("Local mode: Cannot add pipeline entry.");
+        return;
+    }
+    const collectionRef = collection(firestoreDb, 'movie_pipeline');
+    await addDoc(collectionRef, {
+        ...entry,
+        status: 'pending',
+        submittedAt: serverTimestamp(),
+    });
+};
+
+export const deleteMoviePipelineEntry = async (id: string) => {
+     await initializeFirebase();
+    const firestoreDb = db;
+    if (!firestoreDb) {
+        console.warn("Local mode: Cannot delete pipeline entry.");
+        return;
+    }
+    const docRef = doc(firestoreDb, 'movie_pipeline', id);
+    await deleteDoc(docRef);
+};

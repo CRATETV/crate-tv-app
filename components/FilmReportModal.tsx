@@ -11,7 +11,10 @@ interface FilmReportModalProps {
         likes: number;
         donations: number;
         crateTvCut: number;
-        filmmakerPayout: number;
+        filmmakerDonationPayout: number;
+        adRevenue: number;
+        filmmakerAdPayout: number;
+        totalFilmmakerPayout: number;
     };
     onClose: () => void;
 }
@@ -56,10 +59,14 @@ const FilmReportModal: React.FC<FilmReportModalProps> = ({ filmData, onClose }) 
                         <ReportRow label="Total Views" value={formatNumber(filmData.views)} />
                         <ReportRow label="Total Likes" value={formatNumber(filmData.likes)} />
 
-                        <h4 className="text-lg font-semibold text-gray-300 mt-6 mb-2">Financial Breakdown (from Donations)</h4>
+                        <h4 className="text-lg font-semibold text-gray-300 mt-6 mb-2">Financial Breakdown</h4>
                         <ReportRow label="Total Donations Received" value={formatCurrency(filmData.donations)} />
-                        <ReportRow label="Crate TV Cut (30%)" value={formatCurrency(filmData.crateTvCut)} className="text-red-400" />
-                        <ReportRow label="Filmmaker Payout" value={formatCurrency(filmData.filmmakerPayout)} isBold={true} className="text-green-400" />
+                        <ReportRow label="Filmmaker Donation Payout (70%)" value={formatCurrency(filmData.filmmakerDonationPayout)} />
+                        <hr className="border-gray-600 my-2" />
+                        <ReportRow label="Total Ad Revenue (from views)" value={formatCurrency(filmData.adRevenue)} />
+                        <ReportRow label="Filmmaker Ad Payout (50%)" value={formatCurrency(filmData.filmmakerAdPayout)} />
+                        <hr className="border-gray-600 my-2" />
+                        <ReportRow label="Total Filmmaker Payout" value={formatCurrency(filmData.totalFilmmakerPayout)} isBold={true} className="text-green-400" />
                     </div>
                 </div>
 

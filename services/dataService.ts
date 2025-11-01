@@ -14,6 +14,8 @@ const getFallbackData = (): FetchResult => ({
     festivalConfig: festivalConfigData,
     aboutData: aboutData,
     actorSubmissions: [],
+    // FIX: Added missing moviePipeline property to match LiveData type.
+    moviePipeline: [],
   },
   source: 'fallback',
   timestamp: Date.now(),

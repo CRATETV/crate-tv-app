@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/get-sales-data
 import { UserRecord } from 'firebase-admin/auth';
-import { AnalyticsData, FilmmakerPayout } from '../types.js';
+import { AnalyticsData, FilmmakerPayout, Movie } from '../types.js';
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 
 interface SquarePayment {
@@ -20,12 +20,16 @@ interface FirebaseData {
     totalUsers: number;
     allUsers: { email: string; creationTime: string; }[];
     viewLocations: Record<string, Record<string, number>>;
+    allMovies: Record<string, Movie>;
 }
 
 // Mock merch data for simulation purposes
 const MOCK_MERCH_ITEMS = [
     { name: 'Crate TV Classic Tee', price: 2500 },
 ];
+
+const AD_CPM_IN_CENTS = 500; // $5.00 per 1000 views
+const AD_REVENUE_FILMMAKER_SHARE = 0.50; // 50%
 
 const parseNote = (note: string | undefined): { type: string, title?: string, director?: string, itemName?: string } => {
     if (!note) return { type: 'unknown' };
@@ -117,16 +121,19 @@ async function fetchFirebaseData(): Promise<FirebaseData> {
     let totalUsers = 0;
     let allUsersResult: { email: string; creationTime: string; }[] = [];
     let viewLocations: Record<string, Record<string, number>> = {};
+    let allMovies: Record<string, Movie> = {};
 
-    const [viewsSnapshot, moviesSnapshot, locationsSnapshot] = await Promise.all([
+    const [viewsSnapshot, moviesSnapshot, locationsSnapshot, allMoviesSnapshot] = await Promise.all([
         db.collection("view_counts").get(),
         db.collection("movies").get(),
         db.collection("view_locations").get(),
+        db.collection("movies").get(), // Also fetch all movie data for director lookup
     ]);
     
     viewsSnapshot.forEach(doc => { viewCounts[doc.id] = doc.data().count || 0; });
     moviesSnapshot.forEach(doc => { movieLikes[doc.id] = doc.data().likes || 0; });
     locationsSnapshot.forEach(doc => { viewLocations[doc.id] = doc.data(); });
+    allMoviesSnapshot.forEach(doc => { allMovies[doc.id] = doc.data() as Movie; });
     
     let allAuthUsers: UserRecord[] = [];
     let nextPageToken;
@@ -144,7 +151,7 @@ async function fetchFirebaseData(): Promise<FirebaseData> {
     }));
 
     console.log("[Analytics API] Fetched data from Firebase successfully.");
-    return { viewCounts, movieLikes, totalUsers, allUsers: allUsersResult, viewLocations };
+    return { viewCounts, movieLikes, totalUsers, allUsers: allUsersResult, viewLocations, allMovies };
 }
 
 // --- Main API Handler ---
@@ -153,7 +160,7 @@ export async function POST(request: Request) {
     let squareError: string | null = null;
     let firebaseError: string | null = null;
     let allPayments: SquarePayment[] = [];
-    let firebaseData: FirebaseData = { viewCounts: {}, movieLikes: {}, totalUsers: 0, allUsers: [], viewLocations: {} };
+    let firebaseData: FirebaseData = { viewCounts: {}, movieLikes: {}, totalUsers: 0, allUsers: [], viewLocations: {}, allMovies: {} };
 
     try {
         const { password } = await request.json();
@@ -210,7 +217,11 @@ export async function POST(request: Request) {
         const analyticsData: AnalyticsData = {
             totalRevenue: 0, totalDonations: 0, totalSales: 0,
             salesByType: {}, filmmakerPayouts: [],
-            ...firebaseData,
+            viewCounts: firebaseData.viewCounts,
+            movieLikes: firebaseData.movieLikes,
+            totalUsers: firebaseData.totalUsers,
+            allUsers: firebaseData.allUsers,
+            viewLocations: firebaseData.viewLocations,
             totalFestivalRevenue: 0,
             festivalPassSales: { units: 0, revenue: 0 },
             festivalBlockSales: { units: 0, revenue: 0 },
@@ -219,64 +230,76 @@ export async function POST(request: Request) {
             crateTvMerchCut: 0,
             merchSales: {},
             totalAdRevenue: 0,
+            crateTvAdShare: 0,
+            totalFilmmakerAdPayouts: 0,
         };
-        const payoutMap: { [key: string]: FilmmakerPayout } = {};
+        const payoutMap: { [key: string]: Partial<FilmmakerPayout> } = {};
 
+        // 1. Process payments
         allPayments.forEach(payment => {
             const amount = payment.amount_money.amount;
-            analyticsData.totalRevenue += amount;
             const details = parseNote(payment.note);
 
             if (details.type === 'donation' && details.title && details.director) {
                 analyticsData.totalDonations += amount;
                 if (!payoutMap[details.title]) {
-                    payoutMap[details.title] = { movieTitle: details.title, director: details.director, totalDonations: 0, crateTvCut: 0, filmmakerPayout: 0 };
+                    payoutMap[details.title] = { movieTitle: details.title, director: details.director, totalDonations: 0 };
                 }
-                payoutMap[details.title].totalDonations += amount;
-            } else if (details.type === 'pass') {
-                analyticsData.totalFestivalRevenue += amount;
-                analyticsData.festivalPassSales.units += 1;
-                analyticsData.festivalPassSales.revenue += amount;
-            } else if (details.type === 'block' && details.title) {
-                analyticsData.totalFestivalRevenue += amount;
-                analyticsData.festivalBlockSales.units += 1;
-                analyticsData.festivalBlockSales.revenue += amount;
-                if (!analyticsData.salesByBlock[details.title]) {
-                    analyticsData.salesByBlock[details.title] = { units: 0, revenue: 0 };
-                }
-                analyticsData.salesByBlock[details.title].units += 1;
-                analyticsData.salesByBlock[details.title].revenue += amount;
+                payoutMap[details.title].totalDonations! += amount;
+            } else if (details.type === 'pass' || details.type === 'block') {
+                 analyticsData.totalFestivalRevenue += amount;
+                 if (details.type === 'pass') {
+                     analyticsData.festivalPassSales.units += 1;
+                     analyticsData.festivalPassSales.revenue += amount;
+                 } else if (details.title) {
+                     analyticsData.festivalBlockSales.units += 1;
+                     analyticsData.festivalBlockSales.revenue += amount;
+                     if (!analyticsData.salesByBlock[details.title]) analyticsData.salesByBlock[details.title] = { units: 0, revenue: 0 };
+                     analyticsData.salesByBlock[details.title].units += 1;
+                     analyticsData.salesByBlock[details.title].revenue += amount;
+                 }
             } else if (details.type === 'merch_sale' && details.itemName) {
                 analyticsData.totalMerchRevenue += amount;
-                if (!analyticsData.merchSales[details.itemName]) {
-                    analyticsData.merchSales[details.itemName] = { name: details.itemName, units: 0, revenue: 0 };
-                }
+                if (!analyticsData.merchSales[details.itemName]) analyticsData.merchSales[details.itemName] = { name: details.itemName, units: 0, revenue: 0 };
                 analyticsData.merchSales[details.itemName].units += 1;
                 analyticsData.merchSales[details.itemName].revenue += amount;
-
             } else if (details.type !== 'unknown') {
                 analyticsData.totalSales += amount;
                 analyticsData.salesByType[details.type] = (analyticsData.salesByType[details.type] || 0) + amount;
             }
         });
 
-        Object.values(payoutMap).forEach(payout => {
-            payout.crateTvCut = Math.round(payout.totalDonations * 0.30);
-            payout.filmmakerPayout = payout.totalDonations - payout.crateTvCut;
-            analyticsData.filmmakerPayouts.push(payout);
+        // 2. Calculate Ad Revenue and update payout map
+        Object.values(firebaseData.allMovies).forEach(movie => {
+            const views = firebaseData.viewCounts[movie.key] || 0;
+            const filmAdRevenue = (views / 1000) * AD_CPM_IN_CENTS;
+            analyticsData.totalAdRevenue += filmAdRevenue;
+
+            // Ensure every film with a director has a payout map entry
+            if (movie.director && !payoutMap[movie.title]) {
+                 payoutMap[movie.title] = { movieTitle: movie.title, director: movie.director, totalDonations: 0 };
+            }
+
+            if (payoutMap[movie.title]) {
+                 payoutMap[movie.title]!.totalAdRevenue = (payoutMap[movie.title]!.totalAdRevenue || 0) + filmAdRevenue;
+            }
         });
-        analyticsData.filmmakerPayouts.sort((a, b) => b.totalDonations - a.totalDonations);
 
-        // --- Calculate Simulated Ad Revenue ---
-        const totalViews = (Object.values(firebaseData.viewCounts) as number[]).reduce((sum, count) => sum + count, 0);
-        const adCpmInCents = 500; // $5.00 per 1000 views
-        analyticsData.totalAdRevenue = Math.round((totalViews / 1000) * adCpmInCents);
-        
-        // --- Calculate Merch Cut ---
-        const merchCutPercentage = 0.15; // 15%
-        analyticsData.crateTvMerchCut = Math.round(analyticsData.totalMerchRevenue * merchCutPercentage);
+        // 3. Finalize Payout Calculations
+        Object.values(payoutMap).forEach(payout => {
+            payout.filmmakerDonationPayout = (payout.totalDonations || 0) * 0.70;
+            payout.crateTvCut = (payout.totalDonations || 0) * 0.30;
+            payout.filmmakerAdPayout = (payout.totalAdRevenue || 0) * AD_REVENUE_FILMMAKER_SHARE;
+            payout.totalFilmmakerPayout = payout.filmmakerDonationPayout + payout.filmmakerAdPayout;
+            analyticsData.filmmakerPayouts.push(payout as FilmmakerPayout);
+        });
 
-        // --- Final Total Revenue Calculation ---
+        analyticsData.filmmakerPayouts.sort((a, b) => b.totalFilmmakerPayout - a.totalFilmmakerPayout);
+
+        // --- Calculate Final Aggregates ---
+        analyticsData.totalFilmmakerAdPayouts = analyticsData.filmmakerPayouts.reduce((sum, p) => sum + p.filmmakerAdPayout, 0);
+        analyticsData.crateTvAdShare = analyticsData.totalAdRevenue - analyticsData.totalFilmmakerAdPayouts;
+        analyticsData.crateTvMerchCut = Math.round(analyticsData.totalMerchRevenue * 0.15); // 15% merch cut
         analyticsData.totalRevenue = analyticsData.totalDonations + analyticsData.totalSales + analyticsData.totalFestivalRevenue + analyticsData.totalMerchRevenue + analyticsData.totalAdRevenue;
 
         console.log("[Analytics API] Request completed successfully.");

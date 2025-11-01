@@ -14,6 +14,9 @@ interface SquarePayment {
   note?: string;
 }
 
+const AD_CPM_IN_CENTS = 500; // $5.00 per 1000 views
+const AD_REVENUE_FILMMAKER_SHARE = 0.50; // 50%
+
 const parseNote = (note: string | undefined): { type: string, title?: string, director?: string } => {
     if (!note) return { type: 'unknown' };
     const donationMatch = note.match(/Support for film: "(.*)" by (.*)/);
@@ -62,9 +65,26 @@ async function fetchSquareData(accessToken: string, locationId: string | undefin
 
 export async function POST(request: Request) {
     try {
-        const { directorName } = await request.json();
+        const { directorName, password } = await request.json();
 
-        // 1. Authentication (Password check removed, security handled by frontend route protection)
+        // 1. Authentication
+        const primaryAdminPassword = process.env.ADMIN_PASSWORD;
+        const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
+        let isAuthenticated = false;
+        // This endpoint can be accessed by filmmakers, so we don't check for admin password
+        if (password) {
+             if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
+              isAuthenticated = true;
+            } else {
+                for (const key in process.env) {
+                    if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
+                        isAuthenticated = true;
+                        break;
+                    }
+                }
+            }
+        }
+        
         if (!directorName) {
             return new Response(JSON.stringify({ error: 'Filmmaker name is required.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
@@ -113,15 +133,15 @@ export async function POST(request: Request) {
             return directors.includes(trimmedName) || producers.includes(trimmedName);
         });
 
-        if (filmmakerFilms.length === 0) {
-            const emptyAnalytics: FilmmakerAnalytics = { totalDonations: 0, totalPaidOut: 0, balance: 0, films: [] };
+        if (filmmakerFilms.length === 0 && !isAuthenticated) {
+            const emptyAnalytics: FilmmakerAnalytics = { totalDonations: 0, totalAdRevenue: 0, totalPaidOut: 0, balance: 0, films: [] };
             return new Response(JSON.stringify({ analytics: emptyAnalytics }), { status: 200, headers: { 'Content-Type': 'application/json' }});
         }
         
         let totalDonations = 0;
+        let totalAdRevenue = 0;
         const filmPerformances: FilmmakerFilmPerformance[] = [];
 
-        // FIX: Corrected typo from 'directorFilms' to 'filmmakerFilms'.
         filmmakerFilms.forEach(film => {
             const filmDonations = allPayments
                 .filter(p => {
@@ -130,13 +150,19 @@ export async function POST(request: Request) {
                 })
                 .reduce((sum, p) => sum + p.amount_money.amount, 0);
 
+            const filmAdRevenue = ((viewCounts[film.key] || 0) / 1000) * AD_CPM_IN_CENTS;
+            const filmmakerAdShare = filmAdRevenue * AD_REVENUE_FILMMAKER_SHARE;
+
             totalDonations += filmDonations;
+            totalAdRevenue += filmmakerAdShare;
+            
             filmPerformances.push({
                 key: film.key,
                 title: film.title,
                 views: viewCounts[film.key] || 0,
                 likes: allMovies[film.key].likes || 0,
                 donations: filmDonations,
+                adRevenue: filmmakerAdShare,
             });
         });
 
@@ -144,12 +170,13 @@ export async function POST(request: Request) {
             .map(doc => doc.data() as PayoutRequest)
             .reduce((sum, req) => sum + req.amount, 0);
 
-        const crateTvCut = Math.round(totalDonations * 0.30);
-        const filmmakerTotalEarnings = totalDonations - crateTvCut;
-        const balance = filmmakerTotalEarnings - totalPaidOut;
+        const crateTvDonationCut = Math.round(totalDonations * 0.30);
+        const filmmakerTotalDonationEarnings = totalDonations - crateTvDonationCut;
+        const balance = (filmmakerTotalDonationEarnings + totalAdRevenue) - totalPaidOut;
 
         const analytics: FilmmakerAnalytics = {
             totalDonations,
+            totalAdRevenue,
             totalPaidOut,
             balance,
             films: filmPerformances.sort((a,b) => b.views - a.views),

@@ -107,6 +107,17 @@ export interface PayoutRequest {
     completionDate?: { seconds: number; nanoseconds: number };
 }
 
+export interface MoviePipelineEntry {
+  id: string;
+  title: string;
+  posterUrl: string;
+  movieUrl: string;
+  cast: string;
+  director: string;
+  status: 'pending' | 'completed';
+  submittedAt: { seconds: number; nanoseconds: number };
+}
+
 export interface LiveData {
     movies: Record<string, Movie>;
     categories: Record<string, Category>;
@@ -114,6 +125,7 @@ export interface LiveData {
     festivalConfig: FestivalConfig;
     aboutData: AboutData;
     actorSubmissions: ActorSubmission[];
+    moviePipeline: MoviePipelineEntry[];
 }
 
 export interface FetchResult {
@@ -128,7 +140,10 @@ export interface FilmmakerPayout {
     director: string;
     totalDonations: number;
     crateTvCut: number;
-    filmmakerPayout: number;
+    filmmakerDonationPayout: number;
+    totalAdRevenue: number;
+    filmmakerAdPayout: number;
+    totalFilmmakerPayout: number;
 }
 
 export interface AnalyticsData {
@@ -150,6 +165,8 @@ export interface AnalyticsData {
     crateTvMerchCut: number;
     merchSales: Record<string, { name: string, units: number, revenue: number }>;
     totalAdRevenue: number;
+    crateTvAdShare: number;
+    totalFilmmakerAdPayouts: number;
 }
 
 export interface FilmmakerFilmPerformance {
@@ -158,10 +175,12 @@ export interface FilmmakerFilmPerformance {
     views: number;
     likes: number;
     donations: number;
+    adRevenue: number;
 }
 
 export interface FilmmakerAnalytics {
     totalDonations: number;
+    totalAdRevenue: number;
     totalPaidOut: number;
     balance: number;
     films: FilmmakerFilmPerformance[];

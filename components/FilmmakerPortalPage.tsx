@@ -145,8 +145,8 @@ const FilmmakerPortalPage: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
-            <main className="flex-grow pt-24 px-4 md:px-12">
+            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={false} />
+            <main className="flex-grow pt-28 px-4 md:px-12">
                 <div className="max-w-7xl mx-auto">
                     <h1 className="text-3xl font-bold text-white mb-2">Dashboard for {user.name}</h1>
                     <p className="text-gray-400 mb-8">View performance analytics for your films on Crate TV.</p>
@@ -154,10 +154,11 @@ const FilmmakerPortalPage: React.FC = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Main Content */}
                         <div className="lg:col-span-2 space-y-8">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <StatCard title="Available Balance" value={formatCurrency(analytics.balance)} />
-                                <StatCard title="Total Donations" value={formatCurrency(analytics.totalDonations)} />
                                 <StatCard title="Total Paid Out" value={formatCurrency(analytics.totalPaidOut)} />
+                                <StatCard title="Total Ad Revenue" value={formatCurrency(analytics.totalAdRevenue)} />
+                                <StatCard title="Total Donations" value={formatCurrency(analytics.totalDonations)} />
                             </div>
                             <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
                                 <h2 className="text-xl font-bold text-white mb-2">Payouts</h2>
@@ -175,10 +176,11 @@ const FilmmakerPortalPage: React.FC = () => {
                                     {analytics.films.map(film => (
                                         <div key={film.key} className="bg-gray-800/50 border border-gray-700 p-4 rounded-lg">
                                             <h3 className="font-bold text-lg text-white">{film.title}</h3>
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-2 text-center">
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2 text-center">
                                                 <div><p className="text-gray-400 text-sm">Views</p><p className="font-bold text-xl">{film.views.toLocaleString()}</p></div>
                                                 <div><p className="text-gray-400 text-sm">Likes</p><p className="font-bold text-xl">{film.likes.toLocaleString()}</p></div>
                                                 <div><p className="text-gray-400 text-sm">Donations</p><p className="font-bold text-xl text-green-400">{formatCurrency(film.donations)}</p></div>
+                                                <div><p className="text-gray-400 text-sm">Ad Revenue</p><p className="font-bold text-xl text-blue-400">{formatCurrency(film.adRevenue)}</p></div>
                                             </div>
                                         </div>
                                     ))}
