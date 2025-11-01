@@ -20,6 +20,7 @@ import NewFilmAnnouncementModal from './components/NewFilmAnnouncementModal';
 import NowPlayingBanner from './components/NowPlayingBanner';
 import { useAuth } from './contexts/AuthContext';
 import { isMovieReleased } from './constants';
+import BottomNavBar from './components/BottomNavBar';
 
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
@@ -44,6 +45,7 @@ const App: React.FC = () => {
   const [movies, setMovies] = useState<Record<string, Movie>>({});
   const [categories, setCategories] = useState<Record<string, Category>>({});
   const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+  const [isFestivalLive, setIsFestivalLive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
@@ -198,24 +200,44 @@ const App: React.FC = () => {
     fetchRecommendations();
   }, [likedMovies, movies]);
 
+  // This effect dynamically and periodically checks if the festival is live.
+  useEffect(() => {
+    const checkStatus = () => {
+        if (!festivalConfig?.startDate || !festivalConfig?.endDate) {
+            setIsFestivalLive(false);
+            return;
+        }
+        const now = new Date();
+        const start = new Date(festivalConfig.startDate);
+        const end = new Date(festivalConfig.endDate);
+        const isLive = now >= start && now < end;
+        
+        // Only update state if the value has changed to prevent unnecessary re-renders
+        setIsFestivalLive(prevIsLive => {
+            if (prevIsLive !== isLive) {
+                return isLive;
+            }
+            return prevIsLive;
+        });
+    };
+
+    checkStatus(); // Initial check
+    const interval = setInterval(checkStatus, 30000); // Check every 30 seconds for responsiveness
+
+    return () => clearInterval(interval); // Cleanup
+  }, [festivalConfig]);
+
 
   // Effect to show the Festival Live modal once per session
   useEffect(() => {
-    if (!isLoading && festivalConfig?.startDate && festivalConfig?.endDate) {
-      const now = new Date();
-      const start = new Date(festivalConfig.startDate);
-      const end = new Date(festivalConfig.endDate);
-      const isLive = now >= start && now < end;
-
-      if (isLive) {
-        const hasSeenModal = sessionStorage.getItem('hasSeenFestivalLiveModal');
-        if (!hasSeenModal) {
-          setShowFestivalLiveModal(true);
-          sessionStorage.setItem('hasSeenFestivalLiveModal', 'true');
-        }
+    if (!isLoading && isFestivalLive) {
+      const hasSeenModal = sessionStorage.getItem('hasSeenFestivalLiveModal');
+      if (!hasSeenModal) {
+        setShowFestivalLiveModal(true);
+        sessionStorage.setItem('hasSeenFestivalLiveModal', 'true');
       }
     }
-  }, [isLoading, festivalConfig]);
+  }, [isLoading, isFestivalLive]);
   
   // Logic for the hero banner auto-scroll
   const heroMovies = useMemo(() => {
@@ -248,14 +270,6 @@ const App: React.FC = () => {
         return !expiryDate || expiryDate > now;
     });
   }, [movies]);
-
-  const isFestivalLive = useMemo(() => {
-      if (!festivalConfig?.startDate || !festivalConfig?.endDate) return false;
-      const now = new Date();
-      const start = new Date(festivalConfig.startDate);
-      const end = new Date(festivalConfig.endDate);
-      return now >= start && now < end;
-  }, [festivalConfig]);
 
   // Re-architected category rendering logic for stability and mobile visibility.
   // 1. Memoize festival movies separately for dedicated rendering.
@@ -310,21 +324,10 @@ const App: React.FC = () => {
             .filter((m): m is Movie => !!m);
 
         if (categoryMovies.length === 0) return null;
-
-        let title: React.ReactNode = category.title;
-
-        if (key === 'newReleases') {
-            const TitleComponent = () => (
-                <h2 className="hidden md:block text-lg md:text-2xl font-bold mb-4 text-white">
-                    {category.title}
-                </h2>
-            );
-            title = <TitleComponent />;
-        }
         
         return {
             key: key,
-            title: title,
+            title: <h2 className="text-lg md:text-2xl font-bold mb-4 text-white">{category.title}</h2>,
             movies: categoryMovies,
         };
       })
@@ -440,7 +443,7 @@ const App: React.FC = () => {
         isFestivalLive={isFestivalLive}
       />
       
-      <main className="flex-grow">
+      <main className="flex-grow pb-24 md:pb-0">
         {searchQuery ? (
            <div className="pt-24 px-4 md:px-12">
             <h2 className="text-2xl font-bold mb-6 text-white">Search Results for "{searchQuery}"</h2>
@@ -599,6 +602,9 @@ const App: React.FC = () => {
           }}
         />
       )}
+      <BottomNavBar 
+        onSearchClick={() => setIsMobileSearchOpen(true)}
+      />
     </div>
   );
 };

@@ -39,6 +39,7 @@ import FilmmakerPortalPage from './components/FilmmakerPortalPage';
 import FilmmakerSignupPage from './components/FilmmakerSignupPage';
 import RokuGuidePage from './components/RokuGuidePage';
 import LoadingSpinner from './components/LoadingSpinner';
+import Intro from './components/Intro';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -122,8 +123,6 @@ const AppRouter: React.FC = () => {
       return <ActorsDirectoryPage />;
     case '/filmmaker-signup':
       return <FilmmakerSignupPage />;
-    case '/filmmaker-portal':
-      return <FilmmakerPortalPage />;
     case '/thank-you':
       return <ThankYouPage />;
     case '/contact':
@@ -150,6 +149,23 @@ const AppRouter: React.FC = () => {
       return <ActorPortalPage />;
     }
 
+    // Protected Filmmaker Route
+    case '/filmmaker-portal': {
+        if (!authInitialized) return <LoadingSpinner />;
+        if (!user) return <RedirectToLogin />;
+        if (!user.isFilmmaker) {
+            const RedirectHome: React.FC = () => {
+                useEffect(() => {
+                    window.history.replaceState({}, '', '/');
+                    window.dispatchEvent(new Event('pushstate'));
+                }, []);
+                return <App />;
+            };
+            return <RedirectHome />;
+        }
+        return <FilmmakerPortalPage />;
+    }
+
     // Admin & Dev routes
     case '/admin':
       return <AdminPage />;
@@ -163,11 +179,24 @@ const AppRouter: React.FC = () => {
   }
 };
 
+const MainApp: React.FC = () => {
+  const [showIntro, setShowIntro] = useState(sessionStorage.getItem('introSeen') !== 'true');
+
+  const handleIntroEnd = () => {
+    sessionStorage.setItem('introSeen', 'true');
+    setShowIntro(false);
+  };
+
+  return (
+    <AuthProvider>
+      {showIntro ? <Intro onIntroEnd={handleIntroEnd} /> : <AppRouter />}
+    </AuthProvider>
+  );
+};
+
 root.render(
   <React.StrictMode>
-    <AuthProvider>
-      <AppRouter />
-    </AuthProvider>
+    <MainApp />
   </React.StrictMode>
 );
 

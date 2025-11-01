@@ -54,11 +54,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (auth) {
                 const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
                     if (firebaseUser) {
+                        // Get custom claims to determine roles
+                        const idTokenResult = await firebaseUser.getIdTokenResult();
+                        const isActor = !!idTokenResult.claims.isActor;
+                        const isFilmmaker = !!idTokenResult.claims.isFilmmaker;
+
                         let userProfile = await getUserProfile(firebaseUser.uid);
                         if (!userProfile && firebaseUser.email) {
                             userProfile = await createUserProfile(firebaseUser.uid, firebaseUser.email);
                         }
-                        setUser(userProfile);
+                        
+                        // Ensure the user object in state has the roles from claims
+                        if(userProfile) {
+                             setUser({ ...userProfile, isActor, isFilmmaker });
+                        }
+
                         // When user logs in, clear any guest data from memory and storage
                         setAnonymousWatchlist([]);
                         localStorage.removeItem(WATCHLIST_KEY);

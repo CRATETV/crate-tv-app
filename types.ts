@@ -44,6 +44,7 @@ export interface User {
     email: string;
     name?: string;
     isActor: boolean;
+    isFilmmaker: boolean;
     avatar?: string;
     isPremiumSubscriber?: boolean;
     watchlist?: string[];

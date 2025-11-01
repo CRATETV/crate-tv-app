@@ -42,7 +42,7 @@ const FilmmakerSignupPage: React.FC = () => {
                     <div className="max-w-2xl bg-gray-800/50 border border-gray-700 rounded-lg p-8 sm:p-12 animate-[fadeIn_0.5s_ease-out]">
                         <h1 className="text-3xl sm:text-4xl font-bold text-green-400 mb-4">Check Your Email!</h1>
                         <p className="text-gray-300">
-                            We've verified your name and sent the password and a link to the Filmmaker Dashboard to your email address. Please check your inbox (and spam folder) to continue.
+                           We've verified your name and sent a secure link to your email. Click the link to create your password and access your personal Filmmaker Dashboard.
                         </p>
                     </div>
                 </main>
@@ -52,39 +52,49 @@ const FilmmakerSignupPage: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#141414] text-white">
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
-            <main className="flex-grow pt-24 px-4 md:px-12">
-                <div className="max-w-3xl mx-auto">
-                    <div className="text-center mb-10">
-                        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Filmmaker Dashboard Signup</h1>
-                        <p className="text-lg text-gray-400">
-                           If you've directed or produced a film on Crate TV, enter your name and email. We'll verify your credentials and send you a password to access your private analytics dashboard.
-                        </p>
-                    </div>
-                    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-8">
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div>
-                                <label htmlFor="name" className="block text-sm font-medium text-gray-400 mb-2">Your Full Name</label>
-                                <input type="text" id="name" name="name" className="form-input" required placeholder="As it appears in film credits" />
-                            </div>
-                            <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-2">Your Email Address</label>
-                                <input type="email" id="email" name="email" className="form-input" required placeholder="Where we can send your password" />
-                            </div>
-                            
-                            <button type="submit" className="submit-btn w-full mt-8" disabled={status === 'submitting'}>
-                                {status === 'submitting' ? 'Verifying...' : 'Request Access'}
-                            </button>
+        <div className="flex flex-col min-h-screen bg-black text-white">
+            <style>{`
+                body {
+                    background-image: url('https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg');
+                    background-size: cover;
+                    background-position: center;
+                }
+            `}</style>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div className="relative z-10 flex flex-col min-h-screen">
+                <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
+                <main className="flex-grow flex items-center justify-center px-4">
+                     <div className="max-w-md w-full">
+                        <div className="text-center mb-8">
+                            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Filmmaker Dashboard</h1>
+                            <p className="text-lg text-gray-300">
+                               Access your film's performance analytics and manage payouts.
+                            </p>
+                        </div>
+                        <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-8">
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div>
+                                    <label htmlFor="name" className="block text-sm font-medium text-gray-400 mb-2">Your Full Name</label>
+                                    <input type="text" id="name" name="name" className="form-input" required placeholder="As it appears in film credits" />
+                                </div>
+                                <div>
+                                    <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-2">Your Email Address</label>
+                                    <input type="email" id="email" name="email" className="form-input" required placeholder="Where we'll send your access link" />
+                                </div>
+                                
+                                <button type="submit" className="submit-btn w-full mt-8" disabled={status === 'submitting'}>
+                                    {status === 'submitting' ? 'Verifying...' : 'Request Access'}
+                                </button>
 
-                            {status === 'error' && (
-                                <p className="mt-4 text-center text-red-400">{error}</p>
-                            )}
-                        </form>
+                                {status === 'error' && (
+                                    <p className="mt-4 text-center text-red-400">{error}</p>
+                                )}
+                            </form>
+                        </div>
                     </div>
-                </div>
-            </main>
-            <Footer />
+                </main>
+                <Footer />
+            </div>
         </div>
     );
 };

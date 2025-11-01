@@ -3,21 +3,14 @@ import { fetchAndCacheLiveData } from '../services/dataService';
 import { Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import html2canvas from 'html2canvas';
-import { useAuth } from '../contexts/AuthContext';
 
 const TopTenPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [movies, setMovies] = useState<Record<string, Movie>>({});
     const [isDownloading, setIsDownloading] = useState(false);
     const captureRef = useRef<HTMLDivElement>(null);
-    const { user } = useAuth(); // Get user auth state
-    const [isAdmin, setIsAdmin] = useState(false); // State to track admin status
 
     useEffect(() => {
-        // Check for admin status from session storage when the component mounts.
-        const isAdminAuthenticated = sessionStorage.getItem('isAdminAuthenticated') === 'true';
-        setIsAdmin(isAdminAuthenticated);
-
         const loadData = async () => {
             setIsLoading(true);
             try {
@@ -33,13 +26,8 @@ const TopTenPage: React.FC = () => {
     }, []);
 
     const topTenMovies = useMemo(() => {
-        // Get all movies, filter out any potential null/undefined values
         const allValidMovies = Object.values(movies).filter((movie): movie is Movie => !!movie);
-        
-        // Sort all movies by likes, descending. Movies with 0 or undefined likes will be at the end.
         const sortedMovies = allValidMovies.sort((a, b) => (b.likes || 0) - (a.likes || 0));
-        
-        // Take the top 10 from the sorted list.
         return sortedMovies.slice(0, 10);
     }, [movies]);
 
@@ -49,13 +37,11 @@ const TopTenPage: React.FC = () => {
         setIsDownloading(true);
 
         try {
-            captureRef.current.style.border = '1px solid #374151';
             const canvas = await html2canvas(captureRef.current, {
-                backgroundColor: '#111827',
+                backgroundColor: '#111827', // A dark color matching the gradient
                 useCORS: true, 
-                scale: 2,
+                scale: 2, // Higher resolution for better quality
             });
-            captureRef.current.style.border = 'none';
 
             const image = canvas.toDataURL('image/png');
             const link = document.createElement('a');
@@ -72,14 +58,26 @@ const TopTenPage: React.FC = () => {
             setIsDownloading(false);
         }
     };
+    
+    const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, movieKey: string) => {
+        e.preventDefault();
+        window.history.pushState({}, '', `/movie/${movieKey}`);
+        window.dispatchEvent(new Event('pushstate'));
+    };
 
     if (isLoading) {
         return <LoadingSpinner />;
     }
 
+    const currentDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
     return (
         <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans">
-            <div className="max-w-3xl mx-auto">
+            <div className="max-w-7xl mx-auto">
                  <div className="text-center mb-6 sticky top-4 z-20">
                     <button
                         onClick={handleDownload}
@@ -90,48 +88,41 @@ const TopTenPage: React.FC = () => {
                     </button>
                 </div>
 
-                <div ref={captureRef} className="bg-gradient-to-br from-gray-900 via-purple-900/40 to-black p-4 sm:p-6 rounded-xl">
+                <div ref={captureRef} className="bg-gradient-to-br from-[#0c1a4d] via-[#111827] to-[#4d1a2c] p-4 sm:p-8 rounded-xl">
                     <header className="text-center mb-8">
                         <img
                             src={`/api/proxy-image?url=${encodeURIComponent("https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png")}`}
                             alt="Crate TV Logo"
                             crossOrigin="anonymous"
-                            className="mx-auto w-48 h-auto mb-2"
+                            className="mx-auto w-40 h-auto mb-4"
                             onContextMenu={(e) => e.preventDefault()}
                         />
-                        <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">Top 10 Most Liked Films</h1>
-                        <p className="text-sm text-gray-400 mt-2">As of {new Date().toLocaleDateString()}</p>
+                        <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">Top 10 on Crate TV</h1>
                     </header>
 
                     {topTenMovies.length > 0 ? (
-                        <div className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-y-8 gap-x-4">
                             {topTenMovies.map((movie, index) => (
-                                <div key={movie.key} className="flex flex-col p-4 bg-gray-900/50 border border-gray-700 rounded-lg shadow-lg">
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-5xl font-black text-purple-400 w-16 text-center flex-shrink-0">{index + 1}</span>
+                                <div key={movie.key} className="flex items-center justify-start">
+                                    <span 
+                                      className="font-black text-[10rem] sm:text-[12rem] text-gray-800/80 -mr-10 sm:-mr-12 select-none"
+                                      style={{ textShadow: '2px 2px 10px rgba(0,0,0,0.5)' }}
+                                    >
+                                        {index + 1}
+                                    </span>
+                                    <a 
+                                        href={`/movie/${movie.key}`}
+                                        onClick={(e) => handleNavigate(e, movie.key)}
+                                        className="relative z-10 w-32 h-48 sm:w-40 sm:h-60 block group flex-shrink-0"
+                                    >
                                         <img 
                                             src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
                                             alt={movie.title} 
                                             crossOrigin="anonymous"
-                                            className="w-16 h-24 object-cover rounded-md flex-shrink-0" 
+                                            className="w-full h-full object-cover rounded-md shadow-lg transition-transform duration-300 group-hover:scale-105" 
                                             onContextMenu={(e) => e.preventDefault()} 
                                         />
-                                        <div className="flex-grow">
-                                            <h2 className="text-lg font-bold text-white leading-tight">{movie.title}</h2>
-                                            <p className="text-sm text-gray-400">{movie.director}</p>
-                                        </div>
-                                        {/* Conditionally render the like count only for admins */}
-                                        {isAdmin && (
-                                            <div className="text-right flex-shrink-0">
-                                                <p className="font-bold text-lg text-white flex items-center gap-1.5">
-                                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                                                        <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                                                    </svg>
-                                                    {(movie.likes || 0).toLocaleString()}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
+                                    </a>
                                 </div>
                             ))}
                         </div>
@@ -140,6 +131,10 @@ const TopTenPage: React.FC = () => {
                             <p>No liked movies yet. Be the first to like a film!</p>
                         </div>
                     )}
+
+                    <footer className="text-center mt-8 pt-4 border-t border-gray-700/50">
+                        <p className="text-sm text-gray-400">Updated {currentDate}</p>
+                    </footer>
                 </div>
             </div>
         </div>

@@ -64,6 +64,7 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
             email: data.email || '',
             name: data.name,
             isActor: data.isActor === true, // Coerce to boolean, defaulting to false
+            isFilmmaker: data.isFilmmaker === true, // Coerce to boolean, defaulting to false
             avatar: data.avatar || 'fox',
             isPremiumSubscriber: data.isPremiumSubscriber === true, // Default to false
             watchlist: data.watchlist || [],
@@ -82,6 +83,7 @@ export const createUserProfile = async (uid: string, email: string, name?: strin
         email,
         name: name || email.split('@')[0],
         isActor: false,
+        isFilmmaker: false,
         avatar: 'fox', // A default avatar
         isPremiumSubscriber: false,
         watchlist: [], // Initialize watchlist for account-based storage

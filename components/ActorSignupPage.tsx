@@ -52,39 +52,49 @@ const ActorSignupPage: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#141414] text-white">
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
-            <main className="flex-grow pt-24 px-4 md:px-12">
-                <div className="max-w-3xl mx-auto">
-                    <div className="text-center mb-10">
-                        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Actor Portal Signup</h1>
-                        <p className="text-lg text-gray-400">
-                           If you've appeared in a Crate TV film, enter your name and email below. We'll verify your credentials and send you a password to access the portal.
-                        </p>
-                    </div>
-                    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-8">
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div>
-                                <label htmlFor="name" className="block text-sm font-medium text-gray-400 mb-2">Your Full Name</label>
-                                <input type="text" id="name" name="name" className="form-input" required placeholder="As it appears in film credits" />
-                            </div>
-                            <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-2">Your Email Address</label>
-                                <input type="email" id="email" name="email" className="form-input" required placeholder="Where we can send your password" />
-                            </div>
-                            
-                            <button type="submit" className="submit-btn w-full mt-8" disabled={status === 'submitting'}>
-                                {status === 'submitting' ? 'Verifying...' : 'Request Access'}
-                            </button>
+        <div className="flex flex-col min-h-screen bg-black text-white">
+             <style>{`
+                body {
+                    background-image: url('https://cratetelevision.s3.us-east-1.amazonaws.com/actor-bg.jpg');
+                    background-size: cover;
+                    background-position: center;
+                }
+            `}</style>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div className="relative z-10 flex flex-col min-h-screen">
+                <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
+                <main className="flex-grow flex items-center justify-center px-4">
+                    <div className="max-w-md w-full">
+                        <div className="text-center mb-8">
+                            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Actor Portal Signup</h1>
+                            <p className="text-lg text-gray-300">
+                               If you've appeared in a Crate TV film, enter your name and email to get access to your portal.
+                            </p>
+                        </div>
+                        <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-8">
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div>
+                                    <label htmlFor="name" className="block text-sm font-medium text-gray-400 mb-2">Your Full Name</label>
+                                    <input type="text" id="name" name="name" className="form-input" required placeholder="As it appears in film credits" />
+                                </div>
+                                <div>
+                                    <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-2">Your Email Address</label>
+                                    <input type="email" id="email" name="email" className="form-input" required placeholder="Where we can send your password" />
+                                </div>
+                                
+                                <button type="submit" className="submit-btn w-full mt-8" disabled={status === 'submitting'}>
+                                    {status === 'submitting' ? 'Verifying...' : 'Request Access'}
+                                </button>
 
-                            {status === 'error' && (
-                                <p className="mt-4 text-center text-red-400">{error}</p>
-                            )}
-                        </form>
+                                {status === 'error' && (
+                                    <p className="mt-4 text-center text-red-400">{error}</p>
+                                )}
+                            </form>
+                        </div>
                     </div>
-                </div>
-            </main>
-            <Footer />
+                </main>
+                <Footer />
+            </div>
         </div>
     );
 };

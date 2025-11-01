@@ -16,6 +16,7 @@ const FestivalPage: React.FC = () => {
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
     const [isStaging, setIsStaging] = useState(false);
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
+    const [isFestivalLive, setIsFestivalLive] = useState(false);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -45,12 +46,31 @@ const FestivalPage: React.FC = () => {
         loadData();
     }, []);
     
-    const isFestivalLive = useMemo(() => {
-        if (!festivalConfig?.startDate || !festivalConfig?.endDate) return false;
-        const now = new Date();
-        const start = new Date(festivalConfig.startDate);
-        const end = new Date(festivalConfig.endDate);
-        return now >= start && now < end;
+    // This effect dynamically and periodically checks if the festival is live.
+    useEffect(() => {
+        const checkStatus = () => {
+            if (!festivalConfig?.startDate || !festivalConfig?.endDate) {
+                setIsFestivalLive(false);
+                return;
+            }
+            const now = new Date();
+            const start = new Date(festivalConfig.startDate);
+            const end = new Date(festivalConfig.endDate);
+            const isLive = now >= start && now < end;
+
+            // Only update state if the value has changed to prevent unnecessary re-renders
+            setIsFestivalLive(prevIsLive => {
+                if (prevIsLive !== isLive) {
+                    return isLive;
+                }
+                return prevIsLive;
+            });
+        };
+
+        checkStatus(); // Initial check
+        const interval = setInterval(checkStatus, 30000); // Check every 30 seconds for responsiveness
+
+        return () => clearInterval(interval); // Cleanup
     }, [festivalConfig]);
 
     const exitStaging = () => {

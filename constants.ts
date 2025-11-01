@@ -16,16 +16,7 @@ export const categoriesData: Record<string, Category> = {
   },
   newReleases: {
     title: 'New Releases',
-    movieKeys: [
-        'results',
-        'newmovie1756741314485', // What If
-        'newmovie1756501125076', // of Bees and Boobs
-        'newmovie1756487626529', // Strange Encounters
-        'newmovie1756487390550', // I Still Love Her
-        'newmovie1756487215116', // Fling
-        'newmovie1756486933392', // Power Trip
-        'newmovie1756485973547', // Burst
-    ]
+    movieKeys: []
   },
   awardWinners: {
     title: 'Award-Winning Films',

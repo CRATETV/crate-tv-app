@@ -12,14 +12,16 @@ interface HeaderProps {
   isOffline?: boolean;
   showSearch?: boolean;
   isFestivalLive?: boolean;
+  onSignInClick?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit, isStaging, isOffline, showSearch = true, isFestivalLive }) => {
+const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onSearchSubmit, isStaging, showSearch = true, isFestivalLive, onSignInClick }) => {
   const [topOffset, setTopOffset] = useState(0);
   const { user, logout } = useAuth();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDesktopSearchVisible, setIsDesktopSearchVisible] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let offset = 0;
@@ -41,6 +43,12 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
     };
   }, [isAccountMenuOpen]);
 
+  useEffect(() => {
+    if (isDesktopSearchVisible) {
+        searchInputRef.current?.focus();
+    }
+  }, [isDesktopSearchVisible]);
+
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(event.target.value);
   };
@@ -55,7 +63,6 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
   const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
     e.preventDefault();
     setIsAccountMenuOpen(false);
-    setIsMobileMenuOpen(false); // Close mobile menu on navigation
     
     window.history.pushState({}, '', path);
     window.dispatchEvent(new Event('pushstate'));
@@ -66,29 +73,26 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
   const activeLinkStyles = "bg-white/10 text-white";
   const inactiveLinkStyles = "text-gray-300 hover:bg-white/20 hover:text-white";
   
-  const hasSolidBg = isScrolled || pathname !== '/' || isMobileMenuOpen;
+  const hasSolidBg = isScrolled || pathname !== '/';
 
-  const NavLinks: React.FC<{ mobile?: boolean }> = ({ mobile = false }) => {
-      const mobileLinkStyles = "text-2xl font-bold text-gray-300 hover:text-white";
-      const desktopLinkStyles = `${linkBaseStyles}`;
+  const signInButton = (
+    <button 
+      onClick={onSignInClick} 
+      className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-4 py-2 rounded-md transition-colors"
+    >
+      Sign In
+    </button>
+  );
 
-      return (
-         <>
-          {user ? (
-              <>
-                  <a href="/" onClick={(e) => handleNavigate(e, '/')} className={mobile ? mobileLinkStyles : `${desktopLinkStyles} ${pathname === '/' ? activeLinkStyles : inactiveLinkStyles}`}>Home</a>
-                  <a href="/watchlist" onClick={(e) => handleNavigate(e, '/watchlist')} className={mobile ? mobileLinkStyles : `${desktopLinkStyles} ${pathname.startsWith('/watchlist') ? activeLinkStyles : inactiveLinkStyles}`}>My List</a>
-                  <a href="/classics" onClick={(e) => handleNavigate(e, '/classics')} className={mobile ? mobileLinkStyles : `${desktopLinkStyles} ${pathname.startsWith('/classics') ? activeLinkStyles : inactiveLinkStyles}`}>Classics</a>
-                  {isFestivalLive && <a href="/festival" onClick={(e) => handleNavigate(e, '/festival')} className={mobile ? mobileLinkStyles : `${desktopLinkStyles} ${pathname.startsWith('/festival') ? activeLinkStyles : inactiveLinkStyles}`}>Festival</a>}
-              </>
-          ) : (
-              <>
-                  {/* "About Us" is removed as it's now part of the landing page */}
-              </>
-          )}
-        </>
-      );
-  };
+  const signInLink = (
+    <a 
+      href="/login" 
+      onClick={(e) => handleNavigate(e, '/login')} 
+      className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-4 py-2 rounded-md transition-colors"
+    >
+      Sign In
+    </a>
+  );
 
   return (
     <>
@@ -96,6 +100,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
       className={`fixed left-0 w-full z-40 px-4 md:px-8 py-3 flex justify-between items-center transition-all duration-300 ${hasSolidBg ? 'bg-[#141414]/80 backdrop-blur-sm border-b border-gray-800' : 'bg-gradient-to-b from-black/70 to-transparent'}`}
       style={{ top: `${topOffset}px` }}
     >
+      {/* Left Side: Logo and Desktop Nav */}
       <div className="flex items-center gap-4 md:gap-6">
         <a href="/" onClick={(e) => handleNavigate(e, '/')} aria-label="Crate TV Home">
             <img 
@@ -106,24 +111,31 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
             />
         </a>
         <nav className="hidden md:flex items-center gap-2 md:gap-4">
-          <NavLinks />
+          <a href="/classics" onClick={(e) => handleNavigate(e, '/classics')} className={`${linkBaseStyles} ${pathname.startsWith('/classics') ? activeLinkStyles : inactiveLinkStyles}`}>Classics</a>
+          {isFestivalLive && <a href="/festival" onClick={(e) => handleNavigate(e, '/festival')} className={`${linkBaseStyles} ${pathname.startsWith('/festival') ? activeLinkStyles : inactiveLinkStyles}`}>Festival</a>}
         </nav>
       </div>
-      <div className="flex items-center gap-2 sm:gap-4">
+      
+      {/* Right Side (Desktop only) */}
+      <div className="hidden md:flex items-center gap-2 sm:gap-4">
         {showSearch && (
-          <>
-            <form onSubmit={handleSearchSubmit} className="relative w-full max-w-[150px] sm:max-w-xs hidden md:block">
-              <input type="text" name="search" value={searchQuery} onChange={handleSearch} placeholder="Search..." className="w-full py-2 pl-10 pr-4 bg-black/50 border border-gray-500 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/80 focus:bg-black/70 transition-all"/>
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg>
-              </div>
+          <div className="flex items-center gap-2">
+            <form onSubmit={handleSearchSubmit} className={`relative transition-all duration-300 ${isDesktopSearchVisible ? 'w-64' : 'w-0'}`}>
+              <input 
+                ref={searchInputRef}
+                type="text" 
+                name="search" 
+                value={searchQuery} 
+                onChange={handleSearch} 
+                placeholder="Search..." 
+                className={`w-full py-2 pl-4 pr-4 bg-black/50 border border-gray-500 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/80 focus:bg-black/70 transition-opacity duration-300 ${isDesktopSearchVisible ? 'opacity-100' : 'opacity-0'}`}
+                onBlur={() => { if (!searchQuery) setIsDesktopSearchVisible(false); }}
+              />
             </form>
-            <div className="md:hidden flex items-center">
-                <button onClick={onMobileSearchClick} className="p-2 text-white" aria-label="Open search">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg>
-                </button>
-            </div>
-          </>
+             <button onClick={() => setIsDesktopSearchVisible(!isDesktopSearchVisible)} className="p-2 text-white" aria-label="Toggle search">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" /></svg>
+             </button>
+          </div>
         )}
 
         {user ? (
@@ -143,39 +155,10 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
             )}
           </div>
         ) : (
-           <a href="/login" onClick={(e) => handleNavigate(e, '/login')} className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-4 py-2 rounded-md transition-colors hidden md:block">
-             Sign In
-           </a>
+           onSignInClick ? signInButton : signInLink
         )}
-        
-         <div className="md:hidden">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-white" aria-label="Open menu">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" /></svg>
-            </button>
-        </div>
       </div>
     </header>
-
-    {isMobileMenuOpen && (
-      <div className="md:hidden fixed inset-0 bg-black/95 backdrop-blur-sm z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
-        <div className="flex justify-between items-center">
-            <a href="/" onClick={(e) => handleNavigate(e, '/')} aria-label="Crate TV Home">
-                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" className="h-8 w-auto"/>
-            </a>
-            <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-white" aria-label="Close menu">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-        </div>
-        <nav className="flex flex-col items-center justify-center h-full -mt-12 gap-8">
-            <NavLinks mobile={true} />
-            {!user && (
-                <a href="/login" onClick={(e) => handleNavigate(e, '/login')} className="bg-red-600 hover:bg-red-700 text-white font-bold text-2xl px-8 py-4 rounded-lg transition-colors mt-8">
-                    Sign In
-                </a>
-            )}
-        </nav>
-      </div>
-    )}
     </>
   );
 };

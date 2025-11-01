@@ -62,12 +62,9 @@ async function fetchSquareData(accessToken: string, locationId: string | undefin
 
 export async function POST(request: Request) {
     try {
-        const { directorName, password } = await request.json();
+        const { directorName } = await request.json();
 
-        // 1. Authentication
-        if (password !== 'cratedirector') {
-            return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
-        }
+        // 1. Authentication (Password check removed, security handled by frontend route protection)
         if (!directorName) {
             return new Response(JSON.stringify({ error: 'Filmmaker name is required.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
