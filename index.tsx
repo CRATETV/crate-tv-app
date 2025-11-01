@@ -35,8 +35,6 @@ import ActorProfilePage from './components/ActorProfilePage';
 // FIX: Corrected import path
 import WatchlistPage from './components/WatchlistPage';
 // FIX: Corrected import path
-import AnalyticsPage from './components/AnalyticsPage';
-// FIX: Corrected import path
 import FilmmakerPortalPage from './components/FilmmakerPortalPage';
 import FilmmakerSignupPage from './components/FilmmakerSignupPage';
 import RokuGuidePage from './components/RokuGuidePage';
@@ -155,8 +153,6 @@ const AppRouter: React.FC = () => {
     // Admin & Dev routes
     case '/admin':
       return <AdminPage />;
-    case '/analytics':
-      return <AnalyticsPage />;
     case '/filmfestivalmodule':
       return <FilmFestivalModule />;
     case '/developer-guide':
