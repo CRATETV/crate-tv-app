@@ -29,7 +29,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
         {/* Giant Number */}
         <span 
           className="font-black text-[8rem] md:text-[10rem] lg:text-[12rem] leading-none select-none transition-transform duration-300 group-hover:scale-105"
-          style={{ WebkitTextStroke: '2px white', color: '#141414', textStroke: '2px white' }}
+          style={{ WebkitTextStroke: '2px white', color: '#141414' }}
         >
           {rank}
         </span>

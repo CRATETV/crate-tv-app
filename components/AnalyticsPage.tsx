@@ -71,7 +71,7 @@ const AnalyticsPage: React.FC = () => {
     }, [analyticsData, allMovies]);
 
     const handleShare = async () => {
-        if (!navigator.share || !analyticsData) {
+        if (!('share' in navigator) || !analyticsData) {
             alert('Web Share API is not supported in this browser.');
             return;
         }
@@ -164,7 +164,7 @@ const AnalyticsPage: React.FC = () => {
                         <h2 className="text-2xl font-bold text-white">Festival Analytics Summary</h2>
                         <div className="no-print flex gap-4">
                             <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Print Summary</button>
-                            {navigator.share && <button onClick={handleShare} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Share Summary</button>}
+                            {'share' in navigator && <button onClick={handleShare} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Share Summary</button>}
                         </div>
                     </div>
                     

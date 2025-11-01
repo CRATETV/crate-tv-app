@@ -5,7 +5,7 @@ import ActorBioModal from './ActorBioModal';
 import Header from './Header';
 import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
-import BackToTopButton from './BackTotopButton';
+import BackToTopButton from './BackToTopButton';
 import SearchOverlay from './SearchOverlay';
 import StagingBanner from './StagingBanner';
 import DirectorCreditsModal from './DirectorCreditsModal';
