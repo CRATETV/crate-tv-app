@@ -12,6 +12,7 @@ import FallbackGenerator from './components/FallbackGenerator';
 import AnalyticsPage from './components/AnalyticsPage';
 import PayoutsTab from './components/PayoutsTab';
 import EmailSender from './components/EmailSender';
+import TopFilmsTab from './components/TopFilmsTab';
 
 type PublishStatus = 'idle' | 'saving' | 'success' | 'error';
 
@@ -218,6 +219,7 @@ const AdminPage: React.FC = () => {
                 <TabButton tabId="categories" label="Categories" />
                 <TabButton tabId="festival" label="Festival" />
                 <TabButton tabId="about" label="About Us" />
+                <TabButton tabId="top-films" label="Top Films" />
                 <TabButton tabId="submissions" label="Actor Submissions" />
                 <TabButton tabId="payouts" label="Payouts" />
                 <TabButton tabId="email" label="Email Users" />
@@ -253,6 +255,7 @@ const AdminPage: React.FC = () => {
                 {activeTab === 'categories' && <CategoryEditor initialCategories={draftData.categories} allMovies={Object.values(draftData.movies) as Movie[]} onSave={handleSaveCategories} />}
                 {activeTab === 'festival' && <FestivalEditor data={draftData.festivalData} config={draftData.festivalConfig} allMovies={draftData.movies} onDataChange={(d) => setDraftData(p => p ? {...p, festivalData: d} : null)} onConfigChange={(c) => setDraftData(p => p ? {...p, festivalConfig: c} : null)} onSave={() => {}} />}
                 {activeTab === 'about' && <AboutEditor initialData={draftData.aboutData} onSave={(d) => setDraftData(p => p ? {...p, aboutData: d} : null)} />}
+                {activeTab === 'top-films' && <TopFilmsTab />}
                 {activeTab === 'submissions' && <ActorSubmissionsTab submissions={draftData.actorSubmissions} allMovies={draftData.movies} onApprove={approveActorSubmission} onReject={rejectActorSubmission} />}
                 {activeTab === 'payouts' && <PayoutsTab payoutRequests={payoutRequests} onCompletePayout={handleCompletePayout} />}
                 {activeTab === 'email' && <EmailSender />}

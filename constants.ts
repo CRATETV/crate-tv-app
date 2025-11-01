@@ -1,4 +1,6 @@
 
+
+// FIX: Imported types from the corrected types.ts file and removed duplicated type definitions.
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
 
 // Utility function to robustly check if a movie is past its release time.

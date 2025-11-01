@@ -1,5 +1,4 @@
 
-
 import JSZip from 'jszip';
 // FIX: Switched to named imports for the AWS SDK to correctly resolve the S3Client type and its methods, fixing an error where `.send()` was not found.
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
@@ -51,6 +50,8 @@ export async function GET(request: Request) {
         }
         
         const zip = new JSZip();
+
+        const host = new URL(request.url).origin;
 
         // --- ROKU SOURCE FILES ---
         const manifest = `
@@ -119,19 +120,30 @@ function init()
     m.contentTask = m.top.findNode("contentTask")
     m.contentTask.observeField("content", "onContentLoaded")
     m.contentTask.control = "RUN"
+    
+    m.rowList = m.top.findNode("contentRowList")
+    m.rowList.observeField("itemSelected", "onItemSelected")
 end function
 
 function onContentLoaded()
     content = m.contentTask.content
     if content <> invalid
         m.top.findNode("loadingLabel").visible = false
-        rowList = m.top.findNode("contentRowList")
-        rowList.content = content
-        rowList.visible = true
-        rowList.setFocus(true)
+        m.rowList.content = content
+        m.rowList.visible = true
+        m.rowList.setFocus(true)
     else
         m.top.findNode("loadingLabel").text = "Failed to load content."
     end if
+end function
+
+function onItemSelected()
+    selectedIndex = m.rowList.itemSelected
+    selectedItem = m.rowList.content.getChild(selectedIndex[0]).getChild(selectedIndex[1])
+
+    detailsScene = createObject("roSGNode", "DetailsScene")
+    detailsScene.content = selectedItem
+    m.top.getScene().show(detailsScene)
 end function
 `;
         const moviePosterXml = `
@@ -143,110 +155,182 @@ end function
         <field id="focusPercent" type="float" onChange="onFocusChange" />
     </interface>
     <children>
-        <Rectangle id="focusRing" color="0x8b5cf6FF" width="316" height="196" translation="[-8, -8]" visible="false" />
-        <Poster id="tileImage" width="300" height="180" />
-        <Label id="tileLabel" width="300" horizAlign="center" translation="[0, 195]" color="0xFFFFFFFF">
-             <font role="sans" uri="pkg:/fonts/Roboto-Regular.ttf" size="24" />
-        </Label>
+        <Rectangle id="focusRing" color="0x8b5cf6FF" width="316" height="186" translation="[-8, -8]" visible="false" />
+        <Poster id="tileImage" width="300" height="170" />
     </children>
 </component>
 `;
         const moviePosterBrs = `
-function init()
-    m.focusRing = m.top.findNode("focusRing")
-    m.tileImage = m.top.findNode("tileImage")
-    m.tileLabel = m.top.findNode("tileLabel")
-end function
-
 function onContentChange()
-    item = m.top.itemContent
-    if item <> invalid
-        m.tileImage.uri = item.hdposterurl
-        m.tileLabel.text = item.title
+    itemData = m.top.itemContent
+    if itemData <> invalid
+        m.tileImage.uri = itemData.SDPosterUrl
     end if
 end function
 
 function onFocusChange()
     focusPercent = m.top.focusPercent
-    m.focusRing.visible = (focusPercent > 0)
-    
-    ' Scale animation on focus
-    scale = 1 + (0.05 * focusPercent)
+    m.focusRing.opacity = focusPercent
+    m.focusRing.visible = focusPercent > 0
+    scale = 1 + (focusPercent * 0.05)
     m.top.scale = [scale, scale]
+end function
+
+function init()
+    m.tileImage = m.top.findNode("tileImage")
+    m.focusRing = m.top.findNode("focusRing")
+    m.top.observeField("itemContent", "onContentChange")
+    m.top.observeField("focusPercent", "onFocusChange")
 end function
 `;
 
         const contentTaskXml = `
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="ContentTask" extends="Task">
+    <script type="text/brightscript" uri="pkg:/components/ContentTask.brs" />
     <interface>
         <field id="content" type="node" />
     </interface>
-    <script type="text/brightscript" uri="pkg:/components/ContentTask.brs" />
 </component>
 `;
-        const feedUrl = `${new URL(request.url).protocol}//${new URL(request.url).host}/api/roku-feed`;
+
         const contentTaskBrs = `
 function init()
     m.top.functionName = "getContent"
 end function
 
 function getContent()
-    url = "${feedUrl}"
-    port = CreateObject("roMessagePort")
+    url = "${host}/api/roku-feed"
+    
     request = CreateObject("roUrlTransfer")
-    request.SetMessagePort(port)
     request.SetUrl(url)
     
+    port = CreateObject("roMessagePort")
+    request.SetPort(port)
+    
     if request.AsyncGetToString()
-        while true
-            msg = wait(0, port)
-            if type(msg) = "roUrlEvent"
-                if msg.GetResponseCode() = 200
-                    json = msg.GetString()
-                    parsed = ParseJson(json)
-                    if parsed <> invalid
-                        m.top.content = createContent(parsed)
-                    else
-                        m.top.content = invalid
-                    end if
-                    return
+        msg = wait(30000, port) ' 30 second timeout
+        if type(msg) = "roUrlEvent"
+            if msg.GetResponseCode() = 200
+                jsonString = msg.GetString()
+                json = ParseJSON(jsonString)
+                if json <> invalid AND json.categories <> invalid
+                    m.top.content = createContent(json)
                 else
+                    ? "Error: Invalid JSON format from API"
                     m.top.content = invalid
-                    return
                 end if
+            else
+                ? "Error: API request failed with code "; msg.GetResponseCode()
+                m.top.content = invalid
             end if
-        end while
+        else if type(msg) = "roPort" ' Timeout
+            ? "Error: API request timed out"
+            m.top.content = invalid
+        end if
+    else
+        ? "Error: Could not start async request"
+        m.top.content = invalid
     end if
-    m.top.content = invalid
 end function
 
-function createContent(data) as object
-    content = createObject("roSGNode", "ContentNode")
+function createContent(json as object) as object
+    root = createObject("roSGNode", "ContentNode")
     
-    for each category in data.categories
-        row = createObject("roSGNode", "ContentNode")
+    for each category in json.categories
+        row = root.createChild("ContentNode")
         row.title = category.title
         
-        children = createObject("roSGNode", "ContentNode")
         for each movie in category.movies
-            item = createObject("roSGNode", "ContentNode")
-            item.HDPosterUrl = movie.HDPosterUrl
+            item = row.createChild("ContentNode")
+            item.id = movie.id
             item.title = movie.title
-            children.appendChild(item)
+            item.description = movie.description
+            item.SDPosterUrl = movie.SDPosterUrl
+            item.HDPosterUrl = movie.HDPosterUrl
+            item.streamUrl = movie.streamUrl
+            item.director = movie.director
+            item.actors = movie.actors
+            item.genres = movie.genres
         end for
-        
-        row.children = children
-        content.appendChild(row)
     end for
     
-    return content
+    return root
 end function
 `;
-        
-        // --- ADD FILES TO ZIP ---
+
+        const detailsSceneXml = `
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="DetailsScene" extends="Scene">
+    <script type="text/brightscript" uri="pkg:/components/DetailsScene.brs" />
+    <interface>
+        <field id="content" type="node" onChange="onContentChange" />
+    </interface>
+    <children>
+        <Rectangle id="background" color="0x141414FF" width="1920" height="1080" />
+        <Poster id="poster" translation="[80, 150]" width="400" height="600" />
+        <Label id="titleLabel" translation="[520, 150]" width="1300" wrap="true" maxLines="2">
+            <font role="sans" uri="pkg:/fonts/Roboto-Bold.ttf" size="60" />
+        </Label>
+        <Label id="descriptionLabel" translation="[520, 280]" width="1300" wrap="true">
+            <font role="sans" uri="pkg:/fonts/Roboto-Regular.ttf" size="30" />
+        </Label>
+        <Button id="playButton" text="Play" translation="[520, 700]" minWidth="250" />
+        <Video id="videoPlayer" visible="false" />
+    </children>
+</component>
+`;
+
+        const detailsSceneBrs = `
+function init()
+    m.background = m.top.findNode("background")
+    m.poster = m.top.findNode("poster")
+    m.titleLabel = m.top.findNode("titleLabel")
+    m.descriptionLabel = m.top.findNode("descriptionLabel")
+    m.playButton = m.top.findNode("playButton")
+    m.videoPlayer = m.top.findNode("videoPlayer")
+
+    m.playButton.observeField("buttonSelected", "onPlayButtonSelected")
+    m.videoPlayer.observeField("state", "onVideoStateChange")
+
+    m.top.setFocus(m.playButton)
+end function
+
+function onContentChange()
+    content = m.top.content
+    if content <> invalid
+        m.titleLabel.text = content.title
+        m.descriptionLabel.text = content.description
+        m.poster.uri = content.HDPosterUrl
+
+        videoContent = createObject("roSGNode", "ContentNode")
+        videoContent.url = content.streamUrl
+        videoContent.streamformat = "mp4"
+        m.videoPlayer.content = videoContent
+    end if
+end function
+
+function onPlayButtonSelected()
+    m.background.visible = false
+    m.poster.visible = false
+    m.titleLabel.visible = false
+    m.descriptionLabel.visible = false
+    m.playButton.visible = false
+
+    m.videoPlayer.visible = true
+    m.videoPlayer.control = "play"
+    m.videoPlayer.setFocus(true)
+end function
+
+function onVideoStateChange()
+    state = m.videoPlayer.state
+    if state = "finished" or state = "error"
+        m.top.getScene().close()
+    end if
+end function
+`;
+
         zip.file('manifest', manifest);
-        zip.file('source/main.brs', mainBrs);
         zip.folder('components');
         zip.file('components/HomeScene.xml', homeSceneXml);
         zip.file('components/HomeScene.brs', homeSceneBrs);
@@ -254,51 +338,54 @@ end function
         zip.file('components/MoviePoster.brs', moviePosterBrs);
         zip.file('components/ContentTask.xml', contentTaskXml);
         zip.file('components/ContentTask.brs', contentTaskBrs);
-
+        zip.file('components/DetailsScene.xml', detailsSceneXml);
+        zip.file('components/DetailsScene.brs', detailsSceneBrs);
+        zip.folder('source');
+        zip.file('source/main.brs', mainBrs);
+        zip.folder('images');
         zip.folder('fonts');
+
+        // --- FONTS ---
         zip.file('fonts/Roboto-Regular.ttf', ROBOTO_REGULAR_BASE64, { base64: true });
         zip.file('fonts/Roboto-Bold.ttf', ROBOTO_BOLD_BASE64, { base64: true });
-
-        zip.folder('images');
-        // --- FETCH AND ADD IMAGE ASSETS ---
-        const imageKeys = Object.keys(placeholderMap);
         
-        for (const key of imageKeys) {
-            const fileName = key.split('/').pop();
-            if (!fileName) continue;
+        // --- ASSETS ---
+        const assetKeys = [
+            'roku-assets/channel-icon-hd.png',
+            'roku-assets/channel-icon-sd.png',
+            'roku-assets/splash-screen-hd.png',
+            'roku-assets/splash-screen-sd.png',
+        ];
 
+        await Promise.all(assetKeys.map(async (key) => {
+            const fileName = key.split('/').pop();
             try {
                 const command = new GetObjectCommand({ Bucket: bucketName, Key: key });
                 const response = await s3.send(command);
-                const buffer = await response.Body?.transformToByteArray();
-                
-                if (buffer && buffer.length > 0) {
-                   zip.file(`images/${fileName}`, buffer);
-                } else {
-                    console.warn(`S3 object for ${key} was empty. Using fallback placeholder.`);
-                    zip.file(`images/${fileName}`, placeholderMap[key], { base64: true });
-                }
+                const buffer = await response.Body.transformToByteArray();
+                zip.file(`images/${fileName}`, buffer);
             } catch (error) {
-                console.warn(`Failed to fetch S3 asset '${key}'. Using fallback placeholder. Error: ${error}`);
-                zip.file(`images/${fileName}`, placeholderMap[key], { base64: true });
+                console.warn(`Could not fetch asset '${key}' from S3. Using placeholder.`, error);
+                const placeholderBase64 = placeholderMap[key];
+                if (placeholderBase64 && fileName) {
+                    zip.file(`images/${fileName}`, placeholderBase64, { base64: true });
+                }
             }
-        }
+        }));
 
-        // --- GENERATE AND SEND ZIP ---
-        const content = await zip.generateAsync({ type: 'arraybuffer' });
+        const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
 
-        return new Response(content, {
+        return new Response(zipBuffer, {
             status: 200,
             headers: {
                 'Content-Type': 'application/zip',
-                'Content-Disposition': 'attachment; filename="cratv.zip"',
+                'Content-Disposition': 'attachment; filename="cratetv.zip"',
             },
         });
-
     } catch (error) {
-        console.error("Error generating Roku ZIP:", error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-        return new Response(JSON.stringify({ error: `Failed to generate Roku package: ${errorMessage}` }), {
+        console.error('Error generating Roku zip:', error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return new Response(JSON.stringify({ error: errorMessage }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
         });

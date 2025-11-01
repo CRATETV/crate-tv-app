@@ -151,10 +151,10 @@
         body * {
           visibility: hidden;
         }
-        .printable-area, .printable-area *, .printable-top-ten, .printable-top-ten * {
+        .printable-area, .printable-area *, .printable-top-ten, .printable-top-ten *, .printable-film-report, .printable-film-report * {
           visibility: visible;
         }
-        .printable-area {
+        .printable-area, .printable-film-report {
           position: absolute;
           left: 0;
           top: 0;
@@ -168,11 +168,12 @@
             top: 0;
             width: 100%;
         }
-        .printable-area .text-white, .printable-top-ten .text-white { color: black !important; }
-        .printable-area .text-gray-300, .printable-top-ten .text-gray-300 { color: #333 !important; }
-        .printable-area .text-gray-400, .printable-top-ten .text-gray-400 { color: #555 !important; }
-        .printable-area .text-yellow-400 { color: #ca8a04 !important; }
-        .printable-area .text-green-400 { color: #166534 !important; }
+        .printable-area .text-white, .printable-top-ten .text-white, .printable-film-report .text-white { color: black !important; }
+        .printable-area .text-gray-300, .printable-top-ten .text-gray-300, .printable-film-report .text-gray-300 { color: #333 !important; }
+        .printable-area .text-gray-400, .printable-top-ten .text-gray-400, .printable-film-report .text-gray-400 { color: #555 !important; }
+        .printable-area .text-yellow-400, .printable-film-report .text-yellow-400 { color: #ca8a04 !important; }
+        .printable-area .text-green-400, .printable-film-report .text-green-400 { color: #166534 !important; }
+        .printable-area .text-red-400, .printable-film-report .text-red-400 { color: #991b1b !important; }
         .printable-area .bg-gray-800\/50 { background-color: #f3f4f6 !important; }
         .printable-area .border-gray-700 { border-color: #d1d5db !important; }
         .printable-top-ten .text-gray-800 { color: #ccc !important; }

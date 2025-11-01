@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface BottomNavBarProps {
   onSearchClick: () => void;
+  isFestivalLive?: boolean;
 }
 
 // FIX: Changed JSX.Element to React.ReactElement to resolve "Cannot find namespace 'JSX'" error.
@@ -20,7 +21,7 @@ const NavItem: React.FC<{ path: string; activePath: string; icon: React.ReactEle
     };
     
     return (
-        <a href={path} onClick={handleNavigate} className="flex flex-col items-center justify-center text-center w-1/4">
+        <a href={path} onClick={handleNavigate} className="flex flex-col items-center justify-center text-center flex-1">
             <div className={`transition-colors ${isActive ? 'text-white' : 'text-gray-400'}`}>
                 {icon}
             </div>
@@ -30,7 +31,7 @@ const NavItem: React.FC<{ path: string; activePath: string; icon: React.ReactEle
 };
 
 
-const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick }) => {
+const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick, isFestivalLive }) => {
     const { user } = useAuth();
     const [activePath, setActivePath] = useState(window.location.pathname);
 
@@ -65,6 +66,14 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick }) => {
                 label="Search"
                 onClick={onSearchClick}
             />
+            {isFestivalLive && (
+                <NavItem 
+                    path="/festival" 
+                    activePath={activePath} 
+                    icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>}
+                    label="Festival" 
+                />
+            )}
              <NavItem 
                 path="/watchlist" 
                 activePath={activePath} 

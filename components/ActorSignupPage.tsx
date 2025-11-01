@@ -62,7 +62,7 @@ const ActorSignupPage: React.FC = () => {
             `}</style>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
             <div className="relative z-10 flex flex-col min-h-screen">
-                <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
+                <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={false} />
                 <main className="flex-grow flex items-center justify-center px-4 pt-24 pb-12">
                      <div className="max-w-md w-full">
                         <div className="text-center mb-8">

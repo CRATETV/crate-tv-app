@@ -1,6 +1,7 @@
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, Firestore } from 'firebase/firestore';
+// FIX: Corrected type imports to use the new types.ts file
 import { User } from '../types';
 
 let authInstance: Auth | null = null;

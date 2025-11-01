@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, AuthError, sendPasswordResetEmail } from 'firebase/auth';
+// FIX: Corrected type imports to use the new types.ts file
 import { User } from '../types';
 import { 
     initializeFirebaseAuth, 

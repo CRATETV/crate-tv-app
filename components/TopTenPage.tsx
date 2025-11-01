@@ -62,6 +62,7 @@ const TopTenPage: React.FC = () => {
                 isScrolled={true}
                 onMobileSearchClick={() => {}}
                 showSearch={false}
+                showNavLinks={false}
             />
             <main className="flex-grow pt-24 px-4 md:px-12 printable-top-ten">
                 <div className="max-w-4xl mx-auto">
@@ -106,7 +107,7 @@ const TopTenPage: React.FC = () => {
                                 </div>
                                 <div className="flex-grow min-w-0 pl-6">
                                     <h2 className="text-lg md:text-xl font-bold text-white truncate transition-colors duration-300 group-hover:text-red-400">{movie.title}</h2>
-                                    <p className="text-sm text-gray-400 truncate">by {movie.director}</p>
+                                    <p className="text-sm text-gray-400 truncate">{movie.director}</p>
                                 </div>
                             </a>
                         ))}

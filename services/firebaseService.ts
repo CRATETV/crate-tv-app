@@ -25,6 +25,7 @@ import {
     DocumentData
 } from 'firebase/firestore';
 
+// FIX: Corrected type imports to use the new types.ts file
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData, ActorSubmission } from '../types';
 import { moviesData as initialMovies, categoriesData as initialCategories, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
 

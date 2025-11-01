@@ -1,4 +1,6 @@
+// FIX: Defined and exported all necessary types for the application.
 
+// From moviesData
 export interface Actor {
   name: string;
   photo: string;
@@ -16,56 +18,72 @@ export interface Movie {
   fullMovie: string;
   poster: string;
   tvPoster?: string;
-  likes: number;
+  likes?: number;
   rating?: number;
   releaseDateTime?: string;
   mainPageExpiry?: string;
-  durationInMinutes?: number;
-  producers?: string;
   isForSale?: boolean;
   price?: number;
+  producers?: string;
+  durationInMinutes?: number;
 }
 
+// From categoriesData
 export interface Category {
   title: string;
   movieKeys: string[];
 }
 
+// From festivalData and festivalConfigData
 export interface FilmBlock {
-  id: string;
-  title: string;
-  time: string;
-  movieKeys: string[];
+    id: string;
+    title: string;
+    time: string;
+    movieKeys: string[];
 }
 
 export interface FestivalDay {
-  day: number;
-  date: string;
-  blocks: FilmBlock[];
+    day: number;
+    date: string;
+    blocks: FilmBlock[];
 }
 
 export interface FestivalConfig {
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
+    title: string;
+    description: string;
+    startDate: string;
+    endDate: string;
 }
 
+// From aboutData
 export interface AboutData {
-  missionStatement: string;
-  story: string;
-  belief1Title: string;
-  belief1Body: string;
-  belief2Title: string;
-  belief2Body: string;
-  belief3Title: string;
-  belief3Body: string;
-  founderName: string;
-  founderTitle: string;
-  founderBio: string;
-  founderPhoto: string;
+    missionStatement: string;
+    story: string;
+    belief1Title: string;
+    belief1Body: string;
+    belief2Title: string;
+    belief2Body: string;
+    belief3Title: string;
+    belief3Body: string;
+    founderName: string;
+    founderTitle: string;
+    founderBio: string;
+    founderPhoto: string;
 }
 
+// From AuthContext.tsx
+export interface User {
+    uid: string;
+    email: string;
+    name?: string;
+    isActor: boolean;
+    isFilmmaker: boolean;
+    avatar?: string;
+    isPremiumSubscriber?: boolean;
+    watchlist?: string[];
+}
+
+// From Admin & Firebase services
 export interface ActorSubmission {
     id: string;
     actorName: string;
@@ -73,24 +91,9 @@ export interface ActorSubmission {
     bio: string;
     photoUrl: string;
     highResPhotoUrl: string;
-    imdbUrl: string;
-    submissionDate: { seconds: number; nanoseconds: number; };
+    imdbUrl?: string;
+    submissionDate: { seconds: number; nanoseconds: number };
     status: 'pending' | 'approved' | 'rejected';
-}
-
-export interface LiveData {
-    movies: Record<string, Movie>;
-    categories: Record<string, Category>;
-    festivalConfig: FestivalConfig;
-    festivalData: FestivalDay[];
-    aboutData: AboutData;
-    actorSubmissions: ActorSubmission[];
-}
-
-export interface FetchResult {
-    data: LiveData;
-    source: 'live' | 'fallback';
-    timestamp: number;
 }
 
 export interface PayoutRequest {
@@ -100,21 +103,26 @@ export interface PayoutRequest {
     payoutMethod: 'PayPal' | 'Venmo' | 'Other';
     payoutDetails: string;
     status: 'pending' | 'completed';
-    requestDate: { seconds: number; nanoseconds?: number; };
-    completionDate?: { seconds: number; nanoseconds?: number; };
+    requestDate: { seconds: number; nanoseconds: number };
+    completionDate?: { seconds: number; nanoseconds: number };
 }
 
-export interface User {
-    uid: string;
-    email: string;
-    name: string;
-    isActor: boolean;
-    isFilmmaker: boolean;
-    avatar: string;
-    isPremiumSubscriber: boolean;
-    watchlist: string[];
+export interface LiveData {
+    movies: Record<string, Movie>;
+    categories: Record<string, Category>;
+    festivalData: FestivalDay[];
+    festivalConfig: FestivalConfig;
+    aboutData: AboutData;
+    actorSubmissions: ActorSubmission[];
 }
 
+export interface FetchResult {
+  data: LiveData;
+  source: 'live' | 'fallback';
+  timestamp: number;
+}
+
+// From Analytics
 export interface FilmmakerPayout {
     movieTitle: string;
     director: string;
@@ -138,25 +146,10 @@ export interface AnalyticsData {
     festivalPassSales: { units: number, revenue: number };
     festivalBlockSales: { units: number, revenue: number };
     salesByBlock: Record<string, { units: number, revenue: number }>;
-}
-
-export interface ActorPost {
-    id: string;
-    actorName: string;
-    actorPhoto: string;
-    content: string;
-    imageUrl?: string;
-    timestamp: { seconds: number; nanoseconds: number; };
-    likes: string[];
-}
-
-export interface ActorProfile {
-    name: string;
-    slug: string;
-    bio: string;
-    photo: string;
-    highResPhoto: string;
-    imdbUrl: string;
+    totalMerchRevenue: number;
+    crateTvMerchCut: number;
+    merchSales: Record<string, { name: string, units: number, revenue: number }>;
+    totalAdRevenue: number;
 }
 
 export interface FilmmakerFilmPerformance {
@@ -172,4 +165,25 @@ export interface FilmmakerAnalytics {
     totalPaidOut: number;
     balance: number;
     films: FilmmakerFilmPerformance[];
+}
+
+// From Green Room Feed
+export interface ActorPost {
+    id: string;
+    actorName: string;
+    actorPhoto: string;
+    content: string;
+    imageUrl?: string;
+    timestamp: { seconds: number, nanoseconds: number };
+    likes: string[];
+}
+
+// From public actor profiles
+export interface ActorProfile {
+    name: string;
+    slug: string;
+    bio: string;
+    photo: string;
+    highResPhoto: string;
+    imdbUrl: string;
 }

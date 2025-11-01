@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Error fetching data config:', error);
-    return new Response(JSON.stringify({ error: 'An internal server error occurred.' }), {
+    return new Response(JSON.stringify({ error: 'An internal server error occurred while fetching Firebase config.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

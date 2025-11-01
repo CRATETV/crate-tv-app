@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData } from './services/dataService';
+// FIX: Corrected type imports to use the new types.ts file
 import { Movie, Actor, Category, FestivalConfig, LiveData, FetchResult } from './types';
 import Header from './components/Header';
 // FIX: Corrected import path
@@ -604,6 +605,7 @@ const App: React.FC = () => {
       )}
       <BottomNavBar 
         onSearchClick={() => setIsMobileSearchOpen(true)}
+        isFestivalLive={isFestivalLive}
       />
     </div>
   );

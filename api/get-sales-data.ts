@@ -22,8 +22,12 @@ interface FirebaseData {
     viewLocations: Record<string, Record<string, number>>;
 }
 
+// Mock merch data for simulation purposes
+const MOCK_MERCH_ITEMS = [
+    { name: 'Crate TV Classic Tee', price: 2500 },
+];
 
-const parseNote = (note: string | undefined): { type: string, title?: string, director?: string } => {
+const parseNote = (note: string | undefined): { type: string, title?: string, director?: string, itemName?: string } => {
     if (!note) return { type: 'unknown' };
 
     const donationMatch = note.match(/Support for film: "(.*)" by (.*)/);
@@ -40,6 +44,13 @@ const parseNote = (note: string | undefined): { type: string, title?: string, di
     const movieMatch = note.match(/Purchase Film: "(.*)"/);
     if (movieMatch) {
         return { type: 'movie_sale', title: movieMatch[1].trim() };
+    }
+    
+    // Check for mock merch items in the note
+    for (const item of MOCK_MERCH_ITEMS) {
+        if (note.includes(item.name)) {
+            return { type: 'merch_sale', itemName: item.name };
+        }
     }
     
     if (note.includes('Premium Subscription')) return { type: 'subscription' };
@@ -204,6 +215,10 @@ export async function POST(request: Request) {
             festivalPassSales: { units: 0, revenue: 0 },
             festivalBlockSales: { units: 0, revenue: 0 },
             salesByBlock: {},
+            totalMerchRevenue: 0,
+            crateTvMerchCut: 0,
+            merchSales: {},
+            totalAdRevenue: 0,
         };
         const payoutMap: { [key: string]: FilmmakerPayout } = {};
 
@@ -231,6 +246,14 @@ export async function POST(request: Request) {
                 }
                 analyticsData.salesByBlock[details.title].units += 1;
                 analyticsData.salesByBlock[details.title].revenue += amount;
+            } else if (details.type === 'merch_sale' && details.itemName) {
+                analyticsData.totalMerchRevenue += amount;
+                if (!analyticsData.merchSales[details.itemName]) {
+                    analyticsData.merchSales[details.itemName] = { name: details.itemName, units: 0, revenue: 0 };
+                }
+                analyticsData.merchSales[details.itemName].units += 1;
+                analyticsData.merchSales[details.itemName].revenue += amount;
+
             } else if (details.type !== 'unknown') {
                 analyticsData.totalSales += amount;
                 analyticsData.salesByType[details.type] = (analyticsData.salesByType[details.type] || 0) + amount;
@@ -243,6 +266,18 @@ export async function POST(request: Request) {
             analyticsData.filmmakerPayouts.push(payout);
         });
         analyticsData.filmmakerPayouts.sort((a, b) => b.totalDonations - a.totalDonations);
+
+        // --- Calculate Simulated Ad Revenue ---
+        const totalViews = (Object.values(firebaseData.viewCounts) as number[]).reduce((sum, count) => sum + count, 0);
+        const adCpmInCents = 500; // $5.00 per 1000 views
+        analyticsData.totalAdRevenue = Math.round((totalViews / 1000) * adCpmInCents);
+        
+        // --- Calculate Merch Cut ---
+        const merchCutPercentage = 0.15; // 15%
+        analyticsData.crateTvMerchCut = Math.round(analyticsData.totalMerchRevenue * merchCutPercentage);
+
+        // --- Final Total Revenue Calculation ---
+        analyticsData.totalRevenue = analyticsData.totalDonations + analyticsData.totalSales + analyticsData.totalFestivalRevenue + analyticsData.totalMerchRevenue + analyticsData.totalAdRevenue;
 
         console.log("[Analytics API] Request completed successfully.");
         return new Response(JSON.stringify({
