@@ -54,6 +54,7 @@ const AboutPage: React.FC = () => {
                 isScrolled={true}
                 onMobileSearchClick={() => {}}
                 showSearch={false}
+                showNavLinks={false}
             />
 
             <main className="flex-grow pt-24 px-4 md:px-12">

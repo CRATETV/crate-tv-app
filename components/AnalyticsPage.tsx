@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { AnalyticsData, Movie } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -36,6 +37,8 @@ const AnalyticsPage: React.FC = () => {
     const [error, setError] = useState<{ square: string | null, firebase: string | null, critical: string | null }>({ square: null, firebase: null, critical: null });
     const [selectedGeoMovie, setSelectedGeoMovie] = useState<string>('');
     const [selectedFilmForReport, setSelectedFilmForReport] = useState<FilmPerformanceData | null>(null);
+    const [payoutStatus, setPayoutStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+    const [payoutMessage, setPayoutMessage] = useState('');
     
     useEffect(() => {
         const fetchData = async () => {
@@ -94,6 +97,26 @@ const AnalyticsPage: React.FC = () => {
             };
         }).sort((a, b) => b.views - a.views);
     }, [analyticsData, allMovies]);
+    
+    const handleFestivalPayout = async () => {
+        setPayoutStatus('processing');
+        setPayoutMessage('');
+        const password = sessionStorage.getItem('adminPassword');
+        try {
+            const response = await fetch('/api/process-festival-payout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Payout failed.');
+            setPayoutStatus('success');
+            setPayoutMessage(data.message);
+        } catch (err) {
+            setPayoutStatus('error');
+            setPayoutMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
+        }
+    };
 
     const handleShare = async () => { /* ... */ };
 
@@ -166,13 +189,11 @@ const AnalyticsPage: React.FC = () => {
                                     <thead className="text-xs text-gray-400 uppercase bg-gray-700/50 sticky top-0">
                                         <tr>
                                             <th className="p-3">Email</th>
-                                            <th className="p-3">Sign Up Date</th>
                                         </tr>
                                     </thead>
                                     <tbody>{analyticsData.allUsers.map(user => (
                                         <tr key={user.email} className="border-b border-gray-700">
                                             <td className="p-3 font-medium text-white">{user.email}</td>
-                                            <td className="p-3 text-gray-400">{user.creationTime}</td>
                                         </tr>
                                     ))}</tbody>
                                 </table></div>
@@ -187,7 +208,8 @@ const AnalyticsPage: React.FC = () => {
                                 <h2 className="text-2xl font-bold mb-4 text-white">Revenue Streams</h2>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                                     <StatCard title="Total Donations" value={formatCurrency(analyticsData.totalDonations)} />
-                                    <StatCard title="Total Sales" value={formatCurrency(analyticsData.totalSales + analyticsData.totalFestivalRevenue)} />
+                                    {/* FIX: Add type assertion to resolve arithmetic operation error where TypeScript inference fails. */}
+                                    <StatCard title="Total Sales" value={formatCurrency((analyticsData as AnalyticsData).totalSales + (analyticsData as AnalyticsData).totalFestivalRevenue)} />
                                     <StatCard title="Merch Revenue" value={formatCurrency(analyticsData.totalMerchRevenue)} />
                                     <StatCard title="Ad Revenue" value={formatCurrency(analyticsData.totalAdRevenue)} />
                                     <StatCard title="GRAND TOTAL REVENUE" value={formatCurrency(analyticsData.totalRevenue)} className="lg:col-span-4 bg-purple-900/30 border-purple-700" />
@@ -235,16 +257,30 @@ const AnalyticsPage: React.FC = () => {
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                                <StatCard title="Total Festival Revenue" value={formatCurrency(analyticsData.totalFestivalRevenue)} className="sm:col-span-1" />
+                                {/* FIX: Use a type assertion to fix TypeScript inference issue with arithmetic operations. */}
+                                <StatCard title="Total Festival Revenue" value={formatCurrency((analyticsData as AnalyticsData).totalFestivalRevenue)} className="sm:col-span-1" />
                                 <StatCard title="All-Access Passes" value={analyticsData.festivalPassSales.units} />
                                 <StatCard title="Individual Blocks" value={analyticsData.festivalBlockSales.units} />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                                 {/* FIX: Use a type assertion to fix TypeScript inference issue with arithmetic operations. */}
-                                <StatCard title="Crate TV's Share (30%)" value={formatCurrency((analyticsData.totalFestivalRevenue as number) * 0.30)} />
-                                <StatCard title="Playhouse West's Share (70%)" value={formatCurrency((analyticsData.totalFestivalRevenue as number) * 0.70)} />
+                                <StatCard title="Crate TV's Share (30%)" value={formatCurrency((analyticsData as AnalyticsData).totalFestivalRevenue * 0.30)} />
+                                <StatCard title="Playhouse West's Share (70%)" value={formatCurrency((analyticsData as AnalyticsData).totalFestivalRevenue * 0.70)} />
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-4">Sales by Item</h3>
+                             <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg text-center">
+                                <h3 className="text-lg font-bold text-white mb-4">Process Payout</h3>
+                                <button
+                                    onClick={handleFestivalPayout}
+                                    disabled={payoutStatus === 'processing' || (analyticsData as AnalyticsData).totalFestivalRevenue === 0}
+                                    className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg text-lg"
+                                >
+                                    {payoutStatus === 'processing' ? 'Processing...' : `Pay Playhouse West ${formatCurrency((analyticsData as AnalyticsData).totalFestivalRevenue * 0.70)}`}
+                                </button>
+                                {payoutMessage && (
+                                    <p className={`mt-4 text-sm ${payoutStatus === 'error' ? 'text-red-400' : 'text-green-400'}`}>{payoutMessage}</p>
+                                )}
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-4 mt-8">Sales by Item</h3>
                             <div className="overflow-x-auto"><table className="w-full text-left">
                                 <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Item</th><th className="p-3">Units Sold</th><th className="p-3">Revenue</th></tr></thead>
                                 <tbody>

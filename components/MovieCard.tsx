@@ -17,43 +17,36 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
 
   // Special layout for ranked "Top 10" movies, inspired by Hulu/Netflix
   if (rank) {
-    const rankBorders = [
-        'border-yellow-400/80 shadow-lg shadow-yellow-900/50', // Gold
-        'border-slate-300/50', // Silver
-        'border-orange-600/50', // Bronze
-    ];
-    const defaultBorder = 'border-gray-700/50';
-    const borderClass = rank <= 3 ? rankBorders[rank - 1] : defaultBorder;
-    
     return (
       <div
-        className={`group relative h-full w-full cursor-pointer flex items-stretch bg-black rounded-lg overflow-hidden border-2 transition-all duration-300 ${borderClass} hover:border-white/80 hover:scale-105`}
+        className="group relative h-full w-full cursor-pointer flex items-stretch bg-black rounded-lg overflow-hidden transition-transform duration-300 hover:scale-105"
         onClick={() => onSelectMovie(movie)}
         role="button"
         aria-label={`View details for ${movie.title}, ranked number ${rank}`}
         tabIndex={0}
         onKeyPress={(e) => { if (e.key === 'Enter') onSelectMovie(movie)}}
       >
-        {/* Number on the left */}
-        <div className="flex-shrink-0 w-[45%] flex items-center justify-start">
-            <span 
-                className="font-black text-[10rem] md:text-[12rem] leading-none select-none text-gray-800 group-hover:text-gray-700 transition-all duration-300 -ml-4 md:-ml-6"
-                style={{ WebkitTextStroke: '1px rgba(255,255,255,0.1)' }}
+        <img
+            src={movie.poster}
+            alt="" // Decorative
+            className="w-full h-full object-cover"
+            loading="lazy"
+            onContextMenu={(e) => e.preventDefault()}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity"></div>
+        <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+          <div className="flex items-end gap-2">
+             <span 
+                className="font-black text-6xl leading-none select-none text-white/80"
+                style={{ WebkitTextStroke: '1px rgba(0,0,0,0.5)' }}
                 aria-hidden="true"
             >
                 {rank}
             </span>
-        </div>
-        
-        {/* Poster on the right, overlapping */}
-        <div className="w-[65%] flex-shrink-0 -ml-[10%] group-hover:-ml-[5%] transition-all duration-300 shadow-2xl shadow-black rounded-r-lg">
-            <img
-                src={movie.poster}
-                alt="" // Decorative
-                className="w-full h-full object-cover rounded-r-lg"
-                loading="lazy"
-                onContextMenu={(e) => e.preventDefault()}
-            />
+             <h3 className="text-lg font-bold leading-tight opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:translate-y-0 translate-y-2">
+                {movie.title}
+             </h3>
+          </div>
         </div>
       </div>
     );

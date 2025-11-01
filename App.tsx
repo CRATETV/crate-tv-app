@@ -8,8 +8,6 @@ import Hero from './components/Hero';
 import MovieCarousel from './components/MovieCarousel';
 import MovieDetailsModal from './components/MovieDetailsModal';
 import ActorBioModal from './components/ActorBioModal';
-// FIX: Corrected import path
-import Footer from './components/Footer';
 import LoadingSpinner from './components/LoadingSpinner';
 import BackToTopButton from './components/BackToTopButton';
 import SearchOverlay from './components/SearchOverlay';
@@ -22,6 +20,7 @@ import NowPlayingBanner from './components/NowPlayingBanner';
 import { useAuth } from './contexts/AuthContext';
 import { isMovieReleased } from './constants';
 import BottomNavBar from './components/BottomNavBar';
+import CollapsibleFooter from './components/CollapsibleFooter';
 
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
@@ -555,7 +554,7 @@ const App: React.FC = () => {
         )}
       </main>
       
-      <Footer showActorLinks={true} />
+      <CollapsibleFooter showActorLinks={true} />
       <BackToTopButton />
 
       {detailsMovie && (

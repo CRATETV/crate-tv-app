@@ -5,6 +5,7 @@ import LoadingSpinner from './LoadingSpinner';
 import { Movie, AboutData, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import AuthModal from './AuthModal';
+import CollapsibleFooter from './CollapsibleFooter';
 
 const LandingPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -100,6 +101,7 @@ const LandingPage: React.FC = () => {
                         )}
                     </div>
                 </main>
+                 <CollapsibleFooter showActorLinks={true} />
             </div>
             {isAuthModalOpen && (
                 <AuthModal

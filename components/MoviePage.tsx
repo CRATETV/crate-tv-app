@@ -3,7 +3,6 @@ import { Movie, Actor, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import ActorBioModal from './ActorBioModal';
 import Header from './Header';
-import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';
 import SearchOverlay from './SearchOverlay';
@@ -15,6 +14,7 @@ import RokuBanner from './RokuBanner';
 import SquarePaymentModal from './SquarePaymentModal';
 import DonationSuccessModal from './DonationSuccessModal';
 import { isMovieReleased } from '../constants';
+import CollapsibleFooter from './CollapsibleFooter';
 
 declare const google: any; // Declare Google IMA SDK global
 
@@ -457,7 +457,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             
             {playerMode !== 'full' && (
               <>
-                <Footer />
+                <CollapsibleFooter />
                 <BackToTopButton />
               </>
             )}

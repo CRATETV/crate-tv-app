@@ -27,12 +27,15 @@ const Footer: React.FC<FooterProps> = ({ showPortalNotice = false, showActorLink
             <h3 className="font-bold text-white mb-4">Filmmakers</h3>
             <ul className="space-y-2">
               <li><a href="/submit" onClick={(e) => handleNavigate(e, '/submit')} className="hover:text-white transition">Submit a Film</a></li>
+              <li><a href="/filmmaker-dashboard" onClick={(e) => handleNavigate(e, '/filmmaker-dashboard')} className="hover:text-white transition">Filmmaker Dashboard</a></li>
+              <li><a href="/filmmaker-signup" onClick={(e) => handleNavigate(e, '/filmmaker-signup')} className="hover:text-white transition">Dashboard Signup</a></li>
             </ul>
           </div>
            <div>
             <h3 className="font-bold text-white mb-4">Affiliates</h3>
             <ul className="space-y-2">
               <li><a href="https://playhousewest.com/philly/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Playhouse West Philadelphia</a></li>
+              <li><a href="https://www.48hourfilm.com/philadelphia" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Philadelphia 48 Hour Film Project</a></li>
             </ul>
           </div>
           {showActorLinks && (
