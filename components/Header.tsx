@@ -13,9 +13,10 @@ interface HeaderProps {
   showSearch?: boolean;
   isFestivalLive?: boolean;
   onSignInClick?: () => void;
+  showNavLinks?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onSearchSubmit, isStaging, showSearch = true, isFestivalLive, onSignInClick }) => {
+const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onSearchSubmit, isStaging, showSearch = true, isFestivalLive, onSignInClick, showNavLinks = true }) => {
   const [topOffset, setTopOffset] = useState(0);
   const { user, logout } = useAuth();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -110,10 +111,12 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onSe
                 onContextMenu={(e) => e.preventDefault()}
             />
         </a>
-        <nav className="hidden md:flex items-center gap-2 md:gap-4">
-          <a href="/classics" onClick={(e) => handleNavigate(e, '/classics')} className={`${linkBaseStyles} ${pathname.startsWith('/classics') ? activeLinkStyles : inactiveLinkStyles}`}>Classics</a>
-          {isFestivalLive && <a href="/festival" onClick={(e) => handleNavigate(e, '/festival')} className={`${linkBaseStyles} ${pathname.startsWith('/festival') ? activeLinkStyles : inactiveLinkStyles}`}>Festival</a>}
-        </nav>
+        {showNavLinks && (
+          <nav className="hidden md:flex items-center gap-2 md:gap-4">
+            <a href="/classics" onClick={(e) => handleNavigate(e, '/classics')} className={`${linkBaseStyles} ${pathname.startsWith('/classics') ? activeLinkStyles : inactiveLinkStyles}`}>Classics</a>
+            {isFestivalLive && <a href="/festival" onClick={(e) => handleNavigate(e, '/festival')} className={`${linkBaseStyles} ${pathname.startsWith('/festival') ? activeLinkStyles : inactiveLinkStyles}`}>Festival</a>}
+          </nav>
+        )}
       </div>
       
       {/* Right Side (Desktop only) */}

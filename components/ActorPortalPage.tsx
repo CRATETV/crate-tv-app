@@ -55,7 +55,7 @@ const ActorPortalPage: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
+            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={false} />
             <main className="flex-grow pt-24 px-4 md:px-12">
                 <div className="max-w-4xl mx-auto">
                     <h1 className="text-4xl font-bold text-white mb-2">Welcome to the Actor Portal, {user.name}!</h1>

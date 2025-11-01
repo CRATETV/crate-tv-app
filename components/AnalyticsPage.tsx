@@ -122,6 +122,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ allMovies }) => {
     const [error, setError] = useState<{ critical?: string, square?: string, firebase?: string } | null>(null);
     const [activeTab, setActiveTab] = useState('overview');
     const [userSearchTerm, setUserSearchTerm] = useState('');
+    const [userFilter, setUserFilter] = useState<'all' | 'emailOnly'>('emailOnly');
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -159,11 +160,18 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ allMovies }) => {
 
     const filteredUsers = useMemo(() => {
         if (!analytics?.allUsers) return [];
-        if (!userSearchTerm) return analytics.allUsers;
-        return analytics.allUsers.filter(user => 
+        
+        let users = analytics.allUsers;
+        if (userFilter === 'emailOnly') {
+            users = users.filter(user => user.email && user.email !== 'N/A');
+        }
+
+        if (!userSearchTerm) return users;
+
+        return users.filter(user => 
             user.email.toLowerCase().includes(userSearchTerm.toLowerCase())
         );
-    }, [analytics?.allUsers, userSearchTerm]);
+    }, [analytics?.allUsers, userSearchTerm, userFilter]);
 
     const handleCompletePayout = async (requestId: string) => {
         const password = sessionStorage.getItem('adminPassword');
@@ -234,14 +242,20 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ allMovies }) => {
             
             {activeTab === 'users' && analytics && (
                 <div>
-                     <h2 className="text-2xl font-bold text-white mb-4">All Users ({analytics.totalUsers})</h2>
-                     <input
-                        type="text"
-                        placeholder="Search by email..."
-                        value={userSearchTerm}
-                        onChange={e => setUserSearchTerm(e.target.value)}
-                        className="w-full max-w-sm mb-4 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                     />
+                     <h2 className="text-2xl font-bold text-white mb-4">Users ({filteredUsers.length} of {analytics.totalUsers})</h2>
+                     <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
+                        <input
+                            type="text"
+                            placeholder="Search by email..."
+                            value={userSearchTerm}
+                            onChange={e => setUserSearchTerm(e.target.value)}
+                            className="w-full max-w-sm bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                         <div className="flex items-center gap-1 p-1 bg-gray-900/50 rounded-lg border border-gray-700">
+                            <button onClick={() => setUserFilter('emailOnly')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${userFilter === 'emailOnly' ? 'bg-blue-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700'}`}>Emails Only</button>
+                            <button onClick={() => setUserFilter('all')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${userFilter === 'all' ? 'bg-blue-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700'}`}>Show All</button>
+                        </div>
+                     </div>
                      <div className="bg-gray-800/50 rounded-lg max-h-[600px] overflow-y-auto">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-gray-700/50 text-xs text-gray-300 uppercase tracking-wider sticky top-0">

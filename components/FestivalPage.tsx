@@ -80,11 +80,13 @@ const FestivalPage: React.FC = () => {
         window.location.search = params.toString();
     };
 
-    if (isLoading) {
+    // This robust check prevents rendering until all necessary data is loaded, preventing crashes.
+    if (isLoading || (isStaging && !festivalConfig)) {
         return <LoadingSpinner />;
     }
 
-    if (!isFestivalLive && !isStaging) { // In staging, always show the page
+    // This condition now safely runs after all data is loaded.
+    if (!festivalConfig || (!isFestivalLive && !isStaging)) {
         return (
              <div className="flex flex-col min-h-screen bg-[#141414] text-white">
                 <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
@@ -108,7 +110,7 @@ const FestivalPage: React.FC = () => {
                  <div className="max-w-7xl mx-auto p-4 sm:p-8 md:p-12">
                      <FestivalView 
                         festivalData={festivalData}
-                        festivalConfig={festivalConfig!}
+                        festivalConfig={festivalConfig}
                         allMovies={movies}
                      />
                  </div>

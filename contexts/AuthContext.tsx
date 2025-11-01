@@ -54,8 +54,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (auth) {
                 const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
                     if (firebaseUser) {
-                        // Get custom claims to determine roles
-                        const idTokenResult = await firebaseUser.getIdTokenResult();
+                        // Get custom claims to determine roles, forcing a refresh to get the latest claims.
+                        const idTokenResult = await firebaseUser.getIdTokenResult(true);
                         const isActor = !!idTokenResult.claims.isActor;
                         const isFilmmaker = !!idTokenResult.claims.isFilmmaker;
 

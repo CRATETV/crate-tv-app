@@ -96,7 +96,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 body: JSON.stringify({ movieKey: movie.key }),
             }).catch(err => console.error("Failed to track view:", err));
         }
-        // Just play the video. Fullscreen is handled by the new effect.
         videoRef.current.play().catch(e => console.error("Content play failed", e));
     }
   }, [movie?.key]);
@@ -215,39 +214,86 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }, 1000);
     return () => clearInterval(interval);
   }, [movie, released]);
-  
-  // New, improved effect for handling fullscreen and playback logic.
-  useEffect(() => {
-    const videoElement = videoRef.current;
-    if (playerMode === 'full' && released && videoElement) {
-        const isMobile = window.matchMedia("(max-width: 768px)").matches;
-        const startPlaybackFlow = () => {
+
+    // This effect handles entering/exiting the fullscreen player and ad initialization.
+    useEffect(() => {
+        const videoElement = videoRef.current;
+        const containerElement = videoContainerRef.current;
+
+        const enterFullScreenPlayer = async () => {
+            if (!containerElement || !videoElement) return;
+
+            try {
+                // Request fullscreen on the container
+                if (containerElement.requestFullscreen) {
+                    await containerElement.requestFullscreen();
+                } else if ((containerElement as any).webkitRequestFullscreen) { // Safari
+                    await (containerElement as any).webkitRequestFullscreen();
+                } else if ((containerElement as any).msRequestFullscreen) { // IE11
+                    await (containerElement as any).msRequestFullscreen();
+                }
+
+                // Lock orientation to landscape on supported devices
+                // FIX: Cast screen.orientation to `any` to handle missing TypeScript definitions for the experimental `lock` method.
+                if (screen.orientation && (screen.orientation as any).lock) {
+                    await (screen.orientation as any).lock('landscape');
+                }
+            } catch (err) {
+                // This can happen if the user denies the request. The video will still play.
+                console.warn("Could not enter fullscreen or lock orientation:", err);
+            }
+            
+            // After attempting fullscreen, initialize ads which will then play content.
             initializeAds();
         };
 
-        if (isMobile && typeof videoElement.requestFullscreen === 'function') {
-            videoElement.requestFullscreen().then(() => {
-                if (screen.orientation && typeof (screen.orientation as any).lock === 'function') {
-                    (screen.orientation as any).lock('landscape').catch((err: any) => {
-                        console.warn("Could not lock screen orientation:", err);
-                    });
+        const exitFullScreenPlayer = () => {
+            // Exit fullscreen if the browser is currently in it
+            if (document.fullscreenElement || (document as any).webkitFullscreenElement) {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if ((document as any).webkitExitFullscreen) { // Safari
+                    (document as any).webkitExitFullscreen();
                 }
-                startPlaybackFlow();
-            }).catch(err => {
-                console.warn("Fullscreen request failed. Playing inline.", err);
-                startPlaybackFlow();
-            });
+            }
+            // Unlock orientation
+            // FIX: Cast screen.orientation to `any` to handle missing TypeScript definitions for the experimental `unlock` method.
+            if (screen.orientation && (screen.orientation as any).unlock) {
+                (screen.orientation as any).unlock();
+            }
+            // Cleanup ads
+            if (adsManagerRef.current) {
+                adsManagerRef.current.destroy();
+                adsManagerRef.current = null;
+            }
+            setIsAdPlaying(false);
+        };
+
+        if (playerMode === 'full' && released) {
+            enterFullScreenPlayer();
         } else {
-            startPlaybackFlow();
+            exitFullScreenPlayer();
         }
-    } else {
-        if (adsManagerRef.current) {
-            adsManagerRef.current.destroy();
-            adsManagerRef.current = null;
-        }
-        setIsAdPlaying(false);
-    }
-  }, [playerMode, released, initializeAds]);
+    }, [playerMode, released, initializeAds]);
+
+    // Effect to sync app state when user manually exits fullscreen (e.g., with Esc key)
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            const isFullscreen = document.fullscreenElement || (document as any).webkitFullscreenElement;
+            if (!isFullscreen) {
+                // User exited fullscreen manually, so we update our state to 'poster' mode
+                setPlayerMode('poster');
+            }
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange); // Safari
+
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+        };
+    }, []); // Empty dependency array means this runs once on mount
 
   useEffect(() => {
     if (movie) {

@@ -101,11 +101,11 @@ const TopTenPage: React.FC = () => {
                     </header>
 
                     {topTenMovies.length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-y-8 gap-x-4">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-y-8 gap-x-2 sm:gap-x-4">
                             {topTenMovies.map((movie, index) => (
-                                <div key={movie.key} className="flex items-center justify-start">
+                                <div key={movie.key} className="flex items-center justify-center">
                                     <span 
-                                      className="font-black text-[10rem] sm:text-[12rem] text-gray-800/80 -mr-10 sm:-mr-12 select-none"
+                                      className="font-black text-[9rem] sm:text-[12rem] text-gray-800/80 -mr-[3.5rem] sm:-mr-[5rem] select-none"
                                       style={{ textShadow: '2px 2px 10px rgba(0,0,0,0.5)' }}
                                     >
                                         {index + 1}
@@ -113,7 +113,7 @@ const TopTenPage: React.FC = () => {
                                     <a 
                                         href={`/movie/${movie.key}`}
                                         onClick={(e) => handleNavigate(e, movie.key)}
-                                        className="relative z-10 w-32 h-48 sm:w-40 sm:h-60 block group flex-shrink-0"
+                                        className="relative z-10 w-28 h-42 sm:w-40 sm:h-60 block group flex-shrink-0"
                                     >
                                         <img 
                                             src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
