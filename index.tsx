@@ -90,7 +90,7 @@ const AppRouter: React.FC = () => {
     return user ? <MoviePage movieKey={movieMatch[1]} /> : <RedirectToLogin />;
   }
 
-  const actorProfileMatch = route.match(/^\/actors\/([a-zA-Z0-9_-]+)/);
+  const actorProfileMatch = route.match(/^\/actors-directory\/([a-zA-Z0-9_-]+)/);
   if (actorProfileMatch && actorProfileMatch[1]) {
     return <ActorProfilePage slug={actorProfileMatch[1]} />;
   }
@@ -118,7 +118,7 @@ const AppRouter: React.FC = () => {
       return <SubmitPage />;
     case '/actor-signup':
       return <ActorSignupPage />;
-    case '/actors':
+    case '/actors-directory':
       return <ActorsDirectoryPage />;
     case '/filmmaker-signup':
       return <FilmmakerSignupPage />;

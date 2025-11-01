@@ -56,8 +56,19 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
     const userDocRef = doc(db, 'users', uid);
     const userDoc = await getDoc(userDocRef);
     if (userDoc.exists()) {
-        // The document data will not include the ID, so we add it manually.
-        return { uid, ...userDoc.data() } as User;
+        const data = userDoc.data();
+        // Create a user object that strictly conforms to the User type,
+        // ensuring 'isActor' and other fields are always present with a default.
+        const userProfile: User = {
+            uid,
+            email: data.email || '',
+            name: data.name,
+            isActor: data.isActor === true, // Coerce to boolean, defaulting to false
+            avatar: data.avatar || 'fox',
+            isPremiumSubscriber: data.isPremiumSubscriber === true, // Default to false
+            watchlist: data.watchlist || [],
+        };
+        return userProfile;
     }
     return null;
 };

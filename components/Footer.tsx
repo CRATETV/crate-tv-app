@@ -40,7 +40,7 @@ const Footer: React.FC<FooterProps> = ({ showPortalNotice = false, showActorLink
             <div>
               <h3 className="font-bold text-white mb-4">Actors</h3>
               <ul className="space-y-2">
-                <li><a href="/actors" onClick={(e) => handleNavigate(e, '/actors')} className="hover:text-white transition">Actors Directory</a></li>
+                <li><a href="/actors-directory" onClick={(e) => handleNavigate(e, '/actors-directory')} className="hover:text-white transition">Actors Directory</a></li>
                 <li><a href="/actor-portal" onClick={(e) => handleNavigate(e, '/actor-portal')} className="hover:text-white transition">Actor Portal</a></li>
                 <li><a href="/actor-signup" onClick={(e) => handleNavigate(e, '/actor-signup')} className="hover:text-white transition">Actor Portal Signup</a></li>
               </ul>

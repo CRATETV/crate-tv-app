@@ -66,7 +66,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
   const activeLinkStyles = "bg-white/10 text-white";
   const inactiveLinkStyles = "text-gray-300 hover:bg-white/20 hover:text-white";
   
-  const hasSolidBg = isScrolled || !pathname.startsWith('/') || pathname.startsWith('/login') || pathname.startsWith('/about') || isMobileMenuOpen;
+  const hasSolidBg = isScrolled || pathname !== '/' || isMobileMenuOpen;
 
   const NavLinks: React.FC<{ mobile?: boolean }> = ({ mobile = false }) => {
       const mobileLinkStyles = "text-2xl font-bold text-gray-300 hover:text-white";
@@ -83,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
               </>
           ) : (
               <>
-                  <a href="/about" onClick={(e) => handleNavigate(e, '/about')} className={mobile ? mobileLinkStyles : `${desktopLinkStyles} ${pathname.startsWith('/about') ? activeLinkStyles : inactiveLinkStyles}`}>About Us</a>
+                  {/* "About Us" is removed as it's now part of the landing page */}
               </>
           )}
         </>
@@ -97,14 +97,14 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
       style={{ top: `${topOffset}px` }}
     >
       <div className="flex items-center gap-4 md:gap-6">
-        {pathname !== '/' && (
+        <a href="/" onClick={(e) => handleNavigate(e, '/')} aria-label="Crate TV Home">
             <img 
                 src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" 
                 alt="Crate TV" 
                 className="h-8 w-auto"
                 onContextMenu={(e) => e.preventDefault()}
             />
-        )}
+        </a>
         <nav className="hidden md:flex items-center gap-2 md:gap-4">
           <NavLinks />
         </nav>
@@ -142,7 +142,11 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
               </div>
             )}
           </div>
-        ) : null}
+        ) : (
+           <a href="/login" onClick={(e) => handleNavigate(e, '/login')} className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-4 py-2 rounded-md transition-colors hidden md:block">
+             Sign In
+           </a>
+        )}
         
          <div className="md:hidden">
             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-white" aria-label="Open menu">
@@ -155,17 +159,20 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
     {isMobileMenuOpen && (
       <div className="md:hidden fixed inset-0 bg-black/95 backdrop-blur-sm z-50 p-4 animate-[fadeIn_0.2s_ease-out]">
         <div className="flex justify-between items-center">
-            {pathname !== '/' ? (
+            <a href="/" onClick={(e) => handleNavigate(e, '/')} aria-label="Crate TV Home">
                 <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" className="h-8 w-auto"/>
-            ) : (
-                <div /> /* Placeholder to keep button on the right */
-            )}
+            </a>
             <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-white" aria-label="Close menu">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
         </div>
         <nav className="flex flex-col items-center justify-center h-full -mt-12 gap-8">
             <NavLinks mobile={true} />
+            {!user && (
+                <a href="/login" onClick={(e) => handleNavigate(e, '/login')} className="bg-red-600 hover:bg-red-700 text-white font-bold text-2xl px-8 py-4 rounded-lg transition-colors mt-8">
+                    Sign In
+                </a>
+            )}
         </nav>
       </div>
     )}

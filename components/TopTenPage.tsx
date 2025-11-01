@@ -132,12 +132,6 @@ const TopTenPage: React.FC = () => {
                                             </div>
                                         )}
                                     </div>
-                                    {/* Conditionally render synopsis for guest users */}
-                                    {!user && movie.synopsis && (
-                                        <div className="border-t border-gray-700 pt-3 mt-4">
-                                            <p className="text-sm text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></p>
-                                        </div>
-                                    )}
                                 </div>
                             ))}
                         </div>

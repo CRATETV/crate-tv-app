@@ -106,46 +106,61 @@ const FilmmakerPortalPage: React.FC = () => {
             setIsLoading(false);
         }
     };
+    
+    const handleNavigateHome = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        e.preventDefault();
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new Event('pushstate'));
+    };
 
     if (!isAuthenticated) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-900">
-                 <div className="w-full max-w-sm p-8 bg-gray-800 rounded-lg shadow-lg border border-gray-700">
-                    <h1 className="text-2xl font-bold text-center text-white mb-6">Filmmaker Dashboard</h1>
-                    <form onSubmit={handleLogin} className="space-y-4">
-                        <input type="text" value={filmmakerName} onChange={e => setFilmmakerName(e.target.value)} placeholder="Your Full Name (Director/Producer)" className="form-input" required />
-                        <div className="relative">
-                            <input
-                                type={showPassword ? 'text' : 'password'}
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Password"
-                                className="form-input"
-                                required
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white"
-                                aria-label={showPassword ? "Hide password" : "Show password"}
-                            >
-                                {showPassword ? (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                                        <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                                    </svg>
-                                ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074L3.707 2.293zM10 12a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                                        <path d="M2 10s.955-2.263 2.828-4.136A10.046 10.046 0 0110 3c4.478 0 8.268 2.943 9.542 7-.153.483-.32.95-.5 1.401l-1.473-1.473A8.014 8.014 0 0010 8c-2.04 0-3.87.768-5.172 2.035l-1.473-1.473A8.013 8.013 0 002 10z" />
-                                    </svg>
-                                )}
-                            </button>
-                        </div>
-                        {error && <p className="text-red-500 text-sm">{error}</p>}
-                        <button type="submit" className="submit-btn w-full mt-4" disabled={isLoading}>{isLoading ? 'Loading...' : 'View My Dashboard'}</button>
-                    </form>
-                </div>
+            <div className="min-h-screen bg-black text-white flex flex-col">
+                 <style>{`
+                    body {
+                        background-image: url('https://cratetelevision.s3.us-east-1.amazonaws.com/Juniper.png');
+                        background-size: cover;
+                        background-position: center;
+                        background-repeat: no-repeat;
+                    }
+                `}</style>
+                <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+                <header className="absolute top-0 left-0 p-8 z-10">
+                    <a href="/" onClick={handleNavigateHome}><img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" className="w-32 h-auto" /></a>
+                </header>
+                <main className="relative flex-grow flex items-center justify-center p-4">
+                     <div className="w-full max-w-md bg-black/70 backdrop-blur-md p-8 rounded-lg">
+                        <h1 className="text-3xl font-bold text-center text-white mb-2">Filmmaker Dashboard</h1>
+                        <p className="text-center text-gray-400 mb-6 text-sm">Access your film's performance analytics.</p>
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <input type="text" value={filmmakerName} onChange={e => setFilmmakerName(e.target.value)} placeholder="Your Full Name (Director/Producer)" className="form-input" required />
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="Password"
+                                    className="form-input"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white"
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                >
+                                    {showPassword ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" /></svg>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074L3.707 2.293zM10 12a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /><path d="M2 10s.955-2.263 2.828-4.136A10.046 10.046 0 0110 3c4.478 0 8.268 2.943 9.542 7-.153.483-.32.95-.5 1.401l-1.473-1.473A8.014 8.014 0 0010 8c-2.04 0-3.87.768-5.172 2.035l-1.473-1.473A8.013 8.013 0 002 10z" /></svg>
+                                    )}
+                                </button>
+                            </div>
+                            {error && <p className="text-red-500 text-sm">{error}</p>}
+                            <button type="submit" className="submit-btn w-full mt-4" disabled={isLoading}>{isLoading ? 'Loading...' : 'View My Dashboard'}</button>
+                        </form>
+                    </div>
+                </main>
             </div>
         );
     }

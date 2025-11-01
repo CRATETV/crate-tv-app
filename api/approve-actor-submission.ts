@@ -1,6 +1,5 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/approve-actor-submission
-import * as admin from 'firebase-admin';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { Movie, ActorProfile } from '../types.js';
 

@@ -8,11 +8,11 @@ import { ActorProfile } from '../types';
 const ActorCard: React.FC<{ actor: ActorProfile }> = ({ actor }) => {
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault();
-        window.history.pushState({}, '', `/actors/${actor.slug}`);
+        window.history.pushState({}, '', `/actors-directory/${actor.slug}`);
         window.dispatchEvent(new Event('pushstate'));
     };
     return (
-        <a href={`/actors/${actor.slug}`} onClick={handleNavigate} className="group block text-center">
+        <a href={`/actors-directory/${actor.slug}`} onClick={handleNavigate} className="group block text-center">
             <div className="relative aspect-square w-full rounded-full overflow-hidden mx-auto max-w-[200px] border-4 border-gray-800 group-hover:border-purple-500 transition-colors duration-300">
                 <img src={actor.photo} alt={actor.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" loading="lazy" />
             </div>
