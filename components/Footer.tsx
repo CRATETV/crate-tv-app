@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 
 interface FooterProps {
@@ -25,11 +26,10 @@ const Footer: React.FC<FooterProps> = ({ showPortalNotice = false, showActorLink
             </ul>
           </div>
           <div>
-            <h3 className="font-bold text-white mb-4">Filmmakers</h3>
+            <h3 className="font-bold text-white mb-4">Creators</h3>
             <ul className="space-y-2">
               <li><a href="/submit" onClick={(e) => handleNavigate(e, '/submit')} className="hover:text-white transition">Submit a Film</a></li>
               <li><a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="hover:text-white transition">Creator Portals</a></li>
-              <li><a href="/filmmaker-signup" onClick={(e) => handleNavigate(e, '/filmmaker-signup')} className="hover:text-white transition">Dashboard Signup</a></li>
             </ul>
           </div>
            <div>
@@ -43,8 +43,7 @@ const Footer: React.FC<FooterProps> = ({ showPortalNotice = false, showActorLink
             <div>
               <h3 className="font-bold text-white mb-4">Actors</h3>
               <ul className="space-y-2">
-                <li><a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="hover:text-white transition">Creator Portals</a></li>
-                <li><a href="/actor-signup" onClick={(e) => handleNavigate(e, '/actor-signup')} className="hover:text-white transition">Actor Portal Signup</a></li>
+                <li><a href="/actors-directory" onClick={(e) => handleNavigate(e, '/actors-directory')} className="hover:text-white transition">Actors Directory</a></li>
               </ul>
             </div>
           )}

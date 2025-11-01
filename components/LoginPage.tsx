@@ -56,7 +56,7 @@ const LoginPage: React.FC = () => {
         setIsLoading(true);
         try {
             await sendPasswordReset(email);
-            setSuccessMessage("Password reset email sent! Check your inbox.");
+            setSuccessMessage("Password reset email sent! Please check your inbox and spam folder.");
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to send reset email.');
         } finally {

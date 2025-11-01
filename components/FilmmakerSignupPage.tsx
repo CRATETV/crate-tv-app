@@ -44,6 +44,9 @@ const FilmmakerSignupPage: React.FC = () => {
                         <p className="text-gray-300">
                            We've verified your name and sent a secure link to your email. Click the link to create your password and access your personal Filmmaker Dashboard.
                         </p>
+                        <p className="text-sm text-yellow-400 mt-4">
+                            If you don't see the email within a few minutes, please check your spam folder.
+                        </p>
                     </div>
                 </main>
                 <Footer />

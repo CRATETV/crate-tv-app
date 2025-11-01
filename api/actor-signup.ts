@@ -76,11 +76,20 @@ export async function POST(request: Request) {
       </div>
     `;
 
+    const emailText = `
+        Welcome to the Crate TV Actor Portal, ${name}!\n\n
+        We've confirmed you're part of the Crate TV family. To access the portal and update your profile, you first need to create a secure password for your account.\n\n
+        Copy and paste the following link into your browser to set your password:\n${link}\n\n
+        This link is valid for a limited time.\n\n
+        - The Crate TV Team
+    `;
+
     const { error } = await resend.emails.send({
         from: `Crate TV <${fromEmail}>`,
         to: [email],
         subject: `Create Your Password for the Crate TV Actor Portal`,
         html: emailHtml,
+        text: emailText,
     });
 
     if (error) {

@@ -35,8 +35,18 @@ This project requires API keys and a password for its features. You will need to
 
 **Required for Core Features:**
 -   `API_KEY`: Your Google Gemini API key.
--   `RESEND_API_KEY`: Your API key from Resend for handling email submissions.
 -   `ADMIN_PASSWORD`: A secure password of your choice to protect the `/admin` page.
+
+**Required for Email Functionality (Resend):**
+-   `RESEND_API_KEY`: Your API key from Resend.
+-   `FROM_EMAIL`: The email address you want to send emails from (e.g., `noreply@yourdomain.com`).
+
+**CRITICAL: Verify Your Sending Domain**
+For password reset and portal access emails to be delivered reliably and not end up in spam, you **must** verify your domain with Resend.
+1.  Log in to your Resend account.
+2.  Go to the "Domains" section and add your domain (e.g., `cratetv.net`).
+3.  Resend will provide you with DNS records (like MX, TXT, CNAME) that you need to add to your domain's DNS settings (where you bought your domain, like GoDaddy, Namecheap, etc.).
+4.  Once Resend verifies the records, your emails will be properly authenticated and delivered.
 
 **Required for Firebase Integration (Authentication, Database, User Analytics):**
 -   `FIREBASE_API_KEY`: Your Firebase project's Web API Key.

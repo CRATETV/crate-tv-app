@@ -84,12 +84,21 @@ export async function POST(request: Request) {
         <p>- The Crate TV Team</p>
       </div>
     `;
+    
+    const emailText = `
+        Welcome to the Crate TV Filmmaker Dashboard, ${name}!\n\n
+        We've confirmed you're a director or producer on Crate TV. To access your private analytics dashboard, you first need to create a secure password for your account.\n\n
+        Copy and paste the following link into your browser to set your password:\n${link}\n\n
+        This link is valid for a limited time. Once your password is set, you can log in at ${portalUrl}.\n\n
+        We're excited to have you with us!\n- The Crate TV Team
+    `;
 
     const { error } = await resend.emails.send({
         from: `Crate TV <${fromEmail}>`,
         to: [email],
         subject: `Create Your Password for the Crate TV Filmmaker Dashboard`,
         html: emailHtml,
+        text: emailText,
     });
 
     if (error) {
