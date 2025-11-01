@@ -19,6 +19,7 @@ interface FirebaseData {
     movieLikes: Record<string, number>;
     totalUsers: number;
     allUsers: { email: string; creationTime: string; }[];
+    viewLocations: Record<string, Record<string, number>>;
 }
 
 
@@ -35,6 +36,11 @@ const parseNote = (note: string | undefined): { type: string, title?: string, di
 
     const blockMatch = note.match(/Unlock Block: "(.*)"/);
     if (blockMatch) return { type: 'block', title: blockMatch[1].trim() };
+    
+    const movieMatch = note.match(/Purchase Film: "(.*)"/);
+    if (movieMatch) {
+        return { type: 'movie_sale', title: movieMatch[1].trim() };
+    }
     
     if (note.includes('Premium Subscription')) return { type: 'subscription' };
     
@@ -76,7 +82,6 @@ async function fetchSquareData(accessToken: string, locationId: string | undefin
         }
 
         const data = await response.json();
-        // This is a robust check to ensure data.payments exists and is an array before spreading
         if (data.payments && Array.isArray(data.payments)) {
             allPayments.push(...data.payments);
         }
@@ -100,12 +105,17 @@ async function fetchFirebaseData(): Promise<FirebaseData> {
     let movieLikes: Record<string, number> = {};
     let totalUsers = 0;
     let allUsersResult: { email: string; creationTime: string; }[] = [];
+    let viewLocations: Record<string, Record<string, number>> = {};
 
-    const viewsSnapshot = await db.collection("view_counts").get();
+    const [viewsSnapshot, moviesSnapshot, locationsSnapshot] = await Promise.all([
+        db.collection("view_counts").get(),
+        db.collection("movies").get(),
+        db.collection("view_locations").get(),
+    ]);
+    
     viewsSnapshot.forEach(doc => { viewCounts[doc.id] = doc.data().count || 0; });
-
-    const moviesSnapshot = await db.collection("movies").get();
     moviesSnapshot.forEach(doc => { movieLikes[doc.id] = doc.data().likes || 0; });
+    locationsSnapshot.forEach(doc => { viewLocations[doc.id] = doc.data(); });
     
     let allAuthUsers: UserRecord[] = [];
     let nextPageToken;
@@ -123,7 +133,7 @@ async function fetchFirebaseData(): Promise<FirebaseData> {
     }));
 
     console.log("[Analytics API] Fetched data from Firebase successfully.");
-    return { viewCounts, movieLikes, totalUsers, allUsers: allUsersResult };
+    return { viewCounts, movieLikes, totalUsers, allUsers: allUsersResult, viewLocations };
 }
 
 // --- Main API Handler ---
@@ -132,7 +142,7 @@ export async function POST(request: Request) {
     let squareError: string | null = null;
     let firebaseError: string | null = null;
     let allPayments: SquarePayment[] = [];
-    let firebaseData: FirebaseData = { viewCounts: {}, movieLikes: {}, totalUsers: 0, allUsers: [] };
+    let firebaseData: FirebaseData = { viewCounts: {}, movieLikes: {}, totalUsers: 0, allUsers: [], viewLocations: {} };
 
     try {
         const { password } = await request.json();
@@ -250,7 +260,7 @@ export async function POST(request: Request) {
             analyticsData: null,
             errors: { critical: errorMessage }
         }), {
-            status: 200, // Still return 200 OK to prevent a hard crash on the frontend
+            status: 200,
             headers: { 'Content-Type': 'application/json' },
         });
     }

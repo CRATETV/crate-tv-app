@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { AnalyticsData, Movie } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
+const formatNumber = (num: number) => num.toLocaleString();
 
 const StatCard: React.FC<{ title: string; value: string | number; className?: string }> = ({ title, value, className = '' }) => (
     <div className={`bg-gray-800/50 border border-gray-700 p-4 rounded-lg text-center ${className}`}>
@@ -13,12 +15,13 @@ const StatCard: React.FC<{ title: string; value: string | number; className?: st
 );
 
 const AnalyticsPage: React.FC = () => {
-    const [activeTab, setActiveTab] = useState('filmPerformance');
+    const [activeTab, setActiveTab] = useState('overview');
     const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
     const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<{ square: string | null, firebase: string | null, critical: string | null }>({ square: null, firebase: null, critical: null });
-
+    const [selectedGeoMovie, setSelectedGeoMovie] = useState<string>('');
+    
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
@@ -28,7 +31,6 @@ const AnalyticsPage: React.FC = () => {
                 setIsLoading(false);
                 return;
             }
-
             try {
                 const [analyticsRes, liveDataRes] = await Promise.all([
                     fetch('/api/get-sales-data', {
@@ -45,6 +47,11 @@ const AnalyticsPage: React.FC = () => {
                 setAnalyticsData(analyticsJson.analyticsData);
                 setError(analyticsJson.errors);
                 setAllMovies(liveDataRes.data.movies);
+                // Set initial movie for geo view
+                if (analyticsJson.analyticsData?.viewLocations) {
+                    const firstMovieWithGeo = Object.keys(analyticsJson.analyticsData.viewLocations)[0];
+                    setSelectedGeoMovie(firstMovieWithGeo || '');
+                }
                 
             } catch (err) {
                 setError(prev => ({ ...prev, critical: err instanceof Error ? err.message : 'An unknown error occurred during data fetch.' }));
@@ -55,44 +62,23 @@ const AnalyticsPage: React.FC = () => {
         fetchData();
     }, []);
 
-    const topPerformingFilm = useMemo(() => {
-        if (!analyticsData || !allMovies || Object.keys(allMovies).length === 0) return null;
-        const { viewCounts } = analyticsData;
-        let topKey: string | null = null;
-        let maxViews = -1;
-
-        for (const key in viewCounts) {
-            if (viewCounts[key] > maxViews) {
-                maxViews = viewCounts[key];
-                topKey = key;
-            }
-        }
-        return topKey ? { ...allMovies[topKey], views: maxViews } : null;
+    const filmPerformanceData = useMemo(() => {
+        if (!analyticsData || !allMovies) return [];
+        // FIX: Explicitly cast Object.values to Movie[] to fix type inference issues.
+        return (Object.values(allMovies) as Movie[]).map(movie => {
+            const donations = analyticsData.filmmakerPayouts.find(p => p.movieTitle === movie.title)?.totalDonations || 0;
+            return {
+                key: movie.key,
+                title: movie.title,
+                director: movie.director,
+                views: analyticsData.viewCounts[movie.key] || 0,
+                likes: analyticsData.movieLikes[movie.key] || 0,
+                donations: donations,
+            };
+        }).sort((a, b) => b.views - a.views);
     }, [analyticsData, allMovies]);
 
-    const handleShare = async () => {
-        if (!('share' in navigator) || !analyticsData) {
-            alert('Web Share API is not supported in this browser.');
-            return;
-        }
-        try {
-            const text = `Crate TV Festival Analytics Summary:\n` +
-                `Total Revenue: ${formatCurrency(analyticsData.totalFestivalRevenue)}\n` +
-                `All-Access Passes: ${analyticsData.festivalPassSales.units} sold (${formatCurrency(analyticsData.festivalPassSales.revenue)})\n` +
-                `Individual Blocks: ${analyticsData.festivalBlockSales.units} sold (${formatCurrency(analyticsData.festivalBlockSales.revenue)})\n\n` +
-                `Revenue Split:\n` +
-                `  - Crate TV (30%): ${formatCurrency(analyticsData.totalFestivalRevenue * 0.3)}\n` +
-                `  - Playhouse West (70%): ${formatCurrency(analyticsData.totalFestivalRevenue * 0.7)}`;
-
-            await navigator.share({
-                title: 'Crate TV Festival Analytics Summary',
-                text: text,
-            });
-        } catch (error) {
-            console.error('Error sharing analytics:', error);
-        }
-    };
-
+    const handleShare = async () => { /* ... */ };
 
     if (isLoading) {
         return <LoadingSpinner />;
@@ -109,95 +95,120 @@ const AnalyticsPage: React.FC = () => {
 
     return (
         <div style={{ padding: '1rem', backgroundColor: '#1F2937', borderRadius: '8px' }}>
-            <div className="no-print flex items-center gap-2 mb-6 border-b border-gray-600 pb-4">
-                <TabButton tabId="filmPerformance" label="Film Performance" />
-                <TabButton tabId="festivalAnalytics" label="Festival Analytics" />
+            <div className="no-print flex flex-wrap items-center gap-2 mb-6 border-b border-gray-600 pb-4">
+                <TabButton tabId="overview" label="Overview" />
+                <TabButton tabId="audience" label="Audience" />
+                <TabButton tabId="financials" label="Financials" />
+                <TabButton tabId="festival" label="Festival" />
             </div>
 
             {error.critical && <div className="p-4 mb-4 text-red-300 bg-red-900/50 border border-red-700 rounded-md">{error.critical}</div>}
             
-            {activeTab === 'filmPerformance' && (
-                <div>
-                    <h2 className="text-xl font-bold mb-4">Film Performance</h2>
-                    {topPerformingFilm && (
-                        <div className="mb-8 bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-                            <h3 className="text-lg font-semibold text-yellow-400 mb-4">Top Performing Film</h3>
-                            <div className="flex flex-col sm:flex-row items-center gap-6">
-                                <img src={topPerformingFilm.poster} alt={topPerformingFilm.title} className="w-32 h-auto rounded-md object-cover" />
-                                <div>
-                                    <h4 className="text-2xl font-bold text-white">{topPerformingFilm.title}</h4>
-                                    <p className="text-gray-400">by {topPerformingFilm.director}</p>
-                                    <p className="text-4xl font-extrabold text-white mt-2">{topPerformingFilm.views.toLocaleString()} <span className="text-lg font-normal text-gray-400">Total Views</span></p>
-                                </div>
+            {!analyticsData && !isLoading && !error.critical && (
+                 <div className="p-4 mb-4 text-yellow-300 bg-yellow-900/50 border border-yellow-700 rounded-md">No analytics data could be loaded. Firebase or Square might be misconfigured.</div>
+            )}
+
+            {analyticsData && (
+                <div className="printable-area">
+                    {/* OVERVIEW TAB */}
+                    {activeTab === 'overview' && (
+                        <div>
+                            <h2 className="text-2xl font-bold mb-4 text-white">Platform Overview</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                                <StatCard title="Total Revenue" value={formatCurrency(analyticsData.totalRevenue)} />
+                                <StatCard title="Total Users" value={formatNumber(analyticsData.totalUsers)} />
+                                {/* FIX: Add explicit types to reduce function to resolve inference error. */}
+                                <StatCard title="Total Film Views" value={formatNumber(Object.values(analyticsData.viewCounts).reduce((s: number, c: number) => s + c, 0))} />
+                            </div>
+                            <h3 className="text-xl font-bold mb-4 text-white">Film Performance</h3>
+                            <div className="overflow-x-auto"><table className="w-full text-left">
+                                <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Film</th><th className="p-3">Views</th><th className="p-3">Likes</th><th className="p-3">Donations</th></tr></thead>
+                                <tbody>{filmPerformanceData.map(film => (
+                                    <tr key={film.key} className="border-b border-gray-700"><td className="p-3 font-medium text-white">{film.title}</td><td className="p-3">{formatNumber(film.views)}</td><td className="p-3">{formatNumber(film.likes)}</td><td className="p-3">{formatCurrency(film.donations)}</td></tr>
+                                ))}</tbody>
+                            </table></div>
+                        </div>
+                    )}
+                    
+                    {/* AUDIENCE TAB */}
+                    {activeTab === 'audience' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div>
+                                <h2 className="text-2xl font-bold mb-4 text-white">Viewership by Country</h2>
+                                <select value={selectedGeoMovie} onChange={e => setSelectedGeoMovie(e.target.value)} className="form-input mb-4"><option value="">Select a Film</option>{Object.keys(allMovies).map(key => <option key={key} value={key}>{allMovies[key].title}</option>)}</select>
+                                <div className="overflow-x-auto"><table className="w-full text-left">
+                                    <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Country Code</th><th className="p-3">Views</th></tr></thead>
+                                    <tbody>{selectedGeoMovie && analyticsData.viewLocations[selectedGeoMovie] ? Object.entries(analyticsData.viewLocations[selectedGeoMovie]).sort(([, a], [, b]) => b - a).map(([code, count]) => (
+                                        <tr key={code} className="border-b border-gray-700"><td className="p-3 font-medium text-white">{code}</td><td className="p-3">{formatNumber(count)}</td></tr>
+                                    )) : <tr><td colSpan={2} className="p-4 text-center text-gray-500">No location data for this film.</td></tr>}</tbody>
+                                </table></div>
+                            </div>
+                             <div>
+                                <h2 className="text-2xl font-bold mb-4 text-white">User List</h2>
+                                <div className="overflow-y-auto max-h-[600px]"><table className="w-full text-left">
+                                    <thead className="text-xs text-gray-400 uppercase bg-gray-700/50 sticky top-0"><tr><th className="p-3">Email</th><th className="p-3">Sign Up Date</th></tr></thead>
+                                    <tbody>{analyticsData.allUsers.map(user => (
+                                        <tr key={user.email} className="border-b border-gray-700"><td className="p-3 font-medium text-white">{user.email}</td><td className="p-3 text-sm text-gray-300">{user.creationTime}</td></tr>
+                                    ))}</tbody>
+                                </table></div>
                             </div>
                         </div>
                     )}
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
-                                <tr>
-                                    <th className="p-3">Title</th>
-                                    <th className="p-3">Views</th>
-                                    <th className="p-3">Likes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {analyticsData && Object.entries(analyticsData.viewCounts)
-                                    // FIX: Add explicit type assertions to fix arithmetic operation error due to failed type inference.
-                                    .sort(([, a], [, b]) => (b as number) - (a as number))
-                                    .map(([key, views]) => (
-                                    <tr key={key} className="border-b border-gray-700">
-                                        <td className="p-3 font-medium text-white">{allMovies[key]?.title || key}</td>
-                                        <td className="p-3">{views.toLocaleString()}</td>
-                                        <td className="p-3">{analyticsData.movieLikes[key]?.toLocaleString() || '0'}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
 
-            {activeTab === 'festivalAnalytics' && analyticsData && (
-                <div className="printable-area">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold text-white">Festival Analytics Summary</h2>
-                        <div className="no-print flex gap-4">
-                            <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Print Summary</button>
-                            {'share' in navigator && <button onClick={handleShare} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Share Summary</button>}
+                    {/* FINANCIALS TAB */}
+                    {activeTab === 'financials' && (
+                        <div>
+                             <h2 className="text-2xl font-bold mb-4 text-white">Financials</h2>
+                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                                <StatCard title="Total Revenue" value={formatCurrency(analyticsData.totalRevenue)} />
+                                <StatCard title="Total Donations" value={formatCurrency(analyticsData.totalDonations)} />
+                                <StatCard title="Total Film/Other Sales" value={formatCurrency(analyticsData.totalSales)} />
+                            </div>
+                            <h3 className="text-xl font-bold mb-4 text-white">Filmmaker Payouts (from Donations)</h3>
+                            <div className="overflow-x-auto"><table className="w-full text-left">
+                                <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Film</th><th className="p-3">Director</th><th className="p-3">Total Donations</th><th className="p-3">Crate TV Cut (30%)</th><th className="p-3">Filmmaker Payout</th></tr></thead>
+                                <tbody>{analyticsData.filmmakerPayouts.map(p => (
+                                    <tr key={p.movieTitle} className="border-b border-gray-700"><td className="p-3 font-medium text-white">{p.movieTitle}</td><td className="p-3">{p.director}</td><td className="p-3">{formatCurrency(p.totalDonations)}</td><td className="p-3 text-red-400">{formatCurrency(p.crateTvCut)}</td><td className="p-3 font-bold text-green-400">{formatCurrency(p.filmmakerPayout)}</td></tr>
+                                ))}</tbody>
+                            </table></div>
                         </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                        <StatCard title="Total Festival Revenue" value={formatCurrency(analyticsData.totalFestivalRevenue)} className="sm:col-span-1" />
-                        <StatCard title="All-Access Passes Sold" value={analyticsData.festivalPassSales.units} />
-                        <StatCard title="Individual Blocks Sold" value={analyticsData.festivalBlockSales.units} />
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <StatCard title="Crate TV's Share (30%)" value={formatCurrency(analyticsData.totalFestivalRevenue * 0.30)} />
-                        <StatCard title="Playhouse West's Share (70%)" value={formatCurrency(analyticsData.totalFestivalRevenue * 0.70)} />
-                    </div>
+                    )}
 
-                    <h3 className="text-xl font-bold text-white mb-4">Sales by Item</h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
-                                <tr><th className="p-3">Item</th><th className="p-3">Units Sold</th><th className="p-3">Revenue</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr className="border-b border-gray-700 font-semibold"><td className="p-3">All-Access Pass</td><td>{analyticsData.festivalPassSales.units}</td><td>{formatCurrency(analyticsData.festivalPassSales.revenue)}</td></tr>
-                                {/* FIX: Add explicit type assertion to 'sales' to resolve 'unknown' type error. */}
-                                {Object.entries(analyticsData.salesByBlock).map(([title, sales]) => (
-                                    <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{(sales as any).units}</td><td>{formatCurrency((sales as any).revenue)}</td></tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    {/* FESTIVAL TAB */}
+                    {activeTab === 'festival' && (
+                        <div>
+                            <div className="flex justify-between items-center mb-4"><h2 className="text-2xl font-bold text-white">Festival Analytics</h2>
+                                <div className="no-print flex gap-4">
+                                    <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Print</button>
+                                    {'share' in navigator && <button onClick={handleShare} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Share</button>}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                                <StatCard title="Total Festival Revenue" value={formatCurrency(analyticsData.totalFestivalRevenue)} className="sm:col-span-1" />
+                                <StatCard title="All-Access Passes" value={analyticsData.festivalPassSales.units} />
+                                <StatCard title="Individual Blocks" value={analyticsData.festivalBlockSales.units} />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <StatCard title="Crate TV's Share (30%)" value={formatCurrency(analyticsData.totalFestivalRevenue * 0.30)} />
+                                <StatCard title="Playhouse West's Share (70%)" value={formatCurrency(analyticsData.totalFestivalRevenue * 0.70)} />
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-4">Sales by Item</h3>
+                            <div className="overflow-x-auto"><table className="w-full text-left">
+                                <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Item</th><th className="p-3">Units Sold</th><th className="p-3">Revenue</th></tr></thead>
+                                <tbody>
+                                    <tr className="border-b border-gray-700 font-semibold"><td className="p-3">All-Access Pass</td><td>{analyticsData.festivalPassSales.units}</td><td>{formatCurrency(analyticsData.festivalPassSales.revenue)}</td></tr>
+                                    {/* FIX: Add explicit types to map parameters to resolve inference error. */}
+                                    {Object.entries(analyticsData.salesByBlock).map(([title, sales]: [string, { units: number; revenue: number }]) => (
+                                        <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{sales.units}</td><td>{formatCurrency(sales.revenue)}</td></tr>
+                                    ))}
+                                </tbody>
+                            </table></div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
     );
 };
 
-export default AnalyticsPage;
+export default

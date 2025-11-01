@@ -17,42 +17,68 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
 
   // Special layout for ranked "Top 10" movies, inspired by Hulu/Netflix
   if (rank) {
+    const year = movie.releaseDateTime ? new Date(movie.releaseDateTime).getFullYear() : null;
+
+    const rankGradients = [
+        'from-yellow-400/30 via-black/20 to-transparent', // Gold for #1
+        'from-slate-300/30 via-black/20 to-transparent', // Silver for #2
+        'from-orange-600/30 via-black/20 to-transparent', // Bronze for #3
+    ];
+    const rankBorders = [
+        'border-yellow-400/80 shadow-lg shadow-yellow-900/50', // Gold
+        'border-slate-300/50', // Silver
+        'border-orange-600/50', // Bronze
+    ];
+    const defaultGradient = 'from-gray-700/30 via-black/20 to-transparent';
+    const defaultBorder = 'border-gray-700/50';
+
+    const gradientClass = rank <= 3 ? rankGradients[rank - 1] : defaultGradient;
+    const borderClass = rank <= 3 ? rankBorders[rank - 1] : defaultBorder;
+    
     return (
       <div
-        className="group relative h-full w-full cursor-pointer flex items-center"
+        className={`group relative h-full w-full cursor-pointer flex items-center bg-black rounded-lg overflow-hidden border-2 transition-all duration-300 ${borderClass} hover:border-white/80 hover:scale-105`}
         onClick={() => onSelectMovie(movie)}
         role="button"
         aria-label={`View details for ${movie.title}, ranked number ${rank}`}
         tabIndex={0}
         onKeyPress={(e) => { if (e.key === 'Enter') onSelectMovie(movie)}}
       >
-        {/* Giant Number */}
-        <span 
-          className="font-black text-[8rem] md:text-[10rem] lg:text-[12rem] leading-none select-none transition-transform duration-300 group-hover:scale-105"
-          style={{ WebkitTextStroke: '2px white', color: '#141414' }}
-        >
-          {rank}
-        </span>
+        {/* Background gradient */}
+        <div className={`absolute inset-0 bg-gradient-to-r ${gradientClass} opacity-80 group-hover:opacity-100`}></div>
         
-        {/* Poster, overlapping the number */}
-        <div className="absolute left-[30%] w-[70%] h-full rounded-md overflow-hidden shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:translate-x-2">
-             <img
+        {/* Giant Number (behind everything) */}
+        <div className="absolute -left-4 md:-left-8 bottom-0 h-full w-1/2 flex items-center">
+             <span 
+                className="font-black text-[12rem] md:text-[16rem] lg:text-[20rem] leading-none select-none transition-transform duration-500 group-hover:scale-110"
+                style={{ WebkitTextStroke: '2px rgba(255,255,255,0.1)', color: 'transparent' }}
+                aria-hidden="true"
+            >
+                {rank}
+            </span>
+        </div>
+        
+        {/* Text content on the left */}
+        <div className="relative z-10 w-[55%] h-full flex flex-col justify-end p-4 md:p-6 text-white">
+            <p className="text-xs font-bold tracking-widest opacity-80 mb-1 md:mb-2">START WATCHING</p>
+            <h3 className="text-2xl md:text-3xl lg:text-4xl font-extrabold leading-tight line-clamp-2" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+                {movie.title}
+            </h3>
+            {year && <p className="text-xs md:text-sm text-gray-400 mt-2">{year}</p>}
+        </div>
+
+        {/* Poster on the right, overlapping */}
+        <div className="absolute right-0 top-0 h-full w-[60%]">
+            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-black/50 to-black"></div>
+            <img
                 src={movie.poster}
-                alt={""} // Decorative
+                alt="" // Decorative
                 className="w-full h-full object-cover"
                 loading="lazy"
+                style={{ maskImage: 'linear-gradient(to left, black 80%, transparent 100%)' }}
                 onContextMenu={(e) => e.preventDefault()}
             />
         </div>
-
-        {/* 'Coming Soon' overlay if not released */}
-        {!released && (
-            <div className="absolute inset-0 bg-black/80 flex items-center justify-center text-center p-2 z-30 backdrop-blur-sm rounded-md">
-                <div>
-                    <p className="text-white font-bold text-sm">Coming Soon</p>
-                </div>
-            </div>
-        )}
       </div>
     );
   }

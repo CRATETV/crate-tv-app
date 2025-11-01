@@ -505,7 +505,7 @@ const App: React.FC = () => {
                         title={<a href="/top-ten" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/top-ten'); window.dispatchEvent(new Event('pushstate'));}} className="text-lg md:text-2xl font-bold mb-4 text-white hover:text-gray-300 transition-colors">Top 10 on Crate TV Today</a>}
                         movies={topTenMovies}
                         onSelectMovie={handleSelectMovie}
-                        showRankings={false}
+                        showRankings={true}
                     />
                 )}
                 {/* AI-Powered "For You" Carousel */}

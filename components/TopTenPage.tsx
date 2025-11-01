@@ -9,8 +9,16 @@ import LoadingSpinner from './LoadingSpinner';
 const TopTenPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [movies, setMovies] = useState<Record<string, Movie>>({});
+    const [currentDate, setCurrentDate] = useState('');
 
     useEffect(() => {
+        // Set the current date when the component mounts
+        setCurrentDate(new Date().toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        }));
+
         const loadData = async () => {
             setIsLoading(true);
             try {
@@ -43,7 +51,7 @@ const TopTenPage: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+        <div className="flex flex-col min-h-screen bg-gradient-to-b from-[#1a1a1a] to-[#141414] text-white">
             <Header
                 searchQuery=""
                 onSearch={() => {}}
@@ -53,35 +61,45 @@ const TopTenPage: React.FC = () => {
             />
             <main className="flex-grow pt-24 px-4 md:px-12">
                 <div className="max-w-4xl mx-auto">
-                    <div className="text-center mb-12">
-                        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Top 10 Most Liked Films</h1>
-                        <p className="text-lg text-gray-400">
-                           Based on likes from the Crate TV community.
-                        </p>
+                    <div className="text-center mb-12 relative py-8 overflow-hidden rounded-lg">
+                         <div className="absolute inset-0 bg-gradient-to-r from-purple-900/30 via-red-900/30 to-black/30 opacity-50"></div>
+                         <div className="relative z-10">
+                            <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-2" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
+                                Top 10 on Crate TV Today
+                            </h1>
+                            <p className="text-lg text-gray-400">
+                               {currentDate}
+                            </p>
+                         </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                         {topTenMovies.map((movie, index) => (
                             <a 
                                 key={movie.key} 
                                 href={`/movie/${movie.key}`} 
                                 onClick={(e) => handleNavigate(e, movie.key)}
-                                className="flex items-center bg-gray-800/50 hover:bg-gray-700/70 transition-colors duration-300 rounded-lg p-4"
+                                className="group flex items-center bg-transparent hover:bg-gray-800/60 transition-colors duration-300 rounded-lg p-3"
                             >
-                                <div className="text-4xl font-bold text-gray-500 w-16 text-center flex-shrink-0">{index + 1}</div>
-                                <img src={movie.poster} alt={movie.title} className="w-16 h-24 object-cover rounded-md mx-4 flex-shrink-0" onContextMenu={(e) => e.preventDefault()} />
-                                <div className="flex-grow min-w-0">
-                                    <h2 className="text-lg font-bold text-white truncate">{movie.title}</h2>
-                                    <p className="text-sm text-gray-400 truncate">by {movie.director}</p>
+                                <div className="flex items-center justify-center w-24 flex-shrink-0">
+                                   <span 
+                                        className="font-black text-6xl md:text-7xl leading-none select-none text-gray-800 group-hover:text-gray-700 transition-colors duration-300"
+                                        style={{ WebkitTextStroke: '1px rgba(255,255,255,0.1)' }}
+                                    >
+                                        {index + 1}
+                                    </span>
                                 </div>
-                                <div className="text-right ml-4 flex-shrink-0">
-                                    <p className="font-bold text-white flex items-center gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                                        </svg>
-                                        {(movie.likes || 0).toLocaleString()}
-                                    </p>
-                                    <p className="text-xs text-gray-500">Likes</p>
+                                <div className="relative w-20 h-28 flex-shrink-0 rounded-md overflow-hidden shadow-lg transition-transform duration-300 group-hover:scale-105">
+                                    <img 
+                                        src={movie.poster} 
+                                        alt={movie.title} 
+                                        className="w-full h-full object-cover" 
+                                        onContextMenu={(e) => e.preventDefault()} 
+                                    />
+                                </div>
+                                <div className="flex-grow min-w-0 pl-6">
+                                    <h2 className="text-lg md:text-xl font-bold text-white truncate transition-colors duration-300 group-hover:text-red-400">{movie.title}</h2>
+                                    <p className="text-sm text-gray-400 truncate">by {movie.director}</p>
                                 </div>
                             </a>
                         ))}
