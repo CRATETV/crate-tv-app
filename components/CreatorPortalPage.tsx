@@ -12,12 +12,23 @@ const aiGeneratedBackgrounds = [
 const CreatorPortalPage: React.FC = () => {
     const [activeView, setActiveView] = useState<'filmmaker' | 'actor'>('filmmaker');
     const [bgIndex, setBgIndex] = useState(0);
+    const [isScrolled, setIsScrolled] = useState(false);
 
     useEffect(() => {
         const interval = setInterval(() => {
             setBgIndex(prevIndex => (prevIndex + 1) % aiGeneratedBackgrounds.length);
         }, 7000); // Change image every 7 seconds
         return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.pageYOffset > 10);
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
     }, []);
 
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
@@ -47,7 +58,7 @@ const CreatorPortalPage: React.FC = () => {
                 <Header 
                     searchQuery="" 
                     onSearch={() => {}} 
-                    isScrolled={true}
+                    isScrolled={isScrolled}
                     onMobileSearchClick={() => {}}
                     showSearch={false}
                 />

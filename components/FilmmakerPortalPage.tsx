@@ -129,6 +129,20 @@ const FilmmakerPortalPage: React.FC = () => {
             .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
             .slice(0, 10);
     }, [allMovies]);
+    
+    const handleDownloadTopTen = () => {
+        const csvContent = "data:text/csv;charset=utf-8," 
+            + "Rank,Title,Director\n" 
+            + topTenMovies.map((m, i) => `${i + 1},"${m.title.replace(/"/g, '""')}","${m.director.replace(/"/g, '""')}"`).join("\n");
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "crate-tv-top-10.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     if (isLoading) {
         return <LoadingSpinner />;
@@ -202,7 +216,12 @@ const FilmmakerPortalPage: React.FC = () => {
                         {/* Sidebar */}
                         <div className="lg:col-span-1 space-y-8">
                             <div>
-                                <h2 className="text-2xl font-bold text-white mb-4">Top 10 on Crate TV</h2>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-2xl font-bold text-white">Top 10 on Crate TV</h2>
+                                    <button onClick={handleDownloadTopTen} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-md text-xs">
+                                        Download
+                                    </button>
+                                </div>
                                 <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 space-y-3">
                                     {topTenMovies.length > 0 ? topTenMovies.map((movie, index) => (
                                         <div key={movie.key} className="flex items-center gap-4 py-2 border-b border-gray-700 last:border-b-0">
