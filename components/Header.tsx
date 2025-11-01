@@ -107,7 +107,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onSe
             <img 
                 src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" 
                 alt="Crate TV" 
-                className="h-8 w-auto"
+                className="h-10 w-auto"
                 onContextMenu={(e) => e.preventDefault()}
             />
         </a>
