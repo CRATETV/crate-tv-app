@@ -1,282 +1,199 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AnalyticsData, PayoutRequest, Movie, FilmmakerPayout } from '../types';
+import { AnalyticsData, Movie } from '../types';
+import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
-import PayoutsTab from './PayoutsTab';
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
 
-const StatCard: React.FC<{ title: string; value: string | number; }> = ({ title, value }) => (
-    <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
+const StatCard: React.FC<{ title: string; value: string | number; className?: string }> = ({ title, value, className = '' }) => (
+    <div className={`bg-gray-800/50 border border-gray-700 p-4 rounded-lg text-center ${className}`}>
         <h3 className="text-sm font-medium text-gray-400">{title}</h3>
-        <p className="text-3xl font-bold text-white mt-1">{value}</p>
+        <p className="text-2xl font-bold text-white mt-1">{value}</p>
     </div>
 );
 
-type SortableKeys = 'title' | 'views' | 'likes' | 'donations' | 'filmmakerEarning';
-type SortDirection = 'asc' | 'desc';
-
-interface FilmPerformanceTableProps {
-    allMovies: Record<string, Movie>;
-    analytics: AnalyticsData;
-}
-
-const FilmPerformanceTable: React.FC<FilmPerformanceTableProps> = ({ allMovies, analytics }) => {
-    const [sortConfig, setSortConfig] = useState<{ key: SortableKeys; direction: SortDirection } | null>({ key: 'donations', direction: 'desc' });
-
-    const performanceData = useMemo(() => {
-        const donationMap = new Map<string, FilmmakerPayout>();
-        analytics.filmmakerPayouts.forEach(payout => {
-            donationMap.set(payout.movieTitle, payout);
-        });
-
-        // FIX: Explicitly cast `movie` to type `Movie` to resolve TypeScript inference errors.
-        return Object.values(allMovies).map((movie: Movie) => {
-            const donationInfo = donationMap.get(movie.title);
-            return {
-                title: movie.title,
-                director: movie.director,
-                views: analytics.viewCounts[movie.key] || 0,
-                likes: analytics.movieLikes[movie.key] || 0,
-                donations: donationInfo ? donationInfo.totalDonations : 0,
-                crateTvCut: donationInfo ? donationInfo.crateTvCut : 0,
-                filmmakerEarning: donationInfo ? donationInfo.filmmakerPayout : 0,
-            };
-        });
-    }, [allMovies, analytics]);
-
-    const sortedPerformanceData = useMemo(() => {
-        let sortableItems = [...performanceData];
-        if (sortConfig !== null) {
-            sortableItems.sort((a, b) => {
-                if (a[sortConfig.key] < b[sortConfig.key]) {
-                    return sortConfig.direction === 'asc' ? -1 : 1;
-                }
-                if (a[sortConfig.key] > b[sortConfig.key]) {
-                    return sortConfig.direction === 'asc' ? 1 : -1;
-                }
-                return 0;
-            });
-        }
-        return sortableItems;
-    }, [performanceData, sortConfig]);
-
-    const requestSort = (key: SortableKeys) => {
-        let direction: SortDirection = 'desc';
-        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'desc') {
-            direction = 'asc';
-        }
-        setSortConfig({ key, direction });
-    };
-
-    const SortableHeader: React.FC<{ sortKey: SortableKeys, label: string }> = ({ sortKey, label }) => {
-        const isSorted = sortConfig?.key === sortKey;
-        const icon = isSorted ? (sortConfig.direction === 'desc' ? '▼' : '▲') : '↕';
-        return (
-            <th onClick={() => requestSort(sortKey)} className="cursor-pointer px-4 py-3 hover:bg-gray-700">
-                {label} <span className="text-gray-500">{icon}</span>
-            </th>
-        );
-    };
-
-    return (
-        <div className="bg-gray-800/50 rounded-lg overflow-x-auto">
-            <table className="w-full text-left text-sm">
-                <thead className="bg-gray-700/50 text-xs text-gray-300 uppercase tracking-wider">
-                    <tr>
-                        <SortableHeader sortKey="title" label="Film Title" />
-                        <th className="px-4 py-3">Director</th>
-                        <SortableHeader sortKey="views" label="Views" />
-                        <SortableHeader sortKey="likes" label="Likes" />
-                        <SortableHeader sortKey="donations" label="Donations" />
-                        <th className="px-4 py-3">Crate TV Cut</th>
-                        <SortableHeader sortKey="filmmakerEarning" label="Filmmaker Earning" />
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-700">
-                    {sortedPerformanceData.map((data, index) => (
-                        <tr key={index} className="hover:bg-gray-800">
-                            <td className="px-4 py-3 font-medium text-white">{data.title}</td>
-                            <td className="px-4 py-3 text-gray-400">{data.director}</td>
-                            <td className="px-4 py-3">{data.views.toLocaleString()}</td>
-                            <td className="px-4 py-3">{data.likes.toLocaleString()}</td>
-                            <td className="px-4 py-3 font-semibold text-green-400">{formatCurrency(data.donations)}</td>
-                            <td className="px-4 py-3 text-red-400">{formatCurrency(data.crateTvCut)}</td>
-                            <td className="px-4 py-3 font-bold text-green-300">{formatCurrency(data.filmmakerEarning)}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-};
-
-
-interface AnalyticsPageProps {
-    allMovies: Record<string, Movie>;
-}
-
-const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ allMovies }) => {
-    const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-    const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
+const AnalyticsPage: React.FC = () => {
+    const [activeTab, setActiveTab] = useState('filmPerformance');
+    const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+    const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<{ critical?: string, square?: string, firebase?: string } | null>(null);
-    const [activeTab, setActiveTab] = useState('overview');
-    const [userSearchTerm, setUserSearchTerm] = useState('');
-    const [userFilter, setUserFilter] = useState<'all' | 'emailOnly'>('emailOnly');
-
-    const fetchData = async () => {
-        setIsLoading(true);
-        setError(null);
-        const password = sessionStorage.getItem('adminPassword');
-        if (!password) {
-            setError({ critical: 'Admin password not found. Cannot fetch analytics.' });
-            setIsLoading(false);
-            return;
-        }
-        try {
-            const res = await fetch('/api/get-sales-data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password })
-            });
-            
-            const data = await res.json();
-            
-            if (data.errors?.critical) throw new Error(data.errors.critical);
-            
-            setAnalytics(data.analyticsData);
-            setPayoutRequests(data.payoutRequests || []);
-            setError(data.errors);
-        } catch (e) {
-            setError({ critical: e instanceof Error ? e.message : 'Failed to load analytics.' });
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const [error, setError] = useState<{ square: string | null, firebase: string | null, critical: string | null }>({ square: null, firebase: null, critical: null });
 
     useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            const password = sessionStorage.getItem('adminPassword');
+            if (!password) {
+                setError({ ...error, critical: 'Authentication error. Please log in again.' });
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                const [analyticsRes, liveDataRes] = await Promise.all([
+                    fetch('/api/get-sales-data', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password }),
+                    }),
+                    fetchAndCacheLiveData({ force: true })
+                ]);
+                
+                const analyticsJson = await analyticsRes.json();
+                if (analyticsJson.errors?.critical) throw new Error(analyticsJson.errors.critical);
+                
+                setAnalyticsData(analyticsJson.analyticsData);
+                setError(analyticsJson.errors);
+                setAllMovies(liveDataRes.data.movies);
+                
+            } catch (err) {
+                setError(prev => ({ ...prev, critical: err instanceof Error ? err.message : 'An unknown error occurred during data fetch.' }));
+            } finally {
+                setIsLoading(false);
+            }
+        };
         fetchData();
     }, []);
 
-    const filteredUsers = useMemo(() => {
-        if (!analytics?.allUsers) return [];
-        
-        let users = analytics.allUsers;
-        if (userFilter === 'emailOnly') {
-            users = users.filter(user => user.email && user.email !== 'N/A');
+    const topPerformingFilm = useMemo(() => {
+        if (!analyticsData || !allMovies || Object.keys(allMovies).length === 0) return null;
+        const { viewCounts } = analyticsData;
+        let topKey: string | null = null;
+        let maxViews = -1;
+
+        for (const key in viewCounts) {
+            if (viewCounts[key] > maxViews) {
+                maxViews = viewCounts[key];
+                topKey = key;
+            }
         }
+        return topKey ? { ...allMovies[topKey], views: maxViews } : null;
+    }, [analyticsData, allMovies]);
 
-        if (!userSearchTerm) return users;
-
-        return users.filter(user => 
-            user.email.toLowerCase().includes(userSearchTerm.toLowerCase())
-        );
-    }, [analytics?.allUsers, userSearchTerm, userFilter]);
-
-    const handleCompletePayout = async (requestId: string) => {
-        const password = sessionStorage.getItem('adminPassword');
+    const handleShare = async () => {
+        if (!navigator.share || !analyticsData) {
+            alert('Web Share API is not supported in this browser.');
+            return;
+        }
         try {
-            await fetch('/api/complete-payout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requestId, password }),
+            const text = `Crate TV Festival Analytics Summary:\n` +
+                `Total Revenue: ${formatCurrency(analyticsData.totalFestivalRevenue)}\n` +
+                `All-Access Passes: ${analyticsData.festivalPassSales.units} sold (${formatCurrency(analyticsData.festivalPassSales.revenue)})\n` +
+                `Individual Blocks: ${analyticsData.festivalBlockSales.units} sold (${formatCurrency(analyticsData.festivalBlockSales.revenue)})\n\n` +
+                `Revenue Split:\n` +
+                `  - Crate TV (30%): ${formatCurrency(analyticsData.totalFestivalRevenue * 0.3)}\n` +
+                `  - Playhouse West (70%): ${formatCurrency(analyticsData.totalFestivalRevenue * 0.7)}`;
+
+            await navigator.share({
+                title: 'Crate TV Festival Analytics Summary',
+                text: text,
             });
-            // Refetch data to show updated payout list
-            fetchData();
         } catch (error) {
-            console.error("Failed to complete payout:", error);
-            alert("Failed to mark payout as complete. Please check the console.");
+            console.error('Error sharing analytics:', error);
         }
     };
+
+
+    if (isLoading) {
+        return <LoadingSpinner />;
+    }
     
-    const TabButton: React.FC<{ tabName: string; label: string }> = ({ tabName, label }) => (
+    const TabButton: React.FC<{ tabId: string, label: string }> = ({ tabId, label }) => (
         <button
-            onClick={() => setActiveTab(tabName)}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tabName ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+            onClick={() => setActiveTab(tabId)}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tabId ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
         >
             {label}
         </button>
     );
 
-    if (isLoading) return <LoadingSpinner />;
-    
     return (
-        <div className="bg-gray-900 min-h-screen text-gray-200 p-4 sm:p-8">
-             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-white">Site Analytics</h1>
-                <div className="flex flex-wrap gap-2">
-                    <TabButton tabName="overview" label="Overview" />
-                    <TabButton tabName="performance" label="Film Performance" />
-                    <TabButton tabName="payouts" label="Payouts" />
-                    <TabButton tabName="users" label="Users" />
-                </div>
+        <div style={{ padding: '1rem', backgroundColor: '#1F2937', borderRadius: '8px' }}>
+            <div className="no-print flex items-center gap-2 mb-6 border-b border-gray-600 pb-4">
+                <TabButton tabId="filmPerformance" label="Film Performance" />
+                <TabButton tabId="festivalAnalytics" label="Festival Analytics" />
             </div>
 
-            {error?.critical && <div className="bg-red-900/50 text-red-300 p-4 rounded-lg mb-6">{error.critical}</div>}
+            {error.critical && <div className="p-4 mb-4 text-red-300 bg-red-900/50 border border-red-700 rounded-md">{error.critical}</div>}
             
-            {activeTab === 'overview' && (
-                <>
-                {error?.square && <div className="bg-yellow-900/50 text-yellow-300 p-4 rounded-lg mb-6">{error.square}</div>}
-                {error?.firebase && <div className="bg-yellow-900/50 text-yellow-300 p-4 rounded-lg mb-6">{error.firebase}</div>}
-                {analytics && (
-                    <div className="space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <StatCard title="Total Revenue" value={formatCurrency(analytics.totalRevenue)} />
-                            <StatCard title="Filmmaker Donations" value={formatCurrency(analytics.totalDonations)} />
-                            <StatCard title="Other Sales" value={formatCurrency(analytics.totalSales)} />
-                            <StatCard title="Total Users" value={analytics.totalUsers.toLocaleString()} />
-                        </div>
-                        {/* More analytics sections here */}
-                    </div>
-                )}
-                </>
-            )}
-
-            {activeTab === 'performance' && analytics && (
-                <FilmPerformanceTable allMovies={allMovies} analytics={analytics} />
-            )}
-
-            {activeTab === 'payouts' && (
-                <PayoutsTab payoutRequests={payoutRequests} onCompletePayout={handleCompletePayout} />
-            )}
-            
-            {activeTab === 'users' && analytics && (
+            {activeTab === 'filmPerformance' && (
                 <div>
-                     <h2 className="text-2xl font-bold text-white mb-4">Users ({filteredUsers.length} of {analytics.totalUsers})</h2>
-                     <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
-                        <input
-                            type="text"
-                            placeholder="Search by email..."
-                            value={userSearchTerm}
-                            onChange={e => setUserSearchTerm(e.target.value)}
-                            className="w-full max-w-sm bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                         <div className="flex items-center gap-1 p-1 bg-gray-900/50 rounded-lg border border-gray-700">
-                            <button onClick={() => setUserFilter('emailOnly')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${userFilter === 'emailOnly' ? 'bg-blue-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700'}`}>Emails Only</button>
-                            <button onClick={() => setUserFilter('all')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${userFilter === 'all' ? 'bg-blue-600 text-white shadow' : 'text-gray-300 hover:bg-gray-700'}`}>Show All</button>
+                    <h2 className="text-xl font-bold mb-4">Film Performance</h2>
+                    {topPerformingFilm && (
+                        <div className="mb-8 bg-gray-800/50 border border-gray-700 rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-yellow-400 mb-4">Top Performing Film</h3>
+                            <div className="flex flex-col sm:flex-row items-center gap-6">
+                                <img src={topPerformingFilm.poster} alt={topPerformingFilm.title} className="w-32 h-auto rounded-md object-cover" />
+                                <div>
+                                    <h4 className="text-2xl font-bold text-white">{topPerformingFilm.title}</h4>
+                                    <p className="text-gray-400">by {topPerformingFilm.director}</p>
+                                    <p className="text-4xl font-extrabold text-white mt-2">{topPerformingFilm.views.toLocaleString()} <span className="text-lg font-normal text-gray-400">Total Views</span></p>
+                                </div>
+                            </div>
                         </div>
-                     </div>
-                     <div className="bg-gray-800/50 rounded-lg max-h-[600px] overflow-y-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-gray-700/50 text-xs text-gray-300 uppercase tracking-wider sticky top-0">
+                    )}
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
                                 <tr>
-                                    <th className="px-4 py-3">Email</th>
-                                    <th className="px-4 py-3">Sign-up Date</th>
+                                    <th className="p-3">Title</th>
+                                    <th className="p-3">Views</th>
+                                    <th className="p-3">Likes</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-700">
-                                {filteredUsers.map((user, index) => (
-                                    <tr key={index} className="hover:bg-gray-800">
-                                        <td className="px-4 py-3 font-medium text-white">{user.email}</td>
-                                        <td className="px-4 py-3 text-gray-400">{user.creationTime}</td>
+                            <tbody>
+                                {/* FIX: Explicitly cast parameters to type '[string, number]' to resolve a TypeScript error where they were inferred as 'unknown'. */}
+                                {analyticsData && Object.entries(analyticsData.viewCounts)
+                                    .sort(([, a]: [string, number], [, b]: [string, number]) => b - a)
+                                    .map(([key, views]) => (
+                                    <tr key={key} className="border-b border-gray-700">
+                                        <td className="p-3 font-medium text-white">{allMovies[key]?.title || key}</td>
+                                        <td className="p-3">{views.toLocaleString()}</td>
+                                        <td className="p-3">{analyticsData.movieLikes[key]?.toLocaleString() || '0'}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
-                        {filteredUsers.length === 0 && (
-                            <p className="text-center text-gray-500 py-8">No users found.</p>
-                        )}
-                     </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'festivalAnalytics' && analyticsData && (
+                <div className="printable-area">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-bold text-white">Festival Analytics Summary</h2>
+                        <div className="no-print flex gap-4">
+                            <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Print Summary</button>
+                            {navigator.share && <button onClick={handleShare} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Share Summary</button>}
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                        <StatCard title="Total Festival Revenue" value={formatCurrency(analyticsData.totalFestivalRevenue)} className="sm:col-span-1" />
+                        <StatCard title="All-Access Passes Sold" value={analyticsData.festivalPassSales.units} />
+                        <StatCard title="Individual Blocks Sold" value={analyticsData.festivalBlockSales.units} />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <StatCard title="Crate TV's Share (30%)" value={formatCurrency(analyticsData.totalFestivalRevenue * 0.30)} />
+                        <StatCard title="Playhouse West's Share (70%)" value={formatCurrency(analyticsData.totalFestivalRevenue * 0.70)} />
+                    </div>
+
+                    <h3 className="text-xl font-bold text-white mb-4">Sales by Item</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
+                                <tr><th className="p-3">Item</th><th className="p-3">Units Sold</th><th className="p-3">Revenue</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr className="border-b border-gray-700 font-semibold"><td className="p-3">All-Access Pass</td><td>{analyticsData.festivalPassSales.units}</td><td>{formatCurrency(analyticsData.festivalPassSales.revenue)}</td></tr>
+                                {/* FIX: Explicitly cast parameters to their correct types to resolve a TypeScript error where they were inferred as 'unknown'. */}
+                                {Object.entries(analyticsData.salesByBlock).map(([title, sales]: [string, { units: number; revenue: number; }]) => (
+                                    <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{sales.units}</td><td>{formatCurrency(sales.revenue)}</td></tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
         </div>

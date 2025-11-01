@@ -15,48 +15,39 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
 
   const released = isMovieReleased(movie);
 
-  // Special layout for ranked "Top 10" movies, based on the Netflix reference
+  // Special layout for ranked "Top 10" movies, inspired by Hulu/Netflix
   if (rank) {
     return (
       <div
-        className="group relative h-full w-full cursor-pointer rounded-md overflow-hidden transition-all duration-300 shadow-lg bg-gray-900 border-2 border-transparent hover:border-yellow-400"
+        className="group relative h-full w-full cursor-pointer flex items-center"
         onClick={() => onSelectMovie(movie)}
         role="button"
         aria-label={`View details for ${movie.title}, ranked number ${rank}`}
         tabIndex={0}
         onKeyPress={(e) => { if (e.key === 'Enter') onSelectMovie(movie)}}
       >
-        {/* Container for Number and Text */}
-        <div className="absolute inset-y-0 left-0 w-8/12 flex flex-col justify-center p-4 z-20">
-            <p className="text-xs font-bold text-gray-300 uppercase tracking-widest mb-1 transition-colors duration-300 group-hover:text-yellow-400">Start Watching</p>
-            <h3 className="text-white text-xl font-bold drop-shadow-lg line-clamp-3">{movie.title}</h3>
-        </div>
+        {/* Giant Number */}
+        <span 
+          className="font-black text-[8rem] md:text-[10rem] lg:text-[12rem] leading-none select-none transition-transform duration-300 group-hover:scale-105"
+          style={{ WebkitTextStroke: '2px white', color: '#141414', textStroke: '2px white' }}
+        >
+          {rank}
+        </span>
         
-        {/* Giant Number (behind poster and text) */}
-        <div className="absolute inset-0 flex items-center justify-start pointer-events-none z-10">
-            <span 
-                className="font-black text-[18rem] -ml-8 leading-none select-none text-white/5 transition-all duration-500 group-hover:text-white/10 group-hover:scale-105"
-            >
-                {rank}
-            </span>
-        </div>
-        
-        {/* Poster on the right, overlapping the number */}
-        <div className="absolute top-0 right-0 h-full w-6/12 z-0">
+        {/* Poster, overlapping the number */}
+        <div className="absolute left-[30%] w-[70%] h-full rounded-md overflow-hidden shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:translate-x-2">
              <img
                 src={movie.poster}
                 alt={""} // Decorative
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="w-full h-full object-cover"
                 loading="lazy"
                 onContextMenu={(e) => e.preventDefault()}
             />
-            {/* Gradient to blend the poster into the background */}
-             <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-900/60 to-transparent"></div>
         </div>
 
         {/* 'Coming Soon' overlay if not released */}
         {!released && (
-            <div className="absolute inset-0 bg-black/80 flex items-center justify-center text-center p-2 z-30 backdrop-blur-sm">
+            <div className="absolute inset-0 bg-black/80 flex items-center justify-center text-center p-2 z-30 backdrop-blur-sm rounded-md">
                 <div>
                     <p className="text-white font-bold text-sm">Coming Soon</p>
                 </div>

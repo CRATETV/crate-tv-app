@@ -74,6 +74,26 @@ const TopTenPage: React.FC = () => {
         month: 'long',
         day: 'numeric'
     });
+    
+    const RankedCard: React.FC<{ movie: Movie, rank: number }> = ({ movie, rank }) => (
+       <a href={`/movie/${movie.key}`} onClick={(e) => handleNavigate(e, movie.key)} className="group relative w-full aspect-[16/9] flex items-center justify-center">
+         <span 
+             className="font-black text-[10rem] text-gray-800/80 -mr-16 select-none z-0 transition-transform duration-300 group-hover:scale-105"
+             style={{ textShadow: '2px 2px 10px rgba(0,0,0,0.5)' }}
+           >
+             {rank}
+         </span>
+         <div className="relative z-10 w-32 h-48 block group flex-shrink-0">
+             <img 
+                 src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
+                 alt={movie.title} 
+                 crossOrigin="anonymous"
+                 className="w-full h-full object-cover rounded-md shadow-lg transition-transform duration-300 group-hover:scale-110" 
+                 onContextMenu={(e) => e.preventDefault()} 
+             />
+         </div>
+       </a>
+    );
 
     return (
         <div className="min-h-screen bg-black text-white p-4 sm:p-8 font-sans">
@@ -97,33 +117,13 @@ const TopTenPage: React.FC = () => {
                             className="mx-auto w-40 h-auto mb-4"
                             onContextMenu={(e) => e.preventDefault()}
                         />
-                        <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">Top 10 on Crate TV</h1>
+                        <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">Top 10 on Crate TV Today</h1>
                     </header>
 
                     {topTenMovies.length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-y-8 gap-x-2 sm:gap-x-4">
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4">
                             {topTenMovies.map((movie, index) => (
-                                <div key={movie.key} className="flex items-center justify-center">
-                                    <span 
-                                      className="font-black text-[9rem] sm:text-[12rem] text-gray-800/80 -mr-[3.5rem] sm:-mr-[5rem] select-none"
-                                      style={{ textShadow: '2px 2px 10px rgba(0,0,0,0.5)' }}
-                                    >
-                                        {index + 1}
-                                    </span>
-                                    <a 
-                                        href={`/movie/${movie.key}`}
-                                        onClick={(e) => handleNavigate(e, movie.key)}
-                                        className="relative z-10 w-28 h-42 sm:w-40 sm:h-60 block group flex-shrink-0"
-                                    >
-                                        <img 
-                                            src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
-                                            alt={movie.title} 
-                                            crossOrigin="anonymous"
-                                            className="w-full h-full object-cover rounded-md shadow-lg transition-transform duration-300 group-hover:scale-105" 
-                                            onContextMenu={(e) => e.preventDefault()} 
-                                        />
-                                    </a>
-                                </div>
+                                <RankedCard key={movie.key} movie={movie} rank={index + 1} />
                             ))}
                         </div>
                     ) : (

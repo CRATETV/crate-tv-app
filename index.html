@@ -142,6 +142,36 @@
         background-size: 200% 200%;
         animation: secure-overlay-anim 0.15s infinite linear;
       }
+       /* Print-specific styles */
+      @media print {
+        body {
+          background-color: white !important;
+          color: black !important;
+        }
+        body * {
+          visibility: hidden;
+        }
+        .printable-area, .printable-area * {
+          visibility: visible;
+        }
+        .printable-area {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          padding: 2rem;
+          color: black;
+        }
+        .printable-area .text-white { color: black !important; }
+        .printable-area .text-gray-300 { color: #333 !important; }
+        .printable-area .text-gray-400 { color: #555 !important; }
+        .printable-area .text-green-400 { color: #166534 !important; }
+        .printable-area .bg-gray-800\/50 { background-color: #f3f4f6 !important; }
+        .printable-area .border-gray-700 { border-color: #d1d5db !important; }
+        .no-print {
+          display: none !important;
+        }
+      }
     </style>
 
     <!-- Schema.org for Google -->
@@ -190,11 +220,11 @@
   "imports": {
     "react": "https://esm.sh/react@18.3.1",
     "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
-    "@google/genai": "https://esm.sh/@google/genai@0.2.1",
-    "resend": "https://esm.sh/resend@3.2.0",
+    "@google/genai": "https://esm.sh/@google/genai@0.15.0",
+    "resend": "https://esm.sh/resend@3.5.0",
     "jszip": "https://esm.sh/jszip@3.10.1",
-    "@aws-sdk/client-s3": "https://esm.sh/@aws-sdk/client-s3@3.525.0",
-    "@aws-sdk/s3-request-presigner": "https://esm.sh/s3-request-presigner@3.525.0",
+    "@aws-sdk/client-s3": "https://esm.sh/@aws-sdk/client-s3@3.886.0",
+    "@aws-sdk/s3-request-presigner": "https://esm.sh/s3-request-presigner@3.886.0",
     "firebase/app": "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js",
     "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js",
     "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js",

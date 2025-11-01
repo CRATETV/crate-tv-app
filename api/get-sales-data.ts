@@ -30,8 +30,12 @@ const parseNote = (note: string | undefined): { type: string, title?: string, di
         return { type: 'donation', title: donationMatch[1].trim(), director: donationMatch[2].trim() };
     }
     
-    if (note.includes('All-Access Pass')) return { type: 'pass' };
-    if (note.includes('Unlock Block')) return { type: 'block' };
+    const passMatch = note.match(/All-Access Pass/);
+    if (passMatch) return { type: 'pass' };
+
+    const blockMatch = note.match(/Unlock Block: "(.*)"/);
+    if (blockMatch) return { type: 'block', title: blockMatch[1].trim() };
+    
     if (note.includes('Premium Subscription')) return { type: 'subscription' };
     
     return { type: 'unknown' };
@@ -185,7 +189,11 @@ export async function POST(request: Request) {
         const analyticsData: AnalyticsData = {
             totalRevenue: 0, totalDonations: 0, totalSales: 0,
             salesByType: {}, filmmakerPayouts: [],
-            ...firebaseData
+            ...firebaseData,
+            totalFestivalRevenue: 0,
+            festivalPassSales: { units: 0, revenue: 0 },
+            festivalBlockSales: { units: 0, revenue: 0 },
+            salesByBlock: {},
         };
         const payoutMap: { [key: string]: FilmmakerPayout } = {};
 
@@ -193,12 +201,26 @@ export async function POST(request: Request) {
             const amount = payment.amount_money.amount;
             analyticsData.totalRevenue += amount;
             const details = parseNote(payment.note);
+
             if (details.type === 'donation' && details.title && details.director) {
                 analyticsData.totalDonations += amount;
                 if (!payoutMap[details.title]) {
                     payoutMap[details.title] = { movieTitle: details.title, director: details.director, totalDonations: 0, crateTvCut: 0, filmmakerPayout: 0 };
                 }
                 payoutMap[details.title].totalDonations += amount;
+            } else if (details.type === 'pass') {
+                analyticsData.totalFestivalRevenue += amount;
+                analyticsData.festivalPassSales.units += 1;
+                analyticsData.festivalPassSales.revenue += amount;
+            } else if (details.type === 'block' && details.title) {
+                analyticsData.totalFestivalRevenue += amount;
+                analyticsData.festivalBlockSales.units += 1;
+                analyticsData.festivalBlockSales.revenue += amount;
+                if (!analyticsData.salesByBlock[details.title]) {
+                    analyticsData.salesByBlock[details.title] = { units: 0, revenue: 0 };
+                }
+                analyticsData.salesByBlock[details.title].units += 1;
+                analyticsData.salesByBlock[details.title].revenue += amount;
             } else if (details.type !== 'unknown') {
                 analyticsData.totalSales += amount;
                 analyticsData.salesByType[details.type] = (analyticsData.salesByType[details.type] || 0) + amount;

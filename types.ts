@@ -159,6 +159,11 @@ export interface AnalyticsData {
     movieLikes: Record<string, number>;
     totalUsers: number;
     allUsers: { email: string; creationTime: string; }[];
+    // New fields for festival analytics
+    totalFestivalRevenue: number;
+    festivalPassSales: { units: number; revenue: number };
+    festivalBlockSales: { units: number; revenue: number };
+    salesByBlock: { [blockTitle: string]: { units: number; revenue: number; } };
 }
 
 export interface FilmmakerPayout {

@@ -498,6 +498,16 @@ const App: React.FC = () => {
                         onSelectMovie={handleSelectMovie}
                     />
                 )}
+                {/* Top 10 Carousel */}
+                {topTenMovies.length > 0 && (
+                    <MovieCarousel
+                        key="topTen"
+                        title={<a href="/top-ten" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/top-ten'); window.dispatchEvent(new Event('pushstate'));}} className="text-lg md:text-2xl font-bold mb-4 text-white hover:text-gray-300 transition-colors">Top 10 on Crate TV Today</a>}
+                        movies={topTenMovies}
+                        onSelectMovie={handleSelectMovie}
+                        showRankings={true}
+                    />
+                )}
                 {/* AI-Powered "For You" Carousel */}
                 {likedMovies.size === 0 ? (
                     <div className="mb-8 md:mb-12">
@@ -529,16 +539,6 @@ const App: React.FC = () => {
                         onSelectMovie={handleSelectMovie}
                     />
                 ) : null}
-                {/* Top 10 Carousel */}
-                {topTenMovies.length > 0 && (
-                    <MovieCarousel
-                        key="topTen"
-                        title={<h2 className="text-lg md:text-2xl font-bold mb-4 text-white">Top 10 on Crate TV Today</h2>}
-                        movies={topTenMovies}
-                        onSelectMovie={handleSelectMovie}
-                        showRankings={true}
-                    />
-                )}
                 {/* Map over the remaining, standard categories */}
                 {displayedCategories.map(cat => (
                   <MovieCarousel
