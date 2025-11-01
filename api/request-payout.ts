@@ -1,6 +1,6 @@
 // This is a Vercel Serverless Function
 // Path: /api/request-payout
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import * as admin from 'firebase-admin';
 import { Resend } from 'resend';
 

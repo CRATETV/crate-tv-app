@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // Path: /api/get-public-actor-profile
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
-import { ActorProfile, Movie } from '../types';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { ActorProfile, Movie } from '../types.js';
 
 export async function GET(request: Request) {
   try {

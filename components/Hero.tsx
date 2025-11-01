@@ -26,8 +26,9 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
           className="w-full h-full object-cover animate-[fadeIn_1s_ease-in-out]"
           onContextMenu={(e) => e.preventDefault()}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-black/30"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent"></div>
+        {/* Darkened top gradient for better header contrast */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-black/80"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div>
       </div>
 
       {/* Content */}
@@ -54,8 +55,8 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
         </div>
       </div>
 
-      {/* Navigation Dots */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+      {/* Navigation Dots - now hidden on mobile */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 hidden md:flex gap-2">
         {movies.map((_, index) => (
           <button
             key={index}

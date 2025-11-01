@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import MovieEditor from './components/MovieEditor';
 import CategoryEditor from './components/CategoryEditor';
 import FestivalEditor from './components/FestivalEditor';
@@ -29,17 +29,10 @@ const AdminPage: React.FC = () => {
     const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [dataStatus, setDataStatus] = useState<{ source: string, error?: string }>({ source: 'loading' });
+    const [refreshKey, setRefreshKey] = useState(0);
 
-    useEffect(() => {
-        const adminAuth = sessionStorage.getItem('isAdminAuthenticated');
-        if (adminAuth === 'true') {
-            setIsAuthenticated(true);
-        }
-    }, []);
-
-    useEffect(() => {
-        if (!isAuthenticated) return;
-
+    const loadAdminData = useCallback(() => {
+        setIsLoading(true);
         const handleDataUpdate = (result: { data: any, source: string, error?: string }) => {
             setMovies(result.data.movies || {});
             setCategories(result.data.categories || {});
@@ -56,7 +49,26 @@ const AdminPage: React.FC = () => {
         return () => {
             promise.then(unsubscribe => unsubscribe());
         };
-    }, [isAuthenticated]);
+    }, []);
+
+    useEffect(() => {
+        const adminAuth = sessionStorage.getItem('isAdminAuthenticated');
+        if (adminAuth === 'true') {
+            setIsAuthenticated(true);
+        } else {
+            setIsLoading(false); // If not auth'd, stop loading and show login
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        return loadAdminData();
+    }, [isAuthenticated, refreshKey, loadAdminData]);
+
+    const forceRefresh = () => {
+        console.log("Forcing data refresh...");
+        setRefreshKey(k => k + 1);
+    };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -122,20 +134,39 @@ const AdminPage: React.FC = () => {
     const handleSaveAll = async () => {
         setIsSaving(true);
         try {
-            // This is a simplified save all. In a real app, you might have separate save buttons.
+            // Step 1: Save all data to Firebase (this part is assumed to be working)
             await saveCategories(categories);
             if (festivalConfig) await saveFestivalConfig(festivalConfig);
             await saveFestivalDays(festivalData);
             if(aboutData) await saveAboutData(aboutData);
             
-            // Broadcast the update to all open tabs
+            // Step 2: Publish the current state to S3 for the live site
+            const password = sessionStorage.getItem('adminPassword');
+            if (!password) throw new Error("Admin password not found in session.");
+
+            // Construct the payload for the public live-data.json, excluding sensitive info
+            const liveDataPayload = { movies, categories, festivalConfig, festivalData, aboutData };
+            
+            const publishResponse = await fetch('/api/publish-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password, data: liveDataPayload })
+            });
+
+            if (!publishResponse.ok) {
+                const errorData = await publishResponse.json();
+                throw new Error(errorData.error || "Failed to publish data to live site.");
+            }
+
+            // Step 3: Broadcast update to other open admin tabs
             const channel = new BroadcastChannel('cratetv-data-channel');
-            channel.postMessage({ type: 'DATA_PUBLISHED', payload: { movies, categories, festivalConfig, festivalData, aboutData, actorSubmissions } });
+            channel.postMessage({ type: 'DATA_PUBLISHED', payload: { ...liveDataPayload, actorSubmissions } });
             channel.close();
 
-            alert('All changes saved and published!');
+            alert('All changes saved to database and PUBLISHED to the live site!');
         } catch (error) {
-            console.error("Failed to save all data:", error);
+            console.error("Failed to save and publish all data:", error);
+            alert(`Error: ${error instanceof Error ? error.message : 'An unknown error occurred.'}`);
         } finally {
             setIsSaving(false);
         }
@@ -148,6 +179,7 @@ const AdminPage: React.FC = () => {
             synopsis: '',
             cast: [],
             director: '',
+            producers: '',
             trailer: '',
             fullMovie: '',
             poster: '',
@@ -219,10 +251,13 @@ const AdminPage: React.FC = () => {
                 <h1 className="text-3xl font-bold text-white mb-4 sm:mb-0">Crate TV Admin Panel</h1>
                 <div className="flex items-center gap-4">
                      <span className={`text-xs px-2 py-1 rounded-full ${dataStatus.source === 'firebase' ? 'bg-green-800 text-green-300' : 'bg-yellow-800 text-yellow-300'}`}>
-                        Data Source: {dataStatus.source.toUpperCase()}
+                        Data: {dataStatus.source.toUpperCase()}
                     </span>
+                     <button onClick={forceRefresh} title="Force a refresh of all data from the database" className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-3 rounded-md transition-colors text-xs">
+                        Force Refresh
+                    </button>
                     <button onClick={handleSaveAll} disabled={isSaving} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-5 rounded-md transition-colors">
-                        {isSaving ? 'Saving...' : 'Save & Publish All'}
+                        {isSaving ? 'Publishing...' : 'Save & Publish All'}
                     </button>
                 </div>
             </header>
@@ -291,7 +326,7 @@ const AdminPage: React.FC = () => {
                     <ActorSubmissionsTab submissions={actorSubmissions} allMovies={movies} onApprove={approveActorSubmission} onReject={rejectActorSubmission} />
                 )}
                 
-                {activeTab === 'analytics' && <AnalyticsPage />}
+                {activeTab === 'analytics' && <AnalyticsPage allMovies={movies} />}
 
                 {activeTab === 'tools' && (
                     <FallbackGenerator movies={movies} categories={categories} festivalData={festivalData} festivalConfig={festivalConfig} aboutData={aboutData} />

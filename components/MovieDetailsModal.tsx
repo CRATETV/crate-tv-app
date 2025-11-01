@@ -326,6 +326,16 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                       </p>
                   ))}
               </div>
+               {movie.producers && (
+                  <>
+                    <h3 className="text-lg font-semibold text-gray-400 mt-4 mb-2">Producers</h3>
+                    <div className="space-y-2 text-white">
+                        {movie.producers.split(',').map(name => name.trim()).filter(Boolean).map(producerName => (
+                            <p key={producerName}>{producerName}</p>
+                        ))}
+                    </div>
+                  </>
+              )}
             </div>
           </div>
 

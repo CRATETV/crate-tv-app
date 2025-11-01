@@ -79,7 +79,7 @@ const FilmmakerPortalPage: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [directorName, setDirectorName] = useState('');
+    const [filmmakerName, setFilmmakerName] = useState('');
     const [error, setError] = useState('');
     const [analytics, setAnalytics] = useState<FilmmakerAnalytics | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -94,7 +94,7 @@ const FilmmakerPortalPage: React.FC = () => {
             const res = await fetch('/api/get-filmmaker-analytics', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ directorName, password }),
+                body: JSON.stringify({ directorName: filmmakerName, password }),
             });
             if (!res.ok) throw new Error((await res.json()).error || 'Login failed.');
             const data = await res.json();
@@ -113,7 +113,7 @@ const FilmmakerPortalPage: React.FC = () => {
                  <div className="w-full max-w-sm p-8 bg-gray-800 rounded-lg shadow-lg border border-gray-700">
                     <h1 className="text-2xl font-bold text-center text-white mb-6">Filmmaker Dashboard</h1>
                     <form onSubmit={handleLogin} className="space-y-4">
-                        <input type="text" value={directorName} onChange={e => setDirectorName(e.target.value)} placeholder="Your Full Name" className="form-input" required />
+                        <input type="text" value={filmmakerName} onChange={e => setFilmmakerName(e.target.value)} placeholder="Your Full Name (Director/Producer)" className="form-input" required />
                         <div className="relative">
                             <input
                                 type={showPassword ? 'text' : 'password'}
@@ -157,7 +157,7 @@ const FilmmakerPortalPage: React.FC = () => {
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
             <main className="flex-grow pt-24 px-4 md:px-12">
                 <div className="max-w-5xl mx-auto">
-                    <h1 className="text-3xl font-bold text-white mb-2">Dashboard for {directorName}</h1>
+                    <h1 className="text-3xl font-bold text-white mb-2">Dashboard for {filmmakerName}</h1>
                     <p className="text-gray-400 mb-8">View performance analytics for your films on Crate TV.</p>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -199,11 +199,11 @@ const FilmmakerPortalPage: React.FC = () => {
                     </div>
                 </div>
             </main>
-            <Footer />
+            <Footer showPortalNotice={true} showActorLinks={true} />
             {isPayoutModalOpen && (
                 <PayoutModal 
                     balance={analytics.balance} 
-                    directorName={directorName} 
+                    directorName={filmmakerName} 
                     onClose={() => setIsPayoutModalOpen(false)} 
                     onComplete={() => { setIsPayoutModalOpen(false); setPayoutStatus('requested'); }} 
                 />

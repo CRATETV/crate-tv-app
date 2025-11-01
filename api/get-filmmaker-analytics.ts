@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/get-filmmaker-analytics
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
-import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, PayoutRequest } from '../types';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, PayoutRequest } from '../types.js';
 
 // Helper interfaces and functions, self-contained for this endpoint
 interface SquarePayment {
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
         }
         if (!directorName) {
-            return new Response(JSON.stringify({ error: 'Director name is required.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+            return new Response(JSON.stringify({ error: 'Filmmaker name is required.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
         
         // 2. Initialize Firebase
@@ -109,11 +109,14 @@ export async function POST(request: Request) {
         const viewCounts: Record<string, number> = {};
         viewsSnapshot.forEach(doc => { viewCounts[doc.id] = doc.data().count || 0; });
 
-        const directorFilms = Object.values(allMovies).filter(movie =>
-            (movie.director || '').split(',').map(d => d.trim().toLowerCase()).includes(directorName.trim().toLowerCase())
-        );
+        const filmmakerFilms = Object.values(allMovies).filter(movie => {
+            const directors = (movie.director || '').split(',').map(d => d.trim().toLowerCase());
+            const producers = (movie.producers || '').split(',').map(p => p.trim().toLowerCase());
+            const trimmedName = directorName.trim().toLowerCase();
+            return directors.includes(trimmedName) || producers.includes(trimmedName);
+        });
 
-        if (directorFilms.length === 0) {
+        if (filmmakerFilms.length === 0) {
             const emptyAnalytics: FilmmakerAnalytics = { totalDonations: 0, totalPaidOut: 0, balance: 0, films: [] };
             return new Response(JSON.stringify({ analytics: emptyAnalytics }), { status: 200, headers: { 'Content-Type': 'application/json' }});
         }
@@ -121,7 +124,8 @@ export async function POST(request: Request) {
         let totalDonations = 0;
         const filmPerformances: FilmmakerFilmPerformance[] = [];
 
-        directorFilms.forEach(film => {
+        // FIX: Corrected typo from 'directorFilms' to 'filmmakerFilms'.
+        filmmakerFilms.forEach(film => {
             const filmDonations = allPayments
                 .filter(p => {
                     const details = parseNote(p.note);

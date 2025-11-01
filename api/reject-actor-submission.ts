@@ -1,6 +1,6 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/reject-actor-submission
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);

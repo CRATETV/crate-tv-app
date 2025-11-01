@@ -17,7 +17,9 @@ import FeatureModal from './components/FeatureModal';
 import DataStatusIndicator from './components/DataStatusIndicator';
 import FestivalLiveModal from './components/FestivalLiveModal';
 import NewFilmAnnouncementModal from './components/NewFilmAnnouncementModal';
+import NowPlayingBanner from './components/NowPlayingBanner';
 import { useAuth } from './contexts/AuthContext';
+import { isMovieReleased } from './constants';
 
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
@@ -268,6 +270,17 @@ const App: React.FC = () => {
     return festivalMovies.length > 0 ? festivalMovies : null;
   }, [isFestivalLive, categories, visibleMovies]);
 
+  const topTenMovies = useMemo(() => {
+    // FIX: Explicitly cast the parameters to type 'Movie' to resolve TypeScript inference errors.
+    return Object.values(movies)
+        .filter((movie: Movie) => movie && typeof movie.likes === 'number')
+        .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
+        .slice(0, 10);
+  }, [movies]);
+  
+  const nowPlayingMovie = movies['consumed'];
+  const isNowPlayingReleased = isMovieReleased(nowPlayingMovie);
+
   // 2. Memoize the remaining standard categories for the main display list.
   const displayedCategories = useMemo(() => {
     // Create My List category
@@ -450,6 +463,9 @@ const App: React.FC = () => {
               onSelectMovie={handleSelectMovie}
             />
             <div className="relative z-10 -mt-12 px-4 md:px-12">
+              {nowPlayingMovie && isNowPlayingReleased && (
+                <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleSelectMovie} />
+              )}
               <div>
                 {/* Dedicated, stable rendering block for the live festival carousel */}
                 {festivalLiveMovies && (
@@ -493,6 +509,16 @@ const App: React.FC = () => {
                         }
                         movies={recommendedMovies}
                         onSelectMovie={handleSelectMovie}
+                    />
+                )}
+                {/* Top 10 Carousel */}
+                {topTenMovies.length > 0 && (
+                    <MovieCarousel
+                        key="topTen"
+                        title={<h2 className="text-lg md:text-2xl font-bold mb-4 text-white">Top 10 on Crate TV Today</h2>}
+                        movies={topTenMovies}
+                        onSelectMovie={handleSelectMovie}
+                        showRankings={true}
                     />
                 )}
                 {/* Map over the remaining, standard categories */}

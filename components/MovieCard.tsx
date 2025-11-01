@@ -27,7 +27,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
         onKeyPress={(e) => { if (e.key === 'Enter') onSelectMovie(movie)}}
       >
         {/* Container for Number and Text */}
-        <div className="absolute inset-y-0 left-0 w-7/12 flex flex-col justify-center p-4 z-20">
+        <div className="absolute inset-y-0 left-0 w-8/12 flex flex-col justify-center p-4 z-20">
             <p className="text-xs font-bold text-gray-300 uppercase tracking-widest mb-1 transition-colors duration-300 group-hover:text-yellow-400">Start Watching</p>
             <h3 className="text-white text-xl font-bold drop-shadow-lg line-clamp-3">{movie.title}</h3>
         </div>
@@ -42,7 +42,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
         </div>
         
         {/* Poster on the right, overlapping the number */}
-        <div className="absolute top-0 right-0 h-full w-8/12 z-0">
+        <div className="absolute top-0 right-0 h-full w-6/12 z-0">
              <img
                 src={movie.poster}
                 alt={""} // Decorative

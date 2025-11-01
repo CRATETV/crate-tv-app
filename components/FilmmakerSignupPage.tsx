@@ -59,7 +59,7 @@ const FilmmakerSignupPage: React.FC = () => {
                     <div className="text-center mb-10">
                         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Filmmaker Dashboard Signup</h1>
                         <p className="text-lg text-gray-400">
-                           If you've directed a film on Crate TV, enter your name and email. We'll verify your credentials and send you a password to access your private analytics dashboard.
+                           If you've directed or produced a film on Crate TV, enter your name and email. We'll verify your credentials and send you a password to access your private analytics dashboard.
                         </p>
                     </div>
                     <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-8">

@@ -40,6 +40,7 @@ import AnalyticsPage from './components/AnalyticsPage';
 import FilmmakerPortalPage from './components/FilmmakerPortalPage';
 import FilmmakerSignupPage from './components/FilmmakerSignupPage';
 import RokuGuidePage from './components/RokuGuidePage';
+import LoadingSpinner from './components/LoadingSpinner';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -51,7 +52,7 @@ const root = ReactDOM.createRoot(rootElement);
 // This component now contains the router and authentication logic.
 const AppRouter: React.FC = () => {
   const [route, setRoute] = useState(window.location.pathname);
-  const { user } = useAuth();
+  const { user, authInitialized } = useAuth();
 
   useEffect(() => {
     const onNavigate = () => {
@@ -119,8 +120,6 @@ const AppRouter: React.FC = () => {
       return <SubmitPage />;
     case '/actor-signup':
       return <ActorSignupPage />;
-    case '/actor-portal':
-      return <ActorPortalPage />;
     case '/actors':
       return <ActorsDirectoryPage />;
     case '/filmmaker-signup':
@@ -129,8 +128,6 @@ const AppRouter: React.FC = () => {
       return <FilmmakerPortalPage />;
     case '/thank-you':
       return <ThankYouPage />;
-    case '/merch':
-      return <MerchPage />;
     case '/contact':
       return <ContactPage />;
     case '/about':
@@ -138,6 +135,23 @@ const AppRouter: React.FC = () => {
     case '/roku-guide':
       return <RokuGuidePage />;
       
+    // Protected Actor Route
+    case '/actor-portal': {
+      if (!authInitialized) return <LoadingSpinner />;
+      if (!user) return <RedirectToLogin />;
+      if (!user.isActor) {
+        const RedirectHome: React.FC = () => {
+          useEffect(() => {
+            window.history.replaceState({}, '', '/');
+            window.dispatchEvent(new Event('pushstate'));
+          }, []);
+          return <App />;
+        };
+        return <RedirectHome />;
+      }
+      return <ActorPortalPage />;
+    }
+
     // Admin & Dev routes
     case '/admin':
       return <AdminPage />;

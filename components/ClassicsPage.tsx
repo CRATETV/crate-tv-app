@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
-import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import MovieCarousel from './MovieCarousel';
 import MovieDetailsModal from './MovieDetailsModal';
@@ -95,8 +94,7 @@ const ClassicsPage: React.FC = () => {
                     )}
                 </div>
             </main>
-
-            <Footer />
+            
             <BackToTopButton />
 
             {detailsMovie && (

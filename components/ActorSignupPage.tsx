@@ -42,7 +42,7 @@ const ActorSignupPage: React.FC = () => {
                     <div className="max-w-2xl bg-gray-800/50 border border-gray-700 rounded-lg p-8 sm:p-12 animate-[fadeIn_0.5s_ease-out]">
                         <h1 className="text-3xl sm:text-4xl font-bold text-green-400 mb-4">Check Your Email!</h1>
                         <p className="text-gray-300">
-                            We've verified your name and sent the password and a link to the Actor Portal to your email address. Please check your inbox (and spam folder) to continue.
+                           We've verified your name and sent a secure link to your email. Click the link to create your password and access the Actor Portal.
                         </p>
                     </div>
                 </main>
@@ -59,7 +59,7 @@ const ActorSignupPage: React.FC = () => {
                     <div className="text-center mb-10">
                         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Actor Portal Signup</h1>
                         <p className="text-lg text-gray-400">
-                           If you've appeared in a Crate TV film, enter your name and email below. We'll verify your credentials and send you the password to access the portal.
+                           If you've appeared in a Crate TV film, enter your name and email below. We'll verify your credentials and send you a password to access the portal.
                         </p>
                     </div>
                     <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-8">

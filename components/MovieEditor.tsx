@@ -96,8 +96,12 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
 
        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
         <div>
-          <label htmlFor="director" className="block text-sm font-medium text-gray-300">Director</label>
-          <input type="text" name="director" value={formData.director} onChange={handleChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+          <label htmlFor="director" className="block text-sm font-medium text-gray-300">Director(s)</label>
+          <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Comma-separated names" className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+        </div>
+         <div>
+          <label htmlFor="producers" className="block text-sm font-medium text-gray-300">Producer(s)</label>
+          <input type="text" name="producers" value={formData.producers || ''} onChange={handleChange} placeholder="Comma-separated names" className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
         </div>
         <div>
           <label htmlFor="rating" className="block text-sm font-medium text-gray-300">Rating (out of 10)</label>

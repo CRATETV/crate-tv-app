@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { AnalyticsData, PayoutRequest } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { AnalyticsData, PayoutRequest, Movie, FilmmakerPayout } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import PayoutsTab from './PayoutsTab';
 
@@ -12,7 +12,110 @@ const StatCard: React.FC<{ title: string; value: string | number; }> = ({ title,
     </div>
 );
 
-const AnalyticsPage: React.FC = () => {
+type SortableKeys = 'title' | 'views' | 'likes' | 'donations' | 'filmmakerEarning';
+type SortDirection = 'asc' | 'desc';
+
+interface FilmPerformanceTableProps {
+    allMovies: Record<string, Movie>;
+    analytics: AnalyticsData;
+}
+
+const FilmPerformanceTable: React.FC<FilmPerformanceTableProps> = ({ allMovies, analytics }) => {
+    const [sortConfig, setSortConfig] = useState<{ key: SortableKeys; direction: SortDirection } | null>({ key: 'donations', direction: 'desc' });
+
+    const performanceData = useMemo(() => {
+        const donationMap = new Map<string, FilmmakerPayout>();
+        analytics.filmmakerPayouts.forEach(payout => {
+            donationMap.set(payout.movieTitle, payout);
+        });
+
+        // FIX: Explicitly cast `movie` to type `Movie` to resolve TypeScript inference errors.
+        return Object.values(allMovies).map((movie: Movie) => {
+            const donationInfo = donationMap.get(movie.title);
+            return {
+                title: movie.title,
+                director: movie.director,
+                views: analytics.viewCounts[movie.key] || 0,
+                likes: analytics.movieLikes[movie.key] || 0,
+                donations: donationInfo ? donationInfo.totalDonations : 0,
+                crateTvCut: donationInfo ? donationInfo.crateTvCut : 0,
+                filmmakerEarning: donationInfo ? donationInfo.filmmakerPayout : 0,
+            };
+        });
+    }, [allMovies, analytics]);
+
+    const sortedPerformanceData = useMemo(() => {
+        let sortableItems = [...performanceData];
+        if (sortConfig !== null) {
+            sortableItems.sort((a, b) => {
+                if (a[sortConfig.key] < b[sortConfig.key]) {
+                    return sortConfig.direction === 'asc' ? -1 : 1;
+                }
+                if (a[sortConfig.key] > b[sortConfig.key]) {
+                    return sortConfig.direction === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return sortableItems;
+    }, [performanceData, sortConfig]);
+
+    const requestSort = (key: SortableKeys) => {
+        let direction: SortDirection = 'desc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'desc') {
+            direction = 'asc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const SortableHeader: React.FC<{ sortKey: SortableKeys, label: string }> = ({ sortKey, label }) => {
+        const isSorted = sortConfig?.key === sortKey;
+        const icon = isSorted ? (sortConfig.direction === 'desc' ? '▼' : '▲') : '↕';
+        return (
+            <th onClick={() => requestSort(sortKey)} className="cursor-pointer px-4 py-3 hover:bg-gray-700">
+                {label} <span className="text-gray-500">{icon}</span>
+            </th>
+        );
+    };
+
+    return (
+        <div className="bg-gray-800/50 rounded-lg overflow-x-auto">
+            <table className="w-full text-left text-sm">
+                <thead className="bg-gray-700/50 text-xs text-gray-300 uppercase tracking-wider">
+                    <tr>
+                        <SortableHeader sortKey="title" label="Film Title" />
+                        <th className="px-4 py-3">Director</th>
+                        <SortableHeader sortKey="views" label="Views" />
+                        <SortableHeader sortKey="likes" label="Likes" />
+                        <SortableHeader sortKey="donations" label="Donations" />
+                        <th className="px-4 py-3">Crate TV Cut</th>
+                        <SortableHeader sortKey="filmmakerEarning" label="Filmmaker Earning" />
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700">
+                    {sortedPerformanceData.map((data, index) => (
+                        <tr key={index} className="hover:bg-gray-800">
+                            <td className="px-4 py-3 font-medium text-white">{data.title}</td>
+                            <td className="px-4 py-3 text-gray-400">{data.director}</td>
+                            <td className="px-4 py-3">{data.views.toLocaleString()}</td>
+                            <td className="px-4 py-3">{data.likes.toLocaleString()}</td>
+                            <td className="px-4 py-3 font-semibold text-green-400">{formatCurrency(data.donations)}</td>
+                            <td className="px-4 py-3 text-red-400">{formatCurrency(data.crateTvCut)}</td>
+                            <td className="px-4 py-3 font-bold text-green-300">{formatCurrency(data.filmmakerEarning)}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+
+interface AnalyticsPageProps {
+    allMovies: Record<string, Movie>;
+}
+
+const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ allMovies }) => {
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
     const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -86,6 +189,7 @@ const AnalyticsPage: React.FC = () => {
                 <h1 className="text-3xl font-bold text-white">Site Analytics</h1>
                 <div className="flex flex-wrap gap-2">
                     <TabButton tabName="overview" label="Overview" />
+                    <TabButton tabName="performance" label="Film Performance" />
                     <TabButton tabName="payouts" label="Payouts" />
                     <TabButton tabName="users" label="Users" />
                 </div>
@@ -109,6 +213,10 @@ const AnalyticsPage: React.FC = () => {
                     </div>
                 )}
                 </>
+            )}
+
+            {activeTab === 'performance' && analytics && (
+                <FilmPerformanceTable allMovies={allMovies} analytics={analytics} />
             )}
 
             {activeTab === 'payouts' && (

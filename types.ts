@@ -16,6 +16,7 @@ export interface Movie {
   synopsis: string;
   cast: Actor[];
   director: string;
+  producers?: string;
   trailer: string;
   fullMovie: string;
   poster: string;
@@ -94,6 +95,8 @@ export interface FetchResult {
 export interface User {
   uid: string;
   email: string;
+  name?: string;
+  isActor?: boolean;
   avatar: string;
   isPremiumSubscriber: boolean;
   watchlist: string[];

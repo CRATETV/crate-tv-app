@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // Path: /api/filmmaker-signup
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
-import { Movie } from '../types';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { Movie } from '../types.js';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Name and email are required.' }), { status: 400, headers: {'Content-Type': 'application/json'} });
     }
 
-    // --- Validate director name against Firestore ---
+    // --- Validate name against Firestore ---
     const initError = getInitializationError();
     if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
     
@@ -24,19 +24,21 @@ export async function POST(request: Request) {
     if (!db) throw new Error("Database connection failed.");
 
     const moviesSnapshot = await db.collection('movies').get();
-    let directorFound = false;
+    let personFound = false;
     const trimmedName = name.trim().toLowerCase();
 
     moviesSnapshot.forEach(movieDoc => {
         const movieData = movieDoc.data() as Movie;
         const directors = (movieData.director || '').split(',').map(d => d.trim().toLowerCase());
-        if (directors.includes(trimmedName)) {
-            directorFound = true;
+        const producers = (movieData.producers || '').split(',').map(p => p.trim().toLowerCase());
+        
+        if (directors.includes(trimmedName) || producers.includes(trimmedName)) {
+            personFound = true;
         }
     });
 
-    if (!directorFound) {
-      return new Response(JSON.stringify({ error: 'Director name not found in our records. Please ensure it matches the film credits exactly.' }), { status: 404, headers: {'Content-Type': 'application/json'} });
+    if (!personFound) {
+      return new Response(JSON.stringify({ error: "Name not found in our records as a director or producer. Please ensure it matches the film credits exactly." }), { status: 404, headers: {'Content-Type': 'application/json'} });
     }
     
     // --- Send Email with Resend ---
@@ -45,7 +47,7 @@ export async function POST(request: Request) {
     const emailHtml = `
       <div>
         <h1>Welcome to the Crate TV Filmmaker Dashboard, ${name}!</h1>
-        <p>We've confirmed you're a director on Crate TV. You can now access your private dashboard to view your film's analytics and manage earnings.</p>
+        <p>We've confirmed you're a director or producer on Crate TV. You can now access your private dashboard to view your film's analytics and manage earnings.</p>
         <p>Please use the credentials below to log in:</p>
         <ul>
           <li><strong>Portal Login Page:</strong> <a href="${portalUrl}">${portalUrl}</a></li>

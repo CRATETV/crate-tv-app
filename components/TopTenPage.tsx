@@ -33,10 +33,14 @@ const TopTenPage: React.FC = () => {
     }, []);
 
     const topTenMovies = useMemo(() => {
-        return Object.values(movies)
-            .filter((movie: Movie) => movie && movie.likes > 0)
-            .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
-            .slice(0, 10);
+        // Get all movies, filter out any potential null/undefined values
+        const allValidMovies = Object.values(movies).filter((movie): movie is Movie => !!movie);
+        
+        // Sort all movies by likes, descending. Movies with 0 or undefined likes will be at the end.
+        const sortedMovies = allValidMovies.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+        
+        // Take the top 10 from the sorted list.
+        return sortedMovies.slice(0, 10);
     }, [movies]);
 
     const handleDownload = async () => {

@@ -1,6 +1,6 @@
 // FIX: Switched to named imports for the AWS SDK to correctly resolve the S3Client type and its methods, fixing an error where `.send()` was not found.
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { moviesData as fallbackMovies, categoriesData as fallbackCategories, festivalData as fallbackFestival, festivalConfigData as fallbackConfig, aboutData as fallbackAbout } from '../../constants'; // relative path
+import { moviesData as fallbackMovies, categoriesData as fallbackCategories, festivalData as fallbackFestival, festivalConfigData as fallbackConfig, aboutData as fallbackAbout } from '../../constants.js'; // relative path
 
 let cachedData: any = null;
 let lastFetchTime = 0;

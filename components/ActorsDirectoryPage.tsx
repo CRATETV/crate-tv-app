@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
-// FIX: Corrected import path
 import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';
@@ -85,7 +84,7 @@ const ActorsDirectoryPage: React.FC = () => {
                     )}
                 </div>
             </main>
-            <Footer />
+            <Footer showActorLinks={true} />
             <BackToTopButton />
         </div>
     );

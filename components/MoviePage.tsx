@@ -72,26 +72,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [released, setReleased] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const hasTrackedViewRef = useRef(false);
-
-  // Like state
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
-  
-  // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
-  
-  // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  
-  // Staging and feature toggles
   const [isStaging, setIsStaging] = useState(false);
   const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
-  
-  // Payment Modal State
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [showSupportSuccess, setShowSupportSuccess] = useState(false);
-
-  // Ad State
   const adContainerRef = useRef<HTMLDivElement>(null);
   const adsManagerRef = useRef<any>(null);
   const [isAdPlaying, setIsAdPlaying] = useState(false);
@@ -108,25 +96,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 body: JSON.stringify({ movieKey: movie.key }),
             }).catch(err => console.error("Failed to track view:", err));
         }
-
-        const videoElement = videoRef.current;
-        // --- Mobile Fullscreen & Landscape ---
-        const isMobile = window.matchMedia("(max-width: 768px)").matches;
-        if (isMobile && videoElement.requestFullscreen) {
-            videoElement.requestFullscreen().then(() => {
-                // Lock to landscape if supported
-                if (screen.orientation && (screen.orientation as any).lock) {
-                    (screen.orientation as any).lock('landscape').catch((err: any) => {
-                        console.warn("Could not lock screen orientation:", err);
-                    });
-                }
-            }).catch(err => {
-                console.warn("Fullscreen request failed. Playing inline.", err);
-                videoElement.play().catch(e => console.error("Content play failed", e));
-            });
-        } else {
-             videoElement.play().catch(e => console.error("Content play failed", e));
-        }
+        // Just play the video. Fullscreen is handled by the new effect.
+        videoRef.current.play().catch(e => console.error("Content play failed", e));
     }
   }, [movie?.key]);
   
@@ -149,7 +120,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         (adsManagerLoadedEvent: any) => {
             const adsManager = adsManagerLoadedEvent.getAdsManager(videoElement);
             adsManagerRef.current = adsManager;
-
             adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED, () => videoElement.pause());
             adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED, playContent);
             adsManager.addEventListener(google.ima.AdEvent.Type.ALL_ADS_COMPLETED, playContent);
@@ -158,7 +128,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 setAdError('An ad could not be loaded. Starting film...');
                 playContent();
             });
-            
             try {
                 adsManager.init(videoElement.clientWidth, videoElement.clientHeight, google.ima.ViewMode.NORMAL);
                 adsManager.start();
@@ -181,11 +150,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     );
 
     const adsRequest = new google.ima.AdsRequest();
-    // Using a sample skippable pre-roll tag. This would come from AdSense.
     adsRequest.adTagUrl = 'https://storage.googleapis.com/interactive-media-ads/ad-tags/unknown/vast_skippable.xml';
     adsRequest.linearAdSlotWidth = videoElement.clientWidth;
     adsRequest.linearAdSlotHeight = videoElement.clientHeight;
-
     adsLoader.requestAds(adsRequest);
   }, [playerMode, released, playContent]);
   
@@ -216,10 +183,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
             if (sourceMovie) {
               setReleased(isMovieReleased(sourceMovie));
-    
               const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
               if (storedLikedMovies) setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
-    
               setMovie({ ...sourceMovie });
     
               if (params.get('play') === 'true' && sourceMovie.fullMovie && isMovieReleased(sourceMovie)) {
@@ -242,21 +207,39 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   useEffect(() => {
     if (released) return;
-
     const interval = setInterval(() => {
         if (isMovieReleased(movie)) {
             setReleased(true);
             clearInterval(interval);
         }
     }, 1000);
-
     return () => clearInterval(interval);
   }, [movie, released]);
   
+  // New, improved effect for handling fullscreen and playback logic.
   useEffect(() => {
-    if (playerMode === 'full' && released) {
-        const timer = setTimeout(() => initializeAds(), 100);
-        return () => clearTimeout(timer);
+    const videoElement = videoRef.current;
+    if (playerMode === 'full' && released && videoElement) {
+        const isMobile = window.matchMedia("(max-width: 768px)").matches;
+        const startPlaybackFlow = () => {
+            initializeAds();
+        };
+
+        if (isMobile && typeof videoElement.requestFullscreen === 'function') {
+            videoElement.requestFullscreen().then(() => {
+                if (screen.orientation && typeof (screen.orientation as any).lock === 'function') {
+                    (screen.orientation as any).lock('landscape').catch((err: any) => {
+                        console.warn("Could not lock screen orientation:", err);
+                    });
+                }
+                startPlaybackFlow();
+            }).catch(err => {
+                console.warn("Fullscreen request failed. Playing inline.", err);
+                startPlaybackFlow();
+            });
+        } else {
+            startPlaybackFlow();
+        }
     } else {
         if (adsManagerRef.current) {
             adsManagerRef.current.destroy();
@@ -266,7 +249,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
   }, [playerMode, released, initializeAds]);
 
-  // SEO
   useEffect(() => {
     if (movie) {
         document.title = `${movie.title || 'Untitled Film'} | Crate TV`;
@@ -288,7 +270,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     document.addEventListener('keydown', handleEscKey);
     return () => document.removeEventListener('keydown', handleEscKey);
 }, [playerMode]);
-
 
     const recommendedMovies = useMemo(() => {
         if (!movie) return [];
@@ -460,6 +441,16 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                       </p>
                                   ))}
                               </div>
+                              {movie.producers && (
+                                  <>
+                                    <h3 className="text-lg font-semibold text-gray-400 mt-4 mb-2">Producers</h3>
+                                    <div className="space-y-2 text-white">
+                                        {movie.producers.split(',').map(name => name.trim()).filter(Boolean).map(producerName => (
+                                            <p key={producerName}>{producerName}</p>
+                                        ))}
+                                    </div>
+                                  </>
+                              )}
                           </div>
                       </div>
 

@@ -201,58 +201,69 @@ export const listenToAllAdminData = (
             await migrateInitialData(firestoreDb);
 
             const adminData: AdminData = getFallbackData();
-            let initialLoadComplete = false;
-            const expectedLoads = 6; // movies, categories, festivalConfig, festivalData, aboutData, actorSubmissions
-            let receivedLoads = 0;
-            const unsubs: (() => void)[] = [];
+            
+            // This closure-based counter is more robust for handling the initial load.
+            const checkInitialLoadAndCallback = (() => {
+                let loads = 0;
+                const expected = 6;
+                let initialLoadDone = false;
+                
+                return (error?: { collection: string, message: string }) => {
+                    if (error) {
+                        console.error(`Listener error on ${error.collection}: ${error.message}. This might be a missing Firestore index.`);
+                    }
 
-            const checkInitialLoadAndCallback = () => {
-                if (!initialLoadComplete) {
-                    receivedLoads++;
-                    if (receivedLoads >= expectedLoads) {
-                        initialLoadComplete = true;
-                        console.log("Initial data load from Firebase complete.");
+                    if (initialLoadDone) {
+                        callback({ data: { ...adminData }, source: 'firebase' });
+                        return;
+                    }
+                    
+                    loads++;
+                    if (loads >= expected) {
+                        initialLoadDone = true;
+                        console.log("Initial data load from Firebase complete (with or without errors).");
                         callback({ data: { ...adminData }, source: 'firebase' });
                     }
-                } else {
-                    callback({ data: { ...adminData }, source: 'firebase' });
-                }
+                };
+            })();
+            
+            const onError = (error: Error, collectionName: string) => {
+                checkInitialLoadAndCallback({ collection: collectionName, message: error.message });
             };
+            
+            const unsubs: (() => void)[] = [];
 
-            // FIX: Explicitly type the snapshot parameter to resolve the type error.
             unsubs.push(onSnapshot(collection(firestoreDb, 'movies'), (snapshot: QuerySnapshot<DocumentData>) => {
                 const movies: Record<string, Movie> = {};
                 snapshot.forEach(doc => { movies[doc.id] = doc.data() as Movie; });
                 adminData.movies = movies;
                 checkInitialLoadAndCallback();
-            }));
+            }, (err) => onError(err, 'movies')));
 
-            // FIX: Explicitly type the snapshot parameter to resolve the type error.
             unsubs.push(onSnapshot(collection(firestoreDb, 'categories'), (snapshot: QuerySnapshot<DocumentData>) => {
                 const categories: Record<string, Category> = {};
                 snapshot.forEach(doc => { categories[doc.id] = doc.data() as Category; });
                 adminData.categories = categories;
                 checkInitialLoadAndCallback();
-            }));
+            }, (err) => onError(err, 'categories')));
 
             unsubs.push(onSnapshot(doc(firestoreDb, 'festival', 'config'), (doc) => {
                 adminData.festivalConfig = doc.exists() ? (doc.data() as FestivalConfig) : initialFestivalConfig;
                 checkInitialLoadAndCallback();
-            }));
+            }, (err) => onError(err, 'festival/config')));
             
             const daysQuery = query(collection(firestoreDb, 'festival/schedule/days'), orderBy('day'));
-            // FIX: Explicitly type the snapshot parameter to resolve the type error.
             unsubs.push(onSnapshot(daysQuery, (snapshot: QuerySnapshot<DocumentData>) => {
                 const days: FestivalDay[] = [];
                 snapshot.forEach(doc => days.push(doc.data() as FestivalDay));
                 adminData.festivalData = days;
                 checkInitialLoadAndCallback();
-            }));
+            }, (err) => onError(err, 'festival/schedule/days')));
 
             unsubs.push(onSnapshot(doc(firestoreDb, 'content', 'about'), (doc) => {
                 adminData.aboutData = doc.exists() ? (doc.data() as AboutData) : initialAboutData;
                 checkInitialLoadAndCallback();
-            }));
+            }, (err) => onError(err, 'content/about')));
 
             const submissionsQuery = query(collection(firestoreDb, 'actorSubmissions'), where('status', '==', 'pending'), orderBy('submissionDate', 'desc'));
             unsubs.push(onSnapshot(submissionsQuery, (snapshot: QuerySnapshot<DocumentData>) => {
@@ -260,7 +271,7 @@ export const listenToAllAdminData = (
                 snapshot.forEach(doc => { submissions.push({ id: doc.id, ...doc.data() } as ActorSubmission); });
                 adminData.actorSubmissions = submissions;
                 checkInitialLoadAndCallback();
-            }));
+            }, (err) => onError(err, 'actorSubmissions')));
 
             resolve(() => {
                 console.log("Unsubscribing from all Firebase listeners.");

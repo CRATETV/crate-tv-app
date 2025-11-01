@@ -1,6 +1,6 @@
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import * as admin from 'firebase-admin';
-import { ActorProfile } from '../types';
+import { ActorProfile } from '../types.js';
 
 const slugify = (name: string) => name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
 

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Movie } from '../types';
 
 interface NewFilmAnnouncementModalProps {
@@ -8,6 +8,8 @@ interface NewFilmAnnouncementModalProps {
 }
 
 const NewFilmAnnouncementModal: React.FC<NewFilmAnnouncementModalProps> = ({ movie, onClose, onWatchNow }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -19,6 +21,8 @@ const NewFilmAnnouncementModal: React.FC<NewFilmAnnouncementModalProps> = ({ mov
       document.body.style.overflow = 'unset';
     };
   }, [onClose]);
+
+  const synopsisIsLong = movie.synopsis && movie.synopsis.length > 200;
 
   return (
     <div 
@@ -42,7 +46,14 @@ const NewFilmAnnouncementModal: React.FC<NewFilmAnnouncementModalProps> = ({ mov
             <h2 className="text-4xl font-extrabold text-white mb-2 tracking-tight" style={{textShadow: '0 2px 5px rgba(255,0,0,0.5)'}}>Now Playing!</h2>
             <img src={movie.poster} alt={movie.title} className="w-48 h-auto rounded-md shadow-lg my-4 border-2 border-gray-600" />
             <h3 className="text-3xl font-bold text-white mb-3">{movie.title}</h3>
-            <p className="text-gray-300 mb-8 line-clamp-3" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></p>
+            <div className="text-gray-300 mb-8">
+              <p className={!isExpanded && synopsisIsLong ? 'line-clamp-3' : ''} dangerouslySetInnerHTML={{ __html: movie.synopsis }}></p>
+              {synopsisIsLong && !isExpanded && (
+                <button onClick={() => setIsExpanded(true)} className="text-red-400 hover:underline text-sm font-bold mt-1">
+                  Read More
+                </button>
+              )}
+            </div>
             
             <div className="flex flex-col sm:flex-row gap-4 w-full">
                 <button 

@@ -1,12 +1,11 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/actor-signup
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin';
-import { Movie } from '../types';
+import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
+import { Movie } from '../types.js';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
-const portalPassword = 'cratebio';
 
 export async function POST(request: Request) {
   try {
@@ -16,13 +15,15 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Name and email are required.' }), { status: 400 });
     }
 
-    // --- Validate actor name against Firestore ---
+    // --- Firebase Admin Init ---
     const initError = getInitializationError();
     if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
     
     const db = getAdminDb();
-    if (!db) throw new Error("Database connection failed.");
+    const auth = getAdminAuth();
+    if (!db || !auth) throw new Error("Database or Auth connection failed.");
 
+    // --- Step 1: Verify actor name exists in movies DB ---
     const moviesSnapshot = await db.collection('movies').get();
     let actorFound = false;
     const trimmedName = name.trim().toLowerCase();
@@ -38,27 +39,47 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Actor name not found in our records. Please ensure it matches the film credits exactly.' }), { status: 404 });
     }
     
-    // --- Send Email with Resend ---
-    const portalUrl = new URL('/actor-portal', request.url).href;
+    // --- Step 2: Create or Find Firebase user ---
+    let userRecord;
+    try {
+        userRecord = await auth.getUserByEmail(email);
+    } catch (error: any) {
+        if (error.code === 'auth/user-not-found') {
+            userRecord = await auth.createUser({ email, displayName: name });
+        } else {
+            throw error; // Re-throw other auth errors
+        }
+    }
 
+    // --- Step 3: Set custom claim and Firestore profile ---
+    await auth.setCustomUserClaims(userRecord.uid, { isActor: true });
+    const userProfileRef = db.collection('users').doc(userRecord.uid);
+    await userProfileRef.set({ name, email, isActor: true }, { merge: true });
+
+    // --- Step 4: Generate password creation link ---
+    const actionCodeSettings = {
+        url: new URL('/actor-portal', request.url).href,
+        handleCodeInApp: false,
+    };
+    const link = await auth.generatePasswordResetLink(email, actionCodeSettings);
+
+    // --- Step 5: Send Email with Resend ---
     const emailHtml = `
       <div>
         <h1>Welcome to the Crate TV Actor Portal, ${name}!</h1>
-        <p>We've confirmed you're part of the Crate TV family. You can now update your bio and photos through our private portal.</p>
-        <p>Please use the credentials below to log in:</p>
-        <ul>
-          <li><strong>Portal Login Page:</strong> <a href="${portalUrl}">${portalUrl}</a></li>
-          <li><strong>Password:</strong> ${portalPassword}</li>
-        </ul>
+        <p>We've confirmed you're part of the Crate TV family. To access the portal and update your profile, you first need to create a secure password for your account.</p>
+        <p>Click the link below to set your password:</p>
+        <p><a href="${link}" style="color: #6d28d9; text-decoration: none; font-weight: bold;">Create Your Password</a></p>
+        <p>This link is valid for a limited time. Once your password is set, you can log in to the Actor Portal at any time.</p>
         <p>We look forward to seeing your updates!</p>
         <p>- The Crate TV Team</p>
       </div>
     `;
 
-    const { data, error } = await resend.emails.send({
+    const { error } = await resend.emails.send({
         from: `Crate TV <${fromEmail}>`,
         to: [email],
-        subject: `Your Crate TV Actor Portal Access`,
+        subject: `Create Your Password for the Crate TV Actor Portal`,
         html: emailHtml,
     });
 
