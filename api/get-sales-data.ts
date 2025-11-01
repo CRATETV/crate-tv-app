@@ -1,6 +1,6 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/get-sales-data
-import * as admin from 'firebase-admin';
+import { UserRecord } from 'firebase-admin/auth';
 import { AnalyticsData, FilmmakerPayout } from '../types.js';
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 
@@ -18,7 +18,7 @@ interface FirebaseData {
     viewCounts: Record<string, number>;
     movieLikes: Record<string, number>;
     totalUsers: number;
-    recentUsers: { email: string; creationTime: string; }[];
+    allUsers: { email: string; creationTime: string; }[];
 }
 
 
@@ -95,7 +95,7 @@ async function fetchFirebaseData(): Promise<FirebaseData> {
     let viewCounts: Record<string, number> = {};
     let movieLikes: Record<string, number> = {};
     let totalUsers = 0;
-    let recentUsers: { email: string; creationTime: string; }[] = [];
+    let allUsersResult: { email: string; creationTime: string; }[] = [];
 
     const viewsSnapshot = await db.collection("view_counts").get();
     viewsSnapshot.forEach(doc => { viewCounts[doc.id] = doc.data().count || 0; });
@@ -103,7 +103,7 @@ async function fetchFirebaseData(): Promise<FirebaseData> {
     const moviesSnapshot = await db.collection("movies").get();
     moviesSnapshot.forEach(doc => { movieLikes[doc.id] = doc.data().likes || 0; });
     
-    let allAuthUsers: admin.auth.UserRecord[] = [];
+    let allAuthUsers: UserRecord[] = [];
     let nextPageToken;
     do {
         const listUsersResult = await adminAuth.listUsers(1000, nextPageToken);
@@ -113,13 +113,13 @@ async function fetchFirebaseData(): Promise<FirebaseData> {
 
     totalUsers = allAuthUsers.length;
     allAuthUsers.sort((a, b) => new Date(b.metadata.creationTime).getTime() - new Date(a.metadata.creationTime).getTime());
-    recentUsers = allAuthUsers.slice(0, 100).map(user => ({
+    allUsersResult = allAuthUsers.map(user => ({
         email: user.email || 'N/A',
         creationTime: new Date(user.metadata.creationTime).toLocaleString(),
     }));
 
     console.log("[Analytics API] Fetched data from Firebase successfully.");
-    return { viewCounts, movieLikes, totalUsers, recentUsers };
+    return { viewCounts, movieLikes, totalUsers, allUsers: allUsersResult };
 }
 
 // --- Main API Handler ---
@@ -128,7 +128,7 @@ export async function POST(request: Request) {
     let squareError: string | null = null;
     let firebaseError: string | null = null;
     let allPayments: SquarePayment[] = [];
-    let firebaseData: FirebaseData = { viewCounts: {}, movieLikes: {}, totalUsers: 0, recentUsers: [] };
+    let firebaseData: FirebaseData = { viewCounts: {}, movieLikes: {}, totalUsers: 0, allUsers: [] };
 
     try {
         const { password } = await request.json();

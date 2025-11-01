@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // Path: /api/request-payout
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
         payoutMethod,
         payoutDetails,
         status: 'pending',
-        requestDate: admin.firestore.FieldValue.serverTimestamp(),
+        requestDate: FieldValue.serverTimestamp(),
     };
     await db.collection('payout_requests').add(requestData);
 

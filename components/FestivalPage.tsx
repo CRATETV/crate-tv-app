@@ -4,7 +4,7 @@ import Header from './Header';
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import LoadingSpinner from './LoadingSpinner';
-import StagingBanner from './StagingBanner';
+import StagingBanner from './components/StagingBanner';
 import FestivalView from './FestivalView';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import { Movie, FestivalDay, FestivalConfig } from '../types';

@@ -121,6 +121,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ allMovies }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<{ critical?: string, square?: string, firebase?: string } | null>(null);
     const [activeTab, setActiveTab] = useState('overview');
+    const [userSearchTerm, setUserSearchTerm] = useState('');
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -155,6 +156,14 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ allMovies }) => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    const filteredUsers = useMemo(() => {
+        if (!analytics?.allUsers) return [];
+        if (!userSearchTerm) return analytics.allUsers;
+        return analytics.allUsers.filter(user => 
+            user.email.toLowerCase().includes(userSearchTerm.toLowerCase())
+        );
+    }, [analytics?.allUsers, userSearchTerm]);
 
     const handleCompletePayout = async (requestId: string) => {
         const password = sessionStorage.getItem('adminPassword');
@@ -225,14 +234,34 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ allMovies }) => {
             
             {activeTab === 'users' && analytics && (
                 <div>
-                     <h2 className="text-2xl font-bold text-white mb-4">Recent Users ({analytics.recentUsers.length})</h2>
+                     <h2 className="text-2xl font-bold text-white mb-4">All Users ({analytics.totalUsers})</h2>
+                     <input
+                        type="text"
+                        placeholder="Search by email..."
+                        value={userSearchTerm}
+                        onChange={e => setUserSearchTerm(e.target.value)}
+                        className="w-full max-w-sm mb-4 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                     />
                      <div className="bg-gray-800/50 rounded-lg max-h-[600px] overflow-y-auto">
-                        {analytics.recentUsers.map((user, index) => (
-                            <div key={index} className="p-3 border-b border-gray-700">
-                                <p className="text-white">{user.email}</p>
-                                <p className="text-xs text-gray-400">Joined: {user.creationTime}</p>
-                            </div>
-                        ))}
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-gray-700/50 text-xs text-gray-300 uppercase tracking-wider sticky top-0">
+                                <tr>
+                                    <th className="px-4 py-3">Email</th>
+                                    <th className="px-4 py-3">Sign-up Date</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-700">
+                                {filteredUsers.map((user, index) => (
+                                    <tr key={index} className="hover:bg-gray-800">
+                                        <td className="px-4 py-3 font-medium text-white">{user.email}</td>
+                                        <td className="px-4 py-3 text-gray-400">{user.creationTime}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {filteredUsers.length === 0 && (
+                            <p className="text-center text-gray-500 py-8">No users found.</p>
+                        )}
                      </div>
                 </div>
             )}

@@ -81,8 +81,11 @@ export async function GET(request: Request) {
     const finalCategories = [];
 
     // 1. Handle the Live Festival Category
-    // If the festival is live, create a special category for it at the top.
-    if (festivalConfig?.isFestivalLive && categoriesData['pwff12thAnnual']) {
+    const isFestivalLive = festivalConfig?.startDate && festivalConfig?.endDate && 
+                           new Date() >= new Date(festivalConfig.startDate) && 
+                           new Date() < new Date(festivalConfig.endDate);
+
+    if (isFestivalLive && categoriesData['pwff12thAnnual']) {
         const liveFestivalCategory: Category = {
             title: "Film Festival - LIVE NOW",
             movieKeys: categoriesData['pwff12thAnnual'].movieKeys,
@@ -108,7 +111,7 @@ export async function GET(request: Request) {
         .filter(([key]) => {
             const isFeatured = key === 'featured';
             // If the festival is live, also exclude the standard PWFF category to avoid duplicates
-            const isRedundantFestivalCategory = festivalConfig?.isFestivalLive && key === 'pwff12thAnnual';
+            const isRedundantFestivalCategory = isFestivalLive && key === 'pwff12thAnnual';
             return !isFeatured && !isRedundantFestivalCategory;
         })
         .forEach(([key, categoryData]) => {

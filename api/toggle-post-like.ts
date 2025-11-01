@@ -1,5 +1,5 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request: Request) {
   try {
@@ -28,12 +28,12 @@ export async function POST(request: Request) {
     if (likes.includes(actorName)) {
         // Unlike
         await postRef.update({
-            likes: admin.firestore.FieldValue.arrayRemove(actorName)
+            likes: FieldValue.arrayRemove(actorName)
         });
     } else {
         // Like
         await postRef.update({
-            likes: admin.firestore.FieldValue.arrayUnion(actorName)
+            likes: FieldValue.arrayUnion(actorName)
         });
     }
 

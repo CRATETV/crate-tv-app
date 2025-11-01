@@ -10,7 +10,7 @@ inject();
 import App from './App';
 // FIX: Corrected import path
 import AdminPage from './AdminPage';
-import Intro from './components/Intro';
+import LandingPage from './components/LandingPage';
 // FIX: Corrected import path
 import ClassicsPage from './components/ClassicsPage';
 import SubmitPage from './components/SubmitPage';
@@ -99,7 +99,7 @@ const AppRouter: React.FC = () => {
   // Handle static routes with authentication checks
   switch (route) {
     case '/':
-      return user ? <App /> : <RedirectToLogin />;
+      return user ? <App /> : <LandingPage />;
     case '/account':
       return user ? <AccountPage /> : <RedirectToLogin />;
     case '/festival':
@@ -159,45 +159,14 @@ const AppRouter: React.FC = () => {
       return <DeveloperGuidePage />;
     default:
       // Fallback to the appropriate homepage for any unknown routes
-      return user ? <App /> : <RedirectToLogin />;
+      return user ? <App /> : <LandingPage />;
   }
-};
-
-// Manages the intro video display logic.
-const Root: React.FC = () => {
-  // Initialize state based on whether the user has seen the intro before.
-  const [showIntro, setShowIntro] = useState(() => {
-    try {
-      // If 'hasSeenIntro' is in localStorage, we don't show the intro.
-      return !localStorage.getItem('hasSeenIntro');
-    } catch (e) {
-      // If localStorage is unavailable (e.g., private browsing), default to showing intro.
-      console.warn("Could not read from localStorage, showing intro by default.", e);
-      return true;
-    }
-  });
-
-  const handleIntroEnd = () => {
-    try {
-      // Set the flag in localStorage so the intro doesn't show on future visits.
-      localStorage.setItem('hasSeenIntro', 'true');
-    } catch (e) {
-      console.warn("Could not write to localStorage to save intro state.", e);
-    }
-    setShowIntro(false);
-  };
-
-  if (showIntro) {
-    return <Intro onIntroEnd={handleIntroEnd} />;
-  }
-  
-  return <AppRouter />;
 };
 
 root.render(
   <React.StrictMode>
     <AuthProvider>
-      <Root />
+      <AppRouter />
     </AuthProvider>
   </React.StrictMode>
 );

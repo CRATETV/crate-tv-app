@@ -66,7 +66,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMo
   const activeLinkStyles = "bg-white/10 text-white";
   const inactiveLinkStyles = "text-gray-300 hover:bg-white/20 hover:text-white";
   
-  const hasSolidBg = isScrolled || pathname.startsWith('/login') || pathname.startsWith('/about') || (pathname === '/' && !user) || isMobileMenuOpen;
+  const hasSolidBg = isScrolled || !pathname.startsWith('/') || pathname.startsWith('/login') || pathname.startsWith('/about') || isMobileMenuOpen;
 
   const NavLinks: React.FC<{ mobile?: boolean }> = ({ mobile = false }) => {
       const mobileLinkStyles = "text-2xl font-bold text-gray-300 hover:text-white";

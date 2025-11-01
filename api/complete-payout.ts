@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // Path: /api/complete-payout
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request: Request) {
   try {
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     
     await requestRef.update({
         status: 'completed',
-        completionDate: admin.firestore.FieldValue.serverTimestamp()
+        completionDate: FieldValue.serverTimestamp()
     });
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });

@@ -1,6 +1,6 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/toggle-like
-import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 
 export async function POST(request: Request) {
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const movieDocRef = db.collection('movies').doc(movieKey);
     
     // Atomically increment or decrement the likes count
-    const likesIncrement = admin.firestore.FieldValue.increment(action === 'like' ? 1 : -1);
+    const likesIncrement = FieldValue.increment(action === 'like' ? 1 : -1);
     
     await movieDocRef.update({ 
       likes: likesIncrement,

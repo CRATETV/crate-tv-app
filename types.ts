@@ -154,7 +154,7 @@ export interface AnalyticsData {
     viewCounts: Record<string, number>;
     movieLikes: Record<string, number>;
     totalUsers: number;
-    recentUsers: { email: string; creationTime: string; }[];
+    allUsers: { email: string; creationTime: string; }[];
 }
 
 export interface PayoutRequest {

@@ -1,10 +1,12 @@
-import * as admin from 'firebase-admin';
+import { initializeApp, cert, getApps, App } from 'firebase-admin/app';
+import { getAuth, Auth } from 'firebase-admin/auth';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { Buffer } from 'buffer';
 
-let adminAuth: admin.auth.Auth | null = null;
-let adminDb: admin.firestore.Firestore | null = null;
+let adminAuth: Auth | null = null;
+let adminDb: Firestore | null = null;
 let isInitialized = false;
-let initializationError: string | null = null; // To store any error during init
+let initializationError: string | null = null;
 
 // This function initializes the Firebase Admin SDK if it hasn't been already.
 // It's designed to be called in serverless environments where instances are reused.
@@ -24,8 +26,8 @@ const initializeFirebaseAdmin = () => {
             return;
         }
 
-        // Check if the app is already initialized to prevent errors on hot reloads
-        if (admin.apps.length === 0) {
+        // Use getApps() to check for initialization, which is the recommended practice.
+        if (getApps().length === 0) {
             let decodedKey: string;
             try {
                 // Use Node.js Buffer to decode the Base64 string.
@@ -46,14 +48,15 @@ const initializeFirebaseAdmin = () => {
                 throw new Error("The parsed service account key is missing essential properties like 'project_id', 'private_key', or 'client_email'. Please generate a new key from Firebase.");
             }
 
-            admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
+            initializeApp({
+                credential: cert(serviceAccount),
             });
             console.log("Firebase Admin SDK initialized successfully.");
         }
 
-        adminAuth = admin.auth();
-        adminDb = admin.firestore();
+        const app = getApps()[0];
+        adminAuth = getAuth(app);
+        adminDb = getFirestore(app);
         isInitialized = true;
     } catch (error) {
         console.error("Firebase Admin SDK initialization failed:", error);
@@ -71,7 +74,7 @@ export const getInitializationError = (): string | null => {
 };
 
 // Public function to get the initialized Auth instance
-export const getAdminAuth = (): admin.auth.Auth | null => {
+export const getAdminAuth = (): Auth | null => {
     if (!isInitialized) {
         initializeFirebaseAdmin();
     }
@@ -79,7 +82,7 @@ export const getAdminAuth = (): admin.auth.Auth | null => {
 };
 
 // Public function to get the initialized Firestore DB instance
-export const getAdminDb = (): admin.firestore.Firestore | null => {
+export const getAdminDb = (): Firestore | null => {
     if (!isInitialized) {
         initializeFirebaseAdmin();
     }

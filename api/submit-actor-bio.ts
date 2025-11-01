@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/submit-actor-bio
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request: Request) {
   try {
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
         photoUrl,
         highResPhotoUrl,
         imdbUrl: imdbUrl || '',
-        submissionDate: admin.firestore.FieldValue.serverTimestamp(),
+        submissionDate: FieldValue.serverTimestamp(),
         status: 'pending',
     };
 

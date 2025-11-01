@@ -536,7 +536,7 @@ const App: React.FC = () => {
         )}
       </main>
       
-      <Footer />
+      <Footer showActorLinks={true} />
       <BackToTopButton />
 
       {detailsMovie && (

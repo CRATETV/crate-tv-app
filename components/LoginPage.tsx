@@ -18,6 +18,9 @@ const LoginPage: React.FC = () => {
         const params = new URLSearchParams(window.location.search);
         const redirect = params.get('redirect');
         setRedirectPath(redirect || '/');
+        if (params.get('view') === 'signup') {
+            setIsLoginView(false);
+        }
     }, []);
     
     const handleSubmit = async (e: React.FormEvent) => {

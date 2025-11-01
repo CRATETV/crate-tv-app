@@ -17,7 +17,6 @@ export const categoriesData: Record<string, Category> = {
   newReleases: {
     title: 'New Releases',
     movieKeys: [
-        'thatloud',
         'results',
         'newmovie1756741314485', // What If
         'newmovie1756501125076', // of Bees and Boobs
@@ -611,7 +610,7 @@ export const moviesData: Record<string, Movie> = {
    "consumed": {
     "key": "consumed",
     "title": "Consumed",
-    "synopsis": "She gave everything to make her love complete, but a woman learns that her monumental act of self-sacrifice wasn't a noble gesture; it was the final permission her toxic relationship needed to devour her.<br/><br/>Coming October 31st.",
+    "synopsis": "She gave everything to make her love complete, but a woman learns that her monumental act of self-sacrifice wasn't a noble gesture; it was the final permission her toxic relationship needed to devour her.",
     "cast": [
       {
         "name": "Lucie Paige Krovatin",

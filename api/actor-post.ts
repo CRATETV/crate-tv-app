@@ -1,5 +1,5 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { ActorProfile } from '../types.js';
 
 const slugify = (name: string) => name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       actorPhoto: actorProfile.photo, // Use the approved profile photo
       content,
       imageUrl: imageUrl || '',
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
       likes: [],
     };
 
