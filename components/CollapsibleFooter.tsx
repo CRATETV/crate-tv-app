@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 
 interface CollapsibleFooterProps {
@@ -7,23 +8,27 @@ interface CollapsibleFooterProps {
 
 const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice = false, showActorLinks = false }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const handleNavigation = () => {
-      // When a navigation event occurs, close the footer.
       setIsOpen(false);
     };
 
-    // Listen for the custom 'pushstate' event used by the app's router, and the native 'popstate' for browser back/forward.
+    const handleScroll = () => {
+      setIsScrolled(window.pageYOffset > 200);
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('pushstate', handleNavigation);
     window.addEventListener('popstate', handleNavigation);
 
-    // Clean up the listeners when the component unmounts.
     return () => {
+      window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('pushstate', handleNavigation);
       window.removeEventListener('popstate', handleNavigation);
     };
-  }, []); // Empty dependency array ensures this effect runs only once on mount.
+  }, []);
 
   const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
     e.preventDefault();
@@ -32,12 +37,12 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
   };
 
   return (
-    <div className={`fixed bottom-0 left-0 right-0 z-30 transition-all duration-500 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-[calc(100%-2rem)] md:translate-y-[calc(100%-2.5rem)]'}`}>
+    <div className={`fixed bottom-0 left-0 right-0 z-30 transition-all duration-500 ease-in-out hidden md:block ${isOpen ? 'translate-y-0' : 'translate-y-[calc(100%-2.5rem)]'}`}>
         {/* Toggle Button */}
-        <div className="flex justify-center">
+        <div className={`flex justify-center transition-opacity duration-300 ${isScrolled || isOpen ? 'opacity-100' : 'opacity-0'}`}>
              <button 
                 onClick={() => setIsOpen(!isOpen)}
-                className="bg-gray-800 hover:bg-gray-700 text-gray-300 w-20 h-8 md:h-10 rounded-t-lg flex items-center justify-center transition-colors"
+                className="bg-gray-800 hover:bg-gray-700 text-gray-300 w-20 h-10 rounded-t-lg flex items-center justify-center transition-colors"
                 aria-label={isOpen ? "Hide footer" : "Show footer"}
             >
                 <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -60,7 +65,7 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                     <h3 className="font-bold text-white mb-4">Filmmakers</h3>
                     <ul className="space-y-2">
                         <li><a href="/submit" onClick={(e) => handleNavigate(e, '/submit')} className="hover:text-white transition">Submit a Film</a></li>
-                        <li><a href="/filmmaker-dashboard" onClick={(e) => handleNavigate(e, '/filmmaker-dashboard')} className="hover:text-white transition">Filmmaker Dashboard</a></li>
+                        <li><a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="hover:text-white transition">Creator Portals</a></li>
                         <li><a href="/filmmaker-signup" onClick={(e) => handleNavigate(e, '/filmmaker-signup')} className="hover:text-white transition">Dashboard Signup</a></li>
                     </ul>
                 </div>
@@ -75,7 +80,7 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                     <div>
                     <h3 className="font-bold text-white mb-4">Actors</h3>
                     <ul className="space-y-2">
-                        <li><a href="/actor-portal" onClick={(e) => handleNavigate(e, '/actor-portal')} className="hover:text-white transition">Actor Portal</a></li>
+                        <li><a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="hover:text-white transition">Creator Portals</a></li>
                         <li><a href="/actor-signup" onClick={(e) => handleNavigate(e, '/actor-signup')} className="hover:text-white transition">Actor Portal Signup</a></li>
                     </ul>
                     </div>

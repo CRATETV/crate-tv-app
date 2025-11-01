@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -40,6 +41,7 @@ import FilmmakerSignupPage from './components/FilmmakerSignupPage';
 import RokuGuidePage from './components/RokuGuidePage';
 import LoadingSpinner from './components/LoadingSpinner';
 import Intro from './components/Intro';
+import CreatorPortalPage from './components/CreatorPortalPage';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -113,6 +115,8 @@ const AppRouter: React.FC = () => {
       return <TopTenPage />;
     
     // Public Routes
+    case '/portal':
+      return <CreatorPortalPage />;
     case '/login':
       return <LoginPage />;
     case '/submit':

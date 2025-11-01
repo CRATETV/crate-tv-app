@@ -38,12 +38,28 @@ const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, onCreateM
         }
     };
 
+    const handleDownload = () => {
+        const csvContent = "data:text/csv;charset=utf-8," 
+            + "Title,Poster URL,Movie URL,Cast,Director\n" 
+            + pipeline.map(item => `"${item.title.replace(/"/g, '""')}","${item.posterUrl}","${item.movieUrl}","${item.cast.replace(/"/g, '""')}","${item.director.replace(/"/g, '""')}"`).join("\n");
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "movie_pipeline.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const inputClass = "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-blue-500";
 
     return (
         <div>
-            <h2 className="text-2xl font-bold mb-4 text-white">Movie Submission Pipeline</h2>
-            <p className="text-sm text-gray-400 mb-6">Use this table to quickly add basic movie information. Another admin can then use the "Create Movie" button to open the full editor with this data pre-filled.</p>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-white">Movie Submission Pipeline</h2>
+                <button onClick={handleDownload} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md text-sm">Download CSV</button>
+            </div>
             
             <div className="overflow-x-auto">
                 <table className="w-full text-left">

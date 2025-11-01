@@ -209,8 +209,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                                 <StatCard title="Total Revenue" value={formatCurrency(analyticsData.totalRevenue)} />
                                 <StatCard title="Total Users" value={formatNumber(analyticsData.totalUsers)} />
-                                {/* FIX: Explicitly type the accumulator `s` and value `c` in the reduce function to prevent TypeScript from inferring them as `unknown`. */}
-                                <StatCard title="Total Film Views" value={formatNumber(Object.values(analyticsData.viewCounts).reduce((s: number, c: number) => s + (Number(c) || 0), 0))} />
+                                {/* FIX: Explicitly cast Object.values to number[] to resolve type inference issues with the reduce function. */}
+                                <StatCard title="Total Film Views" value={formatNumber((Object.values(analyticsData.viewCounts) as number[]).reduce((s, c) => s + (c || 0), 0))} />
                             </div>
                             <h3 className="text-xl font-bold mb-4 text-white">Film Performance</h3>
                             <div className="overflow-x-auto"><table className="w-full text-left">

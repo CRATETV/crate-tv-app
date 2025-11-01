@@ -621,11 +621,10 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Richard Frohman",
     "trailer": "",
-    "fullMovie": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
-    "likes": 0,
-    "releaseDateTime": "2024-10-31T12:00:00Z"
+    "likes": 0
   },
   "fatherdaughterdance": {
     "key": "fatherdaughterdance",

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData, ActorSubmission, LiveData, PayoutRequest, MoviePipelineEntry } from './types';
 import { listenToAllAdminData, approveActorSubmission, rejectActorSubmission, deleteMoviePipelineEntry } from './services/firebaseService';
@@ -13,11 +14,10 @@ import AnalyticsPage from './components/AnalyticsPage';
 import PayoutsTab from './components/PayoutsTab';
 import EmailSender from './components/EmailSender';
 import TopFilmsTab from './components/TopFilmsTab';
-import FilmmakerDashboardView from './components/FilmmakerDashboardView';
 import MoviePipelineTab from './components/MoviePipelineTab';
 
 type PublishStatus = 'idle' | 'saving' | 'success' | 'error';
-type AdminRole = 'super_admin' | 'festival_admin' | null;
+type AdminRole = 'super_admin' | 'festival_admin' | 'collaborator' | null;
 
 const AdminPage: React.FC = () => {
     // --- Auth State ---
@@ -47,6 +47,8 @@ const AdminPage: React.FC = () => {
             setIsAuthenticated(true);
             if (storedRole === 'festival_admin') {
                 setActiveTab('festival'); // Default festival admins to the festival tab
+            } else if (storedRole === 'collaborator') {
+                setActiveTab('pipeline'); // Default collaborators to the pipeline tab
             }
         } else {
             setIsLoading(false);
@@ -180,6 +182,23 @@ const AdminPage: React.FC = () => {
         });
         setPayoutRequests(prev => prev.map(p => p.id === requestId ? { ...p, status: 'completed' } : p));
     };
+    
+    const handleAddNewMovie = () => {
+        const newKey = `newmovie${Date.now()}`;
+        const newMovie: Movie = { 
+            key: newKey, 
+            title: 'New Film', 
+            synopsis: '', 
+            cast: [], 
+            director: '', 
+            trailer: '', 
+            fullMovie: '', 
+            poster: '', 
+            likes: 0 
+        };
+        setDraftData(prev => prev ? ({ ...prev, movies: { ...prev.movies, [newKey]: newMovie } }) : null);
+        setSelectedMovieKey(newKey);
+    };
 
     const handleCreateMovieFromPipeline = (item: MoviePipelineEntry) => {
         const newMovie: Partial<Movie> = {
@@ -193,8 +212,8 @@ const AdminPage: React.FC = () => {
             trailer: '',
             likes: 0,
         };
-        setSelectedMovieKey(newMovie.key as string);
         setDraftData(prev => prev ? ({ ...prev, movies: { ...prev.movies, [newMovie.key as string]: newMovie as Movie } }) : null);
+        setSelectedMovieKey(newMovie.key as string);
         setActiveTab('movies');
         // Delete the entry from the pipeline after creating the draft
         deleteMoviePipelineEntry(item.id);
@@ -210,7 +229,9 @@ const AdminPage: React.FC = () => {
         window.open(downloadUrl, '_blank');
     };
     
+    const isSuperAdmin = adminRole === 'super_admin';
     const isFestivalAdmin = adminRole === 'festival_admin';
+    const isCollaborator = adminRole === 'collaborator';
 
     // --- RENDER LOGIC ---
     if (!isAuthenticated) {
@@ -239,7 +260,7 @@ const AdminPage: React.FC = () => {
     return (
         <div className="p-4 md:p-8 bg-[#141414] text-white min-h-screen">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold">Admin Dashboard {isFestivalAdmin && <span className="text-lg font-normal text-purple-400">(Festival View)</span>}</h1>
+                <h1 className="text-3xl font-bold">Admin Dashboard {adminRole !== 'super_admin' && <span className="text-lg font-normal text-purple-400">({adminRole?.replace('_', ' ')})</span>}</h1>
                 <div className="flex items-center gap-4">
                     {publishStatus === 'error' && <span className="text-red-400 text-sm">{publishError}</span>}
                     <button onClick={handlePublish} disabled={publishStatus === 'saving'} className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-6 rounded-md transition">
@@ -249,28 +270,27 @@ const AdminPage: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 border-b border-gray-700">
-                {!isFestivalAdmin && <TabButton tabId="dashboard" label="Dashboard" />}
+                {isSuperAdmin && <TabButton tabId="dashboard" label="Dashboard" />}
                 {isFestivalAdmin && <TabButton tabId="festival-dashboard" label="Festival Dashboard" />}
-                <TabButton tabId="movies" label="Movies" />
-                <TabButton tabId="pipeline" label="Movie Pipeline" />
-                <TabButton tabId="festival" label="Festival" />
-                 {!isFestivalAdmin && (
+                {(isSuperAdmin || isFestivalAdmin || isCollaborator) && <TabButton tabId="movies" label="Movies" />}
+                {(isSuperAdmin || isFestivalAdmin || isCollaborator) && <TabButton tabId="pipeline" label="Movie Pipeline" />}
+                {(isSuperAdmin || isFestivalAdmin) && <TabButton tabId="festival" label="Festival" />}
+                {isSuperAdmin && (
                     <>
                         <TabButton tabId="categories" label="Categories" />
                         <TabButton tabId="about" label="About Us" />
                         <TabButton tabId="top-films" label="Top Films" />
-                        <TabButton tabId="filmmakerView" label="Filmmaker View" />
                         <TabButton tabId="submissions" label="Actor Submissions" />
                         <TabButton tabId="payouts" label="Payouts" />
-                        <TabButton tabId="email" label="Email Users" />
-                        <TabButton tabId="tools" label="Tools" />
                     </>
-                 )}
+                )}
+                 {(isSuperAdmin || isCollaborator) && <TabButton tabId="email" label="Email Users" />}
+                 {(isSuperAdmin || isCollaborator) && <TabButton tabId="tools" label="Tools" />}
             </div>
 
             <div className="mt-6 bg-gray-800 p-6 rounded-b-lg">
-                {activeTab === 'dashboard' && <AnalyticsPage viewMode="full" />}
-                {activeTab === 'festival-dashboard' && <AnalyticsPage viewMode="festival" />}
+                {activeTab === 'dashboard' && isSuperAdmin && <AnalyticsPage viewMode="full" />}
+                {activeTab === 'festival-dashboard' && isFestivalAdmin && <AnalyticsPage viewMode="festival" />}
 
                 {activeTab === 'movies' && (
                     selectedMovie ? (
@@ -279,7 +299,7 @@ const AdminPage: React.FC = () => {
                         <div>
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="text-2xl font-bold text-red-400">All Films</h2>
-                                <button onClick={() => setSelectedMovieKey(`newmovie${Date.now()}`)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">+ Add New Movie</button>
+                                <button onClick={handleAddNewMovie} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">+ Add New Movie</button>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                                 {(Object.values(draftData.movies) as Movie[]).sort((a,b) => a.title.localeCompare(b.title)).map(movie => (
@@ -293,16 +313,15 @@ const AdminPage: React.FC = () => {
                     )
                 )}
                 
-                {activeTab === 'pipeline' && <MoviePipelineTab pipeline={draftData.moviePipeline} onCreateMovie={handleCreateMovieFromPipeline} />}
-                {activeTab === 'categories' && !isFestivalAdmin && <CategoryEditor initialCategories={draftData.categories} allMovies={Object.values(draftData.movies) as Movie[]} onSave={handleSaveCategories} />}
-                {activeTab === 'festival' && <FestivalEditor data={draftData.festivalData} config={draftData.festivalConfig} allMovies={draftData.movies} onDataChange={(d) => setDraftData(p => p ? {...p, festivalData: d} : null)} onConfigChange={(c) => setDraftData(p => p ? {...p, festivalConfig: c} : null)} onSave={() => {}} />}
-                {activeTab === 'about' && !isFestivalAdmin && <AboutEditor initialData={draftData.aboutData} onSave={(d) => setDraftData(p => p ? {...p, aboutData: d} : null)} />}
-                {activeTab === 'top-films' && !isFestivalAdmin && <TopFilmsTab />}
-                {activeTab === 'filmmakerView' && !isFestivalAdmin && <FilmmakerDashboardView allMovies={draftData.movies} />}
-                {activeTab === 'submissions' && !isFestivalAdmin && <ActorSubmissionsTab submissions={draftData.actorSubmissions} allMovies={draftData.movies} onApprove={approveActorSubmission} onReject={rejectActorSubmission} />}
-                {activeTab === 'payouts' && !isFestivalAdmin && <PayoutsTab payoutRequests={payoutRequests} onCompletePayout={handleCompletePayout} />}
-                {activeTab === 'email' && !isFestivalAdmin && <EmailSender />}
-                {activeTab === 'tools' && !isFestivalAdmin && (
+                {activeTab === 'pipeline' && (isSuperAdmin || isFestivalAdmin || isCollaborator) && <MoviePipelineTab pipeline={draftData.moviePipeline} onCreateMovie={handleCreateMovieFromPipeline} />}
+                {activeTab === 'categories' && isSuperAdmin && <CategoryEditor initialCategories={draftData.categories} allMovies={Object.values(draftData.movies) as Movie[]} onSave={handleSaveCategories} />}
+                {activeTab === 'festival' && (isSuperAdmin || isFestivalAdmin) && <FestivalEditor data={draftData.festivalData} config={draftData.festivalConfig} allMovies={draftData.movies} onDataChange={(d) => setDraftData(p => p ? {...p, festivalData: d} : null)} onConfigChange={(c) => setDraftData(p => p ? {...p, festivalConfig: c} : null)} onSave={() => {}} />}
+                {activeTab === 'about' && isSuperAdmin && <AboutEditor initialData={draftData.aboutData} onSave={(d) => setDraftData(p => p ? {...p, aboutData: d} : null)} />}
+                {activeTab === 'top-films' && isSuperAdmin && <TopFilmsTab />}
+                {activeTab === 'submissions' && isSuperAdmin && <ActorSubmissionsTab submissions={draftData.actorSubmissions} allMovies={draftData.movies} onApprove={approveActorSubmission} onReject={rejectActorSubmission} />}
+                {activeTab === 'payouts' && isSuperAdmin && <PayoutsTab payoutRequests={payoutRequests} onCompletePayout={handleCompletePayout} />}
+                {activeTab === 'email' && (isSuperAdmin || isCollaborator) && <EmailSender />}
+                {activeTab === 'tools' && (isSuperAdmin || isCollaborator) && (
                     <div className="space-y-8">
                         <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
                              <h2 className="text-2xl font-bold text-green-400 mb-4">Roku Channel Packager</h2>

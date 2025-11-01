@@ -7,6 +7,7 @@ import LoadingSpinner from './LoadingSpinner';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import { Movie, Actor, Category } from '../types';
 import MovieCard from './MovieCard';
+import CollapsibleFooter from './CollapsibleFooter';
 
 const ClassicsPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -71,6 +72,7 @@ const ClassicsPage: React.FC = () => {
                 isScrolled={true}
                 onMobileSearchClick={() => {}}
                 showSearch={false}
+                showNavLinks={false}
             />
 
             <main className="flex-grow">
@@ -102,6 +104,7 @@ const ClassicsPage: React.FC = () => {
                 </div>
             </main>
             
+            <CollapsibleFooter />
             <BackToTopButton />
 
             {detailsMovie && (

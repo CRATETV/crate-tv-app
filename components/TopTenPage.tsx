@@ -46,8 +46,18 @@ const TopTenPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
-    const handlePrint = () => {
-        window.print();
+    const handleDownload = () => {
+        const csvContent = "data:text/csv;charset=utf-8," 
+            + "Rank,Title,Director\n" 
+            + topTenMovies.map((m, i) => `${i + 1},"${m.title.replace(/"/g, '""')}","${m.director.replace(/"/g, '""')}"`).join("\n");
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "crate-tv-top-10.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     if (isLoading) {
@@ -75,7 +85,7 @@ const TopTenPage: React.FC = () => {
                             <p className="text-lg text-gray-400">
                                {currentDate}
                             </p>
-                             <button onClick={handlePrint} className="no-print mt-4 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md text-sm">
+                             <button onClick={handleDownload} className="no-print mt-4 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md text-sm">
                                 Download List
                              </button>
                          </div>

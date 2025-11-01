@@ -14,6 +14,7 @@ export async function POST(request: Request) {
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
         const festivalAdminPassword = 'PWFF1218';
+        const collaboratorPassword = 'C0ll@868';
 
         // --- Role-Based Password Checks ---
 
@@ -24,8 +25,16 @@ export async function POST(request: Request) {
                 headers: { 'Content-Type': 'application/json' },
             });
         }
+
+        // 2. Check for new Collaborator Role
+        if (password === collaboratorPassword) {
+            return new Response(JSON.stringify({ success: true, role: 'collaborator' }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
         
-        // 2. Check against the primary password for Super Admin
+        // 3. Check against the primary password for Super Admin
         if (primaryAdminPassword && password === primaryAdminPassword) {
             return new Response(JSON.stringify({ success: true, role: 'super_admin' }), {
                 status: 200,
@@ -33,7 +42,7 @@ export async function POST(request: Request) {
             });
         }
 
-        // 3. Check against the master password override for Super Admin
+        // 4. Check against the master password override for Super Admin
         if (masterPassword && password === masterPassword) {
             return new Response(JSON.stringify({ success: true, role: 'super_admin' }), {
                 status: 200,
@@ -41,7 +50,7 @@ export async function POST(request: Request) {
             });
         }
 
-        // 4. Check against the list of additional user passwords for Super Admin
+        // 5. Check against the list of additional user passwords for Super Admin
         for (const key in process.env) {
             if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
                  return new Response(JSON.stringify({ success: true, role: 'super_admin' }), {
@@ -51,7 +60,7 @@ export async function POST(request: Request) {
             }
         }
         
-        // 5. First-Time Setup Mode (if no passwords of any kind are set)
+        // 6. First-Time Setup Mode (if no passwords of any kind are set)
         const anyPasswordSet = primaryAdminPassword || masterPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
         if (!anyPasswordSet) {
             console.log("No admin passwords set. Activating first-time setup mode for the session.");
@@ -61,7 +70,7 @@ export async function POST(request: Request) {
             });
         }
 
-        // 6. If all checks fail, deny access
+        // 7. If all checks fail, deny access
         return new Response(JSON.stringify({ error: 'Incorrect password.' }), {
             status: 401,
             headers: { 'Content-Type': 'application/json' },

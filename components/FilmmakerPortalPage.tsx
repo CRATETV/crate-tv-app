@@ -88,7 +88,11 @@ const FilmmakerPortalPage: React.FC = () => {
 
     useEffect(() => {
         const fetchAllData = async () => {
-            if (!user || !user.name) return;
+            if (!user || !user.name) {
+                // If user is not ready, don't fetch. This might happen on initial load.
+                // The component will re-render when the user object is available.
+                return;
+            };
 
             setIsLoading(true);
             setError('');
@@ -141,7 +145,10 @@ const FilmmakerPortalPage: React.FC = () => {
         );
     }
     
-    if (!analytics || !user) return <LoadingSpinner />;
+    // Add a robust check for user and analytics before rendering the main content
+    if (!user || !analytics) {
+        return <LoadingSpinner />;
+    }
 
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
@@ -150,6 +157,10 @@ const FilmmakerPortalPage: React.FC = () => {
                 <div className="max-w-7xl mx-auto">
                     <h1 className="text-3xl font-bold text-white mb-2">Dashboard for {user.name}</h1>
                     <p className="text-gray-400 mb-8">View performance analytics for your films on Crate TV.</p>
+
+                    <div className="border-t border-yellow-800 pt-8 mt-8 mb-8 text-yellow-300 bg-yellow-900/30 p-4 rounded-lg">
+                        <p><strong>Festival Submission Notice:</strong> Please note that we will not accept films created for any of Playhouse West-Philadelphia's film festivals until after the festival has concluded. Thank you for your understanding.</p>
+                    </div>
                     
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Main Content */}
@@ -173,7 +184,7 @@ const FilmmakerPortalPage: React.FC = () => {
                             <div>
                                 <h2 className="text-2xl font-bold text-white mb-4">Your Film Performance</h2>
                                 <div className="space-y-4">
-                                    {analytics.films.map(film => (
+                                    {analytics.films && analytics.films.map(film => (
                                         <div key={film.key} className="bg-gray-800/50 border border-gray-700 p-4 rounded-lg">
                                             <h3 className="font-bold text-lg text-white">{film.title}</h3>
                                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2 text-center">

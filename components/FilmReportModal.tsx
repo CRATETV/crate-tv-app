@@ -39,6 +39,41 @@ const FilmReportModal: React.FC<FilmReportModalProps> = ({ filmData, onClose }) 
         window.print();
     };
 
+    const handleDownloadCsv = () => {
+        const headers = [
+            "Metric",
+            "Value"
+        ];
+    
+        const rows = [
+            ["Film Title", `"${filmData.title.replace(/"/g, '""')}"`],
+            ["Director", `"${filmData.director.replace(/"/g, '""')}"`],
+            ["--- Performance ---", ""],
+            ["Total Views", filmData.views],
+            ["Total Likes", filmData.likes],
+            ["--- Financials (in Cents) ---", ""],
+            ["Total Donations Received", filmData.donations],
+            ["Filmmaker Donation Payout (70%)", filmData.filmmakerDonationPayout],
+            ["Total Ad Revenue", filmData.adRevenue],
+            ["Filmmaker Ad Payout (50%)", filmData.filmmakerAdPayout],
+            ["--- Total Payout (in Cents) ---", ""],
+            ["Total Filmmaker Payout", filmData.totalFilmmakerPayout]
+        ];
+    
+        const csvContent = "data:text/csv;charset=utf-8," 
+            + headers.join(",") + "\n"
+            + rows.map(e => e.join(",")).join("\n");
+    
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        const safeFileName = filmData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        link.setAttribute("download", `crate_tv_report_${safeFileName}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
             <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
@@ -72,6 +107,7 @@ const FilmReportModal: React.FC<FilmReportModalProps> = ({ filmData, onClose }) 
 
                 <div className="no-print bg-gray-900/50 p-4 flex justify-end gap-4 rounded-b-lg">
                     <button onClick={onClose} className="text-gray-400 hover:text-white transition">Close</button>
+                    <button onClick={handleDownloadCsv} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Download CSV</button>
                     <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Print Report</button>
                 </div>
             </div>

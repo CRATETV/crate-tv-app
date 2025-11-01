@@ -351,6 +351,11 @@ const App: React.FC = () => {
   const handleSelectMovie = useCallback((movie: Movie) => {
     setDetailsMovie(movie);
   }, []);
+
+  const handlePlayMovie = useCallback((movieToPlay: Movie) => {
+    window.history.pushState({}, '', `/movie/${movieToPlay.key}?play=true`);
+    window.dispatchEvent(new Event('pushstate'));
+  }, []);
   
   const handleCloseDetailsModal = useCallback(() => {
     setDetailsMovie(null);
@@ -445,7 +450,7 @@ const App: React.FC = () => {
       
       <main className="flex-grow pb-24 md:pb-0">
         {searchQuery ? (
-           <div className="pt-24 px-4 md:px-12">
+           <div className="pt-8 md:pt-24 px-4 md:px-12">
             <h2 className="text-2xl font-bold mb-6 text-white">Search Results for "{searchQuery}"</h2>
             {searchResults.length > 0 ? (
                 <MovieCarousel
@@ -467,7 +472,7 @@ const App: React.FC = () => {
             />
             <div className="relative z-10 mt-8 px-4 md:px-12">
               {nowPlayingMovie && isNowPlayingReleased && (
-                <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleSelectMovie} />
+                <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} />
               )}
               <div>
                 {/* Dedicated, stable rendering block for the live festival carousel */}

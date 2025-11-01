@@ -369,7 +369,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 />
             )}
 
-            <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
+            <main className={`flex-grow ${playerMode === 'full' ? 'flex items-center justify-center' : 'pt-8 md:pt-16'}`}>
                 <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container">
                     <div ref={adContainerRef} className="absolute inset-0 z-20" />
                     
