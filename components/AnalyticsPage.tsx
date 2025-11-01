@@ -142,9 +142,9 @@ const AnalyticsPage: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {/* FIX: Explicitly cast parameters to type '[string, number]' to resolve a TypeScript error where they were inferred as 'unknown'. */}
                                 {analyticsData && Object.entries(analyticsData.viewCounts)
-                                    .sort(([, a]: [string, number], [, b]: [string, number]) => b - a)
+                                    // FIX: Add explicit type assertions to fix arithmetic operation error due to failed type inference.
+                                    .sort(([, a], [, b]) => (b as number) - (a as number))
                                     .map(([key, views]) => (
                                     <tr key={key} className="border-b border-gray-700">
                                         <td className="p-3 font-medium text-white">{allMovies[key]?.title || key}</td>
@@ -187,9 +187,9 @@ const AnalyticsPage: React.FC = () => {
                             </thead>
                             <tbody>
                                 <tr className="border-b border-gray-700 font-semibold"><td className="p-3">All-Access Pass</td><td>{analyticsData.festivalPassSales.units}</td><td>{formatCurrency(analyticsData.festivalPassSales.revenue)}</td></tr>
-                                {/* FIX: Explicitly cast parameters to their correct types to resolve a TypeScript error where they were inferred as 'unknown'. */}
-                                {Object.entries(analyticsData.salesByBlock).map(([title, sales]: [string, { units: number; revenue: number; }]) => (
-                                    <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{sales.units}</td><td>{formatCurrency(sales.revenue)}</td></tr>
+                                {/* FIX: Add explicit type assertion to 'sales' to resolve 'unknown' type error. */}
+                                {Object.entries(analyticsData.salesByBlock).map(([title, sales]) => (
+                                    <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{(sales as any).units}</td><td>{formatCurrency((sales as any).revenue)}</td></tr>
                                 ))}
                             </tbody>
                         </table>
