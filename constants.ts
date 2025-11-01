@@ -621,7 +621,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Richard Frohman",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/consumed+.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
     "likes": 0
