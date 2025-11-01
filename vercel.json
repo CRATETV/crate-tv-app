@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/check-anniversaries",
+      "schedule": "0 10 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/.well-known/apple-developer-merchantid-domain-association",

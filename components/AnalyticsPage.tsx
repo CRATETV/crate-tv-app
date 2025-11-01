@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { AnalyticsData, Movie } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -119,8 +116,8 @@ const AnalyticsPage: React.FC = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                                 <StatCard title="Total Revenue" value={formatCurrency(analyticsData.totalRevenue)} />
                                 <StatCard title="Total Users" value={formatNumber(analyticsData.totalUsers)} />
-                                {/* FIX: Add explicit types to reduce function to resolve inference error. */}
-                                <StatCard title="Total Film Views" value={formatNumber(Object.values(analyticsData.viewCounts).reduce((s: number, c: number) => s + c, 0))} />
+                                {/* FIX: Cast Object.values to number[] to resolve reduce type inference error. */}
+                                <StatCard title="Total Film Views" value={formatNumber((Object.values(analyticsData.viewCounts) as number[]).reduce((s, c) => s + c, 0))} />
                             </div>
                             <h3 className="text-xl font-bold mb-4 text-white">Film Performance</h3>
                             <div className="overflow-x-auto"><table className="w-full text-left">
@@ -148,9 +145,17 @@ const AnalyticsPage: React.FC = () => {
                              <div>
                                 <h2 className="text-2xl font-bold mb-4 text-white">User List</h2>
                                 <div className="overflow-y-auto max-h-[600px]"><table className="w-full text-left">
-                                    <thead className="text-xs text-gray-400 uppercase bg-gray-700/50 sticky top-0"><tr><th className="p-3">Email</th><th className="p-3">Sign Up Date</th></tr></thead>
+                                    <thead className="text-xs text-gray-400 uppercase bg-gray-700/50 sticky top-0">
+                                        <tr>
+                                            <th className="p-3">Email</th>
+                                            <th className="p-3">Sign Up Date</th>
+                                        </tr>
+                                    </thead>
                                     <tbody>{analyticsData.allUsers.map(user => (
-                                        <tr key={user.email} className="border-b border-gray-700"><td className="p-3 font-medium text-white">{user.email}</td><td className="p-3 text-sm text-gray-300">{user.creationTime}</td></tr>
+                                        <tr key={user.email} className="border-b border-gray-700">
+                                            <td className="p-3 font-medium text-white">{user.email}</td>
+                                            <td className="p-3 text-gray-400">{user.creationTime}</td>
+                                        </tr>
                                     ))}</tbody>
                                 </table></div>
                             </div>
@@ -191,10 +196,9 @@ const AnalyticsPage: React.FC = () => {
                                 <StatCard title="Individual Blocks" value={analyticsData.festivalBlockSales.units} />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                {/* FIX: Cast `analyticsData.totalFestivalRevenue` to number to resolve arithmetic operation error. */}
-                                <StatCard title="Crate TV's Share (30%)" value={formatCurrency((analyticsData.totalFestivalRevenue as number) * 0.30)} />
-                                {/* FIX: Cast `analyticsData.totalFestivalRevenue` to number to resolve arithmetic operation error. */}
-                                <StatCard title="Playhouse West's Share (70%)" value={formatCurrency((analyticsData.totalFestivalRevenue as number) * 0.70)} />
+                                {/* FIX: The value from analyticsData.totalFestivalRevenue can be inferred as 'any' or 'unknown' from a JSON response. Explicitly cast to Number before performing arithmetic to ensure type safety and prevent runtime errors. */}
+                                <StatCard title="Crate TV's Share (30%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.30)} />
+                                <StatCard title="Playhouse West's Share (70%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.70)} />
                             </div>
                             <h3 className="text-xl font-bold text-white mb-4">Sales by Item</h3>
                             <div className="overflow-x-auto"><table className="w-full text-left">

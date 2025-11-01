@@ -1,5 +1,9 @@
 // This is a Vercel Serverless Function to process payments with Square.
 import { randomUUID } from 'crypto';
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
 
 // Server-side price map in cents for security.
 // This prevents users from manipulating prices on the client-side.
@@ -12,7 +16,7 @@ const priceMap: Record<string, number> = {
 
 export async function POST(request: Request) {
   try {
-    const { sourceId, amount, movieTitle, directorName, paymentType, itemId, blockTitle } = await request.json();
+    const { sourceId, amount, movieTitle, directorName, paymentType, itemId, blockTitle, email } = await request.json();
     
     console.log('--- [API /process-square-payment] Diagnostic Start ---');
     console.log('VERCEL_ENV:', process.env.VERCEL_ENV);
@@ -107,6 +111,37 @@ export async function POST(request: Request) {
         const errorMessage = data.errors?.[0]?.detail || 'Payment failed.';
         throw new Error(errorMessage);
     }
+    
+    // If it was a successful donation and an email was provided, send a thank you email.
+    if (response.ok && paymentType === 'donation' && email) {
+        try {
+            const amountFormatted = (amountInCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+            const emailHtml = `
+                <div style="font-family: sans-serif; line-height: 1.6;">
+                    <h1 style="color: #c084fc;">Thank You for Your Donation!</h1>
+                    <p>Dear Supporter,</p>
+                    <p>Thank you for your generous donation of <strong>${amountFormatted}</strong> to support the film <strong>"${movieTitle}"</strong> by ${directorName}.</p>
+                    <p>Your contribution directly helps independent filmmakers and allows us to continue showcasing unique and powerful stories on Crate TV.</p>
+                    <p>We couldn't do this without you.</p>
+                    <p>Sincerely,</p>
+                    <p>The Crate TV Team</p>
+                </div>
+            `;
+            
+            await resend.emails.send({
+                from: `Crate TV <${fromEmail}>`,
+                to: email,
+                subject: 'Thank You for Your Donation to Crate TV!',
+                html: emailHtml,
+            });
+            console.log(`[Payment API] Donation thank you email sent to ${email}`);
+
+        } catch (emailError) {
+            // Log the error but don't fail the overall request. The payment succeeded.
+            console.error("[Payment API] Failed to send thank you email:", emailError);
+        }
+    }
+
 
     return new Response(JSON.stringify({ success: true, payment: data.payment }), {
       status: 200,

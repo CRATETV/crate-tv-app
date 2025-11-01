@@ -46,6 +46,10 @@ const TopTenPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    const handlePrint = () => {
+        window.print();
+    };
+
     if (isLoading) {
         return <LoadingSpinner />;
     }
@@ -59,7 +63,7 @@ const TopTenPage: React.FC = () => {
                 onMobileSearchClick={() => {}}
                 showSearch={false}
             />
-            <main className="flex-grow pt-24 px-4 md:px-12">
+            <main className="flex-grow pt-24 px-4 md:px-12 printable-top-ten">
                 <div className="max-w-4xl mx-auto">
                     <div className="text-center mb-12 relative py-8 overflow-hidden rounded-lg">
                          <div className="absolute inset-0 bg-gradient-to-r from-purple-900/30 via-red-900/30 to-black/30 opacity-50"></div>
@@ -70,6 +74,9 @@ const TopTenPage: React.FC = () => {
                             <p className="text-lg text-gray-400">
                                {currentDate}
                             </p>
+                             <button onClick={handlePrint} className="no-print mt-4 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md text-sm">
+                                Download List
+                             </button>
                          </div>
                     </div>
 

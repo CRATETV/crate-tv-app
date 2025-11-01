@@ -11,6 +11,7 @@ import ActorSubmissionsTab from './components/ActorSubmissionsTab';
 import FallbackGenerator from './components/FallbackGenerator';
 import AnalyticsPage from './components/AnalyticsPage';
 import PayoutsTab from './components/PayoutsTab';
+import EmailSender from './components/EmailSender';
 
 type PublishStatus = 'idle' | 'saving' | 'success' | 'error';
 
@@ -219,6 +220,7 @@ const AdminPage: React.FC = () => {
                 <TabButton tabId="about" label="About Us" />
                 <TabButton tabId="submissions" label="Actor Submissions" />
                 <TabButton tabId="payouts" label="Payouts" />
+                <TabButton tabId="email" label="Email Users" />
                 <TabButton tabId="tools" label="Tools" />
             </div>
 
@@ -253,6 +255,7 @@ const AdminPage: React.FC = () => {
                 {activeTab === 'about' && <AboutEditor initialData={draftData.aboutData} onSave={(d) => setDraftData(p => p ? {...p, aboutData: d} : null)} />}
                 {activeTab === 'submissions' && <ActorSubmissionsTab submissions={draftData.actorSubmissions} allMovies={draftData.movies} onApprove={approveActorSubmission} onReject={rejectActorSubmission} />}
                 {activeTab === 'payouts' && <PayoutsTab payoutRequests={payoutRequests} onCompletePayout={handleCompletePayout} />}
+                {activeTab === 'email' && <EmailSender />}
 
                 {activeTab === 'tools' && (
                     <div className="space-y-8">

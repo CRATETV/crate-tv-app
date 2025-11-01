@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie, FilmBlock } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 declare const Square: any; // Allow use of Square global from the SDK script
 
@@ -8,13 +9,15 @@ interface SquarePaymentModalProps {
     block?: FilmBlock;
     paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'movie';
     onClose: () => void;
-    onPaymentSuccess: (details: { paymentType: 'pass' | 'block' | 'subscription' | 'donation' | 'movie', itemId?: string }) => void;
+    onPaymentSuccess: (details: { paymentType: 'pass' | 'block' | 'subscription' | 'donation' | 'movie', itemId?: string, amount: number, email?: string }) => void;
 }
 
 const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, paymentType, onClose, onPaymentSuccess }) => {
+    const { user } = useAuth();
     const [status, setStatus] = useState<'idle' | 'loading' | 'processing' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
     const [donationAmount, setDonationAmount] = useState('5.00');
+    const [email, setEmail] = useState(user?.email || '');
 
     const cardRef = useRef<HTMLDivElement>(null);
     const cardInstance = useRef<any>(null);
@@ -94,6 +97,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                 blockTitle: block?.title,
                 movieTitle: movie?.title,
                 directorName: movie?.director,
+                email: email,
             };
 
             const response = await fetch('/api/process-square-payment', {
@@ -108,7 +112,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
             }
 
             setStatus('success');
-            onPaymentSuccess({ paymentType, itemId: paymentData.itemId });
+            onPaymentSuccess({ paymentType, itemId: paymentData.itemId, amount: paymentDetails.amount, email });
             setTimeout(onClose, 2000);
         } catch (error) {
             setErrorMessage(error instanceof Error ? error.message : 'An unknown error occurred.');
@@ -124,18 +128,32 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                     <p className="text-gray-400 mb-4">{paymentDetails.description}</p>
                     
                     {paymentType === 'donation' && (
-                        <div className="mb-4">
-                            <label htmlFor="donationAmount" className="block text-sm font-medium text-gray-300 mb-1">Amount (USD)</label>
-                            <input
-                                type="number"
-                                id="donationAmount"
-                                value={donationAmount}
-                                onChange={e => setDonationAmount(e.target.value)}
-                                className="form-input"
-                                min="1.00"
-                                step="1.00"
-                                required
-                            />
+                        <div className="space-y-4 mb-4">
+                             <div>
+                                <label htmlFor="donationAmount" className="block text-sm font-medium text-gray-300 mb-1">Amount (USD)</label>
+                                <input
+                                    type="number"
+                                    id="donationAmount"
+                                    value={donationAmount}
+                                    onChange={e => setDonationAmount(e.target.value)}
+                                    className="form-input"
+                                    min="1.00"
+                                    step="1.00"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="emailForReceipt" className="block text-sm font-medium text-gray-300 mb-1">Email for Receipt (Optional)</label>
+                                <input
+                                    type="email"
+                                    id="emailForReceipt"
+                                    value={email}
+                                    onChange={e => setEmail(e.target.value)}
+                                    className={`form-input ${!!user ? 'bg-gray-700 cursor-not-allowed' : ''}`}
+                                    placeholder="you@example.com"
+                                    readOnly={!!user}
+                                />
+                             </div>
                         </div>
                     )}
 

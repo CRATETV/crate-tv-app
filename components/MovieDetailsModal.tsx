@@ -3,6 +3,7 @@ import { Movie, Actor, Category } from '../types';
 import DirectorCreditsModal from './DirectorCreditsModal';
 import Countdown from './Countdown';
 import SquarePaymentModal from './SquarePaymentModal';
+import DonationSuccessModal from './DonationSuccessModal';
 import { isMovieReleased } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -61,7 +62,8 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const modalContentRef = useRef<HTMLDivElement>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
-  const [showSupportSuccess, setShowSupportSuccess] = useState(false);
+  const [isDonationSuccessModalOpen, setIsDonationSuccessModalOpen] = useState(false);
+  const [lastDonationDetails, setLastDonationDetails] = useState<{amount: number; email?: string} | null>(null);
 
   const [released, setReleased] = useState(() => isMovieReleased(movie));
   
@@ -165,9 +167,10 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     onSelectRecommendedMovie(selectedMovie);
   };
 
-  const handlePaymentSuccess = () => {
-      setShowSupportSuccess(true);
-      setTimeout(() => setShowSupportSuccess(false), 3000);
+  const handleDonationSuccess = (details: { amount: number; email?: string }) => {
+      setIsSupportModalOpen(false);
+      setLastDonationDetails(details);
+      setIsDonationSuccessModalOpen(true);
   };
 
   const recommendedMovies = useMemo(() => {
@@ -273,11 +276,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                 </svg>
               </button>
             </div>
-            {showSupportSuccess && (
-              <div className="mt-4 bg-green-500/80 text-white font-bold py-2 px-4 rounded-md inline-block animate-[fadeIn_0.5s_ease-out]">
-                  Thank you for your support!
-              </div>
-            )}
           </div>
         </div>
         
@@ -366,7 +364,16 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
             movie={movie}
             paymentType="donation"
             onClose={() => setIsSupportModalOpen(false)}
-            onPaymentSuccess={handlePaymentSuccess}
+            onPaymentSuccess={handleDonationSuccess}
+        />
+    )}
+    {isDonationSuccessModalOpen && lastDonationDetails && (
+        <DonationSuccessModal
+            movieTitle={movie.title}
+            directorName={movie.director}
+            amount={lastDonationDetails.amount}
+            email={lastDonationDetails.email}
+            onClose={() => setIsDonationSuccessModalOpen(false)}
         />
     )}
     </>

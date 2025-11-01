@@ -61,10 +61,6 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
         {/* Text content on the left */}
         <div className="relative z-10 w-[55%] h-full flex flex-col justify-end p-4 md:p-6 text-white">
             <p className="text-xs font-bold tracking-widest opacity-80 mb-1 md:mb-2">START WATCHING</p>
-            <h3 className="text-2xl md:text-3xl lg:text-4xl font-extrabold leading-tight line-clamp-2" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
-                {movie.title}
-            </h3>
-            {year && <p className="text-xs md:text-sm text-gray-400 mt-2">{year}</p>}
         </div>
 
         {/* Poster on the right, overlapping */}
