@@ -462,7 +462,7 @@ const App: React.FC = () => {
               onSetCurrentIndex={handleSetHeroIndex}
               onSelectMovie={handleSelectMovie}
             />
-            <div className="relative z-10 -mt-12 px-4 md:px-12">
+            <div className="relative z-10 mt-8 px-4 md:px-12">
               {nowPlayingMovie && isNowPlayingReleased && (
                 <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleSelectMovie} />
               )}
@@ -496,7 +496,22 @@ const App: React.FC = () => {
                     />
                 )}
                 {/* AI-Powered "For You" Carousel */}
-                {recommendedMovies.length > 0 && (
+                {likedMovies.size === 0 ? (
+                    <div className="mb-8 md:mb-12">
+                        <h2 className="text-lg md:text-2xl font-bold mb-4 text-white flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            Recommended For You
+                        </h2>
+                        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-8 text-center text-gray-300">
+                            <p>
+                                Click the <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 inline-block mx-1 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg> 
+                                on films you love to get personalized recommendations here!
+                            </p>
+                        </div>
+                    </div>
+                ) : recommendedMovies.length > 0 ? (
                     <MovieCarousel
                         key="recommended"
                         title={
@@ -510,7 +525,7 @@ const App: React.FC = () => {
                         movies={recommendedMovies}
                         onSelectMovie={handleSelectMovie}
                     />
-                )}
+                ) : null}
                 {/* Top 10 Carousel */}
                 {topTenMovies.length > 0 && (
                     <MovieCarousel

@@ -26,26 +26,32 @@ const initializeFirebaseAdmin = () => {
             return;
         }
 
-        // Use getApps() to check for initialization, which is the recommended practice.
-        if (getApps().length === 0) {
-            let decodedKey: string;
-            try {
-                // Use Node.js Buffer to decode the Base64 string.
-                decodedKey = Buffer.from(serviceAccountKey, 'base64').toString('utf8');
-            } catch (bufferError) {
-                throw new Error("Failed to decode FIREBASE_SERVICE_ACCOUNT_KEY from Base64. Ensure the key is a valid, single-line Base64 string.");
-            }
-
+        // Use optional chaining (`?.`) for a more robust check. This prevents the "Cannot read property 'length' of undefined"
+        // error if `getApps()` returns undefined in a weird serverless state, while still correctly handling an empty array.
+        if (!getApps()?.length) {
             let serviceAccount;
             try {
-                serviceAccount = JSON.parse(decodedKey);
+                // First, try to parse the key directly, in case it's raw JSON.
+                serviceAccount = JSON.parse(serviceAccountKey);
             } catch (jsonError) {
-                throw new Error("Failed to parse the decoded service account key as JSON. The key might be corrupted or incorrectly encoded.");
+                // If direct parsing fails, assume it's Base64 encoded.
+                try {
+                    const decodedKey = Buffer.from(serviceAccountKey, 'base64').toString('utf8');
+                    serviceAccount = JSON.parse(decodedKey);
+                } catch (base64Error) {
+                    // If both fail, the key is truly malformed. Provide a detailed error.
+                    const detailedError = "The FIREBASE_SERVICE_ACCOUNT_KEY is malformed. It's not valid JSON, nor is it a valid Base64-encoded JSON string. Please generate a new key from your Firebase project settings.";
+                    console.error("Firebase Admin Key parsing failed.", { 
+                        jsonError: (jsonError as Error).message, 
+                        base64Error: (base64Error as Error).message 
+                    });
+                    throw new Error(detailedError);
+                }
             }
             
             // Check for essential properties in the parsed service account
             if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
-                throw new Error("The parsed service account key is missing essential properties like 'project_id', 'private_key', or 'client_email'. Please generate a new key from Firebase.");
+                throw new Error("The parsed service account key is missing essential properties like 'project_id', 'private_key', or 'client_email'. Please generate a new key from Firebase and check the environment variable.");
             }
 
             initializeApp({
