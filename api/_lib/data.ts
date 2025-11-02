@@ -45,6 +45,21 @@ const getFallbackData = () => ({
     aboutData: fallbackAbout,
 });
 
+const fetchFromS3 = async (client: S3Client, bucketName: string, key: string) => {
+    const command = new GetObjectCommand({
+        Bucket: bucketName,
+        Key: key,
+    });
+    const response = await client.send(command);
+
+    if (!response.Body) {
+        throw new Error(`S3 object has no body for key: ${key}`);
+    }
+    const bodyString = await response.Body.transformToString("utf8");
+    return JSON.parse(bodyString);
+}
+
+
 export const getApiData = async () => {
     const now = Date.now();
     if (cachedData && (now - lastFetchTime < CACHE_DURATION)) {
@@ -55,28 +70,35 @@ export const getApiData = async () => {
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
     
     if (!client || !bucketName) {
-        console.warn("AWS S3 client or bucket name not configured. Using fallback data.");
+        console.warn("AWS S3 client or bucket name not configured. Using built-in fallback data.");
         return getFallbackData();
     }
     
+    // --- MULTI-LAYERED FALLBACK SYSTEM ---
     try {
-        const command = new GetObjectCommand({
-            Bucket: bucketName,
-            Key: 'live-data.json',
-        });
-        const response = await client.send(command);
-
-        if (!response.Body) {
-            throw new Error("S3 object has no body");
-        }
-        const bodyString = await response.Body.transformToString("utf8");
-        const data = JSON.parse(bodyString);
-        
+        // 1. Try to fetch the primary live data
+        console.log("[Data API] Attempting to fetch primary 'live-data.json'");
+        const data = await fetchFromS3(client, bucketName, 'live-data.json');
         cachedData = data;
         lastFetchTime = now;
+        console.log("[Data API] Successfully fetched primary live data.");
         return data;
-    } catch (error) {
-        console.error("Failed to fetch live data for API feed, using fallback.", error);
-        return getFallbackData();
+    } catch (primaryError) {
+        console.warn("[Data API] Failed to fetch primary 'live-data.json'.", (primaryError as Error).message);
+        
+        try {
+            // 2. If primary fails, try the secondary fallback file from S3
+            console.log("[Data API] Attempting to fetch secondary 'fallback-data.json'");
+            const data = await fetchFromS3(client, bucketName, 'fallback-data.json');
+            cachedData = data;
+            lastFetchTime = now;
+            console.log("[Data API] Successfully fetched secondary fallback data from S3.");
+            return data;
+        } catch (secondaryError) {
+            // 3. If both S3 files fail, use the built-in tertiary fallback
+            console.error("[Data API] All S3 fetch attempts failed. Using built-in fallback.", (secondaryError as Error).message);
+            return getFallbackData();
+        }
     }
+    // --- END OF MULTI-LAYERED FALLBACK ---
 };

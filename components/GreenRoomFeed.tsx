@@ -10,14 +10,14 @@ interface GreenRoomFeedProps {
 }
 
 const PostCard: React.FC<{ post: ActorPost; currentActor: string; onLike: (postId: string) => void; }> = ({ post, currentActor, onLike }) => {
-    const isLiked = post.likes.includes(currentActor);
+    const isLiked = (post.likes || []).includes(currentActor);
     return (
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
             <div className="flex items-center gap-3 mb-3">
                 <img src={post.actorPhoto} alt={post.actorName} className="w-10 h-10 rounded-full object-cover" />
                 <div>
                     <p className="font-bold text-white">{post.actorName}</p>
-                    <p className="text-xs text-gray-400">{new Date(post.timestamp.seconds * 1000).toLocaleString()}</p>
+                    <p className="text-xs text-gray-400">{new Date((post.timestamp?.seconds || 0) * 1000).toLocaleString()}</p>
                 </div>
             </div>
             <p className="text-gray-300 whitespace-pre-wrap mb-3">{post.content}</p>
@@ -32,7 +32,7 @@ const PostCard: React.FC<{ post: ActorPost; currentActor: string; onLike: (postI
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
                     </svg>
-                    {post.likes.length}
+                    {(post.likes || []).length}
                 </button>
             </div>
         </div>
@@ -105,9 +105,10 @@ const GreenRoomFeed: React.FC<GreenRoomFeedProps> = ({ actorName }) => {
         // Optimistic update
         setPosts(prevPosts => prevPosts.map(p => {
             if (p.id === postId) {
-                const newLikes = p.likes.includes(actorName)
-                    ? p.likes.filter(name => name !== actorName)
-                    : [...p.likes, actorName];
+                const currentLikes = p.likes || [];
+                const newLikes = currentLikes.includes(actorName)
+                    ? currentLikes.filter(name => name !== actorName)
+                    : [...currentLikes, actorName];
                 return { ...p, likes: newLikes };
             }
             return p;
