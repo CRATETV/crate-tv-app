@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     const now = new Date();
     const movieGenreMap = new Map<string, string[]>();
 
-    Object.values(categoriesData).forEach((category: Category) => {
+    (Object.values(categoriesData) as Category[]).forEach((category: Category) => {
         if (category && Array.isArray(category.movieKeys)) {
             category.movieKeys.forEach(movieKey => {
                 if (!movieGenreMap.has(movieKey)) movieGenreMap.set(movieKey, []);

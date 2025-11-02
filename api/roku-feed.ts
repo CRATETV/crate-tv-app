@@ -4,6 +4,27 @@
 import { getApiData } from './_lib/data.js';
 import { Movie, Category, FestivalConfig } from '../types.js';
 
+interface RokuMovie {
+    id: string;
+    title: string;
+    description: string;
+    SDPosterUrl: string;
+    HDPosterUrl: string;
+    heroImage: string;
+    streamUrl: string;
+    director: string;
+    actors: string[];
+    genres: string[];
+    rating: string;
+    duration: string;
+}
+
+interface RokuCategory {
+    title: string;
+    children: (RokuMovie | null)[];
+}
+
+
 const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Movie> => {
     const visibleMovies: Record<string, Movie> = {};
     const now = new Date();
@@ -23,7 +44,7 @@ const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Mov
     return visibleMovies;
 };
 
-const formatMovieForRoku = (movie: Movie, movieGenreMap: Map<string, string[]>) => {
+const formatMovieForRoku = (movie: Movie, movieGenreMap: Map<string, string[]>): RokuMovie | null => {
     if (!movie) return null;
     // Ensure all fields are strings or arrays of strings to prevent crashes on 'invalid' data in BrightScript
     return {
@@ -48,8 +69,8 @@ export async function GET(request: Request) {
     const visibleMovies = getVisibleMovies(moviesData);
     
     const movieGenreMap = new Map<string, string[]>();
-    Object.keys(visibleMovies).forEach(movieKey => {
-        movieGenreMap.set(movieKey, []);
+    Object.keys(visibleMovies).forEach((key: string) => {
+        movieGenreMap.set(key, []);
     });
 
     (Object.values(categoriesData) as Category[]).forEach((category) => {
@@ -69,7 +90,7 @@ export async function GET(request: Request) {
         .map(movie => formatMovieForRoku(movie, movieGenreMap));
         
     // Helper function to process a single category into the Roku format
-    const processCategory = (categoryData: Category) => {
+    const processCategory = (categoryData: Category): RokuCategory | null => {
         if (!categoryData || !Array.isArray(categoryData.movieKeys)) {
             return null;
         }
@@ -94,7 +115,7 @@ export async function GET(request: Request) {
         .slice(0, 10);
     const topTenCategory: Category | null = topTenMovies.length > 0 ? {
         title: "Top 10 on Crate TV Today",
-        movieKeys: topTenMovies.map(m => m.key)
+        movieKeys: topTenMovies.map((m: Movie) => m.key)
     } : null;
 
     // 3. Get Now Playing Movie
@@ -114,7 +135,7 @@ export async function GET(request: Request) {
     } : null;
 
     // 5. Assemble categories in order
-    const finalCategories = [];
+    const finalCategories: RokuCategory[] = [];
     const orderedCategories: (Category | null)[] = [
         liveFestivalCategory,
         nowPlayingCategory,

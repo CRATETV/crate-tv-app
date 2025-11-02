@@ -8,7 +8,7 @@ import { fetchAndCacheLiveData } from '../services/dataService';
 import { Movie, Category, FestivalConfig } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import CollapsibleFooter from './CollapsibleFooter';
-import BottomNavBar from './components/BottomNavBar';
+import BottomNavBar from './BottomNavBar';
 
 const WatchlistPage: React.FC = () => {
     const { user, watchlist } = useAuth();

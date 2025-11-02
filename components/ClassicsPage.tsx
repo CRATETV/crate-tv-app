@@ -7,7 +7,7 @@ import { fetchAndCacheLiveData } from '../services/dataService';
 import { Movie, Category, FestivalConfig } from '../types';
 import MovieCard from './MovieCard';
 import CollapsibleFooter from './CollapsibleFooter';
-import BottomNavBar from './components/BottomNavBar';
+import BottomNavBar from './BottomNavBar';
 
 const ClassicsPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);

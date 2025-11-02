@@ -52,7 +52,7 @@ const ServiceReminder: React.FC<{ serviceName: string; logoUrl: string; billingU
             <div className="flex-grow">
                 <h4 className="font-bold text-lg text-white">{serviceName} Billing</h4>
                 <div className="flex items-center gap-2 mt-2">
-                    <span className={`w-3 h-3 rounded-full ${statusColors[status.color]}`}></span>
+                    <span className={`w-3 h-3 rounded-full ${statusColors[status.color as keyof typeof statusColors]}`}></span>
                     <span className="text-sm text-gray-300">
                         Next Bill: {displayDate}
                         <span className="ml-2 font-semibold">({status.text})</span>
