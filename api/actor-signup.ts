@@ -60,13 +60,20 @@ export async function POST(request: Request) {
     if (!actorFound) {
       return new Response(JSON.stringify({ error: 'Actor name not found in our records. Please ensure it matches the film credits exactly.' }), { status: 404 });
     }
+
+    // FIX: Add an explicit check for `bestActorData` to ensure its type is narrowed correctly for TypeScript.
+    // This prevents the compiler from inferring the type as 'never' and causing a build failure.
+    if (!bestActorData) {
+        // This state should be unreachable if actorFound is true, but it acts as a safeguard.
+        throw new Error("Internal server error: Actor was found but their profile data could not be collated.");
+    }
     
     // --- Step 1.5: Create public profile from best data if it doesn't exist ---
     const actorSlug = slugify(name);
     const actorProfileRef = db.collection('actor_profiles').doc(actorSlug);
     const actorProfileDoc = await actorProfileRef.get();
 
-    if (!actorProfileDoc.exists && bestActorData) {
+    if (!actorProfileDoc.exists) {
         const actorProfileData: ActorProfile = {
             name: bestActorData.name,
             slug: actorSlug,

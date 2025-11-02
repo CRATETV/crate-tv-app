@@ -88,13 +88,13 @@ const BillingReminders: React.FC = () => {
              <div className="space-y-6">
                 <ServiceReminder 
                     serviceName="Vercel"
-                    logoUrl="https://cratetelevision.s3.us-east-1.amazonaws.com/vercel-logo.svg"
+                    logoUrl="https://cratetelevision.s3.us-east-1.amazonaws.com/vercel.png"
                     billingUrl="https://vercel.com/dashboard/billing"
                     storageKey="cratetv-vercel-billing-date"
                 />
                  <ServiceReminder 
                     serviceName="Amazon Web Services"
-                    logoUrl="https://cratetelevision.s3.us-east-1.amazonaws.com/aws-logo.svg"
+                    logoUrl="https://cratetelevision.s3.us-east-1.amazonaws.com/aws.png"
                     billingUrl="https://console.aws.amazon.com/billing/"
                     storageKey="cratetv-aws-billing-date"
                 />

@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 
 interface CollapsibleFooterProps {
@@ -9,7 +7,7 @@ interface CollapsibleFooterProps {
 
 const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice = false, showActorLinks = false }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [isNearBottom, setIsNearBottom] = useState(false);
 
   useEffect(() => {
     const handleNavigation = () => {
@@ -17,7 +15,9 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
     };
 
     const handleScroll = () => {
-      setIsScrolled(window.pageYOffset > 200);
+      // Show the button when the user is within 150px of the bottom of the page
+      const isCloseToBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 150;
+      setIsNearBottom(isCloseToBottom);
     };
     
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -40,13 +40,13 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
   return (
     <div className={`fixed bottom-0 left-0 right-0 z-30 transition-all duration-500 ease-in-out hidden md:block ${isOpen ? 'translate-y-0' : 'translate-y-[calc(100%-2.5rem)]'}`}>
         {/* Toggle Button */}
-        <div className={`flex justify-center transition-opacity duration-300 ${isScrolled || isOpen ? 'opacity-100' : 'opacity-0'}`}>
+        <div className={`flex justify-center transition-opacity duration-300 ${isNearBottom || isOpen ? 'opacity-100' : 'opacity-0'}`}>
              <button 
                 onClick={() => setIsOpen(!isOpen)}
                 className="bg-gray-800 hover:bg-gray-700 text-gray-300 w-20 h-10 rounded-t-lg flex items-center justify-center transition-colors"
                 aria-label={isOpen ? "Hide footer" : "Show footer"}
             >
-                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                 </svg>
             </button>
