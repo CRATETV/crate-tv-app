@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { listenToAllAdminData, saveMovie, deleteMovie, saveCategories, saveFestivalConfig, saveFestivalDays, saveAboutData, approveActorSubmission, rejectActorSubmission } from './services/firebaseService';
+import { listenToAllAdminData, saveMovie, deleteMovie, saveCategories, saveFestivalConfig, saveFestivalDays, saveAboutData, approveActorSubmission, rejectActorSubmission, deleteMoviePipelineEntry } from './services/firebaseService';
 import { Movie, Category, FestivalDay, FestivalConfig, AboutData, LiveData, ActorSubmission, PayoutRequest, MoviePipelineEntry } from './types';
 import MovieEditor from './components/MovieEditor';
 import CategoryEditor from './components/CategoryEditor';
@@ -146,7 +146,7 @@ const AdminPage: React.FC = () => {
         setActiveTab('movies');
     };
 
-    const handleCreateMovieFromPipeline = (item: MoviePipelineEntry) => {
+    const handleCreateMovieFromPipeline = async (item: MoviePipelineEntry) => {
          const newMovie: Movie = {
             key: `newmovie${Date.now()}`,
             title: item.title,
@@ -160,6 +160,14 @@ const AdminPage: React.FC = () => {
         };
         setSelectedMovie(newMovie);
         setActiveTab('movies');
+        
+        // Automatically remove the item from the pipeline to prevent duplicate work
+        try {
+            await deleteMoviePipelineEntry(item.id);
+        } catch (error) {
+            console.error("Failed to remove item from pipeline after creation:", error);
+            // Non-critical error, the main action (opening the editor) has already succeeded.
+        }
     };
 
     const TabButton: React.FC<{ tabId: string; label: string; requiredRole?: AdminRole[] }> = ({ tabId, label, requiredRole }) => {

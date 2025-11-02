@@ -1,23 +1,47 @@
 import React, { useState } from 'react';
 
 // Helper to get status color based on date
-const getStatus = (dateString: string | null): { color: string; text: string } => {
-    if (!dateString) return { color: 'gray', text: 'Not set' };
-    
+const getStatus = (dateString: string | null): { color: string; text: string; nextBillDate: Date | null } => {
+    if (!dateString) return { color: 'gray', text: 'Not set', nextBillDate: null };
+
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of today in local time
+    today.setHours(0, 0, 0, 0); // Start of today for accurate comparison
+
+    // The saved date is the anchor date, e.g., "2024-08-15"
+    // Use T00:00:00 to ensure it's parsed in the local timezone.
+    const anchorDate = new Date(dateString + 'T00:00:00');
+    const billDay = anchorDate.getDate(); // e.g., 15
+
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    const currentDay = today.getDate();
+
+    let nextBillYear = currentYear;
+    let nextBillMonth = currentMonth;
     
-    // The date from the input is YYYY-MM-DD. When parsed as `new Date()`, it's treated as UTC midnight.
-    // To compare correctly, we ensure the bill date is also treated as local time by adding T00:00:00.
-    const billDate = new Date(dateString + 'T00:00:00');
+    // If today's day is past the billing day, the next bill is next month.
+    if (currentDay > billDay) {
+        nextBillMonth += 1;
+        // The Date object handles month overflow (e.g., month 12 becomes Jan of next year)
+    }
     
-    const diffTime = billDate.getTime() - today.getTime();
+    let nextBillDate = new Date(nextBillYear, nextBillMonth, billDay);
+    
+    // Handle month-end complexities. e.g., if bill day is 31 and next month is February.
+    // new Date(2024, 1, 31) becomes Mar 2, 2024. We need to detect this.
+    // The expected month is `nextBillMonth % 12`.
+    if (nextBillDate.getMonth() !== (nextBillMonth % 12)) {
+        // It overflowed. The actual due date is the last day of the *correct* month.
+        // new Date(year, month_index + 1, 0) gives the last day of month_index.
+        nextBillDate = new Date(nextBillYear, nextBillMonth + 1, 0);
+    }
+
+    const diffTime = nextBillDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) return { color: 'red', text: `Overdue by ${Math.abs(diffDays)} day(s)` };
-    if (diffDays === 0) return { color: 'red', text: 'Due today' };
-    if (diffDays <= 7) return { color: 'yellow', text: `Due in ${diffDays} day(s)` };
-    return { color: 'green', text: `Due in ${diffDays} day(s)` };
+
+    if (diffDays === 0) return { color: 'red', text: 'Due today', nextBillDate };
+    if (diffDays <= 7) return { color: 'yellow', text: `Due in ${diffDays} day(s)`, nextBillDate };
+    return { color: 'green', text: `Due in ${diffDays} day(s)`, nextBillDate };
 };
 
 const statusColors = {
@@ -40,11 +64,21 @@ const ServiceReminder: React.FC<{ serviceName: string; logoUrl: string; billingU
             setSavedDate(null);
         }
     };
-
+    
     const status = getStatus(savedDate);
-    const displayDate = savedDate 
-        ? new Date(savedDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    const displayDate = status.nextBillDate
+        ? status.nextBillDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
         : 'Not set';
+
+    const handleMarkAsPaid = () => {
+        if (status.nextBillDate) {
+            // Format the date as 'YYYY-MM-DD' for the input
+            const nextDateString = status.nextBillDate.toISOString().split('T')[0];
+            localStorage.setItem(storageKey, nextDateString);
+            setSavedDate(nextDateString);
+            setInputDate(nextDateString);
+        }
+    };
 
     return (
         <div className="bg-gray-800 p-4 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -68,6 +102,11 @@ const ServiceReminder: React.FC<{ serviceName: string; logoUrl: string; billingU
                     <button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-2 px-4 rounded-md transition-colors">
                         Save Date
                     </button>
+                    {status.nextBillDate && (
+                         <button onClick={handleMarkAsPaid} className="bg-green-600 hover:bg-green-700 text-white font-bold text-sm py-2 px-4 rounded-md transition-colors">
+                            Mark as Paid
+                        </button>
+                    )}
                     <a href={billingUrl} target="_blank" rel="noopener noreferrer" className="text-center bg-gray-600 hover:bg-gray-500 text-white font-bold text-sm py-2 px-4 rounded-md transition-colors">
                         Go to Dashboard
                     </a>
@@ -83,7 +122,7 @@ const BillingReminders: React.FC = () => {
         <div className="bg-gray-950 p-6 rounded-lg text-gray-200 mt-8">
              <h2 className="text-2xl font-bold mb-4 text-purple-400">External Billing Reminders</h2>
              <p className="text-sm text-gray-400 mb-6">
-                This is a simple, manual tool to help you keep track of your Vercel and AWS billing dates. Set your next estimated billing date, and we'll show you a reminder. This data is saved only in your browser.
+                This is a simple tool to help you keep track of your monthly Vercel and AWS bills. Set the date of your next bill, and it will automatically remind you each month. This data is saved only in your browser.
              </p>
              <div className="space-y-6">
                 <ServiceReminder 

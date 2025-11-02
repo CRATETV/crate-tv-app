@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import GreenRoomFeed from './GreenRoomFeed';
 import { useAuth } from '../contexts/AuthContext';
 import PlayFinder from './PlayFinder';
+import ActorProfileEditor from './ActorProfileEditor';
 
 const ActorPortalPage: React.FC = () => {
     const { user } = useAuth();
@@ -53,12 +53,8 @@ const ActorPortalPage: React.FC = () => {
                         <PlayFinder />
                     )}
 
-                    {activeTab === 'update' && (
-                        <div className="bg-gray-800/50 border border-gray-700 p-8 rounded-lg">
-                           {/* The existing form component would be here, this is just a placeholder example of how it would be structured */}
-                           <h2 className="text-2xl font-bold text-white mb-4">Update Profile</h2>
-                           <p className="text-gray-400">Your profile update form would be displayed here.</p>
-                        </div>
+                    {activeTab === 'update' && user.name && (
+                        <ActorProfileEditor actorName={user.name} />
                     )}
                     {activeTab === 'feed' && user.name && (
                         <GreenRoomFeed actorName={user.name} />

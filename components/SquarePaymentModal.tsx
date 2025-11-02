@@ -7,22 +7,23 @@ declare const Square: any; // Allow use of Square global from the SDK script
 interface SquarePaymentModalProps {
     movie?: Movie;
     block?: FilmBlock;
-    paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'movie';
+    paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'movie' | 'billSavingsDeposit';
     onClose: () => void;
-    onPaymentSuccess: (details: { paymentType: 'pass' | 'block' | 'subscription' | 'donation' | 'movie', itemId?: string, amount: number, email?: string }) => void;
+    onPaymentSuccess: (details: { paymentType: SquarePaymentModalProps['paymentType'], itemId?: string, amount: number, email?: string }) => void;
 }
 
 const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, paymentType, onClose, onPaymentSuccess }) => {
     const { user } = useAuth();
     const [status, setStatus] = useState<'idle' | 'loading' | 'processing' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
-    const [donationAmount, setDonationAmount] = useState('5.00');
+    const [customAmount, setCustomAmount] = useState('10.00'); // Default for donations/deposits
     const [email, setEmail] = useState(user?.email || '');
 
     const cardRef = useRef<HTMLDivElement>(null);
     const cardInstance = useRef<any>(null);
 
     const paymentDetails = useMemo(() => {
+        const amount = parseFloat(customAmount) || 0;
         switch (paymentType) {
             case 'pass':
                 return { amount: 50.00, title: 'All-Access Festival Pass', description: 'Unlock every film block for the entire festival.' };
@@ -33,11 +34,13 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
             case 'subscription':
                 return { amount: 4.99, title: 'Crate TV Premium', description: 'Unlock exclusive films and features.' };
             case 'donation':
-                return { amount: parseFloat(donationAmount) || 0, title: `Support for "${movie?.title}"`, description: `Directed by ${movie?.director}` };
+                return { amount, title: `Support for "${movie?.title}"`, description: `Directed by ${movie?.director}` };
+            case 'billSavingsDeposit':
+                return { amount, title: 'Add Funds to Savings Pot', description: 'Deposit money from your card to the bill savings pot.' };
             default:
                 return { amount: 0, title: 'Purchase', description: '' };
         }
-    }, [paymentType, movie, block, donationAmount]);
+    }, [paymentType, movie, block, customAmount]);
 
     useEffect(() => {
         const initializeSquare = async () => {
@@ -127,33 +130,35 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                     <h2 className="text-2xl font-bold text-white mb-2">{paymentDetails.title}</h2>
                     <p className="text-gray-400 mb-4">{paymentDetails.description}</p>
                     
-                    {paymentType === 'donation' && (
+                    {(paymentType === 'donation' || paymentType === 'billSavingsDeposit') && (
                         <div className="space-y-4 mb-4">
                              <div>
-                                <label htmlFor="donationAmount" className="block text-sm font-medium text-gray-300 mb-1">Amount (USD)</label>
+                                <label htmlFor="customAmount" className="block text-sm font-medium text-gray-300 mb-1">Amount (USD)</label>
                                 <input
                                     type="number"
-                                    id="donationAmount"
-                                    value={donationAmount}
-                                    onChange={e => setDonationAmount(e.target.value)}
+                                    id="customAmount"
+                                    value={customAmount}
+                                    onChange={e => setCustomAmount(e.target.value)}
                                     className="form-input"
                                     min="1.00"
                                     step="1.00"
                                     required
                                 />
                             </div>
-                            <div>
-                                <label htmlFor="emailForReceipt" className="block text-sm font-medium text-gray-300 mb-1">Email for Receipt (Optional)</label>
-                                <input
-                                    type="email"
-                                    id="emailForReceipt"
-                                    value={email}
-                                    onChange={e => setEmail(e.target.value)}
-                                    className={`form-input ${!!user ? 'bg-gray-700 cursor-not-allowed' : ''}`}
-                                    placeholder="you@example.com"
-                                    readOnly={!!user}
-                                />
-                             </div>
+                            {paymentType === 'donation' && (
+                                <div>
+                                    <label htmlFor="emailForReceipt" className="block text-sm font-medium text-gray-300 mb-1">Email for Receipt (Optional)</label>
+                                    <input
+                                        type="email"
+                                        id="emailForReceipt"
+                                        value={email}
+                                        onChange={e => setEmail(e.target.value)}
+                                        className={`form-input ${!!user ? 'bg-gray-700 cursor-not-allowed' : ''}`}
+                                        placeholder="you@example.com"
+                                        readOnly={!!user}
+                                    />
+                                 </div>
+                            )}
                         </div>
                     )}
 

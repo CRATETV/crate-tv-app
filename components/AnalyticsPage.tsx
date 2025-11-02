@@ -4,6 +4,7 @@ import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
 import FilmReportModal from './FilmReportModal';
 import BillingReminders from './BillingReminders';
+import BillSavingsPot from './BillSavingsPot';
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
 const formatNumber = (num: number) => num.toLocaleString();
@@ -52,7 +53,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const [adminPayoutMessage, setAdminPayoutMessage] = useState('');
     
     const fetchData = async () => {
-        setIsLoading(true);
+        // Keep loading true if it's already loading, but don't flash the spinner for a refresh
+        if (isLoading) setIsLoading(true);
         const password = sessionStorage.getItem('adminPassword');
         if (!password) {
             setError({ ...error, critical: 'Authentication error. Please log in again.' });
@@ -145,18 +147,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Payout request failed.');
             
-            // Optimistic update
-            if (analyticsData) {
-                const newPayout: AdminPayout = { 
-                    ...data.newPayout, 
-                    payoutDate: { seconds: Date.now() / 1000, nanoseconds: 0 } 
-                };
-                setAnalyticsData({
-                    ...analyticsData,
-                    totalAdminPayouts: analyticsData.totalAdminPayouts + newPayout.amount,
-                    pastAdminPayouts: [newPayout, ...analyticsData.pastAdminPayouts]
-                });
-            }
+            // Re-fetch data to show the update
+            fetchData();
 
             setAdminPayoutStatus('success');
             setAdminPayoutMessage('Payout recorded successfully.');
@@ -328,7 +320,15 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                     <StatCard title="Total Paid to Admin" value={formatCurrency(analyticsData.totalAdminPayouts)} />
                                     <StatCard title="Current Available Balance" value={formatCurrency(crateTvBalance)} className="bg-green-900/30 border-green-700" />
                                 </div>
-                                <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
+                                
+                                <BillSavingsPot
+                                    currentBalance={analyticsData.billSavingsPotTotal}
+                                    availablePlatformBalance={crateTvBalance}
+                                    transactions={analyticsData.billSavingsTransactions}
+                                    onRefreshData={fetchData}
+                                />
+
+                                <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 mt-6">
                                     <h3 className="text-lg font-semibold text-white mb-4">Record Admin Payout</h3>
                                     <form onSubmit={handleAdminPayout} className="space-y-4">
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

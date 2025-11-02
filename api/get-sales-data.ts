@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // Path: /api/get-sales-data
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
-import { AnalyticsData, Movie, PayoutRequest, AdminPayout } from '../types.js';
+import { AnalyticsData, Movie, PayoutRequest, AdminPayout, BillSavingsTransaction } from '../types.js';
 
 interface SquarePayment {
   id: string;
@@ -93,6 +93,7 @@ export async function POST(request: Request) {
         const locationsPromise = db ? db.collection('view_locations').get() : Promise.resolve(null);
         const usersPromise = auth ? auth.listUsers(1000) : Promise.resolve(null);
         const adminPayoutsPromise = db ? db.collection('admin_payouts').orderBy('payoutDate', 'desc').get() : Promise.resolve(null);
+        const billSavingsPromise = db ? db.collection('bill_savings_transactions').orderBy('transactionDate', 'desc').get() : Promise.resolve(null);
 
 
         const [
@@ -101,8 +102,9 @@ export async function POST(request: Request) {
             viewsSnapshot,
             locationsSnapshot,
             usersResult,
-            adminPayoutsSnapshot
-        ] = await Promise.all([squarePromise.catch(e => { errors.square = e.message; return []; }), moviesPromise, viewsPromise, locationsPromise, usersPromise, adminPayoutsPromise]);
+            adminPayoutsSnapshot,
+            billSavingsSnapshot
+        ] = await Promise.all([squarePromise.catch(e => { errors.square = e.message; return []; }), moviesPromise, viewsPromise, locationsPromise, usersPromise, adminPayoutsPromise, billSavingsPromise]);
 
         // --- Process Data ---
         const allMovies: Record<string, Movie> = {};
@@ -124,6 +126,18 @@ export async function POST(request: Request) {
             pastAdminPayouts.push({ id: doc.id, ...doc.data() } as AdminPayout);
         });
         const totalAdminPayouts = pastAdminPayouts.reduce((sum, p) => sum + p.amount, 0);
+
+        const billSavingsTransactions: BillSavingsTransaction[] = [];
+        let billSavingsPotTotal = 0;
+        billSavingsSnapshot?.forEach(doc => {
+            const transaction = { id: doc.id, ...doc.data() } as BillSavingsTransaction;
+            billSavingsTransactions.push(transaction);
+            if (transaction.type === 'deposit') {
+                billSavingsPotTotal += transaction.amount;
+            } else if (transaction.type === 'withdrawal') {
+                billSavingsPotTotal -= transaction.amount;
+            }
+        });
 
         // --- Financial Calculations ---
         let totalDonations = 0;
@@ -183,7 +197,7 @@ export async function POST(request: Request) {
         });
 
         const analyticsData: AnalyticsData = {
-            totalRevenue, totalCrateTvRevenue, totalAdminPayouts, pastAdminPayouts, totalUsers: allUsers.length, viewCounts, movieLikes, filmmakerPayouts, viewLocations, allUsers,
+            totalRevenue, totalCrateTvRevenue, totalAdminPayouts, pastAdminPayouts, billSavingsPotTotal, billSavingsTransactions, totalUsers: allUsers.length, viewCounts, movieLikes, filmmakerPayouts, viewLocations, allUsers,
             totalDonations, totalSales, totalMerchRevenue, totalAdRevenue, crateTvMerchCut, merchSales,
             totalFestivalRevenue, festivalPassSales, festivalBlockSales, salesByBlock,
         };
