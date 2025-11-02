@@ -2,16 +2,14 @@
 <component name="HomeScene" extends="Scene">
 
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
+    <script type="text/brightscript" uri="pkg:/source/utils.brs" />
 
     <children>
-        <!-- Background color matching the web app -->
-        <Rectangle id="background" color="0x141414FF" width="1920" height="1080" />
-
-        <!-- Font definitions. Font files must be placed in a /fonts directory. -->
-        <Label id="fontLoader">
-            <font role="Roboto-Regular-30" uri="pkg:/fonts/Roboto-Regular.ttf" size="30" />
-            <font role="Roboto-Bold-30" uri="pkg:/fonts/Roboto-Bold.ttf" size="30" />
-            <font role="Roboto-Regular-40" uri="pkg:/fonts/Roboto-Regular.ttf" size="40" />
+        <!-- Font definitions -->
+        <Label id="fontLoader" text="">
+            <font role="font.small" uri="pkg:/fonts/Roboto-Regular.ttf" size="24" />
+            <font role="font.medium" uri="pkg:/fonts/Roboto-Regular.ttf" size="32" />
+            <font role="font.large.bold" uri="pkg:/fonts/Roboto-Bold.ttf" size="48" />
         </Label>
         
         <!-- Loading indicator -->
@@ -23,27 +21,50 @@
             vertAlign="center"
             color="0xFFFFFFFF"
         >
-            <font role="Roboto-Regular-40" />
+            <font role="font.medium" />
         </Label>
         
         <!-- Main content group, initially hidden -->
         <Group id="contentGroup" visible="false">
+            <!-- Hero Section -->
+            <Group id="heroGroup" translation="[0, 0]">
+                <Poster id="heroPoster" width="1920" height="720" />
+                <Rectangle id="heroGradient" color="0x000000AA" width="1000" height="720" />
+                <Label 
+                    id="heroTitle"
+                    width="880"
+                    wrap="true"
+                    translation="[80, 250]"
+                >
+                    <font role="font.large.bold" />
+                </Label>
+                <Label
+                    id="heroSynopsis"
+                    width="880"
+                    wrap="true"
+                    maxLines="3"
+                    translation="[80, 320]"
+                >
+                     <font role="font.small" />
+                </Label>
+            </Group>
+
+            <!-- Movie Carousels -->
             <RowList 
                 id="contentRowList"
-                translation="[80, 80]"
+                translation="[80, 750]"
                 itemComponentName="MoviePoster"
-                itemSize="[300, 235]"
-                rowItemSpacing="[ [40, 0] ]"
+                itemSize="[240, 410]"
+                rowItemSpacing="[ [30, 0] ]"
                 numRows="1"
-                rowHeights="[235]"
+                rowHeights="[410]"
                 rowLabelOffset="[ [0, -50] ]"
                 rowFocusAnimationStyle="floatingFocus"
-                itemSpacing="[0, 60]"
             />
         </Group>
 
         <!-- Task node for fetching data -->
-        <ContentTask id="contentTask" />
+        <Task id="contentTask" uri="pkg:/components/ContentTask.xml" />
     </children>
 
 </component>

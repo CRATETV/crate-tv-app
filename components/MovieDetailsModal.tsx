@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category } from '../types';
 import DirectorCreditsModal from './DirectorCreditsModal';
@@ -163,8 +164,14 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   };
   
   const handleSelectMovieFromDirector = (selectedMovie: Movie) => {
-    setSelectedDirector(null);
-    onSelectRecommendedMovie(selectedMovie);
+    setSelectedDirector(null); // Closes director modal
+    onClose(); // Closes this movie details modal
+    onSelectRecommendedMovie(selectedMovie); // Navigates to play the new movie
+  };
+  
+  const handleRecommendedClick = (movie: Movie) => {
+    onClose();
+    onSelectRecommendedMovie(movie);
   };
 
   const handleDonationSuccess = (details: { amount: number; email?: string }) => {
@@ -342,7 +349,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
               <h3 className="text-2xl font-bold mb-4">More Like This</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-4">
                 {recommendedMovies.map(recMovie => (
-                  <RecommendedMovieCard key={recMovie.key} movie={recMovie} onClick={onSelectRecommendedMovie} />
+                  <RecommendedMovieCard key={recMovie.key} movie={recMovie} onClick={handleRecommendedClick} />
                 ))}
               </div>
             </div>

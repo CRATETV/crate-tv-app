@@ -94,13 +94,13 @@ const App: React.FC = () => {
       loadAppData().finally(() => setIsLoading(false));
     }
     
-    const hasSeenFeatureModal = sessionStorage.getItem('hasSeenActorAiFeature');
+    const hasSeenFeatureModal = localStorage.getItem('hasSeenActorAiFeature');
     if (!hasSeenFeatureModal) {
       setShowFeatureModal(true);
-      sessionStorage.setItem('hasSeenActorAiFeature', 'true');
+      localStorage.setItem('hasSeenActorAiFeature', 'true');
     }
     
-    const hasSeenConsumedAnnouncement = sessionStorage.getItem('hasSeenConsumedAnnouncement');
+    const hasSeenConsumedAnnouncement = localStorage.getItem('hasSeenConsumedAnnouncement');
     if (!hasSeenConsumedAnnouncement) {
         setShowNewFilmModal(true);
     }
@@ -349,7 +349,7 @@ const App: React.FC = () => {
     );
   }, [searchQuery, visibleMovies]);
 
-  const handleSelectMovie = useCallback((movie: Movie) => {
+  const handleOpenDetailsModal = useCallback((movie: Movie) => {
     setDetailsMovie(movie);
   }, []);
 
@@ -373,7 +373,7 @@ const App: React.FC = () => {
 
   const handleCloseNewFilmModal = useCallback(() => {
     setShowNewFilmModal(false);
-    sessionStorage.setItem('hasSeenConsumedAnnouncement', 'true');
+    localStorage.setItem('hasSeenConsumedAnnouncement', 'true');
   }, []);
   
   useEffect(() => {
@@ -457,7 +457,7 @@ const App: React.FC = () => {
                 <MovieCarousel
                     title=""
                     movies={searchResults}
-                    onSelectMovie={handleSelectMovie}
+                    onSelectMovie={handlePlayMovie}
                 />
             ) : (
                 <p className="text-gray-400">No results found.</p>
@@ -469,11 +469,12 @@ const App: React.FC = () => {
               movies={heroMovies}
               currentIndex={heroIndex}
               onSetCurrentIndex={handleSetHeroIndex}
-              onSelectMovie={handleSelectMovie}
+              onPlayMovie={handlePlayMovie}
+              onMoreInfo={handleOpenDetailsModal}
             />
             <div className="relative z-10 mt-8 px-4 md:px-12">
               {nowPlayingMovie && isNowPlayingReleased && (
-                <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} />
+                <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleOpenDetailsModal} onPlayMovie={handlePlayMovie} />
               )}
               <div>
                 {/* Dedicated, stable rendering block for the live festival carousel */}
@@ -501,7 +502,7 @@ const App: React.FC = () => {
                             );
                         })()}
                         movies={festivalLiveMovies}
-                        onSelectMovie={handleSelectMovie}
+                        onSelectMovie={handlePlayMovie}
                     />
                 )}
                 {/* Top 10 Carousel */}
@@ -510,7 +511,7 @@ const App: React.FC = () => {
                         key="topTen"
                         title={<a href="/top-ten" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/top-ten'); window.dispatchEvent(new Event('pushstate'));}} className="text-lg md:text-2xl font-bold mb-6 text-white hover:text-gray-300 transition-colors">Top 10 on Crate TV Today</a>}
                         movies={topTenMovies}
-                        onSelectMovie={handleSelectMovie}
+                        onSelectMovie={handlePlayMovie}
                         showRankings={true}
                     />
                 )}
@@ -542,7 +543,7 @@ const App: React.FC = () => {
                             </h2>
                         }
                         movies={recommendedMovies}
-                        onSelectMovie={handleSelectMovie}
+                        onSelectMovie={handlePlayMovie}
                     />
                 ) : null}
                 {/* Map over the remaining, standard categories */}
@@ -551,7 +552,7 @@ const App: React.FC = () => {
                     key={cat.key}
                     title={cat.title}
                     movies={cat.movies}
-                    onSelectMovie={handleSelectMovie}
+                    onSelectMovie={handlePlayMovie}
                   />
                 ))}
               </div>
@@ -572,7 +573,7 @@ const App: React.FC = () => {
             onSelectActor={handleSelectActor}
             allMovies={movies}
             allCategories={categories}
-            onSelectRecommendedMovie={handleSelectMovie}
+            onSelectRecommendedMovie={handlePlayMovie}
         />
       )}
       {selectedActor && (
@@ -603,7 +604,7 @@ const App: React.FC = () => {
           movie={movies['consumed']}
           onClose={handleCloseNewFilmModal}
           onWatchNow={() => {
-            handleSelectMovie(movies['consumed']);
+            handlePlayMovie(movies['consumed']);
             handleCloseNewFilmModal();
           }}
         />

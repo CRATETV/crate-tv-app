@@ -3,23 +3,17 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import BackToTopButton from './BackToTopButton';
 import MovieCard from './MovieCard';
-import MovieDetailsModal from './MovieDetailsModal';
-import ActorBioModal from './ActorBioModal';
 import LoadingSpinner from './LoadingSpinner';
 import { fetchAndCacheLiveData } from '../services/dataService';
-import { Movie, Actor, Category, FestivalConfig } from '../types';
+import { Movie, Category, FestivalConfig } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import CollapsibleFooter from './CollapsibleFooter';
-import BottomNavBar from './BottomNavBar';
+import BottomNavBar from './components/BottomNavBar';
 
 const WatchlistPage: React.FC = () => {
     const { user, watchlist } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
     const [movies, setMovies] = useState<Record<string, Movie>>({});
-    const [categories, setCategories] = useState<Record<string, Category>>({});
-    const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
-    const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
-    const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
     const [isFestivalLive, setIsFestivalLive] = useState(false);
 
@@ -28,12 +22,7 @@ const WatchlistPage: React.FC = () => {
             try {
                 const { data } = await fetchAndCacheLiveData();
                 setMovies(data.movies);
-                setCategories(data.categories);
                 setFestivalConfig(data.festivalConfig);
-                const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
-                if (storedLikedMovies) {
-                    setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
-                }
             } catch (error) {
                 console.error("Failed to load data for Watchlist page:", error);
             } finally {
@@ -66,19 +55,9 @@ const WatchlistPage: React.FC = () => {
             .filter((m): m is Movie => !!m);
     }, [movies, watchlist]);
     
-    const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
-    const handleCloseDetailsModal = () => setDetailsMovie(null);
-    const handleSelectActor = (actor: Actor) => {
-        setDetailsMovie(null);
-        setSelectedActor(actor);
-    };
-    const handleCloseActorModal = () => setSelectedActor(null);
-
-    const toggleLikeMovie = (movieKey: string) => {
-        const newLikedMovies = new Set(likedMovies);
-        newLikedMovies.has(movieKey) ? newLikedMovies.delete(movieKey) : newLikedMovies.add(movieKey);
-        setLikedMovies(newLikedMovies);
-        localStorage.setItem('cratetv-likedMovies', JSON.stringify(Array.from(newLikedMovies)));
+    const handleSelectMovie = (movie: Movie) => {
+        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+        window.dispatchEvent(new Event('pushstate'));
     };
 
     if (isLoading) {
@@ -113,22 +92,6 @@ const WatchlistPage: React.FC = () => {
             </main>
             <CollapsibleFooter />
             <BackToTopButton />
-
-            {detailsMovie && (
-                <MovieDetailsModal
-                    movie={movies[detailsMovie.key] || detailsMovie}
-                    isLiked={likedMovies.has(detailsMovie.key)}
-                    onToggleLike={toggleLikeMovie}
-                    onClose={handleCloseDetailsModal}
-                    onSelectActor={handleSelectActor}
-                    allMovies={movies}
-                    allCategories={categories}
-                    onSelectRecommendedMovie={handleSelectMovie}
-                />
-            )}
-            {selectedActor && (
-                <ActorBioModal actor={selectedActor} onClose={handleCloseActorModal} />
-            )}
             <BottomNavBar 
                 isFestivalLive={isFestivalLive}
                 onSearchClick={() => {

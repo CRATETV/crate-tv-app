@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Header from './Header';
 import Hero from './Hero';
@@ -80,7 +81,8 @@ const LandingPage: React.FC = () => {
                             movies={heroMovies}
                             currentIndex={heroIndex}
                             onSetCurrentIndex={handleSetHeroIndex}
-                            onSelectMovie={() => openAuthModal('login')}
+                            onPlayMovie={() => openAuthModal('login')}
+                            onMoreInfo={() => openAuthModal('login')}
                         />
                     )}
                     

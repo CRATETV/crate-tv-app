@@ -1,8 +1,8 @@
+
 // This is a Vercel Serverless Function
-// It will be accessible at the path /api/get-sales-data
-import { UserRecord } from 'firebase-admin/auth';
-import { AnalyticsData, FilmmakerPayout, Movie } from '../types.js';
+// Path: /api/get-sales-data
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
+import { AnalyticsData, Movie, PayoutRequest } from '../types.js';
 
 interface SquarePayment {
   id: string;
@@ -12,60 +12,31 @@ interface SquarePayment {
     currency: string;
   };
   note?: string;
+  itemizations?: {
+    name?: string;
+    quantity: string;
+    total_money: { amount: number };
+  }[];
 }
-
-interface FirebaseData {
-    viewCounts: Record<string, number>;
-    movieLikes: Record<string, number>;
-    totalUsers: number;
-    allUsers: { email: string; creationTime: string; }[];
-    viewLocations: Record<string, Record<string, number>>;
-    allMovies: Record<string, Movie>;
-}
-
-// Mock merch data for simulation purposes
-const MOCK_MERCH_ITEMS = [
-    { name: 'Crate TV Classic Tee', price: 2500 },
-];
 
 const AD_CPM_IN_CENTS = 500; // $5.00 per 1000 views
-const AD_REVENUE_FILMMAKER_SHARE = 0.50; // 50%
+const DONATION_PLATFORM_CUT = 0.30;
+const AD_REVENUE_FILMMAKER_SHARE = 0.50;
+const MERCH_PLATFORM_CUT = 0.15;
 
-const parseNote = (note: string | undefined): { type: string, title?: string, director?: string, itemName?: string } => {
+const parseNote = (note: string | undefined): { type: string, title?: string, director?: string, blockTitle?: string } => {
     if (!note) return { type: 'unknown' };
-
     const donationMatch = note.match(/Support for film: "(.*)" by (.*)/);
-    if (donationMatch) {
-        return { type: 'donation', title: donationMatch[1].trim(), director: donationMatch[2].trim() };
-    }
-    
-    const passMatch = note.match(/All-Access Pass/);
-    if (passMatch) return { type: 'pass' };
-
+    if (donationMatch) return { type: 'donation', title: donationMatch[1].trim(), director: donationMatch[2].trim() };
+    if (note.includes('All-Access Pass')) return { type: 'pass' };
     const blockMatch = note.match(/Unlock Block: "(.*)"/);
-    if (blockMatch) return { type: 'block', title: blockMatch[1].trim() };
-    
-    const movieMatch = note.match(/Purchase Film: "(.*)"/);
-    if (movieMatch) {
-        return { type: 'movie_sale', title: movieMatch[1].trim() };
-    }
-    
-    // Check for mock merch items in the note
-    for (const item of MOCK_MERCH_ITEMS) {
-        if (note.includes(item.name)) {
-            return { type: 'merch_sale', itemName: item.name };
-        }
-    }
-    
-    if (note.includes('Premium Subscription')) return { type: 'subscription' };
-    
-    return { type: 'unknown' };
-}
+    if (blockMatch) return { type: 'block', blockTitle: blockMatch[1].trim() };
+    if (note.includes('Purchase Film:')) return { type: 'movie' };
+    if (note.includes('Crate TV Premium Subscription')) return { type: 'subscription' };
+    return { type: 'other' };
+};
 
-// --- Data Fetching Functions ---
-
-async function fetchSquareData(accessToken: string, locationId: string | undefined): Promise<SquarePayment[]> {
-    console.log("[Analytics API] Starting Square data fetch.");
+async function fetchAllSquarePayments(accessToken: string, locationId: string | undefined): Promise<SquarePayment[]> {
     const squareUrlBase = process.env.VERCEL_ENV === 'production' ? 'https://connect.squareup.com' : 'https://connect.squareupsandbox.com';
     let allPayments: SquarePayment[] = [];
     let cursor: string | undefined = undefined;
@@ -78,248 +49,133 @@ async function fetchSquareData(accessToken: string, locationId: string | undefin
 
         const response = await fetch(url.toString(), {
             method: 'GET',
-            headers: {
-                'Square-Version': '2024-05-15',
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Square-Version': '2024-05-15', 'Authorization': `Bearer accessToken`, 'Content-Type': 'application/json' },
         });
         
         if (!response.ok) {
             let errorMsg = 'Failed to fetch payments from Square.';
-            try {
-                const errorData = await response.json();
-                errorMsg = errorData.errors?.[0]?.detail || errorMsg;
-            } catch (e) {
-                errorMsg = `Square API returned a non-JSON error (Status: ${response.status}). This often means the API token is invalid, expired, or missing the PAYMENTS_READ permission.`;
-            }
+            try { const errorData = await response.json(); errorMsg = errorData.errors?.[0]?.detail || errorMsg; } catch (e) { }
             throw new Error(errorMsg);
         }
 
         const data = await response.json();
-        if (data.payments && Array.isArray(data.payments)) {
-            allPayments.push(...data.payments);
-        }
+        if (data.payments && Array.isArray(data.payments)) allPayments.push(...data.payments);
         cursor = data.cursor;
     } while (cursor);
-    
-    console.log(`[Analytics API] Fetched ${allPayments.length} payments from Square.`);
     return allPayments;
 }
 
-async function fetchFirebaseData(): Promise<FirebaseData> {
-    console.log("[Analytics API] Starting Firebase data fetch.");
-    const initError = getInitializationError();
-    if (initError) throw new Error(`Could not connect to Firebase. Reason: ${initError}`);
-    
-    const db = getAdminDb();
-    const adminAuth = getAdminAuth();
-    if (!db || !adminAuth) throw new Error("Firebase Admin services (Auth or Firestore) are not available.");
-
-    let viewCounts: Record<string, number> = {};
-    let movieLikes: Record<string, number> = {};
-    let totalUsers = 0;
-    let allUsersResult: { email: string; creationTime: string; }[] = [];
-    let viewLocations: Record<string, Record<string, number>> = {};
-    let allMovies: Record<string, Movie> = {};
-
-    const [viewsSnapshot, moviesSnapshot, locationsSnapshot, allMoviesSnapshot] = await Promise.all([
-        db.collection("view_counts").get(),
-        db.collection("movies").get(),
-        db.collection("view_locations").get(),
-        db.collection("movies").get(), // Also fetch all movie data for director lookup
-    ]);
-    
-    viewsSnapshot.forEach(doc => { viewCounts[doc.id] = doc.data().count || 0; });
-    moviesSnapshot.forEach(doc => { movieLikes[doc.id] = doc.data().likes || 0; });
-    locationsSnapshot.forEach(doc => { viewLocations[doc.id] = doc.data(); });
-    allMoviesSnapshot.forEach(doc => { allMovies[doc.id] = doc.data() as Movie; });
-    
-    let allAuthUsers: UserRecord[] = [];
-    let nextPageToken;
-    do {
-        const listUsersResult = await adminAuth.listUsers(1000, nextPageToken);
-        allAuthUsers.push(...listUsersResult.users);
-        nextPageToken = listUsersResult.pageToken;
-    } while (nextPageToken);
-
-    totalUsers = allAuthUsers.length;
-    allAuthUsers.sort((a, b) => new Date(b.metadata.creationTime).getTime() - new Date(a.metadata.creationTime).getTime());
-    allUsersResult = allAuthUsers.map(user => ({
-        email: user.email || 'N/A',
-        creationTime: new Date(user.metadata.creationTime).toLocaleString(),
-    }));
-
-    console.log("[Analytics API] Fetched data from Firebase successfully.");
-    return { viewCounts, movieLikes, totalUsers, allUsers: allUsersResult, viewLocations, allMovies };
-}
-
-// --- Main API Handler ---
-
 export async function POST(request: Request) {
-    let squareError: string | null = null;
-    let firebaseError: string | null = null;
-    let allPayments: SquarePayment[] = [];
-    let firebaseData: FirebaseData = { viewCounts: {}, movieLikes: {}, totalUsers: 0, allUsers: [], viewLocations: {}, allMovies: {} };
-
+    const errors: { square: string | null, firebase: string | null, critical: string | null } = { square: null, firebase: null, critical: null };
     try {
         const { password } = await request.json();
-
-        // --- Authentication ---
-        const primaryAdminPassword = process.env.ADMIN_PASSWORD;
-        const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
-        let isAuthenticated = false;
-        if (primaryAdminPassword && password === primaryAdminPassword) isAuthenticated = true;
-        else if (masterPassword && password === masterPassword) isAuthenticated = true;
-        if (!isAuthenticated) {
-            for (const key in process.env) {
-                if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
-                    isAuthenticated = true;
-                    break;
-                }
-            }
+        // Authentication...
+        if (password !== process.env.ADMIN_PASSWORD && password !== process.env.ADMIN_MASTER_PASSWORD) {
+            throw new Error('Unauthorized');
         }
-        const anyPasswordSet = primaryAdminPassword || masterPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
-        if (!anyPasswordSet) isAuthenticated = true;
 
-        if (!isAuthenticated) {
-            return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
-        }
-        
-        // --- Parallel Data Fetching ---
+        // --- Firebase Init ---
+        const firebaseError = getInitializationError();
+        if (firebaseError) errors.firebase = firebaseError;
+        const db = getAdminDb();
+        const auth = getAdminAuth();
+
+        // --- Square Init ---
         const isProduction = process.env.VERCEL_ENV === 'production';
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
         const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
+        if (!accessToken) errors.square = 'Square Access Token is not configured.';
+
+        // --- Parallel Data Fetching ---
+        const squarePromise = accessToken ? fetchAllSquarePayments(accessToken, locationId) : Promise.resolve([]);
+        const moviesPromise = db ? db.collection('movies').get() : Promise.resolve(null);
+        const viewsPromise = db ? db.collection('view_counts').get() : Promise.resolve(null);
+        const locationsPromise = db ? db.collection('view_locations').get() : Promise.resolve(null);
+        const usersPromise = auth ? auth.listUsers(1000) : Promise.resolve(null);
+
+        const [
+            allPayments,
+            moviesSnapshot,
+            viewsSnapshot,
+            locationsSnapshot,
+            usersResult
+        ] = await Promise.all([squarePromise.catch(e => { errors.square = e.message; return []; }), moviesPromise, viewsPromise, locationsPromise, usersPromise]);
+
+        // --- Process Data ---
+        const allMovies: Record<string, Movie> = {};
+        moviesSnapshot?.forEach(doc => { allMovies[doc.id] = doc.data() as Movie; });
+
+        const viewCounts: Record<string, number> = {};
+        viewsSnapshot?.forEach(doc => { viewCounts[doc.id] = doc.data().count || 0; });
         
-        const squarePromise = accessToken
-            ? fetchSquareData(accessToken, locationId)
-            : Promise.reject(new Error(`Square ${isProduction ? 'Production' : 'Sandbox'} Access Token is not configured.`));
+        const movieLikes: Record<string, number> = {};
+        Object.entries(allMovies).forEach(([key, movie]) => { movieLikes[key] = movie.likes || 0; });
 
-        const results = await Promise.allSettled([squarePromise, fetchFirebaseData()]);
+        const viewLocations: Record<string, Record<string, number>> = {};
+        locationsSnapshot?.forEach(doc => { viewLocations[doc.id] = doc.data(); });
+        
+        const allUsers = usersResult ? usersResult.users.map(u => ({ email: u.email || 'N/A', creationTime: new Date(u.metadata.creationTime).toLocaleDateString() })) : [];
 
-        const squareResult = results[0];
-        if (squareResult.status === 'fulfilled') {
-            allPayments = squareResult.value;
-        } else {
-            squareError = squareResult.reason.message;
-            console.error("[Analytics API] Square Fetching Promise Rejected:", squareError);
-        }
+        // --- Financial Calculations ---
+        let totalDonations = 0;
+        const donationsByFilm: Record<string, number> = {};
+        let totalSales = 0;
+        let totalMerchRevenue = 0;
+        const merchSales: Record<string, { name: string; units: number; revenue: number }> = {};
+        let festivalPassSales = { units: 0, revenue: 0 };
+        let festivalBlockSales = { units: 0, revenue: 0 };
+        const salesByBlock: Record<string, { units: number; revenue: number }> = {};
 
-        const firebaseResult = results[1];
-        if (firebaseResult.status === 'fulfilled') {
-            firebaseData = firebaseResult.value;
-        } else {
-            firebaseError = firebaseResult.reason.message;
-            console.error("[Analytics API] Firebase Fetching Promise Rejected:", firebaseError);
-        }
+        allPayments.forEach(p => {
+            const details = parseNote(p.note);
+            if (details.type === 'donation' && details.title) {
+                totalDonations += p.amount_money.amount;
+                donationsByFilm[details.title] = (donationsByFilm[details.title] || 0) + p.amount_money.amount;
+            } else if (['movie', 'subscription'].includes(details.type)) {
+                totalSales += p.amount_money.amount;
+            } else if (details.type === 'pass') {
+                festivalPassSales.units++;
+                festivalPassSales.revenue += p.amount_money.amount;
+            } else if (details.type === 'block' && details.blockTitle) {
+                festivalBlockSales.units++;
+                festivalBlockSales.revenue += p.amount_money.amount;
+                if (!salesByBlock[details.blockTitle]) salesByBlock[details.blockTitle] = { units: 0, revenue: 0 };
+                salesByBlock[details.blockTitle].units++;
+                salesByBlock[details.blockTitle].revenue += p.amount_money.amount;
+            }
+        });
 
-        // --- Data Processing ---
+        const totalAdRevenue = (Object.values(viewCounts).reduce((s, c) => s + c, 0) / 1000) * AD_CPM_IN_CENTS;
+        const crateTvMerchCut = totalMerchRevenue * MERCH_PLATFORM_CUT;
+        const totalFestivalRevenue = festivalPassSales.revenue + festivalBlockSales.revenue;
+        const totalRevenue = totalDonations + totalSales + totalMerchRevenue + totalAdRevenue + totalFestivalRevenue;
+
+        const filmmakerPayouts = Object.values(allMovies).map(movie => {
+            const filmDonations = donationsByFilm[movie.title] || 0;
+            const filmmakerDonationPayout = filmDonations * (1 - DONATION_PLATFORM_CUT);
+            const filmAdRevenue = ((viewCounts[movie.key] || 0) / 1000) * AD_CPM_IN_CENTS;
+            const filmmakerAdPayout = filmAdRevenue * AD_REVENUE_FILMMAKER_SHARE;
+            return {
+                movieTitle: movie.title,
+                totalDonations: filmDonations,
+                crateTvCut: filmDonations * DONATION_PLATFORM_CUT,
+                filmmakerDonationPayout,
+                totalAdRevenue: filmAdRevenue,
+                filmmakerAdPayout,
+                totalFilmmakerPayout: filmmakerDonationPayout + filmmakerAdPayout,
+            };
+        });
+
         const analyticsData: AnalyticsData = {
-            totalRevenue: 0, totalDonations: 0, totalSales: 0,
-            salesByType: {}, filmmakerPayouts: [],
-            viewCounts: firebaseData.viewCounts,
-            movieLikes: firebaseData.movieLikes,
-            totalUsers: firebaseData.totalUsers,
-            allUsers: firebaseData.allUsers,
-            viewLocations: firebaseData.viewLocations,
-            totalFestivalRevenue: 0,
-            festivalPassSales: { units: 0, revenue: 0 },
-            festivalBlockSales: { units: 0, revenue: 0 },
-            salesByBlock: {},
-            totalMerchRevenue: 0,
-            crateTvMerchCut: 0,
-            merchSales: {},
-            totalAdRevenue: 0,
-            crateTvAdShare: 0,
-            totalFilmmakerAdPayouts: 0,
+            totalRevenue, totalUsers: allUsers.length, viewCounts, movieLikes, filmmakerPayouts, viewLocations, allUsers,
+            totalDonations, totalSales, totalMerchRevenue, totalAdRevenue, crateTvMerchCut, merchSales,
+            totalFestivalRevenue, festivalPassSales, festivalBlockSales, salesByBlock,
         };
-        const payoutMap: { [key: string]: Partial<FilmmakerPayout> } = {};
 
-        // 1. Process payments
-        allPayments.forEach(payment => {
-            const amount = payment.amount_money.amount;
-            const details = parseNote(payment.note);
-
-            if (details.type === 'donation' && details.title && details.director) {
-                analyticsData.totalDonations += amount;
-                if (!payoutMap[details.title]) {
-                    payoutMap[details.title] = { movieTitle: details.title, director: details.director, totalDonations: 0 };
-                }
-                payoutMap[details.title].totalDonations! += amount;
-            } else if (details.type === 'pass' || details.type === 'block') {
-                 analyticsData.totalFestivalRevenue += amount;
-                 if (details.type === 'pass') {
-                     analyticsData.festivalPassSales.units += 1;
-                     analyticsData.festivalPassSales.revenue += amount;
-                 } else if (details.title) {
-                     analyticsData.festivalBlockSales.units += 1;
-                     analyticsData.festivalBlockSales.revenue += amount;
-                     if (!analyticsData.salesByBlock[details.title]) analyticsData.salesByBlock[details.title] = { units: 0, revenue: 0 };
-                     analyticsData.salesByBlock[details.title].units += 1;
-                     analyticsData.salesByBlock[details.title].revenue += amount;
-                 }
-            } else if (details.type === 'merch_sale' && details.itemName) {
-                analyticsData.totalMerchRevenue += amount;
-                if (!analyticsData.merchSales[details.itemName]) analyticsData.merchSales[details.itemName] = { name: details.itemName, units: 0, revenue: 0 };
-                analyticsData.merchSales[details.itemName].units += 1;
-                analyticsData.merchSales[details.itemName].revenue += amount;
-            } else if (details.type !== 'unknown') {
-                analyticsData.totalSales += amount;
-                analyticsData.salesByType[details.type] = (analyticsData.salesByType[details.type] || 0) + amount;
-            }
-        });
-
-        // 2. Calculate Ad Revenue and update payout map
-        Object.values(firebaseData.allMovies).forEach(movie => {
-            const views = firebaseData.viewCounts[movie.key] || 0;
-            const filmAdRevenue = (views / 1000) * AD_CPM_IN_CENTS;
-            analyticsData.totalAdRevenue += filmAdRevenue;
-
-            // Ensure every film with a director has a payout map entry
-            if (movie.director && !payoutMap[movie.title]) {
-                 payoutMap[movie.title] = { movieTitle: movie.title, director: movie.director, totalDonations: 0 };
-            }
-
-            if (payoutMap[movie.title]) {
-                 payoutMap[movie.title]!.totalAdRevenue = (payoutMap[movie.title]!.totalAdRevenue || 0) + filmAdRevenue;
-            }
-        });
-
-        // 3. Finalize Payout Calculations
-        Object.values(payoutMap).forEach(payout => {
-            payout.filmmakerDonationPayout = (payout.totalDonations || 0) * 0.70;
-            payout.crateTvCut = (payout.totalDonations || 0) * 0.30;
-            payout.filmmakerAdPayout = (payout.totalAdRevenue || 0) * AD_REVENUE_FILMMAKER_SHARE;
-            payout.totalFilmmakerPayout = payout.filmmakerDonationPayout + payout.filmmakerAdPayout;
-            analyticsData.filmmakerPayouts.push(payout as FilmmakerPayout);
-        });
-
-        analyticsData.filmmakerPayouts.sort((a, b) => b.totalFilmmakerPayout - a.totalFilmmakerPayout);
-
-        // --- Calculate Final Aggregates ---
-        analyticsData.totalFilmmakerAdPayouts = analyticsData.filmmakerPayouts.reduce((sum, p) => sum + p.filmmakerAdPayout, 0);
-        analyticsData.crateTvAdShare = analyticsData.totalAdRevenue - analyticsData.totalFilmmakerAdPayouts;
-        analyticsData.crateTvMerchCut = Math.round(analyticsData.totalMerchRevenue * 0.15); // 15% merch cut
-        analyticsData.totalRevenue = analyticsData.totalDonations + analyticsData.totalSales + analyticsData.totalFestivalRevenue + analyticsData.totalMerchRevenue + analyticsData.totalAdRevenue;
-
-        console.log("[Analytics API] Request completed successfully.");
-        return new Response(JSON.stringify({
-            analyticsData,
-            errors: { square: squareError, firebase: firebaseError }
-        }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return new Response(JSON.stringify({ analyticsData, errors }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "A critical error occurred before data fetching could start.";
-        console.error("[Analytics API] A critical, unhandled error occurred:", error);
-        return new Response(JSON.stringify({ 
-            analyticsData: null,
-            errors: { critical: errorMessage }
-        }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        errors.critical = error instanceof Error ? error.message : "An unknown error occurred.";
+        return new Response(JSON.stringify({ analyticsData: null, errors }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 }

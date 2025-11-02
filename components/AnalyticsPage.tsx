@@ -3,6 +3,7 @@ import { AnalyticsData, Movie } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
 import FilmReportModal from './FilmReportModal';
+import BillingReminders from './BillingReminders';
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
 const formatNumber = (num: number) => num.toLocaleString();
@@ -212,7 +213,10 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                 {/* FIX: Explicitly cast Object.values to number[] to resolve type inference issues with the reduce function. */}
                                 <StatCard title="Total Film Views" value={formatNumber((Object.values(analyticsData.viewCounts) as number[]).reduce((s, c) => s + (c || 0), 0))} />
                             </div>
-                            <h3 className="text-xl font-bold mb-4 text-white">Film Performance</h3>
+                            
+                            <BillingReminders />
+
+                            <h3 className="text-xl font-bold mb-4 mt-8 text-white">Film Performance</h3>
                             <div className="overflow-x-auto"><table className="w-full text-left">
                                 <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Film</th><th className="p-3">Views</th><th className="p-3">Likes</th><th className="p-3">Donations</th><th className="p-3 no-print">Actions</th></tr></thead>
                                 <tbody>{filmPerformanceData.map(film => (

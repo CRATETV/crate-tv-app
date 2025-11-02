@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import Footer from './Footer';
@@ -42,7 +43,7 @@ const TopTenPage: React.FC = () => {
 
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, movieKey: string) => {
         e.preventDefault();
-        window.history.pushState({}, '', `/movie/${movieKey}`);
+        window.history.pushState({}, '', `/movie/${movieKey}?play=true`);
         window.dispatchEvent(new Event('pushstate'));
     };
 

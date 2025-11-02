@@ -5,6 +5,7 @@ import { FilmmakerAnalytics, Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchAndCacheLiveData } from '../services/dataService';
+import PayoutExplanationModal from './PayoutExplanationModal';
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
 
@@ -84,6 +85,7 @@ const FilmmakerPortalPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
+    const [isExplanationModalOpen, setIsExplanationModalOpen] = useState(false);
     const [payoutStatus, setPayoutStatus] = useState<'idle' | 'requested'>('idle');
 
     useEffect(() => {
@@ -182,7 +184,18 @@ const FilmmakerPortalPage: React.FC = () => {
                                 <StatCard title="Total Donations" value={formatCurrency(analytics.totalDonations)} />
                             </div>
                             <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
-                                <h2 className="text-xl font-bold text-white mb-2">Payouts</h2>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <h2 className="text-xl font-bold text-white">Payouts</h2>
+                                    <button 
+                                        onClick={() => setIsExplanationModalOpen(true)}
+                                        className="text-gray-400 hover:text-white transition-colors"
+                                        aria-label="How payouts work"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.79 4 4s-1.79 4-4 4c-1.742 0-3.223-.835-3.772-2M12 18.5v.01" />
+                                        </svg>
+                                    </button>
+                                </div>
                                 {payoutStatus === 'requested' ? (
                                     <p className="text-green-400">Your payout request has been sent! Please allow 3-5 business days for processing.</p>
                                 ) : analytics.balance > 100 ? (
@@ -243,6 +256,9 @@ const FilmmakerPortalPage: React.FC = () => {
                     onClose={() => setIsPayoutModalOpen(false)} 
                     onComplete={() => { setIsPayoutModalOpen(false); setPayoutStatus('requested'); }} 
                 />
+            )}
+            {isExplanationModalOpen && (
+                <PayoutExplanationModal onClose={() => setIsExplanationModalOpen(false)} />
             )}
         </div>
     );

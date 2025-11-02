@@ -54,7 +54,7 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
         {/* Footer Content */}
         <footer className="bg-black text-gray-400 py-12 px-4 md:px-12 border-t border-gray-800">
             <div className="max-w-7xl mx-auto">
-                <div className={`grid grid-cols-2 ${showActorLinks ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-8 mb-8`}>
+                <div className={`grid grid-cols-2 md:grid-cols-3 gap-8 mb-8`}>
                 <div>
                     <h3 className="font-bold text-white mb-4">Company</h3>
                     <ul className="space-y-2">
@@ -76,14 +76,7 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                         <li><a href="https://www.48hourfilm.com/philadelphia" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Philadelphia 48 Hour Film Project</a></li>
                     </ul>
                 </div>
-                {showActorLinks && (
-                    <div>
-                    <h3 className="font-bold text-white mb-4">Actors</h3>
-                    <ul className="space-y-2">
-                         <li><a href="/actors-directory" onClick={(e) => handleNavigate(e, '/actors-directory')} className="hover:text-white transition">Actors Directory</a></li>
-                    </ul>
-                    </div>
-                )}
+                {/* Actor links section removed as requested */}
                 </div>
                 
                 {showPortalNotice && (

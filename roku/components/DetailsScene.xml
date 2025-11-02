@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="DetailsScene" extends="Scene">
+    <script type="text/brightscript" uri="pkg:/components/DetailsScene.brs" />
+    <interface>
+        <field id="content" type="node" onChange="onContentChange" />
+    </interface>
+    <children>
+        <Poster id="backgroundPoster" width="1920" height="1080" />
+        <Rectangle id="background" color="0x141414DD" width="1920" height="1080" />
+
+        <Group id="detailsGroup" translation="[80, 150]">
+            <Poster id="itemPoster" width="400" height="600" />
+            <Group id="infoGroup" translation="[500, 0]">
+                <Label id="titleLabel" width="1200" wrap="true">
+                    <font role="font.large.bold" />
+                </Label>
+                <Label id="synopsisLabel" width="1200" wrap="true" maxLines="8" translation="[0, 80]">
+                    <font role="font.small" />
+                </Label>
+                <Label id="directorLabel" width="1200" translation="[0, 300]">
+                    <font role="font.small" />
+                </Label>
+                 <Label id="castLabel" width="1200" wrap="true" maxLines="4" translation="[0, 350]">
+                    <font role="font.small" />
+                </Label>
+                <ButtonGroup id="actionButtons" translation="[0, 450]" layoutDirection="horiz" itemSpacing="[20, 0]" buttonInfo='[{"text":"Play"}]' />
+            </Group>
+        </Group>
+    </children>
+</component>

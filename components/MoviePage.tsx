@@ -1,10 +1,10 @@
-
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import ActorBioModal from './ActorBioModal';
 import Header from './Header';
 import LoadingSpinner from './LoadingSpinner';
+// FIX: Corrected casing for BackToTopButton import.
 import BackToTopButton from './BackToTopButton';
 import SearchOverlay from './SearchOverlay';
 import StagingBanner from './StagingBanner';
@@ -74,13 +74,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [released, setReleased] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const hasTrackedViewRef = useRef(false);
-  const resumeTimeRef = useRef(0);
 
-  // Like state
-  const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
-  
   // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
+  const [showControls, setShowControls] = useState(false);
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -101,7 +99,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const adsManagerRef = useRef<any>(null);
   const [isAdPlaying, setIsAdPlaying] = useState(false);
   const [adError, setAdError] = useState<string | null>(null);
-  const [isPostRollPlaying, setIsPostRollPlaying] = useState(false);
 
 
   const playContent = useCallback(() => {
@@ -116,19 +113,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             }).catch(err => console.error("Failed to track view:", err));
         }
         videoRef.current.play().catch(e => console.error("Content play failed", e));
-        if (resumeTimeRef.current > 1) { // Seek if resume time is meaningful (more than 1s)
-            videoRef.current.currentTime = resumeTimeRef.current;
-            resumeTimeRef.current = 0; // Reset after seeking
-        }
     }
   }, [videoRef, movie?.key]);
-
-  const handleAllAdsCompleted = useCallback(() => {
-    if (isPostRollPlaying) {
-      window.history.pushState({}, '', '/');
-      window.dispatchEvent(new Event('pushstate'));
-    }
-  }, [isPostRollPlaying]);
   
   const initializeAds = useCallback(() => {
     if (!videoRef.current || !adContainerRef.current || playerMode !== 'full' || !released || adsManagerRef.current || typeof google === 'undefined') {
@@ -153,7 +139,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
             adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED, () => videoElement.pause());
             adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED, playContent);
-            adsManager.addEventListener(google.ima.AdEvent.Type.ALL_ADS_COMPLETED, handleAllAdsCompleted);
+            adsManager.addEventListener(google.ima.AdEvent.Type.ALL_ADS_COMPLETED, playContent);
             adsManager.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, (adErrorEvent: any) => {
                 console.error('Ad Error:', adErrorEvent.getError());
                 setAdError('An ad could not be loaded. Starting film...');
@@ -181,36 +167,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         false
     );
     
-    // Use VMAP to schedule pre-roll and post-roll ads
-    const descriptionUrl = encodeURIComponent(window.location.href);
-    const pubId = "ca-video-pub-5748304047766155";
-    const preRollTag = `https://googleads.g.doubleclick.net/pagead/ads?ad_type=video&client=${pubId}&description_url=${descriptionUrl}&videoad_start_delay=0`;
-    const postRollTag = `https://googleads.g.doubleclick.net/pagead/ads?ad_type=video&client=${pubId}&description_url=${descriptionUrl}&videoad_start_delay=-1`;
-
-    const vmapXml = `
-      <vmap:VMAP xmlns:vmap="http://www.iab.net/videosuite/vmap" version="1.0">
-        <vmap:AdBreak timeOffset="start" breakType="linear" breakId="preroll">
-          <vmap:AdSource id="preroll-ad" allowMultipleAds="false" followRedirects="true">
-            <vmap:AdTagURI templateType="vast3"><![CDATA[${preRollTag}]]></vmap:AdTagURI>
-          </vmap:AdSource>
-        </vmap:AdBreak>
-        <vmap:AdBreak timeOffset="end" breakType="linear" breakId="postroll">
-          <vmap:AdSource id="postroll-ad" allowMultipleAds="false" followRedirects="true">
-            <vmap:AdTagURI templateType="vast3"><![CDATA[${postRollTag}]]></vmap:AdTagURI>
-          </vmap:AdSource>
-        </vmap:AdBreak>
-      </vmap:VMAP>
-    `.trim();
-
-    const vmapDataUri = `data:text/xml;charset=utf-8,${encodeURIComponent(vmapXml)}`;
-
     const adsRequest = new google.ima.AdsRequest();
-    adsRequest.adTagUrl = vmapDataUri;
+    adsRequest.adTagUrl = 'https://googleads.g.doubleclick.net/pagead/ads?ad_type=video&client=ca-video-pub-5748304047766155&videoad_start_delay=0&description_url=' + encodeURIComponent(window.location.href);
     adsRequest.linearAdSlotWidth = videoElement.clientWidth;
     adsRequest.linearAdSlotHeight = videoElement.clientHeight;
 
     adsLoader.requestAds(adsRequest);
-  }, [playerMode, released, playContent, handleAllAdsCompleted]);
+  }, [playerMode, released, playContent]);
   
   useEffect(() => {
     return () => {
@@ -240,9 +203,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             if (sourceMovie) {
               setReleased(isMovieReleased(sourceMovie));
     
-              const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
-              if (storedLikedMovies) setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
-    
               setMovie({ ...sourceMovie });
     
               if (params.get('play') === 'true' && sourceMovie.fullMovie && isMovieReleased(sourceMovie)) {
@@ -251,11 +211,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 setPlayerMode('poster');
               }
             } else {
-              window.location.href = '/';
+              window.history.replaceState({}, '', '/');
+              window.dispatchEvent(new Event('pushstate'));
             }
         } catch (error) {
             console.error("Failed to load movie data:", error);
-            window.location.href = '/';
+            window.history.replaceState({}, '', '/');
+            window.dispatchEvent(new Event('pushstate'));
         } finally {
             setIsLoading(false);
         }
@@ -333,23 +295,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
 
     const handleSearchSubmit = (query: string) => {
-        if (query) window.location.href = `/?search=${encodeURIComponent(query)}`;
+        if (query) {
+             window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
+             window.dispatchEvent(new Event('pushstate'));
+        }
     };
     
     const handleMovieEnd = () => {
-      if (adsLoaderRef.current) {
-        setIsPostRollPlaying(true);
-        adsLoaderRef.current.contentComplete();
-      } else {
-        window.history.pushState({}, '', '/');
-        window.dispatchEvent(new Event('pushstate'));
-      }
+      // Navigate to the home screen when the movie finishes.
+      window.history.pushState({}, '', '/');
+      window.dispatchEvent(new Event('pushstate'));
     };
 
     const handleExitPlayer = () => {
-        if (videoRef.current) {
-            resumeTimeRef.current = videoRef.current.currentTime;
-        }
         setPlayerMode('poster');
     };
     
@@ -358,6 +316,24 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         setLastDonationDetails(details);
         setIsDonationSuccessModalOpen(true);
     };
+
+    const handlePlayerInteraction = () => {
+      setShowControls(true);
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 3000);
+    };
+
+    useEffect(() => {
+      return () => {
+        if (controlsTimeoutRef.current) {
+          clearTimeout(controlsTimeoutRef.current);
+        }
+      };
+    }, []);
 
     if (isLoading || !movie) {
         return <LoadingSpinner />;
@@ -379,7 +355,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             )}
 
             <main className={`flex-grow ${playerMode === 'full' ? 'flex items-center justify-center' : 'pt-4 md:pt-20'}`}>
-                <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container">
+                <div 
+                    ref={videoContainerRef} 
+                    className="relative w-full aspect-video bg-black secure-video-container group"
+                    onClick={handlePlayerInteraction}
+                    onMouseMove={handlePlayerInteraction}
+                >
                     <div ref={adContainerRef} className="absolute inset-0 z-20" />
                     
                     {playerMode === 'full' && (
@@ -431,7 +412,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     )}
                     
                     {playerMode === 'full' && (
-                        <div className="absolute top-4 right-4 z-30 flex items-center gap-4">
+                        <div className={`absolute top-4 right-4 z-30 flex items-center gap-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
                             <CastButton videoElement={videoRef.current} />
                             <button
                                 onClick={handleExitPlayer}

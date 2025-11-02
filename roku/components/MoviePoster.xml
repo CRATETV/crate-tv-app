@@ -14,29 +14,30 @@
         <!-- The focus border, initially invisible -->
         <Rectangle 
             id="focusRing"
-            color="0x8b5cf6FF" ' A vibrant purple for focus
-            width="316"
-            height="196"
+            color="0x6d28d9FF"
+            width="256"
+            height="376"
             translation="[-8, -8]"
-            visible="false" 
+            visible="false"
+            scale="1.0" 
         />
         
         <!-- The movie poster image -->
         <Poster 
             id="tileImage"
-            width="300"
-            height="180"
+            width="240"
+            height="360"
         />
 
         <!-- The movie title label -->
         <Label 
             id="tileLabel"
-            width="300"
+            width="240"
             horizAlign="center"
-            translation="[0, 195]"
+            translation="[0, 370]"
             color="0xFFFFFFFF"
         >
-             <font role="Roboto-Regular-30" />
+             <font role="font.small" />
         </Label>
     </children>
 

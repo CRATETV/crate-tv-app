@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
 // FIX: Corrected import path
@@ -43,8 +44,7 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
     }, [slug]);
 
     const handleSelectMovie = (movie: Movie) => {
-        // Since we are on a public page, we'll navigate to the movie's dedicated page
-        window.history.pushState({}, '', `/movie/${movie.key}`);
+        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
         window.dispatchEvent(new Event('pushstate'));
     };
 

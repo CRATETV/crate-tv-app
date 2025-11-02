@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Header from './Header';
 // FIX: Corrected import path
@@ -119,39 +120,26 @@ Implement Feature A with new styling and adjustments`}
                         </section>
                         
                         <section>
-                            <h2 className="text-3xl font-bold text-white mb-4">How to Package & Test the Roku Channel</h2>
+                            <h2 className="text-3xl font-bold text-white mb-4">How to Set Up the Roku Channel (The Easy Way)</h2>
                             <p className="text-gray-300 mb-4">
-                                The web app includes an amazing feature: an automated packager that creates a working Roku channel for you. Here’s how to generate the channel package and install it on your Roku device for testing (this is called "sideloading").
+                                Crate TV uses Roku's "Direct Publisher" system. This means our web app provides a special JSON feed, and Roku automatically builds and updates the channel for us. There is no longer a need to manually package or upload ZIP files.
                             </p>
                             <p className="text-gray-300 mb-4">
                                 <strong className="text-yellow-400">Prerequisite:</strong> The Roku channel needs a public URL to fetch movie data from. Ensure your web application is deployed and accessible online before proceeding.
                             </p>
                         
-                            <h3 className="text-xl font-semibold text-white mt-6 mb-2">Step 1: Enable Developer Mode on Your Roku</h3>
+                            <h3 className="text-xl font-semibold text-white mt-6 mb-2">One-Time Setup in Roku Developer Dashboard</h3>
                             <ol className="list-decimal list-inside space-y-2 text-gray-300 mb-4">
-                                <li>On your Roku remote, press the following sequence:</li>
-                                <CodeBlock>Home (3x), Up (2x), Right, Left, Right, Left, Right</CodeBlock>
-                                <li>Follow the on-screen instructions to enable Developer Mode. You'll need to agree to the developer agreement.</li>
-                                <li>Your Roku will restart and display a URL on the screen (e.g., <code className="bg-gray-700 p-1 rounded-md">http://192.168.1.100</code>). This is your Roku's IP address. Keep this URL handy and make sure your computer is on the same Wi-Fi network.</li>
-                            </ol>
-                        
-                            <h3 className="text-xl font-semibold text-white mt-6 mb-2">Step 2: Generate the Roku Channel Package</h3>
-                            <ol className="list-decimal list-inside space-y-2 text-gray-300 mb-4">
-                                <li>Navigate to the <a href="/admin" onClick={(e) => handleNavigate(e, '/admin')} className="text-red-400 hover:underline">Admin Panel</a> of your live application.</li>
-                                <li>Go to the <strong>"Tools"</strong> tab.</li>
-                                <li>In the "Automated Roku Channel Packager" section, click the <strong>"Generate & Download Roku ZIP"</strong> button.</li>
-                                <li>A file named <code className="bg-gray-700 p-1 rounded-md">cratv.zip</code> will be downloaded to your computer.</li>
-                            </ol>
-                        
-                            <h3 className="text-xl font-semibold text-white mt-6 mb-2">Step 3: Install ("Sideload") the Channel</h3>
-                            <ol className="list-decimal list-inside space-y-2 text-gray-300 mb-4">
-                                <li>On your computer, open a web browser and go to the Roku IP address from Step 1.</li>
-                                <li>You will see the "Development Application Installer" page.</li>
-                                <li>Click <strong>"Upload"</strong> and select the <code className="bg-gray-700 p-1 rounded-md">cratv.zip</code> file you just downloaded.</li>
-                                <li>Click <strong>"Install"</strong>. After a few moments, the Crate TV channel will appear on your Roku's home screen.</li>
+                                <li>Log into your <a href="https://developer.roku.com/" target="_blank" rel="noopener noreferrer" className="text-red-400 hover:underline">Roku Developer Dashboard</a>.</li>
+                                <li>Go to "My Channels" and click "Add Channel".</li>
+                                <li>Select <strong className="text-white">"Direct Publisher"</strong> from the options.</li>
+                                <li>Follow the on-screen prompts to enter your channel properties (name, description, etc.).</li>
+                                <li>When you get to the <strong className="text-white">"Feed URL"</strong> section, paste the following URL, replacing <code className="bg-gray-700 p-1 rounded-md">[your-live-domain.com]</code> with your actual Vercel deployment URL:</li>
+                                <CodeBlock>{`https://[your-live-domain.com]/api/roku-direct-publisher-feed`}</CodeBlock>
+                                <li>Complete the rest of the channel setup (logos, etc.) and submit it for publishing.</li>
                             </ol>
                             <p className="text-gray-300">
-                                Your Roku channel is now installed and will stream content directly from your web application's API! If you make changes to the Roku source code (in the <code className="bg-gray-700 p-1 rounded-md">/roku</code> directory), you'll need to generate and install a new ZIP file to see them.
+                                That's it! Once published, the Roku channel will automatically check the feed URL for new content. Any changes you "Publish" from the Crate TV admin panel will appear on the Roku channel automatically within 24 hours.
                             </p>
                         </section>
                     </div>

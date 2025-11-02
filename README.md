@@ -15,7 +15,7 @@ Crate TV is a sleek, professional, and fully-featured streaming web application 
 - **Staging Environment**: Preview unreleased movies and content changes by adding `?env=staging` to the URL. A banner indicates you're in preview mode.
 - **Secure Admin Panel**: A password-protected page (`/admin`) for content management. Authentication is handled by a secure, serverless API endpoint, and the password is stored safely as an environment variable.
 - **Integrated Secure File Uploader**: Upload movie files, trailers, and posters directly to Amazon S3 from the admin panel. The system uses secure presigned URLs for fast, direct-to-S3 uploads.
-- **Automated Roku Channel Packager**: A one-click tool in the Admin Panel that generates a complete, ready-to-upload Roku channel ZIP file, automatically configured to pull data from your live web app.
+- **Automated Roku Channel**: The app provides a "Direct Publisher" JSON feed, allowing for automated, hands-free updates to the Roku channel.
 - **NEW: Analytics Dashboard**: A secure page to view total users, recent sign-ups, sales data from Square, filmmaker payout reports, and movie view counts.
 
 ---
@@ -131,32 +131,26 @@ Once deployed, Vercel will provide you with a public URL (e.g., `https://your-pr
 
 ---
 
-## 📺 How to Create and Sideload the Roku Channel
+## 📺 How to Set Up the Automated Roku Channel
 
-The web application includes an amazing feature: an automated packager that creates a working Roku channel for you.
+Crate TV uses Roku's "Direct Publisher" system. This means our web app provides a special JSON feed, and Roku automatically builds and updates the channel for us. There is **no need to manually package or upload ZIP files**.
 
 **Prerequisite**: You must complete the deployment steps above first. The Roku channel needs a public URL to fetch movie data from.
 
-**Note**: The Roku channel's source code (BrightScript and XML) is contained entirely within the `/api/generate-roku-zip.ts` serverless function. The files located in the `/roku` directory of this repository are placeholders and are not used in the final packaged channel. All development for the Roku channel should happen by editing the string contents within the API file.
+### One-Time Setup in Roku Developer Dashboard
 
-### Step 1: Enable Developer Mode on Your Roku
-1.  On your Roku remote, press: **Home (3x), Up (2x), Right, Left, Right, Left, Right**.
-2.  Follow the on-screen instructions to enable Developer Mode and accept the terms.
-3.  Your Roku will restart and display a URL on the screen (e.g., `http://192.168.1.100`). Keep this URL handy.
+1.  Log into your **[Roku Developer Dashboard](https://developer.roku.com/)**.
+2.  Go to **"My Channels"** and click **"Add Channel"**.
+3.  Select **"Direct Publisher"** from the options.
+4.  Follow the on-screen prompts to enter your channel properties (name, description, etc.).
+5.  When you get to the **"Feed URL"** section, paste the following URL, replacing `[your-live-domain.com]` with your actual Vercel deployment URL:
+    ```
+    https://[your-live-domain.com]/api/roku-direct-publisher-feed
+    ```
+6.  Complete the rest of the channel setup (logos, parental controls, etc.).
+7.  **Preview and Publish** your channel.
 
-### Step 2: Generate the Roku Channel Package
-1.  Navigate to the Admin Panel of your **live, deployed** web application (e.g., `https://your-project-name.vercel.app/admin`).
-2.  Enter the admin password you set in your environment variables.
-3.  Go to the **"Tools"** tab.
-4.  In the "Automated Roku Channel Packager" section, click the **"Generate & Download Roku ZIP"** button. A file named `cratv.zip` will be downloaded.
-
-### Step 3: Install the Channel on Your Roku
-1.  On your computer (which must be on the same Wi-Fi network as your Roku), open a web browser and go to the Roku URL from Step 1.
-2.  You will see the "Development Application Installer" page.
-3.  Click **"Upload"** and select the `cratv.zip` file you just downloaded.
-4.  Click **"Install"**. The Crate TV channel will appear on your Roku's home screen.
-
-Your Roku channel is now installed and will stream content directly from your web application's API!
+That's it! Once published, the Roku channel will automatically check the feed URL for new content. Any changes you "Publish" from the Crate TV admin panel will appear on the Roku channel automatically (usually within 24 hours).
 
 ---
 
