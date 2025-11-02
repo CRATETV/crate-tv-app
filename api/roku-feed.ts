@@ -86,7 +86,7 @@ export async function GET(request: Request) {
     // 1. Get Hero Items from 'featured' category
     const heroItems = (categoriesData['featured']?.movieKeys || [])
         .map(key => visibleMovies[key])
-        .filter(Boolean)
+        .filter((movie): movie is Movie => !!movie)
         .map(movie => formatMovieForRoku(movie, movieGenreMap));
         
     // Helper function to process a single category into the Roku format
@@ -96,7 +96,7 @@ export async function GET(request: Request) {
         }
         const movies = categoryData.movieKeys
             .map(movieKey => visibleMovies[movieKey])
-            .filter(Boolean)
+            .filter((movie): movie is Movie => !!movie)
             .map(movie => formatMovieForRoku(movie, movieGenreMap));
           
         if (movies.length > 0) {
