@@ -110,7 +110,7 @@ export async function GET(request: Request) {
     
     // 2. Get Top 10 Movies
     const topTenMovies = Object.values(visibleMovies)
-        .filter((movie: Movie) => movie && typeof movie.likes === 'number')
+        .filter((movie: Movie): movie is Movie => !!movie && typeof movie.likes === 'number')
         .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
         .slice(0, 10);
     const topTenCategory: Category | null = topTenMovies.length > 0 ? {
