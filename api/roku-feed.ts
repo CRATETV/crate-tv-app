@@ -108,11 +108,18 @@ export async function GET(request: Request) {
         return null;
     };
     
-    // 2. Get Top 10 Movies
-    const topTenMovies = Object.values(visibleMovies)
-        .filter((movie: Movie): movie is Movie => !!movie && typeof movie.likes === 'number')
-        .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
-        .slice(0, 10);
+    // 2. Get Top 10 Movies (Refactored for type safety)
+    const allVisibleMovies: Movie[] = Object.values(visibleMovies);
+    const moviesWithLikes = allVisibleMovies.filter((movie: Movie) => {
+        return movie && typeof movie.likes === 'number';
+    });
+    const sortedMovies = moviesWithLikes.sort((a: Movie, b: Movie) => {
+        const likesA = a.likes || 0;
+        const likesB = b.likes || 0;
+        return likesB - likesA;
+    });
+    const topTenMovies = sortedMovies.slice(0, 10);
+
     const topTenCategory: Category | null = topTenMovies.length > 0 ? {
         title: "Top 10 on Crate TV Today",
         movieKeys: topTenMovies.map((m: Movie) => m.key)
