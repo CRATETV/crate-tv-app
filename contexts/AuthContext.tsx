@@ -55,19 +55,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (auth) {
                 const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
                     if (firebaseUser) {
-                        // Get custom claims to determine roles, forcing a refresh to get the latest claims.
                         const idTokenResult = await firebaseUser.getIdTokenResult(true);
-                        const isActor = !!idTokenResult.claims.isActor;
-                        const isFilmmaker = !!idTokenResult.claims.isFilmmaker;
+                        const isActorFromClaim = !!idTokenResult.claims.isActor;
+                        const isFilmmakerFromClaim = !!idTokenResult.claims.isFilmmaker;
 
                         let userProfile = await getUserProfile(firebaseUser.uid);
                         if (!userProfile && firebaseUser.email) {
                             userProfile = await createUserProfile(firebaseUser.uid, firebaseUser.email);
                         }
                         
-                        // Ensure the user object in state has the roles from claims
                         if(userProfile) {
-                             setUser({ ...userProfile, isActor, isFilmmaker });
+                             // FIX: To prevent race conditions on login, combine the role from the DB profile
+                             // with the role from the (potentially delayed) custom claim.
+                             const finalIsActor = isActorFromClaim || (userProfile.isActor ?? false);
+                             const finalIsFilmmaker = isFilmmakerFromClaim || (userProfile.isFilmmaker ?? false);
+                             setUser({ ...userProfile, isActor: finalIsActor, isFilmmaker: finalIsFilmmaker });
                         }
 
                         // When user logs in, clear any guest data from memory and storage

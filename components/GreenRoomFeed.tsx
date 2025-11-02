@@ -10,14 +10,20 @@ interface GreenRoomFeedProps {
 }
 
 const PostCard: React.FC<{ post: ActorPost; currentActor: string; onLike: (postId: string) => void; }> = ({ post, currentActor, onLike }) => {
+    // Defensive check: Ensure likes is an array before using .includes()
     const isLiked = (post.likes || []).includes(currentActor);
+    // Defensive check: Ensure timestamp exists and has seconds before creating a date
+    const postDate = post.timestamp && typeof post.timestamp.seconds === 'number'
+        ? new Date(post.timestamp.seconds * 1000).toLocaleString()
+        : 'just now';
+
     return (
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
             <div className="flex items-center gap-3 mb-3">
                 <img src={post.actorPhoto} alt={post.actorName} className="w-10 h-10 rounded-full object-cover" />
                 <div>
                     <p className="font-bold text-white">{post.actorName}</p>
-                    <p className="text-xs text-gray-400">{new Date((post.timestamp?.seconds || 0) * 1000).toLocaleString()}</p>
+                    <p className="text-xs text-gray-400">{postDate}</p>
                 </div>
             </div>
             <p className="text-gray-300 whitespace-pre-wrap mb-3">{post.content}</p>
@@ -59,7 +65,9 @@ const GreenRoomFeed: React.FC<GreenRoomFeedProps> = ({ actorName }) => {
             });
             if (!response.ok) throw new Error('Failed to fetch feed.');
             const data = await response.json();
-            setPosts(data.posts || []);
+            // FIX: Filter out any invalid posts to prevent rendering crashes.
+            const validPosts = (data.posts || []).filter((p: any) => p && p.id && p.actorName && p.content && p.timestamp);
+            setPosts(validPosts);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Could not load feed.');
         } finally {
