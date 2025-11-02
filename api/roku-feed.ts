@@ -94,30 +94,37 @@ export async function GET(request: Request) {
         if (!categoryData || !Array.isArray(categoryData.movieKeys)) {
             return null;
         }
-        const movies = categoryData.movieKeys
-            .map((movieKey: string) => visibleMovies[movieKey])
-            .filter((movie): movie is Movie => !!movie)
-            .map((movie: Movie) => formatMovieForRoku(movie, movieGenreMap));
+        // Refactored for clarity and compiler stability
+        const movieObjects = categoryData.movieKeys.map((movieKey: string) => visibleMovies[movieKey]);
+        const validMovies = movieObjects.filter((movie): movie is Movie => !!movie);
+        const rokuMovies = validMovies.map((movie: Movie) => formatMovieForRoku(movie, movieGenreMap));
           
-        if (movies.length > 0) {
+        if (rokuMovies.length > 0) {
             return {
                 title: categoryData.title,
-                children: movies, // Roku RowList content nodes use 'children'
+                children: rokuMovies,
             };
         }
         return null;
     };
     
-    // 2. Get Top 10 Movies (Refactored for type safety)
+    // 2. Get Top 10 Movies (Rewritten with a for-loop for maximum compiler stability)
     const allVisibleMovies: Movie[] = Object.values(visibleMovies);
-    const moviesWithLikes = allVisibleMovies.filter((movie: Movie) => {
-        return movie && typeof movie.likes === 'number';
-    });
+    const moviesWithLikes: Movie[] = [];
+    for (const movie of allVisibleMovies) {
+        if (movie && typeof movie.likes === 'number') {
+            moviesWithLikes.push(movie);
+        }
+    }
+
+    // Sort the filtered movies by likes in descending order.
     const sortedMovies = moviesWithLikes.sort((a: Movie, b: Movie) => {
         const likesA = a.likes || 0;
         const likesB = b.likes || 0;
         return likesB - likesA;
     });
+    
+    // Get the top 10.
     const topTenMovies = sortedMovies.slice(0, 10);
 
     const topTenCategory: Category | null = topTenMovies.length > 0 ? {
