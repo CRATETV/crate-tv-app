@@ -4,11 +4,11 @@ import Header from './Header';
 import Footer from './Footer';
 import GreenRoomFeed from './GreenRoomFeed';
 import { useAuth } from '../contexts/AuthContext';
-import MonologueGenerator from './MonologueGenerator';
+import PlayFinder from './PlayFinder';
 
 const ActorPortalPage: React.FC = () => {
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState('practice'); // Default to the new practice tool
+    const [activeTab, setActiveTab] = useState('playFinder'); // Default to the new play finder tool
 
     if (!user) {
         // This should not happen due to route protection, but it's a good safeguard.
@@ -33,7 +33,7 @@ const ActorPortalPage: React.FC = () => {
                     <p className="text-gray-400 mb-8">Update your profile, connect with others, or hone your craft with our new tools.</p>
                     
                      <div className="flex flex-wrap items-center gap-2 mb-6 border-b border-gray-700 pb-4">
-                        <TabButton tabName="practice" label="Monologue Practice" />
+                        <TabButton tabName="playFinder" label="Play Finder" />
                         <TabButton tabName="feed" label="Green Room Feed" />
                         <TabButton tabName="update" label="Update My Profile" />
                         <a 
@@ -49,8 +49,8 @@ const ActorPortalPage: React.FC = () => {
                         </a>
                     </div>
 
-                    {activeTab === 'practice' && (
-                        <MonologueGenerator />
+                    {activeTab === 'playFinder' && (
+                        <PlayFinder />
                     )}
 
                     {activeTab === 'update' && (

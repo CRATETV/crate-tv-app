@@ -1,8 +1,7 @@
-
 // This is a Vercel Serverless Function
 // Path: /api/get-sales-data
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
-import { AnalyticsData, Movie, PayoutRequest } from '../types.js';
+import { AnalyticsData, Movie, PayoutRequest, AdminPayout } from '../types.js';
 
 interface SquarePayment {
   id: string;
@@ -23,6 +22,7 @@ const AD_CPM_IN_CENTS = 500; // $5.00 per 1000 views
 const DONATION_PLATFORM_CUT = 0.30;
 const AD_REVENUE_FILMMAKER_SHARE = 0.50;
 const MERCH_PLATFORM_CUT = 0.15;
+const FESTIVAL_PLATFORM_CUT = 0.30;
 
 const parseNote = (note: string | undefined): { type: string, title?: string, director?: string, blockTitle?: string } => {
     if (!note) return { type: 'unknown' };
@@ -49,7 +49,7 @@ async function fetchAllSquarePayments(accessToken: string, locationId: string | 
 
         const response = await fetch(url.toString(), {
             method: 'GET',
-            headers: { 'Square-Version': '2024-05-15', 'Authorization': `Bearer accessToken`, 'Content-Type': 'application/json' },
+            headers: { 'Square-Version': '2024-05-15', 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
         });
         
         if (!response.ok) {
@@ -92,14 +92,17 @@ export async function POST(request: Request) {
         const viewsPromise = db ? db.collection('view_counts').get() : Promise.resolve(null);
         const locationsPromise = db ? db.collection('view_locations').get() : Promise.resolve(null);
         const usersPromise = auth ? auth.listUsers(1000) : Promise.resolve(null);
+        const adminPayoutsPromise = db ? db.collection('admin_payouts').orderBy('payoutDate', 'desc').get() : Promise.resolve(null);
+
 
         const [
             allPayments,
             moviesSnapshot,
             viewsSnapshot,
             locationsSnapshot,
-            usersResult
-        ] = await Promise.all([squarePromise.catch(e => { errors.square = e.message; return []; }), moviesPromise, viewsPromise, locationsPromise, usersPromise]);
+            usersResult,
+            adminPayoutsSnapshot
+        ] = await Promise.all([squarePromise.catch(e => { errors.square = e.message; return []; }), moviesPromise, viewsPromise, locationsPromise, usersPromise, adminPayoutsPromise]);
 
         // --- Process Data ---
         const allMovies: Record<string, Movie> = {};
@@ -115,6 +118,12 @@ export async function POST(request: Request) {
         locationsSnapshot?.forEach(doc => { viewLocations[doc.id] = doc.data(); });
         
         const allUsers = usersResult ? usersResult.users.map(u => ({ email: u.email || 'N/A', creationTime: new Date(u.metadata.creationTime).toLocaleDateString() })) : [];
+
+        const pastAdminPayouts: AdminPayout[] = [];
+        adminPayoutsSnapshot?.forEach(doc => {
+            pastAdminPayouts.push({ id: doc.id, ...doc.data() } as AdminPayout);
+        });
+        const totalAdminPayouts = pastAdminPayouts.reduce((sum, p) => sum + p.amount, 0);
 
         // --- Financial Calculations ---
         let totalDonations = 0;
@@ -150,6 +159,13 @@ export async function POST(request: Request) {
         const totalFestivalRevenue = festivalPassSales.revenue + festivalBlockSales.revenue;
         const totalRevenue = totalDonations + totalSales + totalMerchRevenue + totalAdRevenue + totalFestivalRevenue;
 
+        // Calculate Crate TV's total share
+        const crateTvDonationShare = totalDonations * DONATION_PLATFORM_CUT;
+        const crateTvAdShare = totalAdRevenue * (1 - AD_REVENUE_FILMMAKER_SHARE);
+        const crateTvFestivalShare = totalFestivalRevenue * FESTIVAL_PLATFORM_CUT;
+        const totalCrateTvRevenue = crateTvDonationShare + crateTvAdShare + crateTvMerchCut + crateTvFestivalShare + totalSales;
+
+
         const filmmakerPayouts = Object.values(allMovies).map(movie => {
             const filmDonations = donationsByFilm[movie.title] || 0;
             const filmmakerDonationPayout = filmDonations * (1 - DONATION_PLATFORM_CUT);
@@ -167,7 +183,7 @@ export async function POST(request: Request) {
         });
 
         const analyticsData: AnalyticsData = {
-            totalRevenue, totalUsers: allUsers.length, viewCounts, movieLikes, filmmakerPayouts, viewLocations, allUsers,
+            totalRevenue, totalCrateTvRevenue, totalAdminPayouts, pastAdminPayouts, totalUsers: allUsers.length, viewCounts, movieLikes, filmmakerPayouts, viewLocations, allUsers,
             totalDonations, totalSales, totalMerchRevenue, totalAdRevenue, crateTvMerchCut, merchSales,
             totalFestivalRevenue, festivalPassSales, festivalBlockSales, salesByBlock,
         };

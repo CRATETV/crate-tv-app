@@ -1,4 +1,3 @@
-
 export interface Actor {
   name: string;
   photo: string;
@@ -24,6 +23,7 @@ export interface Movie {
   isForSale?: boolean;
   price?: number;
   durationInMinutes?: number;
+  hasCopyrightMusic?: boolean;
 }
 
 export interface Category {
@@ -144,8 +144,18 @@ export interface FilmmakerAnalytics {
   films: FilmmakerFilmPerformance[];
 }
 
+export interface AdminPayout {
+  id: string;
+  amount: number; // in cents
+  reason: string;
+  payoutDate: { seconds: number; nanoseconds: number; };
+}
+
 export interface AnalyticsData {
   totalRevenue: number;
+  totalCrateTvRevenue: number;
+  totalAdminPayouts: number;
+  pastAdminPayouts: AdminPayout[];
   totalUsers: number;
   viewCounts: Record<string, number>;
   movieLikes: Record<string, number>;

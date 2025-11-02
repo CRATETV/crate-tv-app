@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import Footer from './Footer';
@@ -209,7 +210,17 @@ const FilmmakerPortalPage: React.FC = () => {
                                 <div className="space-y-4">
                                     {analytics.films && analytics.films.map(film => (
                                         <div key={film.key} className="bg-gray-800/50 border border-gray-700 p-4 rounded-lg">
-                                            <h3 className="font-bold text-lg text-white">{film.title}</h3>
+                                            <h3 className="font-bold text-lg text-white flex items-center gap-2">
+                                                {film.title}
+                                                {allMovies[film.key]?.hasCopyrightMusic && (
+                                                    <span title="This film contains copyrighted music and is not eligible for donations." className="text-xs font-normal bg-yellow-800 text-yellow-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path d="M18 3a1 1 0 00-1.196-.98l-15 2A1 1 0 001 5v11.5a1.5 1.5 0 002.047 1.424L7.5 15.451v-3.924L16.5 13.95V9.451L18 8.783V3z" />
+                                                        </svg>
+                                                        Copyright Music
+                                                    </span>
+                                                )}
+                                            </h3>
                                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2 text-center">
                                                 <div><p className="text-gray-400 text-sm">Views</p><p className="font-bold text-xl">{film.views.toLocaleString()}</p></div>
                                                 <div><p className="text-gray-400 text-sm">Likes</p><p className="font-bold text-xl">{film.likes.toLocaleString()}</p></div>

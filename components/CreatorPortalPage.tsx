@@ -88,7 +88,7 @@ const CreatorPortalPage: React.FC = () => {
                         onMoreInfo={handleHeroAction}
                     />
                     <div className="absolute inset-0 z-20 flex items-center justify-center p-4">
-                        <div className="max-w-md w-full text-center">
+                        <div className="max-w-xl w-full text-center">
                             <div className="bg-black/70 border border-gray-700 rounded-xl shadow-2xl backdrop-blur-md overflow-hidden">
                                 {/* Toggle Switch */}
                                 <div className="flex p-2 bg-gray-800/50">
@@ -110,7 +110,7 @@ const CreatorPortalPage: React.FC = () => {
                                 <div className="p-8">
                                     {activeView === 'filmmaker' ? (
                                         <div className="animate-[fadeIn_0.5s_ease-out]">
-                                            <h2 className="text-3xl font-bold text-white mb-4">Filmmaker Dashboard</h2>
+                                            <h2 className="text-4xl font-bold text-white mb-4">Filmmaker Dashboard</h2>
                                             <p className="text-gray-300 mb-8">
                                                 Access performance analytics, track revenue, and manage payouts.
                                             </p>
@@ -133,7 +133,7 @@ const CreatorPortalPage: React.FC = () => {
                                         </div>
                                     ) : (
                                         <div className="animate-[fadeIn_0.5s_ease-out]">
-                                            <h2 className="text-3xl font-bold text-white mb-4">Actor Portal</h2>
+                                            <h2 className="text-4xl font-bold text-white mb-4">Actor Portal</h2>
                                             <p className="text-gray-300 mb-8">
                                                 Update your public profile, and connect with other actors in the Green Room.
                                             </p>

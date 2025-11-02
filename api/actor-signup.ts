@@ -1,11 +1,21 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/actor-signup
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
-import { Movie } from '../types.js';
+import { Movie, Actor, ActorProfile } from '../types.js';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
+
+// Helper to create a URL-friendly slug from a name
+const slugify = (name: string): string => {
+    return name
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, '') // remove non-word chars
+        .replace(/[\s_-]+/g, '-') // collapse whitespace and replace with -
+        .replace(/^-+|-+$/g, ''); // remove leading/trailing dashes
+};
 
 export async function POST(request: Request) {
   try {
@@ -23,15 +33,27 @@ export async function POST(request: Request) {
     const auth = getAdminAuth();
     if (!db || !auth) throw new Error("Database or Auth connection failed.");
 
-    // --- Step 1: Verify actor name exists in movies DB ---
+    // --- Step 1: Verify actor name exists in movies DB and find their best data ---
     const moviesSnapshot = await db.collection('movies').get();
     let actorFound = false;
+    let bestActorData: Actor | null = null;
     const trimmedName = name.trim().toLowerCase();
 
     moviesSnapshot.forEach(movieDoc => {
         const movieData = movieDoc.data() as Movie;
-        if (movieData.cast && movieData.cast.some(actor => actor.name.trim().toLowerCase() === trimmedName)) {
-            actorFound = true;
+        if (movieData.cast) {
+            const matchedActor = movieData.cast.find(actor => actor.name.trim().toLowerCase() === trimmedName);
+            if (matchedActor) {
+                actorFound = true;
+                // Heuristic to find the "best" profile data.
+                // Prioritize profiles with non-default photos and longer bios.
+                if (!bestActorData || 
+                    (matchedActor.photo && !matchedActor.photo.includes('Defaultpic.png') && (!bestActorData.photo || bestActorData.photo.includes('Defaultpic.png'))) ||
+                    (matchedActor.bio && (!bestActorData.bio || matchedActor.bio.length > bestActorData.bio.length)))
+                {
+                    bestActorData = matchedActor;
+                }
+            }
         }
     });
 
@@ -39,6 +61,23 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Actor name not found in our records. Please ensure it matches the film credits exactly.' }), { status: 404 });
     }
     
+    // --- Step 1.5: Create public profile from best data if it doesn't exist ---
+    const actorSlug = slugify(name);
+    const actorProfileRef = db.collection('actor_profiles').doc(actorSlug);
+    const actorProfileDoc = await actorProfileRef.get();
+
+    if (!actorProfileDoc.exists && bestActorData) {
+        const actorProfileData: ActorProfile = {
+            name: bestActorData.name,
+            slug: actorSlug,
+            bio: bestActorData.bio || 'Bio not available.',
+            photo: bestActorData.photo || '',
+            highResPhoto: bestActorData.highResPhoto || bestActorData.photo || '',
+            imdbUrl: '', // Can be updated later by the actor
+        };
+        await actorProfileRef.set(actorProfileData);
+    }
+
     // --- Step 2: Create or Find Firebase user ---
     let userRecord;
     try {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AnalyticsData, Movie } from '../types';
+import { AnalyticsData, Movie, AdminPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
 import FilmReportModal from './FilmReportModal';
@@ -42,45 +42,52 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const [error, setError] = useState<{ square: string | null, firebase: string | null, critical: string | null }>({ square: null, firebase: null, critical: null });
     const [selectedGeoMovie, setSelectedGeoMovie] = useState<string>('');
     const [selectedFilmForReport, setSelectedFilmForReport] = useState<FilmPerformanceData | null>(null);
-    const [payoutStatus, setPayoutStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
-    const [payoutMessage, setPayoutMessage] = useState('');
+    const [festivalPayoutStatus, setFestivalPayoutStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+    const [festivalPayoutMessage, setFestivalPayoutMessage] = useState('');
+
+    // State for Admin Payout
+    const [adminPayoutAmount, setAdminPayoutAmount] = useState('');
+    const [adminPayoutReason, setAdminPayoutReason] = useState('');
+    const [adminPayoutStatus, setAdminPayoutStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+    const [adminPayoutMessage, setAdminPayoutMessage] = useState('');
     
+    const fetchData = async () => {
+        setIsLoading(true);
+        const password = sessionStorage.getItem('adminPassword');
+        if (!password) {
+            setError({ ...error, critical: 'Authentication error. Please log in again.' });
+            setIsLoading(false);
+            return;
+        }
+        try {
+            const [analyticsRes, liveDataRes] = await Promise.all([
+                fetch('/api/get-sales-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password }),
+                }),
+                fetchAndCacheLiveData({ force: true })
+            ]);
+            
+            const analyticsJson = await analyticsRes.json();
+            if (analyticsJson.errors?.critical) throw new Error(analyticsJson.errors.critical);
+            
+            setAnalyticsData(analyticsJson.analyticsData);
+            setError(analyticsJson.errors);
+            setAllMovies(liveDataRes.data.movies);
+            if (analyticsJson.analyticsData?.viewLocations) {
+                const firstMovieWithGeo = Object.keys(analyticsJson.analyticsData.viewLocations)[0];
+                setSelectedGeoMovie(firstMovieWithGeo || '');
+            }
+            
+        } catch (err) {
+            setError(prev => ({ ...prev, critical: err instanceof Error ? err.message : 'An unknown error occurred during data fetch.' }));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            const password = sessionStorage.getItem('adminPassword');
-            if (!password) {
-                setError({ ...error, critical: 'Authentication error. Please log in again.' });
-                setIsLoading(false);
-                return;
-            }
-            try {
-                const [analyticsRes, liveDataRes] = await Promise.all([
-                    fetch('/api/get-sales-data', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ password }),
-                    }),
-                    fetchAndCacheLiveData({ force: true })
-                ]);
-                
-                const analyticsJson = await analyticsRes.json();
-                if (analyticsJson.errors?.critical) throw new Error(analyticsJson.errors.critical);
-                
-                setAnalyticsData(analyticsJson.analyticsData);
-                setError(analyticsJson.errors);
-                setAllMovies(liveDataRes.data.movies);
-                if (analyticsJson.analyticsData?.viewLocations) {
-                    const firstMovieWithGeo = Object.keys(analyticsJson.analyticsData.viewLocations)[0];
-                    setSelectedGeoMovie(firstMovieWithGeo || '');
-                }
-                
-            } catch (err) {
-                setError(prev => ({ ...prev, critical: err instanceof Error ? err.message : 'An unknown error occurred during data fetch.' }));
-            } finally {
-                setIsLoading(false);
-            }
-        };
         fetchData();
     }, []);
 
@@ -105,8 +112,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     }, [analyticsData, allMovies]);
     
     const handleFestivalPayout = async () => {
-        setPayoutStatus('processing');
-        setPayoutMessage('');
+        setFestivalPayoutStatus('processing');
+        setFestivalPayoutMessage('');
         const password = sessionStorage.getItem('adminPassword');
         try {
             const response = await fetch('/api/process-festival-payout', {
@@ -116,11 +123,49 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Payout failed.');
-            setPayoutStatus('success');
-            setPayoutMessage(data.message);
+            setFestivalPayoutStatus('success');
+            setFestivalPayoutMessage(data.message);
         } catch (err) {
-            setPayoutStatus('error');
-            setPayoutMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
+            setFestivalPayoutStatus('error');
+            setFestivalPayoutMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
+        }
+    };
+
+    const handleAdminPayout = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setAdminPayoutStatus('processing');
+        setAdminPayoutMessage('');
+        const password = sessionStorage.getItem('adminPassword');
+        try {
+            const response = await fetch('/api/request-admin-payout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password, amount: adminPayoutAmount, reason: adminPayoutReason }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Payout request failed.');
+            
+            // Optimistic update
+            if (analyticsData) {
+                const newPayout: AdminPayout = { 
+                    ...data.newPayout, 
+                    payoutDate: { seconds: Date.now() / 1000, nanoseconds: 0 } 
+                };
+                setAnalyticsData({
+                    ...analyticsData,
+                    totalAdminPayouts: analyticsData.totalAdminPayouts + newPayout.amount,
+                    pastAdminPayouts: [newPayout, ...analyticsData.pastAdminPayouts]
+                });
+            }
+
+            setAdminPayoutStatus('success');
+            setAdminPayoutMessage('Payout recorded successfully.');
+            setAdminPayoutAmount('');
+            setAdminPayoutReason('');
+            setTimeout(() => setAdminPayoutStatus('idle'), 3000);
+        } catch (err) {
+            setAdminPayoutStatus('error');
+            setAdminPayoutMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
         }
     };
 
@@ -138,6 +183,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
             {label}
         </button>
     );
+
+    const crateTvBalance = analyticsData ? analyticsData.totalCrateTvRevenue - analyticsData.totalAdminPayouts : 0;
 
     const renderFestivalAnalytics = () => (
         analyticsData && (
@@ -161,13 +208,13 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                     <h3 className="text-lg font-bold text-white mb-4">Process Payout</h3>
                     <button
                         onClick={handleFestivalPayout}
-                        disabled={payoutStatus === 'processing' || Number(analyticsData.totalFestivalRevenue) === 0}
+                        disabled={festivalPayoutStatus === 'processing' || Number(analyticsData.totalFestivalRevenue) === 0}
                         className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg text-lg"
                     >
-                        {payoutStatus === 'processing' ? 'Processing...' : `Pay Playhouse West ${formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.70)}`}
+                        {festivalPayoutStatus === 'processing' ? 'Processing...' : `Pay Playhouse West ${formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.70)}`}
                     </button>
-                    {payoutMessage && (
-                        <p className={`mt-4 text-sm ${payoutStatus === 'error' ? 'text-red-400' : 'text-green-400'}`}>{payoutMessage}</p>
+                    {festivalPayoutMessage && (
+                        <p className={`mt-4 text-sm ${festivalPayoutStatus === 'error' ? 'text-red-400' : 'text-green-400'}`}>{festivalPayoutMessage}</p>
                     )}
                 </div>
                 <h3 className="text-xl font-bold text-white mb-4 mt-8">Sales by Item</h3>
@@ -207,10 +254,10 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                     {(activeTab === 'overview' && !isFestivalView) && (
                         <div>
                             <h2 className="text-2xl font-bold mb-4 text-white">Platform Overview</h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                                <StatCard title="Total Revenue" value={formatCurrency(analyticsData.totalRevenue)} />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                                <StatCard title="Grand Total Revenue" value={formatCurrency(analyticsData.totalRevenue)} />
+                                <StatCard title="Total Platform Revenue" value={formatCurrency(analyticsData.totalCrateTvRevenue)} />
                                 <StatCard title="Total Users" value={formatNumber(analyticsData.totalUsers)} />
-                                {/* FIX: Explicitly cast Object.values to number[] to resolve type inference issues with the reduce function. */}
                                 <StatCard title="Total Film Views" value={formatNumber((Object.values(analyticsData.viewCounts) as number[]).reduce((s, c) => s + (c || 0), 0))} />
                             </div>
                             
@@ -274,26 +321,44 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                     <StatCard title="GRAND TOTAL REVENUE" value={formatCurrency(Number(analyticsData.totalRevenue))} className="lg:col-span-4 bg-purple-900/30 border-purple-700" />
                                 </div>
                             </div>
-
-                            {Object.keys(analyticsData.merchSales).length > 0 && (
-                                <div>
-                                    <h3 className="text-xl font-bold mb-4 text-white">Merchandising Sales</h3>
-                                    <div className="overflow-x-auto"><table className="w-full text-left">
-                                        <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Item</th><th className="p-3 text-center">Units Sold</th><th className="p-3 text-right">Revenue</th></tr></thead>
-                                        <tbody>
-                                            {Object.values(analyticsData.merchSales).map((item: any) => (
-                                                <tr key={item.name} className="border-b border-gray-700"><td className="p-3 font-medium text-white">{item.name}</td><td className="p-3 text-center">{formatNumber(item.units)}</td><td className="p-3 text-right">{formatCurrency(item.revenue)}</td></tr>
-                                            ))}
-                                        </tbody>
-                                        <tfoot className="font-bold">
-                                            <tr className="border-b border-gray-600"><td className="p-3 text-right" colSpan={2}>Crate TV's Cut (15%)</td><td className="p-3 text-right text-red-400">{formatCurrency(Number(analyticsData.crateTvMerchCut))}</td></tr>
-                                            <tr><td className="p-3 text-right" colSpan={2}>Net Merch Revenue</td><td className="p-3 text-right text-green-400">{formatCurrency(Number(analyticsData.totalMerchRevenue) - Number(analyticsData.crateTvMerchCut))}</td></tr>
-                                        </tfoot>
-                                    </table></div>
-                                </div>
-                            )}
-
                              <div>
+                                <h2 className="text-2xl font-bold text-white mb-4">Crate TV Earnings & Payouts</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                    <StatCard title="Total Platform Earnings" value={formatCurrency(analyticsData.totalCrateTvRevenue)} />
+                                    <StatCard title="Total Paid to Admin" value={formatCurrency(analyticsData.totalAdminPayouts)} />
+                                    <StatCard title="Current Available Balance" value={formatCurrency(crateTvBalance)} className="bg-green-900/30 border-green-700" />
+                                </div>
+                                <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
+                                    <h3 className="text-lg font-semibold text-white mb-4">Record Admin Payout</h3>
+                                    <form onSubmit={handleAdminPayout} className="space-y-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            <input type="number" value={adminPayoutAmount} onChange={e => setAdminPayoutAmount(e.target.value)} placeholder="Amount ($)" min="1" step="0.01" className="form-input sm:col-span-1" required />
+                                            <input type="text" value={adminPayoutReason} onChange={e => setAdminPayoutReason(e.target.value)} placeholder="Reason (e.g., Bills, Salary)" className="form-input sm:col-span-2" required />
+                                        </div>
+                                        <button type="submit" disabled={adminPayoutStatus === 'processing'} className="submit-btn bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600">
+                                            {adminPayoutStatus === 'processing' ? 'Recording...' : 'Pay Myself'}
+                                        </button>
+                                        {adminPayoutMessage && <p className={`text-sm ${adminPayoutStatus === 'error' ? 'text-red-400' : 'text-green-400'}`}>{adminPayoutMessage}</p>}
+                                    </form>
+                                    <h4 className="text-md font-semibold text-gray-300 mt-8 mb-4">Payout History</h4>
+                                    <div className="max-h-60 overflow-y-auto">
+                                        {analyticsData.pastAdminPayouts.length > 0 ? (
+                                            <ul className="space-y-2">
+                                                {analyticsData.pastAdminPayouts.map(p => (
+                                                    <li key={p.id} className="flex justify-between items-center text-sm p-2 bg-gray-700/50 rounded-md">
+                                                        <div>
+                                                            <span className="font-semibold text-white">{p.reason}</span>
+                                                            <span className="text-xs text-gray-500 ml-2">{new Date(p.payoutDate.seconds * 1000).toLocaleDateString()}</span>
+                                                        </div>
+                                                        <span className="font-bold text-green-400">{formatCurrency(p.amount)}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : <p className="text-sm text-gray-500">No admin payouts recorded yet.</p>}
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
                                 <h3 className="text-xl font-bold mb-4 text-white">Filmmaker Payouts</h3>
                                 <div className="overflow-x-auto"><table className="w-full text-left">
                                     <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Film</th><th className="p-3">Donation Payout</th><th className="p-3">Ad Payout</th><th className="p-3">Total Payout</th></tr></thead>

@@ -107,7 +107,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
           <label htmlFor="rating" className="block text-sm font-medium text-gray-300">Rating (out of 10)</label>
           <input type="number" name="rating" value={formData.rating || ''} onChange={handleChange} min="0" max="10" step="0.1" className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
         </div>
-        <div className="md:col-span-2">
+        <div className="md:col-span-2 space-y-3 pt-2">
             <label className="flex items-center space-x-3 cursor-pointer">
                 <input
                     type="checkbox"
@@ -117,6 +117,16 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
                     className="h-5 w-5 rounded bg-gray-600 border-gray-500 text-red-500 focus:ring-red-500"
                 />
                 <span className="text-gray-300 font-medium">Mark this film for sale ($5.00)</span>
+            </label>
+            <label className="flex items-center space-x-3 cursor-pointer">
+                <input
+                    type="checkbox"
+                    name="hasCopyrightMusic"
+                    checked={!!formData.hasCopyrightMusic}
+                    onChange={handleChange}
+                    className="h-5 w-5 rounded bg-gray-600 border-gray-500 text-yellow-500 focus:ring-yellow-500"
+                />
+                <span className="text-gray-300 font-medium">Contains Copyrighted Music (Disables Donations)</span>
             </label>
         </div>
       </div>
