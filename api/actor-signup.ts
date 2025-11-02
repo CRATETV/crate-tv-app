@@ -35,16 +35,15 @@ export async function POST(request: Request) {
 
     // --- Step 1: Verify actor name exists in movies DB and find their best data ---
     const moviesSnapshot = await db.collection('movies').get();
-    let actorFound = false;
     let bestActorData: Actor | null = null;
     const trimmedName = name.trim().toLowerCase();
 
-    moviesSnapshot.forEach(movieDoc => {
+    // Refactored to a for...of loop for more reliable type inference by the TS compiler.
+    for (const movieDoc of moviesSnapshot.docs) {
         const movieData = movieDoc.data() as Movie;
         if (movieData.cast) {
             const matchedActor = movieData.cast.find(actor => actor.name.trim().toLowerCase() === trimmedName);
             if (matchedActor) {
-                actorFound = true;
                 // Heuristic to find the "best" profile data.
                 // Prioritize profiles with non-default photos and longer bios.
                 if (!bestActorData || 
@@ -55,17 +54,11 @@ export async function POST(request: Request) {
                 }
             }
         }
-    });
-
-    if (!actorFound) {
-      return new Response(JSON.stringify({ error: 'Actor name not found in our records. Please ensure it matches the film credits exactly.' }), { status: 404 });
     }
 
-    // FIX: Add an explicit check for `bestActorData` to ensure its type is narrowed correctly for TypeScript.
-    // This prevents the compiler from inferring the type as 'never' and causing a build failure.
+    // This check now directly verifies if any actor data was found and acts as a type guard for TypeScript.
     if (!bestActorData) {
-        // This state should be unreachable if actorFound is true, but it acts as a safeguard.
-        throw new Error("Internal server error: Actor was found but their profile data could not be collated.");
+      return new Response(JSON.stringify({ error: 'Actor name not found in our records. Please ensure it matches the film credits exactly.' }), { status: 404 });
     }
     
     // --- Step 1.5: Create public profile from best data if it doesn't exist ---
