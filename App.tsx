@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData } from './services/dataService';
 // FIX: Corrected type imports to use the new types.ts file
@@ -507,7 +508,7 @@ const App: React.FC = () => {
                 {topTenMovies.length > 0 && (
                     <MovieCarousel
                         key="topTen"
-                        title={<a href="/top-ten" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/top-ten'); window.dispatchEvent(new Event('pushstate'));}} className="text-lg md:text-2xl font-bold mb-4 text-white hover:text-gray-300 transition-colors">Top 10 on Crate TV Today</a>}
+                        title={<a href="/top-ten" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/top-ten'); window.dispatchEvent(new Event('pushstate'));}} className="text-lg md:text-2xl font-bold mb-6 text-white hover:text-gray-300 transition-colors">Top 10 on Crate TV Today</a>}
                         movies={topTenMovies}
                         onSelectMovie={handleSelectMovie}
                         showRankings={true}
