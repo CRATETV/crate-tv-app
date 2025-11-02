@@ -40,7 +40,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
     setIsPaymentModalOpen(true);
   };
   
-  const handlePaymentSuccess = (details: { paymentType: 'pass' | 'block' | 'subscription' | 'donation' | 'movie', itemId?: string }) => {
+  const handlePaymentSuccess = (details: { paymentType: 'pass' | 'block' | 'subscription' | 'donation' | 'movie' | 'billSavingsDeposit', itemId?: string, amount: number, email?: string }) => {
     if (details.paymentType === 'pass') {
       grantFestivalAllAccess();
     } else if (details.paymentType === 'block' && details.itemId) {
