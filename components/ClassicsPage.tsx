@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import BackToTopButton from './BackToTopButton';
@@ -5,9 +6,10 @@ import MovieDetailsModal from './MovieDetailsModal';
 import ActorBioModal from './ActorBioModal';
 import LoadingSpinner from './LoadingSpinner';
 import { fetchAndCacheLiveData } from '../services/dataService';
-import { Movie, Actor, Category } from '../types';
+import { Movie, Actor, Category, FestivalConfig } from '../types';
 import MovieCard from './MovieCard';
 import CollapsibleFooter from './CollapsibleFooter';
+import BottomNavBar from './BottomNavBar';
 
 const ClassicsPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -16,6 +18,8 @@ const ClassicsPage: React.FC = () => {
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
     const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
     const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
+    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+    const [isFestivalLive, setIsFestivalLive] = useState(false);
 
     useEffect(() => {
         const loadData = async () => {
@@ -23,6 +27,7 @@ const ClassicsPage: React.FC = () => {
                 const { data } = await fetchAndCacheLiveData();
                 setMovies(data.movies);
                 setCategories(data.categories);
+                setFestivalConfig(data.festivalConfig);
                  const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
                 if (storedLikedMovies) {
                     setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
@@ -36,6 +41,23 @@ const ClassicsPage: React.FC = () => {
 
         loadData();
     }, []);
+
+    useEffect(() => {
+        const checkStatus = () => {
+            if (!festivalConfig?.startDate || !festivalConfig?.endDate) {
+                setIsFestivalLive(false);
+                return;
+            }
+            const now = new Date();
+            const start = new Date(festivalConfig.startDate);
+            const end = new Date(festivalConfig.endDate);
+            const isLive = now >= start && now < end;
+            setIsFestivalLive(isLive);
+        };
+        checkStatus();
+        const interval = setInterval(checkStatus, 60000); // Check every minute
+        return () => clearInterval(interval);
+    }, [festivalConfig]);
 
     const classicMovies = useMemo(() => {
         const classicsCategory = categories.publicDomainIndie;
@@ -71,11 +93,11 @@ const ClassicsPage: React.FC = () => {
                 onSearch={() => {}} 
                 isScrolled={true}
                 onMobileSearchClick={() => {}}
-                showSearch={false}
-                showNavLinks={false}
+                showSearch={true}
+                showNavLinks={true}
             />
 
-            <main className="flex-grow">
+            <main className="flex-grow pb-24 md:pb-0">
                 {/* Hero Section */}
                 <div 
                     className="relative py-24 md:py-32 bg-cover bg-center"
@@ -123,6 +145,14 @@ const ClassicsPage: React.FC = () => {
             {selectedActor && (
                 <ActorBioModal actor={selectedActor} onClose={handleCloseActorModal} />
             )}
+            <BottomNavBar 
+                isFestivalLive={isFestivalLive}
+                onSearchClick={() => {
+                    // Navigate home for search, as this page doesn't have the search overlay
+                    window.history.pushState({}, '', '/');
+                    window.dispatchEvent(new Event('pushstate'));
+                }}
+            />
         </div>
     );
 };

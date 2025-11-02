@@ -35,6 +35,10 @@ const AdminPage: React.FC = () => {
     const [publishStatus, setPublishStatus] = useState<PublishStatus>('idle');
     const [publishError, setPublishError] = useState('');
 
+    // --- Roku Download State ---
+    const [rokuDownloadStatus, setRokuDownloadStatus] = useState<'idle' | 'generating' | 'error'>('idle');
+    const [rokuDownloadError, setRokuDownloadError] = useState('');
+
     // --- Editor-specific State ---
     const [selectedMovieKey, setSelectedMovieKey] = useState<string | null>(null);
 
@@ -225,9 +229,41 @@ const AdminPage: React.FC = () => {
         return draftData.movies[selectedMovieKey];
     }, [selectedMovieKey, draftData]);
 
-    const handleRokuDownload = () => {
-        const downloadUrl = `/api/generate-roku-zip?t=${Date.now()}`;
-        window.open(downloadUrl, '_blank');
+    const handleRokuDownload = async () => {
+        setRokuDownloadStatus('generating');
+        setRokuDownloadError('');
+    
+        const adminPassword = sessionStorage.getItem('adminPassword');
+        if (!adminPassword) {
+            setRokuDownloadError('Authentication error. Please log in again.');
+            setRokuDownloadStatus('error');
+            return;
+        }
+    
+        try {
+            const response = await fetch(`/api/generate-roku-zip?password=${encodeURIComponent(adminPassword)}`);
+    
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to generate package: ${errorText} (Status: ${response.status})`);
+            }
+    
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cratetv.zip';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            
+            setRokuDownloadStatus('idle');
+    
+        } catch (err) {
+            setRokuDownloadError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            setRokuDownloadStatus('error');
+        }
     };
     
     const isSuperAdmin = adminRole === 'super_admin';
@@ -309,10 +345,10 @@ const AdminPage: React.FC = () => {
                         <TabButton tabId="top-films" label="Top Films" />
                         <TabButton tabId="submissions" label="Actor Submissions" />
                         <TabButton tabId="payouts" label="Payouts" />
+                        <TabButton tabId="email" label="Email Users" />
+                        <TabButton tabId="tools" label="Tools" />
                     </>
                 )}
-                 {(isSuperAdmin || isCollaborator) && <TabButton tabId="email" label="Email Users" />}
-                 {(isSuperAdmin || isCollaborator) && <TabButton tabId="tools" label="Tools" />}
             </div>
 
             <div className="mt-6 bg-gray-800 p-6 rounded-b-lg">
@@ -347,13 +383,16 @@ const AdminPage: React.FC = () => {
                 {activeTab === 'top-films' && isSuperAdmin && <TopFilmsTab />}
                 {activeTab === 'submissions' && isSuperAdmin && <ActorSubmissionsTab submissions={draftData.actorSubmissions} allMovies={draftData.movies} onApprove={approveActorSubmission} onReject={rejectActorSubmission} />}
                 {activeTab === 'payouts' && isSuperAdmin && <PayoutsTab payoutRequests={payoutRequests} onCompletePayout={handleCompletePayout} />}
-                {activeTab === 'email' && (isSuperAdmin || isCollaborator) && <EmailSender />}
-                {activeTab === 'tools' && (isSuperAdmin || isCollaborator) && (
+                {activeTab === 'email' && isSuperAdmin && <EmailSender />}
+                {activeTab === 'tools' && isSuperAdmin && (
                     <div className="space-y-8">
                         <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
                              <h2 className="text-2xl font-bold text-green-400 mb-4">Roku Channel Packager</h2>
                              <p className="text-gray-300 mb-4">Generate a ready-to-upload ZIP file for the Roku channel. This package will use the currently published live data.</p>
-                             <button onClick={handleRokuDownload} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-md">Generate & Download Roku ZIP</button>
+                             <button onClick={handleRokuDownload} disabled={rokuDownloadStatus === 'generating'} className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-bold py-2 px-6 rounded-md">
+                                {rokuDownloadStatus === 'generating' ? 'Generating...' : 'Generate & Download Roku ZIP'}
+                             </button>
+                             {rokuDownloadStatus === 'error' && <p className="text-red-400 text-sm mt-2">{rokuDownloadError}</p>}
                         </div>
                         <FallbackGenerator movies={draftData.movies} categories={draftData.categories} festivalData={draftData.festivalData} festivalConfig={draftData.festivalConfig} aboutData={draftData.aboutData} />
                     </div>

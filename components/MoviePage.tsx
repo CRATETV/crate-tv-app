@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -73,6 +74,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [released, setReleased] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const hasTrackedViewRef = useRef(false);
+  const resumeTimeRef = useRef(0);
 
   // Like state
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
@@ -114,6 +116,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             }).catch(err => console.error("Failed to track view:", err));
         }
         videoRef.current.play().catch(e => console.error("Content play failed", e));
+        if (resumeTimeRef.current > 1) { // Seek if resume time is meaningful (more than 1s)
+            videoRef.current.currentTime = resumeTimeRef.current;
+            resumeTimeRef.current = 0; // Reset after seeking
+        }
     }
   }, [videoRef, movie?.key]);
 
@@ -341,6 +347,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
 
     const handleExitPlayer = () => {
+        if (videoRef.current) {
+            resumeTimeRef.current = videoRef.current.currentTime;
+        }
         setPlayerMode('poster');
     };
     
@@ -421,17 +430,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         </>
                     )}
                     
-                    {playerMode === 'full' && <CastButton videoElement={videoRef.current} />}
                     {playerMode === 'full' && (
-                        <button
-                            onClick={handleExitPlayer}
-                            className="absolute top-4 right-16 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white z-30"
-                            aria-label="Exit video player"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        <div className="absolute top-4 right-4 z-30 flex items-center gap-4">
+                            <CastButton videoElement={videoRef.current} />
+                            <button
+                                onClick={handleExitPlayer}
+                                className="bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white"
+                                aria-label="Exit video player"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
                     )}
                 </div>
 

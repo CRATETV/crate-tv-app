@@ -184,10 +184,18 @@ const AppRouter: React.FC = () => {
 };
 
 const MainApp: React.FC = () => {
-  const [showIntro, setShowIntro] = useState(sessionStorage.getItem('introSeen') !== 'true');
+  const [showIntro, setShowIntro] = useState(() => {
+    const lastSeen = localStorage.getItem('introSeenTimestamp');
+    if (!lastSeen) {
+      return true; // Never seen before
+    }
+    const oneDay = 24 * 60 * 60 * 1000;
+    // Show if more than 24 hours have passed
+    return (Date.now() - parseInt(lastSeen, 10)) > oneDay;
+  });
 
   const handleIntroEnd = () => {
-    sessionStorage.setItem('introSeen', 'true');
+    localStorage.setItem('introSeenTimestamp', Date.now().toString());
     setShowIntro(false);
   };
 

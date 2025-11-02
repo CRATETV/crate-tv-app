@@ -1,6 +1,6 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/approve-actor-submission
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { Movie, ActorProfile } from '../types.js';
 
 // Helper to create a URL-friendly slug from a name
@@ -43,7 +43,8 @@ export async function POST(request: Request) {
     const initError = getInitializationError();
     if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
     const db = getAdminDb();
-    if (!db) throw new Error("Database connection failed.");
+    const auth = getAdminAuth(); // Get auth instance
+    if (!db || !auth) throw new Error("Database or Auth connection failed.");
 
     const submissionRef = db.collection('actorSubmissions').doc(submissionId);
     const submissionDoc = await submissionRef.get();
@@ -52,7 +53,17 @@ export async function POST(request: Request) {
     const submissionData = submissionDoc.data();
     if (!submissionData) throw new Error("Submission data is empty.");
 
-    const { actorName, bio, photoUrl, highResPhotoUrl, imdbUrl } = submissionData;
+    const { actorName, bio, photoUrl, highResPhotoUrl, imdbUrl, email } = submissionData;
+
+    // --- Grant Actor Role (Custom Claim) ---
+    // This is the critical fix for the login loop.
+    let userRecord;
+    try {
+        userRecord = await auth.getUserByEmail(email);
+        await auth.setCustomUserClaims(userRecord.uid, { isActor: true });
+    } catch (error: any) {
+        console.warn(`Could not find user with email ${email} to set custom claims. Proceeding without setting role. Error: ${error.message}`);
+    }
     
     const batch = db.batch();
 
@@ -69,8 +80,13 @@ export async function POST(request: Request) {
     };
     batch.set(actorProfileRef, actorProfileData, { merge: true });
 
+    // 2. If we found the user, also update their 'users' collection document for consistency
+    if (userRecord) {
+        const userProfileRef = db.collection('users').doc(userRecord.uid);
+        batch.set(userProfileRef, { isActor: true }, { merge: true });
+    }
 
-    // 2. Update the actor's info across all movies they appear in
+    // 3. Update the actor's info across all movies they appear in
     const moviesSnapshot = await db.collection('movies').get();
     let moviesUpdatedCount = 0;
 
@@ -98,14 +114,14 @@ export async function POST(request: Request) {
         }
     });
 
-    // 3. Mark submission as approved
+    // 4. Mark submission as approved
     batch.update(submissionRef, { status: 'approved' });
 
     await batch.commit();
 
     return new Response(JSON.stringify({ 
         success: true, 
-        message: `Approved ${actorName}. Created/updated public profile and updated ${moviesUpdatedCount} film(s).` 
+        message: `Approved ${actorName}. Created/updated public profile, updated ${moviesUpdatedCount} film(s), and granted actor role.` 
     }), { status: 200, headers: { 'Content-Type': 'application/json' }});
 
   } catch (error) {

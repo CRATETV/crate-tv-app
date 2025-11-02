@@ -1,24 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Header from './Header';
+import Hero from './Hero';
+import LoadingSpinner from './LoadingSpinner';
 import CollapsibleFooter from './CollapsibleFooter';
-
-const aiGeneratedBackgrounds = [
-    'https://cratetelevision.s3.us-east-1.amazonaws.com/ai-portal-backgrounds/portal-bg-1.jpg',
-    'https://cratetelevision.s3.us-east-1.amazonaws.com/ai-portal-backgrounds/portal-bg-2.jpg',
-    'https://cratetelevision.s3.us-east-1.amazonaws.com/ai-portal-backgrounds/portal-bg-3.jpg',
-    'https://cratetelevision.s3.us-east-1.amazonaws.com/ai-portal-backgrounds/portal-bg-4.jpg'
-];
+import { Movie, Category } from '../types';
+import { fetchAndCacheLiveData } from '../services/dataService';
 
 const CreatorPortalPage: React.FC = () => {
     const [activeView, setActiveView] = useState<'filmmaker' | 'actor'>('filmmaker');
-    const [bgIndex, setBgIndex] = useState(0);
     const [isScrolled, setIsScrolled] = useState(false);
-
+    
+    // State for Hero component
+    const [isLoading, setIsLoading] = useState(true);
+    const [movies, setMovies] = useState<Record<string, Movie>>({});
+    const [categories, setCategories] = useState<Record<string, Category>>({});
+    const [heroIndex, setHeroIndex] = useState(0);
+    const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    
     useEffect(() => {
-        const interval = setInterval(() => {
-            setBgIndex(prevIndex => (prevIndex + 1) % aiGeneratedBackgrounds.length);
-        }, 7000); // Change image every 7 seconds
-        return () => clearInterval(interval);
+        const loadData = async () => {
+            try {
+                const { data } = await fetchAndCacheLiveData();
+                setMovies(data.movies);
+                setCategories(data.categories);
+            } catch (error) {
+                console.error("Failed to load data for Creator Portal page:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadData();
     }, []);
 
     useEffect(() => {
@@ -30,39 +41,61 @@ const CreatorPortalPage: React.FC = () => {
             window.removeEventListener('scroll', handleScroll);
         };
     }, []);
+    
+    const heroMovies = useMemo(() => {
+        if (!categories.featured?.movieKeys) return [];
+        return categories.featured.movieKeys.map(key => movies[key]).filter(Boolean);
+    }, [movies, categories.featured]);
+
+    useEffect(() => {
+        if (heroMovies.length > 1) {
+            heroIntervalRef.current = setInterval(() => {
+                setHeroIndex(prevIndex => (prevIndex + 1) % heroMovies.length);
+            }, 7000);
+        }
+        return () => {
+            if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
+        };
+    }, [heroMovies.length]);
+
+    const handleSetHeroIndex = (index: number) => {
+        setHeroIndex(index);
+        if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
+    };
 
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
         e.preventDefault();
         window.history.pushState({}, '', path);
         window.dispatchEvent(new Event('pushstate'));
     };
+    
+    const handleSelectMovie = () => {
+        const path = activeView === 'filmmaker' ? '/filmmaker-signup' : '/actor-signup';
+        window.history.pushState({}, '', path);
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
+    if (isLoading) {
+        return <LoadingSpinner />;
+    }
 
     return (
-        <div className="flex flex-col min-h-screen bg-black text-white">
-            {/* Background Image Cycler */}
-            <div className="fixed inset-0 z-0">
-                {aiGeneratedBackgrounds.map((src, index) => (
-                    <div
-                        key={src}
-                        className="absolute inset-0 w-full h-full bg-cover bg-center transition-opacity duration-1000"
-                        style={{ 
-                            backgroundImage: `url(${src})`,
-                            opacity: index === bgIndex ? 1 : 0,
-                        }}
-                    />
-                ))}
-                <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-            </div>
-
-            <div className="relative z-10 flex flex-col min-h-screen">
-                <Header 
-                    searchQuery="" 
-                    onSearch={() => {}} 
-                    isScrolled={isScrolled}
-                    onMobileSearchClick={() => {}}
-                    showSearch={false}
+        <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+            <Header 
+                searchQuery="" 
+                onSearch={() => {}} 
+                isScrolled={isScrolled}
+                onMobileSearchClick={() => {}}
+                showSearch={false}
+            />
+            <main className="flex-grow">
+                <Hero
+                    movies={heroMovies}
+                    currentIndex={heroIndex}
+                    onSetCurrentIndex={handleSetHeroIndex}
+                    onSelectMovie={handleSelectMovie}
                 />
-                <main className="flex-grow flex items-center justify-center pt-24 pb-12 px-4">
+                <div className="relative z-10 flex items-center justify-center py-12 px-4">
                     <div className="max-w-4xl w-full text-center">
                         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Creator Portals</h1>
                         <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
@@ -138,9 +171,9 @@ const CreatorPortalPage: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                </main>
-                <CollapsibleFooter showActorLinks={true} />
-            </div>
+                </div>
+            </main>
+            <CollapsibleFooter showActorLinks={true} />
         </div>
     );
 };

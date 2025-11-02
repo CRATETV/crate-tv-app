@@ -1,5 +1,4 @@
 
-
 // FIX: Imported types from the corrected types.ts file and removed duplicated type definitions.
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
 
@@ -621,7 +620,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Richard Frohman",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/consumed+.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
     "likes": 0

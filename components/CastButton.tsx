@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 
 interface CastButtonProps {
@@ -82,7 +83,7 @@ const CastButton: React.FC<CastButtonProps> = ({ videoElement }) => {
   return (
     <button
       onClick={handleCast}
-      className={`absolute top-4 right-4 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors ${iconColor} ${connectionState === 'connecting' ? 'animate-pulse' : ''}`}
+      className={`bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors ${iconColor} ${connectionState === 'connecting' ? 'animate-pulse' : ''}`}
       aria-label="Cast to device"
     >
       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">

@@ -1,4 +1,3 @@
-
 import JSZip from 'jszip';
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
@@ -39,6 +38,38 @@ const getS3Client = () => {
 
 export async function GET(request: Request) {
     try {
+        // --- Authentication ---
+        const { searchParams } = new URL(request.url);
+        const password = searchParams.get('password');
+
+        if (!password) {
+            return new Response('Password query parameter is required.', { status: 401 });
+        }
+        
+        const primaryAdminPassword = process.env.ADMIN_PASSWORD;
+        const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
+        let isSuperAdmin = false;
+
+        if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
+            isSuperAdmin = true;
+        } else {
+            for (const key in process.env) {
+                if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
+                    isSuperAdmin = true;
+                    break;
+                }
+            }
+        }
+        
+        const anyPasswordSet = primaryAdminPassword || masterPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
+        if (!anyPasswordSet) {
+            isSuperAdmin = true; 
+        }
+
+        if (!isSuperAdmin) {
+            return new Response('Forbidden: You do not have permission to perform this action.', { status: 403 });
+        }
+        
         const s3 = getS3Client();
         const bucketName = process.env.AWS_S3_BUCKET_NAME;
 
