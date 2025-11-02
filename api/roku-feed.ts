@@ -83,11 +83,11 @@ export async function GET(request: Request) {
         }
     });
     
-    // 1. Get Hero Items from 'featured' category
-    const heroItems = (categoriesData['featured']?.movieKeys || [])
-        .map((key: string) => visibleMovies[key])
-        .filter((movie): movie is Movie => !!movie)
-        .map((movie: Movie) => formatMovieForRoku(movie, movieGenreMap));
+    // 1. Get Hero Items from 'featured' category (Refactored for compiler stability)
+    const heroMovieKeys: string[] = categoriesData['featured']?.movieKeys || [];
+    const heroMovieObjects: (Movie | undefined)[] = heroMovieKeys.map((key: string) => visibleMovies[key]);
+    const validHeroMovies: Movie[] = heroMovieObjects.filter((movie): movie is Movie => !!movie);
+    const heroItems = validHeroMovies.map((movie: Movie) => formatMovieForRoku(movie, movieGenreMap));
         
     // Helper function to process a single category into the Roku format
     const processCategory = (categoryData: Category): RokuCategory | null => {
