@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './Header';
 // FIX: Corrected import path
 import Footer from './Footer';
@@ -7,7 +7,12 @@ import LoadingSpinner from './LoadingSpinner';
 import StagingBanner from './StagingBanner';
 import FestivalView from './FestivalView';
 import { fetchAndCacheLiveData } from '../services/dataService';
-import { Movie, FestivalDay, FestivalConfig } from '../types';
+import { Movie, FestivalDay, FestivalConfig, LiveData, FetchResult } from '../types';
+
+interface BroadcastMessage {
+    type: string;
+    payload: LiveData;
+}
 
 const FestivalPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -18,6 +23,23 @@ const FestivalPage: React.FC = () => {
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
     const [isFestivalLive, setIsFestivalLive] = useState(false);
 
+    const applyData = useCallback((result: FetchResult) => {
+        setDataSource(result.source);
+        setMovies(result.data.movies);
+        setFestivalData(result.data.festivalData);
+        setFestivalConfig(result.data.festivalConfig);
+    }, []);
+
+    const loadAppData = useCallback(async (options?: { force?: boolean }) => {
+        try {
+            const result = await fetchAndCacheLiveData({ force: options?.force });
+            applyData(result);
+        } catch (error) {
+            console.error("Failed to load festival data", error);
+        }
+    }, [applyData]);
+
+    // Effect for initial load
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const env = params.get('env');
@@ -28,23 +50,34 @@ const FestivalPage: React.FC = () => {
         }
 
         setIsLoading(true);
-        
-        const loadData = async () => {
-            try {
-                const { data: liveData, source } = await fetchAndCacheLiveData();
-                setMovies(liveData.movies);
-                setDataSource(source);
-                setFestivalData(liveData.festivalData);
-                setFestivalConfig(liveData.festivalConfig);
-            } catch (error) {
-                console.error("Failed to load data for Festival page:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
+        loadAppData({ force: isStagingActive }).finally(() => setIsLoading(false));
+    }, [loadAppData]);
 
-        loadData();
-    }, []);
+    // Effect for real-time data synchronization
+    useEffect(() => {
+        const channel = new BroadcastChannel('cratetv-data-channel');
+        const handleMessage = (event: MessageEvent<BroadcastMessage>) => {
+          if (event.data?.type === 'DATA_PUBLISHED' && event.data.payload) {
+            console.log(`[Festival Page Broadcast] Received new data. Applying immediately.`);
+            applyData({ data: event.data.payload, source: 'live', timestamp: Date.now() });
+          }
+        };
+        channel.addEventListener('message', handleMessage);
+
+        const handleVisibilityChange = () => {
+          if (document.visibilityState === 'visible') {
+            console.log('[Festival Page Visibility] Tab is now visible. Checking for fresh data.');
+            loadAppData({ force: true });
+          }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+          channel.removeEventListener('message', handleMessage);
+          channel.close();
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [loadAppData, applyData]);
     
     // This effect dynamically and periodically checks if the festival is live.
     useEffect(() => {

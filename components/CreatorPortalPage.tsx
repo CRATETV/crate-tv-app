@@ -95,7 +95,7 @@ const CreatorPortalPage: React.FC = () => {
                     onSetCurrentIndex={handleSetHeroIndex}
                     onSelectMovie={handleSelectMovie}
                 />
-                <div className="relative z-10 flex items-center justify-center py-12 px-4">
+                <div className="relative z-10 flex items-center justify-center py-8 px-4">
                     <div className="max-w-4xl w-full text-center">
                         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Creator Portals</h1>
                         <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">

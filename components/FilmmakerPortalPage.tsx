@@ -171,10 +171,6 @@ const FilmmakerPortalPage: React.FC = () => {
                 <div className="max-w-7xl mx-auto">
                     <h1 className="text-3xl font-bold text-white mb-2">Dashboard for {user.name}</h1>
                     <p className="text-gray-400 mb-8">View performance analytics for your films on Crate TV.</p>
-
-                    <div className="border-t border-yellow-800 pt-8 mt-8 mb-8 text-yellow-300 bg-yellow-900/30 p-4 rounded-lg">
-                        <p><strong>Festival Submission Notice:</strong> Please note that we will not accept films created for any of Playhouse West-Philadelphia's film festivals until after the festival has concluded. Thank you for your understanding.</p>
-                    </div>
                     
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Main Content */}
