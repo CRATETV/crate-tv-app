@@ -58,10 +58,18 @@ const ServiceReminder: React.FC<{ serviceName: string; logoUrl: string; billingU
 
     const handleMarkAsPaid = () => {
         if (status.nextBillDate) {
-            // Set the new anchor date to be the bill that was just paid.
-            // The getStatus function will then automatically calculate the *next* one.
-            const newAnchorDate = status.nextBillDate;
-            const newDateString = newAnchorDate.toISOString().split('T')[0];
+            // To advance, create a new date from the *current* next bill date,
+            // advance it by one month, and save that as the new anchor.
+            const currentBillDate = status.nextBillDate;
+            const nextMonthDate = new Date(currentBillDate);
+            nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+
+            // Handle month-end issues (e.g., Jan 31 -> Feb 28)
+            if (nextMonthDate.getDate() !== currentBillDate.getDate()) {
+                nextMonthDate.setDate(0);
+            }
+
+            const newDateString = nextMonthDate.toISOString().split('T')[0];
             localStorage.setItem(storageKey, newDateString);
             setSavedDate(newDateString);
             setInputDate(newDateString);
