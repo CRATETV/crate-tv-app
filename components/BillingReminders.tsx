@@ -7,33 +7,19 @@ const getStatus = (dateString: string | null): { color: string; text: string; ne
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Start of today for accurate comparison
 
-    // The saved date is the anchor date, e.g., "2024-08-15"
-    // Use T00:00:00 to ensure it's parsed in the local timezone.
-    const anchorDate = new Date(dateString + 'T00:00:00');
-    const billDay = anchorDate.getDate(); // e.g., 15
-
-    const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth();
-    const currentDay = today.getDate();
-
-    let nextBillYear = currentYear;
-    let nextBillMonth = currentMonth;
+    // The saved date is the anchor. We need to find the first occurrence of its day on or after today.
+    let nextBillDate = new Date(dateString + 'T00:00:00');
     
-    // If today's day is past the billing day, the next bill is next month.
-    if (currentDay > billDay) {
-        nextBillMonth += 1;
-        // The Date object handles month overflow (e.g., month 12 becomes Jan of next year)
-    }
-    
-    let nextBillDate = new Date(nextBillYear, nextBillMonth, billDay);
-    
-    // Handle month-end complexities. e.g., if bill day is 31 and next month is February.
-    // new Date(2024, 1, 31) becomes Mar 2, 2024. We need to detect this.
-    // The expected month is `nextBillMonth % 12`.
-    if (nextBillDate.getMonth() !== (nextBillMonth % 12)) {
-        // It overflowed. The actual due date is the last day of the *correct* month.
-        // new Date(year, month_index + 1, 0) gives the last day of month_index.
-        nextBillDate = new Date(nextBillYear, nextBillMonth + 1, 0);
+    // While the calculated bill date is in the past, keep advancing it by a month until it's in the future.
+    while (nextBillDate < today) {
+        const originalDay = nextBillDate.getDate();
+        nextBillDate.setMonth(nextBillDate.getMonth() + 1);
+        
+        // If advancing the month changed the day (e.g., from Jan 31 to Mar 2),
+        // it means the next month is shorter. We should set it to the last day of that month.
+        if (nextBillDate.getDate() !== originalDay) {
+            nextBillDate.setDate(0); // Sets to the last day of the previous month
+        }
     }
 
     const diffTime = nextBillDate.getTime() - today.getTime();
@@ -72,11 +58,13 @@ const ServiceReminder: React.FC<{ serviceName: string; logoUrl: string; billingU
 
     const handleMarkAsPaid = () => {
         if (status.nextBillDate) {
-            // Format the date as 'YYYY-MM-DD' for the input
-            const nextDateString = status.nextBillDate.toISOString().split('T')[0];
-            localStorage.setItem(storageKey, nextDateString);
-            setSavedDate(nextDateString);
-            setInputDate(nextDateString);
+            // Set the new anchor date to be the bill that was just paid.
+            // The getStatus function will then automatically calculate the *next* one.
+            const newAnchorDate = status.nextBillDate;
+            const newDateString = newAnchorDate.toISOString().split('T')[0];
+            localStorage.setItem(storageKey, newDateString);
+            setSavedDate(newDateString);
+            setInputDate(newDateString);
         }
     };
 

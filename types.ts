@@ -172,7 +172,10 @@ export interface AnalyticsData {
     viewCounts: Record<string, number>;
     movieLikes: Record<string, number>;
     viewLocations: Record<string, Record<string, number>>;
-    allUsers: { email: string; creationTime: string }[];
+    
+    allUsers: { email: string }[];
+    actorUsers: { email: string }[];
+    filmmakerUsers: { email: string }[];
     
     totalDonations: number;
     totalSales: number;

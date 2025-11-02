@@ -78,7 +78,6 @@ export async function POST(request: Request) {
         const firebaseError = getInitializationError();
         if (firebaseError) errors.firebase = firebaseError;
         const db = getAdminDb();
-        const auth = getAdminAuth();
 
         // --- Square Init ---
         const isProduction = process.env.VERCEL_ENV === 'production';
@@ -91,7 +90,7 @@ export async function POST(request: Request) {
         const moviesPromise = db ? db.collection('movies').get() : Promise.resolve(null);
         const viewsPromise = db ? db.collection('view_counts').get() : Promise.resolve(null);
         const locationsPromise = db ? db.collection('view_locations').get() : Promise.resolve(null);
-        const usersPromise = auth ? auth.listUsers(1000) : Promise.resolve(null);
+        const usersPromise = db ? db.collection('users').get() : Promise.resolve(null);
         const adminPayoutsPromise = db ? db.collection('admin_payouts').orderBy('payoutDate', 'desc').get() : Promise.resolve(null);
         const billSavingsPromise = db ? db.collection('bill_savings_transactions').orderBy('transactionDate', 'desc').get() : Promise.resolve(null);
 
@@ -101,7 +100,7 @@ export async function POST(request: Request) {
             moviesSnapshot,
             viewsSnapshot,
             locationsSnapshot,
-            usersResult,
+            usersSnapshot,
             adminPayoutsSnapshot,
             billSavingsSnapshot
         ] = await Promise.all([squarePromise.catch(e => { errors.square = e.message; return []; }), moviesPromise, viewsPromise, locationsPromise, usersPromise, adminPayoutsPromise, billSavingsPromise]);
@@ -119,7 +118,21 @@ export async function POST(request: Request) {
         const viewLocations: Record<string, Record<string, number>> = {};
         locationsSnapshot?.forEach(doc => { viewLocations[doc.id] = doc.data(); });
         
-        const allUsers = usersResult ? usersResult.users.map(u => ({ email: u.email || 'N/A', creationTime: new Date(u.metadata.creationTime).toLocaleDateString() })) : [];
+        const allUsers: { email: string }[] = [];
+        const actorUsers: { email: string }[] = [];
+        const filmmakerUsers: { email: string }[] = [];
+        usersSnapshot?.forEach(doc => {
+            const userData = doc.data();
+            if (userData.email) {
+                allUsers.push({ email: userData.email });
+                if (userData.isActor) {
+                    actorUsers.push({ email: userData.email });
+                }
+                if (userData.isFilmmaker) {
+                    filmmakerUsers.push({ email: userData.email });
+                }
+            }
+        });
 
         const pastAdminPayouts: AdminPayout[] = [];
         adminPayoutsSnapshot?.forEach(doc => {
@@ -169,13 +182,14 @@ export async function POST(request: Request) {
         });
 
         const totalAdRevenue = (Object.values(viewCounts).reduce((s, c) => s + c, 0) / 1000) * AD_CPM_IN_CENTS;
-        const crateTvMerchCut = totalMerchRevenue * MERCH_PLATFORM_CUT;
         const totalFestivalRevenue = festivalPassSales.revenue + festivalBlockSales.revenue;
         const totalRevenue = totalDonations + totalSales + totalMerchRevenue + totalAdRevenue + totalFestivalRevenue;
 
         // Calculate Crate TV's total share
         const crateTvDonationShare = totalDonations * DONATION_PLATFORM_CUT;
         const crateTvAdShare = totalAdRevenue * (1 - AD_REVENUE_FILMMAKER_SHARE);
+        // FIX: Removed redeclared block-scoped variable 'crateTvMerchCut'. It is now only declared where it is first used in the 'totalCrateTvRevenue' calculation.
+        const crateTvMerchCut = totalMerchRevenue * MERCH_PLATFORM_CUT;
         const crateTvFestivalShare = totalFestivalRevenue * FESTIVAL_PLATFORM_CUT;
         const totalCrateTvRevenue = crateTvDonationShare + crateTvAdShare + crateTvMerchCut + crateTvFestivalShare + totalSales;
 
@@ -197,7 +211,7 @@ export async function POST(request: Request) {
         });
 
         const analyticsData: AnalyticsData = {
-            totalRevenue, totalCrateTvRevenue, totalAdminPayouts, pastAdminPayouts, billSavingsPotTotal, billSavingsTransactions, totalUsers: allUsers.length, viewCounts, movieLikes, filmmakerPayouts, viewLocations, allUsers,
+            totalRevenue, totalCrateTvRevenue, totalAdminPayouts, pastAdminPayouts, billSavingsPotTotal, billSavingsTransactions, totalUsers: allUsers.length, viewCounts, movieLikes, filmmakerPayouts, viewLocations, allUsers, actorUsers, filmmakerUsers,
             totalDonations, totalSales, totalMerchRevenue, totalAdRevenue, crateTvMerchCut, merchSales,
             totalFestivalRevenue, festivalPassSales, festivalBlockSales, salesByBlock,
         };

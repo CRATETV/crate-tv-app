@@ -1,4 +1,4 @@
-import { getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
+import { getAdminAuth, getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -6,7 +6,7 @@ const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
 
 export async function POST(request: Request) {
     try {
-        const { password, subject, htmlBody } = await request.json();
+        const { password, subject, htmlBody, audience = 'all' } = await request.json();
 
         // --- Authentication ---
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
@@ -27,24 +27,29 @@ export async function POST(request: Request) {
         const initError = getInitializationError();
         if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
         
-        const auth = getAdminAuth();
-        if (!auth) throw new Error("Firebase Auth connection failed.");
+        const db = getAdminDb();
+        if (!db) throw new Error("Firebase DB connection failed.");
 
-        // --- Fetch all users ---
-        let allEmails: string[] = [];
-        let nextPageToken;
-        do {
-            const listUsersResult = await auth.listUsers(1000, nextPageToken);
-            listUsersResult.users.forEach(userRecord => {
-                if (userRecord.email) {
-                    allEmails.push(userRecord.email);
-                }
-            });
-            nextPageToken = listUsersResult.pageToken;
-        } while (nextPageToken);
+        // --- Fetch users based on audience ---
+        let usersQuery;
+        const usersCollection = db.collection('users');
+
+        if (audience === 'actors') {
+            usersQuery = usersCollection.where('isActor', '==', true);
+        } else if (audience === 'filmmakers') {
+            usersQuery = usersCollection.where('isFilmmaker', '==', true);
+        } else {
+            usersQuery = usersCollection;
+        }
+        
+        const usersSnapshot = await usersQuery.get();
+        const allEmails = usersSnapshot.docs
+            .map(doc => doc.data().email)
+            .filter(email => !!email);
+
 
         if (allEmails.length === 0) {
-            return new Response(JSON.stringify({ message: "No users to email." }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            return new Response(JSON.stringify({ message: `No users found in the '${audience}' group.` }), { status: 200, headers: { 'Content-Type': 'application/json' } });
         }
 
         // --- Send emails in batches of 50 using Resend ---
@@ -60,11 +65,11 @@ export async function POST(request: Request) {
             });
         }
         
-        return new Response(JSON.stringify({ success: true, message: `Email successfully sent to ${allEmails.length} users.` }), { status: 200, headers: { 'Content-Type': 'application/json' }});
+        return new Response(JSON.stringify({ success: true, message: `Email successfully sent to ${allEmails.length} users in the '${audience}' group.` }), { status: 200, headers: { 'Content-Type': 'application/json' }});
 
     } catch (error) {
         console.error("Error sending bulk email:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown server error occurred.";
-        return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: { 'Content-Type': 'application/json' }});
+        return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 }

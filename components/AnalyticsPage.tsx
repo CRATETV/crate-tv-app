@@ -34,6 +34,38 @@ interface AnalyticsPageProps {
     viewMode: 'full' | 'festival';
 }
 
+const AudienceEmailList: React.FC<{ title: string; users: { email: string }[] }> = ({ title, users }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
+
+    const handleCopy = () => {
+        const emails = users.map(u => u.email).join(', ');
+        navigator.clipboard.writeText(emails).then(() => {
+            setCopyStatus('copied');
+            setTimeout(() => setCopyStatus('idle'), 2000);
+        });
+    };
+
+    return (
+        <div className="bg-gray-800/50 border border-gray-700 rounded-lg">
+            <div className="p-4 flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-white">{title} ({users.length})</h3>
+                <div className="flex items-center gap-2">
+                    <button onClick={handleCopy} className="text-xs bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md">{copyStatus === 'copied' ? 'Copied!' : 'Copy Emails'}</button>
+                    <button onClick={() => setIsOpen(!isOpen)} className="text-xs bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md">{isOpen ? 'Hide' : 'Show'} List</button>
+                </div>
+            </div>
+            {isOpen && (
+                <div className="border-t border-gray-700 p-4 max-h-60 overflow-y-auto">
+                    <ul className="text-sm text-gray-300">
+                        {users.map(user => <li key={user.email}>{user.email}</li>)}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const isFestivalView = viewMode === 'festival';
     const [activeTab, setActiveTab] = useState(isFestivalView ? 'festival' : 'overview');
@@ -267,36 +299,20 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                     
                     {/* AUDIENCE TAB */}
                     {(activeTab === 'audience' && !isFestivalView) && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <div>
-                                <h2 className="text-2xl font-bold mb-4 text-white">Viewership by Country</h2>
-                                <select value={selectedGeoMovie} onChange={e => setSelectedGeoMovie(e.target.value)} className="form-input mb-4"><option value="">Select a Film</option>{Object.keys(allMovies).map(key => <option key={key} value={key}>{allMovies[key].title}</option>)}</select>
+                        <div className="space-y-6">
+                            <h2 className="text-2xl font-bold text-white">Audience Segments</h2>
+                             <AudienceEmailList title="All Registered Users" users={analyticsData.allUsers} />
+                             <AudienceEmailList title="Actors" users={analyticsData.actorUsers} />
+                             <AudienceEmailList title="Filmmakers" users={analyticsData.filmmakerUsers} />
+                             
+                             <h2 className="text-2xl font-bold text-white mt-8">Viewership by Country</h2>
+                                <select value={selectedGeoMovie} onChange={e => setSelectedGeoMovie(e.target.value)} className="form-input mb-4 max-w-sm"><option value="">Select a Film</option>{Object.keys(allMovies).map(key => <option key={key} value={key}>{allMovies[key].title}</option>)}</select>
                                 <div className="overflow-x-auto"><table className="w-full text-left">
                                     <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Country Code</th><th className="p-3">Views</th></tr></thead>
                                     <tbody>{selectedGeoMovie && analyticsData.viewLocations[selectedGeoMovie] ? Object.entries(analyticsData.viewLocations[selectedGeoMovie]).sort(([, a], [, b]) => Number(b) - Number(a)).map(([code, count]) => (
                                         <tr key={code} className="border-b border-gray-700"><td className="p-3 font-medium text-white">{code}</td><td className="p-3">{formatNumber(Number(count))}</td></tr>
                                     )) : <tr><td colSpan={2} className="p-4 text-center text-gray-500">No location data for this film.</td></tr>}</tbody>
                                 </table></div>
-                            </div>
-                             <div>
-                                <h2 className="text-2xl font-bold mb-4 text-white">User List</h2>
-                                <div className="overflow-y-auto max-h-[600px]"><table className="w-full text-left">
-                                    <thead className="text-xs text-gray-400 uppercase bg-gray-700/50 sticky top-0">
-                                        <tr>
-                                            <th className="p-3">Email</th>
-                                            <th className="p-3">Sign Up Date</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>{analyticsData.allUsers
-                                        .filter(user => user.email && user.email !== 'N/A')
-                                        .map(user => (
-                                        <tr key={user.email} className="border-b border-gray-700">
-                                            <td className="p-3 font-medium text-white">{user.email}</td>
-                                            <td className="p-3 text-gray-400">{user.creationTime}</td>
-                                        </tr>
-                                    ))}</tbody>
-                                </table></div>
-                            </div>
                         </div>
                     )}
 
