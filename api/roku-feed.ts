@@ -29,7 +29,7 @@ const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Mov
     const visibleMovies: Record<string, Movie> = {};
     const now = new Date();
 
-    Object.values(moviesData).forEach(movie => {
+    Object.values(moviesData).forEach((movie: Movie) => {
       if (!movie) return; // Add a guard for safety
       const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
       const expiryDate = movie.mainPageExpiry ? new Date(movie.mainPageExpiry) : null;
@@ -73,9 +73,9 @@ export async function GET(request: Request) {
         movieGenreMap.set(key, []);
     });
 
-    (Object.values(categoriesData) as Category[]).forEach((category) => {
+    (Object.values(categoriesData) as Category[]).forEach((category: Category) => {
         if (category && Array.isArray(category.movieKeys)) {
-            category.movieKeys.forEach(movieKey => {
+            category.movieKeys.forEach((movieKey: string) => {
                 if (movieGenreMap.has(movieKey)) {
                     movieGenreMap.get(movieKey)?.push(category.title);
                 }
@@ -85,9 +85,9 @@ export async function GET(request: Request) {
     
     // 1. Get Hero Items from 'featured' category
     const heroItems = (categoriesData['featured']?.movieKeys || [])
-        .map(key => visibleMovies[key])
+        .map((key: string) => visibleMovies[key])
         .filter((movie): movie is Movie => !!movie)
-        .map(movie => formatMovieForRoku(movie, movieGenreMap));
+        .map((movie: Movie) => formatMovieForRoku(movie, movieGenreMap));
         
     // Helper function to process a single category into the Roku format
     const processCategory = (categoryData: Category): RokuCategory | null => {
@@ -95,9 +95,9 @@ export async function GET(request: Request) {
             return null;
         }
         const movies = categoryData.movieKeys
-            .map(movieKey => visibleMovies[movieKey])
+            .map((movieKey: string) => visibleMovies[movieKey])
             .filter((movie): movie is Movie => !!movie)
-            .map(movie => formatMovieForRoku(movie, movieGenreMap));
+            .map((movie: Movie) => formatMovieForRoku(movie, movieGenreMap));
           
         if (movies.length > 0) {
             return {
@@ -145,13 +145,13 @@ export async function GET(request: Request) {
     const processedKeys = new Set(['featured', 'pwff12thAnnual', 'consumed']);
     const remainingCategoryOrder = ["newReleases", "awardWinners", "comedy", "drama", "documentary", "exploreTitles", "publicDomainIndie"];
     
-    remainingCategoryOrder.forEach(key => {
+    remainingCategoryOrder.forEach((key: string) => {
         if (!processedKeys.has(key) && categoriesData[key]) {
             orderedCategories.push(categoriesData[key]);
         }
     });
     
-    orderedCategories.forEach(cat => {
+    orderedCategories.forEach((cat: Category | null) => {
         if (cat) {
             const processed = processCategory(cat);
             if (processed) {
