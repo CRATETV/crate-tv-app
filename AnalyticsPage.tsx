@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AnalyticsData, Movie, AdminPayout } from '../types';
-import { fetchAndCacheLiveData } from '../services/dataService';
+import { AnalyticsData, Movie, AdminPayout } from './types';
+import { fetchAndCacheLiveData } from './services/dataService';
 import LoadingSpinner from './components/LoadingSpinner';
 import FilmReportModal from './components/FilmReportModal';
 import BillingReminders from './components/BillingReminders';
@@ -66,6 +66,18 @@ const AudienceEmailList: React.FC<{ title: string; users: { email: string }[] }>
     );
 };
 
+// Define the type for a single filmmaker payout record to ensure type safety.
+type FilmmakerPayout = {
+    movieTitle: string;
+    totalDonations: number;
+    crateTvCut: number;
+    filmmakerDonationPayout: number;
+    totalAdRevenue: number;
+    filmmakerAdPayout: number;
+    totalFilmmakerPayout: number;
+};
+
+
 const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const isFestivalView = viewMode === 'festival';
     const [activeTab, setActiveTab] = useState(isFestivalView ? 'festival' : 'overview');
@@ -73,6 +85,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<{ square: string | null, firebase: string | null, critical: string | null }>({ square: null, firebase: null, critical: null });
+    const [selectedGeoMovie, setSelectedGeoMovie] = useState<string>('');
     const [selectedFilmForReport, setSelectedFilmForReport] = useState<FilmPerformanceData | null>(null);
     const [festivalPayoutStatus, setFestivalPayoutStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
     const [festivalPayoutMessage, setFestivalPayoutMessage] = useState('');
@@ -108,6 +121,10 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
             setAnalyticsData(analyticsJson.analyticsData);
             setError(analyticsJson.errors);
             setAllMovies(liveDataRes.data.movies);
+            if (analyticsJson.analyticsData?.viewLocations) {
+                const firstMovieWithGeo = Object.keys(analyticsJson.analyticsData.viewLocations)[0];
+                setSelectedGeoMovie(firstMovieWithGeo || '');
+            }
             
         } catch (err) {
             setError(prev => ({ ...prev, critical: err instanceof Error ? err.message : 'An unknown error occurred during data fetch.' }));
@@ -123,7 +140,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const filmPerformanceData = useMemo((): FilmPerformanceData[] => {
         if (!analyticsData || !allMovies) return [];
         return (Object.values(allMovies) as Movie[]).map(movie => {
-            const payoutInfo = analyticsData.filmmakerPayouts.find(p => p.movieTitle === movie.title);
+            const payoutInfo = analyticsData.filmmakerPayouts.find((p: FilmmakerPayout) => p.movieTitle === movie.title);
             return {
                 key: movie.key,
                 title: movie.title,
@@ -346,7 +363,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                     <div className="max-h-60 overflow-y-auto">
                                         {analyticsData.pastAdminPayouts.length > 0 ? (
                                             <ul className="space-y-2">
-                                                {analyticsData.pastAdminPayouts.map(p => (
+                                                {analyticsData.pastAdminPayouts.map((p: AdminPayout) => (
                                                     <li key={p.id} className="flex justify-between items-center text-sm p-2 bg-gray-700/50 rounded-md">
                                                         <div>
                                                             <span className="font-semibold text-white">{p.reason}</span>
@@ -364,7 +381,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                 <h3 className="text-xl font-bold mb-4 text-white">Filmmaker Payouts</h3>
                                 <div className="overflow-x-auto"><table className="w-full text-left">
                                     <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Film</th><th className="p-3">Donation Payout</th><th className="p-3">Ad Payout</th><th className="p-3">Total Payout</th></tr></thead>
-                                    <tbody>{analyticsData.filmmakerPayouts.map(p => (
+                                    <tbody>{analyticsData.filmmakerPayouts.map((p: FilmmakerPayout) => (
                                         <tr key={p.movieTitle} className="border-b border-gray-700">
                                           <td className="p-3 font-medium text-white">{p.movieTitle}</td>
                                           <td className="p-3">{formatCurrency(p.filmmakerDonationPayout)}</td>
@@ -383,7 +400,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
             
             {selectedFilmForReport && (
                 <FilmReportModal 
-                    filmData={selectedFilmForReport as any} // Cast to any to avoid type errors
+                    filmData={selectedFilmForReport}
                     onClose={() => setSelectedFilmForReport(null)} 
                 />
             )}

@@ -1,10 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AnalyticsData, Movie } from '../types';
-import { fetchAndCacheLiveData } from '../services/dataService';
+import { AnalyticsData, Movie } from './types';
+import { fetchAndCacheLiveData } from './services/dataService';
 import LoadingSpinner from './components/LoadingSpinner';
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
 const formatNumber = (num: number) => num.toLocaleString();
+
+// Define the type for a single filmmaker payout record to ensure type safety.
+type FilmmakerPayout = {
+    movieTitle: string;
+    totalDonations: number;
+    crateTvCut: number;
+    filmmakerDonationPayout: number;
+    totalAdRevenue: number;
+    filmmakerAdPayout: number;
+    totalFilmmakerPayout: number;
+};
 
 const TopFilmsTab: React.FC = () => {
     const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
@@ -57,7 +68,7 @@ const TopFilmsTab: React.FC = () => {
         if (!analyticsData || !allMovies) return [];
         
         return (Object.values(allMovies) as Movie[]).map(movie => {
-            const donations = analyticsData.filmmakerPayouts.find(p => p.movieTitle === movie.title)?.totalDonations || 0;
+            const donations = analyticsData.filmmakerPayouts.find((p: FilmmakerPayout) => p.movieTitle === movie.title)?.totalDonations || 0;
             return {
                 key: movie.key,
                 title: movie.title,
