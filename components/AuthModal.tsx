@@ -77,7 +77,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
             onClick={onClose}
         >
             <div 
-                className="bg-black/80 border border-gray-700 rounded-lg shadow-xl w-full max-w-md relative" 
+                className="bg-black/80 border border-gray-700 rounded-lg shadow-xl w-full max-w-md relative mt-48" 
                 onClick={(e) => e.stopPropagation()}
             >
                 <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-white z-10">
