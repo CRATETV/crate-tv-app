@@ -271,7 +271,7 @@ const AdminPage: React.FC = () => {
                         <h1 className="text-3xl font-bold text-red-500">Crate TV Admin</h1>
                         <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-white">Logout</button>
                     </div>
-                    {role === 'super_admin' && (
+                    {(role === 'super_admin' || role === 'festival_admin') && (
                         <div className="flex items-center gap-2">
                              <button onClick={handlePublish} disabled={publishStatus === 'publishing'} className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors">
                                 {publishStatus === 'publishing' ? 'Publishing...' : 'Publish Live Data'}

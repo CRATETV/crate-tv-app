@@ -89,6 +89,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const [selectedFilmForReport, setSelectedFilmForReport] = useState<FilmPerformanceData | null>(null);
     const [festivalPayoutStatus, setFestivalPayoutStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
     const [festivalPayoutMessage, setFestivalPayoutMessage] = useState('');
+    const [expandedPayoutRow, setExpandedPayoutRow] = useState<string | null>(null);
 
     // State for Admin Payout
     const [adminPayoutAmount, setAdminPayoutAmount] = useState('');
@@ -382,12 +383,28 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                 <div className="overflow-x-auto"><table className="w-full text-left">
                                     <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Film</th><th className="p-3">Donation Payout</th><th className="p-3">Ad Payout</th><th className="p-3">Total Payout</th></tr></thead>
                                     <tbody>{analyticsData.filmmakerPayouts.map((p: FilmmakerPayout) => (
-                                        <tr key={p.movieTitle} className="border-b border-gray-700">
-                                          <td className="p-3 font-medium text-white">{p.movieTitle}</td>
-                                          <td className="p-3">{formatCurrency(p.filmmakerDonationPayout)}</td>
-                                          <td className="p-3">{formatCurrency(p.filmmakerAdPayout)}</td>
-                                          <td className="p-3 font-bold text-green-400">{formatCurrency(p.totalFilmmakerPayout)}</td>
-                                        </tr>
+                                         <React.Fragment key={p.movieTitle}>
+                                            <tr className="border-b border-gray-700 cursor-pointer hover:bg-gray-700/50" onClick={() => setExpandedPayoutRow(expandedPayoutRow === p.movieTitle ? null : p.movieTitle)}>
+                                                <td className="p-3 font-medium text-white">{p.movieTitle}</td>
+                                                <td className="p-3">{formatCurrency(p.filmmakerDonationPayout)}</td>
+                                                <td className="p-3">{formatCurrency(p.filmmakerAdPayout)}</td>
+                                                <td className="p-3 font-bold text-green-400">{formatCurrency(p.totalFilmmakerPayout)}</td>
+                                            </tr>
+                                            {expandedPayoutRow === p.movieTitle && (
+                                                <tr className="bg-gray-800">
+                                                    <td colSpan={4} className="p-4">
+                                                        <h5 className="font-semibold text-gray-300 mb-2">Viewership by Country for {p.movieTitle}</h5>
+                                                        {(analyticsData.viewLocations && analyticsData.viewLocations[Object.keys(allMovies).find(key => allMovies[key].title === p.movieTitle) || '']) ? (
+                                                            <ul className="text-sm text-gray-400">
+                                                                {Object.entries(analyticsData.viewLocations[Object.keys(allMovies).find(key => allMovies[key].title === p.movieTitle) || '']).map(([country, count]) => (
+                                                                    <li key={country}>{country}: {formatNumber(Number(count))} views</li>
+                                                                ))}
+                                                            </ul>
+                                                        ) : <p className="text-sm text-gray-500">No location data available for this film.</p>}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
                                     ))}</tbody>
                                 </table></div>
                             </div>

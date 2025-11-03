@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 
 // Helper to get status color based on date
-const getStatus = (dateString: string | null): { color: string; text: string; nextBillDate: Date | null } => {
-    if (!dateString) return { color: 'gray', text: 'Not set', nextBillDate: null };
+const getStatus = (dateString: string | null): { color: string; text: string; nextBillDate: Date | null; diffDays: number } => {
+    if (!dateString) return { color: 'gray', text: 'Not set', nextBillDate: null, diffDays: Infinity };
 
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Start of today for accurate comparison
@@ -24,10 +24,13 @@ const getStatus = (dateString: string | null): { color: string; text: string; ne
 
     const diffTime = nextBillDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return { color: 'red', text: 'Due today', nextBillDate };
-    if (diffDays <= 7) return { color: 'yellow', text: `Due in ${diffDays} day(s)`, nextBillDate };
-    return { color: 'green', text: `Due in ${diffDays} day(s)`, nextBillDate };
+    
+    if (diffDays <= 0) {
+      const text = diffDays === 0 ? 'Due today' : `Overdue by ${Math.abs(diffDays)} day(s)`;
+      return { color: 'red', text, nextBillDate, diffDays };
+    }
+    if (diffDays <= 7) return { color: 'yellow', text: `Due in ${diffDays} day(s)`, nextBillDate, diffDays };
+    return { color: 'green', text: `Due in ${diffDays} day(s)`, nextBillDate, diffDays };
 };
 
 const statusColors = {
@@ -110,7 +113,11 @@ const ServiceReminder: React.FC<{ serviceName: string; logoUrl: string; billingU
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                      {status.nextBillDate && (
-                         <button onClick={handleMarkAsPaid} className="bg-green-600 hover:bg-green-700 text-white font-bold text-sm py-2 px-4 rounded-md transition-colors w-full">
+                         <button 
+                            onClick={handleMarkAsPaid} 
+                            disabled={status.diffDays > 0}
+                            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold text-sm py-2 px-4 rounded-md transition-colors w-full"
+                         >
                             Mark as Paid
                         </button>
                     )}
