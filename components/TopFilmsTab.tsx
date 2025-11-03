@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AnalyticsData, Movie } from '../types';
+import { AnalyticsData, Movie, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -49,7 +49,6 @@ const TopFilmsTab: React.FC = () => {
     const topFilmsData = useMemo(() => {
         if (!analyticsData || !allMovies) return [];
         
-        // FIX: Explicitly cast Object.values to Movie[] to fix type inference issues.
         return (Object.values(allMovies) as Movie[]).map(movie => {
             const donations = analyticsData.filmmakerPayouts.find(p => p.movieTitle === movie.title)?.totalDonations || 0;
             return {

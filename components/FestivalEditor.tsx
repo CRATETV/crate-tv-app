@@ -78,6 +78,17 @@ interface FestivalEditorProps {
     onSave: () => void;
 }
 
+// Helper to format a Date object into a string for datetime-local input
+const toDateTimeLocalString = (date: Date) => {
+    const ten = (i: number) => (i < 10 ? '0' : '') + i;
+    const YYYY = date.getFullYear();
+    const MM = ten(date.getMonth() + 1);
+    const DD = ten(date.getDate());
+    const HH = ten(date.getHours());
+    const mm = ten(date.getMinutes());
+    return `${YYYY}-${MM}-${DD}T${HH}:${mm}`;
+};
+
 // The FestivalEditor component for managing festival data
 const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies, onDataChange, onConfigChange, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
@@ -181,6 +192,20 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
     }, 500);
   };
   
+  const handleGoLive = () => {
+    if (!window.confirm("This will make the festival live immediately and set it to end in one week. This will overwrite the current start and end dates. Are you sure?")) return;
+    
+    const now = new Date();
+    const endDate = new Date();
+    endDate.setDate(now.getDate() + 7);
+
+    onConfigChange({ 
+        ...config, 
+        startDate: toDateTimeLocalString(now),
+        endDate: toDateTimeLocalString(endDate),
+    });
+  };
+
   if (!config) {
     return (
       <div className="bg-gray-950 p-6 rounded-lg text-center">
@@ -224,6 +249,16 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
               <input type="datetime-local" name="endDate" value={config.endDate || ''} onChange={handleConfigChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
             </div>
           </div>
+          <div className="pt-4 mt-4 border-t border-gray-800">
+                <button 
+                    type="button" 
+                    onClick={handleGoLive} 
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors"
+                >
+                    Go Live Now
+                </button>
+                <p className="text-xs text-gray-500 mt-1">Sets start date to now and end date 7 days from now.</p>
+            </div>
       </div>
 
       <div className="space-y-6">

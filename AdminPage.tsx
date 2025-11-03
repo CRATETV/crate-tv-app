@@ -283,8 +283,8 @@ const AdminPage: React.FC = () => {
 
                 <div className="flex flex-wrap items-center gap-2 mb-6 border-b border-gray-700 pb-4">
                     <TabButton tabId="analytics" label="Analytics" requiredRole={['super_admin', 'festival_admin']} />
+                    <TabButton tabId="top_films" label="Top Films" requiredRole={['super_admin', 'festival_admin']} />
                     {role !== 'festival_admin' && <>
-                        <TabButton tabId="top_films" label="Top Films" requiredRole={['super_admin']} />
                         <TabButton tabId="movies" label="Movies" requiredRole={['super_admin', 'collaborator']} />
                         <TabButton tabId="categories" label="Categories" requiredRole={['super_admin', 'collaborator']} />
                     </>}

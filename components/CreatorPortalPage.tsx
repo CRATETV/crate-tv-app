@@ -88,7 +88,7 @@ const CreatorPortalPage: React.FC = () => {
                         onPlayMovie={handleHeroAction}
                         onMoreInfo={handleHeroAction}
                     />
-                    <div className="absolute inset-0 z-20 flex items-start justify-center p-4 pt-32 md:pt-48">
+                    <div className="absolute inset-0 z-20 flex items-start justify-center p-4 pt-48 md:pt-64">
                         <div className="max-w-xl w-full text-center">
                             <div className="bg-black/70 border border-gray-700 rounded-xl shadow-2xl backdrop-blur-md overflow-hidden">
                                 {/* Toggle Switch */}

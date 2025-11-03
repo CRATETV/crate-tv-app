@@ -159,6 +159,16 @@ export interface FilmmakerAnalytics {
     films: FilmmakerFilmPerformance[];
 }
 
+export interface FilmmakerPayout {
+    movieTitle: string;
+    totalDonations: number;
+    crateTvCut: number;
+    filmmakerDonationPayout: number;
+    totalAdRevenue: number;
+    filmmakerAdPayout: number;
+    totalFilmmakerPayout: number;
+}
+
 export interface AnalyticsData {
     totalRevenue: number;
     totalCrateTvRevenue: number;
@@ -190,15 +200,7 @@ export interface AnalyticsData {
     festivalBlockSales: { units: number; revenue: number };
     salesByBlock: Record<string, { units: number; revenue: number }>;
 
-    filmmakerPayouts: {
-        movieTitle: string;
-        totalDonations: number;
-        crateTvCut: number;
-        filmmakerDonationPayout: number;
-        totalAdRevenue: number;
-        filmmakerAdPayout: number;
-        totalFilmmakerPayout: number;
-    }[];
+    filmmakerPayouts: FilmmakerPayout[];
 }
 
 export interface ActorPost {
