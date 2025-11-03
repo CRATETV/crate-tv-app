@@ -1,3 +1,5 @@
+
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -15,7 +17,7 @@ import RokuBanner from './RokuBanner';
 import SquarePaymentModal from './SquarePaymentModal';
 import DonationSuccessModal from './DonationSuccessModal';
 import { isMovieReleased } from '../constants';
-import CollapsibleFooter from './CollapsibleFooter';
+import Footer from './Footer';
 
 declare const google: any; // Declare Google IMA SDK global
 
@@ -74,6 +76,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [released, setReleased] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const hasTrackedViewRef = useRef(false);
+
+  // Like state
+  const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
+  const [isAnimatingLike, setIsAnimatingLike] = useState(false);
 
   // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
@@ -274,6 +280,58 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     return () => document.removeEventListener('keydown', handleEscKey);
 }, [playerMode]);
 
+    // --- Like Functionality ---
+    useEffect(() => {
+        const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
+        if (storedLikedMovies) {
+            setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
+        }
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('cratetv-likedMovies', JSON.stringify(Array.from(likedMovies)));
+    }, [likedMovies]);
+    
+    const toggleLikeMovie = useCallback(async () => {
+        if (!movie) return;
+        const movieKey = movie.key;
+        const newLikedMovies = new Set(likedMovies);
+        const action = newLikedMovies.has(movieKey) ? 'unlike' : 'like';
+
+        let likesChange = 0;
+        if (action === 'like') {
+            newLikedMovies.add(movieKey);
+            likesChange = 1;
+            setIsAnimatingLike(true);
+            setTimeout(() => setIsAnimatingLike(false), 500);
+        } else {
+            newLikedMovies.delete(movieKey);
+            likesChange = -1;
+        }
+        setLikedMovies(newLikedMovies);
+
+        // Optimistically update the single movie state
+        setMovie(prevMovie => {
+            if (!prevMovie) return null;
+            return {
+                ...prevMovie,
+                likes: Math.max(0, (prevMovie.likes || 0) + likesChange)
+            };
+        });
+
+        // Persist to server
+        try {
+            await fetch('/api/toggle-like', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey, action }),
+            });
+        } catch (error) {
+            console.error("Failed to send like update:", error);
+        }
+    }, [likedMovies, movie]);
+    // --- End Like Functionality ---
+
 
     const recommendedMovies = useMemo(() => {
         if (!movie) return [];
@@ -338,6 +396,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     if (isLoading || !movie) {
         return <LoadingSpinner />;
     }
+
+    const isLiked = likedMovies.has(movie.key);
 
     return (
         <div className="flex flex-col min-h-screen bg-black text-white">
@@ -455,6 +515,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                Support Filmmaker
                             </button>
                           )}
+                          <button onClick={toggleLikeMovie} className={`h-10 w-10 flex items-center justify-center rounded-full border-2 border-gray-400 text-white hover:border-white transition ${isAnimatingLike ? 'animate-heartbeat' : ''}`}>
+                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors ${isLiked ? 'text-red-500' : 'text-inherit'}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                </svg>
+                          </button>
+                          <span className="text-gray-400 text-sm">
+                            {movie.likes > 0 ? `${movie.likes.toLocaleString()} likes` : ''}
+                          </span>
                       </div>
                       <div className="mt-4 text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: movie.synopsis || '' }}></div>
                        
@@ -508,7 +576,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             
             {playerMode !== 'full' && (
               <>
-                <CollapsibleFooter />
+                <Footer />
                 <BackToTopButton />
               </>
             )}

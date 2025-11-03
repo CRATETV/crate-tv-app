@@ -200,7 +200,7 @@ export const listenToAllAdminData = (
             // This closure-based counter is more robust for handling the initial load.
             const checkInitialLoadAndCallback = (() => {
                 let loads = 0;
-                const expected = 7; // Increased for the new moviePipeline listener
+                const expected = 6; // Reduced from 7 as we removed the submissions listener
                 let initialLoadDone = false;
                 
                 return (error?: { collection: string, message: string }) => {
@@ -259,14 +259,6 @@ export const listenToAllAdminData = (
                 adminData.aboutData = doc.exists() ? (doc.data() as AboutData) : initialAboutData;
                 checkInitialLoadAndCallback();
             }, (err) => onError(err, 'content/about')));
-
-            const submissionsQuery = query(collection(firestoreDb, 'actorSubmissions'), where('status', '==', 'pending'), orderBy('submissionDate', 'desc'));
-            unsubs.push(onSnapshot(submissionsQuery, (snapshot: QuerySnapshot<DocumentData>) => {
-                const submissions: ActorSubmission[] = [];
-                snapshot.forEach(doc => { submissions.push({ id: doc.id, ...doc.data() } as ActorSubmission); });
-                adminData.actorSubmissions = submissions;
-                checkInitialLoadAndCallback();
-            }, (err) => onError(err, 'actorSubmissions')));
 
             const pipelineQuery = query(collection(firestoreDb, 'movie_pipeline'), where('status', '==', 'pending'), orderBy('submittedAt', 'desc'));
             unsubs.push(onSnapshot(pipelineQuery, (snapshot: QuerySnapshot<DocumentData>) => {
@@ -390,32 +382,6 @@ export const saveAboutData = async (aboutData: AboutData) => {
     }
     await setDoc(doc(firestoreDb, 'content', 'about'), aboutData);
 };
-
-// --- Actor Submission Functions ---
-const callSubmissionApi = async (endpoint: string, payload: object) => {
-    const password = sessionStorage.getItem('adminPassword');
-    if (!password) throw new Error("Admin password not found in session.");
-    
-    const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, password }),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'API call failed.');
-    }
-    return await response.json();
-}
-
-export const approveActorSubmission = async (submissionId: string) => {
-    return callSubmissionApi('/api/approve-actor-submission', { submissionId });
-}
-
-export const rejectActorSubmission = async (submissionId: string, reason?: string) => {
-    return callSubmissionApi('/api/reject-actor-submission', { submissionId, reason });
-}
 
 // --- Movie Pipeline Functions ---
 export const addMoviePipelineEntry = async (entry: Omit<MoviePipelineEntry, 'id' | 'submittedAt' | 'status'>) => {

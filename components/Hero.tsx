@@ -30,7 +30,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
         />
         {/* Darkened top gradient for better header contrast */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-black/80"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent"></div>
       </div>
 
       {/* Content */}
@@ -38,7 +38,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
         <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold mb-4 max-w-xl animate-[slideInUp_0.5s_ease-out] drop-shadow-lg">
           {currentMovie.title}
         </h1>
-        <p className="text-sm md:text-base lg:text-lg max-w-xl mb-6 animate-[slideInUp_0.7s_ease-out] line-clamp-3" dangerouslySetInnerHTML={{ __html: currentMovie.synopsis }}></p>
+        <p className="text-sm md:text-base lg:text-lg max-w-xl mb-6 animate-[slideInUp_0.7s_ease-out] line-clamp-3 drop-shadow-lg" dangerouslySetInnerHTML={{ __html: currentMovie.synopsis }}></p>
         <div className="flex items-center gap-4 animate-[slideInUp_0.9s_ease-out]">
           <button
             onClick={() => onPlayMovie(currentMovie)}

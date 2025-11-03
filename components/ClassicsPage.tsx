@@ -1,4 +1,7 @@
 
+
+
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import BackToTopButton from './BackToTopButton';
@@ -6,7 +9,7 @@ import LoadingSpinner from './LoadingSpinner';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import { Movie, Category, FestivalConfig } from '../types';
 import MovieCard from './MovieCard';
-import CollapsibleFooter from './CollapsibleFooter';
+import Footer from './Footer';
 import BottomNavBar from './BottomNavBar';
 
 const ClassicsPage: React.FC = () => {
@@ -107,7 +110,7 @@ const ClassicsPage: React.FC = () => {
                 </div>
             </main>
             
-            <CollapsibleFooter />
+            <Footer />
             <BackToTopButton />
             <BottomNavBar 
                 isFestivalLive={isFestivalLive}

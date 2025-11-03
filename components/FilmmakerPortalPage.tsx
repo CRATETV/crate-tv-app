@@ -146,6 +146,25 @@ const FilmmakerPortalPage: React.FC = () => {
         document.body.removeChild(link);
     };
 
+    const handleShareTopTen = async () => {
+        const shareData = {
+            title: 'Top 10 on Crate TV',
+            text: 'Check out the top 10 most popular films on Crate TV today!',
+            url: `${window.location.origin}/top-ten`
+        };
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                // Fallback for desktop browsers
+                await navigator.clipboard.writeText(shareData.url);
+                alert('Link to Top 10 page copied to clipboard!');
+            }
+        } catch (err) {
+            console.error("Couldn't share top ten list:", err);
+        }
+    };
+
     if (isLoading) {
         return <LoadingSpinner />;
     }
@@ -237,9 +256,14 @@ const FilmmakerPortalPage: React.FC = () => {
                             <div>
                                 <div className="flex justify-between items-center mb-4">
                                     <h2 className="text-2xl font-bold text-white">Top 10 on Crate TV</h2>
-                                    <button onClick={handleDownloadTopTen} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-md text-xs">
-                                        Download
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button onClick={handleShareTopTen} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md text-xs">
+                                            Share
+                                        </button>
+                                        <button onClick={handleDownloadTopTen} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-md text-xs">
+                                            Download
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 space-y-3">
                                     {topTenMovies.length > 0 ? topTenMovies.map((movie, index) => (

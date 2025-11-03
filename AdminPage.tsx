@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { listenToAllAdminData, saveMovie, deleteMovie, saveCategories, saveFestivalConfig, saveFestivalDays, saveAboutData, approveActorSubmission, rejectActorSubmission, deleteMoviePipelineEntry } from './services/firebaseService';
-import { Movie, Category, FestivalDay, FestivalConfig, AboutData, LiveData, ActorSubmission, PayoutRequest, MoviePipelineEntry } from './types';
+import { listenToAllAdminData, saveMovie, deleteMovie, saveCategories, saveFestivalConfig, saveFestivalDays, saveAboutData, deleteMoviePipelineEntry } from './services/firebaseService';
+import { Movie, Category, FestivalDay, FestivalConfig, AboutData, LiveData, PayoutRequest, MoviePipelineEntry } from './types';
 import MovieEditor from './components/MovieEditor';
 import CategoryEditor from './components/CategoryEditor';
 import FestivalEditor from './components/FestivalEditor';
@@ -8,7 +8,6 @@ import AboutEditor from './components/AboutEditor';
 import LoadingSpinner from './components/LoadingSpinner';
 import FallbackGenerator from './components/FallbackGenerator';
 import AnalyticsPage from './components/AnalyticsPage';
-import ActorSubmissionsTab from './components/ActorSubmissionsTab';
 import PayoutsTab from './components/PayoutsTab';
 import EmailSender from './components/EmailSender';
 import MoviePipelineTab from './components/MoviePipelineTab';
@@ -290,7 +289,6 @@ const AdminPage: React.FC = () => {
                     </>}
                     <TabButton tabId="festival" label="Festival" requiredRole={['super_admin', 'festival_admin']} />
                     {role !== 'festival_admin' && <>
-                        <TabButton tabId="submissions" label="Submissions" requiredRole={['super_admin']} />
                         <TabButton tabId="payouts" label="Payouts" requiredRole={['super_admin']} />
                     </>}
                     <TabButton tabId="pipeline" label="Pipeline" requiredRole={['super_admin', 'collaborator', 'festival_admin']} />
@@ -334,7 +332,6 @@ const AdminPage: React.FC = () => {
                 
                 {activeTab === 'categories' && <CategoryEditor initialCategories={data.categories} allMovies={Object.values(data.movies)} onSave={saveCategories} />}
                 {activeTab === 'festival' && <FestivalEditor data={data.festivalData} config={data.festivalConfig} allMovies={data.movies} onDataChange={saveFestivalDays} onConfigChange={saveFestivalConfig} onSave={() => { /* Handled by individual change handlers */ }} />}
-                {activeTab === 'submissions' && <ActorSubmissionsTab submissions={data.actorSubmissions} allMovies={data.movies} onApprove={approveActorSubmission} onReject={rejectActorSubmission} />}
                 {activeTab === 'payouts' && <PayoutsTab payoutRequests={payouts} onCompletePayout={completePayout} />}
                 {activeTab === 'pipeline' && <MoviePipelineTab pipeline={data.moviePipeline} onCreateMovie={handleCreateMovieFromPipeline} />}
                 {activeTab === 'about' && <AboutEditor initialData={data.aboutData} onSave={saveAboutData} />}

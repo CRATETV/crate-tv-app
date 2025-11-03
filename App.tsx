@@ -21,7 +21,7 @@ import NowPlayingBanner from './components/NowPlayingBanner';
 import { useAuth } from './contexts/AuthContext';
 import { isMovieReleased } from './constants';
 import BottomNavBar from './components/BottomNavBar';
-import CollapsibleFooter from './components/CollapsibleFooter';
+import Footer from './components/Footer';
 
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
@@ -561,7 +561,7 @@ const App: React.FC = () => {
         )}
       </main>
       
-      <CollapsibleFooter showActorLinks={true} />
+      <Footer showActorLinks={true} className="hidden md:block" />
       <BackToTopButton />
 
       {detailsMovie && (

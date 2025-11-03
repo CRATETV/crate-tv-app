@@ -50,8 +50,6 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick, isFestivalLi
         };
     }, []);
 
-    const accountPath = user ? '/account' : '/login';
-
     return (
         <div className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-black/80 backdrop-blur-sm border-t border-gray-800 z-40 flex justify-around items-center">
             <NavItem 
@@ -67,14 +65,18 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick, isFestivalLi
                 label="Search"
                 onClick={onSearchClick}
             />
-             {user && (
-                <NavItem 
-                    path="/classics" 
-                    activePath={activePath} 
-                    icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>}
-                    label="Classics" 
-                />
-            )}
+             <NavItem
+                path="/top-ten"
+                activePath={activePath}
+                icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
+                label="Top 10"
+            />
+             <NavItem
+                path="/portal"
+                activePath={activePath}
+                icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H5v-2H3v-2H1v-4a1 1 0 011-1h2V7a1 1 0 011-1h2V3a1 1 0 011-1h2a1 1 0 011 1v2h2a1 1 0 011 1v2z" /></svg>}
+                label="Portal"
+            />
             {isFestivalLive && (
                 <NavItem 
                     path="/festival" 
@@ -88,12 +90,6 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick, isFestivalLi
                 activePath={activePath} 
                 icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>}
                 label="My List" 
-            />
-            <NavItem 
-                path={accountPath} 
-                activePath={activePath} 
-                icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
-                label={user ? 'Account' : 'Sign In'}
             />
         </div>
     );

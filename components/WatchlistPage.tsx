@@ -7,7 +7,7 @@ import LoadingSpinner from './LoadingSpinner';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import { Movie, Category, FestivalConfig } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import CollapsibleFooter from './CollapsibleFooter';
+import Footer from './Footer';
 import BottomNavBar from './BottomNavBar';
 
 const WatchlistPage: React.FC = () => {
@@ -90,7 +90,7 @@ const WatchlistPage: React.FC = () => {
                     )}
                 </div>
             </main>
-            <CollapsibleFooter />
+            <Footer className="hidden md:block" />
             <BackToTopButton />
             <BottomNavBar 
                 isFestivalLive={isFestivalLive}

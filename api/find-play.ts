@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from '@google/genai';
 
 // This is a Vercel Serverless Function

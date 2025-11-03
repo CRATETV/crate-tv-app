@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -91,7 +89,7 @@ const AppRouter: React.FC = () => {
 
   const movieMatch = route.match(/^\/movie\/([a-zA-Z0-9_-]+)/);
   if (movieMatch && movieMatch[1]) {
-    return user ? <MoviePage movieKey={movieMatch[1]} /> : <RedirectToLogin />;
+    return <MoviePage movieKey={movieMatch[1]} />;
   }
 
   const actorProfileMatch = route.match(/^\/actors-directory\/([a-zA-Z0-9_-]+)/);

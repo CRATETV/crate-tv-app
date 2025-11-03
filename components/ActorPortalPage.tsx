@@ -61,7 +61,7 @@ const ActorPortalPage: React.FC = () => {
                     )}
                 </div>
             </main>
-            <Footer showPortalNotice={true} showActorLinks={true} />
+            <Footer showPortalNotice={true} />
         </div>
     );
 };
