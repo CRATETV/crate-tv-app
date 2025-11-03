@@ -412,18 +412,36 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     )}
                     
                     {playerMode === 'full' && (
-                        <div className={`absolute top-4 right-4 z-30 flex items-center gap-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-                            <CastButton videoElement={videoRef.current} />
-                            <button
-                                onClick={handleExitPlayer}
-                                className="bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white"
-                                aria-label="Exit video player"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
+                        <>
+                            {/* Back to Home Button */}
+                            <div className={`absolute top-4 left-4 z-30 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+                                <button
+                                    onClick={() => {
+                                        window.history.pushState({}, '', '/');
+                                        window.dispatchEvent(new Event('pushstate'));
+                                    }}
+                                    className="bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white"
+                                    aria-label="Back to Home"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                    </svg>
+                                </button>
+                            </div>
+                            {/* Right side controls */}
+                            <div className={`absolute top-4 right-4 z-30 flex items-center gap-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+                                <CastButton videoElement={videoRef.current} />
+                                <button
+                                    onClick={handleExitPlayer}
+                                    className="bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white"
+                                    aria-label="Exit video player"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </>
                     )}
                 </div>
 

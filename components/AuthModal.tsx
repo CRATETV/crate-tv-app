@@ -41,10 +41,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
                 await signIn(email, password);
             } else {
                 await signUp(email, password);
-                setSuccessMessage('Account created! Please sign in.');
-                setIsLoginView(true); // Switch to login view after successful signup
+                // After signup, onAuthStateChanged handles the login automatically.
+                // We no longer need to show a message and switch the view.
             }
-            // On successful login, AuthProvider handles the state change. We just close the modal.
+            // On successful login or signup, the AuthProvider handles the state change. We just close the modal.
             onClose();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred.');

@@ -33,10 +33,11 @@ const LoginPage: React.FC = () => {
                 await signIn(email, password);
             } else {
                 await signUp(email, password);
-                setSuccessMessage('Account created! Please sign in.');
-                setIsLoginView(true);
+                // After signup, onAuthStateChanged in AuthContext will log the user in.
+                // The app will re-render to the correct state, so we don't need to
+                // confuse the user by asking them to sign in again.
             }
-            // On successful login, navigate
+            // On successful login or signup (which auto-logs-in), navigate.
             window.history.pushState({}, '', redirectPath);
             window.dispatchEvent(new Event('pushstate'));
         } catch (err) {
