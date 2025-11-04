@@ -1,54 +1,19 @@
 
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import Header from './Header';
 import BackToTopButton from './BackToTopButton';
 import MovieCard from './MovieCard';
 import LoadingSpinner from './LoadingSpinner';
-import { fetchAndCacheLiveData } from '../services/dataService';
-import { Movie, Category, FestivalConfig } from '../types';
+import { Movie } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
+import { useFestival } from '../contexts/FestivalContext';
 
 const WatchlistPage: React.FC = () => {
     const { user, watchlist } = useAuth();
-    const [isLoading, setIsLoading] = useState(true);
-    const [movies, setMovies] = useState<Record<string, Movie>>({});
-    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
-    const [isFestivalLive, setIsFestivalLive] = useState(false);
-
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const { data } = await fetchAndCacheLiveData();
-                setMovies(data.movies);
-                setFestivalConfig(data.festivalConfig);
-            } catch (error) {
-                console.error("Failed to load data for Watchlist page:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        loadData();
-    }, []);
-
-    useEffect(() => {
-        const checkStatus = () => {
-            if (!festivalConfig?.startDate || !festivalConfig?.endDate) {
-                setIsFestivalLive(false);
-                return;
-            }
-            const now = new Date();
-            const start = new Date(festivalConfig.startDate);
-            const end = new Date(festivalConfig.endDate);
-            const isLive = now >= start && now < end;
-            setIsFestivalLive(isLive);
-        };
-        checkStatus();
-        const interval = setInterval(checkStatus, 60000); // Check every minute
-        return () => clearInterval(interval);
-    }, [festivalConfig]);
+    const { isLoading, movies } = useFestival();
 
     const watchlistMovies = useMemo(() => {
         return watchlist
@@ -73,7 +38,6 @@ const WatchlistPage: React.FC = () => {
                 isScrolled={true}
                 onMobileSearchClick={() => {}}
                 showNavLinks={true}
-                isFestivalLive={isFestivalLive}
             />
             <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
                 <div className="max-w-7xl mx-auto">
@@ -95,7 +59,6 @@ const WatchlistPage: React.FC = () => {
             <CollapsibleFooter />
             <BackToTopButton />
             <BottomNavBar 
-                isFestivalLive={isFestivalLive}
                 onSearchClick={() => {
                     // Navigate home for search, as this page doesn't have the search overlay
                     window.history.pushState({}, '', '/');

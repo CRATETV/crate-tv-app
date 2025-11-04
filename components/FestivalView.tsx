@@ -41,13 +41,19 @@ const FestivalView: React.FC<FestivalViewProps> = ({
     setIsPaymentModalOpen(true);
   };
   
-  const handlePaymentSuccess = (details: { paymentType: 'pass' | 'block' | 'subscription' | 'donation' | 'movie' | 'billSavingsDeposit', itemId?: string, amount: number, email?: string }) => {
-    if (details.paymentType === 'pass') {
-      grantFestivalAllAccess();
-    } else if (details.paymentType === 'block' && details.itemId) {
-      unlockFestivalBlock(details.itemId);
-    } else if (details.paymentType === 'movie' && details.itemId) {
-        purchaseMovie(details.itemId);
+  const handlePaymentSuccess = async (details: { paymentType: 'pass' | 'block' | 'subscription' | 'donation' | 'movie' | 'billSavingsDeposit', itemId?: string, amount: number, email?: string }) => {
+    try {
+        if (details.paymentType === 'pass') {
+            await grantFestivalAllAccess();
+        } else if (details.paymentType === 'block' && details.itemId) {
+            await unlockFestivalBlock(details.itemId);
+        } else if (details.paymentType === 'movie' && details.itemId) {
+            await purchaseMovie(details.itemId);
+        }
+    } catch (error) {
+        console.error("Failed to save purchase to user profile:", error);
+        // Optionally show an error message to the user here
+        alert("There was a problem saving your purchase. Please try refreshing the page. If the problem persists, contact support.");
     }
   };
 

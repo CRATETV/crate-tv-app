@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useFestival } from '../contexts/FestivalContext';
 import { avatars } from './avatars';
 
 interface HeaderProps {
@@ -9,16 +10,15 @@ interface HeaderProps {
   onMobileSearchClick: () => void;
   onSearchSubmit?: (query: string) => void;
   isStaging?: boolean;
-  isOffline?: boolean;
   showSearch?: boolean;
-  isFestivalLive?: boolean;
   onSignInClick?: () => void;
   showNavLinks?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onSearchSubmit, isStaging, showSearch = true, isFestivalLive, onSignInClick, showNavLinks = true }) => {
+const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onSearchSubmit, isStaging, showSearch = true, onSignInClick, showNavLinks = true }) => {
   const [topOffset, setTopOffset] = useState(0);
   const { user, logout } = useAuth();
+  const { isFestivalLive } = useFestival();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isDesktopSearchVisible, setIsDesktopSearchVisible] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -70,7 +70,7 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onSe
   };
 
   const pathname = window.location.pathname;
-  const linkBaseStyles = "px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200";
+  const linkBaseStyles = "px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 flex items-center gap-2";
   const activeLinkStyles = "bg-white/10 text-white";
   const inactiveLinkStyles = "text-gray-300 hover:bg-white/20 hover:text-white";
   
@@ -114,7 +114,18 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onSe
         {showNavLinks && (
           <nav className="hidden md:flex items-center gap-2 md:gap-4">
             {user && <a href="/classics" onClick={(e) => handleNavigate(e, '/classics')} className={`${linkBaseStyles} ${pathname.startsWith('/classics') ? activeLinkStyles : inactiveLinkStyles}`}>Classics</a>}
-            {isFestivalLive && <a href="/festival" onClick={(e) => handleNavigate(e, '/festival')} className={`${linkBaseStyles} ${pathname.startsWith('/festival') ? activeLinkStyles : inactiveLinkStyles}`}>Festival</a>}
+            {isFestivalLive && (
+              <a href="/festival" onClick={(e) => handleNavigate(e, '/festival')} className={`${linkBaseStyles} ${pathname.startsWith('/festival') ? activeLinkStyles : inactiveLinkStyles}`}>
+                Festival
+                <div className="flex items-center gap-1.5 bg-red-600 text-white font-bold text-xs px-2 py-0.5 rounded-md">
+                    <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                    </span>
+                    <span>LIVE</span>
+                </div>
+              </a>
+            )}
           </nav>
         )}
       </div>

@@ -4,7 +4,7 @@ import Footer from './Footer';
 import { FilmmakerAnalytics, Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchAndCacheLiveData } from '../services/dataService';
+import { useFestival } from '../contexts/FestivalContext';
 import PayoutExplanationModal from './PayoutExplanationModal';
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
@@ -80,8 +80,8 @@ const PayoutModal: React.FC<{ balance: number; directorName: string; onClose: ()
 
 const FilmmakerPortalPage: React.FC = () => {
     const { user } = useAuth();
+    const { movies: allMovies } = useFestival();
     const [analytics, setAnalytics] = useState<FilmmakerAnalytics | null>(null);
-    const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
@@ -89,30 +89,23 @@ const FilmmakerPortalPage: React.FC = () => {
     const [payoutStatus, setPayoutStatus] = useState<'idle' | 'requested'>('idle');
 
     useEffect(() => {
-        const fetchAllData = async () => {
+        const fetchAnalyticsData = async () => {
             if (!user || !user.name) {
-                // If user is not ready, don't fetch. This might happen on initial load.
-                // The component will re-render when the user object is available.
                 return;
             };
 
             setIsLoading(true);
             setError('');
             try {
-                const [analyticsRes, liveDataRes] = await Promise.all([
-                    fetch('/api/get-filmmaker-analytics', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ directorName: user.name }),
-                    }),
-                    fetchAndCacheLiveData()
-                ]);
+                const analyticsRes = await fetch('/api/get-filmmaker-analytics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ directorName: user.name }),
+                });
 
                 if (!analyticsRes.ok) throw new Error((await analyticsRes.json()).error || 'Failed to load analytics.');
                 const analyticsData = await analyticsRes.json();
                 setAnalytics(analyticsData.analytics);
-                
-                setAllMovies(liveDataRes.data.movies);
                 
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'An unknown error occurred.');
@@ -121,7 +114,7 @@ const FilmmakerPortalPage: React.FC = () => {
             }
         };
 
-        fetchAllData();
+        fetchAnalyticsData();
     }, [user]);
 
     const topTenMovies = useMemo(() => {

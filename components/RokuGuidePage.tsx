@@ -5,8 +5,7 @@ import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
-import { FestivalConfig } from '../types';
-import { fetchAndCacheLiveData } from '../services/dataService';
+import { useFestival } from '../contexts/FestivalContext';
 
 const Step: React.FC<{ number: string; title: string; children: React.ReactNode }> = ({ number, title, children }) => (
     <div className="flex items-start gap-4">
@@ -21,34 +20,7 @@ const Step: React.FC<{ number: string; title: string; children: React.ReactNode 
 );
 
 const RokuGuidePage: React.FC = () => {
-    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
-    const [isFestivalLive, setIsFestivalLive] = useState(false);
-
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const { data } = await fetchAndCacheLiveData();
-                setFestivalConfig(data.festivalConfig);
-            } catch (error) {
-                console.error("Failed to load data for Roku Guide page:", error);
-            }
-        };
-        loadData();
-    }, []);
-
-    useEffect(() => {
-        const checkStatus = () => {
-            if (!festivalConfig?.startDate || !festivalConfig?.endDate) return;
-            const now = new Date();
-            const start = new Date(festivalConfig.startDate);
-            const end = new Date(festivalConfig.endDate);
-            setIsFestivalLive(now >= start && now < end);
-        };
-        checkStatus();
-        const interval = setInterval(checkStatus, 60000);
-        return () => clearInterval(interval);
-    }, [festivalConfig]);
-
+    const { isFestivalLive } = useFestival();
 
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">

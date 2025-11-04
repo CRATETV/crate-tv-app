@@ -6,8 +6,7 @@ import BackToTopButton from './BackToTopButton';
 import SearchOverlay from './SearchOverlay';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
-import { FestivalConfig } from '../types';
-import { fetchAndCacheLiveData } from '../services/dataService';
+import { useFestival } from '../contexts/FestivalContext';
 
 const SubmitPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -15,33 +14,7 @@ const SubmitPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const formRef = useRef<HTMLFormElement>(null);
-    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
-    const [isFestivalLive, setIsFestivalLive] = useState(false);
-
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const { data } = await fetchAndCacheLiveData();
-                setFestivalConfig(data.festivalConfig);
-            } catch (error) {
-                console.error("Failed to load data for Submit page:", error);
-            }
-        };
-        loadData();
-    }, []);
-
-     useEffect(() => {
-        const checkStatus = () => {
-            if (!festivalConfig?.startDate || !festivalConfig?.endDate) return;
-            const now = new Date();
-            const start = new Date(festivalConfig.startDate);
-            const end = new Date(festivalConfig.endDate);
-            setIsFestivalLive(now >= start && now < end);
-        };
-        checkStatus();
-        const interval = setInterval(checkStatus, 60000);
-        return () => clearInterval(interval);
-    }, [festivalConfig]);
+    const { isFestivalLive } = useFestival();
     
     const handleSearchSubmit = (query: string) => {
         if (query) {

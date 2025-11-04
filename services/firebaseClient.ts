@@ -63,6 +63,8 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
         const data = userDoc.data()!;
         // Create a user object that strictly conforms to the User type,
         // ensuring 'isActor' and other fields are always present with a default.
+        // FIX: Sanitize array fields from Firestore to ensure they are string arrays, preventing downstream type errors.
+        // FIX: Use an explicit type guard `(item): item is string` to ensure TypeScript correctly infers the result of the filter as `string[]`, resolving downstream type errors.
         const userProfile: User = {
             uid,
             email: data.email || '',
@@ -71,7 +73,10 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
             isFilmmaker: data.isFilmmaker === true, // Coerce to boolean, defaulting to false
             avatar: data.avatar || 'fox',
             isPremiumSubscriber: data.isPremiumSubscriber === true, // Default to false
-            watchlist: data.watchlist || [],
+            watchlist: Array.isArray(data.watchlist) ? data.watchlist.filter((item): item is string => typeof item === 'string') : [],
+            hasFestivalAllAccess: data.hasFestivalAllAccess === true,
+            unlockedBlockIds: Array.isArray(data.unlockedBlockIds) ? data.unlockedBlockIds.filter((item): item is string => typeof item === 'string') : [],
+            purchasedMovieKeys: Array.isArray(data.purchasedMovieKeys) ? data.purchasedMovieKeys.filter((item): item is string => typeof item === 'string') : [],
         };
         return userProfile;
     }
@@ -91,6 +96,9 @@ export const createUserProfile = async (uid: string, email: string, name?: strin
         avatar: 'fox', // A default avatar
         isPremiumSubscriber: false,
         watchlist: [], // Initialize watchlist for account-based storage
+        hasFestivalAllAccess: false,
+        unlockedBlockIds: [],
+        purchasedMovieKeys: [],
     };
     await userDocRef.set(newUser);
 

@@ -10,7 +10,7 @@ interface MovieCardProps {
 
 const rankColors = [
   '#FFD700', // 1. Gold
-  '#C0C0C0', // 2. Silver
+  '#22d3ee', // 2. Cyan (Replaced Silver)
   '#CD7F32', // 3. Bronze
   '#dc2626', // 4. Red-600
   '#4f46e5', // 5. Indigo-600

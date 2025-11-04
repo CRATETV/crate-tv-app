@@ -114,6 +114,9 @@ export interface User {
     avatar: string;
     isPremiumSubscriber?: boolean;
     watchlist?: string[];
+    hasFestivalAllAccess?: boolean;
+    unlockedBlockIds?: string[];
+    purchasedMovieKeys?: string[];
 }
 
 export interface PayoutRequest {

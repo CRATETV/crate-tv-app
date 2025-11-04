@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useFestival } from '../contexts/FestivalContext';
 
 interface BottomNavBarProps {
   onSearchClick: () => void;
-  isFestivalLive?: boolean;
 }
 
 // FIX: Changed JSX.Element to React.ReactElement to resolve "Cannot find namespace 'JSX'" error.
@@ -33,8 +33,9 @@ const NavItem: React.FC<{ path: string; activePath: string; icon: React.ReactEle
 };
 
 
-const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick, isFestivalLive }) => {
+const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick }) => {
     const { user } = useAuth();
+    const { isFestivalLive } = useFestival();
     const [activePath, setActivePath] = useState(window.location.pathname);
 
     useEffect(() => {

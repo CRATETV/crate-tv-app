@@ -2,18 +2,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
-import { fetchAndCacheLiveData } from '../services/dataService';
-import { Movie, FestivalConfig } from '../types';
+import { Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import BottomNavBar from './BottomNavBar';
 import CollapsibleFooter from './CollapsibleFooter';
+import { useFestival } from '../contexts/FestivalContext';
 
 const TopTenPage: React.FC = () => {
-    const [isLoading, setIsLoading] = useState(true);
-    const [movies, setMovies] = useState<Record<string, Movie>>({});
+    const { isLoading, movies } = useFestival();
     const [currentDate, setCurrentDate] = useState('');
-    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
-    const [isFestivalLive, setIsFestivalLive] = useState(false);
 
     useEffect(() => {
         // Set the current date when the component mounts
@@ -22,38 +19,7 @@ const TopTenPage: React.FC = () => {
             month: 'long',
             day: 'numeric',
         }));
-
-        const loadData = async () => {
-            setIsLoading(true);
-            try {
-                const { data } = await fetchAndCacheLiveData();
-                setMovies(data.movies);
-                setFestivalConfig(data.festivalConfig);
-            } catch (error) {
-                console.error("Failed to load data for Top Ten page:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        loadData();
     }, []);
-
-    useEffect(() => {
-        const checkStatus = () => {
-            if (!festivalConfig?.startDate || !festivalConfig?.endDate) {
-                setIsFestivalLive(false);
-                return;
-            }
-            const now = new Date();
-            const start = new Date(festivalConfig.startDate);
-            const end = new Date(festivalConfig.endDate);
-            setIsFestivalLive(now >= start && now < end);
-        };
-        checkStatus();
-        const interval = setInterval(checkStatus, 60000); // Check every minute
-        return () => clearInterval(interval);
-    }, [festivalConfig]);
-
 
     const topTenMovies = useMemo(() => {
         return Object.values(movies)
@@ -175,7 +141,6 @@ const TopTenPage: React.FC = () => {
             <CollapsibleFooter />
             <BackToTopButton />
              <BottomNavBar 
-                isFestivalLive={isFestivalLive}
                 onSearchClick={() => {
                     window.history.pushState({}, '', '/');
                     window.dispatchEvent(new Event('pushstate'));

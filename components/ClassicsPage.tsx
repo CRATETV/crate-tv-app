@@ -5,51 +5,14 @@ import Header from './Header';
 import BackToTopButton from './BackToTopButton';
 import LoadingSpinner from './LoadingSpinner';
 import { fetchAndCacheLiveData } from '../services/dataService';
-import { Movie, Category, FestivalConfig } from '../types';
+import { Movie, Category } from '../types';
 import MovieCard from './MovieCard';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
+import { useFestival } from '../contexts/FestivalContext';
 
 const ClassicsPage: React.FC = () => {
-    const [isLoading, setIsLoading] = useState(true);
-    const [movies, setMovies] = useState<Record<string, Movie>>({});
-    const [categories, setCategories] = useState<Record<string, Category>>({});
-    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
-    const [isFestivalLive, setIsFestivalLive] = useState(false);
-
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const { data } = await fetchAndCacheLiveData();
-                setMovies(data.movies);
-                setCategories(data.categories);
-                setFestivalConfig(data.festivalConfig);
-            } catch (error) {
-                console.error("Failed to load data for Classics page:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        loadData();
-    }, []);
-
-    useEffect(() => {
-        const checkStatus = () => {
-            if (!festivalConfig?.startDate || !festivalConfig?.endDate) {
-                setIsFestivalLive(false);
-                return;
-            }
-            const now = new Date();
-            const start = new Date(festivalConfig.startDate);
-            const end = new Date(festivalConfig.endDate);
-            const isLive = now >= start && now < end;
-            setIsFestivalLive(isLive);
-        };
-        checkStatus();
-        const interval = setInterval(checkStatus, 60000); // Check every minute
-        return () => clearInterval(interval);
-    }, [festivalConfig]);
+    const { isLoading: isFestivalLoading, movies, categories } = useFestival();
 
     const classicMovies = useMemo(() => {
         const classicsCategory = categories.publicDomainIndie;
@@ -64,7 +27,7 @@ const ClassicsPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
-    if (isLoading) {
+    if (isFestivalLoading) {
         return <LoadingSpinner />;
     }
 
@@ -77,7 +40,6 @@ const ClassicsPage: React.FC = () => {
                 onMobileSearchClick={() => {}}
                 showSearch={true}
                 showNavLinks={true}
-                isFestivalLive={isFestivalLive}
             />
 
             <main className="flex-grow pb-24 md:pb-0">
@@ -112,7 +74,6 @@ const ClassicsPage: React.FC = () => {
             <CollapsibleFooter />
             <BackToTopButton />
             <BottomNavBar 
-                isFestivalLive={isFestivalLive}
                 onSearchClick={() => {
                     // Navigate home for search, as this page doesn't have the search overlay
                     window.history.pushState({}, '', '/');

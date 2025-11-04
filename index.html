@@ -184,11 +184,12 @@
         }
       }
       .ranked-card-border {
-        box-shadow: 0 0 0 2px var(--rank-color);
+        border: 2px solid var(--rank-color, #374151);
+        box-shadow: 0 0 0 0 rgba(167, 139, 250, 0);
         transition: box-shadow 0.3s ease-in-out;
       }
       .ranked-card-border:hover {
-        box-shadow: 0 0 15px 3px var(--rank-color);
+        box-shadow: 0 0 15px 3px rgba(167, 139, 250, 0.5);
       }
     </style>
 

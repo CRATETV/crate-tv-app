@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category, FestivalConfig } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -17,6 +18,8 @@ import DonationSuccessModal from './DonationSuccessModal';
 import { isMovieReleased } from '../constants';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
+import { useAuth } from '../contexts/AuthContext';
+
 
 declare const google: any; // Declare Google IMA SDK global
 
@@ -78,6 +81,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   
   const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
   const [isFestivalLive, setIsFestivalLive] = useState(false);
+  const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
 
   // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
@@ -87,7 +91,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // Search and URL state
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const [locationSearch, setLocationSearch] = useState(window.location.search);
   
   // Staging and feature toggles
   const [isStaging, setIsStaging] = useState(false);
@@ -104,6 +107,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const adsManagerRef = useRef<any>(null);
   const [isAdPlaying, setIsAdPlaying] = useState(false);
   const [adError, setAdError] = useState<string | null>(null);
+  
+  // Use refs to give the event listener access to the latest state without re-attaching.
+  const movieRef = useRef(movie);
+  const releasedRef = useRef(released);
+  useEffect(() => {
+    movieRef.current = movie;
+    releasedRef.current = released;
+  }, [movie, released]);
 
   const playContent = useCallback(() => {
     setIsAdPlaying(false);
@@ -188,24 +199,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
   }, []);
 
-  // Make component reactive to URL query string changes
-  useEffect(() => {
-    const handleNav = () => setLocationSearch(window.location.search);
-    window.addEventListener('popstate', handleNav);
-    window.addEventListener('pushstate', handleNav);
-    return () => {
-        window.removeEventListener('popstate', handleNav);
-        window.removeEventListener('pushstate', handleNav);
-    };
-  }, []);
-
+  // Effect to load all necessary data ONCE when the movieKey changes.
   useEffect(() => {
     setIsLoading(true);
-    const params = new URLSearchParams(locationSearch);
+    const params = new URLSearchParams(window.location.search);
     const env = params.get('env');
     const stagingSession = sessionStorage.getItem('crateTvStaging');
     const stagingActive = env === 'staging' || stagingSession === 'true';
     if (stagingActive) setIsStaging(true);
+    
+    const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
+    if (storedLikedMovies) {
+      setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
+    }
     
     const loadMovieData = async () => {
         try {
@@ -217,15 +223,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             const sourceMovie = liveData.movies[movieKey];
 
             if (sourceMovie) {
-              const isReleasedNow = isMovieReleased(sourceMovie);
-              setReleased(isReleasedNow);
+              setReleased(isMovieReleased(sourceMovie));
               setMovie({ ...sourceMovie });
-    
-              if (params.get('play') === 'true' && sourceMovie.fullMovie && isReleasedNow) {
-                setPlayerMode('full');
-              } else {
-                setPlayerMode('poster');
-              }
             } else {
               window.history.replaceState({}, '', '/');
               window.dispatchEvent(new Event('pushstate'));
@@ -239,7 +238,41 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         }
     };
     loadMovieData();
-  }, [movieKey, locationSearch]);
+  }, [movieKey]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cratetv-likedMovies', JSON.stringify(Array.from(likedMovies)));
+    } catch (e) {
+      console.warn("Could not write liked movies to localStorage.", e);
+    }
+  }, [likedMovies]);
+
+  // Effect to ONLY control player mode based on URL. This runs ONCE.
+  useEffect(() => {
+    const handlePlayerMode = () => {
+        const params = new URLSearchParams(window.location.search);
+        const shouldPlay = params.get('play') === 'true';
+
+        // Read from refs to get the latest state inside the listener.
+        if (movieRef.current && movieRef.current.fullMovie && releasedRef.current && shouldPlay) {
+            setPlayerMode('full');
+        } else {
+            setPlayerMode('poster');
+        }
+    };
+    
+    handlePlayerMode(); // Initial check
+
+    // Listen for browser navigation events to update player state
+    window.addEventListener('popstate', handlePlayerMode);
+    window.addEventListener('pushstate', handlePlayerMode);
+
+    return () => {
+        window.removeEventListener('popstate', handlePlayerMode);
+        window.removeEventListener('pushstate', handlePlayerMode);
+    };
+  }, []); // Empty dependency array ensures this runs only once.
 
   useEffect(() => {
     if (released) return;
@@ -398,6 +431,44 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         setIsDonationSuccessModalOpen(true);
     };
 
+    const toggleLikeMovie = useCallback(async (movieKey: string) => {
+        const newLikedMovies = new Set(likedMovies);
+        let likesChange = 0;
+        const action = newLikedMovies.has(movieKey) ? 'unlike' : 'like';
+
+        if (action === 'unlike') {
+            newLikedMovies.delete(movieKey);
+            likesChange = -1;
+        } else {
+            newLikedMovies.add(movieKey);
+            likesChange = 1;
+        }
+        setLikedMovies(newLikedMovies);
+
+        setMovie(prevMovie => {
+            if (!prevMovie) return prevMovie;
+            return {
+                ...prevMovie,
+                likes: Math.max(0, (prevMovie.likes || 0) + likesChange)
+            };
+        });
+
+        try {
+            const response = await fetch('/api/toggle-like', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey, action }),
+            });
+            if (!response.ok) {
+                console.error("Failed to sync like with server.");
+                // Note: Consider reverting the optimistic update on error.
+            }
+        } catch (error) {
+            console.error("Failed to send like update to server:", error);
+        }
+    }, [likedMovies]);
+
+
     const handlePlayerInteraction = () => {
       setShowControls(true);
       if (controlsTimeoutRef.current) {
@@ -419,6 +490,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     if (isLoading || !movie) {
         return <LoadingSpinner />;
     }
+    
+    const isLiked = likedMovies.has(movie.key);
 
     return (
         <div className="flex flex-col min-h-screen bg-black text-white">
@@ -536,6 +609,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                Support Filmmaker
                             </button>
                           )}
+                           <button onClick={() => toggleLikeMovie(movie.key)} className={`h-10 w-10 flex items-center justify-center rounded-full border-2 border-gray-400 text-white hover:border-white transition`}>
+                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors ${isLiked ? 'text-red-500' : 'text-inherit'}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                </svg>
+                            </button>
                       </div>
                       <div className="mt-4 text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: movie.synopsis || '' }}></div>
                        

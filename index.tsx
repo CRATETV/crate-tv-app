@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { FestivalProvider } from './contexts/FestivalContext';
 import { inject } from '@vercel/analytics';
 
 // Inject Vercel Analytics
@@ -217,7 +218,9 @@ const MainApp: React.FC = () => {
 
   return (
     <AuthProvider>
-      {showIntro ? <Intro onIntroEnd={handleIntroEnd} /> : <AppRouter />}
+      <FestivalProvider>
+        {showIntro ? <Intro onIntroEnd={handleIntroEnd} /> : <AppRouter />}
+      </FestivalProvider>
     </AuthProvider>
   );
 };

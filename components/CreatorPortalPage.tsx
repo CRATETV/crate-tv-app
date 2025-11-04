@@ -1,96 +1,31 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import Header from './Header';
-import Hero from './Hero';
-import LoadingSpinner from './LoadingSpinner';
 import CollapsibleFooter from './CollapsibleFooter';
-import { Movie, Category, FestivalConfig } from '../types';
-import { fetchAndCacheLiveData } from '../services/dataService';
 import BottomNavBar from './BottomNavBar';
 import SearchOverlay from './SearchOverlay';
+import { useFestival } from '../contexts/FestivalContext';
 
 const CreatorPortalPage: React.FC = () => {
     const [activeView, setActiveView] = useState<'filmmaker' | 'actor'>('filmmaker');
-    
-    // State for Hero component
-    const [isLoading, setIsLoading] = useState(true);
-    const [movies, setMovies] = useState<Record<string, Movie>>({});
-    const [categories, setCategories] = useState<Record<string, Category>>({});
-    const [heroIndex, setHeroIndex] = useState(0);
-    const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    
-    // State for BottomNavBar and Search
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
-    const [isFestivalLive, setIsFestivalLive] = useState(false);
-    
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const { data } = await fetchAndCacheLiveData();
-                setMovies(data.movies);
-                setCategories(data.categories);
-                setFestivalConfig(data.festivalConfig);
-            } catch (error) {
-                console.error("Failed to load data for Creator Portal page:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        loadData();
-    }, []);
-
-    useEffect(() => {
-        const checkStatus = () => {
-            if (!festivalConfig?.startDate || !festivalConfig?.endDate) {
-                setIsFestivalLive(false);
-                return;
-            }
-            const now = new Date();
-            const start = new Date(festivalConfig.startDate);
-            const end = new Date(festivalConfig.endDate);
-            const isLive = now >= start && now < end;
-            setIsFestivalLive(isLive);
-        };
-        checkStatus();
-        const interval = setInterval(checkStatus, 60000);
-        return () => clearInterval(interval);
-    }, [festivalConfig]);
-    
-    const heroMovies = useMemo(() => {
-        if (!categories.featured?.movieKeys) return [];
-        return categories.featured.movieKeys.map(key => movies[key]).filter(Boolean);
-    }, [movies, categories.featured]);
-
-    useEffect(() => {
-        if (heroMovies.length > 1) {
-            heroIntervalRef.current = setInterval(() => {
-                setHeroIndex(prevIndex => (prevIndex + 1) % heroMovies.length);
-            }, 7000);
-        }
-        return () => {
-            if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
-        };
-    }, [heroMovies.length]);
-
-    const handleSetHeroIndex = (index: number) => {
-        setHeroIndex(index);
-        if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
-    };
+    const { isFestivalLive } = useFestival();
 
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
         e.preventDefault();
         window.history.pushState({}, '', path);
         window.dispatchEvent(new Event('pushstate'));
     };
-    
-    const handleHeroAction = () => {
+
+    const handleHeroAction = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent nested event triggers
         const path = activeView === 'filmmaker' ? '/filmmaker-signup' : '/actor-signup';
         window.history.pushState({}, '', path);
         window.dispatchEvent(new Event('pushstate'));
     };
-
+    
     const handleSearchSubmit = (query: string) => {
         if (query) {
             const homeUrl = new URL('/', window.location.origin);
@@ -101,10 +36,6 @@ const CreatorPortalPage: React.FC = () => {
         setIsMobileSearchOpen(false);
     };
 
-    if (isLoading) {
-        return <LoadingSpinner />;
-    }
-
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
             <Header 
@@ -113,16 +44,24 @@ const CreatorPortalPage: React.FC = () => {
                 isScrolled={true}
                 onMobileSearchClick={() => setIsMobileSearchOpen(true)}
                 showSearch={false}
-                isFestivalLive={isFestivalLive}
             />
             <main className="flex-grow pb-24 md:pb-0">
-                <Hero
-                    movies={heroMovies}
-                    currentIndex={heroIndex}
-                    onSetCurrentIndex={handleSetHeroIndex}
-                    onPlayMovie={handleHeroAction}
-                    onMoreInfo={handleHeroAction}
-                />
+                {/* Static Hero Section - Fast Loading */}
+                <div 
+                    className="relative w-full h-[56.25vw] max-h-[70vh] bg-black bg-cover bg-center"
+                    style={{ backgroundImage: `url('https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg')`}}
+                >
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-black/80"></div>
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div>
+                    <div className="relative z-10 flex flex-col justify-center h-full px-4 md:px-12 text-white">
+                        <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold mb-4 max-w-xl drop-shadow-lg">
+                            Creator Portals
+                        </h1>
+                        <p className="text-sm md:text-base lg:text-lg max-w-xl mb-6">
+                            Access your dashboard, manage your profile, and connect with the Crate TV community.
+                        </p>
+                    </div>
+                </div>
                 
                 <div className="relative z-10 mt-12 px-4 pb-16">
                     <div className="max-w-xl w-full mx-auto text-center">

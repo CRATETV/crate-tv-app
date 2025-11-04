@@ -4,44 +4,14 @@ import Header from './Header';
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import LoadingSpinner from './LoadingSpinner';
-import { AboutData, FestivalConfig } from '../types';
-import { fetchAndCacheLiveData } from '../services/dataService';
+import { AboutData } from '../types';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
+import { useFestival } from '../contexts/FestivalContext';
 
 const AboutPage: React.FC = () => {
-    const [aboutData, setAboutData] = useState<AboutData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
-    const [isFestivalLive, setIsFestivalLive] = useState(false);
-
-    useEffect(() => {
-        const loadAboutData = async () => {
-            try {
-                const { data: liveData } = await fetchAndCacheLiveData();
-                setAboutData(liveData.aboutData);
-                setFestivalConfig(liveData.festivalConfig);
-            } catch (error) {
-                console.error("Failed to load About Us data", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        loadAboutData();
-    }, []);
-
-    useEffect(() => {
-        const checkStatus = () => {
-            if (!festivalConfig?.startDate || !festivalConfig?.endDate) return;
-            const now = new Date();
-            const start = new Date(festivalConfig.startDate);
-            const end = new Date(festivalConfig.endDate);
-            setIsFestivalLive(now >= start && now < end);
-        };
-        checkStatus();
-        const interval = setInterval(checkStatus, 60000);
-        return () => clearInterval(interval);
-    }, [festivalConfig]);
+    const { isLoading, aboutData } = useFestival();
+    const { isFestivalLive } = useFestival();
 
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
         e.preventDefault();
