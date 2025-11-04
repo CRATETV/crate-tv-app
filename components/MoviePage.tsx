@@ -38,16 +38,18 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const { user } = useAuth();
   const { isLoading: isDataLoading, movies: allMovies, categories: allCategories, dataSource } = useFestival();
   
-  const [movie, setMovie] = useState<Movie | null>(null);
+  // Directly derive the movie object from context to prevent stale state.
+  const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
+  
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [released, setReleased] = useState(false);
+  const [released, setReleased] = useState(() => isMovieReleased(movie));
   const hasTrackedViewRef = useRef(false);
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
 
   // Player state
-  const [isPaused, setIsPaused] = useState(false); // Start as playing
+  const [isPaused, setIsPaused] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -133,19 +135,16 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     if (isStagingActive) setIsStaging(true);
     const storedLikes = localStorage.getItem('cratetv-likedMovies');
     if (storedLikes) setLikedMovies(new Set(JSON.parse(storedLikes)));
-  }, []);
+    hasTrackedViewRef.current = false; // Reset view tracking on movie key change
+  }, [movieKey]);
   
   useEffect(() => {
-      const sourceMovie = allMovies[movieKey];
-      if (sourceMovie) {
-          setMovie(sourceMovie);
-          setReleased(isMovieReleased(sourceMovie));
-          hasTrackedViewRef.current = false; // Reset view tracking for new movie
-      } else if (!isDataLoading) {
+      // If data has loaded but the movie doesn't exist, redirect to home.
+      if (!isDataLoading && !movie) {
           window.history.replaceState({}, '', '/');
           window.dispatchEvent(new Event('pushstate'));
       }
-  }, [movieKey, allMovies, isDataLoading]);
+  }, [isDataLoading, movie]);
 
   useEffect(() => {
     if (movie && movie.fullMovie && released) {
@@ -248,9 +247,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         });
     };
     
-    // Get the most up-to-date movie object from the context for overlays
-    const movieForOverlay = allMovies[movieKey];
-
     if (isDataLoading || !movie) {
         return <LoadingSpinner />;
     }
@@ -279,9 +275,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 onEnded={handleMovieEnd}
                                 autoPlay
                             />
-                            {isPaused && movieForOverlay && (
+                            {isPaused && (
                                 <PauseOverlay
-                                    movie={movieForOverlay}
+                                    movie={movie}
                                     onExitPlayer={handleShowDetails}
                                     onSelectActor={setSelectedActor}
                                 />

@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     }
 
     // --- Step 3: Set custom claim and Firestore profile ---
-    // FIX: Preserve existing actor role when adding filmmaker role
+    // This is the critical fix: Read existing claims and merge them with the new one.
     const existingClaims = userRecord.customClaims || {};
     await auth.setCustomUserClaims(userRecord.uid, {
         ...existingClaims,
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     });
 
     const userProfileRef = db.collection('users').doc(userRecord.uid);
-    // FIX: Ensure both roles are correctly set in the Firestore document
+    // Also ensure both roles are correctly set in the Firestore document for consistency.
     await userProfileRef.set({ 
         name, 
         email, 
