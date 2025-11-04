@@ -35,7 +35,9 @@ This project requires API keys and a password for its features. You will need to
 
 **Required for Core Features:**
 -   `API_KEY`: Your Google Gemini API key.
--   `ADMIN_PASSWORD`: A secure password of your choice to protect the `/admin` page.
+-   `ADMIN_PASSWORD`: A secure password of your choice to protect the `/admin` page for the main super administrator.
+-   `COLLABORATOR_PASSWORD`: A password for users who need limited access to manage movies, categories, pipeline, and tools.
+-   `FESTIVAL_ADMIN_PASSWORD`: A password for users who only need access to manage the film festival section.
 
 **Required for Email Functionality (Resend):**
 -   `RESEND_API_KEY`: Your API key from Resend.

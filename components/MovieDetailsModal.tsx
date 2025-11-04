@@ -22,6 +22,7 @@ interface MovieDetailsModalProps {
   onSubscribe?: () => void;
   isPremiumMovie?: boolean;
   isPremiumSubscriber?: boolean;
+  onPlayMovie?: (movie: Movie) => void;
 }
 
 const RecommendedMovieCard: React.FC<{ movie: Movie; onClick: (movie: Movie) => void; }> = ({ movie, onClick }) => {
@@ -55,7 +56,8 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   showSupportButton = true,
   onSubscribe,
   isPremiumMovie,
-  isPremiumSubscriber
+  isPremiumSubscriber,
+  onPlayMovie,
 }) => {
   const { user, watchlist, toggleWatchlist } = useAuth();
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
@@ -98,18 +100,13 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     if (modalContentRef.current) {
         modalContentRef.current.scrollTop = 0;
     }
-    // Update URL to reflect the currently viewed movie
-    if (window.history.replaceState) {
-        const path = `/movie/${movie.key}${window.location.search}`;
-        window.history.replaceState({ path }, '', path);
-    }
   }, [movie]);
   
   // Close modal with Escape key and handle body scroll
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        closeAndResetUrl();
+        onClose();
       }
     };
     window.addEventListener('keydown', handleEsc);
@@ -121,16 +118,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
       // Clear any running animation timers when the modal closes
       timers.current.forEach(clearTimeout);
     };
-  }, []);
-
-
-  const closeAndResetUrl = () => {
-    if (window.history.replaceState) {
-      const path = `/${window.location.search}`;
-      window.history.replaceState({ path }, '', path);
-    }
-    onClose();
-  };
+  }, [onClose]);
 
   const handleToggleLike = () => {
     // Trigger animation instantly on click
@@ -158,15 +146,9 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   
   const handleSelectMovieFromDirector = (selectedMovie: Movie) => {
     setSelectedDirector(null); // Closes director modal
-    onClose(); // Closes this movie details modal
-    onSelectRecommendedMovie(selectedMovie); // Navigates to play the new movie
+    onSelectRecommendedMovie(selectedMovie); // Re-use the recommended movie logic
   };
   
-  const handleRecommendedClick = (movie: Movie) => {
-    onClose();
-    onSelectRecommendedMovie(movie);
-  };
-
   const handleDonationSuccess = (details: { amount: number; email?: string }) => {
       setIsSupportModalOpen(false);
       setLastDonationDetails(details);
@@ -176,10 +158,8 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const recommendedMovies = useMemo(() => {
     if (!movie) return [];
     const recommendedKeys = new Set<string>();
-    // FIX: Add explicit type 'Category' to the 'cat' parameter to fix TypeScript inference issue.
     const currentMovieCategories = Object.values(allCategories).filter((cat: Category) => cat.movieKeys.includes(movie.key));
     
-    // FIX: Add explicit type 'Category' to the 'cat' parameter to fix TypeScript inference issue.
     currentMovieCategories.forEach((cat: Category) => {
       cat.movieKeys.forEach(key => {
         if (key !== movie.key) {
@@ -199,20 +179,24 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     window.dispatchEvent(new Event('pushstate'));
   }
 
-  const handlePlayMovie = () => {
-      onClose(); // Close the modal
-      handleNavigate(`/movie/${movie.key}?play=true`); // Navigate to the dedicated page and play
+  const handlePlayButtonClick = () => {
+      if (onPlayMovie) {
+          onPlayMovie(movie);
+      } else {
+          onClose(); // Close the modal
+          handleNavigate(`/movie/${movie.key}`); // Navigate to the dedicated page
+      }
   };
 
   return (
     <>
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.3s_ease-out]" onClick={closeAndResetUrl}>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
       <div 
         className="bg-[#181818] rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative scrollbar-hide border border-gray-800"
         onClick={(e) => e.stopPropagation()}
         ref={modalContentRef}
       >
-        <button onClick={closeAndResetUrl} className="absolute top-3 right-3 text-gray-400 bg-black/50 rounded-full p-1.5 hover:text-white z-20">
+        <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 bg-black/50 rounded-full p-1.5 hover:text-white z-20">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -243,7 +227,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                         Join Premium to Watch
                     </button>
                   ) : movie.fullMovie ? (
-                    <button onClick={handlePlayMovie} className="flex items-center justify-center px-4 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
+                    <button onClick={handlePlayButtonClick} className="flex items-center justify-center px-4 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                         Play Full Movie
                     </button>
@@ -342,7 +326,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
               <h3 className="text-2xl font-bold mb-4">More Like This</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-4">
                 {recommendedMovies.map(recMovie => (
-                  <RecommendedMovieCard key={recMovie.key} movie={recMovie} onClick={handleRecommendedClick} />
+                  <RecommendedMovieCard key={recMovie.key} movie={recMovie} onClick={onSelectRecommendedMovie} />
                 ))}
               </div>
             </div>

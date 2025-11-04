@@ -13,21 +13,21 @@ export async function POST(request: Request) {
 
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
-        const festivalAdminPassword = 'PWFF1218';
-        const collaboratorPassword = 'C0ll@868';
+        const festivalAdminPassword = process.env.FESTIVAL_ADMIN_PASSWORD;
+        const collaboratorPassword = process.env.COLLABORATOR_PASSWORD;
 
         // --- Role-Based Password Checks ---
 
-        // 1. Check for Festival Admin Role
-        if (password === festivalAdminPassword) {
+        // 1. Check for Festival Admin Role from environment variable
+        if (festivalAdminPassword && password === festivalAdminPassword) {
             return new Response(JSON.stringify({ success: true, role: 'festival_admin' }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
             });
         }
 
-        // 2. Check for new Collaborator Role
-        if (password === collaboratorPassword) {
+        // 2. Check for Collaborator Role from environment variable
+        if (collaboratorPassword && password === collaboratorPassword) {
             return new Response(JSON.stringify({ success: true, role: 'collaborator' }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         }
         
         // 6. First-Time Setup Mode (if no passwords of any kind are set)
-        const anyPasswordSet = primaryAdminPassword || masterPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
+        const anyPasswordSet = primaryAdminPassword || masterPassword || festivalAdminPassword || collaboratorPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
         if (!anyPasswordSet) {
             console.log("No admin passwords set. Activating first-time setup mode for the session.");
             return new Response(JSON.stringify({ success: true, firstLogin: true, role: 'super_admin' }), {

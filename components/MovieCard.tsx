@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Movie } from '../types';
 import { isMovieReleased } from '../constants';
@@ -5,77 +6,35 @@ import { isMovieReleased } from '../constants';
 interface MovieCardProps {
   movie: Movie;
   onSelectMovie: (movie: Movie) => void;
-  rank?: number;
 }
 
-const rankColors = [
-  '#FFD700', // 1. Gold
-  '#22d3ee', // 2. Cyan (Replaced Silver)
-  '#CD7F32', // 3. Bronze
-  '#dc2626', // 4. Red-600
-  '#4f46e5', // 5. Indigo-600
-  '#059669', // 6. Emerald-600
-  '#db2777', // 7. Pink-600
-  '#0ea5e9', // 8. Sky-500
-  '#f97316', // 9. Orange-500
-  '#8b5cf6', // 10. Violet-500
-];
-
-const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => {
+const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie }) => {
   if (!movie) {
     return null;
   }
 
   const released = isMovieReleased(movie);
 
-  // Special layout for ranked "Top 10" movies, inspired by the user's request.
-  if (rank) {
-    const borderColor = rankColors[(rank - 1) % rankColors.length];
-    return (
-      <div
-        className="group relative h-full w-full cursor-pointer flex items-stretch bg-black rounded-lg overflow-hidden transition-transform duration-300 hover:scale-105 ranked-card-border"
-        style={{ '--rank-color': borderColor } as React.CSSProperties}
-        onClick={() => onSelectMovie(movie)}
-        role="button"
-        aria-label={`View details for ${movie.title}, ranked number ${rank}`}
-        tabIndex={0}
-        onKeyPress={(e) => { if (e.key === 'Enter') onSelectMovie(movie)}}
-      >
-        {/* Background gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-gray-900/80 to-transparent z-10"></div>
-        
-        {/* Left Side: Rank and Title */}
-        <div className="relative z-20 flex-shrink-0 w-2/5 flex flex-col justify-between p-4">
-          <span 
-            className="font-black text-8xl lg:text-9xl text-gray-800 select-none"
-            style={{ WebkitTextStroke: '2px rgba(150,150,150,0.2)' }}
-            aria-hidden="true"
-          >
-            {rank}
-          </span>
-          <div>
-            <h3 className="text-xl lg:text-2xl font-bold text-white transition-transform duration-300 transform group-hover:-translate-y-1">
-              {movie.title}
-            </h3>
-            <p className="text-sm text-gray-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              Click to view
-            </p>
-          </div>
-        </div>
+  // A set of movie keys for posters that have a wider aspect ratio where text might get cut off.
+  // These will use `object-contain` instead of `object-cover`.
+  const widePosterKeys = new Set([
+    'theneighbours',
+    'results',
+    'almasvows',
+    'newmovie1756485973547', // Burst
+    'drive',
+    'fatherdaughterdance',
+    'newmovie1756487390550', // I Still Love Her
+    'itsinyou',
+    'newmovie1756486933392', // Power Trip
+    'newmovie1756487626529', // Strange Encounters
+    'tedandnatalie',
+    'unhinged',
+    'wrapitup'
+  ]);
 
-        {/* Right Side: Poster */}
-        <div className="relative w-3/5">
-          <img
-            src={movie.poster}
-            alt="" // Decorative
-            className="w-full h-full object-cover"
-            loading="lazy"
-            onContextMenu={(e) => e.preventDefault()}
-          />
-        </div>
-      </div>
-    );
-  }
+  const isWidePoster = widePosterKeys.has(movie.key);
+  const imageFitClass = isWidePoster ? 'object-contain' : 'object-cover';
 
   // Standard movie card for all other carousels
   return (
@@ -90,7 +49,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
       <img
         src={movie.poster}
         alt={movie.title}
-        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+        className={`w-full h-full ${imageFitClass} transition-transform duration-300 group-hover:scale-105`}
         loading="lazy"
         onContextMenu={(e) => e.preventDefault()}
       />

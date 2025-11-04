@@ -21,6 +21,7 @@ import { useFestival } from './contexts/FestivalContext';
 import { isMovieReleased } from './constants';
 import BottomNavBar from './components/BottomNavBar';
 import CollapsibleFooter from './components/CollapsibleFooter';
+import TopTenList from './components/TopTenList';
 
 type DisplayedCategory = {
   key: string;
@@ -361,13 +362,13 @@ const App: React.FC = () => {
                 )}
                 <div>
                   {topTenMovies.length > 0 && (
-                      <MovieCarousel
-                          key="topTen"
-                          title={<a href="/top-ten" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/top-ten'); window.dispatchEvent(new Event('pushstate'));}} className="text-lg md:text-2xl font-bold mb-6 text-white hover:text-gray-300 transition-colors">Top 10 on Crate TV Today</a>}
-                          movies={topTenMovies}
-                          onSelectMovie={handlePlayMovie}
-                          showRankings={true}
-                      />
+                      <div className="mb-8 md:mb-12">
+                          <a href="/top-ten" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/top-ten'); window.dispatchEvent(new Event('pushstate'));}} className="text-lg md:text-2xl font-bold mb-6 text-white hover:text-gray-300 transition-colors inline-block">Top 10 on Crate TV Today</a>
+                          <TopTenList
+                              movies={topTenMovies}
+                              onSelectMovie={handlePlayMovie}
+                          />
+                      </div>
                   )}
                   {likedMovies.size === 0 ? (
                       <div className="mb-8 md:mb-12">

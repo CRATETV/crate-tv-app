@@ -13,6 +13,7 @@ import PayoutsTab from './components/PayoutsTab';
 import EmailSender from './components/EmailSender';
 import MoviePipelineTab from './components/MoviePipelineTab';
 import TopFilmsTab from './components/TopFilmsTab';
+import RokuAdminTab from './components/RokuAdminTab';
 
 type AdminRole = 'super_admin' | 'festival_admin' | 'collaborator' | null;
 
@@ -43,6 +44,8 @@ const AdminPage: React.FC = () => {
             setIsLoggedIn(true);
             if (savedRole === 'festival_admin') {
                 setActiveTab('festival'); // Set default tab to 'festival' for them
+            } else if (savedRole === 'collaborator') {
+                setActiveTab('movies'); // Default collaborator to movies
             }
         }
         setIsCheckingAuth(false);
@@ -154,6 +157,8 @@ const AdminPage: React.FC = () => {
                 setIsLoggedIn(true);
                 if (result.role === 'festival_admin') {
                     setActiveTab('festival');
+                } else if (result.role === 'collaborator') {
+                    setActiveTab('movies');
                 }
             } else {
                 throw new Error(result.error || 'Login failed.');
@@ -307,12 +312,13 @@ const AdminPage: React.FC = () => {
                     <TabButton tabId="top_films" label="Top Films" requiredRole={['super_admin']} />
                     <TabButton tabId="movies" label="Movies" requiredRole={['super_admin', 'collaborator', 'festival_admin']} />
                     <TabButton tabId="categories" label="Categories" requiredRole={['super_admin', 'collaborator']} />
-                    <TabButton tabId="festival" label="Festival" requiredRole={['super_admin', 'festival_admin']} />
+                    <TabButton tabId="festival" label="Festival" requiredRole={['super_admin', 'festival_admin', 'collaborator']} />
                     <TabButton tabId="submissions" label="Submissions" requiredRole={['super_admin']} />
                     <TabButton tabId="payouts" label="Payouts" requiredRole={['super_admin']} />
                     <TabButton tabId="pipeline" label="Pipeline" requiredRole={['super_admin', 'collaborator', 'festival_admin']} />
                     <TabButton tabId="about" label="About Page" requiredRole={['super_admin']} />
-                    <TabButton tabId="tools" label="Tools" requiredRole={['super_admin', 'collaborator']} />
+                    <TabButton tabId="roku" label="Roku" requiredRole={['super_admin']} />
+                    <TabButton tabId="tools" label="Tools" requiredRole={['super_admin']} />
                 </div>
                 
                 {dbError && <div className="p-4 mb-4 text-red-300 bg-red-900/50 border border-red-700 rounded-md">{dbError}</div>}
@@ -353,6 +359,7 @@ const AdminPage: React.FC = () => {
                 {activeTab === 'payouts' && <PayoutsTab payoutRequests={payouts} onCompletePayout={completePayout} />}
                 {activeTab === 'pipeline' && <MoviePipelineTab pipeline={data.moviePipeline} onCreateMovie={handleCreateMovieFromPipeline} />}
                 {activeTab === 'about' && <AboutEditor initialData={data.aboutData} onSave={saveAboutData} />}
+                {activeTab === 'roku' && <RokuAdminTab />}
 
                 {activeTab === 'tools' && (
                     <div className="space-y-8">

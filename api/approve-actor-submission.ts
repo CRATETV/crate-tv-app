@@ -56,7 +56,6 @@ export async function POST(request: Request) {
     const { actorName, bio, photoUrl, highResPhotoUrl, imdbUrl, email } = submissionData;
 
     // --- Grant Actor Role (Custom Claim) ---
-    // This is the critical fix for the login loop.
     let userRecord;
     try {
         userRecord = await auth.getUserByEmail(email);
