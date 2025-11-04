@@ -58,9 +58,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         setUser(profile);
                         // FIX: Type 'unknown[]' is not assignable to type 'string[]'.
                         // Data from firestore is not guaranteed to be clean, so we sanitize all array fields here as a safeguard.
+                        // FIX: Use an explicit type guard `(item): item is string` to ensure TypeScript correctly infers the result of the filter as `string[]`, resolving downstream type errors.
                         setWatchlist(Array.isArray(profile.watchlist) ? profile.watchlist.filter((item: any): item is string => typeof item === 'string') : []);
                         setHasFestivalAllAccess(profile.hasFestivalAllAccess || false);
+                        // FIX: Use an explicit type guard `(item): item is string` to ensure TypeScript correctly infers the result of the filter as `string[]`, resolving downstream type errors.
                         setUnlockedFestivalBlockIds(new Set(Array.isArray(profile.unlockedBlockIds) ? profile.unlockedBlockIds.filter((item: any): item is string => typeof item === 'string') : []));
+                        // FIX: Use an explicit type guard `(item): item is string` to ensure TypeScript correctly infers the result of the filter as `string[]`, resolving downstream type errors.
                         setPurchasedMovieKeys(new Set(Array.isArray(profile.purchasedMovieKeys) ? profile.purchasedMovieKeys.filter((item: any): item is string => typeof item === 'string') : []));
                     } else {
                         const newProfile = await createUserProfile(firebaseUser.uid, firebaseUser.email!);

@@ -60,7 +60,10 @@ export async function POST(request: Request) {
     let userRecord;
     try {
         userRecord = await auth.getUserByEmail(email);
-        await auth.setCustomUserClaims(userRecord.uid, { isActor: true });
+        await auth.setCustomUserClaims(userRecord.uid, {
+            ...userRecord.customClaims,
+            isActor: true
+        });
     } catch (error: any) {
         console.warn(`Could not find user with email ${email} to set custom claims. Proceeding without setting role. Error: ${error.message}`);
     }

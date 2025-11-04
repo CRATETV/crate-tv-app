@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Movie, Actor, Category, FilmBlock, FestivalDay } from './types';
 import Header from './components/Header';
@@ -313,7 +314,7 @@ const App: React.FC = () => {
                 <MovieCarousel
                     title=""
                     movies={searchResults}
-                    onSelectMovie={handlePlayMovie} // Play movie directly for a consistent experience
+                    onSelectMovie={handlePlayMovie}
                 />
             ) : (
                 <p className="text-gray-400">No results found.</p>
@@ -348,7 +349,7 @@ const App: React.FC = () => {
                                       </div>
                                   }
                                   movies={blockMovies}
-                                  onSelectMovie={handleOpenDetailsModal} // Open details modal to show purchase options
+                                  onSelectMovie={handlePlayMovie} // Open details modal to show purchase options
                               />
                           );
                       }))}
@@ -356,7 +357,7 @@ const App: React.FC = () => {
                   )}
 
                 {nowPlayingMovie && isNowPlayingReleased && (
-                  <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleOpenDetailsModal} onPlayMovie={handlePlayMovie} />
+                  <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handlePlayMovie} onPlayMovie={handlePlayMovie} />
                 )}
                 <div>
                   {topTenMovies.length > 0 && (

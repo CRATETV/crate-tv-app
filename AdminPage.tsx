@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { listenToAllAdminData, saveMovie, deleteMovie, saveCategories, saveFestivalConfig, saveFestivalDays, saveAboutData, approveActorSubmission, rejectActorSubmission, deleteMoviePipelineEntry } from './services/firebaseService';
 import { Movie, Category, FestivalDay, FestivalConfig, AboutData, LiveData, ActorSubmission, PayoutRequest, MoviePipelineEntry } from './types';
@@ -19,6 +18,7 @@ type AdminRole = 'super_admin' | 'festival_admin' | 'collaborator' | null;
 
 const AdminPage: React.FC = () => {
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [authError, setAuthError] = useState('');
     const [role, setRole] = useState<AdminRole>(null);
@@ -239,14 +239,34 @@ const AdminPage: React.FC = () => {
                             <label className="block text-gray-300 text-sm font-bold mb-2" htmlFor="password">
                                 Password
                             </label>
-                            <input
-                                className="form-input"
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="******************"
-                            />
+                            <div className="relative">
+                                <input
+                                    className="form-input pr-10"
+                                    id="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="******************"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white"
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                >
+                                    {showPassword ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                                        </svg>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074L3.707 2.293zM10 12a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                            <path d="M2 10s.955-2.263 2.828-4.136A10.046 10.046 0 0110 3c4.478 0 8.268 2.943 9.542 7-.153.483-.32.95-.5 1.401l-1.473-1.473A8.014 8.014 0 0010 8c-2.04 0-3.87.768-5.172 2.035l-1.473-1.473A8.013 8.013 0 002 10z" />
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                         {authError && <p className="text-red-500 text-xs italic mb-4">{authError}</p>}
                         <div className="flex items-center justify-between">
@@ -292,7 +312,7 @@ const AdminPage: React.FC = () => {
                     <TabButton tabId="payouts" label="Payouts" requiredRole={['super_admin']} />
                     <TabButton tabId="pipeline" label="Pipeline" requiredRole={['super_admin', 'collaborator', 'festival_admin']} />
                     <TabButton tabId="about" label="About Page" requiredRole={['super_admin']} />
-                    <TabButton tabId="tools" label="Tools" requiredRole={['super_admin']} />
+                    <TabButton tabId="tools" label="Tools" requiredRole={['super_admin', 'collaborator']} />
                 </div>
                 
                 {dbError && <div className="p-4 mb-4 text-red-300 bg-red-900/50 border border-red-700 rounded-md">{dbError}</div>}

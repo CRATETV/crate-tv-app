@@ -100,7 +100,10 @@ export async function POST(request: Request) {
     }
 
     // --- Step 3: Set custom claim and Firestore profile ---
-    await auth.setCustomUserClaims(userRecord.uid, { isActor: true });
+    await auth.setCustomUserClaims(userRecord.uid, {
+        ...userRecord.customClaims,
+        isActor: true
+    });
     const userProfileRef = db.collection('users').doc(userRecord.uid);
     await userProfileRef.set({ name: bestActorData.name, email, isActor: true }, { merge: true });
 

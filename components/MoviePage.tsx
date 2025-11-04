@@ -17,6 +17,7 @@ import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
+import PauseOverlay from './PauseOverlay';
 
 
 declare const google: any; // Declare Google IMA SDK global
@@ -47,8 +48,8 @@ const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
 
     return (
         <a
-            href={`/movie/${movie.key}`}
-            onClick={(e) => handleNavigate(e, `/movie/${movie.key}`)}
+            href={`/movie/${movie.key}?play=true`}
+            onClick={(e) => handleNavigate(e, `/movie/${movie.key}?play=true`)}
             className="group relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 bg-gray-900"
         >
               <img 
@@ -77,12 +78,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
 
-  // Player state - Simplified
+  // Player state
   const [shouldPlay, setShouldPlay] = useState(
     new URLSearchParams(window.location.search).get('play') === 'true'
   );
   const [showControls, setShowControls] = useState(false);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
   
   // Search and URL state
   const [searchQuery, setSearchQuery] = useState('');
@@ -403,6 +405,26 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       };
     }, []);
 
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !isPlayerMode) return;
+
+        const handlePause = () => {
+            if (video.currentTime > 0 && !video.ended) {
+                setIsPaused(true);
+            }
+        };
+        const handlePlay = () => setIsPaused(false);
+
+        video.addEventListener('pause', handlePause);
+        video.addEventListener('play', handlePlay);
+
+        return () => {
+            video.removeEventListener('pause', handlePause);
+            video.removeEventListener('play', handlePlay);
+        };
+    }, [isPlayerMode]);
+
     if (isDataLoading || !movie) {
         return <LoadingSpinner />;
     }
@@ -428,23 +450,32 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 <div 
                     ref={videoContainerRef} 
                     className="relative w-full aspect-video bg-black secure-video-container group"
-                    onClick={handlePlayerInteraction}
+                    onClick={() => isPlayerMode ? (videoRef.current?.paused ? videoRef.current?.play() : videoRef.current?.pause()) : null}
                     onMouseMove={handlePlayerInteraction}
                 >
                     <div ref={adContainerRef} className="absolute inset-0 z-20" />
                     
                     {isPlayerMode ? (
-                        <video 
-                            ref={videoRef} 
-                            src={movie.fullMovie} 
-                            className="w-full h-full"
-                            controls={!isAdPlaying}
-                            playsInline
-                            onContextMenu={(e) => e.preventDefault()} 
-                            controlsList="nodownload"
-                            onEnded={handleMovieEnd}
-                            autoPlay
-                        />
+                        <>
+                            <video 
+                                ref={videoRef} 
+                                src={movie.fullMovie} 
+                                className="w-full h-full"
+                                playsInline
+                                onContextMenu={(e) => e.preventDefault()} 
+                                controlsList="nodownload"
+                                onEnded={handleMovieEnd}
+                                autoPlay
+                            />
+                            {isPaused && (
+                                <PauseOverlay
+                                    movie={movie}
+                                    onResume={() => videoRef.current?.play()}
+                                    onExitPlayer={handleExitPlayer}
+                                    onSelectActor={setSelectedActor}
+                                />
+                            )}
+                        </>
                     ) : (
                         <>
                             <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" onContextMenu={(e) => e.preventDefault()} />
@@ -479,7 +510,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         </>
                     )}
                     
-                    {isPlayerMode && (
+                    {isPlayerMode && !isPaused && (
                         <div className={`absolute inset-0 z-30 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                             {/* Back to Home Button */}
                              <button
