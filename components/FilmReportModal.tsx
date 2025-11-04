@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
 const formatNumber = (num: number) => num.toLocaleString();
@@ -27,6 +27,9 @@ const ReportRow: React.FC<{ label: string; value: string | number; isBold?: bool
 );
 
 const FilmReportModal: React.FC<FilmReportModalProps> = ({ filmData, onClose }) => {
+    const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+    const [emailMessage, setEmailMessage] = useState('');
+
     useEffect(() => {
         const handleEsc = (event: KeyboardEvent) => {
             if (event.key === 'Escape') onClose();
@@ -37,6 +40,26 @@ const FilmReportModal: React.FC<FilmReportModalProps> = ({ filmData, onClose }) 
 
     const handlePrint = () => {
         window.print();
+    };
+
+    const handleEmailReport = async () => {
+        setEmailStatus('sending');
+        setEmailMessage('');
+        const password = sessionStorage.getItem('adminPassword');
+        try {
+            const response = await fetch('/api/email-film-report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password, filmData }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to send email.');
+            setEmailStatus('success');
+            setEmailMessage(data.message);
+        } catch (err) {
+            setEmailStatus('error');
+            setEmailMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
+        }
     };
 
     const handleDownloadCsv = () => {
@@ -104,11 +127,17 @@ const FilmReportModal: React.FC<FilmReportModalProps> = ({ filmData, onClose }) 
                         <ReportRow label="Total Filmmaker Payout" value={formatCurrency(filmData.totalFilmmakerPayout)} isBold={true} className="text-green-400" />
                     </div>
                 </div>
-
-                <div className="no-print bg-gray-900/50 p-4 flex justify-end gap-4 rounded-b-lg">
-                    <button onClick={onClose} className="text-gray-400 hover:text-white transition">Close</button>
-                    <button onClick={handleDownloadCsv} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Download CSV</button>
-                    <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Print Report</button>
+                
+                 <div className="no-print bg-gray-900/50 p-4 rounded-b-lg">
+                    {emailMessage && <p className={`text-center text-sm mb-2 ${emailStatus === 'error' ? 'text-red-400' : 'text-green-400'}`}>{emailMessage}</p>}
+                    <div className="flex justify-end gap-4">
+                        <button onClick={onClose} className="text-gray-400 hover:text-white transition">Close</button>
+                        <button onClick={handleDownloadCsv} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Download CSV</button>
+                        <button onClick={handleEmailReport} disabled={emailStatus === 'sending'} className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-4 rounded-md">
+                            {emailStatus === 'sending' ? 'Sending...' : 'Email to Filmmaker'}
+                        </button>
+                        <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Print Report</button>
+                    </div>
                 </div>
             </div>
         </div>

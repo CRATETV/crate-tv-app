@@ -250,6 +250,11 @@ const App: React.FC = () => {
     setShowNewFilmModal(false);
     localStorage.setItem('hasSeenConsumedAnnouncement', 'true');
   }, []);
+
+  const handleSelectFromSearch = (movie: Movie) => {
+    setIsMobileSearchOpen(false);
+    handlePlayMovie(movie);
+  };
   
   useEffect(() => {
     try {
@@ -308,7 +313,7 @@ const App: React.FC = () => {
       />
       
       <main className="flex-grow pb-24 md:pb-0">
-        {searchQuery ? (
+        {searchQuery && !isMobileSearchOpen ? (
            <div className="pt-8 md:pt-24 px-4 md:px-12">
             <h2 className="text-2xl font-bold mb-6 text-white">Search Results for "{searchQuery}"</h2>
             {searchResults.length > 0 ? (
@@ -364,7 +369,7 @@ const App: React.FC = () => {
                   {topTenMovies.length > 0 && (
                     <MovieCarousel
                       title={
-                        <a href="/top-ten" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/top-ten'); window.dispatchEvent(new Event('pushstate'));}} className="text-lg md:text-2xl font-bold mb-4 text-white hover:text-gray-300 transition-colors inline-block">Top 10 on Crate TV Today</a>
+                        <a href="/top-ten" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/top-ten'); window.dispatchEvent(new Event('pushstate'));}} className="text-lg md:text-2xl font-bold mb-4 text-white hover:text-gray-300 transition-colors inline-block uppercase tracking-wider">Top 10 Today</a>
                       }
                       movies={topTenMovies}
                       onSelectMovie={handlePlayMovie}
@@ -438,6 +443,8 @@ const App: React.FC = () => {
           searchQuery={searchQuery}
           onSearch={setSearchQuery}
           onClose={() => setIsMobileSearchOpen(false)}
+          results={searchResults}
+          onSelectMovie={handleSelectFromSearch}
         />
       )}
       {showFeatureModal && (

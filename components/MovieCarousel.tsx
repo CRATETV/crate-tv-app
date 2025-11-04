@@ -26,7 +26,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
     return null;
   }
   
-  const carouselClasses = `flex overflow-x-auto space-x-${showRankings ? '8' : '4'} pb-4 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8`;
+  const carouselClasses = `flex overflow-x-auto space-x-4 pb-4 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8`;
 
   return (
     <div className="mb-8 md:mb-12">
@@ -39,7 +39,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
         <div ref={scrollRef} className={carouselClasses}>
           {movies.map((movie, index) => {
             const containerClasses = showRankings 
-                ? 'flex-shrink-0 w-[45vw] sm:w-[33vw] md:w-[25vw] lg:w-[20vw]' 
+                ? 'flex-shrink-0 w-[80vw] sm:w-[60vw] md:w-[45vw] lg:w-[35vw]' 
                 : 'flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw]';
 
             return (

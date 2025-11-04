@@ -1,3 +1,6 @@
+
+
+
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { initializeFirebaseAuth, getAuthInstance, getUserProfile, createUserProfile, updateUserProfile } from '../services/firebaseClient';
 import { User } from '../types';
@@ -56,14 +59,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     const profile = await getUserProfile(firebaseUser.uid);
                     if (profile) {
                         setUser(profile);
-                        // FIX: Type 'unknown[]' is not assignable to type 'string[]'.
                         // Data from firestore is not guaranteed to be clean, so we sanitize all array fields here as a safeguard.
-                        // FIX: Use an explicit type guard `(item): item is string` to ensure TypeScript correctly infers the result of the filter as `string[]`, resolving downstream type errors.
                         setWatchlist(Array.isArray(profile.watchlist) ? profile.watchlist.filter((item: any): item is string => typeof item === 'string') : []);
                         setHasFestivalAllAccess(profile.hasFestivalAllAccess || false);
-                        // FIX: Use an explicit type guard `(item): item is string` to ensure TypeScript correctly infers the result of the filter as `string[]`, resolving downstream type errors.
                         setUnlockedFestivalBlockIds(new Set(Array.isArray(profile.unlockedBlockIds) ? profile.unlockedBlockIds.filter((item: any): item is string => typeof item === 'string') : []));
-                        // FIX: Use an explicit type guard `(item): item is string` to ensure TypeScript correctly infers the result of the filter as `string[]`, resolving downstream type errors.
                         setPurchasedMovieKeys(new Set(Array.isArray(profile.purchasedMovieKeys) ? profile.purchasedMovieKeys.filter((item: any): item is string => typeof item === 'string') : []));
                     } else {
                         const newProfile = await createUserProfile(firebaseUser.uid, firebaseUser.email!);
@@ -133,7 +132,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newUnlockedIds = new Set(unlockedFestivalBlockIds).add(blockId);
         setUnlockedFestivalBlockIds(newUnlockedIds); // Optimistic update
         try {
-            // FIX: Replaced `Array.from()` with the spread syntax `[...]` to convert the Set to an array. This resolves a TypeScript error where the type was incorrectly inferred as `unknown[]` instead of `string[]`.
+            // FIX: Using spread syntax, which is the modern standard for converting a Set to an Array. The previous `Array.from` approach was still causing type inference issues in this environment.
             await updateUserProfile(user.uid, { unlockedBlockIds: [...newUnlockedIds] });
         } catch (error) {
             console.error("Failed to save unlocked block:", error);
@@ -159,7 +158,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newPurchases = new Set(purchasedMovieKeys).add(movieKey);
         setPurchasedMovieKeys(newPurchases); // Optimistic update
         try {
-            // FIX: Replaced `Array.from()` with the spread syntax `[...]` to convert the Set to an array. This resolves a TypeScript error where the type was incorrectly inferred as `unknown[]` instead of `string[]`.
+            // FIX: Using spread syntax, which is the modern standard for converting a Set to an Array. The previous `Array.from` approach was still causing type inference issues in this environment.
             await updateUserProfile(user.uid, { purchasedMovieKeys: [...newPurchases] });
         } catch (error) {
             console.error("Failed to save movie purchase:", error);

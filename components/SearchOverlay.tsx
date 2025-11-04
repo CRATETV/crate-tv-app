@@ -1,13 +1,17 @@
 import React, { useEffect, useRef } from 'react';
+import { Movie } from '../types';
+import MovieCard from './MovieCard';
 
 interface SearchOverlayProps {
   searchQuery: string;
   onSearch: (query: string) => void;
   onClose: () => void;
   onSubmit?: (query: string) => void;
+  results: Movie[];
+  onSelectMovie: (movie: Movie) => void;
 }
 
-const SearchOverlay: React.FC<SearchOverlayProps> = ({ searchQuery, onSearch, onClose, onSubmit }) => {
+const SearchOverlay: React.FC<SearchOverlayProps> = ({ searchQuery, onSearch, onClose, onSubmit, results, onSelectMovie }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -29,6 +33,11 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ searchQuery, onSearch, on
     if (onSubmit) {
       onSubmit(searchQuery);
     }
+    // Don't close, let the user see the results
+  };
+
+  const handleSelect = (movie: Movie) => {
+    onSelectMovie(movie);
   };
 
   return (
@@ -52,7 +61,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ searchQuery, onSearch, on
       <form onSubmit={handleSubmit} className="relative">
         <input
           ref={inputRef}
-          type="text"
+          type="search"
           value={searchQuery}
           onChange={handleSearchChange}
           placeholder="Titles, actors, genres..."
@@ -64,7 +73,22 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ searchQuery, onSearch, on
           </svg>
         </div>
       </form>
-       {/* The search results will be visible on the main page underneath this overlay */}
+      
+      {/* Search Results Section */}
+      <div className="flex-grow overflow-y-auto mt-6 scrollbar-hide">
+        {searchQuery && results.length > 0 && (
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+            {results.map(movie => (
+              <MovieCard key={movie.key} movie={movie} onSelectMovie={handleSelect} />
+            ))}
+          </div>
+        )}
+        {searchQuery && results.length === 0 && (
+          <div className="text-center text-gray-400 pt-16">
+            <p>No results found for "{searchQuery}"</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

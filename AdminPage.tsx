@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { listenToAllAdminData, saveMovie, deleteMovie, saveCategories, saveFestivalConfig, saveFestivalDays, saveAboutData, approveActorSubmission, rejectActorSubmission, deleteMoviePipelineEntry } from './services/firebaseService';
 import { Movie, Category, FestivalDay, FestivalConfig, AboutData, LiveData, ActorSubmission, PayoutRequest, MoviePipelineEntry } from './types';
@@ -9,11 +8,9 @@ import AboutEditor from './components/AboutEditor';
 import LoadingSpinner from './components/LoadingSpinner';
 import FallbackGenerator from './components/FallbackGenerator';
 import AnalyticsPage from './components/AnalyticsPage';
-import ActorSubmissionsTab from './components/ActorSubmissionsTab';
 import PayoutsTab from './components/PayoutsTab';
 import EmailSender from './components/EmailSender';
 import MoviePipelineTab from './components/MoviePipelineTab';
-import TopFilmsTab from './components/TopFilmsTab';
 import RokuAdminTab from './components/RokuAdminTab';
 
 type AdminRole = 'super_admin' | 'festival_admin' | 'collaborator' | null;
@@ -30,7 +27,6 @@ const AdminPage: React.FC = () => {
     const [data, setData] = useState<LiveData | null>(null);
     const [dbError, setDbError] = useState<string | null>(null);
     const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-    const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
     
     const [activeTab, setActiveTab] = useState('analytics');
     const [publishStatus, setPublishStatus] = useState<'idle' | 'publishing' | 'success' | 'error'>('idle');
@@ -51,29 +47,6 @@ const AdminPage: React.FC = () => {
         }
         setIsCheckingAuth(false);
     }, []);
-    
-    const getPayouts = async (adminPassword: string) => {
-        const res = await fetch('/api/get-payouts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: adminPassword }),
-        });
-        if (!res.ok) throw new Error('Failed to fetch payouts');
-        const data = await res.json();
-        return data.payoutRequests;
-    };
-
-    const completePayout = async (requestId: string) => {
-        const adminPassword = sessionStorage.getItem('adminPassword');
-        await fetch('/api/complete-payout', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requestId, password: adminPassword }),
-        });
-        // Re-fetch payouts
-        const updatedPayouts = await getPayouts(adminPassword!);
-        setPayouts(updatedPayouts);
-    };
 
     const dataListenerCallback = useCallback((result: { data: LiveData, error?: string }) => {
         if (result.error) {
@@ -87,19 +60,6 @@ const AdminPage: React.FC = () => {
         if (isLoggedIn) {
             setIsLoadingData(true);
             const unsubscribePromise = listenToAllAdminData(dataListenerCallback);
-
-            const fetchPayoutData = async () => {
-                const adminPassword = sessionStorage.getItem('adminPassword');
-                if (adminPassword) {
-                    try {
-                        const fetchedPayouts = await getPayouts(adminPassword);
-                        setPayouts(fetchedPayouts);
-                    } catch (err) {
-                        console.error("Failed to fetch payouts", err);
-                    }
-                }
-            };
-            fetchPayoutData();
             
             return () => {
                 unsubscribePromise.then(unsub => unsub());
@@ -310,12 +270,9 @@ const AdminPage: React.FC = () => {
 
                 <div className="flex flex-wrap items-center gap-2 mb-6 border-b border-gray-700 pb-4">
                     <TabButton tabId="analytics" label="Analytics" requiredRole={['super_admin', 'festival_admin']} />
-                    <TabButton tabId="top_films" label="Top 10 List" requiredRole={['super_admin']} />
                     <TabButton tabId="movies" label="Movies" requiredRole={['super_admin', 'collaborator', 'festival_admin']} />
                     <TabButton tabId="categories" label="Categories" requiredRole={['super_admin', 'collaborator']} />
                     <TabButton tabId="festival" label="Festival" requiredRole={['super_admin', 'festival_admin', 'collaborator']} />
-                    <TabButton tabId="submissions" label="Submissions" requiredRole={['super_admin']} />
-                    <TabButton tabId="payouts" label="Payouts" requiredRole={['super_admin']} />
                     <TabButton tabId="pipeline" label="Pipeline" requiredRole={['super_admin', 'collaborator', 'festival_admin']} />
                     <TabButton tabId="about" label="About Page" requiredRole={['super_admin']} />
                     <TabButton tabId="roku" label="Roku" requiredRole={['super_admin']} />
@@ -325,7 +282,6 @@ const AdminPage: React.FC = () => {
                 {dbError && <div className="p-4 mb-4 text-red-300 bg-red-900/50 border border-red-700 rounded-md">{dbError}</div>}
 
                 {activeTab === 'analytics' && <AnalyticsPage viewMode={role === 'festival_admin' ? 'festival' : 'full'} />}
-                {activeTab === 'top_films' && <TopFilmsTab />}
 
                 {activeTab === 'movies' && (
                     <div>
@@ -356,8 +312,6 @@ const AdminPage: React.FC = () => {
                 
                 {activeTab === 'categories' && <CategoryEditor initialCategories={data.categories} allMovies={Object.values(data.movies)} onSave={saveCategories} />}
                 {activeTab === 'festival' && <FestivalEditor data={data.festivalData} config={data.festivalConfig} allMovies={data.movies} onDataChange={saveFestivalDays} onConfigChange={saveFestivalConfig} onSave={() => { /* Handled by individual change handlers */ }} />}
-                {activeTab === 'submissions' && <ActorSubmissionsTab submissions={data.actorSubmissions} allMovies={data.movies} onApprove={approveActorSubmission} onReject={rejectActorSubmission} />}
-                {activeTab === 'payouts' && <PayoutsTab payoutRequests={payouts} onCompletePayout={completePayout} />}
                 {activeTab === 'pipeline' && <MoviePipelineTab pipeline={data.moviePipeline} onCreateMovie={handleCreateMovieFromPipeline} />}
                 {activeTab === 'about' && <AboutEditor initialData={data.aboutData} onSave={saveAboutData} />}
                 {activeTab === 'roku' && <RokuAdminTab />}

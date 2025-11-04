@@ -248,7 +248,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             <main className="flex-grow flex items-center justify-center">
                 <div 
                     className="relative w-full aspect-video bg-black secure-video-container group"
-                    onClick={handlePlayerInteraction}
                     onMouseMove={handlePlayerInteraction}
                 >
                     <div ref={adContainerRef} className="absolute inset-0 z-20" />
