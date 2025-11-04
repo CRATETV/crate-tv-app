@@ -1,15 +1,11 @@
-
-
-
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import Header from './Header';
-import Hero from './Hero';
-import LoadingSpinner from './LoadingSpinner';
+import Header from './components/Header';
+import Hero from './components/Hero';
+import LoadingSpinner from './components/LoadingSpinner';
 import { Movie, AboutData, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
-import AuthModal from './AuthModal';
-import Footer from './Footer';
+import AuthModal from './components/AuthModal';
+import Footer from './components/Footer';
 
 const LandingPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
