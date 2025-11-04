@@ -129,8 +129,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newUnlockedIds = new Set(unlockedFestivalBlockIds).add(blockId);
         setUnlockedFestivalBlockIds(newUnlockedIds); // Optimistic update
         try {
-            // FIX: Using spread syntax to convert the Set to an array. This resolves a TypeScript error where `Array.from` on a Set was incorrectly inferred as `unknown[]` instead of `string[]`.
-            await updateUserProfile(user.uid, { unlockedBlockIds: [...newUnlockedIds] });
+            // FIX: Replaced spread syntax with Array.from() to fix a type inference issue where the resulting array was incorrectly typed as unknown[].
+            await updateUserProfile(user.uid, { unlockedBlockIds: Array.from(newUnlockedIds) });
         } catch (error) {
             console.error("Failed to save unlocked block:", error);
             setUnlockedFestivalBlockIds(unlockedFestivalBlockIds); // Revert on error
@@ -155,8 +155,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newPurchases = new Set(purchasedMovieKeys).add(movieKey);
         setPurchasedMovieKeys(newPurchases); // Optimistic update
         try {
-            // FIX: Using spread syntax to convert the Set to an array. This resolves a TypeScript error where `Array.from` on a Set was incorrectly inferred as `unknown[]` instead of `string[]`.
-            await updateUserProfile(user.uid, { purchasedMovieKeys: [...newPurchases] });
+            // FIX: Replaced spread syntax with Array.from() to fix a type inference issue where the resulting array was incorrectly typed as unknown[].
+            await updateUserProfile(user.uid, { purchasedMovieKeys: Array.from(newPurchases) });
         } catch (error) {
             console.error("Failed to save movie purchase:", error);
             setPurchasedMovieKeys(purchasedMovieKeys); // Revert on error

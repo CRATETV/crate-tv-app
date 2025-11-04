@@ -26,6 +26,9 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
   const isWidePoster = widePosterKeys.has(movie.key);
   const imageFitClass = isWidePoster ? 'object-contain' : 'object-cover';
 
+  // FIX: Special handling for the Crossroads poster to hide the white border.
+  const isCrossroads = movie.key === 'crossroads';
+
   if (rank) {
     const rankColors = [
       '#FFD700', '#C0C0C0', '#CD7F32', '#be123c', '#3b82f6', 
@@ -73,7 +76,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
   // Standard movie card for all other carousels with new hover effect
   return (
     <div
-      className="group relative cursor-pointer rounded-md overflow-hidden aspect-[2/3] bg-gray-900 h-full"
+      className={`group relative cursor-pointer rounded-md overflow-hidden aspect-[2/3] h-full ${isCrossroads ? 'bg-purple-800' : 'bg-gray-900'}`}
       onClick={() => onSelectMovie(movie)}
       tabIndex={0}
       onKeyPress={(e) => { if (e.key === 'Enter') onSelectMovie(movie)}}
@@ -83,7 +86,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
       <img
         src={movie.poster}
         alt={movie.title}
-        className={`w-full h-full ${imageFitClass} transition-transform duration-300 group-hover:scale-105`}
+        className={`w-full h-full ${imageFitClass} transition-transform duration-300 group-hover:scale-105 ${isCrossroads ? 'scale-[0.95] group-hover:scale-100' : ''}`}
         loading="lazy"
         onContextMenu={(e) => e.preventDefault()}
       />

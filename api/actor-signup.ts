@@ -101,7 +101,7 @@ export async function POST(request: Request) {
 
     // --- Step 3: Set custom claim and Firestore profile ---
     await auth.setCustomUserClaims(userRecord.uid, {
-        ...userRecord.customClaims,
+        ...(userRecord.customClaims || {}),
         isActor: true
     });
     const userProfileRef = db.collection('users').doc(userRecord.uid);
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
         <p>- The Crate TV Team</p>
       </div>
     `;
-
+    
     const emailText = `
         Welcome to the Crate TV Actor Portal, ${name}!\n\n
         We've created an account for you in the Crate TV family. To access the portal and manage your public profile, you first need to create a secure password.\n\n

@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 
     // --- Step 3: Set custom claim and Firestore profile ---
     await auth.setCustomUserClaims(userRecord.uid, {
-        ...userRecord.customClaims,
+        ...(userRecord.customClaims || {}),
         isFilmmaker: true
     });
     const userProfileRef = db.collection('users').doc(userRecord.uid);

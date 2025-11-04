@@ -111,7 +111,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     adsLoader.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, () => playContent(), false);
     
     const adsRequest = new google.ima.AdsRequest();
-    adsRequest.adTagUrl = 'https://googleads.g.doubleclick.net/pagead/ads?ad_type=video&client=ca-video-pub-5748304047766155&videoad_start_delay=0&description_url=' + encodeURIComponent(window.location.href);
+    
+    // Check for a production ad tag in localStorage. If it exists, use it. Otherwise, use the sample tag.
+    const productionAdTag = localStorage.getItem('productionAdTagUrl');
+    adsRequest.adTagUrl = productionAdTag || 'https://googleads.g.doubleclick.net/pagead/ads?ad_type=video&client=ca-video-pub-5748304047766155&videoad_start_delay=0&description_url=' + encodeURIComponent(window.location.href);
+    
     adsLoader.requestAds(adsRequest);
   }, [released, playContent]);
   
@@ -189,6 +193,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3500);
     }, []);
 
+    const handleContainerClick = () => {
+      if (isAdPlaying) return; // Don't interfere with ads
+      if (videoRef.current) {
+          videoRef.current.paused ? videoRef.current.play() : videoRef.current.pause();
+      }
+    };
+
     useEffect(() => {
       const video = videoRef.current;
       if (!video) return;
@@ -249,8 +260,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 <div 
                     className="relative w-full aspect-video bg-black secure-video-container group"
                     onMouseMove={handlePlayerInteraction}
+                    onClick={handleContainerClick}
                 >
-                    <div ref={adContainerRef} className="absolute inset-0 z-20" />
+                    <div ref={adContainerRef} className={`absolute inset-0 z-20 ${isAdPlaying ? '' : 'pointer-events-none'}`} />
                     
                     {movie.fullMovie && released ? (
                         <>
@@ -263,18 +275,16 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 controlsList="nodownload"
                                 onEnded={handleMovieEnd}
                                 autoPlay
-                                onClick={() => videoRef.current?.paused ? videoRef.current?.play() : videoRef.current?.pause()}
                             />
                             {isPaused && (
                                 <PauseOverlay
                                     movie={movie}
-                                    onResume={() => videoRef.current?.play()}
                                     onExitPlayer={handleShowDetails}
                                     onSelectActor={setSelectedActor}
                                 />
                             )}
                             <div className={`absolute inset-0 z-30 transition-opacity duration-300 pointer-events-none ${showControls && !isPaused ? 'opacity-100' : 'opacity-0'}`}>
-                                <button onClick={handleGoHome} className="absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 pointer-events-auto" aria-label="Back to Home"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleGoHome(); }} className="absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 pointer-events-auto" aria-label="Back to Home"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
                                 <div className="absolute top-4 right-4 flex items-center gap-4 pointer-events-auto">
                                     <CastButton videoElement={videoRef.current} />
                                 </div>
