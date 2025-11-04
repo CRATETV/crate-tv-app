@@ -130,7 +130,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newUnlockedIds = new Set(unlockedFestivalBlockIds).add(blockId);
         setUnlockedFestivalBlockIds(newUnlockedIds); // Optimistic update
         try {
-            await updateUserProfile(user.uid, { unlockedBlockIds: Array.from(newUnlockedIds) });
+            // FIX: Type 'unknown[]' is not assignable to type 'string[]'. Replaced Array.from with spread syntax to ensure correct type inference.
+            await updateUserProfile(user.uid, { unlockedBlockIds: [...newUnlockedIds] });
         } catch (error) {
             console.error("Failed to save unlocked block:", error);
             setUnlockedFestivalBlockIds(unlockedFestivalBlockIds); // Revert on error
@@ -155,7 +156,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newPurchases = new Set(purchasedMovieKeys).add(movieKey);
         setPurchasedMovieKeys(newPurchases); // Optimistic update
         try {
-            await updateUserProfile(user.uid, { purchasedMovieKeys: Array.from(newPurchases) });
+            // FIX: Type 'unknown[]' is not assignable to type 'string[]'. Replaced Array.from with spread syntax to ensure correct type inference.
+            await updateUserProfile(user.uid, { purchasedMovieKeys: [...newPurchases] });
         } catch (error) {
             console.error("Failed to save movie purchase:", error);
             setPurchasedMovieKeys(purchasedMovieKeys); // Revert on error

@@ -42,7 +42,7 @@ const ActorSignupPage: React.FC = () => {
                     <div className="max-w-2xl bg-gray-800/50 border border-gray-700 rounded-lg p-8 sm:p-12 animate-[fadeIn_0.5s_ease-out]">
                         <h1 className="text-3xl sm:text-4xl font-bold text-green-400 mb-4">Check Your Email!</h1>
                         <p className="text-gray-300">
-                           We've verified your name and sent a secure link to your email. Click the link to create your password and access the Actor Portal.
+                           We've sent a secure link to your email. Click the link to create your password and access the Actor Portal.
                         </p>
                          <p className="text-sm text-yellow-400 mt-4">
                             If you don't see the email within a few minutes, please check your spam folder.
@@ -71,18 +71,18 @@ const ActorSignupPage: React.FC = () => {
                         <div className="text-center mb-8">
                             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Actor Portal Signup</h1>
                             <p className="text-lg text-gray-300">
-                               If you've appeared in a Crate TV film, enter your name and email to get access to your portal.
+                               Join the Crate TV actor community. Create your public profile to be discovered, and access tools to hone your craft.
                             </p>
                         </div>
                         <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-8">
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div>
                                     <label htmlFor="name" className="block text-sm font-medium text-gray-400 mb-2">Your Full Name</label>
-                                    <input type="text" id="name" name="name" className="form-input" required placeholder="As it appears in film credits" />
+                                    <input type="text" id="name" name="name" className="form-input" required placeholder="Your professional name" />
                                 </div>
                                 <div>
                                     <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-2">Your Email Address</label>
-                                    <input type="email" id="email" name="email" className="form-input" required placeholder="Where we can send your password" />
+                                    <input type="email" id="email" name="email" className="form-input" required placeholder="Where we can send your access link" />
                                 </div>
                                 
                                 <button type="submit" className="submit-btn w-full mt-8" disabled={status === 'submitting'}>

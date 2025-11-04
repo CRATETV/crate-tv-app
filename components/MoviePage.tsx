@@ -25,8 +25,6 @@ interface MoviePageProps {
   movieKey: string;
 }
 
-type PlayerMode = 'poster' | 'full';
-
 // Helper function to create/update meta tags
 const setMetaTag = (attr: 'name' | 'property', value: string, content: string) => {
   let element = document.querySelector(`meta[${attr}="${value}"]`);
@@ -79,8 +77,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
 
-  // Player state
-  const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
+  // Player state - Simplified
+  const [shouldPlay, setShouldPlay] = useState(
+    new URLSearchParams(window.location.search).get('play') === 'true'
+  );
   const [showControls, setShowControls] = useState(false);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -103,14 +103,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [isAdPlaying, setIsAdPlaying] = useState(false);
   const [adError, setAdError] = useState<string | null>(null);
   
-  // Use refs to give the event listener access to the latest state without re-attaching.
-  const movieRef = useRef(movie);
-  const releasedRef = useRef(released);
-  useEffect(() => {
-    movieRef.current = movie;
-    releasedRef.current = released;
-  }, [movie, released]);
-
   const playContent = useCallback(() => {
     setIsAdPlaying(false);
     if (videoRef.current) {
@@ -127,8 +119,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   }, [videoRef, movie?.key]);
   
   const initializeAds = useCallback(() => {
-    if (!videoRef.current || !adContainerRef.current || playerMode !== 'full' || !released || adsManagerRef.current || typeof google === 'undefined') {
-        if (playerMode === 'full') playContent();
+    if (!videoRef.current || !adContainerRef.current || !released || adsManagerRef.current || typeof google === 'undefined') {
+        playContent();
         return;
     }
     
@@ -183,7 +175,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     adsRequest.linearAdSlotHeight = videoElement.clientHeight;
 
     adsLoader.requestAds(adsRequest);
-  }, [playerMode, released, playContent]);
+  }, [released, playContent]);
   
   useEffect(() => {
     return () => {
@@ -230,31 +222,22 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
   }, [likedMovies]);
 
-  // FIX: This robustly controls the player mode based on URL changes
+  // Simplified effect to track if the URL wants the player to be open
   useEffect(() => {
-    const handlePlayerMode = () => {
+    const checkUrlForPlay = () => {
         const params = new URLSearchParams(window.location.search);
-        const shouldPlay = params.get('play') === 'true';
-
-        // Use refs to get the latest state inside the listener.
-        if (movieRef.current && movieRef.current.fullMovie && releasedRef.current && shouldPlay) {
-            setPlayerMode('full');
-        } else {
-            setPlayerMode('poster');
-        }
+        setShouldPlay(params.get('play') === 'true');
     };
-    
-    handlePlayerMode(); // Initial check on mount/movie change
 
-    // Listen for browser navigation events to update player state
-    window.addEventListener('popstate', handlePlayerMode);
-    window.addEventListener('pushstate', handlePlayerMode);
+    checkUrlForPlay(); // Initial check on mount
+    window.addEventListener('popstate', checkUrlForPlay);
+    window.addEventListener('pushstate', checkUrlForPlay);
 
     return () => {
-        window.removeEventListener('popstate', handlePlayerMode);
-        window.removeEventListener('pushstate', handlePlayerMode);
+        window.removeEventListener('popstate', checkUrlForPlay);
+        window.removeEventListener('pushstate', checkUrlForPlay);
     };
-  }, [movieKey]); // Re-attach listeners if the movie page itself changes
+  }, []);
 
   // Countdown timer for unreleased movies
   useEffect(() => {
@@ -270,10 +253,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     return () => clearInterval(interval);
   }, [movie, released]);
 
-  
+  // Derived constant to determine player mode, simplifying render logic
+  const isPlayerMode = shouldPlay && movie && movie.fullMovie && released;
+
   // Ad initialization effect
   useEffect(() => {
-    if (playerMode === 'full' && released) {
+    if (isPlayerMode) {
         const timer = setTimeout(() => initializeAds(), 100);
         return () => clearTimeout(timer);
     } else {
@@ -283,7 +268,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         }
         setIsAdPlaying(false);
     }
-  }, [playerMode, released, initializeAds]);
+  }, [isPlayerMode, initializeAds]);
 
   // SEO
   useEffect(() => {
@@ -302,7 +287,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
     // Effect for saving/restoring video progress
     useEffect(() => {
-        if (playerMode !== 'full' || !videoRef.current || !movie) return;
+        if (!isPlayerMode || !videoRef.current || !movie) return;
 
         const video = videoRef.current;
         let progressInterval: ReturnType<typeof setInterval>;
@@ -329,7 +314,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             handleTimeUpdate();
             video.removeEventListener('loadedmetadata', handleLoadedMetadata);
         };
-    }, [playerMode, movie]);
+    }, [isPlayerMode, movie]);
 
 
     const recommendedMovies = useMemo(() => {
@@ -428,7 +413,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         <div className="flex flex-col min-h-screen bg-black text-white">
             {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
             
-            {playerMode !== 'full' && (
+            {!isPlayerMode && (
                 <Header
                     searchQuery={searchQuery}
                     onSearch={setSearchQuery}
@@ -439,7 +424,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 />
             )}
 
-            <main className={`flex-grow ${playerMode === 'full' ? 'flex items-center justify-center' : 'pt-4 md:pt-20 pb-24 md:pb-0'}`}>
+            <main className={`flex-grow ${isPlayerMode ? 'flex items-center justify-center' : 'pt-4 md:pt-20 pb-24 md:pb-0'}`}>
                 <div 
                     ref={videoContainerRef} 
                     className="relative w-full aspect-video bg-black secure-video-container group"
@@ -448,7 +433,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 >
                     <div ref={adContainerRef} className="absolute inset-0 z-20" />
                     
-                    {playerMode === 'full' && (
+                    {isPlayerMode ? (
                         <video 
                             ref={videoRef} 
                             src={movie.fullMovie} 
@@ -460,9 +445,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             onEnded={handleMovieEnd}
                             autoPlay
                         />
-                    )}
-
-                    {playerMode !== 'full' && (
+                    ) : (
                         <>
                             <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" onContextMenu={(e) => e.preventDefault()} />
                             
@@ -496,7 +479,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         </>
                     )}
                     
-                    {playerMode === 'full' && (
+                    {isPlayerMode && (
                         <div className={`absolute inset-0 z-30 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                             {/* Back to Home Button */}
                              <button
@@ -528,7 +511,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     )}
                 </div>
 
-                {playerMode !== 'full' && (
+                {!isPlayerMode && (
                   <div className="max-w-6xl mx-auto p-4 md:p-8">
                       <h1 className="text-3xl md:text-5xl font-bold text-white">{movie.title || 'Untitled Film'}</h1>
                       <div className="mt-4 flex flex-wrap items-center gap-4">
@@ -594,7 +577,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 )}
             </main>
             
-            {playerMode !== 'full' && (
+            {!isPlayerMode && (
               <>
                 <CollapsibleFooter />
                 <BackToTopButton />

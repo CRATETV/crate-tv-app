@@ -320,39 +320,41 @@ const App: React.FC = () => {
             )}
            </div>
         ) : (
-          isFestivalLive ? (
             <>
-              <FestivalHero festivalConfig={festivalConfig} />
-              <div className="relative z-10 mt-8 px-4 md:px-12 space-y-8">
-                {festivalData.map((day: FestivalDay) => day.blocks.map((block: FilmBlock) => {
-                    const blockMovies = block.movieKeys.map(key => movies[key]).filter(Boolean);
-                    if (blockMovies.length === 0) return null;
-                    return (
-                        <MovieCarousel
-                            key={block.id}
-                            title={
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-4">
-                                    <h2 className="text-lg md:text-2xl font-bold text-white">{block.title}</h2>
-                                    <p className="font-semibold text-purple-300 text-sm sm:text-base">{block.time}</p>
-                                </div>
-                            }
-                            movies={blockMovies}
-                            onSelectMovie={handleOpenDetailsModal} // Open details modal to show purchase options
-                        />
-                    );
-                }))}
-              </div>
-            </>
-          ) : (
-            <>
-              <Hero
-                movies={heroMovies}
-                currentIndex={heroIndex}
-                onSetCurrentIndex={handleSetHeroIndex}
-                onPlayMovie={handlePlayMovie}
-                onMoreInfo={handleOpenDetailsModal}
-              />
+              {isFestivalLive ? (
+                <FestivalHero festivalConfig={festivalConfig} />
+              ) : (
+                <Hero
+                  movies={heroMovies}
+                  currentIndex={heroIndex}
+                  onSetCurrentIndex={handleSetHeroIndex}
+                  onPlayMovie={handlePlayMovie}
+                  onMoreInfo={handleOpenDetailsModal}
+                />
+              )}
               <div className="relative z-10 mt-8 px-4 md:px-12">
+                  {isFestivalLive && (
+                    <div className="space-y-8 mb-8 md:mb-12">
+                      {festivalData.map((day: FestivalDay) => day.blocks.map((block: FilmBlock) => {
+                          const blockMovies = block.movieKeys.map(key => movies[key]).filter(Boolean);
+                          if (blockMovies.length === 0) return null;
+                          return (
+                              <MovieCarousel
+                                  key={block.id}
+                                  title={
+                                      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-4">
+                                          <h2 className="text-lg md:text-2xl font-bold text-white">{block.title}</h2>
+                                          <p className="font-semibold text-purple-300 text-sm sm:text-base">{block.time}</p>
+                                      </div>
+                                  }
+                                  movies={blockMovies}
+                                  onSelectMovie={handleOpenDetailsModal} // Open details modal to show purchase options
+                              />
+                          );
+                      }))}
+                    </div>
+                  )}
+
                 {nowPlayingMovie && isNowPlayingReleased && (
                   <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleOpenDetailsModal} onPlayMovie={handlePlayMovie} />
                 )}
@@ -407,7 +409,6 @@ const App: React.FC = () => {
                 </div>
               </div>
             </>
-          )
         )}
       </main>
       
