@@ -81,10 +81,13 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
             isFilmmaker: data.isFilmmaker === true, // Coerce to boolean, defaulting to false
             avatar: data.avatar || 'fox',
             isPremiumSubscriber: data.isPremiumSubscriber === true, // Default to false
-            watchlist: Array.isArray(data.watchlist) ? data.watchlist.filter((item): item is string => typeof item === 'string') : [],
+// FIX: Explicitly type the 'item' in the array filter as 'any' to help TypeScript's type inference. This resolves the 'unknown[]' is not assignable to 'string[]' error by ensuring the type guard correctly narrows the array type.
+            watchlist: Array.isArray(data.watchlist) ? data.watchlist.filter((item: any): item is string => typeof item === 'string') : [],
             hasFestivalAllAccess: data.hasFestivalAllAccess === true,
-            unlockedBlockIds: Array.isArray(data.unlockedBlockIds) ? data.unlockedBlockIds.filter((item): item is string => typeof item === 'string') : [],
-            purchasedMovieKeys: Array.isArray(data.purchasedMovieKeys) ? data.purchasedMovieKeys.filter((item): item is string => typeof item === 'string') : [],
+// FIX: Explicitly type the 'item' in the array filter as 'any' to help TypeScript's type inference. This resolves the 'unknown[]' is not assignable to 'string[]' error by ensuring the type guard correctly narrows the array type.
+            unlockedBlockIds: Array.isArray(data.unlockedBlockIds) ? data.unlockedBlockIds.filter((item: any): item is string => typeof item === 'string') : [],
+// FIX: Explicitly type the 'item' in the array filter as 'any' to help TypeScript's type inference. This resolves the 'unknown[]' is not assignable to 'string[]' error by ensuring the type guard correctly narrows the array type.
+            purchasedMovieKeys: Array.isArray(data.purchasedMovieKeys) ? data.purchasedMovieKeys.filter((item: any): item is string => typeof item === 'string') : [],
         };
         return userProfile;
     }
