@@ -1,7 +1,3 @@
-
-
-
-
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { initializeFirebaseAuth, getAuthInstance, getUserProfile, createUserProfile, updateUserProfile } from '../services/firebaseClient';
 import { User } from '../types';
@@ -133,7 +129,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newUnlockedIds = new Set(unlockedFestivalBlockIds).add(blockId);
         setUnlockedFestivalBlockIds(newUnlockedIds); // Optimistic update
         try {
-            // FIX: Using spread syntax, which is the modern standard for converting a Set to an Array. The previous `Array.from` approach was still causing type inference issues in this environment.
+            // FIX: Using spread syntax to convert the Set to an array. This resolves a TypeScript error where `Array.from` on a Set was incorrectly inferred as `unknown[]` instead of `string[]`.
             await updateUserProfile(user.uid, { unlockedBlockIds: [...newUnlockedIds] });
         } catch (error) {
             console.error("Failed to save unlocked block:", error);
@@ -159,7 +155,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newPurchases = new Set(purchasedMovieKeys).add(movieKey);
         setPurchasedMovieKeys(newPurchases); // Optimistic update
         try {
-            // FIX: Using spread syntax, which is the modern standard for converting a Set to an Array. The previous `Array.from` approach was still causing type inference issues in this environment.
+            // FIX: Using spread syntax to convert the Set to an array. This resolves a TypeScript error where `Array.from` on a Set was incorrectly inferred as `unknown[]` instead of `string[]`.
             await updateUserProfile(user.uid, { purchasedMovieKeys: [...newPurchases] });
         } catch (error) {
             console.error("Failed to save movie purchase:", error);

@@ -11,7 +11,8 @@ interface PauseOverlayProps {
 const PauseOverlay: React.FC<PauseOverlayProps> = ({ movie, onResume, onExitPlayer, onSelectActor }) => {
     return (
         <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col justify-center items-center z-20 p-4 sm:p-8 animate-[fadeIn_0.3s_ease-out]"
+            className="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col justify-center items-center z-20 p-4 sm:p-8 animate-[fadeIn_0.3s_ease-out] cursor-pointer"
+            onClick={onResume}
         >
             <div 
                 className="w-full max-w-5xl text-white grid grid-cols-1 md:grid-cols-3 gap-8 items-center"

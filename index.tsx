@@ -44,6 +44,8 @@ import RokuGuidePage from './components/RokuGuidePage';
 import LoadingSpinner from './components/LoadingSpinner';
 import Intro from './components/Intro';
 import CreatorPortalPage from './components/CreatorPortalPage';
+import CreatorDashboardPage from './components/CreatorDashboardPage';
+
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -116,9 +118,16 @@ const AppRouter: React.FC = () => {
     case '/top-ten': // Made public per user request
       return <TopTenPage />;
     
+    // Unified Portal Route
+    case '/portal': {
+      if (!authInitialized || (user && !claimsLoaded)) return <LoadingSpinner />;
+      if (user && (user.isActor || user.isFilmmaker)) {
+        return <CreatorDashboardPage />;
+      }
+      return <CreatorPortalPage />; // Public-facing portal page
+    }
+
     // Public Routes
-    case '/portal':
-      return <CreatorPortalPage />;
     case '/login': {
         // If the user is authenticated, redirect them away from the login page.
         // This prevents the "login twice" bug by handling the redirect after the user state is fully updated.
@@ -153,38 +162,18 @@ const AppRouter: React.FC = () => {
     case '/roku-guide':
       return <RokuGuidePage />;
       
-    // Protected Actor Route
+    // Legacy Protected Actor Route (now redirects to unified portal)
     case '/actor-portal': {
-      if (!authInitialized || (user && !claimsLoaded)) return <LoadingSpinner />;
+      if (!authInitialized) return <LoadingSpinner />;
       if (!user) return <RedirectToLogin />;
-      if (!user.isActor) {
-        const RedirectHome: React.FC = () => {
-          useEffect(() => {
-            window.history.replaceState({}, '', '/');
-            window.dispatchEvent(new Event('pushstate'));
-          }, []);
-          return <App />;
-        };
-        return <RedirectHome />;
-      }
-      return <ActorPortalPage />;
+      return <ActorPortalPage />; // This component now just redirects
     }
 
-    // Protected Filmmaker Route
+    // Legacy Protected Filmmaker Route (now redirects to unified portal)
     case '/filmmaker-dashboard': {
-        if (!authInitialized || (user && !claimsLoaded)) return <LoadingSpinner />;
+        if (!authInitialized) return <LoadingSpinner />;
         if (!user) return <RedirectToLogin />;
-        if (!user.isFilmmaker) {
-            const RedirectHome: React.FC = () => {
-                useEffect(() => {
-                    window.history.replaceState({}, '', '/');
-                    window.dispatchEvent(new Event('pushstate'));
-                }, []);
-                return <App />;
-            };
-            return <RedirectHome />;
-        }
-        return <FilmmakerPortalPage />;
+        return <FilmmakerPortalPage />; // This component now just redirects
     }
 
     // Admin & Dev routes

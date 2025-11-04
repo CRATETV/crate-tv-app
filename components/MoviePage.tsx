@@ -273,9 +273,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     onSelectActor={setSelectedActor}
                                 />
                             )}
-                            <div className={`absolute inset-0 z-30 transition-opacity duration-300 ${showControls && !isPaused ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                                <button onClick={handleGoHome} className="absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70" aria-label="Back to Home"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-                                <div className="absolute top-4 right-4 flex items-center gap-4">
+                            <div className={`absolute inset-0 z-30 transition-opacity duration-300 pointer-events-none ${showControls && !isPaused ? 'opacity-100' : 'opacity-0'}`}>
+                                <button onClick={handleGoHome} className="absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 pointer-events-auto" aria-label="Back to Home"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
+                                <div className="absolute top-4 right-4 flex items-center gap-4 pointer-events-auto">
                                     <CastButton videoElement={videoRef.current} />
                                 </div>
                             </div>
