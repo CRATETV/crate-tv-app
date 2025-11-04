@@ -58,10 +58,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         setUser(profile);
                         // FIX: Type 'unknown[]' is not assignable to type 'string[]'.
                         // Data from firestore is now sanitized in the `getUserProfile` service function to guarantee type safety.
-                        setWatchlist(profile.watchlist ?? []);
+                        // FIX: Defensively sanitize array properties from the profile to ensure type safety, resolving TypeScript errors.
+                        setWatchlist(Array.isArray(profile.watchlist) ? profile.watchlist.filter((item): item is string => typeof item === 'string') : []);
                         setHasFestivalAllAccess(profile.hasFestivalAllAccess || false);
-                        setUnlockedFestivalBlockIds(new Set(profile.unlockedBlockIds ?? []));
-                        setPurchasedMovieKeys(new Set(profile.purchasedMovieKeys ?? []));
+                        setUnlockedFestivalBlockIds(new Set(Array.isArray(profile.unlockedBlockIds) ? profile.unlockedBlockIds.filter((item): item is string => typeof item === 'string') : []));
+                        setPurchasedMovieKeys(new Set(Array.isArray(profile.purchasedMovieKeys) ? profile.purchasedMovieKeys.filter((item): item is string => typeof item === 'string') : []));
                     } else {
                         const newProfile = await createUserProfile(firebaseUser.uid, firebaseUser.email!);
                         setUser(newProfile);

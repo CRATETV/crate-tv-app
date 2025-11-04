@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { fetchAndCacheLiveData } from '../services/dataService';
-import { Movie, Category, FestivalConfig, LiveData, FetchResult, FestivalDay } from '../types';
+import { Movie, Category, FestivalConfig, LiveData, FetchResult, FestivalDay, AboutData } from '../types';
 
 interface BroadcastMessage {
   type: string;
@@ -13,6 +13,7 @@ interface FestivalContextType {
     categories: Record<string, Category>;
     festivalConfig: FestivalConfig | null;
     festivalData: FestivalDay[];
+    aboutData: AboutData | null;
     isFestivalLive: boolean;
     dataSource: 'live' | 'fallback' | null;
 }
@@ -33,6 +34,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [categories, setCategories] = useState<Record<string, Category>>({});
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
     const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
+    const [aboutData, setAboutData] = useState<AboutData | null>(null);
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
     const [isFestivalLive, setIsFestivalLive] = useState(false);
 
@@ -42,6 +44,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         setCategories(result.data.categories);
         setFestivalConfig(result.data.festivalConfig);
         setFestivalData(result.data.festivalData);
+        setAboutData(result.data.aboutData);
     }, []);
 
     const loadAppData = useCallback(async (options?: { force?: boolean }) => {
@@ -118,6 +121,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         categories,
         festivalConfig,
         festivalData,
+        aboutData,
         isFestivalLive,
         dataSource,
     };

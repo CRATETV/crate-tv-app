@@ -14,7 +14,6 @@ const SubmitPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const formRef = useRef<HTMLFormElement>(null);
-    const { isFestivalLive } = useFestival();
     
     const handleSearchSubmit = (query: string) => {
         if (query) {
@@ -135,7 +134,6 @@ const SubmitPage: React.FC = () => {
                 />
             )}
              <BottomNavBar 
-                isFestivalLive={isFestivalLive}
                 onSearchClick={() => setIsMobileSearchOpen(true)}
             />
         </div>

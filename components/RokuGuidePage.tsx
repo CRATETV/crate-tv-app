@@ -20,8 +20,7 @@ const Step: React.FC<{ number: string; title: string; children: React.ReactNode 
 );
 
 const RokuGuidePage: React.FC = () => {
-    const { isFestivalLive } = useFestival();
-
+    
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
             <Header 
@@ -62,7 +61,6 @@ const RokuGuidePage: React.FC = () => {
             <CollapsibleFooter />
             <BackToTopButton />
             <BottomNavBar 
-                isFestivalLive={isFestivalLive}
                 onSearchClick={() => {
                     window.history.pushState({}, '', '/');
                     window.dispatchEvent(new Event('pushstate'));

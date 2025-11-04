@@ -13,8 +13,7 @@ const ContactPage: React.FC = () => {
     const [submissionStatus, setSubmissionStatus] = useState<'success' | 'error' | null>(null);
     const [errorMessage, setErrorMessage] = useState('');
     const formRef = useRef<HTMLFormElement>(null);
-    const { isFestivalLive } = useFestival();
-
+    
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -107,7 +106,6 @@ const ContactPage: React.FC = () => {
             <CollapsibleFooter />
             <BackToTopButton />
             <BottomNavBar 
-                isFestivalLive={isFestivalLive}
                 onSearchClick={() => {
                     window.history.pushState({}, '', '/');
                     window.dispatchEvent(new Event('pushstate'));

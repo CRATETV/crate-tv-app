@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';
@@ -11,8 +12,7 @@ const CreatorPortalPage: React.FC = () => {
     const [activeView, setActiveView] = useState<'filmmaker' | 'actor'>('filmmaker');
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-    const { isFestivalLive } = useFestival();
-
+    
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
         e.preventDefault();
         window.history.pushState({}, '', path);
@@ -138,7 +138,6 @@ const CreatorPortalPage: React.FC = () => {
             </main>
             <CollapsibleFooter showActorLinks={true} />
             <BottomNavBar 
-                isFestivalLive={isFestivalLive}
                 onSearchClick={() => setIsMobileSearchOpen(true)}
             />
             {isMobileSearchOpen && (

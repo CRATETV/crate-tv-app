@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category, FestivalConfig } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -673,7 +674,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             )}
             
             <BottomNavBar 
-                isFestivalLive={isFestivalLive}
                 onSearchClick={() => setIsMobileSearchOpen(true)}
             />
 

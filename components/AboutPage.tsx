@@ -11,8 +11,7 @@ import { useFestival } from '../contexts/FestivalContext';
 
 const AboutPage: React.FC = () => {
     const { isLoading, aboutData } = useFestival();
-    const { isFestivalLive } = useFestival();
-
+    
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
         e.preventDefault();
         window.history.pushState({}, '', path);
@@ -128,7 +127,6 @@ const AboutPage: React.FC = () => {
             <CollapsibleFooter />
             <BackToTopButton />
             <BottomNavBar 
-                isFestivalLive={isFestivalLive}
                 onSearchClick={() => {
                     window.history.pushState({}, '', '/');
                     window.dispatchEvent(new Event('pushstate'));
