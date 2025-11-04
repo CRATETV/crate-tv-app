@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { listenToAllAdminData, saveMovie, deleteMovie, saveCategories, saveFestivalConfig, saveFestivalDays, saveAboutData, approveActorSubmission, rejectActorSubmission, deleteMoviePipelineEntry } from './services/firebaseService';
 import { Movie, Category, FestivalDay, FestivalConfig, AboutData, LiveData, ActorSubmission, PayoutRequest, MoviePipelineEntry } from './types';
@@ -286,20 +285,14 @@ const AdminPage: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-2 mb-6 border-b border-gray-700 pb-4">
                     <TabButton tabId="analytics" label="Analytics" requiredRole={['super_admin', 'festival_admin']} />
                     <TabButton tabId="top_films" label="Top Films" requiredRole={['super_admin']} />
-                    {role !== 'festival_admin' && <>
-                        <TabButton tabId="movies" label="Movies" requiredRole={['super_admin', 'collaborator']} />
-                        <TabButton tabId="categories" label="Categories" requiredRole={['super_admin', 'collaborator']} />
-                    </>}
+                    <TabButton tabId="movies" label="Movies" requiredRole={['super_admin', 'collaborator', 'festival_admin']} />
+                    <TabButton tabId="categories" label="Categories" requiredRole={['super_admin', 'collaborator']} />
                     <TabButton tabId="festival" label="Festival" requiredRole={['super_admin', 'festival_admin']} />
-                    {role !== 'festival_admin' && <>
-                        <TabButton tabId="submissions" label="Submissions" requiredRole={['super_admin']} />
-                        <TabButton tabId="payouts" label="Payouts" requiredRole={['super_admin']} />
-                    </>}
+                    <TabButton tabId="submissions" label="Submissions" requiredRole={['super_admin']} />
+                    <TabButton tabId="payouts" label="Payouts" requiredRole={['super_admin']} />
                     <TabButton tabId="pipeline" label="Pipeline" requiredRole={['super_admin', 'collaborator', 'festival_admin']} />
-                    {role !== 'festival_admin' && <>
-                        <TabButton tabId="about" label="About Page" requiredRole={['super_admin']} />
-                        <TabButton tabId="tools" label="Tools" requiredRole={['super_admin']} />
-                    </>}
+                    <TabButton tabId="about" label="About Page" requiredRole={['super_admin']} />
+                    <TabButton tabId="tools" label="Tools" requiredRole={['super_admin']} />
                 </div>
                 
                 {dbError && <div className="p-4 mb-4 text-red-300 bg-red-900/50 border border-red-700 rounded-md">{dbError}</div>}

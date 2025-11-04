@@ -313,7 +313,7 @@ const App: React.FC = () => {
                 <MovieCarousel
                     title=""
                     movies={searchResults}
-                    onSelectMovie={handleOpenDetailsModal} // Changed to open details modal
+                    onSelectMovie={handlePlayMovie} // Play movie directly for a consistent experience
                 />
             ) : (
                 <p className="text-gray-400">No results found.</p>
