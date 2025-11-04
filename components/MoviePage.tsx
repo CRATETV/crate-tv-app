@@ -1,12 +1,10 @@
 
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Movie, Actor, Category, FestivalConfig } from '../types';
-import { fetchAndCacheLiveData } from '../services/dataService';
+import { Movie, Actor, Category } from '../types';
 import ActorBioModal from './ActorBioModal';
 import Header from './Header';
 import LoadingSpinner from './LoadingSpinner';
-// FIX: Corrected casing for BackToTopButton import.
 import BackToTopButton from './BackToTopButton';
 import SearchOverlay from './SearchOverlay';
 import StagingBanner from './StagingBanner';
@@ -20,6 +18,7 @@ import { isMovieReleased } from '../constants';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
 import { useAuth } from '../contexts/AuthContext';
+import { useFestival } from '../contexts/FestivalContext';
 
 
 declare const google: any; // Declare Google IMA SDK global
@@ -69,19 +68,17 @@ const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
 }
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
+  const { user } = useAuth();
+  const { isLoading: isDataLoading, movies: allMovies, categories: allCategories, dataSource } = useFestival();
+  
   const [movie, setMovie] = useState<Movie | null>(null);
-  const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
-  const [allCategories, setAllCategories] = useState<Record<string, Category>>({});
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const [released, setReleased] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const hasTrackedViewRef = useRef(false);
   
-  const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
-  const [isFestivalLive, setIsFestivalLive] = useState(false);
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
 
   // Player state
@@ -95,7 +92,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   
   // Staging and feature toggles
   const [isStaging, setIsStaging] = useState(false);
-  const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
   
   // Payment Modal State
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
@@ -200,9 +196,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
   }, []);
 
-  // Effect to load all necessary data ONCE when the movieKey changes.
+  // Effect to load component state from context/storage
   useEffect(() => {
-    setIsLoading(true);
     const params = new URLSearchParams(window.location.search);
     const env = params.get('env');
     const stagingSession = sessionStorage.getItem('crateTvStaging');
@@ -213,33 +208,21 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     if (storedLikedMovies) {
       setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
     }
-    
-    const loadMovieData = async () => {
-        try {
-            const { data: liveData, source } = await fetchAndCacheLiveData({ force: stagingActive });
-            setDataSource(source);
-            setAllMovies(liveData.movies);
-            setAllCategories(liveData.categories);
-            setFestivalConfig(liveData.festivalConfig);
-            const sourceMovie = liveData.movies[movieKey];
+  }, []);
+  
+  // Effect to set the current movie based on movieKey and context data
+  useEffect(() => {
+      const sourceMovie = allMovies[movieKey];
+      if (sourceMovie) {
+          setMovie(sourceMovie);
+          setReleased(isMovieReleased(sourceMovie));
+      } else if (!isDataLoading) {
+          // If data has loaded and movie is not found, redirect
+          window.history.replaceState({}, '', '/');
+          window.dispatchEvent(new Event('pushstate'));
+      }
+  }, [movieKey, allMovies, isDataLoading]);
 
-            if (sourceMovie) {
-              setReleased(isMovieReleased(sourceMovie));
-              setMovie({ ...sourceMovie });
-            } else {
-              window.history.replaceState({}, '', '/');
-              window.dispatchEvent(new Event('pushstate'));
-            }
-        } catch (error) {
-            console.error("Failed to load movie data:", error);
-            window.history.replaceState({}, '', '/');
-            window.dispatchEvent(new Event('pushstate'));
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    loadMovieData();
-  }, [movieKey]);
 
   useEffect(() => {
     try {
@@ -249,13 +232,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
   }, [likedMovies]);
 
-  // Effect to ONLY control player mode based on URL. This runs ONCE.
+  // FIX: This robustly controls the player mode based on URL changes
   useEffect(() => {
     const handlePlayerMode = () => {
         const params = new URLSearchParams(window.location.search);
         const shouldPlay = params.get('play') === 'true';
 
-        // Read from refs to get the latest state inside the listener.
+        // Use refs to get the latest state inside the listener.
         if (movieRef.current && movieRef.current.fullMovie && releasedRef.current && shouldPlay) {
             setPlayerMode('full');
         } else {
@@ -263,7 +246,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         }
     };
     
-    handlePlayerMode(); // Initial check
+    handlePlayerMode(); // Initial check on mount/movie change
 
     // Listen for browser navigation events to update player state
     window.addEventListener('popstate', handlePlayerMode);
@@ -273,8 +256,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         window.removeEventListener('popstate', handlePlayerMode);
         window.removeEventListener('pushstate', handlePlayerMode);
     };
-  }, []); // Empty dependency array ensures this runs only once.
+  }, [movieKey]); // Re-attach listeners if the movie page itself changes
 
+  // Countdown timer for unreleased movies
   useEffect(() => {
     if (released) return;
 
@@ -288,22 +272,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     return () => clearInterval(interval);
   }, [movie, released]);
 
-  useEffect(() => {
-    const checkStatus = () => {
-        if (!festivalConfig?.startDate || !festivalConfig?.endDate) {
-            setIsFestivalLive(false);
-            return;
-        }
-        const now = new Date();
-        const start = new Date(festivalConfig.startDate);
-        const end = new Date(festivalConfig.endDate);
-        setIsFestivalLive(now >= start && now < end);
-    };
-    checkStatus();
-    const interval = setInterval(checkStatus, 60000);
-    return () => clearInterval(interval);
-  }, [festivalConfig]);
   
+  // Ad initialization effect
   useEffect(() => {
     if (playerMode === 'full' && released) {
         const timer = setTimeout(() => initializeAds(), 100);
@@ -332,14 +302,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
  }, [movie]);
 
- useEffect(() => {
-    const handleEscKey = (event: KeyboardEvent) => {
-        if (event.key === 'Escape' && playerMode === 'full') handleExitPlayer();
-    };
-    document.addEventListener('keydown', handleEscKey);
-    return () => document.removeEventListener('keydown', handleEscKey);
-}, [playerMode]);
-
     // Effect for saving/restoring video progress
     useEffect(() => {
         if (playerMode !== 'full' || !videoRef.current || !movie) return;
@@ -348,7 +310,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         let progressInterval: ReturnType<typeof setInterval>;
 
         const handleTimeUpdate = () => {
-            // Save progress if playing and time is meaningful
             if (video.currentTime > 1 && !video.paused) {
                 localStorage.setItem(`cratetv-progress-${movie.key}`, video.currentTime.toString());
             }
@@ -358,21 +319,16 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             const savedTime = localStorage.getItem(`cratetv-progress-${movie.key}`);
             if (savedTime) {
                 const time = parseFloat(savedTime);
-                // Ensure we don't seek past the end of the video
-                if (time < video.duration) {
-                    video.currentTime = time;
-                }
+                if (time < video.duration) video.currentTime = time;
             }
         };
 
-        // Set up listeners
         video.addEventListener('loadedmetadata', handleLoadedMetadata);
-        progressInterval = setInterval(handleTimeUpdate, 5000); // Save progress every 5 seconds
+        progressInterval = setInterval(handleTimeUpdate, 5000);
 
-        // Cleanup function
         return () => {
             clearInterval(progressInterval);
-            handleTimeUpdate(); // Save one last time on unmount/cleanup
+            handleTimeUpdate();
             video.removeEventListener('loadedmetadata', handleLoadedMetadata);
         };
     }, [playerMode, movie]);
@@ -405,11 +361,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
     
     const handleMovieEnd = () => {
-      // Clear progress when movie finishes
       if (movie) localStorage.removeItem(`cratetv-progress-${movie.key}`);
-      // Navigate to the home screen when the movie finishes.
-      window.history.pushState({}, '', '/');
-      window.dispatchEvent(new Event('pushstate'));
+      handleExitPlayer(); // Go back to poster view instead of home
     };
     
     const handlePlayFromPoster = () => {
@@ -434,36 +387,21 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
     const toggleLikeMovie = useCallback(async (movieKey: string) => {
         const newLikedMovies = new Set(likedMovies);
-        let likesChange = 0;
         const action = newLikedMovies.has(movieKey) ? 'unlike' : 'like';
 
         if (action === 'unlike') {
             newLikedMovies.delete(movieKey);
-            likesChange = -1;
         } else {
             newLikedMovies.add(movieKey);
-            likesChange = 1;
         }
         setLikedMovies(newLikedMovies);
 
-        setMovie(prevMovie => {
-            if (!prevMovie) return prevMovie;
-            return {
-                ...prevMovie,
-                likes: Math.max(0, (prevMovie.likes || 0) + likesChange)
-            };
-        });
-
         try {
-            const response = await fetch('/api/toggle-like', {
+            await fetch('/api/toggle-like', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ movieKey, action }),
             });
-            if (!response.ok) {
-                console.error("Failed to sync like with server.");
-                // Note: Consider reverting the optimistic update on error.
-            }
         } catch (error) {
             console.error("Failed to send like update to server:", error);
         }
@@ -472,23 +410,17 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
     const handlePlayerInteraction = () => {
       setShowControls(true);
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
-      controlsTimeoutRef.current = setTimeout(() => {
-        setShowControls(false);
-      }, 3000);
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+      controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000);
     };
 
     useEffect(() => {
       return () => {
-        if (controlsTimeoutRef.current) {
-          clearTimeout(controlsTimeoutRef.current);
-        }
+        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
       };
     }, []);
 
-    if (isLoading || !movie) {
+    if (isDataLoading || !movie) {
         return <LoadingSpinner />;
     }
     
@@ -567,24 +499,22 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     )}
                     
                     {playerMode === 'full' && (
-                        <>
+                        <div className={`absolute inset-0 z-30 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                             {/* Back to Home Button */}
-                            <div className={`absolute top-4 left-4 z-30 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-                                <button
-                                    onClick={() => {
-                                        window.history.pushState({}, '', '/');
-                                        window.dispatchEvent(new Event('pushstate'));
-                                    }}
-                                    className="bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white"
-                                    aria-label="Back to Home"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                    </svg>
-                                </button>
-                            </div>
+                             <button
+                                onClick={() => {
+                                    window.history.pushState({}, '', '/');
+                                    window.dispatchEvent(new Event('pushstate'));
+                                }}
+                                className="absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white"
+                                aria-label="Back to Home"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                            </button>
                             {/* Right side controls */}
-                            <div className={`absolute top-4 right-4 z-30 flex items-center gap-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+                            <div className="absolute top-4 right-4 flex items-center gap-4">
                                 <CastButton videoElement={videoRef.current} />
                                 <button
                                     onClick={handleExitPlayer}
@@ -596,7 +526,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     </svg>
                                 </button>
                             </div>
-                        </>
+                        </div>
                     )}
                 </div>
 

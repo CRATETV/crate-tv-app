@@ -50,6 +50,14 @@ export const getAuthInstance = (): firebase.auth.Auth | null => {
     return authInstance;
 };
 
+// Export a function to get the DB instance
+export const getDbInstance = (): firebase.firestore.Firestore | null => {
+    if (!db) {
+         console.warn("getDbInstance called before Firebase has been initialized.");
+    }
+    return db;
+};
+
 // --- User Profile Functions ---
 
 export const getUserProfile = async (uid: string): Promise<User | null> => {

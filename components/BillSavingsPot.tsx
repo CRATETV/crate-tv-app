@@ -128,7 +128,11 @@ const BillSavingsPot: React.FC<BillSavingsPotProps> = ({ currentBalance, availab
                                 <li key={t.id} className="flex justify-between items-center text-sm p-2 bg-gray-700/50 rounded-md">
                                     <div>
                                         <span className="font-semibold text-white">{t.reason}</span>
-                                        <span className="text-xs text-gray-500 ml-2">{new Date(t.transactionDate.seconds * 1000).toLocaleDateString()}</span>
+                                        <span className="text-xs text-gray-500 ml-2">
+                                            {t.transactionDate && typeof t.transactionDate.seconds === 'number'
+                                                ? new Date(t.transactionDate.seconds * 1000).toLocaleDateString()
+                                                : 'Processing...'}
+                                        </span>
                                     </div>
                                     <span className={`font-bold ${t.type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
                                         {t.type === 'deposit' ? '+' : '-'}

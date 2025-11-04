@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie, FilmBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -97,7 +96,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                 sourceId: result.token,
                 paymentType: paymentType,
                 amount: paymentDetails.amount,
-                itemId: paymentType === 'block' ? block?.id : (paymentType === 'movie' ? movie?.key : undefined),
+                itemId: paymentType === 'block' ? block?.id : (paymentType === 'movie' || paymentType === 'donation' ? movie?.key : undefined),
                 blockTitle: block?.title,
                 movieTitle: movie?.title,
                 directorName: movie?.director,

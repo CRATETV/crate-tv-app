@@ -77,30 +77,6 @@ export const fetchAndCacheLiveData = async (options?: { force?: boolean }): Prom
         if (!dataResponse.ok) throw new Error(`Failed to fetch live data from ${liveDataUrl}`);
         const data: LiveData = await dataResponse.json();
         
-        // --- TROUBLESHOOTING HOTFIX for "Consumed" movie ---
-        // This ensures the "Consumed" movie is always playable, even if the published live data is stale.
-        if (data.movies.consumed && moviesData.consumed) {
-            data.movies.consumed.fullMovie = moviesData.consumed.fullMovie;
-            // Ensure there is no future release date blocking playback
-            if (data.movies.consumed.releaseDateTime) {
-                 delete data.movies.consumed.releaseDateTime;
-            }
-        }
-        // --- End of hotfix ---
-
-        // Merge classic films into live data
-        const classicCategory = categoriesData.publicDomainIndie;
-        if (classicCategory && classicCategory.movieKeys) {
-            if (!data.categories.publicDomainIndie) {
-                data.categories.publicDomainIndie = classicCategory;
-            }
-            classicCategory.movieKeys.forEach(key => {
-                if (moviesData[key]) {
-                    data.movies[key] = moviesData[key];
-                }
-            });
-        }
-        
         // Merge live likes into the movie data
         if (likesResponse.ok) {
             const liveLikes: Record<string, number> = await likesResponse.json();

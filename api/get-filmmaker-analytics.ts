@@ -3,65 +3,8 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, PayoutRequest } from '../types.js';
 
-// Helper interfaces and functions, self-contained for this endpoint
-interface SquarePayment {
-  id: string;
-  created_at: string;
-  amount_money: {
-    amount: number; // in cents
-    currency: string;
-  };
-  note?: string;
-}
-
 const AD_CPM_IN_CENTS = 500; // $5.00 per 1000 views
 const AD_REVENUE_FILMMAKER_SHARE = 0.50; // 50%
-
-const parseNote = (note: string | undefined): { type: string, title?: string, director?: string } => {
-    if (!note) return { type: 'unknown' };
-    const donationMatch = note.match(/Support for film: "(.*)" by (.*)/);
-    if (donationMatch) {
-        return { type: 'donation', title: donationMatch[1].trim(), director: donationMatch[2].trim() };
-    }
-    return { type: 'other' };
-}
-
-async function fetchSquareData(accessToken: string, locationId: string | undefined): Promise<SquarePayment[]> {
-    const squareUrlBase = process.env.VERCEL_ENV === 'production' ? 'https://connect.squareup.com' : 'https://connect.squareupsandbox.com';
-    let allPayments: SquarePayment[] = [];
-    let cursor: string | undefined = undefined;
-
-    do {
-        const url = new URL(`${squareUrlBase}/v2/payments`);
-        url.searchParams.append('begin_time', '2020-01-01T00:00:00Z');
-        if (locationId) url.searchParams.append('location_id', locationId);
-        if (cursor) url.searchParams.append('cursor', cursor);
-
-        const response = await fetch(url.toString(), {
-            method: 'GET',
-            headers: { 'Square-Version': '2024-05-15', 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        });
-        
-        if (!response.ok) {
-            let errorMsg = 'Failed to fetch payments from Square.';
-            try {
-                const errorData = await response.json();
-                errorMsg = errorData.errors?.[0]?.detail || errorMsg;
-            } catch (e) {
-                errorMsg = `Square API returned a non-JSON error (Status: ${response.status}).`;
-            }
-            throw new Error(errorMsg);
-        }
-
-        const data = await response.json();
-        if (data.payments && Array.isArray(data.payments)) {
-            allPayments.push(...data.payments);
-        }
-        cursor = data.cursor;
-    } while (cursor);
-    return allPayments;
-}
-
 
 export async function POST(request: Request) {
     try {
@@ -96,22 +39,18 @@ export async function POST(request: Request) {
         if (!db) throw new Error("Database connection failed.");
 
         // 3. Fetch all necessary data in parallel
-        const isProduction = process.env.VERCEL_ENV === 'production';
-        const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
-        const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
-
-        const squarePromise = accessToken ? fetchSquareData(accessToken, locationId) : Promise.resolve([]);
+        const donationsPromise = db.collection('donations').where('directorName', '==', directorName).get();
         const moviesPromise = db.collection('movies').get();
         const viewsPromise = db.collection('view_counts').get();
         const payoutsPromise = db.collection('payout_requests').where('directorName', '==', directorName).where('status', '==', 'completed').get();
         
         const [
-            allPayments,
+            donationsSnapshot,
             moviesSnapshot,
             viewsSnapshot,
             payoutsSnapshot
         ] = await Promise.all([
-            squarePromise,
+            donationsPromise,
             moviesPromise,
             viewsPromise,
             payoutsPromise
@@ -142,13 +81,15 @@ export async function POST(request: Request) {
         let totalAdRevenue = 0;
         const filmPerformances: FilmmakerFilmPerformance[] = [];
 
+        // Aggregate donations by movieKey first for efficiency
+        const donationsByFilm: Record<string, number> = {};
+        donationsSnapshot.forEach(doc => {
+            const donation = doc.data();
+            donationsByFilm[donation.movieKey] = (donationsByFilm[donation.movieKey] || 0) + donation.amount;
+        });
+
         filmmakerFilms.forEach(film => {
-            const filmDonations = allPayments
-                .filter(p => {
-                    const details = parseNote(p.note);
-                    return details.type === 'donation' && details.title === film.title;
-                })
-                .reduce((sum, p) => sum + p.amount_money.amount, 0);
+            const filmDonations = donationsByFilm[film.key] || 0;
 
             const filmAdRevenue = ((viewCounts[film.key] || 0) / 1000) * AD_CPM_IN_CENTS;
             const filmmakerAdShare = filmAdRevenue * AD_REVENUE_FILMMAKER_SHARE;

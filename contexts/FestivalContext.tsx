@@ -1,11 +1,8 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useMemo } from 'react';
-import { fetchAndCacheLiveData } from '../services/dataService';
-import { Movie, Category, FestivalConfig, LiveData, FetchResult, FestivalDay, AboutData } from '../types';
-
-interface BroadcastMessage {
-  type: string;
-  payload: LiveData;
-}
+import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
+import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
+import { Movie, Category, FestivalConfig, FestivalDay, AboutData } from '../types';
+import { moviesData, categoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
+import type { Firestore, Unsubscribe } from 'firebase/firestore';
 
 interface FestivalContextType {
     isLoading: boolean;
@@ -30,71 +27,93 @@ export const useFestival = () => {
 
 export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [isLoading, setIsLoading] = useState(true);
-    const [movies, setMovies] = useState<Record<string, Movie>>({});
-    const [categories, setCategories] = useState<Record<string, Category>>({});
-    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
-    const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
-    const [aboutData, setAboutData] = useState<AboutData | null>(null);
-    const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
+    const [movies, setMovies] = useState<Record<string, Movie>>(moviesData);
+    const [categories, setCategories] = useState<Record<string, Category>>(categoriesData);
+    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(initialFestivalConfig);
+    const [festivalData, setFestivalData] = useState<FestivalDay[]>(initialFestivalData);
+    const [aboutData, setAboutData] = useState<AboutData | null>(initialAboutData);
+    const [dataSource, setDataSource] = useState<'fallback' | 'live' | null>('fallback');
     const [isFestivalLive, setIsFestivalLive] = useState(false);
 
-    const applyData = useCallback((result: FetchResult) => {
-        setDataSource(result.source);
-        setMovies(result.data.movies);
-        setCategories(result.data.categories);
-        setFestivalConfig(result.data.festivalConfig);
-        setFestivalData(result.data.festivalData);
-        setAboutData(result.data.aboutData);
-    }, []);
-
-    const loadAppData = useCallback(async (options?: { force?: boolean }) => {
-        try {
-            const result = await fetchAndCacheLiveData({ force: options?.force });
-            applyData(result);
-        } catch (error) {
-            console.error("Failed to load app data", error);
-        }
-    }, [applyData]);
-
     useEffect(() => {
-        setIsLoading(true);
-        const isStagingActive = sessionStorage.getItem('crateTvStaging') === 'true';
-        loadAppData({ force: isStagingActive }).finally(() => setIsLoading(false));
+        const setupRealtimeListeners = async () => {
+            await initializeFirebaseAuth();
+            const db = getDbInstance();
 
-        // Real-time data synchronization
-        const channel = new BroadcastChannel('cratetv-data-channel');
-        const handleMessage = (event: MessageEvent<BroadcastMessage>) => {
-            if (event.data?.type === 'DATA_PUBLISHED' && event.data.payload) {
-                const liveData = event.data.payload;
-                const now = Date.now();
-                console.log(`[Broadcast] Received new data in FestivalContext. Applying immediately.`);
-                applyData({ data: liveData, source: 'live', timestamp: now });
+            if (!db) {
+                console.warn("Could not connect to Firestore. Using fallback data.");
+                setIsLoading(false);
+                return () => {}; // Return an empty unsubscribe function
+            }
 
-                try {
-                    const cachePayload = { data: liveData, source: 'live' };
-                    localStorage.setItem('cratetv-live-data', JSON.stringify(cachePayload));
-                    localStorage.setItem('cratetv-live-data-timestamp', now.toString());
-                } catch(e) {
-                    console.warn("[Broadcast] Could not write new data to localStorage cache.", e);
+            console.log("Setting up real-time Firebase listeners...");
+            setDataSource('live');
+            const unsubscribers: Unsubscribe[] = [];
+            let loadedCount = 0;
+            const totalListeners = 5;
+
+            const checkAllLoaded = () => {
+                loadedCount++;
+                if (loadedCount >= totalListeners) {
+                    setIsLoading(false);
+                    console.log("All real-time listeners initialized.");
                 }
-            }
-        };
-        channel.addEventListener('message', handleMessage);
+            };
 
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                console.log('[Visibility] Tab is now visible. Checking for fresh data in FestivalContext.');
-                loadAppData({ force: true });
-            }
+            // Movies listener
+            const moviesUnsub = db.collection('movies').onSnapshot(snapshot => {
+                const moviesData: Record<string, Movie> = {};
+                snapshot.forEach(doc => { moviesData[doc.id] = doc.data() as Movie; });
+                setMovies(moviesData);
+                checkAllLoaded();
+            }, (error) => { console.error("Movies listener error:", error); checkAllLoaded(); });
+            unsubscribers.push(moviesUnsub);
+
+            // Categories listener
+            const categoriesUnsub = db.collection('categories').onSnapshot(snapshot => {
+                const categoriesData: Record<string, Category> = {};
+                snapshot.forEach(doc => { categoriesData[doc.id] = doc.data() as Category; });
+                setCategories(categoriesData);
+                checkAllLoaded();
+            }, (error) => { console.error("Categories listener error:", error); checkAllLoaded(); });
+            unsubscribers.push(categoriesUnsub);
+
+            // Festival Config listener
+            const festivalConfigUnsub = db.collection('festival').doc('config').onSnapshot(doc => {
+                setFestivalConfig(doc.exists ? doc.data() as FestivalConfig : initialFestivalConfig);
+                checkAllLoaded();
+            }, (error) => { console.error("Festival Config listener error:", error); checkAllLoaded(); });
+            unsubscribers.push(festivalConfigUnsub);
+
+            // Festival Days listener
+            const festivalDaysUnsub = db.collection('festival/schedule/days').orderBy('day').onSnapshot(snapshot => {
+                const daysData: FestivalDay[] = [];
+                snapshot.forEach(doc => daysData.push(doc.data() as FestivalDay));
+                setFestivalData(daysData);
+                checkAllLoaded();
+            }, (error) => { console.error("Festival Days listener error:", error); checkAllLoaded(); });
+            unsubscribers.push(festivalDaysUnsub);
+
+            // About Data listener
+            const aboutDataUnsub = db.collection('content').doc('about').onSnapshot(doc => {
+                setAboutData(doc.exists ? doc.data() as AboutData : initialAboutData);
+                checkAllLoaded();
+            }, (error) => { console.error("About Data listener error:", error); checkAllLoaded(); });
+            unsubscribers.push(aboutDataUnsub);
+
+            // Return a function that unsubscribes from all listeners
+            return () => {
+                console.log("Tearing down real-time listeners.");
+                unsubscribers.forEach(unsub => unsub());
+            };
         };
-        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        const unsubscribePromise = setupRealtimeListeners();
 
         return () => {
-            channel.removeEventListener('message', handleMessage);
-            channel.close();
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            unsubscribePromise.then(unsub => unsub && unsub());
         };
-    }, [loadAppData, applyData]);
+    }, []);
 
     useEffect(() => {
         const checkStatus = () => {

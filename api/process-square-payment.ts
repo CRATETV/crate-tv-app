@@ -1,6 +1,8 @@
 // This is a Vercel Serverless Function to process payments with Square.
 import { randomUUID } from 'crypto';
 import { Resend } from 'resend';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -116,6 +118,33 @@ export async function POST(request: Request) {
         throw new Error(errorMessage);
     }
     
+    const paymentResult = data.payment;
+
+    // If payment succeeded, log donation to Firestore for faster analytics
+    if (paymentResult && paymentType === 'donation' && itemId) {
+        const initError = getInitializationError();
+        if (!initError) {
+            const db = getAdminDb();
+            if (db) {
+                try {
+                    await db.collection('donations').add({
+                        movieKey: itemId,
+                        movieTitle: movieTitle,
+                        directorName: directorName,
+                        amount: amountInCents,
+                        currency: 'USD',
+                        squarePaymentId: paymentResult.id,
+                        createdAt: FieldValue.serverTimestamp(),
+                    });
+                    console.log('[Payment API] Logged donation to Firestore.');
+                } catch (dbError) {
+                    console.error("[Payment API] Failed to log donation to Firestore:", dbError);
+                    // Non-critical error, the payment itself succeeded.
+                }
+            }
+        }
+    }
+
     // If it was a successful donation and an email was provided, send a thank you email.
     if (response.ok && paymentType === 'donation' && email) {
         try {
