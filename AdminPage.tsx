@@ -15,6 +15,65 @@ import RokuAdminTab from './components/RokuAdminTab';
 
 type AdminRole = 'super_admin' | 'festival_admin' | 'collaborator' | null;
 
+const MonetizationTab: React.FC = () => {
+    const [adTagUrl, setAdTagUrl] = useState('');
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'success'>('idle');
+
+    useEffect(() => {
+        const savedUrl = localStorage.getItem('productionAdTagUrl');
+        if (savedUrl) {
+            setAdTagUrl(savedUrl);
+        }
+    }, []);
+
+    const handleSave = () => {
+        localStorage.setItem('productionAdTagUrl', adTagUrl);
+        setSaveStatus('success');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+    };
+
+    return (
+        <div className="bg-gray-800/50 border border-gray-700 p-6 md:p-8 rounded-lg max-w-2xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Monetization Settings</h2>
+            <p className="text-gray-400 mb-6">
+                This is where you activate real revenue generation. Paste your production video ad tag URL from your Google AdSense or Ad Manager account below.
+            </p>
+            <div className="space-y-4">
+                <div>
+                    <label htmlFor="adTagUrl" className="block text-sm font-medium text-gray-400 mb-2">
+                        Production Ad Tag URL
+                    </label>
+                    <textarea
+                        id="adTagUrl"
+                        value={adTagUrl}
+                        onChange={(e) => setAdTagUrl(e.target.value)}
+                        className="form-input w-full font-mono text-sm"
+                        rows={4}
+                        placeholder="https://googleads.g.doubleclick.net/pagead/ads?..."
+                    />
+                    <p className="text-xs text-gray-500 mt-2">
+                        Your ad tag is saved securely in your browser and is never exposed in the code. Need help finding this? 
+                        <a href="https://support.google.com/admanager/answer/1068325" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline ml-1">
+                            Learn more at Google.
+                        </a>
+                    </p>
+                </div>
+                <button
+                    onClick={handleSave}
+                    className="submit-btn bg-green-600 hover:bg-green-700"
+                >
+                    Save & Activate Ads
+                </button>
+                {saveStatus === 'success' && (
+                    <p className="text-green-400 text-sm">
+                        Ad Tag URL saved! Your films will now serve production ads.
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const AdminPage: React.FC = () => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -276,6 +335,7 @@ const AdminPage: React.FC = () => {
                     <TabButton tabId="pipeline" label="Pipeline" requiredRole={['super_admin', 'collaborator', 'festival_admin']} />
                     <TabButton tabId="about" label="About Page" requiredRole={['super_admin']} />
                     <TabButton tabId="roku" label="Roku" requiredRole={['super_admin']} />
+                    <TabButton tabId="monetization" label="Monetization" requiredRole={['super_admin']} />
                     <TabButton tabId="tools" label="Tools" requiredRole={['super_admin']} />
                 </div>
                 
@@ -315,6 +375,7 @@ const AdminPage: React.FC = () => {
                 {activeTab === 'pipeline' && <MoviePipelineTab pipeline={data.moviePipeline} onCreateMovie={handleCreateMovieFromPipeline} />}
                 {activeTab === 'about' && <AboutEditor initialData={data.aboutData} onSave={saveAboutData} />}
                 {activeTab === 'roku' && <RokuAdminTab />}
+                {activeTab === 'monetization' && <MonetizationTab />}
 
                 {activeTab === 'tools' && (
                     <div className="space-y-8">

@@ -17,7 +17,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
 
   const widePosterKeys = new Set([
     'theneighbours', 'results', 'almasvows', 'newmovie1756485973547', // Burst
-    'drive', 'fatherdaughterdance', 'newmovie1756487390550', // I Still Love Her
+    'fatherdaughterdance', 'newmovie1756487390550', // I Still Love Her
     'itsinyou', 'newmovie1756486933392', // Power Trip
     'newmovie1756487626529', // Strange Encounters
     'tedandnatalie', 'unhinged', 'wrapitup'
@@ -26,12 +26,9 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
   const isWidePoster = widePosterKeys.has(movie.key);
   const imageFitClass = isWidePoster ? 'object-contain' : 'object-cover';
 
-  // FIX: Special handling for the Crossroads poster to hide the white border.
-  const isCrossroads = movie.key === 'crossroads';
-
   if (rank) {
     const rankColors = [
-      '#FFD700', '#C0C0C0', '#CD7F32', '#be123c', '#3b82f6', 
+      '#FFD700', '#22d3ee', '#CD7F32', '#be123c', '#3b82f6', 
       '#16a34a', '#9333ea', '#f59e0b', '#db2777', '#14b8a6'
     ];
     const color = rankColors[rank - 1] || '#64748B';
@@ -76,7 +73,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
   // Standard movie card for all other carousels with new hover effect
   return (
     <div
-      className={`group relative cursor-pointer rounded-md overflow-hidden aspect-[2/3] h-full ${isCrossroads ? 'bg-purple-800' : 'bg-gray-900'}`}
+      className="group relative cursor-pointer rounded-md overflow-hidden aspect-[2/3] h-full bg-gray-900"
       onClick={() => onSelectMovie(movie)}
       tabIndex={0}
       onKeyPress={(e) => { if (e.key === 'Enter') onSelectMovie(movie)}}
@@ -86,7 +83,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
       <img
         src={movie.poster}
         alt={movie.title}
-        className={`w-full h-full ${imageFitClass} transition-transform duration-300 group-hover:scale-105 ${isCrossroads ? 'scale-[0.95] group-hover:scale-100' : ''}`}
+        className={`w-full h-full ${imageFitClass} transition-transform duration-300 group-hover:scale-105`}
         loading="lazy"
         onContextMenu={(e) => e.preventDefault()}
       />

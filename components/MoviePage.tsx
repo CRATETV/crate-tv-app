@@ -247,6 +247,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             body: JSON.stringify({ movieKey, action: newLiked.has(movieKey) ? 'like' : 'unlike' }),
         });
     };
+    
+    // Get the most up-to-date movie object from the context for overlays
+    const movieForOverlay = allMovies[movieKey];
 
     if (isDataLoading || !movie) {
         return <LoadingSpinner />;
@@ -276,9 +279,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 onEnded={handleMovieEnd}
                                 autoPlay
                             />
-                            {isPaused && (
+                            {isPaused && movieForOverlay && (
                                 <PauseOverlay
-                                    movie={movie}
+                                    movie={movieForOverlay}
                                     onExitPlayer={handleShowDetails}
                                     onSelectActor={setSelectedActor}
                                 />

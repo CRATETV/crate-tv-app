@@ -100,16 +100,25 @@ export async function POST(request: Request) {
     }
 
     // --- Step 3: Set custom claim and Firestore profile ---
+    // FIX: Preserve existing filmmaker role when adding actor role
+    const existingClaims = userRecord.customClaims || {};
     await auth.setCustomUserClaims(userRecord.uid, {
-        ...(userRecord.customClaims || {}),
+        ...existingClaims,
         isActor: true
     });
+    
     const userProfileRef = db.collection('users').doc(userRecord.uid);
-    await userProfileRef.set({ name: bestActorData.name, email, isActor: true }, { merge: true });
+    // FIX: Ensure both roles are correctly set in the Firestore document
+    await userProfileRef.set({ 
+        name: bestActorData.name, 
+        email, 
+        isActor: true,
+        isFilmmaker: existingClaims.isFilmmaker === true 
+    }, { merge: true });
 
     // --- Step 4: Generate password creation link ---
     const actionCodeSettings = {
-        url: new URL('/actor-portal', request.url).href,
+        url: new URL('/portal', request.url).href, // Correctly redirect to the unified portal
         handleCodeInApp: false,
     };
     const link = await auth.generatePasswordResetLink(email, actionCodeSettings);

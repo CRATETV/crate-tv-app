@@ -59,22 +59,31 @@ export async function POST(request: Request) {
     }
 
     // --- Step 3: Set custom claim and Firestore profile ---
+    // FIX: Preserve existing actor role when adding filmmaker role
+    const existingClaims = userRecord.customClaims || {};
     await auth.setCustomUserClaims(userRecord.uid, {
-        ...(userRecord.customClaims || {}),
+        ...existingClaims,
         isFilmmaker: true
     });
+
     const userProfileRef = db.collection('users').doc(userRecord.uid);
-    await userProfileRef.set({ name, email, isFilmmaker: true }, { merge: true });
+    // FIX: Ensure both roles are correctly set in the Firestore document
+    await userProfileRef.set({ 
+        name, 
+        email, 
+        isFilmmaker: true,
+        isActor: existingClaims.isActor === true
+    }, { merge: true });
 
     // --- Step 4: Generate password creation link ---
     const actionCodeSettings = {
-        url: new URL('/filmmaker-dashboard', request.url).href, // Redirect to portal after password set
+        url: new URL('/portal', request.url).href, // Redirect to unified portal after password set
         handleCodeInApp: false,
     };
     const link = await auth.generatePasswordResetLink(email, actionCodeSettings);
 
     // --- Step 5: Send Email with Resend ---
-    const portalUrl = new URL('/filmmaker-dashboard', request.url).href;
+    const portalUrl = new URL('/portal', request.url).href;
 
     const emailHtml = `
       <div>
