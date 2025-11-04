@@ -6,6 +6,8 @@ import LoadingSpinner from './LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import PayoutExplanationModal from './PayoutExplanationModal';
+import AwardCard from './AwardCard';
+import FilmmakerForum from './FilmmakerForum';
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
 
@@ -80,6 +82,7 @@ const PayoutModal: React.FC<{ balance: number; directorName: string; onClose: ()
 
 const FilmmakerPortalPage: React.FC = () => {
     const { user } = useAuth();
+    const [activeTab, setActiveTab] = useState('analytics');
     const [analytics, setAnalytics] = useState<FilmmakerAnalytics | null>(null);
     const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
     const [isLoading, setIsLoading] = useState(true);
@@ -91,8 +94,6 @@ const FilmmakerPortalPage: React.FC = () => {
     useEffect(() => {
         const fetchAllData = async () => {
             if (!user || !user.name) {
-                // If user is not ready, don't fetch. This might happen on initial load.
-                // The component will re-render when the user object is available.
                 return;
             };
 
@@ -124,46 +125,22 @@ const FilmmakerPortalPage: React.FC = () => {
         fetchAllData();
     }, [user]);
 
-    const topTenMovies = useMemo(() => {
-        if (!allMovies) return [];
-        return Object.values(allMovies)
-            .filter((movie: Movie): movie is Movie => !!movie && typeof movie.likes === 'number')
-            .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
-            .slice(0, 10);
-    }, [allMovies]);
-    
-    const handleDownloadTopTen = () => {
-        const csvContent = "data:text/csv;charset=utf-8," 
-            + "Rank,Title,Director\n" 
-            + topTenMovies.map((m, i) => `${i + 1},"${m.title.replace(/"/g, '""')}","${m.director.replace(/"/g, '""')}"`).join("\n");
-        
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "crate-tv-top-10.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
+    const filmsWithAwards = useMemo(() => {
+        if (!analytics || !allMovies) return [];
+        return analytics.films
+            .map(filmPerformance => allMovies[filmPerformance.key])
+            .filter((movie): movie is Movie => !!(movie && movie.awards && movie.awards.length > 0));
+    }, [analytics, allMovies]);
 
-    const handleShareTopTen = async () => {
-        const shareData = {
-            title: 'Top 10 on Crate TV',
-            text: 'Check out the top 10 most popular films on Crate TV today!',
-            url: `${window.location.origin}/top-ten`
-        };
-        try {
-            if (navigator.share) {
-                await navigator.share(shareData);
-            } else {
-                // Fallback for desktop browsers
-                await navigator.clipboard.writeText(shareData.url);
-                alert('Link to Top 10 page copied to clipboard!');
-            }
-        } catch (err) {
-            console.error("Couldn't share top ten list:", err);
-        }
-    };
+    const TabButton: React.FC<{ tabName: string; label: string }> = ({ tabName, label }) => (
+        <button
+            onClick={() => setActiveTab(tabName)}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tabName ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+        >
+            {label}
+        </button>
+    );
+
 
     if (isLoading) {
         return <LoadingSpinner />;
@@ -180,7 +157,6 @@ const FilmmakerPortalPage: React.FC = () => {
         );
     }
     
-    // Add a robust check for user and analytics before rendering the main content
     if (!user || !analytics) {
         return <LoadingSpinner />;
     }
@@ -189,20 +165,26 @@ const FilmmakerPortalPage: React.FC = () => {
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={false} />
             <main className="flex-grow pt-28 px-4 md:px-12">
-                <div className="max-w-7xl mx-auto">
+                <div className="max-w-4xl mx-auto">
                     <h1 className="text-3xl font-bold text-white mb-2">Dashboard for {user.name}</h1>
-                    <p className="text-gray-400 mb-8">View performance analytics for your films on Crate TV.</p>
+                    <p className="text-gray-400 mb-8">Your central hub for analytics, awards, and community.</p>
                     
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Main Content */}
-                        <div className="lg:col-span-2 space-y-8">
+                    <div className="flex flex-wrap items-center gap-2 mb-6 border-b border-gray-700 pb-4">
+                        <TabButton tabName="analytics" label="Analytics" />
+                        <TabButton tabName="awards" label="Awards" />
+                        <TabButton tabName="forum" label="Community Forum" />
+                        <TabButton tabName="events" label="Live Events" />
+                    </div>
+
+                    {activeTab === 'analytics' && (
+                        <div className="space-y-8">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <StatCard title="Available Balance" value={formatCurrency(analytics.balance)} />
                                 <StatCard title="Total Paid Out" value={formatCurrency(analytics.totalPaidOut)} />
                                 <StatCard title="Total Ad Revenue" value={formatCurrency(analytics.totalAdRevenue)} />
                                 <StatCard title="Total Donations" value={formatCurrency(analytics.totalDonations)} />
                             </div>
-                            <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
+                             <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
                                 <div className="flex items-center gap-2 mb-2">
                                     <h2 className="text-xl font-bold text-white">Payouts</h2>
                                     <button 
@@ -210,9 +192,7 @@ const FilmmakerPortalPage: React.FC = () => {
                                         className="text-gray-400 hover:text-white transition-colors"
                                         aria-label="How payouts work"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.79 4 4s-1.79 4-4 4c-1.742 0-3.223-.835-3.772-2M12 18.5v.01" />
-                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.79 4 4s-1.79 4-4 4c-1.742 0-3.223-.835-3.772-2M12 18.5v.01" /></svg>
                                     </button>
                                 </div>
                                 {payoutStatus === 'requested' ? (
@@ -226,19 +206,9 @@ const FilmmakerPortalPage: React.FC = () => {
                             <div>
                                 <h2 className="text-2xl font-bold text-white mb-4">Your Film Performance</h2>
                                 <div className="space-y-4">
-                                    {analytics.films && analytics.films.map(film => (
+                                    {analytics.films.map(film => (
                                         <div key={film.key} className="bg-gray-800/50 border border-gray-700 p-4 rounded-lg">
-                                            <h3 className="font-bold text-lg text-white flex items-center gap-2">
-                                                {film.title}
-                                                {allMovies[film.key]?.hasCopyrightMusic && (
-                                                    <span title="This film contains copyrighted music and is not eligible for donations." className="text-xs font-normal bg-yellow-800 text-yellow-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path d="M18 3a1 1 0 00-1.196-.98l-15 2A1 1 0 001 5v11.5a1.5 1.5 0 002.047 1.424L7.5 15.451v-3.924L16.5 13.95V9.451L18 8.783V3z" />
-                                                        </svg>
-                                                        Copyright Music
-                                                    </span>
-                                                )}
-                                            </h3>
+                                            <h3 className="font-bold text-lg text-white">{film.title}</h3>
                                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2 text-center">
                                                 <div><p className="text-gray-400 text-sm">Views</p><p className="font-bold text-xl">{film.views.toLocaleString()}</p></div>
                                                 <div><p className="text-gray-400 text-sm">Likes</p><p className="font-bold text-xl">{film.likes.toLocaleString()}</p></div>
@@ -250,36 +220,38 @@ const FilmmakerPortalPage: React.FC = () => {
                                 </div>
                             </div>
                         </div>
+                    )}
 
-                        {/* Sidebar */}
-                        <div className="lg:col-span-1 space-y-8">
-                            <div>
-                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-2xl font-bold text-white">Top 10 on Crate TV</h2>
-                                    <div className="flex gap-2">
-                                        <button onClick={handleShareTopTen} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md text-xs">
-                                            Share
-                                        </button>
-                                        <button onClick={handleDownloadTopTen} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-md text-xs">
-                                            Download
-                                        </button>
-                                    </div>
+                    {activeTab === 'awards' && (
+                        <div>
+                            <h2 className="text-2xl font-bold text-white mb-4">Your Awards</h2>
+                            {filmsWithAwards.length > 0 ? (
+                                <div className="space-y-6">
+                                    {filmsWithAwards.map(movie =>
+                                        movie.awards!.map(award => (
+                                            <AwardCard key={`${movie.key}-${award}`} movie={movie} award={award} />
+                                        ))
+                                    )}
                                 </div>
-                                <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 space-y-3">
-                                    {topTenMovies.length > 0 ? topTenMovies.map((movie, index) => (
-                                        <div key={movie.key} className="flex items-center gap-4 py-2 border-b border-gray-700 last:border-b-0">
-                                            <span className="font-black text-3xl text-gray-600 w-8 text-center flex-shrink-0">{index + 1}</span>
-                                            <img src={movie.poster} alt="" className="w-10 h-14 object-cover rounded-md flex-shrink-0" />
-                                            <div className="min-w-0">
-                                                <p className="font-semibold text-white text-sm truncate">{movie.title}</p>
-                                                <p className="text-xs text-gray-400 truncate">{movie.director}</p>
-                                            </div>
-                                        </div>
-                                    )) : <p className="text-gray-500 text-center py-4">Top 10 list is currently unavailable.</p>}
+                            ) : (
+                                <div className="text-center py-16 text-gray-500">
+                                    <p>No awards to display yet. Keep creating!</p>
                                 </div>
-                            </div>
+                            )}
                         </div>
-                    </div>
+                    )}
+
+                    {activeTab === 'forum' && (
+                        <FilmmakerForum user={user} />
+                    )}
+
+                    {activeTab === 'events' && (
+                        <div className="bg-gray-800/50 border border-gray-700 p-8 rounded-lg text-center">
+                             <h2 className="text-2xl font-bold text-white mb-4">Director's Cut Live Events</h2>
+                             <p className="text-gray-400 mb-6">Coming soon! An exclusive space for live film premieres followed by an interactive Q&A with the director. Get ready to connect with your audience like never before.</p>
+                             <div className="text-purple-400 font-bold">Stay Tuned for Announcements</div>
+                        </div>
+                    )}
                 </div>
             </main>
             <Footer showPortalNotice={true} showActorLinks={true} />

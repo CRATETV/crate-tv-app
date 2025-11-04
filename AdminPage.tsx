@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { listenToAllAdminData, saveMovie, deleteMovie, saveCategories, saveFestivalConfig, saveFestivalDays, saveAboutData, deleteMoviePipelineEntry } from './services/firebaseService';
+// FIX: Corrected import path for types to be relative.
 import { Movie, Category, FestivalDay, FestivalConfig, AboutData, LiveData, PayoutRequest, MoviePipelineEntry } from './types';
 import MovieEditor from './components/MovieEditor';
 import CategoryEditor from './components/CategoryEditor';

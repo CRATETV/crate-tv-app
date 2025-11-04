@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData } from './services/dataService';
-// FIX: Corrected type imports to use the new types.ts file
+// FIX: Corrected import path for types to be relative.
 import { Movie, Actor, Category, FestivalConfig, LiveData, FetchResult } from './types';
 import Header from './components/Header';
 // FIX: Corrected import path

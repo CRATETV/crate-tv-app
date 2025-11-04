@@ -1,4 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
+// FIX: Corrected import path for types to be relative.
 import { Movie, Actor } from '../types';
 import S3Uploader from './S3Uploader';
 
@@ -107,6 +109,10 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
           <label htmlFor="rating" className="block text-sm font-medium text-gray-300">Rating (out of 10)</label>
           <input type="number" name="rating" value={formData.rating || ''} onChange={handleChange} min="0" max="10" step="0.1" className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
         </div>
+        <div>
+          <label htmlFor="durationInMinutes" className="block text-sm font-medium text-gray-300">Duration (in minutes)</label>
+          <input type="number" name="durationInMinutes" value={formData.durationInMinutes || ''} onChange={handleChange} min="0" step="1" className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-red-500 focus:border-red-500" />
+        </div>
         <div className="md:col-span-2 space-y-3 pt-2">
             <label className="flex items-center space-x-3 cursor-pointer">
                 <input
@@ -127,6 +133,16 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ movie, onSave, onCancel, onDe
                     className="h-5 w-5 rounded bg-gray-600 border-gray-500 text-yellow-500 focus:ring-yellow-500"
                 />
                 <span className="text-gray-300 font-medium">Contains Copyrighted Music (Disables Donations)</span>
+            </label>
+            <label className="flex items-center space-x-3 cursor-pointer">
+                <input
+                    type="checkbox"
+                    name="isWatchPartyEligible"
+                    checked={!!formData.isWatchPartyEligible}
+                    onChange={handleChange}
+                    className="h-5 w-5 rounded bg-gray-600 border-gray-500 text-blue-500 focus:ring-blue-500"
+                />
+                <span className="text-gray-300 font-medium">Eligible for Watch Party</span>
             </label>
         </div>
       </div>

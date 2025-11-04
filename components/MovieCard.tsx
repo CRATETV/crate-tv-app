@@ -1,6 +1,8 @@
 import React from 'react';
+// FIX: Corrected import path for types to be relative.
 import { Movie } from '../types';
 import { isMovieReleased } from '../constants';
+import Laurel from './Laurel';
 
 interface MovieCardProps {
   movie: Movie;
@@ -57,6 +59,11 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
             loading="lazy"
             onContextMenu={(e) => e.preventDefault()}
           />
+           {movie.awards && movie.awards.length > 0 && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <Laurel awardText={movie.awards[0]} />
+              </div>
+            )}
         </div>
       </div>
     );
@@ -88,6 +95,11 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
         </div>
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      {movie.awards && movie.awards.length > 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <Laurel awardText={movie.awards[0]} size="small" />
+        </div>
+      )}
     </div>
   );
 };
