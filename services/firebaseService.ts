@@ -1,9 +1,8 @@
-
 // FIX: The Firebase V9 modular imports are failing, indicating an older SDK version (likely v8) is installed.
 // The code has been refactored to use the v8 namespaced/compat syntax for all Firebase App, Auth, and Firestore interactions.
-import firebase from 'firebase/app';
-import 'firebase/auth';
-import 'firebase/firestore';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import 'firebase/compat/firestore';
 
 
 // FIX: Corrected type imports to use the new types.ts file
@@ -96,7 +95,7 @@ const migrateInitialData = async (firestoreDb: firebase.firestore.Firestore) => 
 
     // 1. Check for missing MOVIES
     const moviesSnapshot = await firestoreDb.collection('movies').get();
-    const existingMovieKeys = new Set(moviesSnapshot.docs.map(doc => doc.id));
+    const existingMovieKeys = new Set(moviesSnapshot.docs.map((doc: firebase.firestore.QueryDocumentSnapshot) => doc.id));
     for (const [key, movie] of Object.entries(initialMovies)) {
         if (!existingMovieKeys.has(key)) {
             console.log(`- Adding missing movie: ${key}`);
@@ -107,7 +106,7 @@ const migrateInitialData = async (firestoreDb: firebase.firestore.Firestore) => 
 
     // 2. Check for missing CATEGORIES
     const categoriesSnapshot = await firestoreDb.collection('categories').get();
-    const existingCategoryKeys = new Set(categoriesSnapshot.docs.map(doc => doc.id));
+    const existingCategoryKeys = new Set(categoriesSnapshot.docs.map((doc: firebase.firestore.QueryDocumentSnapshot) => doc.id));
     for (const [key, category] of Object.entries(initialCategories)) {
         if (!existingCategoryKeys.has(key)) {
             console.log(`- Adding missing category: ${key}`);
@@ -207,53 +206,53 @@ export const listenToAllAdminData = (
             
             const unsubs: (() => void)[] = [];
 
-            unsubs.push(firestoreDb.collection('movies').onSnapshot((snapshot) => {
+            unsubs.push(firestoreDb.collection('movies').onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
                 const movies: Record<string, Movie> = {};
-                snapshot.forEach(doc => { movies[doc.id] = doc.data() as Movie; });
+                snapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => { movies[doc.id] = doc.data() as Movie; });
                 adminData.movies = movies;
                 checkInitialLoadAndCallback();
-            }, (err) => onError(err, 'movies')));
+            }, (err: Error) => onError(err, 'movies')));
 
-            unsubs.push(firestoreDb.collection('categories').onSnapshot((snapshot) => {
+            unsubs.push(firestoreDb.collection('categories').onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
                 const categories: Record<string, Category> = {};
-                snapshot.forEach(doc => { categories[doc.id] = doc.data() as Category; });
+                snapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => { categories[doc.id] = doc.data() as Category; });
                 adminData.categories = categories;
                 checkInitialLoadAndCallback();
-            }, (err) => onError(err, 'categories')));
+            }, (err: Error) => onError(err, 'categories')));
 
-            unsubs.push(firestoreDb.collection('festival').doc('config').onSnapshot((doc) => {
+            unsubs.push(firestoreDb.collection('festival').doc('config').onSnapshot((doc: firebase.firestore.DocumentSnapshot) => {
                 adminData.festivalConfig = doc.exists ? (doc.data() as FestivalConfig) : initialFestivalConfig;
                 checkInitialLoadAndCallback();
-            }, (err) => onError(err, 'festival/config')));
+            }, (err: Error) => onError(err, 'festival/config')));
             
             const daysQuery = firestoreDb.collection('festival/schedule/days').orderBy('day');
-            unsubs.push(daysQuery.onSnapshot((snapshot) => {
+            unsubs.push(daysQuery.onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
                 const days: FestivalDay[] = [];
-                snapshot.forEach(doc => days.push(doc.data() as FestivalDay));
+                snapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => days.push(doc.data() as FestivalDay));
                 adminData.festivalData = days;
                 checkInitialLoadAndCallback();
-            }, (err) => onError(err, 'festival/schedule/days')));
+            }, (err: Error) => onError(err, 'festival/schedule/days')));
 
-            unsubs.push(firestoreDb.collection('content').doc('about').onSnapshot((doc) => {
+            unsubs.push(firestoreDb.collection('content').doc('about').onSnapshot((doc: firebase.firestore.DocumentSnapshot) => {
                 adminData.aboutData = doc.exists ? (doc.data() as AboutData) : initialAboutData;
                 checkInitialLoadAndCallback();
-            }, (err) => onError(err, 'content/about')));
+            }, (err: Error) => onError(err, 'content/about')));
 
             const submissionsQuery = firestoreDb.collection('actorSubmissions').where('status', '==', 'pending').orderBy('submissionDate', 'desc');
-            unsubs.push(submissionsQuery.onSnapshot((snapshot) => {
+            unsubs.push(submissionsQuery.onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
                 const submissions: ActorSubmission[] = [];
-                snapshot.forEach(doc => { submissions.push({ id: doc.id, ...doc.data() } as ActorSubmission); });
+                snapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => { submissions.push({ id: doc.id, ...doc.data() } as ActorSubmission); });
                 adminData.actorSubmissions = submissions;
                 checkInitialLoadAndCallback();
-            }, (err) => onError(err, 'actorSubmissions')));
+            }, (err: Error) => onError(err, 'actorSubmissions')));
 
             const pipelineQuery = firestoreDb.collection('movie_pipeline').where('status', '==', 'pending').orderBy('submittedAt', 'desc');
-            unsubs.push(pipelineQuery.onSnapshot((snapshot) => {
+            unsubs.push(pipelineQuery.onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
                 const pipeline: MoviePipelineEntry[] = [];
-                snapshot.forEach(doc => { pipeline.push({ id: doc.id, ...doc.data() } as MoviePipelineEntry); });
+                snapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => { pipeline.push({ id: doc.id, ...doc.data() } as MoviePipelineEntry); });
                 adminData.moviePipeline = pipeline;
                 checkInitialLoadAndCallback();
-            }, (err) => onError(err, 'movie_pipeline')));
+            }, (err: Error) => onError(err, 'movie_pipeline')));
 
             resolve(() => {
                 console.log("Unsubscribing from all Firebase listeners.");
@@ -295,7 +294,7 @@ export const deleteMovie = async (movieKey: string) => {
     
     const categoriesSnapshot = await firestoreDb.collection('categories').get();
     const batch = firestoreDb.batch();
-    categoriesSnapshot.forEach(categoryDoc => {
+    categoriesSnapshot.forEach((categoryDoc: firebase.firestore.QueryDocumentSnapshot) => {
         const categoryData = categoryDoc.data() as Category;
         if (categoryData.movieKeys.includes(movieKey)) {
             batch.update(categoryDoc.ref, {
@@ -320,7 +319,7 @@ export const saveCategories = async (categories: Record<string, Category>) => {
     });
     
     const existingCategoriesSnapshot = await firestoreDb.collection('categories').get();
-    existingCategoriesSnapshot.forEach(doc => {
+    existingCategoriesSnapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
         if (!categories[doc.id]) {
             batch.delete(doc.ref);
         }
@@ -351,7 +350,7 @@ export const saveFestivalDays = async (days: FestivalDay[]) => {
     const collectionRef = firestoreDb.collection('festival/schedule/days');
     
     const existingDaysSnapshot = await collectionRef.get();
-    existingDaysSnapshot.forEach(doc => batch.delete(doc.ref));
+    existingDaysSnapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => batch.delete(doc.ref));
 
     days.forEach(day => {
         batch.set(collectionRef.doc(`day-${day.day}`), day);

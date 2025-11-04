@@ -1,8 +1,8 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 // FIX: The Firebase V9 modular imports are failing, indicating an older SDK version (likely v8) is installed.
 // The code has been refactored to use the v8 namespaced syntax (e.g., auth.onAuthStateChanged) for compatibility.
-import firebase from 'firebase/app';
-import 'firebase/auth';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
 // FIX: Corrected type imports to use the new types.ts file
 import { User } from '../types';
 import { 
@@ -58,7 +58,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         initializeFirebaseAuth().then(auth => {
             if (auth) {
-                const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+                const unsubscribe = auth.onAuthStateChanged(async (firebaseUser: firebase.User | null) => {
                     if (firebaseUser) {
                         setClaimsLoaded(false); // Reset on user change
                         

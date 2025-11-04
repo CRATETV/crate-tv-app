@@ -1,8 +1,8 @@
 // FIX: The Firebase V9 modular imports are failing, indicating an older SDK version (likely v8) is installed.
 // The code has been refactored to use the v8 namespaced/compat syntax for Firestore interactions.
 import { getDb } from './_lib/firebase.js';
-import firebase from 'firebase/app';
-import 'firebase/firestore';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
 
 export async function POST(request: Request) {
   try {

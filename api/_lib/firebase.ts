@@ -1,7 +1,7 @@
 // FIX: The Firebase V9 modular imports are failing, indicating an older SDK version (likely v8) is installed.
 // The code has been refactored to use the v8 namespaced/compat syntax for Firebase App and Firestore initialization.
-import firebase from 'firebase/app';
-import 'firebase/firestore';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
 
 let db: firebase.firestore.Firestore | null = null;
 let firebaseInitializationPromise: Promise<firebase.firestore.Firestore | null> | null = null;
