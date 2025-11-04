@@ -47,7 +47,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
 
   // Player state
-  const [isPaused, setIsPaused] = useState(true); // Start as paused until autoPlay kicks in
+  const [isPaused, setIsPaused] = useState(false); // Start as playing
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   

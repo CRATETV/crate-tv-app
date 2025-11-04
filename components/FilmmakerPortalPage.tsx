@@ -80,7 +80,7 @@ const PayoutModal: React.FC<{ balance: number; directorName: string; onClose: ()
 
 const FilmmakerPortalPage: React.FC = () => {
     const { user } = useAuth();
-    const { movies: allMovies } = useFestival();
+    const { movies: allMovies, isLoading: isFestivalLoading } = useFestival();
     const [analytics, setAnalytics] = useState<FilmmakerAnalytics | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -157,7 +157,7 @@ const FilmmakerPortalPage: React.FC = () => {
         document.body.removeChild(link);
     };
 
-    if (isLoading) {
+    if (isLoading || isFestivalLoading) {
         return <LoadingSpinner />;
     }
 
@@ -248,16 +248,9 @@ const FilmmakerPortalPage: React.FC = () => {
                             <div>
                                 <div className="flex justify-between items-center mb-4">
                                     <h2 className="text-2xl font-bold text-white">Top 10 on Crate TV</h2>
-                                    <div className="flex gap-2">
-                                        <button onClick={handleDownloadTopTen} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-md text-xs">
-                                            Download
-                                        </button>
-                                        {('share' in navigator) && (
-                                            <button onClick={handleShareTopTen} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md text-xs">
-                                                Share
-                                            </button>
-                                        )}
-                                    </div>
+                                    <button onClick={handleDownloadTopTen} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-md text-xs">
+                                        Download
+                                    </button>
                                 </div>
                                 <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 space-y-3">
                                     {topTenMovies.length > 0 ? topTenMovies.map((movie, index) => (

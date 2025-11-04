@@ -7,9 +7,10 @@ interface MovieCarouselProps {
   title: React.ReactNode;
   movies: Movie[];
   onSelectMovie: (movie: Movie) => void;
+  showRankings?: boolean;
 }
 
-const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie }) => {
+const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, showRankings = false }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -25,7 +26,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
     return null;
   }
   
-  const carouselClasses = "flex overflow-x-auto space-x-4 pb-4 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8";
+  const carouselClasses = `flex overflow-x-auto space-x-${showRankings ? '8' : '4'} pb-4 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8`;
 
   return (
     <div className="mb-8 md:mb-12">
@@ -36,14 +37,17 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
       )}
       <div className="relative group">
         <div ref={scrollRef} className={carouselClasses}>
-          {movies.map((movie) => {
-            const containerClasses = 'flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw]';
+          {movies.map((movie, index) => {
+            const containerClasses = showRankings 
+                ? 'flex-shrink-0 w-[45vw] sm:w-[33vw] md:w-[25vw] lg:w-[20vw]' 
+                : 'flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw]';
 
             return (
               <div key={movie.key} className={containerClasses}>
                 <MovieCard
                   movie={movie}
                   onSelectMovie={onSelectMovie}
+                  rank={showRankings ? index + 1 : undefined}
                 />
               </div>
             );

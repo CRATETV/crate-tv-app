@@ -133,8 +133,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newUnlockedIds = new Set(unlockedFestivalBlockIds).add(blockId);
         setUnlockedFestivalBlockIds(newUnlockedIds); // Optimistic update
         try {
-            // FIX: Type 'unknown[]' is not assignable to type 'string[]'. The type inference for Array.from(Set<string>) seems to be failing in this environment.
-            // Using spread syntax to convert the Set to an array, which may have better type inference in this context.
+            // FIX: Replaced `Array.from()` with the spread syntax `[...]` to convert the Set to an array. This resolves a TypeScript error where the type was incorrectly inferred as `unknown[]` instead of `string[]`.
             await updateUserProfile(user.uid, { unlockedBlockIds: [...newUnlockedIds] });
         } catch (error) {
             console.error("Failed to save unlocked block:", error);
@@ -160,8 +159,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newPurchases = new Set(purchasedMovieKeys).add(movieKey);
         setPurchasedMovieKeys(newPurchases); // Optimistic update
         try {
-            // FIX: Type 'unknown[]' is not assignable to type 'string[]'. The type inference for Array.from(Set<string>) seems to be failing in this environment.
-            // Using spread syntax to convert the Set to an array, which may have better type inference in this context.
+            // FIX: Replaced `Array.from()` with the spread syntax `[...]` to convert the Set to an array. This resolves a TypeScript error where the type was incorrectly inferred as `unknown[]` instead of `string[]`.
             await updateUserProfile(user.uid, { purchasedMovieKeys: [...newPurchases] });
         } catch (error) {
             console.error("Failed to save movie purchase:", error);

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { AnalyticsData, Movie, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -49,8 +50,9 @@ const TopFilmsTab: React.FC = () => {
     const topFilmsData = useMemo(() => {
         if (!analyticsData || !allMovies) return [];
         
+        const filmmakerPayouts = analyticsData.filmmakerPayouts || [];
         return (Object.values(allMovies) as Movie[]).map(movie => {
-            const donations = analyticsData.filmmakerPayouts.find(p => p.movieTitle === movie.title)?.totalDonations || 0;
+            const donations = filmmakerPayouts.find((p: FilmmakerPayout) => p.movieTitle === movie.title)?.totalDonations || 0;
             return {
                 key: movie.key,
                 title: movie.title,
@@ -75,31 +77,45 @@ const TopFilmsTab: React.FC = () => {
 
     return (
         <div>
-            <h2 className="text-2xl font-bold mb-4 text-white">Top Films by Likes</h2>
+            <h2 className="text-2xl font-bold mb-4 text-white">Top 10 List by Likes</h2>
             <p className="text-sm text-gray-400 mb-6">This list ranks all films by their total like count, providing a clear view of audience favorites.</p>
-            <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                    <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
-                        <tr>
-                            <th className="p-3">Rank</th>
-                            <th className="p-3">Film</th>
-                            <th className="p-3 text-center">Likes</th>
-                            <th className="p-3 text-center">Views</th>
-                            <th className="p-3 text-right">Donations</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {topFilmsData.map((film, index) => (
-                            <tr key={film.key} className="border-b border-gray-700">
-                                <td className="p-3 font-bold text-lg">{index + 1}</td>
-                                <td className="p-3 font-medium text-white">{film.title}</td>
-                                <td className="p-3 text-center font-semibold text-red-400">{formatNumber(film.likes)}</td>
-                                <td className="p-3 text-center">{formatNumber(film.views)}</td>
-                                <td className="p-3 text-right font-medium text-green-400">{formatCurrency(film.donations)}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+            <div className="space-y-2">
+                {topFilmsData.map((film, index) => (
+                    <div key={film.key} className="group flex items-center bg-gray-800/60 rounded-lg p-3">
+                        <div className="flex items-center justify-center w-24 flex-shrink-0">
+                            <span 
+                                className="font-black text-6xl md:text-7xl leading-none select-none text-gray-700"
+                                style={{ WebkitTextStroke: '1px rgba(255,255,255,0.1)' }}
+                            >
+                                {index + 1}
+                            </span>
+                        </div>
+                        <div className="relative w-16 h-24 flex-shrink-0 rounded-md overflow-hidden shadow-lg">
+                            <img 
+                                src={allMovies[film.key]?.poster} 
+                                alt={film.title} 
+                                className="w-full h-full object-cover" 
+                            />
+                        </div>
+                        <div className="flex-grow min-w-0 pl-6">
+                            <h3 className="text-lg font-bold text-white truncate">{film.title}</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2 text-center sm:text-left">
+                                <div>
+                                    <p className="text-gray-400 text-xs">Likes</p>
+                                    <p className="font-bold text-lg text-red-400">{formatNumber(film.likes)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-400 text-xs">Views</p>
+                                    <p className="font-bold text-lg">{formatNumber(film.views)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-400 text-xs">Donations</p>
+                                    <p className="font-bold text-lg text-green-400">{formatCurrency(film.donations)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );

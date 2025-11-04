@@ -362,13 +362,14 @@ const App: React.FC = () => {
                 )}
                 <div>
                   {topTenMovies.length > 0 && (
-                      <div className="mb-8 md:mb-12">
-                          <a href="/top-ten" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/top-ten'); window.dispatchEvent(new Event('pushstate'));}} className="text-lg md:text-2xl font-bold mb-6 text-white hover:text-gray-300 transition-colors inline-block">Top 10 on Crate TV Today</a>
-                          <TopTenList
-                              movies={topTenMovies}
-                              onSelectMovie={handlePlayMovie}
-                          />
-                      </div>
+                    <MovieCarousel
+                      title={
+                        <a href="/top-ten" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/top-ten'); window.dispatchEvent(new Event('pushstate'));}} className="text-lg md:text-2xl font-bold mb-4 text-white hover:text-gray-300 transition-colors inline-block">Top 10 on Crate TV Today</a>
+                      }
+                      movies={topTenMovies}
+                      onSelectMovie={handlePlayMovie}
+                      showRankings={true}
+                    />
                   )}
                   {likedMovies.size === 0 ? (
                       <div className="mb-8 md:mb-12">
