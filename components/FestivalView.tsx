@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Movie, FestivalDay, FestivalConfig, FilmBlock } from '../types';
 import SquarePaymentModal from './SquarePaymentModal';
@@ -51,9 +52,15 @@ const FestivalView: React.FC<FestivalViewProps> = ({
   };
 
   const navigateToMovie = (movieKey: string) => {
-    const path = `/movie/${movieKey}`;
-    window.history.pushState({}, '', path);
-    window.dispatchEvent(new Event('pushstate'));
+    // Open the movie in a new tab if it's an external link, otherwise navigate
+    const movie = allMovies[movieKey];
+    if (movie && (movie.fullMovie.startsWith('http://') || movie.fullMovie.startsWith('https://'))) {
+        window.open(movie.fullMovie, '_blank', 'noopener,noreferrer');
+    } else {
+        const path = `/movie/${movieKey}?play=true`;
+        window.history.pushState({}, '', path);
+        window.dispatchEvent(new Event('pushstate'));
+    }
   };
 
   if (!festivalData || festivalData.length === 0) {
@@ -62,22 +69,10 @@ const FestivalView: React.FC<FestivalViewProps> = ({
 
   return (
     <div className="font-sans bg-gray-950 text-gray-200">
-       <style>
-        {`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.5s ease-out;
-        }
-        `}
-      </style>
-      
       {showHero && (
         <div className="relative bg-gradient-to-br from-[#2c1a4d] via-[#1a2c4d] to-[#141414] text-center py-12 sm:py-20 px-4 overflow-hidden">
             <div className="absolute inset-0 bg-black/30"></div>
-            <div className="relative z-10 max-w-4xl mx-auto">
+            <div className="relative z-10 max-w-4xl mx-auto animate-fadeInHeroContent">
                 <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{festivalConfig.title}</h1>
                 <p className="text-base sm:text-lg text-gray-300 max-w-2xl mx-auto mb-8">
                     {festivalConfig.description}
@@ -111,7 +106,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
 
           <div>
               {festivalData.filter(day => day.day === activeDay).map(day => (
-                  <div key={day.day} className="space-y-12 animate-fadeIn">
+                  <div key={day.day} className="space-y-12 animate-[fadeIn_0.5s_ease-out]">
                       {day.blocks.map(block => {
                           const blockMovies = block.movieKeys.map(key => allMovies[key]).filter(Boolean);
                           const isBlockUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
@@ -134,15 +129,16 @@ const FestivalView: React.FC<FestivalViewProps> = ({
                                    </div>
                                 </div>
                                 <div className="p-4 sm:p-6">
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+                                    <div className="flex overflow-x-auto space-x-4 pb-4 scrollbar-hide -mx-4 px-4 sm:-mx-6 sm:px-6">
                                         {blockMovies.map(movie => (
-                                            <FilmBlockCard
-                                                key={movie.key}
-                                                movie={movie}
-                                                isUnlocked={isBlockUnlocked}
-                                                onWatch={() => navigateToMovie(movie.key)}
-                                                onUnlock={() => handlePurchaseClick('movie', movie)}
-                                            />
+                                            <div key={movie.key} className="flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw]">
+                                                <FilmBlockCard
+                                                    movie={movie}
+                                                    isUnlocked={isBlockUnlocked}
+                                                    onWatch={() => navigateToMovie(movie.key)}
+                                                    onUnlock={() => handlePurchaseClick('movie', movie)}
+                                                />
+                                            </div>
                                         ))}
                                     </div>
                                 </div>

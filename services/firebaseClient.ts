@@ -1,15 +1,18 @@
-import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, Firestore } from 'firebase/firestore';
+// FIX: The Firebase V9 modular imports are failing, indicating an older SDK version (likely v8) is installed.
+// The code has been refactored to use the v8 namespaced/compat syntax for all Firebase App, Auth, and Firestore interactions.
+import firebase from 'firebase/app';
+import 'firebase/auth';
+import 'firebase/firestore';
+
 // FIX: Corrected type imports to use the new types.ts file
 import { User } from '../types';
 
-let authInstance: Auth | null = null;
-let app: FirebaseApp | null = null;
-let db: Firestore | null = null;
+let authInstance: firebase.auth.Auth | null = null;
+let app: firebase.app.App | null = null;
+let db: firebase.firestore.Firestore | null = null;
 
 // This function ensures Firebase is initialized only once.
-export const initializeFirebaseAuth = async (): Promise<Auth | null> => {
+export const initializeFirebaseAuth = async (): Promise<firebase.auth.Auth | null> => {
     if (authInstance) return authInstance;
 
     try {
@@ -22,17 +25,17 @@ export const initializeFirebaseAuth = async (): Promise<Auth | null> => {
             throw new Error('Invalid Firebase config from server');
         }
 
-        if (getApps().length === 0) {
-            app = initializeApp(firebaseConfig);
+        if (firebase.apps.length === 0) {
+            app = firebase.initializeApp(firebaseConfig);
         } else {
-            app = getApp();
+            app = firebase.app();
         }
         
-        authInstance = getAuth(app);
+        authInstance = app.auth();
         // Set persistence to 'local' to keep users signed in across sessions.
-        await setPersistence(authInstance, browserLocalPersistence);
+        await authInstance.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
         
-        db = getFirestore(app); // Initialize Firestore
+        db = app.firestore(); // Initialize Firestore
         return authInstance;
     } catch (error) {
         console.error("Firebase Auth initialization failed:", error);
@@ -40,7 +43,7 @@ export const initializeFirebaseAuth = async (): Promise<Auth | null> => {
     }
 };
 
-export const getAuthInstance = (): Auth | null => {
+export const getAuthInstance = (): firebase.auth.Auth | null => {
     if (!authInstance) {
         console.warn("getAuthInstance called before initializeFirebaseAuth has completed. This might lead to errors.");
     }
@@ -54,10 +57,10 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
         console.error("Firestore is not initialized. Cannot get user profile.");
         return null;
     }
-    const userDocRef = doc(db, 'users', uid);
-    const userDoc = await getDoc(userDocRef);
-    if (userDoc.exists()) {
-        const data = userDoc.data();
+    const userDocRef = db.collection('users').doc(uid);
+    const userDoc = await userDocRef.get();
+    if (userDoc.exists) {
+        const data = userDoc.data()!;
         // Create a user object that strictly conforms to the User type,
         // ensuring 'isActor' and other fields are always present with a default.
         const userProfile: User = {
@@ -79,7 +82,7 @@ export const createUserProfile = async (uid: string, email: string, name?: strin
     if (!db) {
         throw new Error("Firestore is not initialized. Cannot create user profile.");
     }
-    const userDocRef = doc(db, 'users', uid);
+    const userDocRef = db.collection('users').doc(uid);
     const newUser: Omit<User, 'uid'> = { // Storing without the UID inside the document itself
         email,
         name: name || email.split('@')[0],
@@ -89,7 +92,7 @@ export const createUserProfile = async (uid: string, email: string, name?: strin
         isPremiumSubscriber: false,
         watchlist: [], // Initialize watchlist for account-based storage
     };
-    await setDoc(userDocRef, newUser);
+    await userDocRef.set(newUser);
 
     // Send signup notification email. This is a non-blocking "fire and forget" call.
     fetch('/api/send-signup-notification', {
@@ -108,6 +111,6 @@ export const updateUserProfile = async (uid: string, data: Partial<Omit<User, 'u
     if (!db) {
         throw new Error("Firestore is not initialized. Cannot update user profile.");
     }
-    const userDocRef = doc(db, 'users', uid);
-    await setDoc(userDocRef, data, { merge: true });
+    const userDocRef = db.collection('users').doc(uid);
+    await userDocRef.set(data, { merge: true });
 };

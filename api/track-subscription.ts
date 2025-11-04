@@ -1,5 +1,8 @@
+// FIX: The Firebase V9 modular imports are failing, indicating an older SDK version (likely v8) is installed.
+// The code has been refactored to use the v8 namespaced/compat syntax for Firestore interactions.
 import { getDb } from './_lib/firebase.js';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import firebase from 'firebase/app';
+import 'firebase/firestore';
 
 export async function POST(request: Request) {
   try {
@@ -14,11 +17,11 @@ export async function POST(request: Request) {
     }
     
     // Use the email as the document ID to prevent duplicate entries for the same user
-    const subscriptionDocRef = doc(db, 'subscriptions', email);
+    const subscriptionDocRef = db.collection('subscriptions').doc(email);
     
     // Set the document with a timestamp. If it already exists, it will be overwritten with a new timestamp.
-    await setDoc(subscriptionDocRef, { 
-      subscribedAt: serverTimestamp()
+    await subscriptionDocRef.set({ 
+      subscribedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });

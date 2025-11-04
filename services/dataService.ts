@@ -68,7 +68,12 @@ export const fetchAndCacheLiveData = async (options?: { force?: boolean }): Prom
             return getFallbackData();
         }
 
-        const dataResponse = await fetch(`${liveDataUrl}?t=${now}`); // Use timestamp to bust browser cache
+        // Fetch main data and live likes in parallel for speed
+        const [dataResponse, likesResponse] = await Promise.all([
+            fetch(`${liveDataUrl}?t=${now}`), // Use timestamp to bust browser cache
+            fetch('/api/get-movie-likes')
+        ]);
+        
         if (!dataResponse.ok) throw new Error(`Failed to fetch live data from ${liveDataUrl}`);
         const data: LiveData = await dataResponse.json();
         
@@ -96,6 +101,19 @@ export const fetchAndCacheLiveData = async (options?: { force?: boolean }): Prom
             });
         }
         
+        // Merge live likes into the movie data
+        if (likesResponse.ok) {
+            const liveLikes: Record<string, number> = await likesResponse.json();
+            for (const key in liveLikes) {
+                if (data.movies[key]) {
+                    data.movies[key].likes = liveLikes[key];
+                }
+            }
+            console.log("[Likes] Successfully merged live like counts.");
+        } else {
+            console.warn("[Likes] Could not fetch live like counts. Top 10 list may be stale.");
+        }
+
         const result: FetchResult = { data, source: 'live', timestamp: now };
         
         try {

@@ -1,5 +1,8 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, AuthError, sendPasswordResetEmail } from 'firebase/auth';
+// FIX: The Firebase V9 modular imports are failing, indicating an older SDK version (likely v8) is installed.
+// The code has been refactored to use the v8 namespaced syntax (e.g., auth.onAuthStateChanged) for compatibility.
+import firebase from 'firebase/app';
+import 'firebase/auth';
 // FIX: Corrected type imports to use the new types.ts file
 import { User } from '../types';
 import { 
@@ -19,6 +22,7 @@ const ALL_ACCESS_PASS_KEY = 'cratetv-allAccessPass';
 interface AuthContextType {
     user: User | null;
     authInitialized: boolean;
+    claimsLoaded: boolean;
     signIn: (email: string, password: string) => Promise<void>;
     signUp: (email: string, password: string) => Promise<void>;
     logout: () => void;
@@ -42,6 +46,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // --- User Authentication State ---
     const [user, setUser] = useState<User | null>(null);
     const [authInitialized, setAuthInitialized] = useState(false);
+    const [claimsLoaded, setClaimsLoaded] = useState(false);
 
     // --- State for GUEST users (device-local) ---
     const [anonymousWatchlist, setAnonymousWatchlist] = useState<string[]>([]);
@@ -53,8 +58,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         initializeFirebaseAuth().then(auth => {
             if (auth) {
-                const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+                const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
                     if (firebaseUser) {
+                        setClaimsLoaded(false); // Reset on user change
+                        
                         const idTokenResult = await firebaseUser.getIdTokenResult(true);
                         const isActorFromClaim = !!idTokenResult.claims.isActor;
                         const isFilmmakerFromClaim = !!idTokenResult.claims.isFilmmaker;
@@ -65,18 +72,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         }
                         
                         if(userProfile) {
-                             // FIX: To prevent race conditions on login, combine the role from the DB profile
-                             // with the role from the (potentially delayed) custom claim.
                              const finalIsActor = isActorFromClaim || (userProfile.isActor ?? false);
                              const finalIsFilmmaker = isFilmmakerFromClaim || (userProfile.isFilmmaker ?? false);
                              setUser({ ...userProfile, isActor: finalIsActor, isFilmmaker: finalIsFilmmaker });
                         }
 
+                        setClaimsLoaded(true); // Mark claims as loaded after all async ops
+                        
                         // When user logs in, clear any guest data from memory and storage
                         setAnonymousWatchlist([]);
                         localStorage.removeItem(WATCHLIST_KEY);
                     } else {
                         setUser(null);
+                        setClaimsLoaded(true); // No user, so claims are "loaded"
                         // When user logs out or is a guest, load device-local data
                         try {
                             const storedWatchlist = localStorage.getItem(WATCHLIST_KEY);
@@ -108,6 +116,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 } catch (error) {
                     console.error("Failed to load guest data from localStorage", error);
                 }
+                setClaimsLoaded(true); // No auth service, claims are "loaded"
                 setAuthInitialized(true);
             }
         });
@@ -129,7 +138,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const auth = getAuthInstance();
         if (!auth) throw new Error("Authentication service is not available.");
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            await auth.signInWithEmailAndPassword(email, password);
         } catch (error) {
             throw new Error(handleAuthError(error));
         }
@@ -139,8 +148,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const auth = getAuthInstance();
         if (!auth) throw new Error("Authentication service is not available.");
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            await createUserProfile(userCredential.user.uid, email);
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            await createUserProfile(userCredential.user!.uid, email);
         } catch (error) {
             throw new Error(handleAuthError(error));
         }
@@ -150,7 +159,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const auth = getAuthInstance();
         if (!auth) throw new Error("Authentication service is not available.");
         try {
-            await sendPasswordResetEmail(auth, email);
+            await auth.sendPasswordResetEmail(email);
         } catch (error) {
             throw new Error(handleAuthError(error));
         }
@@ -158,7 +167,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const logout = () => {
         const auth = getAuthInstance();
-        if (auth) signOut(auth);
+        if (auth) auth.signOut();
         window.history.pushState({}, '', '/login');
         window.dispatchEvent(new Event('pushstate'));
     };
@@ -250,7 +259,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const unifiedWatchlist = user?.watchlist ?? anonymousWatchlist;
 
     const value = { 
-        user, authInitialized, signIn, signUp, logout, setAvatar, sendPasswordReset, subscribe,
+        user, authInitialized, claimsLoaded, signIn, signUp, logout, setAvatar, sendPasswordReset, subscribe,
         watchlist: unifiedWatchlist,
         purchasedMovies, unlockedFestivalBlockIds, hasFestivalAllAccess,
         toggleWatchlist, purchaseMovie, unlockFestivalBlock, grantFestivalAllAccess

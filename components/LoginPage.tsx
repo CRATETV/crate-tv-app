@@ -31,14 +31,12 @@ const LoginPage: React.FC = () => {
         try {
             if (isLoginView) {
                 await signIn(email, password);
-                // On successful login, navigate to the intended page.
-                window.history.pushState({}, '', redirectPath);
-                window.dispatchEvent(new Event('pushstate'));
+                // The AppRouter will now handle the redirect automatically
+                // when the `user` state updates.
             } else {
                 await signUp(email, password);
                 // After signup, onAuthStateChanged in AuthContext will handle
                 // updating the user state, which triggers the AppRouter to show the correct page.
-                // Navigating manually here causes a race condition and the "login twice" issue.
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred.');

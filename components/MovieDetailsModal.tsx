@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category } from '../types';
 import DirectorCreditsModal from './DirectorCreditsModal';
@@ -117,25 +118,10 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     return () => {
       window.removeEventListener('keydown', handleEsc);
       document.body.style.overflow = 'unset';
+      // Clear any running animation timers when the modal closes
+      timers.current.forEach(clearTimeout);
     };
   }, []);
-
-  // Effect for like animation
-  useEffect(() => {
-    // Clear any existing timers
-    timers.current.forEach(clearTimeout);
-    timers.current = [];
-
-    if (isLiked) {
-        setIsAnimatingLike(true);
-        const timer = setTimeout(() => setIsAnimatingLike(false), 500);
-        timers.current.push(timer);
-    }
-
-    return () => {
-        timers.current.forEach(clearTimeout);
-    };
-  }, [isLiked, movie.key]);
 
 
   const closeAndResetUrl = () => {
@@ -147,6 +133,13 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   };
 
   const handleToggleLike = () => {
+    // Trigger animation instantly on click
+    setIsAnimatingLike(true);
+    timers.current.forEach(clearTimeout);
+    const timer = setTimeout(() => setIsAnimatingLike(false), 500); // Duration of the heartbeat animation
+    timers.current = [timer];
+
+    // Call the parent function to update the actual like state
     onToggleLike(movie.key);
   };
 
@@ -318,7 +311,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
               <h3 className="text-lg font-semibold text-gray-400 mb-2">Cast</h3>
               <div className="space-y-2 text-white">
                 {movie.cast.map((actor) => (
-                  <p key={actor.name} className="group cursor-pointer" onClick={() => onSelectActor(actor)}>
+                  <p key={actor.name} className="group cursor-pointer rounded -mx-1 px-1 transition-colors hover:bg-white/10 active:bg-white/20" onClick={() => onSelectActor(actor)}>
                     <span className="group-hover:text-red-400 transition">{actor.name}</span>
                   </p>
                 ))}

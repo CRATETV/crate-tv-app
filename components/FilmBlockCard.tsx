@@ -10,7 +10,7 @@ interface FilmBlockCardProps {
 
 const FilmBlockCard: React.FC<FilmBlockCardProps> = ({ movie, isUnlocked, onWatch, onUnlock }) => {
     return (
-        <div className="group relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-800 border-2 border-transparent hover:border-purple-500 focus-within:border-purple-500 transition-all duration-300">
+        <div className="group relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-800 border-2 border-transparent hover:border-purple-500 focus-within:border-purple-500 transition-all duration-300">
             <img
                 src={movie.poster}
                 alt={movie.title}

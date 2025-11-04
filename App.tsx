@@ -86,6 +86,12 @@ const App: React.FC = () => {
     const stagingSession = sessionStorage.getItem('crateTvStaging');
     const isStagingActive = env === 'staging' || stagingSession === 'true';
 
+    // Handle search query from URL on initial load
+    const initialSearch = params.get('search');
+    if (initialSearch) {
+        setSearchQuery(initialSearch);
+    }
+
     if (isStagingActive) {
       sessionStorage.setItem('crateTvStaging', 'true');
       setIsStaging(true);

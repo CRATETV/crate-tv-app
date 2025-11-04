@@ -84,9 +84,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [showControls, setShowControls] = useState(false);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
-  // Search state
+  // Search and URL state
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [locationSearch, setLocationSearch] = useState(window.location.search);
   
   // Staging and feature toggles
   const [isStaging, setIsStaging] = useState(false);
@@ -103,7 +104,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const adsManagerRef = useRef<any>(null);
   const [isAdPlaying, setIsAdPlaying] = useState(false);
   const [adError, setAdError] = useState<string | null>(null);
-
 
   const playContent = useCallback(() => {
     setIsAdPlaying(false);
@@ -188,9 +188,20 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
   }, []);
 
+  // Make component reactive to URL query string changes
+  useEffect(() => {
+    const handleNav = () => setLocationSearch(window.location.search);
+    window.addEventListener('popstate', handleNav);
+    window.addEventListener('pushstate', handleNav);
+    return () => {
+        window.removeEventListener('popstate', handleNav);
+        window.removeEventListener('pushstate', handleNav);
+    };
+  }, []);
+
   useEffect(() => {
     setIsLoading(true);
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(locationSearch);
     const env = params.get('env');
     const stagingSession = sessionStorage.getItem('crateTvStaging');
     const stagingActive = env === 'staging' || stagingSession === 'true';
@@ -206,11 +217,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             const sourceMovie = liveData.movies[movieKey];
 
             if (sourceMovie) {
-              setReleased(isMovieReleased(sourceMovie));
-    
+              const isReleasedNow = isMovieReleased(sourceMovie);
+              setReleased(isReleasedNow);
               setMovie({ ...sourceMovie });
     
-              if (params.get('play') === 'true' && sourceMovie.fullMovie && isMovieReleased(sourceMovie)) {
+              if (params.get('play') === 'true' && sourceMovie.fullMovie && isReleasedNow) {
                 setPlayerMode('full');
               } else {
                 setPlayerMode('poster');
@@ -228,7 +239,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         }
     };
     loadMovieData();
-  }, [movieKey]);
+  }, [movieKey, locationSearch]);
 
   useEffect(() => {
     if (released) return;
@@ -366,9 +377,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       window.history.pushState({}, '', '/');
       window.dispatchEvent(new Event('pushstate'));
     };
+    
+    const handlePlayFromPoster = () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('play', 'true');
+        window.history.pushState({}, '', url.toString());
+        window.dispatchEvent(new Event('pushstate'));
+    };
 
     const handleExitPlayer = () => {
-        setPlayerMode('poster');
+        const url = new URL(window.location.href);
+        url.searchParams.delete('play');
+        window.history.pushState({}, '', url.toString());
+        window.dispatchEvent(new Event('pushstate'));
     };
     
     const handleDonationSuccess = (details: { amount: number; email?: string }) => {
@@ -446,7 +467,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                                     <button 
-                                        onClick={() => setPlayerMode('full')}
+                                        onClick={handlePlayFromPoster}
                                         className="absolute text-white bg-black/50 rounded-full p-4 hover:bg-black/70 transition-colors"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" viewBox="0 0 20 20" fill="currentColor">

@@ -8,6 +8,19 @@ interface MovieCardProps {
   rank?: number;
 }
 
+const rankColors = [
+  '#FFD700', // 1. Gold
+  '#C0C0C0', // 2. Silver
+  '#CD7F32', // 3. Bronze
+  '#dc2626', // 4. Red-600
+  '#4f46e5', // 5. Indigo-600
+  '#059669', // 6. Emerald-600
+  '#db2777', // 7. Pink-600
+  '#0ea5e9', // 8. Sky-500
+  '#f97316', // 9. Orange-500
+  '#8b5cf6', // 10. Violet-500
+];
+
 const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => {
   if (!movie) {
     return null;
@@ -17,9 +30,11 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
 
   // Special layout for ranked "Top 10" movies, inspired by the user's request.
   if (rank) {
+    const borderColor = rankColors[(rank - 1) % rankColors.length];
     return (
       <div
-        className="group relative h-full w-full cursor-pointer flex items-stretch bg-black rounded-lg overflow-hidden transition-transform duration-300 hover:scale-105 shadow-lg"
+        className="group relative h-full w-full cursor-pointer flex items-stretch bg-black rounded-lg overflow-hidden transition-transform duration-300 hover:scale-105 ranked-card-border"
+        style={{ '--rank-color': borderColor } as React.CSSProperties}
         onClick={() => onSelectMovie(movie)}
         role="button"
         aria-label={`View details for ${movie.title}, ranked number ${rank}`}

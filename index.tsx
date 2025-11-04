@@ -54,7 +54,7 @@ const root = ReactDOM.createRoot(rootElement);
 // This component now contains the router and authentication logic.
 const AppRouter: React.FC = () => {
   const [route, setRoute] = useState(window.location.pathname);
-  const { user, authInitialized } = useAuth();
+  const { user, authInitialized, claimsLoaded } = useAuth();
 
   useEffect(() => {
     const onNavigate = () => {
@@ -118,8 +118,23 @@ const AppRouter: React.FC = () => {
     // Public Routes
     case '/portal':
       return <CreatorPortalPage />;
-    case '/login':
-      return <LoginPage />;
+    case '/login': {
+        // If the user is authenticated, redirect them away from the login page.
+        // This prevents the "login twice" bug by handling the redirect after the user state is fully updated.
+        if (authInitialized && user) {
+            const RedirectAfterLogin: React.FC = () => {
+                useEffect(() => {
+                    const params = new URLSearchParams(window.location.search);
+                    const redirect = params.get('redirect') || '/';
+                    window.history.replaceState({}, '', redirect);
+                    window.dispatchEvent(new Event('pushstate'));
+                }, []);
+                return <LoadingSpinner />; // Show a spinner during the brief transition
+            };
+            return <RedirectAfterLogin />;
+        }
+        return <LoginPage />;
+    }
     case '/submit':
       return <SubmitPage />;
     case '/actor-signup':
@@ -139,7 +154,7 @@ const AppRouter: React.FC = () => {
       
     // Protected Actor Route
     case '/actor-portal': {
-      if (!authInitialized) return <LoadingSpinner />;
+      if (!authInitialized || (user && !claimsLoaded)) return <LoadingSpinner />;
       if (!user) return <RedirectToLogin />;
       if (!user.isActor) {
         const RedirectHome: React.FC = () => {
@@ -156,7 +171,7 @@ const AppRouter: React.FC = () => {
 
     // Protected Filmmaker Route
     case '/filmmaker-dashboard': {
-        if (!authInitialized) return <LoadingSpinner />;
+        if (!authInitialized || (user && !claimsLoaded)) return <LoadingSpinner />;
         if (!user) return <RedirectToLogin />;
         if (!user.isFilmmaker) {
             const RedirectHome: React.FC = () => {

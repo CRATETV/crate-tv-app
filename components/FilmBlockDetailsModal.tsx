@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Movie, FilmBlock } from '../types';
 import SquarePaymentModal from './SquarePaymentModal';

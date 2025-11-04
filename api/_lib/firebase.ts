@@ -1,8 +1,10 @@
-import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+// FIX: The Firebase V9 modular imports are failing, indicating an older SDK version (likely v8) is installed.
+// The code has been refactored to use the v8 namespaced/compat syntax for Firebase App and Firestore initialization.
+import firebase from 'firebase/app';
+import 'firebase/firestore';
 
-let db: Firestore | null = null;
-let firebaseInitializationPromise: Promise<Firestore | null> | null = null;
+let db: firebase.firestore.Firestore | null = null;
+let firebaseInitializationPromise: Promise<firebase.firestore.Firestore | null> | null = null;
 
 const initializeFirebase = () => {
     if (firebaseInitializationPromise) {
@@ -24,13 +26,11 @@ const initializeFirebase = () => {
                 throw new Error("Firebase server environment variables are not set.");
             }
             
-            let app: FirebaseApp;
-            if (getApps().length === 0) {
-                app = initializeApp(firebaseConfig);
-            } else {
-                app = getApp();
+            if (firebase.apps.length === 0) {
+                firebase.initializeApp(firebaseConfig);
             }
-            db = getFirestore(app);
+            
+            db = firebase.firestore();
             console.log("Firebase initialized for API route.");
             return db;
         } catch (error) {
