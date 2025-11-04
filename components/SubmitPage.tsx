@@ -1,27 +1,55 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Header from './Header';
 // FIX: Corrected import path
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import SearchOverlay from './SearchOverlay';
+import CollapsibleFooter from './CollapsibleFooter';
+import BottomNavBar from './BottomNavBar';
+import { FestivalConfig } from '../types';
+import { fetchAndCacheLiveData } from '../services/dataService';
 
 const SubmitPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-    
-    // Simplified form state
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
     const formRef = useRef<HTMLFormElement>(null);
+    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+    const [isFestivalLive, setIsFestivalLive] = useState(false);
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const { data } = await fetchAndCacheLiveData();
+                setFestivalConfig(data.festivalConfig);
+            } catch (error) {
+                console.error("Failed to load data for Submit page:", error);
+            }
+        };
+        loadData();
+    }, []);
+
+     useEffect(() => {
+        const checkStatus = () => {
+            if (!festivalConfig?.startDate || !festivalConfig?.endDate) return;
+            const now = new Date();
+            const start = new Date(festivalConfig.startDate);
+            const end = new Date(festivalConfig.endDate);
+            setIsFestivalLive(now >= start && now < end);
+        };
+        checkStatus();
+        const interval = setInterval(checkStatus, 60000);
+        return () => clearInterval(interval);
+    }, [festivalConfig]);
     
     const handleSearchSubmit = (query: string) => {
         if (query) {
-          window.location.href = `/?search=${encodeURIComponent(query)}`;
+          window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
+          window.dispatchEvent(new Event('pushstate'));
         }
     };
     
-    // Form submission handler
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -44,7 +72,6 @@ const SubmitPage: React.FC = () => {
                 throw new Error(errorData.error || 'Server responded with an error.');
             }
 
-            // On success, redirect to the thank you page
             window.history.pushState({}, '', '/thank-you');
             window.dispatchEvent(new Event('pushstate'));
 
@@ -68,7 +95,7 @@ const SubmitPage: React.FC = () => {
                 onSearchSubmit={handleSearchSubmit}
             />
 
-            <main className="flex-grow pt-20">
+            <main className="flex-grow pt-20 pb-24 md:pb-0">
                 <div className="container mx-auto p-4 sm:p-6 lg:p-8">
                     <h1 className="text-4xl sm:text-5xl font-bold text-center mb-4 text-white">Film Submission</h1>
                     <p className="text-center mb-10 text-lg sm:text-xl text-gray-400">
@@ -120,7 +147,7 @@ const SubmitPage: React.FC = () => {
                 </div>
             </main>
 
-            <Footer />
+            <CollapsibleFooter />
             <BackToTopButton />
 
             {isMobileSearchOpen && (
@@ -134,6 +161,10 @@ const SubmitPage: React.FC = () => {
                   }}
                 />
             )}
+             <BottomNavBar 
+                isFestivalLive={isFestivalLive}
+                onSearchClick={() => setIsMobileSearchOpen(true)}
+            />
         </div>
     );
 };

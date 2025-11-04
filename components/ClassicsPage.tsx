@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import BackToTopButton from './BackToTopButton';
@@ -76,6 +77,7 @@ const ClassicsPage: React.FC = () => {
                 onMobileSearchClick={() => {}}
                 showSearch={true}
                 showNavLinks={true}
+                isFestivalLive={isFestivalLive}
             />
 
             <main className="flex-grow pb-24 md:pb-0">

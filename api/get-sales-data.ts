@@ -26,6 +26,7 @@ const FESTIVAL_PLATFORM_CUT = 0.30;
 
 const parseNote = (note: string | undefined): { type: string, title?: string, director?: string, blockTitle?: string } => {
     if (!note) return { type: 'unknown' };
+    if (note.startsWith('Deposit to Crate TV Bill Savings Pot')) return { type: 'billSavingsDeposit' };
     const donationMatch = note.match(/Support for film: "(.*)" by (.*)/);
     if (donationMatch) return { type: 'donation', title: donationMatch[1].trim(), director: donationMatch[2].trim() };
     if (note.includes('All-Access Pass')) return { type: 'pass' };
@@ -178,6 +179,10 @@ export async function POST(request: Request) {
                 if (!salesByBlock[details.blockTitle]) salesByBlock[details.blockTitle] = { units: 0, revenue: 0 };
                 salesByBlock[details.blockTitle].units++;
                 salesByBlock[details.blockTitle].revenue += p.amount_money.amount;
+            } else if (details.type === 'billSavingsDeposit') {
+                // Deposits from card are tracked in their own collection,
+                // but we should add them to the platform's revenue total.
+                totalSales += p.amount_money.amount;
             }
         });
 

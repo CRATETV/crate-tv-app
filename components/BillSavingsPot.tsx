@@ -43,7 +43,7 @@ const BillSavingsPot: React.FC<BillSavingsPotProps> = ({ currentBalance, availab
         await processTransaction(activeTab === 'add' ? 'deposit' : 'withdrawal', numericAmount, reason);
     };
 
-    const handlePaymentSuccess = async (details: { amount: number }) => {
+    const handlePaymentSuccess = async (details: { paymentType: 'billSavingsDeposit', amount: number }) => {
         setIsPaymentModalOpen(false);
         await processTransaction('deposit', details.amount, 'Deposit from Card');
     };
@@ -145,7 +145,7 @@ const BillSavingsPot: React.FC<BillSavingsPotProps> = ({ currentBalance, availab
             <SquarePaymentModal
                 paymentType="billSavingsDeposit"
                 onClose={() => setIsPaymentModalOpen(false)}
-                onPaymentSuccess={handlePaymentSuccess}
+                onPaymentSuccess={handlePaymentSuccess as any}
             />
         )}
         </>

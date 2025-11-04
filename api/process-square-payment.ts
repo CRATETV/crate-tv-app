@@ -52,12 +52,16 @@ export async function POST(request: Request) {
     let note: string;
 
     // Determine amount and note based on payment type, using server-side pricing.
-    if (paymentType === 'donation') {
+    if (paymentType === 'donation' || paymentType === 'billSavingsDeposit') {
         amountInCents = Math.round(Number(amount) * 100);
-        if (amountInCents < 100) { // Minimum $1.00 donation
-            throw new Error("Donation amount must be at least $1.00.");
+        if (amountInCents < 100) { // Minimum $1.00
+            throw new Error("Amount must be at least $1.00.");
         }
-        note = `Support for film: "${movieTitle}" by ${directorName}`;
+        if (paymentType === 'donation') {
+            note = `Support for film: "${movieTitle}" by ${directorName}`;
+        } else {
+            note = 'Deposit to Crate TV Bill Savings Pot';
+        }
     } else if (priceMap[paymentType]) {
         amountInCents = priceMap[paymentType];
         switch(paymentType) {

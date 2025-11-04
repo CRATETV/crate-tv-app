@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Movie, Actor, Category } from '../types';
+import { Movie, Actor, Category, FestivalConfig } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import ActorBioModal from './ActorBioModal';
 import Header from './Header';
@@ -16,6 +16,7 @@ import SquarePaymentModal from './SquarePaymentModal';
 import DonationSuccessModal from './DonationSuccessModal';
 import { isMovieReleased } from '../constants';
 import CollapsibleFooter from './CollapsibleFooter';
+import BottomNavBar from './BottomNavBar';
 
 declare const google: any; // Declare Google IMA SDK global
 
@@ -74,6 +75,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [released, setReleased] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const hasTrackedViewRef = useRef(false);
+  
+  const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+  const [isFestivalLive, setIsFestivalLive] = useState(false);
 
   // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
@@ -198,6 +202,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             setDataSource(source);
             setAllMovies(liveData.movies);
             setAllCategories(liveData.categories);
+            setFestivalConfig(liveData.festivalConfig);
             const sourceMovie = liveData.movies[movieKey];
 
             if (sourceMovie) {
@@ -237,6 +242,22 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
     return () => clearInterval(interval);
   }, [movie, released]);
+
+  useEffect(() => {
+    const checkStatus = () => {
+        if (!festivalConfig?.startDate || !festivalConfig?.endDate) {
+            setIsFestivalLive(false);
+            return;
+        }
+        const now = new Date();
+        const start = new Date(festivalConfig.startDate);
+        const end = new Date(festivalConfig.endDate);
+        setIsFestivalLive(now >= start && now < end);
+    };
+    checkStatus();
+    const interval = setInterval(checkStatus, 60000);
+    return () => clearInterval(interval);
+  }, [festivalConfig]);
   
   useEffect(() => {
     if (playerMode === 'full' && released) {
@@ -274,6 +295,43 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     return () => document.removeEventListener('keydown', handleEscKey);
 }, [playerMode]);
 
+    // Effect for saving/restoring video progress
+    useEffect(() => {
+        if (playerMode !== 'full' || !videoRef.current || !movie) return;
+
+        const video = videoRef.current;
+        let progressInterval: ReturnType<typeof setInterval>;
+
+        const handleTimeUpdate = () => {
+            // Save progress if playing and time is meaningful
+            if (video.currentTime > 1 && !video.paused) {
+                localStorage.setItem(`cratetv-progress-${movie.key}`, video.currentTime.toString());
+            }
+        };
+
+        const handleLoadedMetadata = () => {
+            const savedTime = localStorage.getItem(`cratetv-progress-${movie.key}`);
+            if (savedTime) {
+                const time = parseFloat(savedTime);
+                // Ensure we don't seek past the end of the video
+                if (time < video.duration) {
+                    video.currentTime = time;
+                }
+            }
+        };
+
+        // Set up listeners
+        video.addEventListener('loadedmetadata', handleLoadedMetadata);
+        progressInterval = setInterval(handleTimeUpdate, 5000); // Save progress every 5 seconds
+
+        // Cleanup function
+        return () => {
+            clearInterval(progressInterval);
+            handleTimeUpdate(); // Save one last time on unmount/cleanup
+            video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        };
+    }, [playerMode, movie]);
+
 
     const recommendedMovies = useMemo(() => {
         if (!movie) return [];
@@ -302,6 +360,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
     
     const handleMovieEnd = () => {
+      // Clear progress when movie finishes
+      if (movie) localStorage.removeItem(`cratetv-progress-${movie.key}`);
       // Navigate to the home screen when the movie finishes.
       window.history.pushState({}, '', '/');
       window.dispatchEvent(new Event('pushstate'));
@@ -354,7 +414,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 />
             )}
 
-            <main className={`flex-grow ${playerMode === 'full' ? 'flex items-center justify-center' : 'pt-4 md:pt-20'}`}>
+            <main className={`flex-grow ${playerMode === 'full' ? 'flex items-center justify-center' : 'pt-4 md:pt-20 pb-24 md:pb-0'}`}>
                 <div 
                     ref={videoContainerRef} 
                     className="relative w-full aspect-video bg-black secure-video-container group"
@@ -512,6 +572,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 <BackToTopButton />
               </>
             )}
+            
+            <BottomNavBar 
+                isFestivalLive={isFestivalLive}
+                onSearchClick={() => setIsMobileSearchOpen(true)}
+            />
 
             {selectedActor && (
                 <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />

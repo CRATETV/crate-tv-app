@@ -1,14 +1,46 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Header from './Header';
 // FIX: Corrected import path
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
+import CollapsibleFooter from './CollapsibleFooter';
+import BottomNavBar from './BottomNavBar';
+import { FestivalConfig } from '../types';
+import { fetchAndCacheLiveData } from '../services/dataService';
+
 
 const ContactPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submissionStatus, setSubmissionStatus] = useState<'success' | 'error' | null>(null);
     const [errorMessage, setErrorMessage] = useState('');
     const formRef = useRef<HTMLFormElement>(null);
+    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+    const [isFestivalLive, setIsFestivalLive] = useState(false);
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const { data } = await fetchAndCacheLiveData();
+                setFestivalConfig(data.festivalConfig);
+            } catch (error) {
+                console.error("Failed to load data for Contact page:", error);
+            }
+        };
+        loadData();
+    }, []);
+
+    useEffect(() => {
+        const checkStatus = () => {
+            if (!festivalConfig?.startDate || !festivalConfig?.endDate) return;
+            const now = new Date();
+            const start = new Date(festivalConfig.startDate);
+            const end = new Date(festivalConfig.endDate);
+            setIsFestivalLive(now >= start && now < end);
+        };
+        checkStatus();
+        const interval = setInterval(checkStatus, 60000);
+        return () => clearInterval(interval);
+    }, [festivalConfig]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -57,7 +89,7 @@ const ContactPage: React.FC = () => {
                 showSearch={false}
             />
 
-            <main className="flex-grow pt-24 px-4 md:px-12">
+            <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
                 <div className="max-w-3xl mx-auto">
                     <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 text-center">Contact Us</h1>
                     <p className="text-lg text-gray-400 mb-10 text-center">
@@ -99,8 +131,15 @@ const ContactPage: React.FC = () => {
                 </div>
             </main>
 
-            <Footer />
+            <CollapsibleFooter />
             <BackToTopButton />
+            <BottomNavBar 
+                isFestivalLive={isFestivalLive}
+                onSearchClick={() => {
+                    window.history.pushState({}, '', '/');
+                    window.dispatchEvent(new Event('pushstate'));
+                }}
+            />
         </div>
     );
 };

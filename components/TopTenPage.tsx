@@ -1,16 +1,19 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import { fetchAndCacheLiveData } from '../services/dataService';
-import { Movie } from '../types';
+import { Movie, FestivalConfig } from '../types';
 import LoadingSpinner from './LoadingSpinner';
+import BottomNavBar from './BottomNavBar';
+import CollapsibleFooter from './CollapsibleFooter';
 
 const TopTenPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [movies, setMovies] = useState<Record<string, Movie>>({});
     const [currentDate, setCurrentDate] = useState('');
+    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+    const [isFestivalLive, setIsFestivalLive] = useState(false);
 
     useEffect(() => {
         // Set the current date when the component mounts
@@ -25,6 +28,7 @@ const TopTenPage: React.FC = () => {
             try {
                 const { data } = await fetchAndCacheLiveData();
                 setMovies(data.movies);
+                setFestivalConfig(data.festivalConfig);
             } catch (error) {
                 console.error("Failed to load data for Top Ten page:", error);
             } finally {
@@ -33,6 +37,23 @@ const TopTenPage: React.FC = () => {
         };
         loadData();
     }, []);
+
+    useEffect(() => {
+        const checkStatus = () => {
+            if (!festivalConfig?.startDate || !festivalConfig?.endDate) {
+                setIsFestivalLive(false);
+                return;
+            }
+            const now = new Date();
+            const start = new Date(festivalConfig.startDate);
+            const end = new Date(festivalConfig.endDate);
+            setIsFestivalLive(now >= start && now < end);
+        };
+        checkStatus();
+        const interval = setInterval(checkStatus, 60000); // Check every minute
+        return () => clearInterval(interval);
+    }, [festivalConfig]);
+
 
     const topTenMovies = useMemo(() => {
         return Object.values(movies)
@@ -45,6 +66,25 @@ const TopTenPage: React.FC = () => {
         e.preventDefault();
         window.history.pushState({}, '', `/movie/${movieKey}?play=true`);
         window.dispatchEvent(new Event('pushstate'));
+    };
+
+    const handleShare = async () => {
+        const shareData = {
+            title: 'Top 10 on Crate TV',
+            text: `Check out the most popular films on Crate TV today - ${currentDate}!`,
+            url: window.location.href,
+        };
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                // Fallback for browsers that don't support Web Share API
+                navigator.clipboard.writeText(shareData.url);
+                alert('Link to Top 10 page copied to clipboard!');
+            }
+        } catch (error) {
+            console.error('Error sharing Top Ten page:', error);
+        }
     };
 
     const handleDownload = () => {
@@ -75,7 +115,7 @@ const TopTenPage: React.FC = () => {
                 showSearch={false}
                 showNavLinks={false}
             />
-            <main className="flex-grow pt-24 px-4 md:px-12 printable-top-ten">
+            <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12 printable-top-ten">
                 <div className="max-w-4xl mx-auto">
                     <div className="text-center mb-12 relative py-8 overflow-hidden rounded-lg">
                          <div className="absolute inset-0 bg-gradient-to-r from-purple-900/30 via-red-900/30 to-black/30 opacity-50"></div>
@@ -86,9 +126,16 @@ const TopTenPage: React.FC = () => {
                             <p className="text-lg text-gray-400">
                                {currentDate}
                             </p>
-                             <button onClick={handleDownload} className="no-print mt-4 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md text-sm">
-                                Download List
-                             </button>
+                            <div className="no-print mt-4 flex justify-center gap-4">
+                                <button onClick={handleDownload} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md text-sm">
+                                    Download List
+                                </button>
+                                {('share' in navigator) && (
+                                    <button onClick={handleShare} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">
+                                        Share
+                                    </button>
+                                )}
+                             </div>
                          </div>
                     </div>
 
@@ -125,8 +172,15 @@ const TopTenPage: React.FC = () => {
                     </div>
                 </div>
             </main>
-            <Footer />
+            <CollapsibleFooter />
             <BackToTopButton />
+             <BottomNavBar 
+                isFestivalLive={isFestivalLive}
+                onSearchClick={() => {
+                    window.history.pushState({}, '', '/');
+                    window.dispatchEvent(new Event('pushstate'));
+                }}
+            />
         </div>
     );
 };

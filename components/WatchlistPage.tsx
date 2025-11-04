@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import BackToTopButton from './BackToTopButton';
@@ -72,6 +73,7 @@ const WatchlistPage: React.FC = () => {
                 isScrolled={true}
                 onMobileSearchClick={() => {}}
                 showNavLinks={true}
+                isFestivalLive={isFestivalLive}
             />
             <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
                 <div className="max-w-7xl mx-auto">

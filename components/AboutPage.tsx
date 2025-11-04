@@ -4,18 +4,23 @@ import Header from './Header';
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import LoadingSpinner from './LoadingSpinner';
-import { AboutData } from '../types';
+import { AboutData, FestivalConfig } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
+import CollapsibleFooter from './CollapsibleFooter';
+import BottomNavBar from './BottomNavBar';
 
 const AboutPage: React.FC = () => {
     const [aboutData, setAboutData] = useState<AboutData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+    const [isFestivalLive, setIsFestivalLive] = useState(false);
 
     useEffect(() => {
         const loadAboutData = async () => {
             try {
                 const { data: liveData } = await fetchAndCacheLiveData();
                 setAboutData(liveData.aboutData);
+                setFestivalConfig(liveData.festivalConfig);
             } catch (error) {
                 console.error("Failed to load About Us data", error);
             } finally {
@@ -24,6 +29,19 @@ const AboutPage: React.FC = () => {
         };
         loadAboutData();
     }, []);
+
+    useEffect(() => {
+        const checkStatus = () => {
+            if (!festivalConfig?.startDate || !festivalConfig?.endDate) return;
+            const now = new Date();
+            const start = new Date(festivalConfig.startDate);
+            const end = new Date(festivalConfig.endDate);
+            setIsFestivalLive(now >= start && now < end);
+        };
+        checkStatus();
+        const interval = setInterval(checkStatus, 60000);
+        return () => clearInterval(interval);
+    }, [festivalConfig]);
 
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
         e.preventDefault();
@@ -57,7 +75,7 @@ const AboutPage: React.FC = () => {
                 showNavLinks={false}
             />
 
-            <main className="flex-grow pt-24 px-4 md:px-12">
+            <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
                 <div className="max-w-4xl mx-auto">
                     <div className="mb-12 text-center animate-fadeInHeroContent">
                         <img
@@ -137,8 +155,15 @@ const AboutPage: React.FC = () => {
                     </div>
                 </div>
             </main>
-            <Footer />
+            <CollapsibleFooter />
             <BackToTopButton />
+            <BottomNavBar 
+                isFestivalLive={isFestivalLive}
+                onSearchClick={() => {
+                    window.history.pushState({}, '', '/');
+                    window.dispatchEvent(new Event('pushstate'));
+                }}
+            />
         </div>
     );
 };

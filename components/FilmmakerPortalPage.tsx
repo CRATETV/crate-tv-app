@@ -131,6 +131,24 @@ const FilmmakerPortalPage: React.FC = () => {
             .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
             .slice(0, 10);
     }, [allMovies]);
+
+    const handleShareTopTen = async () => {
+        const shareData = {
+            title: 'Top 10 on Crate TV',
+            text: `Check out the most popular films on Crate TV today!`,
+            url: `${window.location.origin}/top-ten`,
+        };
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                navigator.clipboard.writeText(shareData.url);
+                alert('Link to Top 10 page copied to clipboard!');
+            }
+        } catch (error) {
+            console.error('Error sharing Top Ten page:', error);
+        }
+    };
     
     const handleDownloadTopTen = () => {
         const csvContent = "data:text/csv;charset=utf-8," 
@@ -237,9 +255,16 @@ const FilmmakerPortalPage: React.FC = () => {
                             <div>
                                 <div className="flex justify-between items-center mb-4">
                                     <h2 className="text-2xl font-bold text-white">Top 10 on Crate TV</h2>
-                                    <button onClick={handleDownloadTopTen} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-md text-xs">
-                                        Download
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button onClick={handleDownloadTopTen} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-md text-xs">
+                                            Download
+                                        </button>
+                                        {('share' in navigator) && (
+                                            <button onClick={handleShareTopTen} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md text-xs">
+                                                Share
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 space-y-3">
                                     {topTenMovies.length > 0 ? topTenMovies.map((movie, index) => (

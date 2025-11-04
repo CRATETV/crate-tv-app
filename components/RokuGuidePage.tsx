@@ -1,9 +1,12 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './Header';
 // FIX: Corrected import path
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
+import CollapsibleFooter from './CollapsibleFooter';
+import BottomNavBar from './BottomNavBar';
+import { FestivalConfig } from '../types';
+import { fetchAndCacheLiveData } from '../services/dataService';
 
 const Step: React.FC<{ number: string; title: string; children: React.ReactNode }> = ({ number, title, children }) => (
     <div className="flex items-start gap-4">
@@ -18,6 +21,35 @@ const Step: React.FC<{ number: string; title: string; children: React.ReactNode 
 );
 
 const RokuGuidePage: React.FC = () => {
+    const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+    const [isFestivalLive, setIsFestivalLive] = useState(false);
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const { data } = await fetchAndCacheLiveData();
+                setFestivalConfig(data.festivalConfig);
+            } catch (error) {
+                console.error("Failed to load data for Roku Guide page:", error);
+            }
+        };
+        loadData();
+    }, []);
+
+    useEffect(() => {
+        const checkStatus = () => {
+            if (!festivalConfig?.startDate || !festivalConfig?.endDate) return;
+            const now = new Date();
+            const start = new Date(festivalConfig.startDate);
+            const end = new Date(festivalConfig.endDate);
+            setIsFestivalLive(now >= start && now < end);
+        };
+        checkStatus();
+        const interval = setInterval(checkStatus, 60000);
+        return () => clearInterval(interval);
+    }, [festivalConfig]);
+
+
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
             <Header 
@@ -28,7 +60,7 @@ const RokuGuidePage: React.FC = () => {
                 showSearch={false}
             />
 
-            <main className="flex-grow pt-24 px-4 md:px-12">
+            <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
                 <div className="max-w-3xl mx-auto">
                      <div className="text-center mb-12">
                         <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/ruko+logo+.webp" alt="Roku Logo" className="w-32 h-auto mx-auto mb-4" />
@@ -55,8 +87,15 @@ const RokuGuidePage: React.FC = () => {
                 </div>
             </main>
 
-            <Footer />
+            <CollapsibleFooter />
             <BackToTopButton />
+            <BottomNavBar 
+                isFestivalLive={isFestivalLive}
+                onSearchClick={() => {
+                    window.history.pushState({}, '', '/');
+                    window.dispatchEvent(new Event('pushstate'));
+                }}
+            />
         </div>
     );
 };
