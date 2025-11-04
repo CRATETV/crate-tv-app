@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Header from './Header';
 import Hero from './Hero';
@@ -5,7 +6,7 @@ import LoadingSpinner from './LoadingSpinner';
 import { Movie, AboutData, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import AuthModal from './AuthModal';
-import Footer from './Footer';
+import CollapsibleFooter from './CollapsibleFooter';
 
 const LandingPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -102,7 +103,7 @@ const LandingPage: React.FC = () => {
                         )}
                     </div>
                 </main>
-                 <Footer showActorLinks={true} />
+                 <CollapsibleFooter showActorLinks={true} />
             </div>
             {isAuthModalOpen && (
                 <AuthModal

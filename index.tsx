@@ -1,27 +1,227 @@
-import React, { useState } from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-import Intro from './components/Intro';
-import { AuthProvider } from './contexts/AuthContext';
-// Assuming a global CSS file exists for tailwind or other base styles
-// import './index.css';
 
-const Main = () => {
-  // By default, show the intro. A real app might use sessionStorage to skip it on refresh.
-  const [showIntro, setShowIntro] = useState(true);
+
+import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom/client';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { inject } from '@vercel/analytics';
+
+// Inject Vercel Analytics
+inject();
+
+// Import all page components
+import App from './App';
+// FIX: Corrected import path
+import AdminPage from './AdminPage';
+import LandingPage from './components/LandingPage';
+// FIX: Corrected import path
+import ClassicsPage from './components/ClassicsPage';
+import SubmitPage from './components/SubmitPage';
+// FIX: Corrected import path
+import MoviePage from './components/MoviePage';
+import MerchPage from './components/MerchPage';
+import ContactPage from './components/ContactPage';
+import AboutPage from './components/AboutPage';
+// FIX: Corrected import path
+import LoginPage from './components/LoginPage';
+import AccountPage from './components/AccountPage';
+import FestivalPage from './components/FestivalPage';
+import FilmFestivalModule from './FilmFestivalModule';
+import DeveloperGuidePage from './components/DeveloperGuidePage';
+import ThankYouPage from './components/ThankYouPage';
+import TopTenPage from './components/TopTenPage';
+// FIX: Corrected import path
+import ActorPortalPage from './components/ActorPortalPage';
+import ActorSignupPage from './components/ActorSignupPage';
+import ActorsDirectoryPage from './components/ActorsDirectoryPage';
+import ActorProfilePage from './components/ActorProfilePage';
+// FIX: Corrected import path
+import WatchlistPage from './components/WatchlistPage';
+// FIX: Corrected import path
+import FilmmakerPortalPage from './components/FilmmakerPortalPage';
+import FilmmakerSignupPage from './components/FilmmakerSignupPage';
+import RokuGuidePage from './components/RokuGuidePage';
+import LoadingSpinner from './components/LoadingSpinner';
+import Intro from './components/Intro';
+import CreatorPortalPage from './components/CreatorPortalPage';
+
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error("Could not find root element to mount to");
+}
+
+const root = ReactDOM.createRoot(rootElement);
+
+// This component now contains the router and authentication logic.
+const AppRouter: React.FC = () => {
+  const [route, setRoute] = useState(window.location.pathname);
+  const { user, authInitialized } = useAuth();
+
+  useEffect(() => {
+    const onNavigate = () => {
+      setRoute(window.location.pathname);
+      window.scrollTo(0, 0);
+    };
+    
+    window.addEventListener('popstate', onNavigate);
+    window.addEventListener('pushstate', onNavigate);
+
+    return () => {
+      window.removeEventListener('popstate', onNavigate);
+      window.removeEventListener('pushstate', onNavigate);
+    };
+  }, []);
+  
+  // A simple component to handle redirects for protected routes.
+  const RedirectToLogin: React.FC = () => {
+    useEffect(() => {
+      const currentPath = window.location.pathname + window.location.search;
+      const loginUrl = new URL('/login', window.location.origin);
+      // Don't set a redirect for the root path
+      if (currentPath !== '/' && currentPath !== '/login') {
+          loginUrl.searchParams.set('redirect', currentPath);
+      }
+      // Use replaceState to not add a bad entry to the browser's history
+      window.history.replaceState({}, '', loginUrl.toString());
+      window.dispatchEvent(new Event('pushstate'));
+    }, []);
+    
+    // Render the login page immediately to avoid a flash of other content.
+    return <LoginPage />;
+  };
+
+  const movieMatch = route.match(/^\/movie\/([a-zA-Z0-9_-]+)/);
+  if (movieMatch && movieMatch[1]) {
+    return user ? <MoviePage movieKey={movieMatch[1]} /> : <RedirectToLogin />;
+  }
+
+  const actorProfileMatch = route.match(/^\/actors-directory\/([a-zA-Z0-9_-]+)/);
+  if (actorProfileMatch && actorProfileMatch[1]) {
+    return <ActorProfilePage slug={actorProfileMatch[1]} />;
+  }
+
+
+  // Handle static routes with authentication checks
+  switch (route) {
+    case '/':
+      return user ? <App /> : <LandingPage />;
+    case '/account':
+      return user ? <AccountPage /> : <RedirectToLogin />;
+    case '/festival':
+       return user ? <FestivalPage /> : <RedirectToLogin />;
+    case '/watchlist':
+      return user ? <WatchlistPage /> : <RedirectToLogin />;
+    case '/classics':
+      return user ? <ClassicsPage /> : <RedirectToLogin />;
+    case '/top-ten': // Made public per user request
+      return <TopTenPage />;
+    
+    // Public Routes
+    case '/portal':
+      return <CreatorPortalPage />;
+    case '/login':
+      return <LoginPage />;
+    case '/submit':
+      return <SubmitPage />;
+    case '/actor-signup':
+      return <ActorSignupPage />;
+    case '/actors-directory':
+      return <ActorsDirectoryPage />;
+    case '/filmmaker-signup':
+      return <FilmmakerSignupPage />;
+    case '/thank-you':
+      return <ThankYouPage />;
+    case '/contact':
+      return <ContactPage />;
+    case '/about':
+      return <AboutPage />;
+    case '/roku-guide':
+      return <RokuGuidePage />;
+      
+    // Protected Actor Route
+    case '/actor-portal': {
+      if (!authInitialized) return <LoadingSpinner />;
+      if (!user) return <RedirectToLogin />;
+      if (!user.isActor) {
+        const RedirectHome: React.FC = () => {
+          useEffect(() => {
+            window.history.replaceState({}, '', '/');
+            window.dispatchEvent(new Event('pushstate'));
+          }, []);
+          return <App />;
+        };
+        return <RedirectHome />;
+      }
+      return <ActorPortalPage />;
+    }
+
+    // Protected Filmmaker Route
+    case '/filmmaker-dashboard': {
+        if (!authInitialized) return <LoadingSpinner />;
+        if (!user) return <RedirectToLogin />;
+        if (!user.isFilmmaker) {
+            const RedirectHome: React.FC = () => {
+                useEffect(() => {
+                    window.history.replaceState({}, '', '/');
+                    window.dispatchEvent(new Event('pushstate'));
+                }, []);
+                return <App />;
+            };
+            return <RedirectHome />;
+        }
+        return <FilmmakerPortalPage />;
+    }
+
+    // Admin & Dev routes
+    case '/admin':
+      return <AdminPage />;
+    case '/filmfestivalmodule':
+      return <FilmFestivalModule />;
+    case '/developer-guide':
+      return <DeveloperGuidePage />;
+    default:
+      // Fallback to the appropriate homepage for any unknown routes
+      return user ? <App /> : <LandingPage />;
+  }
+};
+
+const MainApp: React.FC = () => {
+  const [showIntro, setShowIntro] = useState(() => {
+    const lastSeen = localStorage.getItem('introSeenTimestamp');
+    if (!lastSeen) {
+      return true; // Never seen before
+    }
+    const oneDay = 24 * 60 * 60 * 1000;
+    // Show if more than 24 hours have passed
+    return (Date.now() - parseInt(lastSeen, 10)) > oneDay;
+  });
 
   const handleIntroEnd = () => {
+    localStorage.setItem('introSeenTimestamp', Date.now().toString());
     setShowIntro(false);
   };
 
-  // The main app is wrapped in StrictMode for development checks and AuthProvider for authentication context.
   return (
-    <React.StrictMode>
-      <AuthProvider>
-        {showIntro ? <Intro onIntroEnd={handleIntroEnd} /> : <App />}
-      </AuthProvider>
-    </React.StrictMode>
+    <AuthProvider>
+      {showIntro ? <Intro onIntroEnd={handleIntroEnd} /> : <AppRouter />}
+    </AuthProvider>
   );
 };
 
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(<Main />);
+root.render(
+  <React.StrictMode>
+    <MainApp />
+  </React.StrictMode>
+);
+
+// Register the Service Worker for PWA functionality
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(registration => {
+        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+      })
+      .catch(error => {
+        console.log('ServiceWorker registration failed: ', error);
+      });
+  });
+}

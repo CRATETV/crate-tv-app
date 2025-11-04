@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const { name, email } = await request.json();
 
     if (!name || !email) {
-      return new Response(JSON.stringify({ error: 'Name and email are required.' }), { status: 400, headers: {'Content-Type': 'application/json'} });
+      return new Response(JSON.stringify({ error: 'Name and email are required.' }), { status: 400 });
     }
 
     // --- Firebase Admin Init ---
@@ -33,26 +33,51 @@ export async function POST(request: Request) {
     const auth = getAdminAuth();
     if (!db || !auth) throw new Error("Database or Auth connection failed.");
 
-    // --- Step 1: Verify actor name exists in movies DB ---
+    // --- Step 1: Verify actor name exists in movies DB and find their best data ---
     const moviesSnapshot = await db.collection('movies').get();
-    let foundActor: Actor | null = null;
+    let bestActorData: Actor | null = null;
     const trimmedName = name.trim().toLowerCase();
 
+    // Refactored to a for...of loop for more reliable type inference by the TS compiler.
     for (const movieDoc of moviesSnapshot.docs) {
         const movieData = movieDoc.data() as Movie;
-        if (movieData.cast && Array.isArray(movieData.cast)) {
-            const actorInMovie = movieData.cast.find(actor => actor.name.trim().toLowerCase() === trimmedName);
-            if (actorInMovie) {
-                foundActor = actorInMovie;
-                break; // Found our actor, no need to search further
+        if (movieData.cast) {
+            const matchedActor = movieData.cast.find(actor => actor.name.trim().toLowerCase() === trimmedName);
+            if (matchedActor) {
+                // Heuristic to find the "best" profile data.
+                // Prioritize profiles with non-default photos and longer bios.
+                if (!bestActorData || 
+                    (matchedActor.photo && !matchedActor.photo.includes('Defaultpic.png') && (!bestActorData.photo || bestActorData.photo.includes('Defaultpic.png'))) ||
+                    (matchedActor.bio && (!bestActorData.bio || matchedActor.bio.length > bestActorData.bio.length)))
+                {
+                    bestActorData = matchedActor;
+                }
             }
         }
     }
 
-    if (!foundActor) {
-      return new Response(JSON.stringify({ error: "Name not found in our film credits. Please ensure it matches exactly." }), { status: 404, headers: {'Content-Type': 'application/json'} });
+    // This check now directly verifies if any actor data was found and acts as a type guard for TypeScript.
+    if (!bestActorData) {
+      return new Response(JSON.stringify({ error: 'Actor name not found in our records. Please ensure it matches the film credits exactly.' }), { status: 404 });
     }
     
+    // --- Step 1.5: Create public profile from best data if it doesn't exist ---
+    const actorSlug = slugify(name);
+    const actorProfileRef = db.collection('actor_profiles').doc(actorSlug);
+    const actorProfileDoc = await actorProfileRef.get();
+
+    if (!actorProfileDoc.exists) {
+        const actorProfileData: ActorProfile = {
+            name: bestActorData.name,
+            slug: actorSlug,
+            bio: bestActorData.bio || 'Bio not available.',
+            photo: bestActorData.photo || '',
+            highResPhoto: bestActorData.highResPhoto || bestActorData.photo || '',
+            imdbUrl: '', // Can be updated later by the actor
+        };
+        await actorProfileRef.set(actorProfileData);
+    }
+
     // --- Step 2: Create or Find Firebase user ---
     let userRecord;
     try {
@@ -61,65 +86,41 @@ export async function POST(request: Request) {
         if (error.code === 'auth/user-not-found') {
             userRecord = await auth.createUser({ email, displayName: name });
         } else {
-            // Re-throw other auth errors, like email-already-in-use by a non-actor
-             if(error.code === 'auth/email-already-exists') {
-                throw new Error("This email is already associated with an account. Please use a different email or contact support.");
-             }
-            throw error;
+            throw error; // Re-throw other auth errors
         }
     }
 
-    // --- Step 3: Set custom claim, Firestore profile, and Public Actor Profile ---
+    // --- Step 3: Set custom claim and Firestore profile ---
     await auth.setCustomUserClaims(userRecord.uid, { isActor: true });
-    
     const userProfileRef = db.collection('users').doc(userRecord.uid);
     await userProfileRef.set({ name, email, isActor: true }, { merge: true });
 
-    // Create the public-facing profile if it doesn't exist, seeded with data from the movie
-    const actorSlug = slugify(name);
-    const actorProfileRef = db.collection('actor_profiles').doc(actorSlug);
-    const existingProfile = await actorProfileRef.get();
-    if (!existingProfile.exists) {
-        const newProfile: ActorProfile = {
-            name: foundActor.name,
-            slug: actorSlug,
-            bio: foundActor.bio || 'Bio not available.',
-            photo: foundActor.photo,
-            highResPhoto: foundActor.highResPhoto,
-            imdbUrl: '', // Can be filled in later by the actor
-        };
-        await actorProfileRef.set(newProfile);
-    }
-
-
     // --- Step 4: Generate password creation link ---
     const actionCodeSettings = {
-        url: new URL('/actor-portal', request.url).href, // Redirect to portal after password set
+        url: new URL('/actor-portal', request.url).href,
         handleCodeInApp: false,
     };
     const link = await auth.generatePasswordResetLink(email, actionCodeSettings);
 
     // --- Step 5: Send Email with Resend ---
-    const portalUrl = new URL('/actor-portal', request.url).href;
-
     const emailHtml = `
       <div>
         <h1>Welcome to the Crate TV Actor Portal, ${name}!</h1>
-        <p>We've confirmed you're an actor on Crate TV. To access your private portal where you can update your profile and connect with other actors, you first need to create a secure password for your account.</p>
+        <p>We've confirmed you're part of the Crate TV family. To access the portal and update your profile, you first need to create a secure password for your account.</p>
         <p>Click the link below to set your password:</p>
         <p><a href="${link}" style="color: #6d28d9; text-decoration: none; font-weight: bold;">Create Your Password</a></p>
-        <p>This link is valid for a limited time. Once your password is set, you can log in at <a href="${portalUrl}">${portalUrl}</a>.</p>
-        <p>We're excited to have you with us!</p>
+        <p>This link is valid for a limited time. Once your password is set, you can log in to the Actor Portal at any time.</p>
+        <p>We look forward to seeing your updates!</p>
         <p>- The Crate TV Team</p>
       </div>
     `;
-    
+
     const emailText = `
         Welcome to the Crate TV Actor Portal, ${name}!\n\n
-        We've confirmed you're an actor on Crate TV. To access your private portal where you can update your profile and connect with other actors, you first need to create a secure password for your account.\n\n
+        We've confirmed you're part of the Crate TV family. To access the portal and update your profile, you first need to create a secure password for your account.\n\n
         Copy and paste the following link into your browser to set your password:\n${link}\n\n
-        This link is valid for a limited time. Once your password is set, you can log in at ${portalUrl}.\n\n
-        We're excited to have you with us!\n- The Crate TV Team
+        This link is valid for a limited time.\n\n
+        - The Crate TV Team
     `;
 
     const { error } = await resend.emails.send({
@@ -135,11 +136,11 @@ export async function POST(request: Request) {
         throw new Error('Could not send the access email. Please try again later.');
     }
 
-    return new Response(JSON.stringify({ success: true, message: 'Verification successful. Email sent.' }), { status: 200, headers: {'Content-Type': 'application/json'} });
+    return new Response(JSON.stringify({ success: true, message: 'Verification successful. Email sent.' }), { status: 200 });
 
   } catch (error) {
     console.error("Error in actor-signup API:", error);
     const errorMessage = error instanceof Error ? error.message : "An unknown server error occurred.";
-    return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: {'Content-Type': 'application/json'} });
+    return new Response(JSON.stringify({ error: errorMessage }), { status: 500 });
   }
 }

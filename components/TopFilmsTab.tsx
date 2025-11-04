@@ -50,7 +50,7 @@ const TopFilmsTab: React.FC = () => {
         if (!analyticsData || !allMovies) return [];
         
         return (Object.values(allMovies) as Movie[]).map(movie => {
-            const donations = analyticsData.filmmakerPayouts.find((p: FilmmakerPayout) => p.movieTitle === movie.title)?.totalDonations || 0;
+            const donations = analyticsData.filmmakerPayouts.find(p => p.movieTitle === movie.title)?.totalDonations || 0;
             return {
                 key: movie.key,
                 title: movie.title,

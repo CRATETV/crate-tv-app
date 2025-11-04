@@ -1,5 +1,4 @@
 import React, { useRef } from 'react';
-// FIX: Corrected import path for types to be relative.
 import { Movie } from '../types';
 import MovieCard from './MovieCard';
 

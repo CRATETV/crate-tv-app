@@ -3,8 +3,8 @@ import { Movie, Actor, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import ActorBioModal from './ActorBioModal';
 import Header from './Header';
-import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
+// FIX: Corrected casing for BackToTopButton import.
 import BackToTopButton from './BackToTopButton';
 import SearchOverlay from './SearchOverlay';
 import StagingBanner from './StagingBanner';
@@ -15,6 +15,7 @@ import RokuBanner from './RokuBanner';
 import SquarePaymentModal from './SquarePaymentModal';
 import DonationSuccessModal from './DonationSuccessModal';
 import { isMovieReleased } from '../constants';
+import CollapsibleFooter from './CollapsibleFooter';
 
 declare const google: any; // Declare Google IMA SDK global
 
@@ -74,12 +75,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [isLoading, setIsLoading] = useState(true);
   const hasTrackedViewRef = useRef(false);
 
-  // Like state
-  const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
-  const [isAnimatingLike, setIsAnimatingLike] = useState(false);
-
   // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
+  const [showControls, setShowControls] = useState(false);
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,6 +95,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   // Ad State
   const adContainerRef = useRef<HTMLDivElement>(null);
+  const adsLoaderRef = useRef<any>(null);
   const adsManagerRef = useRef<any>(null);
   const [isAdPlaying, setIsAdPlaying] = useState(false);
   const [adError, setAdError] = useState<string | null>(null);
@@ -118,7 +118,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   
   const initializeAds = useCallback(() => {
     if (!videoRef.current || !adContainerRef.current || playerMode !== 'full' || !released || adsManagerRef.current || typeof google === 'undefined') {
-        if (playerMode === 'full') playContent(); // Play content directly if ads can't be initialized
+        if (playerMode === 'full') playContent();
         return;
     }
     
@@ -129,6 +129,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
     const adDisplayContainer = new google.ima.AdDisplayContainer(adContainer, videoElement);
     const adsLoader = new google.ima.AdsLoader(adDisplayContainer);
+    adsLoaderRef.current = adsLoader;
 
     adsLoader.addEventListener(
         google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
@@ -165,10 +166,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         },
         false
     );
-
+    
     const adsRequest = new google.ima.AdsRequest();
-    // Using a sample skippable pre-roll tag. This would come from AdSense.
-    adsRequest.adTagUrl = 'https://storage.googleapis.com/interactive-media-ads/ad-tags/unknown/vast_skippable.xml';
+    adsRequest.adTagUrl = 'https://googleads.g.doubleclick.net/pagead/ads?ad_type=video&client=ca-video-pub-5748304047766155&videoad_start_delay=0&description_url=' + encodeURIComponent(window.location.href);
     adsRequest.linearAdSlotWidth = videoElement.clientWidth;
     adsRequest.linearAdSlotHeight = videoElement.clientHeight;
 
@@ -203,9 +203,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             if (sourceMovie) {
               setReleased(isMovieReleased(sourceMovie));
     
-              const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
-              if (storedLikedMovies) setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
-    
               setMovie({ ...sourceMovie });
     
               if (params.get('play') === 'true' && sourceMovie.fullMovie && isMovieReleased(sourceMovie)) {
@@ -214,13 +211,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 setPlayerMode('poster');
               }
             } else {
-              // Instead of a hard redirect, which can be jarring, push to history for a smoother SPA navigation.
-              window.history.pushState({}, '', '/');
+              window.history.replaceState({}, '', '/');
               window.dispatchEvent(new Event('pushstate'));
             }
         } catch (error) {
             console.error("Failed to load movie data:", error);
-            window.history.pushState({}, '', '/');
+            window.history.replaceState({}, '', '/');
             window.dispatchEvent(new Event('pushstate'));
         } finally {
             setIsLoading(false);
@@ -278,40 +274,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     return () => document.removeEventListener('keydown', handleEscKey);
 }, [playerMode]);
 
-    const toggleLikeMovie = useCallback(async (movieKey: string) => {
-        setIsAnimatingLike(false);
-        const newLikedMovies = new Set(likedMovies);
-        const action = newLikedMovies.has(movieKey) ? 'unlike' : 'like';
-
-        if (action === 'unlike') {
-            newLikedMovies.delete(movieKey);
-        } else {
-            newLikedMovies.add(movieKey);
-            setTimeout(() => setIsAnimatingLike(true), 10);
-        }
-        setLikedMovies(newLikedMovies);
-
-        setMovie(prevMovie => {
-            if (!prevMovie) return null;
-            const likesChange = action === 'like' ? 1 : -1;
-            return {
-                ...prevMovie,
-                likes: Math.max(0, (prevMovie.likes || 0) + likesChange)
-            };
-        });
-
-        localStorage.setItem('cratetv-likedMovies', JSON.stringify(Array.from(newLikedMovies)));
-        
-        try {
-            await fetch('/api/toggle-like', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ movieKey, action }),
-            });
-        } catch (error) {
-            console.error("Failed to sync like with server:", error);
-        }
-    }, [likedMovies]);
 
     const recommendedMovies = useMemo(() => {
         if (!movie) return [];
@@ -334,26 +296,44 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
     const handleSearchSubmit = (query: string) => {
         if (query) {
-            window.location.href = `/?search=${encodeURIComponent(query)}`;
+             window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
+             window.dispatchEvent(new Event('pushstate'));
         }
     };
     
     const handleMovieEnd = () => {
+      // Navigate to the home screen when the movie finishes.
       window.history.pushState({}, '', '/');
       window.dispatchEvent(new Event('pushstate'));
     };
 
-    // FIX: Define the handleExitPlayer function to switch the player mode back to 'poster'.
     const handleExitPlayer = () => {
         setPlayerMode('poster');
     };
     
-    const handlePaymentSuccess = (details: { paymentType: string, amount: number, email?: string }) => {
-        if (details.paymentType === 'donation') {
-            setLastDonationDetails({ amount: details.amount, email: details.email });
-            setIsDonationSuccessModalOpen(true);
-        }
+    const handleDonationSuccess = (details: { amount: number; email?: string }) => {
+        setIsSupportModalOpen(false);
+        setLastDonationDetails(details);
+        setIsDonationSuccessModalOpen(true);
     };
+
+    const handlePlayerInteraction = () => {
+      setShowControls(true);
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 3000);
+    };
+
+    useEffect(() => {
+      return () => {
+        if (controlsTimeoutRef.current) {
+          clearTimeout(controlsTimeoutRef.current);
+        }
+      };
+    }, []);
 
     if (isLoading || !movie) {
         return <LoadingSpinner />;
@@ -374,9 +354,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 />
             )}
 
-            <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
-                <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container">
-                    <div ref={adContainerRef} className="absolute inset-0 z-20 pointer-events-none" />
+            <main className={`flex-grow ${playerMode === 'full' ? 'flex items-center justify-center' : 'pt-4 md:pt-20'}`}>
+                <div 
+                    ref={videoContainerRef} 
+                    className="relative w-full aspect-video bg-black secure-video-container group"
+                    onClick={handlePlayerInteraction}
+                    onMouseMove={handlePlayerInteraction}
+                >
+                    <div ref={adContainerRef} className="absolute inset-0 z-20" />
                     
                     {playerMode === 'full' && (
                         <video 
@@ -388,6 +373,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             onContextMenu={(e) => e.preventDefault()} 
                             controlsList="nodownload"
                             onEnded={handleMovieEnd}
+                            autoPlay
                         />
                     )}
 
@@ -425,17 +411,37 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         </>
                     )}
                     
-                    {playerMode === 'full' && <CastButton videoElement={videoRef.current} />}
                     {playerMode === 'full' && (
-                        <button
-                            onClick={handleExitPlayer}
-                            className="absolute top-4 right-16 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white z-30"
-                            aria-label="Exit video player"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        <>
+                            {/* Back to Home Button */}
+                            <div className={`absolute top-4 left-4 z-30 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+                                <button
+                                    onClick={() => {
+                                        window.history.pushState({}, '', '/');
+                                        window.dispatchEvent(new Event('pushstate'));
+                                    }}
+                                    className="bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white"
+                                    aria-label="Back to Home"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                    </svg>
+                                </button>
+                            </div>
+                            {/* Right side controls */}
+                            <div className={`absolute top-4 right-4 z-30 flex items-center gap-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+                                <CastButton videoElement={videoRef.current} />
+                                <button
+                                    onClick={handleExitPlayer}
+                                    className="bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white"
+                                    aria-label="Exit video player"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </>
                     )}
                 </div>
 
@@ -443,12 +449,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                   <div className="max-w-6xl mx-auto p-4 md:p-8">
                       <h1 className="text-3xl md:text-5xl font-bold text-white">{movie.title || 'Untitled Film'}</h1>
                       <div className="mt-4 flex flex-wrap items-center gap-4">
-                          <button onClick={() => setIsSupportModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors">
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" />
-                             </svg>
-                             Support Filmmaker
-                          </button>
+                          {!movie.hasCopyrightMusic && (
+                            <button onClick={() => setIsSupportModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors">
+                               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" /></svg>
+                               Support Filmmaker
+                            </button>
+                          )}
                       </div>
                       <div className="mt-4 text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: movie.synopsis || '' }}></div>
                        
@@ -502,7 +508,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             
             {playerMode !== 'full' && (
               <>
-                <Footer />
+                <CollapsibleFooter />
                 <BackToTopButton />
               </>
             )}
@@ -536,16 +542,16 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     movie={movie}
                     paymentType="donation"
                     onClose={() => setIsSupportModalOpen(false)}
-                    onPaymentSuccess={handlePaymentSuccess}
+                    onPaymentSuccess={handleDonationSuccess}
                 />
             )}
             {isDonationSuccessModalOpen && lastDonationDetails && movie && (
                 <DonationSuccessModal
-                    onClose={() => setIsDonationSuccessModalOpen(false)}
                     movieTitle={movie.title}
                     directorName={movie.director}
                     amount={lastDonationDetails.amount}
                     email={lastDonationDetails.email}
+                    onClose={() => setIsDonationSuccessModalOpen(false)}
                 />
             )}
         </div>

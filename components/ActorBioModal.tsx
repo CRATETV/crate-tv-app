@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-// FIX: Corrected import path for types to be relative.
 import { Actor } from '../types';
 import { generateActorFact, findImdbUrl } from '../services/geminiService';
 import html2canvas from 'html2canvas';

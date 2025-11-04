@@ -1,5 +1,5 @@
 
-// FIX: Corrected import path for types to be relative.
+// FIX: Imported types from the corrected types.ts file and removed duplicated type definitions.
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
 
 // Utility function to robustly check if a movie is past its release time.
@@ -123,8 +123,7 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/That+Loud+.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/That%20Loud.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/That%20Loud.png",
-    "likes": 0,
-    "durationInMinutes": 7
+    "likes": 0
   },
   "lifeless": {
     "key": "lifeless",
@@ -156,8 +155,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.amazonaws.com/Lifeless+poster+remake+.jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Lifeless.png",
     "likes": 0,
-    "rating": 8.8,
-    "durationInMinutes": 15
+    "rating": 8.8
   },
   "almasvows": {
     "key": "almasvows",
@@ -232,8 +230,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Director's+cut+poster+.jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
     "likes": 0,
-    "rating": 9.2,
-    "durationInMinutes": 12
+    "rating": 9.2
   },
   "foodiecalltheatricalcut": {
     "key": "foodiecalltheatricalcut",
@@ -276,8 +273,7 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Lasley+cut.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
-    "likes": 0,
-    "durationInMinutes": 10
+    "likes": 0
   },
   "finallycaught": {
     "key": "finallycaught",
@@ -464,9 +460,7 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/Street+Eats+THE+BOOT-A+Louisiana+Food+Truck+Journey.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/street+Eats+the+Boot+trailer+overlay++(1).jpeg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/street+Eats+the+Boot+trailer+overlay++(1).jpeg",
-    "likes": 0,
-    "durationInMinutes": 57,
-    "isWatchPartyEligible": true
+    "likes": 0
   },
   "silentlove": {
     "key": "silentlove",
@@ -517,9 +511,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Juniper.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Juniper.png",
     "likes": 0,
-    "rating": 9.5,
-    "awards": ["Audience Choice 2024"],
-    "durationInMinutes": 10
+    "rating": 9.5
   },
   "drive": {
     "key": "drive",
@@ -550,9 +542,7 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Drive+(2).mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Drive+Poster.jpeg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Drive+Poster.jpeg",
-    "likes": 15,
-    "durationInMinutes": 19,
-    "isWatchPartyEligible": true
+    "likes": 15
   },
   "wrapitup": {
     "key": "wrapitup",
@@ -633,9 +623,7 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/consumed+.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
-    "likes": 0,
-    "durationInMinutes": 18,
-    "isWatchPartyEligible": true
+    "likes": 0
   },
   "fatherdaughterdance": {
     "key": "fatherdaughterdance",
@@ -1188,8 +1176,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "likes": 0,
-    "releaseDateTime": "1902-09-01T12:00:00Z",
-    "durationInMinutes": 14
+    "releaseDateTime": "1902-09-01T12:00:00Z"
   },
   "suspense": {
     "key": "suspense",
@@ -1209,8 +1196,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/suspense+movie+poster+.jpeg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/suspense+movie+poster+.jpeg",
     "likes": 0,
-    "releaseDateTime": "1913-07-06T12:00:00Z",
-    "durationInMinutes": 10
+    "releaseDateTime": "1913-07-06T12:00:00Z"
   },
   "thepawnshop": {
     "key": "thepawnshop",
@@ -1236,9 +1222,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/'The_Pawnshop'.jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/'The_Pawnshop'.jpg",
     "likes": 0,
-    "releaseDateTime": "1916-10-02T12:00:00Z",
-    "durationInMinutes": 24,
-    "isWatchPartyEligible": true
+    "releaseDateTime": "1916-10-02T12:00:00Z"
   },
   "theimmigrant": {
     "key": "theimmigrant",
@@ -1264,9 +1248,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The_Immigrant_1917.JPG",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The_Immigrant_1917.JPG",
     "likes": 0,
-    "releaseDateTime": "1917-06-17T12:00:00Z",
-    "durationInMinutes": 25,
-    "isWatchPartyEligible": true
+    "releaseDateTime": "1917-06-17T12:00:00Z"
   },
   "thefallofthehouseofusher": {
     "key": "thefallofthehouseofusher",
@@ -1279,8 +1261,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Fall+of+House+Of+Usher+.jpeg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Fall+of+House+Of+Usher+.jpeg",
     "likes": 0,
-    "releaseDateTime": "1928-10-28T12:00:00Z",
-    "durationInMinutes": 13
+    "releaseDateTime": "1928-10-28T12:00:00Z"
   },
   "unchienandalou": {
     "key": "unchienandalou",
@@ -1293,9 +1274,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Un+Chien+Andalou.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Un+Chien+Andalou.webp",
     "likes": 0,
-    "releaseDateTime": "1929-06-06T12:00:00Z",
-    "durationInMinutes": 21,
-    "isWatchPartyEligible": true
+    "releaseDateTime": "1929-06-06T12:00:00Z"
   },
   "meshesofafternoon": {
     "key": "meshesofafternoon",
@@ -1315,8 +1294,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Meshes_of_the_Afternoon_1.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Meshes_of_the_Afternoon_1.png",
     "likes": 0,
-    "releaseDateTime": "1943-01-01T12:00:00Z",
-    "durationInMinutes": 14
+    "releaseDateTime": "1943-01-01T12:00:00Z"
   },
   "bridelessgroom": {
     "key": "bridelessgroom",
@@ -1336,8 +1314,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Bridelessgroom_1sht.jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Bridelessgroom_1sht.jpg",
     "likes": 0,
-    "releaseDateTime": "1947-09-11T12:00:00Z",
-    "durationInMinutes": 17
+    "releaseDateTime": "1947-09-11T12:00:00Z"
   }
 };
 

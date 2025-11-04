@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
+// FIX: Corrected import path
 import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';

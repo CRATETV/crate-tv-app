@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchAndCacheLiveData } from './services/dataService';
-// FIX: Corrected import path for types to be relative.
+// FIX: Corrected type imports to use the new types.ts file
 import { Movie, Actor, Category, FestivalConfig, LiveData, FetchResult } from './types';
 import Header from './components/Header';
 // FIX: Corrected import path
@@ -21,7 +21,7 @@ import NowPlayingBanner from './components/NowPlayingBanner';
 import { useAuth } from './contexts/AuthContext';
 import { isMovieReleased } from './constants';
 import BottomNavBar from './components/BottomNavBar';
-import Footer from './components/Footer';
+import CollapsibleFooter from './components/CollapsibleFooter';
 
 const CACHE_KEY = 'cratetv-live-data';
 const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
@@ -561,7 +561,7 @@ const App: React.FC = () => {
         )}
       </main>
       
-      <Footer showActorLinks={true} className="hidden md:block" />
+      <CollapsibleFooter showActorLinks={true} />
       <BackToTopButton />
 
       {detailsMovie && (

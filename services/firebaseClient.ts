@@ -1,93 +1,113 @@
-// services/firebaseClient.ts
-
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, Firestore, updateDoc } from 'firebase/firestore';
+import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
+import { getAuth, Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { getFirestore, doc, getDoc, setDoc, Firestore } from 'firebase/firestore';
+// FIX: Corrected type imports to use the new types.ts file
 import { User } from '../types';
 
+let authInstance: Auth | null = null;
 let app: FirebaseApp | null = null;
-let auth: Auth | null = null;
 let db: Firestore | null = null;
 
-let firebaseInitializationPromise: Promise<Auth | null> | null = null;
+// This function ensures Firebase is initialized only once.
+export const initializeFirebaseAuth = async (): Promise<Auth | null> => {
+    if (authInstance) return authInstance;
 
-export const initializeFirebaseAuth = (): Promise<Auth | null> => {
-    if (firebaseInitializationPromise) {
-        return firebaseInitializationPromise;
-    }
-
-    firebaseInitializationPromise = (async () => {
-        try {
-            const response = await fetch('/api/firebase-config', { method: 'POST' });
-            if (!response.ok) {
-                console.error("Failed to fetch Firebase config, auth will not be available.");
-                return null;
-            }
-            const firebaseConfig = await response.json();
-            if (!firebaseConfig.apiKey) {
-                 console.error("Firebase config is incomplete, auth will not be available.");
-                 return null;
-            }
-
-            if (getApps().length === 0) {
-                app = initializeApp(firebaseConfig);
-            } else {
-                app = getApp();
-            }
-            auth = getAuth(app);
-            db = getFirestore(app);
-            return auth;
-        } catch (error) {
-            console.error("Firebase initialization error:", error);
-            return null;
-        }
-    })();
-
-    return firebaseInitializationPromise;
-};
-
-export const getAuthInstance = (): Auth | null => auth;
-export const getDbInstance = (): Firestore | null => db;
-
-export const getUserProfile = async (uid: string): Promise<User | null> => {
-    if (!db) return null;
-    const docRef = doc(db, 'users', uid);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-        return docSnap.data() as User;
-    }
-    return null;
-};
-
-export const createUserProfile = async (uid: string, email: string): Promise<User | null> => {
-    if (!db) return null;
-    const userProfile: User = {
-        uid,
-        email,
-        name: email.split('@')[0], // Default name
-        avatar: 'fox', // Default avatar
-        watchlist: [],
-        isPremiumSubscriber: false,
-    };
     try {
-        await setDoc(doc(db, 'users', uid), userProfile);
+        const response = await fetch('/api/firebase-config', { method: 'POST' });
+        if (!response.ok) {
+            throw new Error('Failed to fetch Firebase config');
+        }
+        const firebaseConfig = await response.json();
+        if (!firebaseConfig.apiKey) {
+            throw new Error('Invalid Firebase config from server');
+        }
 
-        // Send notification to admin about new signup
-        fetch('/api/send-signup-notification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email }),
-        }).catch(err => console.error("Failed to send signup notification:", err));
-
-        return userProfile;
+        if (getApps().length === 0) {
+            app = initializeApp(firebaseConfig);
+        } else {
+            app = getApp();
+        }
+        
+        authInstance = getAuth(app);
+        // Set persistence to 'local' to keep users signed in across sessions.
+        await setPersistence(authInstance, browserLocalPersistence);
+        
+        db = getFirestore(app); // Initialize Firestore
+        return authInstance;
     } catch (error) {
-        console.error("Error creating user profile:", error);
+        console.error("Firebase Auth initialization failed:", error);
         return null;
     }
 };
 
-export const updateUserProfile = async (uid: string, data: Partial<User>): Promise<void> => {
-    if (!db) return;
+export const getAuthInstance = (): Auth | null => {
+    if (!authInstance) {
+        console.warn("getAuthInstance called before initializeFirebaseAuth has completed. This might lead to errors.");
+    }
+    return authInstance;
+};
+
+// --- User Profile Functions ---
+
+export const getUserProfile = async (uid: string): Promise<User | null> => {
+    if (!db) {
+        console.error("Firestore is not initialized. Cannot get user profile.");
+        return null;
+    }
     const userDocRef = doc(db, 'users', uid);
-    await updateDoc(userDocRef, data);
+    const userDoc = await getDoc(userDocRef);
+    if (userDoc.exists()) {
+        const data = userDoc.data();
+        // Create a user object that strictly conforms to the User type,
+        // ensuring 'isActor' and other fields are always present with a default.
+        const userProfile: User = {
+            uid,
+            email: data.email || '',
+            name: data.name,
+            isActor: data.isActor === true, // Coerce to boolean, defaulting to false
+            isFilmmaker: data.isFilmmaker === true, // Coerce to boolean, defaulting to false
+            avatar: data.avatar || 'fox',
+            isPremiumSubscriber: data.isPremiumSubscriber === true, // Default to false
+            watchlist: data.watchlist || [],
+        };
+        return userProfile;
+    }
+    return null;
+};
+
+export const createUserProfile = async (uid: string, email: string, name?: string): Promise<User> => {
+    if (!db) {
+        throw new Error("Firestore is not initialized. Cannot create user profile.");
+    }
+    const userDocRef = doc(db, 'users', uid);
+    const newUser: Omit<User, 'uid'> = { // Storing without the UID inside the document itself
+        email,
+        name: name || email.split('@')[0],
+        isActor: false,
+        isFilmmaker: false,
+        avatar: 'fox', // A default avatar
+        isPremiumSubscriber: false,
+        watchlist: [], // Initialize watchlist for account-based storage
+    };
+    await setDoc(userDocRef, newUser);
+
+    // Send signup notification email. This is a non-blocking "fire and forget" call.
+    fetch('/api/send-signup-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+    }).catch(error => {
+        // We log the error but don't block the user's signup flow if the notification fails.
+        console.warn('Failed to send signup notification email:', error);
+    });
+    
+    return { uid, ...newUser };
+};
+
+export const updateUserProfile = async (uid: string, data: Partial<Omit<User, 'uid'>>): Promise<void> => {
+    if (!db) {
+        throw new Error("Firestore is not initialized. Cannot update user profile.");
+    }
+    const userDocRef = doc(db, 'users', uid);
+    await setDoc(userDocRef, data, { merge: true });
 };
