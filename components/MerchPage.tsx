@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Header from './Header';
 // FIX: Corrected import path
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import SearchOverlay from './SearchOverlay';
+import { useFestival } from '../contexts/FestivalContext';
+import { Movie } from '../types';
 
 // Data for merchandise items
 const merchItems = [
@@ -18,11 +20,24 @@ const merchItems = [
 const MerchPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+    const { movies } = useFestival();
 
-    const handleSearchSubmit = (query: string) => {
-        if (query) {
-          window.location.href = `/?search=${encodeURIComponent(query)}`;
-        }
+    const searchResults = useMemo(() => {
+        if (!searchQuery) return [];
+        // FIX: Cast movie to Movie type to resolve properties.
+        return (Object.values(movies) as Movie[]).filter(movie =>
+            movie && (
+                (movie.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (movie.director || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (movie.cast || []).some(actor => (actor.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
+            )
+        );
+    }, [searchQuery, movies]);
+
+    const handleSelectFromSearch = (movie: Movie) => {
+        setIsMobileSearchOpen(false);
+        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+        window.dispatchEvent(new Event('pushstate'));
     };
 
     return (
@@ -32,7 +47,6 @@ const MerchPage: React.FC = () => {
                 onSearch={setSearchQuery} 
                 isScrolled={true}
                 onMobileSearchClick={() => setIsMobileSearchOpen(true)}
-                onSearchSubmit={handleSearchSubmit}
             />
 
             <main className="flex-grow">
@@ -88,10 +102,8 @@ const MerchPage: React.FC = () => {
                   searchQuery={searchQuery}
                   onSearch={setSearchQuery}
                   onClose={() => setIsMobileSearchOpen(false)}
-                  onSubmit={(query) => {
-                    handleSearchSubmit(query);
-                    setIsMobileSearchOpen(false);
-                  }}
+                  results={searchResults}
+                  onSelectMovie={handleSelectFromSearch}
                 />
             )}
         </div>

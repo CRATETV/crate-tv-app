@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 // FIX: Corrected import path
 import Footer from './Footer';
@@ -9,6 +9,7 @@ import FestivalView from './FestivalView';
 import { useFestival } from '../contexts/FestivalContext';
 import BottomNavBar from './BottomNavBar';
 import SearchOverlay from './SearchOverlay';
+import { Movie } from '../types';
 
 
 const FestivalPage: React.FC = () => {
@@ -23,6 +24,7 @@ const FestivalPage: React.FC = () => {
     
     const [isStaging, setIsStaging] = useState(false);
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     
     useEffect(() => {
         const isStagingActive = sessionStorage.getItem('crateTvStaging') === 'true';
@@ -31,21 +33,29 @@ const FestivalPage: React.FC = () => {
         }
     }, []);
 
+    const searchResults = useMemo(() => {
+        if (!searchQuery) return [];
+        // FIX: Cast movie to Movie type to resolve properties.
+        return (Object.values(movies) as Movie[]).filter(movie =>
+            movie && (
+                (movie.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (movie.director || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (movie.cast || []).some(actor => (actor.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
+            )
+        );
+    }, [searchQuery, movies]);
+
+    const handleSelectFromSearch = (movie: Movie) => {
+        setIsMobileSearchOpen(false);
+        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
     const exitStaging = () => {
         sessionStorage.removeItem('crateTvStaging');
         setIsStaging(false);
         // A full reload is best here to ensure non-staging data is fetched cleanly
         window.location.reload();
-    };
-    
-    const handleSearchSubmit = (query: string) => {
-        if (query) {
-            const homeUrl = new URL('/', window.location.origin);
-            homeUrl.searchParams.set('search', query);
-            window.history.pushState({}, '', homeUrl.toString());
-            window.dispatchEvent(new Event('pushstate'));
-        }
-        setIsMobileSearchOpen(false);
     };
 
     if (isLoading) {
@@ -87,10 +97,11 @@ const FestivalPage: React.FC = () => {
             <BottomNavBar onSearchClick={() => setIsMobileSearchOpen(true)} />
             {isMobileSearchOpen && (
                 <SearchOverlay
-                    searchQuery=""
-                    onSearch={() => {}}
+                    searchQuery={searchQuery}
+                    onSearch={setSearchQuery}
                     onClose={() => setIsMobileSearchOpen(false)}
-                    onSubmit={handleSearchSubmit}
+                    results={searchResults}
+                    onSelectMovie={handleSelectFromSearch}
                 />
             )}
         </div>

@@ -1,6 +1,7 @@
 
 
 
+
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { initializeFirebaseAuth, getAuthInstance, getUserProfile, createUserProfile, updateUserProfile } from '../services/firebaseClient';
 import { User } from '../types';

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import GreenRoomFeed from './GreenRoomFeed';
@@ -8,11 +8,15 @@ import ActorProfileEditor from './ActorProfileEditor';
 import LoadingSpinner from './LoadingSpinner';
 import BottomNavBar from './BottomNavBar';
 import SearchOverlay from './SearchOverlay';
+import { useFestival } from '../contexts/FestivalContext';
+import { Movie } from '../types';
 
 const ActorPortalPage: React.FC = () => {
     const { user } = useAuth();
+    const { movies } = useFestival();
     const [activeTab, setActiveTab] = useState('playFinder'); // Default to the new play finder tool
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // This is the critical safeguard. If the user object or the user's name isn't loaded yet,
     // show a spinner. This prevents child components from crashing with null/undefined props.
@@ -20,14 +24,22 @@ const ActorPortalPage: React.FC = () => {
         return <LoadingSpinner />; 
     }
     
-    const handleSearchSubmit = (query: string) => {
-        if (query) {
-            const homeUrl = new URL('/', window.location.origin);
-            homeUrl.searchParams.set('search', query);
-            window.history.pushState({}, '', homeUrl.toString());
-            window.dispatchEvent(new Event('pushstate'));
-        }
+    const searchResults = useMemo(() => {
+        if (!searchQuery) return [];
+        // FIX: Cast movie to Movie type to resolve properties.
+        return (Object.values(movies) as Movie[]).filter(movie =>
+            movie && (
+                (movie.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (movie.director || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (movie.cast || []).some(actor => (actor.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
+            )
+        );
+    }, [searchQuery, movies]);
+
+    const handleSelectFromSearch = (movie: Movie) => {
         setIsMobileSearchOpen(false);
+        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+        window.dispatchEvent(new Event('pushstate'));
     };
 
     const TabButton: React.FC<{ tabName: string; label: string }> = ({ tabName, label }) => (
@@ -80,10 +92,11 @@ const ActorPortalPage: React.FC = () => {
             <BottomNavBar onSearchClick={() => setIsMobileSearchOpen(true)} />
             {isMobileSearchOpen && (
                 <SearchOverlay
-                    searchQuery=""
-                    onSearch={() => {}}
+                    searchQuery={searchQuery}
+                    onSearch={setSearchQuery}
                     onClose={() => setIsMobileSearchOpen(false)}
-                    onSubmit={handleSearchSubmit}
+                    results={searchResults}
+                    onSelectMovie={handleSelectFromSearch}
                 />
             )}
         </div>

@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Header from './Header';
 // FIX: Corrected import path
 import Footer from './Footer';
@@ -7,6 +8,7 @@ import SearchOverlay from './SearchOverlay';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
 import { useFestival } from '../contexts/FestivalContext';
+import { Movie } from '../types';
 
 const SubmitPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -14,12 +16,24 @@ const SubmitPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const formRef = useRef<HTMLFormElement>(null);
+    const { movies } = useFestival();
     
-    const handleSearchSubmit = (query: string) => {
-        if (query) {
-          window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
-          window.dispatchEvent(new Event('pushstate'));
-        }
+    const searchResults = useMemo(() => {
+        if (!searchQuery) return [];
+        // FIX: Cast movie to Movie type to resolve properties.
+        return (Object.values(movies) as Movie[]).filter(movie =>
+            movie && (
+                (movie.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (movie.director || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (movie.cast || []).some(actor => (actor.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
+            )
+        );
+    }, [searchQuery, movies]);
+
+    const handleSelectFromSearch = (movie: Movie) => {
+        setIsMobileSearchOpen(false);
+        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+        window.dispatchEvent(new Event('pushstate'));
     };
     
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -64,7 +78,6 @@ const SubmitPage: React.FC = () => {
                 onSearch={setSearchQuery} 
                 isScrolled={true}
                 onMobileSearchClick={() => setIsMobileSearchOpen(true)}
-                onSearchSubmit={handleSearchSubmit}
             />
 
             <main className="flex-grow pt-20 pb-24 md:pb-0">
@@ -127,10 +140,8 @@ const SubmitPage: React.FC = () => {
                   searchQuery={searchQuery}
                   onSearch={setSearchQuery}
                   onClose={() => setIsMobileSearchOpen(false)}
-                  onSubmit={(query) => {
-                    handleSearchSubmit(query);
-                    setIsMobileSearchOpen(false);
-                  }}
+                  results={searchResults}
+                  onSelectMovie={handleSelectFromSearch}
                 />
             )}
              <BottomNavBar 
