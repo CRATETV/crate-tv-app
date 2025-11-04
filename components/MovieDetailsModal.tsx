@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { Movie, Actor, Category } from '../types';
 import { useAuth } from '../contexts/AuthContext';

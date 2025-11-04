@@ -339,18 +339,20 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
     
     const handleMovieEnd = () => {
-      // Instead of redirecting home, just exit the player to show the details page again.
-      setPlayerMode('poster');
+      window.history.pushState({}, '', '/');
+      window.dispatchEvent(new Event('pushstate'));
     };
 
+    // FIX: Define the handleExitPlayer function to switch the player mode back to 'poster'.
     const handleExitPlayer = () => {
         setPlayerMode('poster');
     };
     
-    const handlePaymentSuccess = (details: {amount: number; email?: string}) => {
-        setIsSupportModalOpen(false);
-        setLastDonationDetails(details);
-        setIsDonationSuccessModalOpen(true);
+    const handlePaymentSuccess = (details: { paymentType: string, amount: number, email?: string }) => {
+        if (details.paymentType === 'donation') {
+            setLastDonationDetails({ amount: details.amount, email: details.email });
+            setIsDonationSuccessModalOpen(true);
+        }
     };
 
     if (isLoading || !movie) {
@@ -441,23 +443,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                   <div className="max-w-6xl mx-auto p-4 md:p-8">
                       <h1 className="text-3xl md:text-5xl font-bold text-white">{movie.title || 'Untitled Film'}</h1>
                       <div className="mt-4 flex flex-wrap items-center gap-4">
-                          {!movie.hasCopyrightMusic && (
-                              <button onClick={() => setIsSupportModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors">
-                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" />
-                                 </svg>
-                                 Support Filmmaker
-                              </button>
-                          )}
-                          <button onClick={() => toggleLikeMovie(movie.key)} className="relative h-12 w-12 flex items-center justify-center rounded-full border-2 border-gray-400 text-white hover:border-white transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-7 w-7 transition-colors ${likedMovies.has(movie.key) ? 'text-red-500' : 'text-inherit'}`} fill={likedMovies.has(movie.key) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-                            {isAnimatingLike && (
-                                <div key={Date.now()} className="absolute inset-0 flex items-center justify-center animate-heartbeat" onAnimationEnd={() => setIsAnimatingLike(false)}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                                    </svg>
-                                </div>
-                            )}
+                          <button onClick={() => setIsSupportModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors">
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" />
+                             </svg>
+                             Support Filmmaker
                           </button>
                       </div>
                       <div className="mt-4 text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: movie.synopsis || '' }}></div>
@@ -549,13 +539,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     onPaymentSuccess={handlePaymentSuccess}
                 />
             )}
-            {isDonationSuccessModalOpen && movie && lastDonationDetails && (
+            {isDonationSuccessModalOpen && lastDonationDetails && movie && (
                 <DonationSuccessModal
+                    onClose={() => setIsDonationSuccessModalOpen(false)}
                     movieTitle={movie.title}
                     directorName={movie.director}
                     amount={lastDonationDetails.amount}
                     email={lastDonationDetails.email}
-                    onClose={() => setIsDonationSuccessModalOpen(false)}
                 />
             )}
         </div>
