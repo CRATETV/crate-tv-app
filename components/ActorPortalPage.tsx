@@ -5,15 +5,30 @@ import GreenRoomFeed from './GreenRoomFeed';
 import { useAuth } from '../contexts/AuthContext';
 import PlayFinder from './PlayFinder';
 import ActorProfileEditor from './ActorProfileEditor';
+import LoadingSpinner from './LoadingSpinner';
+import BottomNavBar from './BottomNavBar';
+import SearchOverlay from './SearchOverlay';
 
 const ActorPortalPage: React.FC = () => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('playFinder'); // Default to the new play finder tool
+    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
-    if (!user) {
-        // This should not happen due to route protection, but it's a good safeguard.
-        return null; 
+    // This is the critical safeguard. If the user object or the user's name isn't loaded yet,
+    // show a spinner. This prevents child components from crashing with null/undefined props.
+    if (!user || !user.name) {
+        return <LoadingSpinner />; 
     }
+    
+    const handleSearchSubmit = (query: string) => {
+        if (query) {
+            const homeUrl = new URL('/', window.location.origin);
+            homeUrl.searchParams.set('search', query);
+            window.history.pushState({}, '', homeUrl.toString());
+            window.dispatchEvent(new Event('pushstate'));
+        }
+        setIsMobileSearchOpen(false);
+    };
 
     const TabButton: React.FC<{ tabName: string; label: string }> = ({ tabName, label }) => (
         <button
@@ -26,8 +41,8 @@ const ActorPortalPage: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={false} />
-            <main className="flex-grow pt-24 px-4 md:px-12">
+            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => setIsMobileSearchOpen(true)} showSearch={false} showNavLinks={false} />
+            <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
                 <div className="max-w-4xl mx-auto">
                     <h1 className="text-4xl font-bold text-white mb-2">Welcome to the Actor Portal, {user.name}!</h1>
                     <p className="text-gray-400 mb-8">Update your profile, connect with others, or hone your craft with our new tools.</p>
@@ -62,6 +77,15 @@ const ActorPortalPage: React.FC = () => {
                 </div>
             </main>
             <Footer showPortalNotice={true} showActorLinks={true} />
+            <BottomNavBar onSearchClick={() => setIsMobileSearchOpen(true)} />
+            {isMobileSearchOpen && (
+                <SearchOverlay
+                    searchQuery=""
+                    onSearch={() => {}}
+                    onClose={() => setIsMobileSearchOpen(false)}
+                    onSubmit={handleSearchSubmit}
+                />
+            )}
         </div>
     );
 };

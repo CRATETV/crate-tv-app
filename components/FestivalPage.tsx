@@ -7,6 +7,8 @@ import LoadingSpinner from './LoadingSpinner';
 import StagingBanner from './StagingBanner';
 import FestivalView from './FestivalView';
 import { useFestival } from '../contexts/FestivalContext';
+import BottomNavBar from './BottomNavBar';
+import SearchOverlay from './SearchOverlay';
 
 
 const FestivalPage: React.FC = () => {
@@ -20,7 +22,8 @@ const FestivalPage: React.FC = () => {
     } = useFestival();
     
     const [isStaging, setIsStaging] = useState(false);
-
+    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+    
     useEffect(() => {
         const isStagingActive = sessionStorage.getItem('crateTvStaging') === 'true';
         if (isStagingActive) {
@@ -33,6 +36,16 @@ const FestivalPage: React.FC = () => {
         setIsStaging(false);
         // A full reload is best here to ensure non-staging data is fetched cleanly
         window.location.reload();
+    };
+    
+    const handleSearchSubmit = (query: string) => {
+        if (query) {
+            const homeUrl = new URL('/', window.location.origin);
+            homeUrl.searchParams.set('search', query);
+            window.history.pushState({}, '', homeUrl.toString());
+            window.dispatchEvent(new Event('pushstate'));
+        }
+        setIsMobileSearchOpen(false);
     };
 
     if (isLoading) {
@@ -57,9 +70,9 @@ const FestivalPage: React.FC = () => {
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
             {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
+            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => setIsMobileSearchOpen(true)} showSearch={false} />
             
-            <main className="flex-grow pt-16">
+            <main className="flex-grow pt-16 pb-24 md:pb-0">
                  <div className="max-w-7xl mx-auto p-4 sm:p-8 md:p-12">
                      <FestivalView 
                         festivalData={festivalData}
@@ -71,6 +84,15 @@ const FestivalPage: React.FC = () => {
 
             <Footer />
             <BackToTopButton />
+            <BottomNavBar onSearchClick={() => setIsMobileSearchOpen(true)} />
+            {isMobileSearchOpen && (
+                <SearchOverlay
+                    searchQuery=""
+                    onSearch={() => {}}
+                    onClose={() => setIsMobileSearchOpen(false)}
+                    onSubmit={handleSearchSubmit}
+                />
+            )}
         </div>
     );
 };
