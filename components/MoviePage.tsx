@@ -280,6 +280,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     movie={movie}
                                     onExitPlayer={handleShowDetails}
                                     onSelectActor={setSelectedActor}
+                                    onResume={handleContainerClick}
                                 />
                             )}
                             <div className={`absolute inset-0 z-30 transition-opacity duration-300 pointer-events-none ${showControls && !isPaused ? 'opacity-100' : 'opacity-0'}`}>

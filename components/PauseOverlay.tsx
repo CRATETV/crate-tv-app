@@ -5,12 +5,14 @@ interface PauseOverlayProps {
     movie: Movie;
     onExitPlayer: () => void; // This is the "More Details" button
     onSelectActor: (actor: Actor) => void;
+    onResume: () => void;
 }
 
-const PauseOverlay: React.FC<PauseOverlayProps> = ({ movie, onExitPlayer, onSelectActor }) => {
+const PauseOverlay: React.FC<PauseOverlayProps> = ({ movie, onExitPlayer, onSelectActor, onResume }) => {
     return (
         <div 
             className="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col justify-center items-center z-20 p-4 sm:p-8 animate-[fadeIn_0.3s_ease-out] cursor-pointer"
+            onClick={onResume}
         >
             <div 
                 className="w-full max-w-5xl text-white grid grid-cols-1 md:grid-cols-3 gap-8 items-center"
@@ -19,6 +21,7 @@ const PauseOverlay: React.FC<PauseOverlayProps> = ({ movie, onExitPlayer, onSele
                 {/* Left Side: Controls */}
                 <div className="md:col-span-1 flex flex-row md:flex-col items-center justify-center gap-8">
                     <button 
+                        onClick={onResume}
                         className="flex flex-col items-center text-gray-300 hover:text-white transition-colors group"
                         aria-label="Resume playback"
                     >

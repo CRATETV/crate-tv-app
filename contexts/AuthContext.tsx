@@ -1,6 +1,13 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
-import { initializeFirebaseAuth, getAuthInstance, getUserProfile, createUserProfile, updateUserProfile } from '../services/firebaseClient';
+import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useMemo } from 'react';
+import { 
+    initializeFirebaseAuth, 
+    getAuthInstance,
+    getUserProfile,
+    createUserProfile,
+    updateUserProfile,
+} from '../services/firebaseClient';
 import { User } from '../types';
+import firebase from 'firebase/compat/app';
 
 interface AuthContextType {
     user: User | null;
@@ -11,15 +18,16 @@ interface AuthContextType {
     logout: () => Promise<void>;
     sendPasswordReset: (email: string) => Promise<void>;
     setAvatar: (avatarId: string) => Promise<void>;
-    toggleWatchlist: (movieKey: string) => Promise<void>;
     watchlist: string[];
-    subscribe: () => void;
-    unlockedFestivalBlockIds: Set<string>;
+    toggleWatchlist: (movieKey: string) => Promise<void>;
+    // Festival & Purchase related
     hasFestivalAllAccess: boolean;
+    unlockedFestivalBlockIds: Set<string>;
+    purchasedMovieKeys: Set<string>;
     unlockFestivalBlock: (blockId: string) => Promise<void>;
     grantFestivalAllAccess: () => Promise<void>;
     purchaseMovie: (movieKey: string) => Promise<void>;
-    purchasedMovieKeys: Set<string>;
+    subscribe: () => Promise<void>; // For premium
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,187 +44,152 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [user, setUser] = useState<User | null>(null);
     const [authInitialized, setAuthInitialized] = useState(false);
     const [claimsLoaded, setClaimsLoaded] = useState(false);
-    const [watchlist, setWatchlist] = useState<string[]>([]);
-    
-    // Festival related state
-    const [unlockedFestivalBlockIds, setUnlockedFestivalBlockIds] = useState<Set<string>>(new Set());
-    const [hasFestivalAllAccess, setHasFestivalAllAccess] = useState(false);
-    const [purchasedMovieKeys, setPurchasedMovieKeys] = useState<Set<string>>(new Set());
 
+    // This effect runs once on mount to initialize Firebase and set up the auth state listener.
     useEffect(() => {
-        const initializeAuth = async () => {
+        let unsubscribe: firebase.Unsubscribe = () => {};
+
+        const initAuth = async () => {
             const auth = await initializeFirebaseAuth();
-            if (!auth) {
-                setAuthInitialized(true);
-                return;
-            }
-
-            const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-                if (firebaseUser) {
-                    const profile = await getUserProfile(firebaseUser.uid);
-                    if (profile) {
-                        setUser(profile);
-                        // Data from firestore is not guaranteed to be clean, so we sanitize all array fields here as a safeguard.
-                        setWatchlist(Array.isArray(profile.watchlist) ? profile.watchlist.filter((item: any): item is string => typeof item === 'string') : []);
-                        setHasFestivalAllAccess(profile.hasFestivalAllAccess || false);
-                        setUnlockedFestivalBlockIds(new Set(Array.isArray(profile.unlockedBlockIds) ? profile.unlockedBlockIds.filter((item: any): item is string => typeof item === 'string') : []));
-                        setPurchasedMovieKeys(new Set(Array.isArray(profile.purchasedMovieKeys) ? profile.purchasedMovieKeys.filter((item: any): item is string => typeof item === 'string') : []));
-                    } else {
-                        const newProfile = await createUserProfile(firebaseUser.uid, firebaseUser.email!);
-                        setUser(newProfile);
-                        setWatchlist([]);
-                        setHasFestivalAllAccess(false);
-                        setUnlockedFestivalBlockIds(new Set());
-                        setPurchasedMovieKeys(new Set());
-                    }
-
-                    const idTokenResult = await firebaseUser.getIdTokenResult(true);
-                    const claims = idTokenResult.claims;
-                    setUser(prevUser => {
-                        if (!prevUser) return null;
-                        const updatedUser = {
-                            ...prevUser,
-                            isActor: !!claims.isActor,
-                            isFilmmaker: !!claims.isFilmmaker,
-                            isPremiumSubscriber: !!claims.isPremiumSubscriber,
-                        };
-                        if (prevUser.isActor !== updatedUser.isActor || prevUser.isFilmmaker !== updatedUser.isFilmmaker || prevUser.isPremiumSubscriber !== updatedUser.isPremiumSubscriber) {
-                            updateUserProfile(prevUser.uid, { isActor: updatedUser.isActor, isFilmmaker: updatedUser.isFilmmaker, isPremiumSubscriber: updatedUser.isPremiumSubscriber });
+            if (auth) {
+                unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+                    if (firebaseUser) {
+                        // User is signed in.
+                        let userProfile = await getUserProfile(firebaseUser.uid);
+                        if (!userProfile) {
+                            // If user exists in Auth but not in Firestore, create a profile.
+                            userProfile = await createUserProfile(firebaseUser.uid, firebaseUser.email!);
                         }
-                        return updatedUser;
-                    });
-                    setClaimsLoaded(true);
+                        setUser(userProfile);
+                        
+                        // Check for custom claims
+                        const idTokenResult = await firebaseUser.getIdTokenResult(true); // Force refresh
+                        const claims = idTokenResult.claims;
+                        setUser(currentProfile => {
+                            if (!currentProfile) return null;
+                            const updatedProfile = { ...currentProfile };
+                            let needsUpdate = false;
+                            
+                            if (claims.isActor && !currentProfile.isActor) {
+                                updatedProfile.isActor = true;
+                                needsUpdate = true;
+                            }
+                             if (claims.isFilmmaker && !currentProfile.isFilmmaker) {
+                                updatedProfile.isFilmmaker = true;
+                                needsUpdate = true;
+                            }
+                            
+                            if (needsUpdate) {
+                                updateUserProfile(currentProfile.uid, { isActor: updatedProfile.isActor, isFilmmaker: updatedProfile.isFilmmaker });
+                            }
+                            return updatedProfile;
+                        });
+                        setClaimsLoaded(true);
 
-                } else {
-                    setUser(null);
-                    setClaimsLoaded(false);
-                    setWatchlist([]);
-                    setHasFestivalAllAccess(false);
-                    setUnlockedFestivalBlockIds(new Set());
-                    setPurchasedMovieKeys(new Set());
-                }
+                    } else {
+                        // User is signed out.
+                        setUser(null);
+                        setClaimsLoaded(false);
+                    }
+                    setAuthInitialized(true);
+                });
+            } else {
+                // Firebase initialization failed.
                 setAuthInitialized(true);
-            });
-
-            return () => unsubscribe();
+            }
         };
 
-        const unsubscribePromise = initializeAuth();
+        initAuth();
 
-        return () => {
-            unsubscribePromise.then(unsub => {
-                if (unsub) unsub();
-            });
-        };
+        // Cleanup subscription on unmount
+        return () => unsubscribe();
     }, []);
     
-    const subscribe = useCallback(() => {
-        if(user) {
-            const updatedUser = { ...user, isPremiumSubscriber: true };
-            setUser(updatedUser);
-            updateUserProfile(user.uid, { isPremiumSubscriber: true });
-             // Also track subscription event
-            fetch('/api/track-subscription', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: user.email }),
-            }).catch(err => console.warn("Failed to track subscription event:", err));
-        }
-    }, [user]);
-
-    const unlockFestivalBlock = useCallback(async (blockId: string) => {
-        if (!user) return;
-        const newUnlockedIds = new Set(unlockedFestivalBlockIds).add(blockId);
-        setUnlockedFestivalBlockIds(newUnlockedIds); // Optimistic update
-        try {
-            // FIX: Replaced Array.from with spread syntax to address a TypeScript type inference issue.
-            await updateUserProfile(user.uid, { unlockedBlockIds: [...newUnlockedIds] });
-        } catch (error) {
-            console.error("Failed to save unlocked block:", error);
-            setUnlockedFestivalBlockIds(unlockedFestivalBlockIds); // Revert on error
-            throw error;
-        }
-    }, [user, unlockedFestivalBlockIds]);
-
-    const grantFestivalAllAccess = useCallback(async () => {
-        if (!user) return;
-        setHasFestivalAllAccess(true); // Optimistic update
-        try {
-            await updateUserProfile(user.uid, { hasFestivalAllAccess: true });
-        } catch (error) {
-            console.error("Failed to save all-access pass:", error);
-            setHasFestivalAllAccess(false); // Revert on error
-            throw error;
-        }
-    }, [user]);
-    
-    const purchaseMovie = useCallback(async (movieKey: string) => {
-        if (!user) return;
-        const newPurchases = new Set(purchasedMovieKeys).add(movieKey);
-        setPurchasedMovieKeys(newPurchases); // Optimistic update
-        try {
-            // FIX: Replaced Array.from with spread syntax to address a TypeScript type inference issue.
-            await updateUserProfile(user.uid, { purchasedMovieKeys: [...newPurchases] });
-        } catch (error) {
-            console.error("Failed to save movie purchase:", error);
-            setPurchasedMovieKeys(purchasedMovieKeys); // Revert on error
-            throw error;
-        }
-    }, [user, purchasedMovieKeys]);
-
-    const signIn = (email: string, password: string) => {
+    // --- Auth Actions ---
+    const signIn = async (email: string, password: string) => {
         const auth = getAuthInstance();
-        if (!auth) throw new Error("Auth service is not available.");
-        return auth.signInWithEmailAndPassword(email, password).then(() => {});
+        if (!auth) throw new Error("Authentication service is not available.");
+        await auth.signInWithEmailAndPassword(email, password);
     };
 
     const signUp = async (email: string, password: string) => {
         const auth = getAuthInstance();
-        if (!auth) throw new Error("Auth service is not available.");
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        if (userCredential.user) {
-            const newProfile = await createUserProfile(userCredential.user.uid, email);
-            setUser(newProfile);
-            setWatchlist([]);
-        }
+        if (!auth) throw new Error("Authentication service is not available.");
+        await auth.createUserWithEmailAndPassword(email, password);
+        // onAuthStateChanged will handle profile creation.
     };
     
-    const logout = () => {
+    const logout = async () => {
         const auth = getAuthInstance();
-        if (!auth) throw new Error("Auth service is not available.");
-        return auth.signOut();
+        if (auth) await auth.signOut();
+    };
+    
+    const sendPasswordReset = async (email: string) => {
+        const auth = getAuthInstance();
+        if (!auth) throw new Error("Authentication service is not available.");
+        await auth.sendPasswordResetEmail(email);
     };
 
-    const sendPasswordReset = (email: string) => {
-        const auth = getAuthInstance();
-        if (!auth) throw new Error("Auth service is not available.");
-        return auth.sendPasswordResetEmail(email);
-    };
-
+    // --- Profile Actions ---
     const setAvatar = async (avatarId: string) => {
         if (!user) return;
-        setUser({ ...user, avatar: avatarId });
         await updateUserProfile(user.uid, { avatar: avatarId });
+        setUser(currentUser => currentUser ? ({ ...currentUser, avatar: avatarId }) : null);
     };
 
+    // --- Watchlist ---
+    const watchlist = user?.watchlist || [];
     const toggleWatchlist = useCallback(async (movieKey: string) => {
         if (!user) return;
-
         const newWatchlist = watchlist.includes(movieKey)
             ? watchlist.filter(key => key !== movieKey)
             : [...watchlist, movieKey];
-
-        setWatchlist(newWatchlist); // Optimistic update
-        try {
-            await updateUserProfile(user.uid, { watchlist: newWatchlist });
-        } catch (error) {
-            console.error("Failed to update watchlist:", error);
-            setWatchlist(watchlist); // Revert on error
-            throw error;
-        }
+        
+        await updateUserProfile(user.uid, { watchlist: newWatchlist });
+        setUser(currentUser => currentUser ? ({ ...currentUser, watchlist: newWatchlist }) : null);
     }, [user, watchlist]);
 
-    const value: AuthContextType = {
+
+    // --- Purchases & Subscriptions ---
+    const hasFestivalAllAccess = user?.hasFestivalAllAccess || false;
+    const unlockedFestivalBlockIds = useMemo(() => new Set(user?.unlockedBlockIds || []), [user]);
+    const purchasedMovieKeys = useMemo(() => new Set(user?.purchasedMovieKeys || []), [user]);
+
+    const unlockFestivalBlock = async (blockId: string) => {
+        if (!user || unlockedFestivalBlockIds.has(blockId)) return;
+        const newUnlocked = [...(user.unlockedBlockIds || []), blockId];
+        await updateUserProfile(user.uid, { unlockedBlockIds: newUnlocked });
+        setUser(currentUser => currentUser ? ({ ...currentUser, unlockedBlockIds: newUnlocked }) : null);
+    };
+    
+    const grantFestivalAllAccess = async () => {
+        if (!user || user.hasFestivalAllAccess) return;
+        await updateUserProfile(user.uid, { hasFestivalAllAccess: true });
+        setUser(currentUser => currentUser ? ({ ...currentUser, hasFestivalAllAccess: true }) : null);
+    };
+
+    const purchaseMovie = async (movieKey: string) => {
+        if (!user || purchasedMovieKeys.has(movieKey)) return;
+        const newPurchased = [...(user.purchasedMovieKeys || []), movieKey];
+        await updateUserProfile(user.uid, { purchasedMovieKeys: newPurchased });
+        setUser(currentUser => currentUser ? ({ ...currentUser, purchasedMovieKeys: newPurchased }) : null);
+    };
+
+    const subscribe = async () => {
+        if (!user || user.isPremiumSubscriber) return;
+        await updateUserProfile(user.uid, { isPremiumSubscriber: true });
+        setUser(currentUser => currentUser ? ({ ...currentUser, isPremiumSubscriber: true }) : null);
+
+        // Fire-and-forget tracking
+        fetch('/api/track-subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: user.email }),
+        }).catch(err => console.warn('Subscription tracking failed', err));
+    };
+
+
+    const value = {
         user,
         authInitialized,
         claimsLoaded,
@@ -225,20 +198,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logout,
         sendPasswordReset,
         setAvatar,
-        toggleWatchlist,
         watchlist,
-        subscribe,
-        unlockedFestivalBlockIds,
+        toggleWatchlist,
         hasFestivalAllAccess,
+        unlockedFestivalBlockIds,
+        purchasedMovieKeys,
         unlockFestivalBlock,
         grantFestivalAllAccess,
         purchaseMovie,
-        purchasedMovieKeys,
+        subscribe
     };
 
-    return (
-        <AuthContext.Provider value={value}>
-            {children}
-        </AuthContext.Provider>
-    );
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
