@@ -1,5 +1,3 @@
-
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category } from '../types';
 import DirectorCreditsModal from './DirectorCreditsModal';
@@ -179,6 +177,11 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
       }
   };
 
+  const handleWatchPartyClick = () => {
+    onClose();
+    handleNavigate(`/watchparty/${movie.key}`);
+  };
+
   return (
     <>
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
@@ -218,10 +221,18 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                         Join Premium to Watch
                     </button>
                   ) : movie.fullMovie ? (
+                    <>
                     <button onClick={handlePlayButtonClick} className="flex items-center justify-center px-4 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                         Play Full Movie
                     </button>
+                    <button onClick={handleWatchPartyClick} className="flex items-center justify-center px-4 py-2 bg-blue-600/80 text-white font-bold rounded-md hover:bg-blue-700/80 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        Watch Party
+                    </button>
+                    </>
                   ) : null}
                   {!movie.hasCopyrightMusic && (
                     <button onClick={() => onSupportMovie(movie)} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors">

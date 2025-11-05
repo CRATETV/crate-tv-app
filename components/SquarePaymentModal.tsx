@@ -77,9 +77,6 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                         },
                         'input': {
                             color: '#e0e0e0'
-                        },
-                        '.message.is-error': {
-                            color: '#ef4444'
                         }
                     }
                 });

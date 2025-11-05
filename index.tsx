@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -45,6 +43,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import Intro from './components/Intro';
 import CreatorPortalPage from './components/CreatorPortalPage';
 import CreatorDashboardPage from './components/CreatorDashboardPage';
+import WatchPartyPage from './components/WatchPartyPage';
 
 
 const rootElement = document.getElementById('root');
@@ -95,6 +94,11 @@ const AppRouter: React.FC = () => {
   const movieMatch = route.match(/^\/movie\/([a-zA-Z0-9_-]+)/);
   if (movieMatch && movieMatch[1]) {
     return user ? <MoviePage movieKey={movieMatch[1]} /> : <RedirectToLogin />;
+  }
+
+  const watchPartyMatch = route.match(/^\/watchparty\/([a-zA-Z0-9_-]+)/);
+  if (watchPartyMatch && watchPartyMatch[1]) {
+    return user ? <WatchPartyPage movieKey={watchPartyMatch[1]} /> : <RedirectToLogin />;
   }
 
   const actorProfileMatch = route.match(/^\/actors-directory\/([a-zA-Z0-9_-]+)/);

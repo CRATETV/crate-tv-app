@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // Path: /api/get-public-actors
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { ActorProfile, Movie, Actor } from '../types.js';
+import { ActorProfile, Movie, Actor, Category } from '../types.js';
 
 const slugify = (name: string): string => {
     if (!name) return '';
@@ -21,17 +21,31 @@ export async function GET(request: Request) {
     const db = getAdminDb();
     if (!db) throw new Error("Database connection failed.");
 
-    // 1. Get all existing profiles from the dedicated collection
+    // --- Start of Change ---
+    // 1. Fetch the list of classic movie keys to exclude them
+    const classicsDoc = await db.collection('categories').doc('publicDomainIndie').get();
+    const classicsData = classicsDoc.data() as Category | undefined;
+    const classicsMovieKeys = new Set(classicsData?.movieKeys || []);
+    // --- End of Change ---
+
+    // 2. Get all existing profiles from the dedicated collection
     const profilesSnapshot = await db.collection('actor_profiles').get();
     const existingProfiles: Record<string, ActorProfile> = {};
     profilesSnapshot.forEach(doc => {
         existingProfiles[doc.id] = doc.data() as ActorProfile;
     });
 
-    // 2. Scan all movies to find any actors with bios that are missing from the profiles collection
+    // 3. Scan all movies to find any actors with bios that are missing from the profiles collection
     const allActorsInMovies = new Map<string, Actor>();
     const moviesSnapshot = await db.collection('movies').get();
     moviesSnapshot.forEach(doc => {
+        const movieKey = doc.id;
+        // --- Start of Change ---
+        // If the movie is a classic, skip its cast
+        if (classicsMovieKeys.has(movieKey)) {
+            return;
+        }
+        // --- End of Change ---
         const movie = doc.data() as Movie;
         if (movie.cast && Array.isArray(movie.cast)) {
             movie.cast.forEach(actor => {
@@ -51,7 +65,7 @@ export async function GET(request: Request) {
         }
     });
 
-    // 3. Create a batch to add any new profiles found in movies
+    // 4. Create a batch to add any new profiles found in movies
     const batch = db.batch();
     let newProfilesAddedCount = 0;
     for (const actor of allActorsInMovies.values()) {
@@ -73,13 +87,13 @@ export async function GET(request: Request) {
         }
     }
 
-    // 4. Commit the new profiles if any were found
+    // 5. Commit the new profiles if any were found
     if (newProfilesAddedCount > 0) {
         await batch.commit();
         console.log(`[get-public-actors] Backfilled ${newProfilesAddedCount} actor profiles.`);
     }
 
-    // 5. Return all profiles, sorted alphabetically
+    // 6. Return all profiles, sorted alphabetically
     const allProfiles = Object.values(existingProfiles).sort((a, b) => a.name.localeCompare(b.name));
 
     return new Response(JSON.stringify({ actors: allProfiles }), {
