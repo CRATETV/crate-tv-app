@@ -78,8 +78,8 @@ const CreatorDashboardPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     
     // Default to the most "active" role (filmmaker > actor), or whichever they have.
-    const defaultTab = user?.isFilmmaker ? 'filmmaker' : 'actor';
-    const [activeTab, setActiveTab] = useState(defaultTab);
+    const defaultView = user?.isFilmmaker ? 'filmmaker' : 'actor';
+    const [activeView, setActiveView] = useState(defaultView);
     
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
@@ -102,14 +102,7 @@ const CreatorDashboardPage: React.FC = () => {
         return <LoadingSpinner />;
     }
 
-    const TabButton: React.FC<{ tabName: string; label: string }> = ({ tabName, label }) => (
-        <button
-            onClick={() => setActiveTab(tabName)}
-            className={`px-6 py-3 text-lg font-bold transition-colors duration-300 rounded-t-lg border-b-2 ${activeTab === tabName ? 'border-red-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
-        >
-            {label}
-        </button>
-    );
+    const isDualRole = user.isFilmmaker && user.isActor;
 
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
@@ -123,15 +116,23 @@ const CreatorDashboardPage: React.FC = () => {
             />
             <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
                 <div className="max-w-7xl mx-auto">
-                    <div className="border-b border-gray-700 mb-8">
-                        {user.isFilmmaker && <TabButton tabName="filmmaker" label="Filmmaker" />}
-                        {user.isActor && <TabButton tabName="actor" label="Actor" />}
-                        {user.isFilmmaker && <TabButton tabName="monetization" label="Monetization" />}
+                     <div className="flex items-center gap-4 mb-8">
+                        <h1 className="text-4xl font-bold text-white">Welcome, {user.name}</h1>
+                        {isDualRole && (
+                             <select 
+                                value={activeView} 
+                                onChange={(e) => setActiveView(e.target.value)}
+                                className="form-input !w-auto bg-gray-800 border-gray-600"
+                             >
+                                <option value="filmmaker">Filmmaker Dashboard</option>
+                                <option value="actor">Actor Portal</option>
+                             </select>
+                        )}
                     </div>
 
-                    {activeTab === 'filmmaker' && user.isFilmmaker && <FilmmakerDashboardView />}
-                    {activeTab === 'actor' && user.isActor && <ActorPortalView />}
-                    {activeTab === 'monetization' && user.isFilmmaker && <MonetizationTab />}
+                    {activeView === 'filmmaker' && user.isFilmmaker && <FilmmakerDashboardView />}
+                    {activeView === 'actor' && user.isActor && <ActorPortalView />}
+
                 </div>
             </main>
             <CollapsibleFooter showActorLinks={true} />

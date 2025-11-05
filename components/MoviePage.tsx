@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import ActorBioModal from './ActorBioModal';
@@ -267,6 +266,25 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         setSeekAnim('forward');
         setTimeout(() => setSeekAnim(null), 500);
     }, [currentTime, duration]);
+    
+    const handleFullscreen = async () => {
+        const player = playerContainerRef.current;
+        if (!player) return;
+
+        try {
+            if (document.fullscreenElement) {
+                await document.exitFullscreen();
+            } else {
+                await player.requestFullscreen();
+                // After entering fullscreen, try to lock orientation
+                if (screen.orientation && (screen.orientation as any).lock) {
+                    await (screen.orientation as any).lock('landscape');
+                }
+            }
+        } catch (error) {
+            console.error("Fullscreen or orientation lock failed:", error);
+        }
+    };
 
     const handleTapToSeek = (e: React.MouseEvent<HTMLDivElement>, direction: 'rewind' | 'forward') => {
         const now = new Date().getTime();
@@ -315,7 +333,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     className="relative w-full aspect-video bg-black secure-video-container"
                     onMouseMove={handlePlayerInteraction}
                     onMouseLeave={() => { if (isPlaying) setShowControls(false); }}
-                    onClick={handlePlayerInteraction}
                 >
                     <div ref={adContainerRef} className={`absolute inset-0 z-20 ${isAdPlaying ? '' : 'pointer-events-none'}`} />
                     
@@ -329,6 +346,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 onContextMenu={(e) => e.preventDefault()} 
                                 controlsList="nodownload"
                                 autoPlay
+                                onClick={handlePlayPause}
                             />
                             {/* Double tap overlays */}
                              <div className="absolute top-0 left-0 h-full w-1/3 z-30" onDoubleClick={(e) => handleTapToSeek(e, 'rewind')}></div>
@@ -363,11 +381,25 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     <input type="range" min="0" max={duration} value={currentTime} onChange={e => handleSeek(Number(e.target.value))} className="w-full h-1 bg-gray-500/50 rounded-lg appearance-none cursor-pointer range-sm" />
                                     <div className="flex justify-between items-center mt-2">
                                         <div className="flex items-center gap-4">
-                                            <button onClick={handlePlayPause}><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">{isPlaying ? <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /> : <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />}</svg></button>
+                                            <button onClick={handlePlayPause} className="control-bar-button"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">{isPlaying ? <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /> : <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />}</svg></button>
                                             <p className="text-xs">{formatTime(currentTime)} / {formatTime(duration)}</p>
                                         </div>
                                         <div className="flex items-center gap-4">
+                                            <button onClick={() => toggleLikeMovie(movieKey)} className="control-bar-button" aria-label="Like film">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors ${isLiked ? 'text-red-500' : 'text-white'}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                                            </button>
+                                            {!movie.hasCopyrightMusic && (
+                                                <button onClick={() => setIsSupportModalOpen(true)} className="control-bar-button text-purple-300" aria-label="Support filmmaker">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" /></svg>
+                                                </button>
+                                            )}
+                                            <button onClick={handleShowDetails} className="control-bar-button" aria-label="More info">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            </button>
                                             <CastButton videoElement={videoRef.current} />
+                                            <button onClick={handleFullscreen} className="control-bar-button" aria-label="Toggle fullscreen">
+                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1v4m0 0h-4m4-4l-5 5M4 16v4m0 0h4m-4-4l5-5m11 5v-4m0 0h-4m4 4l-5-5" /></svg>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
