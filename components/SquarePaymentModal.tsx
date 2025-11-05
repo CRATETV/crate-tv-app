@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie, FilmBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';

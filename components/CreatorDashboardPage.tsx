@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';
@@ -60,18 +59,19 @@ const CreatorDashboardPage: React.FC = () => {
                      <div className="mb-8">
                         <h1 className="text-4xl font-bold text-white">Welcome, {user.name}</h1>
                         <p className="text-gray-400 mt-2">
-                            {isDualRole 
-                                ? "You have access to both Filmmaker and Actor portals. Choose a dashboard below."
-                                : user.isFilmmaker
+                            {user.isFilmmaker && !user.isActor
                                 ? "This is your personal dashboard for managing your films and tracking performance."
-                                : "This is your personal portal for managing your profile and connecting with the community."
+                                : !user.isFilmmaker && user.isActor
+                                ? "This is your personal portal for managing your profile and connecting with the community."
+                                : "" // Dual role message is handled below
                             }
                         </p>
                     </div>
 
                     {isDualRole && (
-                        <div className="mb-8 border-b border-gray-700">
-                            <div className="flex items-center gap-6">
+                        <div className="mb-8">
+                            <p className="text-gray-400 mt-2 mb-4">You have access to both Filmmaker and Actor portals. Switch between them below.</p>
+                            <div className="flex items-center gap-2 md:gap-6 border-b border-gray-700">
                                 <button
                                     onClick={() => setActiveView('filmmaker')}
                                     className={`flex items-center gap-2 py-3 px-4 font-semibold border-b-4 transition-colors ${activeView === 'filmmaker' ? 'border-purple-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
