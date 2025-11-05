@@ -94,6 +94,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank
                 </div>
             </div>
         </div>
+      </div>
     </div>
   );
 };
