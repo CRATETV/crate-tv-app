@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie, FilmBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -129,8 +130,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[80] p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
-            <div className="bg-gray-900 rounded-lg shadow-xl w-full max-w-md border border-gray-700" onClick={e => e.stopPropagation()}>
-                <div className="p-6">
+            <div className="bg-gray-900 rounded-lg shadow-xl w-full max-w-md border border-gray-700 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                <div className="p-6 overflow-y-auto">
                     <h2 className="text-2xl font-bold text-white mb-2">{paymentDetails.title}</h2>
                     <p className="text-gray-400 mb-4">{paymentDetails.description}</p>
                     
@@ -172,7 +173,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                     {errorMessage && <p className="text-red-500 text-sm mt-2">{errorMessage}</p>}
                 </div>
 
-                <div className="bg-gray-800/50 p-4 rounded-b-lg">
+                <div className="bg-gray-800/50 p-4 rounded-b-lg mt-auto">
                     {status === 'success' ? (
                         <div className="text-center text-green-400 font-bold">Payment Successful! Thank you.</div>
                     ) : (

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';
@@ -58,9 +59,14 @@ const CreatorDashboardPage: React.FC = () => {
                 <div className="max-w-7xl mx-auto">
                      <div className="mb-8">
                         <h1 className="text-4xl font-bold text-white">Welcome, {user.name}</h1>
-                         {isDualRole && (
-                            <p className="text-gray-400 mt-2">You have access to both Filmmaker and Actor portals. Choose a dashboard below.</p>
-                        )}
+                        <p className="text-gray-400 mt-2">
+                            {isDualRole 
+                                ? "You have access to both Filmmaker and Actor portals. Choose a dashboard below."
+                                : user.isFilmmaker
+                                ? "This is your personal dashboard for managing your films and tracking performance."
+                                : "This is your personal portal for managing your profile and connecting with the community."
+                            }
+                        </p>
                     </div>
 
                     {isDualRole && (
