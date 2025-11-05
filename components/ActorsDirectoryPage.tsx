@@ -53,7 +53,7 @@ const ActorsDirectoryPage: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
+            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={false} />
             <main className="flex-grow pt-24 px-4 md:px-12">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-12">
