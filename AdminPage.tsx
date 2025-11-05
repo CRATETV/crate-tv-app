@@ -11,8 +11,55 @@ import AnalyticsPage from './components/AnalyticsPage';
 import PayoutsTab from './components/PayoutsTab';
 import EmailSender from './components/EmailSender';
 import MoviePipelineTab from './components/MoviePipelineTab';
-import RokuAdminTab from './components/RokuAdminTab';
 import TopFilmsTab from './components/TopFilmsTab';
+
+const RokuAdminTab: React.FC = () => {
+    const feedUrl = `${window.location.origin}/api/roku-feed`;
+
+    return (
+        <div className="space-y-8">
+            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                <h2 className="text-2xl font-bold text-purple-400 mb-4">Roku SDK Channel Publishing Guide</h2>
+                <p className="text-yellow-300 bg-yellow-900/30 border border-yellow-800 p-3 rounded-md text-sm mb-6">
+                    <strong>Important:</strong> Roku has stopped accepting "Direct Publisher" channels. This guide shows you how to publish using the new SDK method. Your project already includes all the necessary code. This is a one-time setup.
+                </p>
+
+                <div className="space-y-6 text-gray-300">
+                    <div>
+                        <h3 className="text-xl font-semibold text-white mb-2">Step 1: Get Your Feed URL</h3>
+                        <p className="mb-2">Your channel's content is powered by this unique URL. You will need it in the next step.</p>
+                        <div className="flex gap-2">
+                            <input type="text" readOnly value={feedUrl} className="form-input flex-grow" />
+                            <button onClick={() => navigator.clipboard.writeText(feedUrl)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Copy</button>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-semibold text-white mb-2">Step 2: Update the Channel Code</h3>
+                        <p>In your project's code, open the file: <code className="bg-gray-900 p-1 rounded">roku/components/HomeScene.brs</code></p>
+                        <p>Find the line that says <code className="bg-gray-900 p-1 rounded">m.contentTask.url = "..."</code> and replace the placeholder URL with the one you just copied.</p>
+                    </div>
+                     <div>
+                        <h3 className="text-xl font-semibold text-white mb-2">Step 3: Add Your Artwork</h3>
+                        <p>In the <code className="bg-gray-900 p-1 rounded">roku/images/</code> folder, add these two files:</p>
+                        <ul className="list-disc list-inside ml-4 mt-2">
+                            <li><code className="bg-gray-900 p-1 rounded">logo_hd.png</code> (336x210 recommended)</li>
+                            <li><code className="bg-gray-900 p-1 rounded">splash_hd.png</code> (1920x1080 required)</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-semibold text-white mb-2">Step 4: Package Your Channel</h3>
+                        <p>Create a ZIP file containing <strong className="text-yellow-400">only the contents</strong> of the <code className="bg-gray-900 p-1 rounded">roku</code> directory. Do not zip the folder itself.</p>
+                        <p className="text-sm mt-1">Inside the ZIP file, you should see: <code className="bg-gray-900 p-1 rounded">components</code>, <code className="bg-gray-900 p-1 rounded">source</code>, <code className="bg-gray-900 p-1 rounded">images</code>, and <code className="bg-gray-900 p-1 rounded">manifest</code>.</p>
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-semibold text-white mb-2">Step 5: Upload and Publish</h3>
+                         <p>Go to your <a href="https://developer.roku.com/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Roku Developer Dashboard</a>, select your SDK channel, go to "Package Upload", and upload your ZIP file. Then, follow the steps to test and publish your channel.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 type AdminRole = 'super_admin' | 'festival_admin' | 'collaborator' | null;
 

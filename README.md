@@ -135,7 +135,7 @@ Once deployed, Vercel will provide you with a public URL (e.g., `https://your-pr
 
 ## 📺 How to Set Up the Roku Channel (SDK)
 
-Roku is phasing out its "Direct Publisher" method. This project now includes a full **SDK (Software Development Kit) channel** that functions like Direct Publisher by loading its content from a feed URL.
+Roku has stopped accepting "Direct Publisher" channels. This project now includes a full **SDK (Software Development Kit) channel** that functions like Direct Publisher by loading its content from a feed URL. This is a one-time setup.
 
 **Prerequisite**: You must complete the deployment steps above first. The Roku channel needs a public URL to fetch movie data from.
 
@@ -157,18 +157,13 @@ Roku is phasing out its "Direct Publisher" method. This project now includes a f
     *   Create a ZIP file containing **only the contents** of the `roku` directory (the `components`, `source`, `images`, and `manifest` files).
     *   **Important**: Do not put the `roku` folder itself in the ZIP file. The root of the ZIP file should be the channel's files and folders.
 
-5.  **Test Your Channel (Sideloading)**:
-    *   Before you publish, you should test the channel on a real Roku device.
-    *   Follow Roku's official guide to [enable Developer Mode on your device and sideload your channel](https://developer.roku.com/docs/developer-program/getting-started/developer-setup.md).
-
-6.  **Publish to the Channel Store**:
+5.  **Test & Publish**:
     *   Log into your **[Roku Developer Dashboard](https://developer.roku.com/)**.
-    *   Go to **"Manage My Channels"** and either create a new SDK channel or select an existing one.
-    *   Navigate to the **"Package Upload"** page.
-    *   Upload the ZIP file you created in Step 4.
-    *   Complete the rest of the channel information (screenshots, descriptions) and submit it for review.
+    *   Go to **"Manage My Channels"** and select your SDK channel.
+    *   Navigate to the **"Package Upload"** page and upload the ZIP file you just created.
+    *   Follow Roku's instructions to install a preview on your device, test it, and then submit it for publishing.
 
-Once published, any content you update and **"Publish"** in the Crate TV admin panel will automatically appear in your live Roku channel the next time a user opens it (Roku caches the feed, so updates may not be instant).
+Once published, any content you update and **"Publish"** in the Crate TV admin panel will automatically appear in your live Roku channel.
 
 ---
 
