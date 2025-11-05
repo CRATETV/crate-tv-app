@@ -82,6 +82,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   }, [movie?.key]);
   
   const initializeAds = useCallback(() => {
+    // Check for a production ad tag in localStorage. If it doesn't exist, play content immediately.
+    const productionAdTag = localStorage.getItem('productionAdTagUrl');
+    if (!productionAdTag) {
+        console.log("No production ad tag found. Skipping ad and playing content.");
+        playContent();
+        return;
+    }
+
     if (!videoRef.current || !adContainerRef.current || !released || adsManagerRef.current || typeof google === 'undefined') {
         playContent();
         return;
@@ -113,10 +121,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     adsLoader.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, () => playContent(), false);
     
     const adsRequest = new google.ima.AdsRequest();
-    
-    // Check for a production ad tag in localStorage. If it exists, use it. Otherwise, use the sample tag.
-    const productionAdTag = localStorage.getItem('productionAdTagUrl');
-    adsRequest.adTagUrl = productionAdTag || 'https://googleads.g.doubleclick.net/pagead/ads?ad_type=video&client=ca-video-pub-5748304047766155&videoad_start_delay=0&description_url=' + encodeURIComponent(window.location.href);
+    adsRequest.adTagUrl = productionAdTag;
     
     adsLoader.requestAds(adsRequest);
   }, [released, playContent]);

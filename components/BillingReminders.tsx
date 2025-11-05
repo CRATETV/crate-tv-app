@@ -59,7 +59,6 @@ const ServiceReminder: React.FC<{ serviceName: string; logoUrl: string; billingU
         ? status.nextBillDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
         : 'Not set';
 
-    // FIX: Correctly calculates the next billing date after marking a payment as complete.
     const handleMarkAsPaid = () => {
         if (!status.nextBillDate) return;
         
@@ -70,7 +69,7 @@ const ServiceReminder: React.FC<{ serviceName: string; logoUrl: string; billingU
         nextPeriodDate.setMonth(nextPeriodDate.getMonth() + 1);
 
         // If advancing the month changed the day (e.g., from Jan 31 to Feb 28),
-        // reset to the last day of the correct month.
+        // reset to the last day of the correct month. This is the crucial fix.
         if (nextPeriodDate.getDate() !== currentBillDate.getDate()) {
             nextPeriodDate.setDate(0);
         }

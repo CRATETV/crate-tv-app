@@ -86,15 +86,8 @@ export async function POST(request: Request) {
 
     // --- Step 2: Create or Find Firebase user ---
     let userRecord;
-    let existingProfileData: { isFilmmaker?: boolean } = {};
-    const userProfileRef = db.collection('users');
-
     try {
         userRecord = await auth.getUserByEmail(email);
-        const userProfileDoc = await userProfileRef.doc(userRecord.uid).get();
-        if (userProfileDoc.exists) {
-            existingProfileData = userProfileDoc.data() as { isFilmmaker?: boolean };
-        }
     } catch (error: any) {
         if (error.code === 'auth/user-not-found') {
             userRecord = await auth.createUser({ email, displayName: name });
@@ -107,16 +100,17 @@ export async function POST(request: Request) {
     }
 
     // --- Step 3: Set custom claim and Firestore profile ---
+    const existingClaims = userRecord.customClaims || {};
     await auth.setCustomUserClaims(userRecord.uid, {
+        ...existingClaims, // This is the key fix: preserve existing roles
         isActor: true,
-        isFilmmaker: existingProfileData.isFilmmaker === true
     });
     
-    await userProfileRef.doc(userRecord.uid).set({ 
+    await db.collection('users').doc(userRecord.uid).set({ 
         name: bestActorData.name, 
         email, 
         isActor: true,
-        isFilmmaker: existingProfileData.isFilmmaker === true 
+        isFilmmaker: existingClaims.isFilmmaker === true // Also update the DB record
     }, { merge: true });
 
     // --- Step 4: Generate password creation link ---
