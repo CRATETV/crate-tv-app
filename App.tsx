@@ -31,7 +31,7 @@ type DisplayedCategory = {
 };
 
 const App: React.FC = () => {
-  const { user, watchlist } = useAuth();
+  const { user, watchlist, watchedMovies } = useAuth();
   const { isLoading, movies, categories, festivalData, festivalConfig, isFestivalLive, dataSource } = useFestival();
   
   const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
@@ -39,7 +39,6 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
-  const [watchedMovies, setWatchedMovies] = useState<Set<string>>(new Set());
   const [isScrolled, setIsScrolled] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const [isStaging, setIsStaging] = useState(false);
@@ -54,6 +53,9 @@ const App: React.FC = () => {
   const [lastDonationDetails, setLastDonationDetails] = useState<{amount: number; email?: string} | null>(null);
 
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  
+  // Create a memoized Set for efficient `isWatched` lookups in child components.
+  const watchedMoviesSet = useMemo(() => new Set(watchedMovies), [watchedMovies]);
   
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -85,27 +87,12 @@ const App: React.FC = () => {
     if (storedLikedMovies) {
       setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
     }
-    
-    const storedWatchedMovies = localStorage.getItem('cratetv-watched-movies');
-    if (storedWatchedMovies) {
-        setWatchedMovies(new Set(JSON.parse(storedWatchedMovies)));
-    }
-
-    const handleWatchedUpdate = () => {
-        const updatedWatched = localStorage.getItem('cratetv-watched-movies');
-        if (updatedWatched) {
-            setWatchedMovies(new Set(JSON.parse(updatedWatched)));
-        }
-    };
-
-    window.addEventListener('watchedMoviesUpdated', handleWatchedUpdate);
 
     const handleScroll = () => setIsScrolled(window.pageYOffset > 10);
     window.addEventListener('scroll', handleScroll, { passive: true });
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('watchedMoviesUpdated', handleWatchedUpdate);
       if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
     };
   }, []);
@@ -349,7 +336,7 @@ const App: React.FC = () => {
                     title=""
                     movies={searchResults}
                     onSelectMovie={handlePlayMovie}
-                    watchedMovies={watchedMovies}
+                    watchedMovies={watchedMoviesSet}
                     likedMovies={likedMovies}
                     onToggleLike={toggleLikeMovie}
                     onSupportMovie={setMovieForSupport}
@@ -388,7 +375,7 @@ const App: React.FC = () => {
                                   }
                                   movies={blockMovies}
                                   onSelectMovie={handlePlayMovie}
-                                  watchedMovies={watchedMovies}
+                                  watchedMovies={watchedMoviesSet}
                                   likedMovies={likedMovies}
                                   onToggleLike={toggleLikeMovie}
                                   onSupportMovie={setMovieForSupport}
@@ -410,7 +397,7 @@ const App: React.FC = () => {
                       movies={topTenMovies}
                       onSelectMovie={handlePlayMovie}
                       showRankings={true}
-                      watchedMovies={watchedMovies}
+                      watchedMovies={watchedMoviesSet}
                       likedMovies={likedMovies}
                       onToggleLike={toggleLikeMovie}
                       onSupportMovie={setMovieForSupport}
@@ -444,7 +431,7 @@ const App: React.FC = () => {
                           }
                           movies={recommendedMovies}
                           onSelectMovie={handlePlayMovie}
-                          watchedMovies={watchedMovies}
+                          watchedMovies={watchedMoviesSet}
                           likedMovies={likedMovies}
                           onToggleLike={toggleLikeMovie}
                           onSupportMovie={setMovieForSupport}
@@ -456,7 +443,7 @@ const App: React.FC = () => {
                       title={cat.title}
                       movies={cat.movies}
                       onSelectMovie={handlePlayMovie}
-                      watchedMovies={watchedMovies}
+                      watchedMovies={watchedMoviesSet}
                       likedMovies={likedMovies}
                       onToggleLike={toggleLikeMovie}
                       onSupportMovie={setMovieForSupport}

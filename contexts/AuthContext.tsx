@@ -20,6 +20,8 @@ interface AuthContextType {
     setAvatar: (avatarId: string) => Promise<void>;
     watchlist: string[];
     toggleWatchlist: (movieKey: string) => Promise<void>;
+    watchedMovies: string[];
+    markAsWatched: (movieKey: string) => Promise<void>;
     // Festival & Purchase related
     hasFestivalAllAccess: boolean;
     unlockedFestivalBlockIds: Set<string>;
@@ -137,8 +139,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(currentUser => currentUser ? ({ ...currentUser, avatar: avatarId }) : null);
     };
 
-    // --- Watchlist ---
+    // --- Watchlist & Watched History ---
     const watchlist = user?.watchlist || [];
+    const watchedMovies = user?.watchedMovies || [];
+
     const toggleWatchlist = useCallback(async (movieKey: string) => {
         if (!user) return;
         const newWatchlist = watchlist.includes(movieKey)
@@ -148,6 +152,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await updateUserProfile(user.uid, { watchlist: newWatchlist });
         setUser(currentUser => currentUser ? ({ ...currentUser, watchlist: newWatchlist }) : null);
     }, [user, watchlist]);
+
+    const markAsWatched = useCallback(async (movieKey: string) => {
+        if (!user || watchedMovies.includes(movieKey)) return; // Don't do anything if not logged in or already watched
+        const newWatchedMovies = [...watchedMovies, movieKey];
+
+        await updateUserProfile(user.uid, { watchedMovies: newWatchedMovies });
+        setUser(currentUser => currentUser ? ({ ...currentUser, watchedMovies: newWatchedMovies }) : null);
+    }, [user, watchedMovies]);
 
 
     // --- Purchases & Subscriptions ---
@@ -200,6 +212,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setAvatar,
         watchlist,
         toggleWatchlist,
+        watchedMovies,
+        markAsWatched,
         hasFestivalAllAccess,
         unlockedFestivalBlockIds,
         purchasedMovieKeys,

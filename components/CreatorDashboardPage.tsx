@@ -11,66 +11,6 @@ import { Movie } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
 import { useMemo } from 'react';
 
-const MonetizationTab: React.FC = () => {
-    const [adTagUrl, setAdTagUrl] = useState('');
-    const [saveStatus, setSaveStatus] = useState<'idle' | 'success'>('idle');
-
-    useEffect(() => {
-        const savedUrl = localStorage.getItem('productionAdTagUrl');
-        if (savedUrl) {
-            setAdTagUrl(savedUrl);
-        }
-    }, []);
-
-    const handleSave = () => {
-        localStorage.setItem('productionAdTagUrl', adTagUrl);
-        setSaveStatus('success');
-        setTimeout(() => setSaveStatus('idle'), 3000);
-    };
-
-    return (
-        <div className="bg-gray-800/50 border border-gray-700 p-6 md:p-8 rounded-lg max-w-2xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Monetization Settings</h2>
-            <p className="text-gray-400 mb-6">
-                This is where you activate real revenue generation. Paste your production video ad tag URL from your Google AdSense or Ad Manager account below.
-            </p>
-            <div className="space-y-4">
-                <div>
-                    <label htmlFor="adTagUrl" className="block text-sm font-medium text-gray-400 mb-2">
-                        Production Ad Tag URL
-                    </label>
-                    <textarea
-                        id="adTagUrl"
-                        value={adTagUrl}
-                        onChange={(e) => setAdTagUrl(e.target.value)}
-                        className="form-input w-full font-mono text-sm"
-                        rows={4}
-                        placeholder="https://googleads.g.doubleclick.net/pagead/ads?..."
-                    />
-                    <p className="text-xs text-gray-500 mt-2">
-                        Your ad tag is saved securely in your browser and is never exposed in the code. Need help finding this? 
-                        <a href="https://support.google.com/admanager/answer/1068325" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline ml-1">
-                            Learn more at Google.
-                        </a>
-                    </p>
-                </div>
-                <button
-                    onClick={handleSave}
-                    className="submit-btn bg-green-600 hover:bg-green-700"
-                >
-                    Save & Activate Ads
-                </button>
-                {saveStatus === 'success' && (
-                    <p className="text-green-400 text-sm">
-                        Ad Tag URL saved! Your films will now serve production ads.
-                    </p>
-                )}
-            </div>
-        </div>
-    );
-};
-
-
 const CreatorDashboardPage: React.FC = () => {
     const { user } = useAuth();
     const { movies } = useFestival();
@@ -79,7 +19,7 @@ const CreatorDashboardPage: React.FC = () => {
     
     // Default to the most "active" role (filmmaker > actor), or whichever they have.
     const defaultView = user?.isFilmmaker ? 'filmmaker' : 'actor';
-    const [activeView, setActiveView] = useState(defaultView);
+    const [activeView, setActiveView] = useState<'filmmaker' | 'actor'>(defaultView);
     
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
@@ -116,19 +56,33 @@ const CreatorDashboardPage: React.FC = () => {
             />
             <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
                 <div className="max-w-7xl mx-auto">
-                     <div className="flex items-center gap-4 mb-8">
+                     <div className="mb-8">
                         <h1 className="text-4xl font-bold text-white">Welcome, {user.name}</h1>
-                        {isDualRole && (
-                             <select 
-                                value={activeView} 
-                                onChange={(e) => setActiveView(e.target.value)}
-                                className="form-input !w-auto bg-gray-800 border-gray-600"
-                             >
-                                <option value="filmmaker">Filmmaker Dashboard</option>
-                                <option value="actor">Actor Portal</option>
-                             </select>
+                         {isDualRole && (
+                            <p className="text-gray-400 mt-2">You have access to both Filmmaker and Actor portals. Choose a dashboard below.</p>
                         )}
                     </div>
+
+                    {isDualRole && (
+                        <div className="mb-8 border-b border-gray-700">
+                            <div className="flex items-center gap-6">
+                                <button
+                                    onClick={() => setActiveView('filmmaker')}
+                                    className={`flex items-center gap-2 py-3 px-4 font-semibold border-b-4 transition-colors ${activeView === 'filmmaker' ? 'border-purple-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                    Filmmaker Dashboard
+                                </button>
+                                <button
+                                    onClick={() => setActiveView('actor')}
+                                    className={`flex items-center gap-2 py-3 px-4 font-semibold border-b-4 transition-colors ${activeView === 'actor' ? 'border-purple-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                    Actor Portal
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {activeView === 'filmmaker' && user.isFilmmaker && <FilmmakerDashboardView />}
                     {activeView === 'actor' && user.isActor && <ActorPortalView />}

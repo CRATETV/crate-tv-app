@@ -114,6 +114,7 @@ export interface User {
     avatar: string;
     isPremiumSubscriber?: boolean;
     watchlist?: string[];
+    watchedMovies?: string[];
     hasFestivalAllAccess?: boolean;
     unlockedBlockIds?: string[];
     purchasedMovieKeys?: string[];

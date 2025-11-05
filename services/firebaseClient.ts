@@ -11,37 +11,56 @@ let authInstance: firebase.auth.Auth | null = null;
 let app: firebase.app.App | null = null;
 let db: firebase.firestore.Firestore | null = null;
 
-// This function ensures Firebase is initialized only once.
-export const initializeFirebaseAuth = async (): Promise<firebase.auth.Auth | null> => {
-    if (authInstance) return authInstance;
+let firebaseInitializationPromise: Promise<firebase.auth.Auth | null> | null = null;
+let firebaseInitializationError: string | null = null;
 
-    try {
-        const response = await fetch('/api/firebase-config', { method: 'POST' });
-        if (!response.ok) {
-            throw new Error('Failed to fetch Firebase config');
-        }
-        const firebaseConfig = await response.json();
-        if (!firebaseConfig.apiKey) {
-            throw new Error('Invalid Firebase config from server');
-        }
-
-        if (firebase.apps.length === 0) {
-            app = firebase.initializeApp(firebaseConfig);
-        } else {
-            app = firebase.app();
-        }
-        
-        authInstance = app.auth();
-        // Set persistence to 'local' to keep users signed in across sessions.
-        await authInstance.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-        
-        db = app.firestore(); // Initialize Firestore
-        return authInstance;
-    } catch (error) {
-        console.error("Firebase Auth initialization failed:", error);
-        return null;
+const initializeFirebase = () => {
+    if (firebaseInitializationPromise) {
+        return firebaseInitializationPromise;
     }
+
+    firebaseInitializationPromise = (async () => {
+        try {
+            console.log("Attempting to fetch Firebase config from API...");
+            const response = await fetch('/api/firebase-config', { method: 'POST' });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to fetch Firebase config: ${response.status} ${errorText}`);
+            }
+
+            const firebaseConfig = await response.json();
+            if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+                throw new Error("Fetched Firebase config is missing required keys.");
+            }
+            
+            console.log("Firebase config fetched successfully. Initializing Firebase...");
+            if (firebase.apps.length === 0) {
+                app = firebase.initializeApp(firebaseConfig);
+            } else {
+                app = firebase.app();
+            }
+            db = app.firestore();
+            authInstance = app.auth();
+            await authInstance.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+            console.log("Firebase initialized successfully.");
+            return authInstance;
+
+        } catch (error) {
+            console.error("Firebase initialization failed:", error);
+            firebaseInitializationError = error instanceof Error ? error.message : String(error);
+            db = null;
+            authInstance = null;
+            return null;
+        }
+    })();
+    
+    return firebaseInitializationPromise;
 };
+
+export const initializeFirebaseAuth = async (): Promise<firebase.auth.Auth | null> => {
+    return await initializeFirebase();
+}
+
 
 export const getAuthInstance = (): firebase.auth.Auth | null => {
     if (!authInstance) {
@@ -83,6 +102,7 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
             isPremiumSubscriber: data.isPremiumSubscriber === true, // Default to false
 // FIX: Explicitly type the 'item' in the array filter as 'any' to help TypeScript's type inference. This resolves the 'unknown[]' is not assignable to 'string[]' error by ensuring the type guard correctly narrows the array type.
             watchlist: Array.isArray(data.watchlist) ? data.watchlist.filter((item: any): item is string => typeof item === 'string') : [],
+            watchedMovies: Array.isArray(data.watchedMovies) ? data.watchedMovies.filter((item: any): item is string => typeof item === 'string') : [],
             hasFestivalAllAccess: data.hasFestivalAllAccess === true,
 // FIX: Explicitly type the 'item' in the array filter as 'any' to help TypeScript's type inference. This resolves the 'unknown[]' is not assignable to 'string[]' error by ensuring the type guard correctly narrows the array type.
             unlockedBlockIds: Array.isArray(data.unlockedBlockIds) ? data.unlockedBlockIds.filter((item: any): item is string => typeof item === 'string') : [],
@@ -107,6 +127,7 @@ export const createUserProfile = async (uid: string, email: string, name?: strin
         avatar: 'fox', // A default avatar
         isPremiumSubscriber: false,
         watchlist: [], // Initialize watchlist for account-based storage
+        watchedMovies: [], // Initialize watched history
         hasFestivalAllAccess: false,
         unlockedBlockIds: [],
         purchasedMovieKeys: [],

@@ -36,7 +36,7 @@ const setMetaTag = (attr: 'name' | 'property', value: string, content: string) =
 };
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { user } = useAuth();
+  const { user, markAsWatched } = useAuth();
   const { isLoading: isDataLoading, movies: allMovies, categories: allCategories, dataSource } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
@@ -185,20 +185,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
-
-        const markAsWatched = (key: string) => {
-            try {
-                const watchedMoviesStr = localStorage.getItem('cratetv-watched-movies');
-                const watchedMovies = watchedMoviesStr ? new Set(JSON.parse(watchedMoviesStr)) : new Set();
-                if (!watchedMovies.has(key)) {
-                    watchedMovies.add(key);
-                    localStorage.setItem('cratetv-watched-movies', JSON.stringify(Array.from(watchedMovies)));
-                    window.dispatchEvent(new CustomEvent('watchedMoviesUpdated'));
-                }
-            } catch (e) {
-                console.warn("Could not update watched movies in localStorage.", e);
-            }
-        };
         
         const handlePlay = () => { setIsPlaying(true); setIsPaused(false); handlePlayerInteraction(); };
         const handlePause = () => { setIsPlaying(false); if (!video.ended) setIsPaused(true); };
@@ -243,7 +229,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             clearInterval(progressInterval);
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
         };
-    }, [movieKey, handlePlayerInteraction]);
+    }, [movieKey, handlePlayerInteraction, markAsWatched]);
 
     const handlePlayPause = useCallback(() => {
         if (videoRef.current) {

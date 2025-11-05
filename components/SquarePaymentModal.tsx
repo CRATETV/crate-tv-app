@@ -44,23 +44,19 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
 
     useEffect(() => {
         const initializeSquare = async () => {
+            if (!cardRef.current) return;
             setStatus('loading');
             try {
-                // The API endpoint now correctly determines whether to use Sandbox or Production keys.
                 const configRes = await fetch('/api/square-config', { method: 'GET' });
                 if (!configRes.ok) throw new Error('Could not load payment configuration.');
                 const { applicationId, locationId } = await configRes.json();
 
-                if (!applicationId || !locationId) {
-                    throw new Error('Payment configuration is incomplete.');
-                }
-                if (!cardRef.current) {
-                    throw new Error('Payment form failed to render.');
-                }
+                if (!applicationId || !locationId) throw new Error('Payment configuration is incomplete.');
 
                 const payments = Square.payments(applicationId, locationId);
-                cardInstance.current = await payments.card();
-                await cardInstance.current.attach('#card-container');
+                const card = await payments.card();
+                await card.attach('#card-container');
+                cardInstance.current = card;
                 setStatus('idle');
             } catch (error) {
                 setErrorMessage(error instanceof Error ? error.message : 'Failed to initialize payment form.');
@@ -74,7 +70,15 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
           if (event.key === 'Escape') onClose();
         };
         window.addEventListener('keydown', handleEsc);
-        return () => window.removeEventListener('keydown', handleEsc);
+        
+        // Cleanup function to destroy the card instance when the component unmounts
+        return () => {
+            window.removeEventListener('keydown', handleEsc);
+            if (cardInstance.current) {
+                cardInstance.current.destroy();
+                cardInstance.current = null;
+            }
+        };
     }, [onClose]);
 
     const handlePayment = async () => {
