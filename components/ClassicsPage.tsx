@@ -6,7 +6,7 @@ import BackToTopButton from './BackToTopButton';
 import LoadingSpinner from './LoadingSpinner';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import { Movie, Category } from '../types';
-import MovieCard from './MovieCard';
+import { MovieCard } from './MovieCard';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
 import { useFestival } from '../contexts/FestivalContext';

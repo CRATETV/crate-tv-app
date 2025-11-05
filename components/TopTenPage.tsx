@@ -13,7 +13,6 @@ const TopTenPage: React.FC = () => {
     const [currentDate, setCurrentDate] = useState('');
 
     useEffect(() => {
-        // Set the current date when the component mounts
         setCurrentDate(new Date().toLocaleDateString(undefined, {
             year: 'numeric',
             month: 'long',
@@ -47,45 +46,12 @@ const TopTenPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
-    const handleShare = async () => {
-        const shareData = {
-            title: 'Top 10 on Crate TV',
-            text: `Check out the most popular films on Crate TV today - ${currentDate}!`,
-            url: window.location.href,
-        };
-        try {
-            if (navigator.share) {
-                await navigator.share(shareData);
-            } else {
-                // Fallback for browsers that don't support Web Share API
-                navigator.clipboard.writeText(shareData.url);
-                alert('Link to Top 10 page copied to clipboard!');
-            }
-        } catch (error) {
-            console.error('Error sharing Top Ten page:', error);
-        }
-    };
-
-    const handleDownload = () => {
-        const csvContent = "data:text/csv;charset=utf-8," 
-            + "Rank,Title,Director\n" 
-            + topTenMovies.map((m, i) => `${i + 1},"${m.title.replace(/"/g, '""')}","${m.director.replace(/"/g, '""')}"`).join("\n");
-        
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "crate-tv-top-10.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
     if (isLoading) {
         return <LoadingSpinner />;
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-gradient-to-b from-[#1a1a1a] to-[#141414] text-white">
+        <div className="flex flex-col min-h-screen bg-black text-white">
             <Header
                 searchQuery=""
                 onSearch={() => {}}
@@ -94,31 +60,16 @@ const TopTenPage: React.FC = () => {
                 showSearch={false}
                 showNavLinks={false}
             />
-            <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12 printable-top-ten">
-                <div className="max-w-4xl mx-auto">
-                    <div className="text-center mb-12 relative py-8 overflow-hidden rounded-lg">
-                         <div className="absolute inset-0 bg-gradient-to-r from-purple-900/30 via-red-900/30 to-black/30 opacity-50"></div>
-                         <div className="relative z-10">
-                            <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-2" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
-                                Top 10 on Crate TV Today
-                            </h1>
-                            <p className="text-lg text-gray-400">
-                               {currentDate}
-                            </p>
-                            <div className="no-print mt-4 flex justify-center gap-4">
-                                <button onClick={handleDownload} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md text-sm">
-                                    Download List
-                                </button>
-                                {('share' in navigator) && (
-                                    <button onClick={handleShare} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">
-                                        Share
-                                    </button>
-                                )}
-                             </div>
-                         </div>
+            <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
+                <div className="max-w-6xl mx-auto">
+                    <div className="text-center mb-12">
+                        <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-2">
+                            Top 10 Today
+                        </h1>
+                        <p className="text-lg text-gray-400">{currentDate}</p>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                         {topTenMovies.map((movie, index) => {
                             const color = rankColors[index] || '#64748B';
                             return (
@@ -126,27 +77,36 @@ const TopTenPage: React.FC = () => {
                                     key={movie.key} 
                                     href={`/movie/${movie.key}`} 
                                     onClick={(e) => handleNavigate(e, movie.key)}
-                                    className="group flex items-center bg-transparent hover:bg-gray-800/60 transition-colors duration-300 rounded-lg p-3"
+                                    className="group block relative rounded-lg overflow-hidden transition-shadow duration-300 hover:shadow-2xl"
+                                    style={{ '--rank-color': color } as React.CSSProperties}
                                 >
-                                    <div className="flex items-center justify-center w-24 flex-shrink-0">
-                                       <span 
-                                            className="font-black text-6xl md:text-7xl leading-none select-none text-transparent group-hover:opacity-75 transition-opacity duration-300"
-                                            style={{ WebkitTextStroke: `2px ${color}` }}
-                                        >
-                                            {index + 1}
-                                        </span>
-                                    </div>
-                                    <div className="relative w-20 h-28 flex-shrink-0 rounded-md overflow-hidden shadow-lg transition-transform duration-300 group-hover:scale-105">
-                                        <img 
-                                            src={movie.poster} 
-                                            alt={movie.title} 
-                                            className="w-full h-full object-cover" 
-                                            onContextMenu={(e) => e.preventDefault()} 
-                                        />
-                                    </div>
-                                    <div className="flex-grow min-w-0 pl-6">
-                                        <h2 className="text-lg md:text-xl font-bold text-white truncate transition-colors duration-300 group-hover:text-red-400">{movie.title}</h2>
-                                        <p className="text-sm text-gray-400 truncate">{movie.director}</p>
+                                    <div className="ranked-card-border p-3 bg-gray-900/50">
+                                        <div className="flex items-stretch gap-4">
+                                            {/* Left side: Rank and Title */}
+                                            <div className="flex-1 flex items-center">
+                                                <span 
+                                                    className="font-black text-7xl md:text-8xl leading-none select-none text-transparent transition-transform duration-300 group-hover:scale-105"
+                                                    style={{ WebkitTextStroke: `3px ${color}` }}
+                                                >
+                                                    {index + 1}
+                                                </span>
+                                                <div className="ml-6">
+                                                    <p className="text-sm font-bold uppercase tracking-wider text-gray-400">Start Watching</p>
+                                                    <h2 className="text-xl md:text-3xl font-bold text-white transition-colors duration-300 group-hover:text-[var(--rank-color)]">{movie.title}</h2>
+                                                </div>
+                                            </div>
+                                            {/* Right side: Poster */}
+                                            <div className="w-2/5 md:w-1/3 flex-shrink-0">
+                                                <div className="aspect-[2/3] rounded-md overflow-hidden shadow-lg">
+                                                    <img 
+                                                        src={movie.poster} 
+                                                        alt={movie.title} 
+                                                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                                        onContextMenu={(e) => e.preventDefault()} 
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </a>
                             );

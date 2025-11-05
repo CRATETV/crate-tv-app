@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnalyticsData, Movie, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
+import html2canvas from 'html2canvas';
+import TopTenShareableImage from './TopTenShareableImage';
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
 const formatNumber = (num: number) => num.toLocaleString();
@@ -11,6 +13,9 @@ const TopFilmsTab: React.FC = () => {
     const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<{ critical: string | null }>({ critical: null });
+    const [isGenerating, setIsGenerating] = useState(false);
+    const shareableImageRef = useRef<HTMLDivElement>(null);
+    const currentDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
     useEffect(() => {
         const fetchData = async () => {
@@ -58,35 +63,51 @@ const TopFilmsTab: React.FC = () => {
                 views: analyticsData.viewCounts[movie.key] || 0,
                 likes: analyticsData.movieLikes[movie.key] || 0,
                 donations: donations,
+                poster: movie.poster,
             };
         }).sort((a, b) => b.likes - a.likes).slice(0, 10); // Sort by likes and take top 10
     }, [analyticsData, allMovies]);
 
-    const handleShare = async () => {
-        if (!topFilmsData || topFilmsData.length === 0) return;
+    const handleShareImage = async () => {
+        if (!shareableImageRef.current || isGenerating) return;
 
-        const title = 'Top 10 Films on Crate TV';
-        const url = `${window.location.origin}/top-ten`;
-        const text = topFilmsData.map((film, index) => `${index + 1}. ${film.title}`).join('\n');
-        
-        const shareData = {
-            title,
-            text: `Check out the current Top 10 films on Crate TV!\n\n${text}`,
-            url,
-        };
-
+        setIsGenerating(true);
         try {
-            if (navigator.share) {
-                await navigator.share(shareData);
+            const canvas = await html2canvas(shareableImageRef.current, {
+                useCORS: true,
+                backgroundColor: null,
+                scale: 1,
+            });
+
+            const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+            if (!blob) throw new Error('Failed to create image blob.');
+
+            const file = new File([blob], 'cratetv_top10.png', { type: 'image/png' });
+            
+            if (navigator.share && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: 'Top 10 on Crate TV',
+                    text: `Check out the current Top 10 films on Crate TV! #indiefilm #cratetv`,
+                    files: [file],
+                });
             } else {
-                await navigator.clipboard.writeText(`${shareData.text}\n\nView the list here: ${shareData.url}`);
-                alert('Top 10 list and link copied to clipboard!');
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'cratetv_top10.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
             }
+
         } catch (error) {
-            console.error('Error sharing Top 10 list:', error);
-            alert('Could not share the list.');
+            console.error("Error generating or sharing image:", error);
+            alert("Sorry, we couldn't generate the shareable image. Please try again.");
+        } finally {
+            setIsGenerating(false);
         }
     };
+
 
     if (isLoading) {
         return <LoadingSpinner />;
@@ -105,10 +126,11 @@ const TopFilmsTab: React.FC = () => {
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold text-white">Top 10 Films by Likes</h2>
                 <button
-                    onClick={handleShare}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm no-print"
+                    onClick={handleShareImage}
+                    disabled={isGenerating}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm no-print disabled:bg-blue-800 disabled:cursor-wait"
                 >
-                    Share List
+                    {isGenerating ? 'Generating Image...' : 'Share Image'}
                 </button>
             </div>
             <p className="text-sm text-gray-400 mb-6">This list ranks all films by their total like count, providing a clear view of audience favorites.</p>
@@ -150,6 +172,13 @@ const TopFilmsTab: React.FC = () => {
                     </div>
                 ))}
             </div>
+            {topFilmsData.length > 0 && (
+                <div className="absolute -left-[9999px] top-0" aria-hidden="true">
+                    <div ref={shareableImageRef}>
+                        <TopTenShareableImage topFilms={topFilmsData} date={currentDate} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

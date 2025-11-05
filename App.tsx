@@ -30,6 +30,27 @@ type DisplayedCategory = {
   movies: Movie[];
 };
 
+const SkeletonCard: React.FC = () => (
+  <div className="flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw]">
+    <div className="aspect-[2/3] bg-gray-800 rounded-md animate-pulse-bg"></div>
+  </div>
+);
+
+const SkeletonCarousel: React.FC = () => (
+  <div className="mb-8 md:mb-12">
+    <div className="h-8 bg-gray-800 rounded w-1/4 mb-4 animate-pulse-bg"></div>
+    <div className="flex overflow-hidden space-x-4 pb-4">
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+    </div>
+  </div>
+);
+
+
 const App: React.FC = () => {
   const { user, watchlist, watchedMovies } = useAuth();
   const { isLoading, movies, categories, festivalData, festivalConfig, isFestivalLive, dataSource } = useFestival();
@@ -46,6 +67,7 @@ const App: React.FC = () => {
   const [showFestivalLiveModal, setShowFestivalLiveModal] = useState(false);
   const [showNewFilmModal, setShowNewFilmModal] = useState(false);
   const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
 
   // State for centrally managed modals
   const [movieForSupport, setMovieForSupport] = useState<Movie | null>(null);
@@ -56,6 +78,7 @@ const App: React.FC = () => {
   
   // Create a memoized Set for efficient `isWatched` lookups in child components.
   const watchedMoviesSet = useMemo(() => new Set(watchedMovies), [watchedMovies]);
+  const watchlistSet = useMemo(() => new Set(watchlist), [watchlist]);
   
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -104,6 +127,7 @@ const App: React.FC = () => {
             return;
         }
 
+        setIsLoadingRecommendations(true);
         try {
             const likedTitles = Array.from(likedMovies).map(key => movies[key]?.title).filter(Boolean);
             if (likedTitles.length === 0) return;
@@ -128,6 +152,8 @@ const App: React.FC = () => {
             }
         } catch (error) {
             console.error("Error fetching recommendations:", error);
+        } finally {
+            setIsLoadingRecommendations(false);
         }
     };
     fetchRecommendations();
@@ -351,6 +377,7 @@ const App: React.FC = () => {
                     movies={searchResults}
                     onSelectMovie={handlePlayMovie}
                     watchedMovies={watchedMoviesSet}
+                    watchlist={watchlistSet}
                     likedMovies={likedMovies}
                     onToggleLike={toggleLikeMovie}
                     onSupportMovie={setMovieForSupport}
@@ -390,6 +417,7 @@ const App: React.FC = () => {
                                   movies={blockMovies}
                                   onSelectMovie={handlePlayMovie}
                                   watchedMovies={watchedMoviesSet}
+                                  watchlist={watchlistSet}
                                   likedMovies={likedMovies}
                                   onToggleLike={toggleLikeMovie}
                                   onSupportMovie={setMovieForSupport}
@@ -412,6 +440,7 @@ const App: React.FC = () => {
                       onSelectMovie={handlePlayMovie}
                       showRankings={true}
                       watchedMovies={watchedMoviesSet}
+                      watchlist={watchlistSet}
                       likedMovies={likedMovies}
                       onToggleLike={toggleLikeMovie}
                       onSupportMovie={setMovieForSupport}
@@ -432,6 +461,8 @@ const App: React.FC = () => {
                               </p>
                           </div>
                       </div>
+                  ) : isLoadingRecommendations ? (
+                      <SkeletonCarousel />
                   ) : recommendedMovies.length > 0 ? (
                       <MovieCarousel
                           key="recommended"
@@ -446,11 +477,19 @@ const App: React.FC = () => {
                           movies={recommendedMovies}
                           onSelectMovie={handlePlayMovie}
                           watchedMovies={watchedMoviesSet}
+                          watchlist={watchlistSet}
                           likedMovies={likedMovies}
                           onToggleLike={toggleLikeMovie}
                           onSupportMovie={setMovieForSupport}
                       />
-                  ) : null}
+                  ) : (
+                     <div className="mb-8 md:mb-12">
+                        <h2 className="text-lg md:text-2xl font-bold mb-4 text-white flex items-center gap-2">Recommended For You</h2>
+                        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-8 text-center text-gray-400">
+                           <p>No recommendations found yet. Keep liking films to help us learn what you love!</p>
+                        </div>
+                     </div>
+                  )}
                   {displayedCategories.map(cat => (
                     <MovieCarousel
                       key={cat.key}
@@ -458,6 +497,7 @@ const App: React.FC = () => {
                       movies={cat.movies}
                       onSelectMovie={handlePlayMovie}
                       watchedMovies={watchedMoviesSet}
+                      watchlist={watchlistSet}
                       likedMovies={likedMovies}
                       onToggleLike={toggleLikeMovie}
                       onSupportMovie={setMovieForSupport}

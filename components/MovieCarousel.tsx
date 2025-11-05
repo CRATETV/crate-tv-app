@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Movie } from '../types';
-import MovieCard from './MovieCard';
+import { MovieCard } from './MovieCard';
 
 interface MovieCarouselProps {
   title: React.ReactNode;
@@ -8,12 +8,13 @@ interface MovieCarouselProps {
   onSelectMovie: (movie: Movie) => void;
   showRankings?: boolean;
   watchedMovies: Set<string>;
+  watchlist: Set<string>;
   likedMovies: Set<string>;
   onToggleLike: (movieKey: string) => void;
   onSupportMovie: (movie: Movie) => void;
 }
 
-const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, showRankings = false, watchedMovies, likedMovies, onToggleLike, onSupportMovie }) => {
+const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, showRankings = false, watchedMovies, watchlist, likedMovies, onToggleLike, onSupportMovie }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -52,6 +53,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                   onSelectMovie={onSelectMovie}
                   rank={showRankings ? index + 1 : undefined}
                   isWatched={watchedMovies.has(movie.key)}
+                  isOnWatchlist={watchlist.has(movie.key)}
                   isLiked={likedMovies.has(movie.key)}
                   onToggleLike={onToggleLike}
                   onSupportMovie={onSupportMovie}

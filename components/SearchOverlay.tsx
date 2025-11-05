@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Movie } from '../types';
-import MovieCard from './MovieCard';
+import { MovieCard } from './MovieCard';
 
 interface SearchOverlayProps {
   searchQuery: string;

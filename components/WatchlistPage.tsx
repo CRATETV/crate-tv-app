@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import Header from './Header';
 import BackToTopButton from './BackToTopButton';
-import MovieCard from './MovieCard';
+import { MovieCard } from './MovieCard';
 import LoadingSpinner from './LoadingSpinner';
 import { Movie } from '../types';
 import { useAuth } from '../contexts/AuthContext';

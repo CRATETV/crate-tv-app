@@ -6,12 +6,13 @@ interface MovieCardProps {
   onSelectMovie: (movie: Movie) => void;
   rank?: number;
   isWatched?: boolean;
+  isOnWatchlist?: boolean;
   isLiked?: boolean;
   onToggleLike?: (movieKey: string) => void;
   onSupportMovie?: (movie: Movie) => void;
 }
 
-const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank, isWatched, isLiked, onToggleLike, onSupportMovie }) => {
+export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank, isWatched, isOnWatchlist, isLiked, onToggleLike, onSupportMovie }) => {
   if (!movie) return null;
 
   const handleToggleLike = (e: React.MouseEvent) => {
@@ -36,6 +37,13 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank, isWat
         loading="lazy"
         onContextMenu={(e) => e.preventDefault()}
       />
+      {isOnWatchlist && (
+        <div className="absolute top-2 right-2 bg-black/60 rounded-full p-1.5" title="On My List">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+            </svg>
+        </div>
+      )}
       {isWatched && (
         <div className="absolute bottom-1 left-1 bg-red-600/80 text-white text-xs font-bold px-1.5 py-0.5 rounded">
           WATCHED
@@ -87,8 +95,5 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank, isWat
             </div>
         </div>
     </div>
-    </div>
   );
 };
-
-export default MovieCard;

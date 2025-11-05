@@ -3,7 +3,7 @@ import Header from './Header';
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import LoadingSpinner from './LoadingSpinner';
-import MovieCard from './MovieCard';
+import { MovieCard } from './MovieCard';
 import MovieDetailsModal from './MovieDetailsModal';
 import ActorBioModal from './ActorBioModal';
 import { fetchAndCacheLiveData } from '../services/dataService';

@@ -25,6 +25,9 @@ export interface Movie {
   // New properties for Watch Party scheduling
   isWatchPartyEnabled?: boolean;
   watchPartyStartTime?: string;
+  // New properties for monetization
+  isForSale?: boolean;
+  salePrice?: number;
 }
 
 export interface Category {

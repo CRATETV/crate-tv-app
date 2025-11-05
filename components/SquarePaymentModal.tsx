@@ -30,7 +30,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
             case 'block':
                 return { amount: 10.00, title: `Block: ${block?.title}`, description: `Access all films in the "${block?.title}" block.` };
             case 'movie':
-                 return { amount: 5.00, title: `Film: ${movie?.title}`, description: 'Permanently own this film to watch anytime.' };
+                 return { amount: movie?.salePrice || 5.00, title: `Film: ${movie?.title}`, description: 'Permanently own this film to watch anytime.' };
             case 'subscription':
                 return { amount: 4.99, title: 'Crate TV Premium', description: 'Unlock exclusive films and features.' };
             case 'donation':
