@@ -362,7 +362,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                            <div className={`absolute inset-0 z-30 transition-opacity duration-300 pointer-events-none ${showControls ? 'opacity-100' : 'opacity-0'}`}>
                                 <button onClick={(e) => { e.stopPropagation(); handleGoHome(); }} className="absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 pointer-events-auto" aria-label="Back to Home"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
                                 {/* Bottom Controls */}
-                                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent pointer-events-auto">
+                                <div className="absolute bottom-0 left-0 right-0 px-4 pt-4 pb-8 md:p-4 bg-gradient-to-t from-black/70 to-transparent pointer-events-auto">
                                     {/* Timeline */}
                                     <input type="range" min="0" max={duration} value={currentTime} onChange={e => handleSeek(Number(e.target.value))} className="w-full h-1 bg-gray-500/50 rounded-lg appearance-none cursor-pointer range-sm" />
                                     <div className="flex justify-between items-center mt-2">

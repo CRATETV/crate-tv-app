@@ -26,7 +26,7 @@ const FestivalHero: React.FC<FestivalHeroProps> = ({ festivalConfig }) => {
       <div className="absolute inset-0 bg-black/60"></div>
       
       {/* Content */}
-      <div className="relative z-10 flex flex-col justify-center items-center h-full text-center px-4 text-white">
+      <div className="relative z-10 flex flex-col justify-end items-center h-full text-center px-4 pb-12 md:pb-20 text-white">
         <div className="bg-red-600 text-white font-bold text-sm px-4 py-1 rounded-full mb-4 animate-[slideInUp_0.5s_ease-out]">
           FESTIVAL IS LIVE NOW
         </div>

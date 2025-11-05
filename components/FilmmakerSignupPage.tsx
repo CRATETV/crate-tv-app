@@ -75,10 +75,14 @@ const FilmmakerSignupPage: React.FC = () => {
                             </p>
                         </div>
                         <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-8">
+                            <div className="bg-blue-900/30 border border-blue-700 text-blue-200 text-sm rounded-lg p-4 mb-6">
+                                <h3 className="font-bold mb-2">How It Works:</h3>
+                                <p>To verify your identity, our system automatically checks if your name matches a director or producer in our film credits. If it's a match, we'll immediately send a secure access link to your email.</p>
+                            </div>
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div>
                                     <label htmlFor="name" className="block text-sm font-medium text-gray-400 mb-2">Your Full Name</label>
-                                    <input type="text" id="name" name="name" className="form-input" required placeholder="As it appears in film credits" />
+                                    <input type="text" id="name" name="name" className="form-input" required placeholder="Enter name exactly as it appears in credits" />
                                 </div>
                                 <div>
                                     <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-2">Your Email Address</label>
@@ -86,7 +90,7 @@ const FilmmakerSignupPage: React.FC = () => {
                                 </div>
                                 
                                 <button type="submit" className="submit-btn w-full mt-8" disabled={status === 'submitting'}>
-                                    {status === 'submitting' ? 'Verifying...' : 'Request Access'}
+                                    {status === 'submitting' ? 'Verifying...' : 'Verify Identity & Get Access'}
                                 </button>
 
                                 {status === 'error' && (

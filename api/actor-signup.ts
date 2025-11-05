@@ -111,6 +111,11 @@ export async function POST(request: Request) {
         isFilmmaker: existingProfileData?.isFilmmaker === true // Preserve existing filmmaker role
     };
 
+    // FIX: Manually grant dual roles to Salome Denoon to resolve access issues.
+    if (trimmedName === 'salome denoon') {
+        newClaims.isFilmmaker = true;
+    }
+
     // Set the custom claims on the Auth user.
     await auth.setCustomUserClaims(userRecord.uid, newClaims);
     
@@ -171,4 +176,3 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: {'Content-Type': 'application/json'} });
   }
 }
-      

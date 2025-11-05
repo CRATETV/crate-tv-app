@@ -1,3 +1,4 @@
+
 // This is a Vercel Serverless Function
 // Path: /api/filmmaker-signup
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -65,6 +66,11 @@ export async function POST(request: Request) {
         isFilmmaker: true, // Granting filmmaker role now
         isActor: existingProfileData?.isActor === true // Preserve existing actor role
     };
+    
+    // FIX: Manually grant dual roles to Salome Denoon to resolve access issues.
+    if (trimmedName === 'salome denoon') {
+        newClaims.isActor = true;
+    }
 
     await auth.setCustomUserClaims(userRecord.uid, newClaims);
     
