@@ -1,3 +1,4 @@
+
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/actor-signup
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -99,19 +100,27 @@ export async function POST(request: Request) {
         }
     }
 
-    // --- Step 3: Set custom claim and Firestore profile ---
-    const existingClaims = userRecord.customClaims || {};
-    await auth.setCustomUserClaims(userRecord.uid, {
-        ...existingClaims, // This is the key fix: preserve existing roles
-        isActor: true,
-    });
+    // --- Step 3: Set custom claim and Firestore profile (ROBUST METHOD) ---
+    // Fetch the existing user profile from Firestore to get the most reliable role data.
+    const userProfileDoc = await db.collection('users').doc(userRecord.uid).get();
+    const existingProfileData = userProfileDoc.data();
     
+    // Determine the new, merged set of roles.
+    const newClaims = {
+        isActor: true, // Granting actor role now
+        isFilmmaker: existingProfileData?.isFilmmaker === true // Preserve existing filmmaker role
+    };
+
+    // Set the custom claims on the Auth user.
+    await auth.setCustomUserClaims(userRecord.uid, newClaims);
+    
+    // Update the user's document in Firestore with the merged roles.
     await db.collection('users').doc(userRecord.uid).set({ 
         name: bestActorData.name, 
         email, 
-        isActor: true,
-        isFilmmaker: existingClaims.isFilmmaker === true // Also update the DB record
+        ...newClaims
     }, { merge: true });
+
 
     // --- Step 4: Generate password creation link ---
     const actionCodeSettings = {
@@ -162,3 +171,4 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: {'Content-Type': 'application/json'} });
   }
 }
+      

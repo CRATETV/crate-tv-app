@@ -27,6 +27,19 @@ const TopTenPage: React.FC = () => {
             .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
             .slice(0, 10);
     }, [movies]);
+    
+    const rankColors = [
+      '#FFD700', // Gold
+      '#22d3ee', // Cyan
+      '#CD7F32', // Bronze
+      '#be123c', // Red
+      '#3b82f6', // Blue
+      '#16a34a', // Green
+      '#9333ea', // Purple
+      '#f59e0b', // Orange
+      '#db2777', // Pink
+      '#14b8a6'  // Teal
+    ];
 
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, movieKey: string) => {
         e.preventDefault();
@@ -106,35 +119,38 @@ const TopTenPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-2">
-                        {topTenMovies.map((movie, index) => (
-                            <a 
-                                key={movie.key} 
-                                href={`/movie/${movie.key}`} 
-                                onClick={(e) => handleNavigate(e, movie.key)}
-                                className="group flex items-center bg-transparent hover:bg-gray-800/60 transition-colors duration-300 rounded-lg p-3"
-                            >
-                                <div className="flex items-center justify-center w-24 flex-shrink-0">
-                                   <span 
-                                        className="font-black text-6xl md:text-7xl leading-none select-none text-gray-800 group-hover:text-gray-700 transition-colors duration-300"
-                                        style={{ WebkitTextStroke: '1px rgba(255,255,255,0.1)' }}
-                                    >
-                                        {index + 1}
-                                    </span>
-                                </div>
-                                <div className="relative w-20 h-28 flex-shrink-0 rounded-md overflow-hidden shadow-lg transition-transform duration-300 group-hover:scale-105">
-                                    <img 
-                                        src={movie.poster} 
-                                        alt={movie.title} 
-                                        className="w-full h-full object-cover" 
-                                        onContextMenu={(e) => e.preventDefault()} 
-                                    />
-                                </div>
-                                <div className="flex-grow min-w-0 pl-6">
-                                    <h2 className="text-lg md:text-xl font-bold text-white truncate transition-colors duration-300 group-hover:text-red-400">{movie.title}</h2>
-                                    <p className="text-sm text-gray-400 truncate">{movie.director}</p>
-                                </div>
-                            </a>
-                        ))}
+                        {topTenMovies.map((movie, index) => {
+                            const color = rankColors[index] || '#64748B';
+                            return (
+                                <a 
+                                    key={movie.key} 
+                                    href={`/movie/${movie.key}`} 
+                                    onClick={(e) => handleNavigate(e, movie.key)}
+                                    className="group flex items-center bg-transparent hover:bg-gray-800/60 transition-colors duration-300 rounded-lg p-3"
+                                >
+                                    <div className="flex items-center justify-center w-24 flex-shrink-0">
+                                       <span 
+                                            className="font-black text-6xl md:text-7xl leading-none select-none text-transparent group-hover:opacity-75 transition-opacity duration-300"
+                                            style={{ WebkitTextStroke: `2px ${color}` }}
+                                        >
+                                            {index + 1}
+                                        </span>
+                                    </div>
+                                    <div className="relative w-20 h-28 flex-shrink-0 rounded-md overflow-hidden shadow-lg transition-transform duration-300 group-hover:scale-105">
+                                        <img 
+                                            src={movie.poster} 
+                                            alt={movie.title} 
+                                            className="w-full h-full object-cover" 
+                                            onContextMenu={(e) => e.preventDefault()} 
+                                        />
+                                    </div>
+                                    <div className="flex-grow min-w-0 pl-6">
+                                        <h2 className="text-lg md:text-xl font-bold text-white truncate transition-colors duration-300 group-hover:text-red-400">{movie.title}</h2>
+                                        <p className="text-sm text-gray-400 truncate">{movie.director}</p>
+                                    </div>
+                                </a>
+                            );
+                        })}
                     </div>
                 </div>
             </main>

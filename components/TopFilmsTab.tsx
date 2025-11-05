@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { AnalyticsData, Movie, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -60,8 +59,34 @@ const TopFilmsTab: React.FC = () => {
                 likes: analyticsData.movieLikes[movie.key] || 0,
                 donations: donations,
             };
-        }).sort((a, b) => b.likes - a.likes); // Sort by likes, descending
+        }).sort((a, b) => b.likes - a.likes).slice(0, 10); // Sort by likes and take top 10
     }, [analyticsData, allMovies]);
+
+    const handleShare = async () => {
+        if (!topFilmsData || topFilmsData.length === 0) return;
+
+        const title = 'Top 10 Films on Crate TV';
+        const url = `${window.location.origin}/top-ten`;
+        const text = topFilmsData.map((film, index) => `${index + 1}. ${film.title}`).join('\n');
+        
+        const shareData = {
+            title,
+            text: `Check out the current Top 10 films on Crate TV!\n\n${text}`,
+            url,
+        };
+
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                await navigator.clipboard.writeText(`${shareData.text}\n\nView the list here: ${shareData.url}`);
+                alert('Top 10 list and link copied to clipboard!');
+            }
+        } catch (error) {
+            console.error('Error sharing Top 10 list:', error);
+            alert('Could not share the list.');
+        }
+    };
 
     if (isLoading) {
         return <LoadingSpinner />;
@@ -77,7 +102,15 @@ const TopFilmsTab: React.FC = () => {
 
     return (
         <div>
-            <h2 className="text-2xl font-bold mb-4 text-white">Top 10 List by Likes</h2>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-white">Top 10 Films by Likes</h2>
+                <button
+                    onClick={handleShare}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm no-print"
+                >
+                    Share List
+                </button>
+            </div>
             <p className="text-sm text-gray-400 mb-6">This list ranks all films by their total like count, providing a clear view of audience favorites.</p>
             <div className="space-y-2">
                 {topFilmsData.map((film, index) => (

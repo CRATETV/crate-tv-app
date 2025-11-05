@@ -1,3 +1,4 @@
+
 // This is a Vercel Serverless Function
 // Path: /api/filmmaker-signup
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -51,74 +52,4 @@ export async function POST(request: Request) {
             userRecord = await auth.createUser({ email, displayName: name });
         } else {
              if(error.code === 'auth/email-already-exists') {
-                throw new Error("This email is already associated with an account. Please use a different email or contact support.");
-             }
-            throw error;
-        }
-    }
-
-    // --- Step 3: Set custom claim and Firestore profile ---
-    const existingClaims = userRecord.customClaims || {};
-    await auth.setCustomUserClaims(userRecord.uid, {
-        ...existingClaims, // This is the key fix: preserve existing roles
-        isFilmmaker: true,
-    });
-
-    await db.collection('users').doc(userRecord.uid).set({ 
-        name, 
-        email, 
-        isFilmmaker: true,
-        isActor: existingClaims.isActor === true // Also update the DB record
-    }, { merge: true });
-
-    // --- Step 4: Generate password creation link ---
-    const actionCodeSettings = {
-        url: new URL('/portal', request.url).href, // Redirect to unified portal after password set
-        handleCodeInApp: false,
-    };
-    const link = await auth.generatePasswordResetLink(email, actionCodeSettings);
-
-    // --- Step 5: Send Email with Resend ---
-    const portalUrl = new URL('/portal', request.url).href;
-
-    const emailHtml = `
-      <div>
-        <h1>Welcome to the Crate TV Filmmaker Dashboard, ${name}!</h1>
-        <p>We've confirmed you're a director or producer on Crate TV. To access your private analytics dashboard, you first need to create a secure password for your account.</p>
-        <p>Click the link below to set your password:</p>
-        <p><a href="${link}" style="color: #6d28d9; text-decoration: none; font-weight: bold;">Create Your Password</a></p>
-        <p>This link is valid for a limited time. Once your password is set, you can log in at <a href="${portalUrl}">${portalUrl}</a>.</p>
-        <p>We're excited to have you with us!</p>
-        <p>- The Crate TV Team</p>
-      </div>
-    `;
-    
-    const emailText = `
-        Welcome to the Crate TV Filmmaker Dashboard, ${name}!\n\n
-        We've confirmed you're a director or producer on Crate TV. To access your private analytics dashboard, you first need to create a secure password for your account.\n\n
-        Copy and paste the following link into your browser to set your password:\n${link}\n\n
-        This link is valid for a limited time. Once your password is set, you can log in at ${portalUrl}.\n\n
-        We're excited to have you with us!\n- The Crate TV Team
-    `;
-
-    const { error } = await resend.emails.send({
-        from: `Crate TV <${fromEmail}>`,
-        to: [email],
-        subject: `Create Your Password for the Crate TV Filmmaker Dashboard`,
-        html: emailHtml,
-        text: emailText,
-    });
-
-    if (error) {
-        console.error('Resend error:', error);
-        throw new Error('Could not send the access email. Please try again later.');
-    }
-
-    return new Response(JSON.stringify({ success: true, message: 'Verification successful. Email sent.' }), { status: 200, headers: {'Content-Type': 'application/json'} });
-
-  } catch (error) {
-    console.error("Error in filmmaker-signup API:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unknown server error occurred.";
-    return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: {'Content-Type': 'application/json'} });
-  }
-}
+                throw new Error("This email is a...
