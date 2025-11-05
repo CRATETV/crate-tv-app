@@ -67,7 +67,9 @@ export async function POST(request: Request) {
 
     const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
 
-    return new Response(zipBuffer, {
+    // The Vercel/Node.js runtime's `Response` constructor can accept a Buffer directly.
+    // We cast to `any` to bypass a TypeScript error caused by conflicting DOM and Node.js type definitions.
+    return new Response(zipBuffer as any, {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',

@@ -42,7 +42,8 @@ const WatchPartyAdminTab: React.FC<WatchPartyAdminTabProps> = ({ allMovies }) =>
     }, [selectedMovieKey]);
     
     // Create a sorted list of movies for the dropdown
-    const moviesWithParties = Object.values(allMovies).sort((a, b) => a.title.localeCompare(b.title));
+    // FIX: Cast Object.values to Movie[] to resolve TypeScript errors about unknown properties.
+    const moviesWithParties = (Object.values(allMovies) as Movie[]).sort((a, b) => a.title.localeCompare(b.title));
 
     return (
         <div className="bg-gray-950 p-6 rounded-lg text-gray-200">
