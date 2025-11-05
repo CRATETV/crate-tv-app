@@ -14,31 +14,19 @@
         <!-- The focus border, initially invisible -->
         <Rectangle 
             id="focusRing"
-            color="0x6d28d9FF"
-            width="256"
-            height="376"
-            translation="[-8, -8]"
+            color="0xFFFFFFFF"
+            width="252"
+            height="372"
+            translation="[-6, -6]"
             visible="false"
-            scale="1.0" 
         />
         
         <!-- The movie poster image -->
         <Poster 
-            id="tileImage"
+            id="tilePoster"
             width="240"
             height="360"
         />
-
-        <!-- The movie title label -->
-        <Label 
-            id="tileLabel"
-            width="240"
-            horizAlign="center"
-            translation="[0, 370]"
-            color="0xFFFFFFFF"
-        >
-             <font role="font.small" />
-        </Label>
     </children>
 
 </component>

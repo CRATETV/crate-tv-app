@@ -15,7 +15,7 @@ Crate TV is a sleek, professional, and fully-featured streaming web application 
 - **Staging Environment**: Preview unreleased movies and content changes by adding `?env=staging` to the URL. A banner indicates you're in preview mode.
 - **Secure Admin Panel**: A password-protected page (`/admin`) for content management. Authentication is handled by a secure, serverless API endpoint, and the password is stored safely as an environment variable.
 - **Integrated Secure File Uploader**: Upload movie files, trailers, and posters directly to Amazon S3 from the admin panel. The system uses secure presigned URLs for fast, direct-to-S3 uploads.
-- **Automated Roku Channel**: The app provides a "Direct Publisher" JSON feed, allowing for automated, hands-free updates to the Roku channel.
+- **NEW: Roku SDK Channel**: The project now includes a complete, feed-driven Roku channel built with the SDK. The Admin Panel provides a step-by-step guide for packaging and publishing.
 - **NEW: Analytics Dashboard**: A secure page to view total users, recent sign-ups, sales data from Square, filmmaker payout reports, and movie view counts.
 
 ---
@@ -133,26 +133,42 @@ Once deployed, Vercel will provide you with a public URL (e.g., `https://your-pr
 
 ---
 
-## 📺 How to Set Up the Automated Roku Channel
+## 📺 How to Set Up the Roku Channel (SDK)
 
-Crate TV uses Roku's "Direct Publisher" system. This means our web app provides a special JSON feed, and Roku automatically builds and updates the channel for us. There is **no need to manually package or upload ZIP files**.
+Roku is phasing out its "Direct Publisher" method. This project now includes a full **SDK (Software Development Kit) channel** that functions like Direct Publisher by loading its content from a feed URL.
 
 **Prerequisite**: You must complete the deployment steps above first. The Roku channel needs a public URL to fetch movie data from.
 
-### One-Time Setup in Roku Developer Dashboard
+### One-Time Setup and Publishing Process
 
-1.  Log into your **[Roku Developer Dashboard](https://developer.roku.com/)**.
-2.  Go to **"My Channels"** and click **"Add Channel"**.
-3.  Select **"Direct Publisher"** from the options.
-4.  Follow the on-screen prompts to enter your channel properties (name, description, etc.).
-5.  When you get to the **"Feed URL"** section, paste the following URL, replacing `[your-live-domain.com]` with your actual Vercel deployment URL:
-    ```
-    https://[your-live-domain.com]/api/roku-direct-publisher-feed
-    ```
-6.  Complete the rest of the channel setup (logos, parental controls, etc.).
-7.  **Preview and Publish** your channel.
+1.  **Get Your Feed URL**: Log into your Crate TV admin panel (`/admin`) and go to the **"Roku"** tab. It will display your unique feed URL. Copy it.
 
-That's it! Once published, the Roku channel will automatically check the feed URL for new content. Any changes you "Publish" from the Crate TV admin panel will appear on the Roku channel automatically (usually within 24 hours).
+2.  **Update the Channel Code**:
+    *   In your project files, open `roku/components/HomeScene.brs`.
+    *   Find the line: `m.contentTask.url = "https://[your-live-domain.com]/api/roku-feed"`
+    *   Replace the placeholder URL with the actual URL you copied in the previous step. Save the file.
+
+3.  **Add Channel Artwork**:
+    *   In the `roku/images/` folder, you must add two images:
+        *   `logo_hd.png` (Recommended: 336x210 pixels)
+        *   `splash_hd.png` (The loading screen, must be 1920x1080 pixels)
+
+4.  **Package Your Channel**:
+    *   Create a ZIP file containing **only the contents** of the `roku` directory (the `components`, `source`, `images`, and `manifest` files).
+    *   **Important**: Do not put the `roku` folder itself in the ZIP file. The root of the ZIP file should be the channel's files and folders.
+
+5.  **Test Your Channel (Sideloading)**:
+    *   Before you publish, you should test the channel on a real Roku device.
+    *   Follow Roku's official guide to [enable Developer Mode on your device and sideload your channel](https://developer.roku.com/docs/developer-program/getting-started/developer-setup.md).
+
+6.  **Publish to the Channel Store**:
+    *   Log into your **[Roku Developer Dashboard](https://developer.roku.com/)**.
+    *   Go to **"Manage My Channels"** and either create a new SDK channel or select an existing one.
+    *   Navigate to the **"Package Upload"** page.
+    *   Upload the ZIP file you created in Step 4.
+    *   Complete the rest of the channel information (screenshots, descriptions) and submit it for review.
+
+Once published, any content you update and **"Publish"** in the Crate TV admin panel will automatically appear in your live Roku channel the next time a user opens it (Roku caches the feed, so updates may not be instant).
 
 ---
 

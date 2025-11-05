@@ -11,19 +11,17 @@
         <Group id="detailsGroup" translation="[80, 150]">
             <Poster id="itemPoster" width="400" height="600" />
             <Group id="infoGroup" translation="[500, 0]">
-                <Label id="titleLabel" width="1200" wrap="true">
-                    <font role="font.large.bold" />
-                </Label>
-                <Label id="synopsisLabel" width="1200" wrap="true" maxLines="8" translation="[0, 80]">
-                    <font role="font.small" />
-                </Label>
-                <Label id="directorLabel" width="1200" translation="[0, 300]">
-                    <font role="font.small" />
-                </Label>
-                 <Label id="castLabel" width="1200" wrap="true" maxLines="4" translation="[0, 350]">
-                    <font role="font.small" />
-                </Label>
-                <ButtonGroup id="actionButtons" translation="[0, 450]" layoutDirection="horiz" itemSpacing="[20, 0]" buttonInfo='[{"text":"Play"}]' />
+                <Label id="titleLabel" width="1200" wrap="true" font="font:LargeBoldSystemFont" />
+                <Label id="synopsisLabel" width="1200" wrap="true" maxLines="8" translation="[0, 80]" font="font:SmallSystemFont" />
+                <Label id="directorLabel" width="1200" translation="[0, 300]" font="font:SmallSystemFont" />
+                 <Label id="castLabel" width="1200" wrap="true" maxLines="4" translation="[0, 350]" font="font:SmallSystemFont" />
+                <ButtonGroup 
+                    id="actionButtons" 
+                    translation="[0, 450]" 
+                    layoutDirection="horiz" 
+                    itemSpacing="[20, 0]" 
+                    buttons='["Play"]'
+                />
             </Group>
         </Group>
     </children>

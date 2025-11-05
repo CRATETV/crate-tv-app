@@ -19,7 +19,7 @@ export const categoriesData: Record<string, Category> = {
   },
   newReleases: {
     title: 'New Releases',
-    movieKeys: []
+    movieKeys: ['theneighbours', 'twopeasinapod', 'slap', 'tedandnatalie', 'itsinyou']
   },
   awardWinners: {
     title: 'Award-Winning Films',
@@ -746,7 +746,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Akil Logan-Haye",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Intrusive+Thoughts+Final+.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Intrusive+Thoughts+Final.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/Intrusive+Thoughts+for+instant+tv+Channel++(1920+x+1080+px)+(1080+x+1620+px).png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/Intrusive+Thoughts+for+instant+tv+Channel++(1920+x+1080+px)+(1080+x+1620+px).png",
     "likes": 0
@@ -1074,7 +1074,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "theneighbours": {
     "key": "theneighbours",
-    "title": " Neighbours",
+    "title": "Neighbours",
     "synopsis": "A comedic drama with a dark twist.",
     "cast": [
       {

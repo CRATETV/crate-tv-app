@@ -2,16 +2,8 @@
 <component name="HomeScene" extends="Scene">
 
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
-    <script type="text/brightscript" uri="pkg:/source/utils.brs" />
 
     <children>
-        <!-- Font definitions -->
-        <Label id="fontLoader" text="">
-            <font role="font.small" uri="pkg:/fonts/Roboto-Regular.ttf" size="24" />
-            <font role="font.medium" uri="pkg:/fonts/Roboto-Regular.ttf" size="32" />
-            <font role="font.large.bold" uri="pkg:/fonts/Roboto-Bold.ttf" size="48" />
-        </Label>
-        
         <!-- Loading indicator -->
         <Label 
             id="loadingLabel"
@@ -21,13 +13,13 @@
             vertAlign="center"
             color="0xFFFFFFFF"
         >
-            <font role="font.medium" />
+            <font role="sans" size="30"/>
         </Label>
         
         <!-- Main content group, initially hidden -->
         <Group id="contentGroup" visible="false">
             <!-- Hero Section -->
-            <Group id="heroGroup" translation="[0, 0]">
+            <Group id="heroGroup">
                 <Poster id="heroPoster" width="1920" height="720" />
                 <Rectangle id="heroGradient" color="0x000000AA" width="1000" height="720" />
                 <Label 
@@ -35,29 +27,27 @@
                     width="880"
                     wrap="true"
                     translation="[80, 250]"
-                >
-                    <font role="font.large.bold" />
-                </Label>
+                    font="font:LargeBoldSystemFont"
+                />
                 <Label
-                    id="heroSynopsis"
+                    id="heroDescription"
                     width="880"
                     wrap="true"
                     maxLines="3"
                     translation="[80, 320]"
-                >
-                     <font role="font.small" />
-                </Label>
+                    font="font:SmallSystemFont"
+                />
             </Group>
 
             <!-- Movie Carousels -->
             <RowList 
-                id="contentRowList"
+                id="categoryRowList"
                 translation="[80, 750]"
                 itemComponentName="MoviePoster"
-                itemSize="[240, 410]"
+                itemSize="[240, 360]"
                 rowItemSpacing="[ [30, 0] ]"
                 numRows="1"
-                rowHeights="[410]"
+                rowHeights="[360]"
                 rowLabelOffset="[ [0, -50] ]"
                 rowFocusAnimationStyle="floatingFocus"
             />

@@ -12,16 +12,5 @@
             translation="[0,0]"
             visible="true"
         />
-        <Label 
-            id="errorLabel"
-            text=""
-            translation="[960, 540]"
-            horizAlign="center"
-            vertAlign="center"
-            color="0xFFFFFFFF"
-            visible="false"
-        >
-            <font role="Roboto-Regular-32" />
-        </Label>
     </children>
 </component>
