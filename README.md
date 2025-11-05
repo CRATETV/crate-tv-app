@@ -15,7 +15,7 @@ Crate TV is a sleek, professional, and fully-featured streaming web application 
 - **Staging Environment**: Preview unreleased movies and content changes by adding `?env=staging` to the URL. A banner indicates you're in preview mode.
 - **Secure Admin Panel**: A password-protected page (`/admin`) for content management. Authentication is handled by a secure, serverless API endpoint, and the password is stored safely as an environment variable.
 - **Integrated Secure File Uploader**: Upload movie files, trailers, and posters directly to Amazon S3 from the admin panel. The system uses secure presigned URLs for fast, direct-to-S3 uploads.
-- **NEW: Roku SDK Channel**: The project now includes a complete, feed-driven Roku channel built with the SDK. The Admin Panel provides a step-by-step guide for packaging and publishing.
+- **NEW: Automated Roku SDK Channel Packaging**: The project now includes a complete, feed-driven Roku channel built with the SDK. The Admin Panel features a one-click tool to download a production-ready channel package, eliminating all manual code editing and zipping.
 - **NEW: Analytics Dashboard**: A secure page to view total users, recent sign-ups, sales data from Square, filmmaker payout reports, and movie view counts.
 
 ---
@@ -133,37 +133,33 @@ Once deployed, Vercel will provide you with a public URL (e.g., `https://your-pr
 
 ---
 
-## 📺 How to Set Up the Roku Channel (SDK)
+## 📺 How to Set Up the Roku Channel (Automated SDK Method)
 
-Roku has stopped accepting "Direct Publisher" channels. This project now includes a full **SDK (Software Development Kit) channel** that functions like Direct Publisher by loading its content from a feed URL. This is a one-time setup.
+This project includes a full **SDK (Software Development Kit) channel** that loads its content from a live feed. The Admin Panel automates the packaging process, so you never have to edit code or manually zip files. This is a one-time setup.
 
-**Prerequisite**: You must complete the deployment steps above first. The Roku channel needs a public URL to fetch movie data from.
+**Prerequisite**: You must have deployed your Crate TV web application. The Roku channel needs a public URL to fetch movie data from.
 
-### One-Time Setup and Publishing Process
+### One-Time Publishing Process
 
-1.  **Get Your Feed URL**: Log into your Crate TV admin panel (`/admin`) and go to the **"Roku"** tab. It will display your unique feed URL. Copy it.
+1.  **Download Your Channel Package**:
+    *   Log into your Crate TV admin panel (`/admin`).
+    *   Navigate to the **"Roku"** tab.
+    *   Click the **"Download Roku Package (.zip)"** button. A production-ready zip file will be downloaded to your computer.
 
-2.  **Update the Channel Code**:
-    *   In your project files, open `roku/components/HomeScene.brs`.
-    *   Find the line: `m.contentTask.url = "https://[your-live-domain.com]/api/roku-feed"`
-    *   Replace the placeholder URL with the actual URL you copied in the previous step. Save the file.
-
-3.  **Add Channel Artwork**:
-    *   In the `roku/images/` folder, you must add two images:
+2.  **Add Channel Artwork (First-Time Only)**:
+    *   Unzip the downloaded package.
+    *   In the `images/` folder, add your two required image files:
         *   `logo_hd.png` (Recommended: 336x210 pixels)
         *   `splash_hd.png` (The loading screen, must be 1920x1080 pixels)
+    *   Re-zip the **contents** of the folder (not the folder itself).
 
-4.  **Package Your Channel**:
-    *   Create a ZIP file containing **only the contents** of the `roku` directory (the `components`, `source`, `images`, and `manifest` files).
-    *   **Important**: Do not put the `roku` folder itself in the ZIP file. The root of the ZIP file should be the channel's files and folders.
-
-5.  **Test & Publish**:
+3.  **Upload and Publish**:
     *   Log into your **[Roku Developer Dashboard](https://developer.roku.com/)**.
     *   Go to **"Manage My Channels"** and select your SDK channel.
-    *   Navigate to the **"Package Upload"** page and upload the ZIP file you just created.
+    *   Navigate to the **"Package Upload"** page and upload the ZIP file.
     *   Follow Roku's instructions to install a preview on your device, test it, and then submit it for publishing.
 
-Once published, any content you update and **"Publish"** in the Crate TV admin panel will automatically appear in your live Roku channel.
+Once published, any content you **"Publish"** in the Crate TV admin panel will automatically appear in your live Roku channel. You only need to re-package and upload if you make changes to the channel's source code itself.
 
 ---
 

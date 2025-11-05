@@ -1,440 +1,243 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { listenToAllAdminData, saveMovie, deleteMovie, saveCategories, saveFestivalConfig, saveFestivalDays, saveAboutData, approveActorSubmission, rejectActorSubmission, deleteMoviePipelineEntry } from './services/firebaseService';
-import { Movie, Category, FestivalDay, FestivalConfig, AboutData, LiveData, ActorSubmission, PayoutRequest, MoviePipelineEntry } from './types';
+import React, { useState, useEffect } from 'react';
+import { listenToAllAdminData, saveMovie, deleteMovie, saveCategories, saveFestivalConfig, saveFestivalDays, saveAboutData, approveActorSubmission, rejectActorSubmission } from './services/firebaseService';
+import { LiveData, Movie, Category, FestivalConfig, FestivalDay, AboutData } from './types';
 import MovieEditor from './components/MovieEditor';
 import CategoryEditor from './components/CategoryEditor';
 import FestivalEditor from './components/FestivalEditor';
 import AboutEditor from './components/AboutEditor';
-import LoadingSpinner from './components/LoadingSpinner';
 import FallbackGenerator from './components/FallbackGenerator';
+import LoadingSpinner from './components/LoadingSpinner';
 import AnalyticsPage from './components/AnalyticsPage';
-import PayoutsTab from './components/PayoutsTab';
-import EmailSender from './components/EmailSender';
+import ActorSubmissionsTab from './components/ActorSubmissionsTab';
 import MoviePipelineTab from './components/MoviePipelineTab';
+import AdminPayoutsTab from './components/AdminPayoutsTab';
 import TopFilmsTab from './components/TopFilmsTab';
-
-const RokuAdminTab: React.FC = () => {
-    const feedUrl = `${window.location.origin}/api/roku-feed`;
-
-    return (
-        <div className="space-y-8">
-            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                <h2 className="text-2xl font-bold text-purple-400 mb-4">Roku SDK Channel Publishing Guide</h2>
-                <p className="text-yellow-300 bg-yellow-900/30 border border-yellow-800 p-3 rounded-md text-sm mb-6">
-                    <strong>Important:</strong> Roku has stopped accepting "Direct Publisher" channels. This guide shows you how to publish using the new SDK method. Your project already includes all the necessary code. This is a one-time setup.
-                </p>
-
-                <div className="space-y-6 text-gray-300">
-                    <div>
-                        <h3 className="text-xl font-semibold text-white mb-2">Step 1: Get Your Feed URL</h3>
-                        <p className="mb-2">Your channel's content is powered by this unique URL. You will need it in the next step.</p>
-                        <div className="flex gap-2">
-                            <input type="text" readOnly value={feedUrl} className="form-input flex-grow" />
-                            <button onClick={() => navigator.clipboard.writeText(feedUrl)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Copy</button>
-                        </div>
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-semibold text-white mb-2">Step 2: Update the Channel Code</h3>
-                        <p>In your project's code, open the file: <code className="bg-gray-900 p-1 rounded">roku/components/HomeScene.brs</code></p>
-                        <p>Find the line that says <code className="bg-gray-900 p-1 rounded">m.contentTask.url = "..."</code> and replace the placeholder URL with the one you just copied.</p>
-                    </div>
-                     <div>
-                        <h3 className="text-xl font-semibold text-white mb-2">Step 3: Add Your Artwork</h3>
-                        <p>In the <code className="bg-gray-900 p-1 rounded">roku/images/</code> folder, add these two files:</p>
-                        <ul className="list-disc list-inside ml-4 mt-2">
-                            <li><code className="bg-gray-900 p-1 rounded">logo_hd.png</code> (336x210 recommended)</li>
-                            <li><code className="bg-gray-900 p-1 rounded">splash_hd.png</code> (1920x1080 required)</li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-semibold text-white mb-2">Step 4: Package Your Channel</h3>
-                        <p>Create a ZIP file containing <strong className="text-yellow-400">only the contents</strong> of the <code className="bg-gray-900 p-1 rounded">roku</code> directory. Do not zip the folder itself.</p>
-                        <p className="text-sm mt-1">Inside the ZIP file, you should see: <code className="bg-gray-900 p-1 rounded">components</code>, <code className="bg-gray-900 p-1 rounded">source</code>, <code className="bg-gray-900 p-1 rounded">images</code>, and <code className="bg-gray-900 p-1 rounded">manifest</code>.</p>
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-semibold text-white mb-2">Step 5: Upload and Publish</h3>
-                         <p>Go to your <a href="https://developer.roku.com/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Roku Developer Dashboard</a>, select your SDK channel, go to "Package Upload", and upload your ZIP file. Then, follow the steps to test and publish your channel.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
+import EmailSender from './components/EmailSender';
+import RokuAdminTab from './components/RokuAdminTab';
+import WatchPartyAdminTab from './components/WatchPartyAdminTab';
 
 type AdminRole = 'super_admin' | 'festival_admin' | 'collaborator' | null;
 
-const MonetizationTab: React.FC = () => {
-    const [adTagUrl, setAdTagUrl] = useState('');
-    const [saveStatus, setSaveStatus] = useState<'idle' | 'success'>('idle');
-
-    useEffect(() => {
-        const savedUrl = localStorage.getItem('productionAdTagUrl');
-        if (savedUrl) {
-            setAdTagUrl(savedUrl);
-        }
-    }, []);
-
-    const handleSave = () => {
-        localStorage.setItem('productionAdTagUrl', adTagUrl);
-        setSaveStatus('success');
-        setTimeout(() => setSaveStatus('idle'), 3000);
-    };
-
-    return (
-        <div className="bg-gray-800/50 border border-gray-700 p-6 md:p-8 rounded-lg max-w-2xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Monetization Settings</h2>
-            <p className="text-gray-400 mb-6">
-                This is where you activate real revenue generation. Paste your production video ad tag URL from your Google AdSense or Ad Manager account below.
-            </p>
-            <div className="space-y-4">
-                <div>
-                    <label htmlFor="adTagUrl" className="block text-sm font-medium text-gray-400 mb-2">
-                        Production Ad Tag URL
-                    </label>
-                    <textarea
-                        id="adTagUrl"
-                        value={adTagUrl}
-                        onChange={(e) => setAdTagUrl(e.target.value)}
-                        className="form-input w-full font-mono text-sm"
-                        rows={4}
-                        placeholder="https://googleads.g.doubleclick.net/pagead/ads?..."
-                    />
-                    <p className="text-xs text-gray-500 mt-2">
-                        Your ad tag is saved securely in your browser and is never exposed in the code. Need help finding this? 
-                        <a href="https://support.google.com/admanager/answer/1068325" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline ml-1">
-                            Learn more at Google.
-                        </a>
-                    </p>
-                </div>
-                <button
-                    onClick={handleSave}
-                    className="submit-btn bg-green-600 hover:bg-green-700"
-                >
-                    Save & Activate Ads
-                </button>
-                {saveStatus === 'success' && (
-                    <p className="text-green-400 text-sm">
-                        Ad Tag URL saved! Your films will now serve production ads.
-                    </p>
-                )}
-            </div>
-        </div>
-    );
-};
-
-const AdminPage: React.FC = () => {
+const LoginPage: React.FC<{ onLogin: (password: string, role: AdminRole) => void; onFirstLogin: () => void; }> = ({ onLogin, onFirstLogin }) => {
     const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [authError, setAuthError] = useState('');
-    const [role, setRole] = useState<AdminRole>(null);
-    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-
-    const [isLoadingData, setIsLoadingData] = useState(true);
-    const [data, setData] = useState<LiveData | null>(null);
-    const [dbError, setDbError] = useState<string | null>(null);
-    const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-    
-    const [activeTab, setActiveTab] = useState('analytics');
-    const [publishStatus, setPublishStatus] = useState<'idle' | 'publishing' | 'success' | 'error'>('idle');
-    const [publishMessage, setPublishMessage] = useState('');
-
-    useEffect(() => {
-        const savedPassword = sessionStorage.getItem('adminPassword');
-        const savedRole = sessionStorage.getItem('adminRole') as AdminRole;
-        if (savedPassword && savedRole) {
-            setPassword(savedPassword);
-            setRole(savedRole);
-            setIsLoggedIn(true);
-            if (savedRole === 'festival_admin') {
-                setActiveTab('festival'); // Set default tab to 'festival' for them
-            } else if (savedRole === 'collaborator') {
-                setActiveTab('movies'); // Default collaborator to movies
-            }
-        }
-        setIsCheckingAuth(false);
-    }, []);
-
-    const dataListenerCallback = useCallback((result: { data: LiveData, error?: string }) => {
-        if (result.error) {
-            setDbError(result.error);
-        }
-        setData(result.data);
-        setIsLoadingData(false);
-    }, []);
-
-    useEffect(() => {
-        if (isLoggedIn) {
-            setIsLoadingData(true);
-            const unsubscribePromise = listenToAllAdminData(dataListenerCallback);
-            
-            return () => {
-                unsubscribePromise.then(unsub => unsub());
-            };
-        }
-    }, [isLoggedIn, dataListenerCallback]);
-    
-    const handlePublish = async () => {
-        if (!data || !window.confirm("Are you sure you want to publish all current data to the live site? This will overwrite the existing live data.")) {
-            return;
-        }
-
-        setPublishStatus('publishing');
-        setPublishMessage('');
-        const adminPassword = sessionStorage.getItem('adminPassword');
-
-        try {
-            const response = await fetch('/api/publish-data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: adminPassword, data }),
-            });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Failed to publish.');
-            
-            // On successful publish, notify other tabs
-            const channel = new BroadcastChannel('cratetv-data-channel');
-            channel.postMessage({ type: 'DATA_PUBLISHED', payload: data });
-            channel.close();
-
-            setPublishStatus('success');
-            setPublishMessage('Published successfully! Site is now live with your changes.');
-        } catch (err) {
-            setPublishStatus('error');
-            setPublishMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
-        } finally {
-            setTimeout(() => setPublishStatus('idle'), 4000);
-        }
-    };
-
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setAuthError('');
+        setIsLoading(true);
+        setError('');
         try {
             const response = await fetch('/api/admin-login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password }),
             });
-            const result = await response.json();
-            if (response.ok && result.success) {
-                sessionStorage.setItem('adminPassword', password);
-                sessionStorage.setItem('adminRole', result.role);
-                setRole(result.role);
-                setIsLoggedIn(true);
-                if (result.role === 'festival_admin') {
-                    setActiveTab('festival');
-                } else if (result.role === 'collaborator') {
-                    setActiveTab('movies');
-                }
-            } else {
-                throw new Error(result.error || 'Login failed.');
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Login failed');
             }
+            if (data.firstLogin) {
+                onFirstLogin();
+            }
+            onLogin(password, data.role);
         } catch (err) {
-            setAuthError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        } finally {
+            setIsLoading(false);
         }
+    };
+    
+    return (
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">
+            <div className="w-full max-w-sm">
+                <form onSubmit={handleLogin} className="bg-gray-800 shadow-md rounded-lg px-8 pt-6 pb-8 mb-4">
+                    <h1 className="text-2xl font-bold text-center mb-6">Admin Panel</h1>
+                    <div className="mb-4">
+                        <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="password">
+                            Password
+                        </label>
+                        <input
+                            className="form-input w-full"
+                            id="password"
+                            type="password"
+                            placeholder="******************"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
+                    </div>
+                    {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
+                    <div className="flex items-center justify-between">
+                        <button className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full" type="submit" disabled={isLoading}>
+                            {isLoading ? 'Signing In...' : 'Sign In'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+
+const AdminPage: React.FC = () => {
+    const [loggedIn, setLoggedIn] = useState(false);
+    const [adminRole, setAdminRole] = useState<AdminRole>(null);
+    const [isFirstLogin, setIsFirstLogin] = useState(false);
+    const [data, setData] = useState<LiveData | null>(null);
+    const [source, setSource] = useState<'firebase' | 'fallback' | null>(null);
+    const [error, setError] = useState<string | undefined>();
+    const [activeTab, setActiveTab] = useState('analytics');
+    
+    useEffect(() => {
+        const password = sessionStorage.getItem('adminPassword');
+        const role = sessionStorage.getItem('adminRole') as AdminRole;
+        if (password && role) {
+            setLoggedIn(true);
+            setAdminRole(role);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!loggedIn) return;
+        
+        let unsubscribe: (() => void) | null = null;
+        
+        const setupListener = async () => {
+            unsubscribe = await listenToAllAdminData((result) => {
+                setData(result.data);
+                setSource(result.source);
+                setError(result.error);
+            });
+        };
+        
+        setupListener();
+        
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
+    }, [loggedIn]);
+
+    const handleLogin = (password: string, role: AdminRole) => {
+        sessionStorage.setItem('adminPassword', password);
+        sessionStorage.setItem('adminRole', role || '');
+        setLoggedIn(true);
+        setAdminRole(role);
+        // Default to the first available tab for the role
+        setActiveTab(getAvailableTabs(role)[0] || 'analytics');
+    };
+
+    const handleFirstLogin = () => {
+        setIsFirstLogin(true);
     };
 
     const handleLogout = () => {
         sessionStorage.removeItem('adminPassword');
         sessionStorage.removeItem('adminRole');
-        setIsLoggedIn(false);
-        setRole(null);
-        setPassword('');
+        setLoggedIn(false);
+        setAdminRole(null);
     };
 
-    const handleCreateNewMovie = () => {
-        const newMovie: Movie = {
-            key: `newmovie${Date.now()}`,
-            title: '',
-            synopsis: '',
-            cast: [],
-            director: '',
-            trailer: '',
-            fullMovie: '',
-            poster: '',
-            likes: 0
-        };
-        setSelectedMovie(newMovie);
-        setActiveTab('movies');
-    };
-
-    const handleCreateMovieFromPipeline = async (item: MoviePipelineEntry) => {
-         const newMovie: Movie = {
-            key: `newmovie${Date.now()}`,
-            title: item.title,
-            synopsis: '',
-            cast: item.cast.split(',').map(name => ({ name: name.trim(), photo: '', bio: '', highResPhoto: '' })),
-            director: item.director,
-            trailer: '',
-            fullMovie: item.movieUrl,
-            poster: item.posterUrl,
-            likes: 0
-        };
-        setSelectedMovie(newMovie);
-        setActiveTab('movies');
-        
-        // Automatically remove the item from the pipeline to prevent duplicate work
+    const handleSaveAll = async () => {
+        if (!data) return;
+        if (source === 'fallback') {
+            alert("Running in local mode. Changes are not saved to the server.");
+            return;
+        }
         try {
-            await deleteMoviePipelineEntry(item.id);
+            await Promise.all([
+                saveCategories(data.categories),
+                saveFestivalConfig(data.festivalConfig),
+                saveFestivalDays(data.festivalData),
+                saveAboutData(data.aboutData)
+            ]);
+            alert('All data saved successfully!');
         } catch (error) {
-            console.error("Failed to remove item from pipeline after creation:", error);
-            // Non-critical error, the main action (opening the editor) has already succeeded.
+            alert('An error occurred while saving: ' + (error as Error).message);
+        }
+    };
+    
+    if (!loggedIn) {
+        return <LoginPage onLogin={handleLogin} onFirstLogin={handleFirstLogin} />;
+    }
+
+    if (!data) {
+        return <LoadingSpinner />;
+    }
+    
+    const TabButton: React.FC<{ tabId: string, label: string }> = ({ tabId, label }) => (
+        <button
+            onClick={() => setActiveTab(tabId)}
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tabId ? 'bg-red-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+        >
+            {label}
+        </button>
+    );
+
+    const getAvailableTabs = (role: AdminRole): string[] => {
+        switch (role) {
+            case 'super_admin':
+                return ['analytics', 'movies', 'categories', 'festival', 'about', 'submissions', 'pipeline', 'payouts', 'top-films', 'emails', 'watch-party', 'roku', 'fallback'];
+            case 'festival_admin':
+                return ['festival', 'analytics-festival'];
+            case 'collaborator':
+                return ['movies', 'categories', 'pipeline', 'submissions'];
+            default:
+                return [];
         }
     };
 
-    const TabButton: React.FC<{ tabId: string; label: string; requiredRole?: AdminRole[] }> = ({ tabId, label, requiredRole }) => {
-        if (requiredRole && role && !requiredRole.includes(role)) {
-            return null;
-        }
-        return (
-            <button
-                onClick={() => { setSelectedMovie(null); setActiveTab(tabId); }}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tabId ? 'bg-red-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
-            >
-                {label}
-            </button>
-        );
-    };
-
-    if (isCheckingAuth) {
-        return <LoadingSpinner />;
-    }
-
-    if (!isLoggedIn) {
-        return (
-            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-                <div className="w-full max-w-sm">
-                    <form onSubmit={handleLogin} className="bg-gray-800 shadow-md rounded-lg px-8 pt-6 pb-8 mb-4">
-                        <h1 className="text-2xl font-bold text-white mb-6 text-center">Admin Access</h1>
-                        <div className="mb-4">
-                            <label className="block text-gray-300 text-sm font-bold mb-2" htmlFor="password">
-                                Password
-                            </label>
-                            <div className="relative">
-                                <input
-                                    className="form-input pr-10"
-                                    id="password"
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="******************"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white"
-                                    aria-label={showPassword ? "Hide password" : "Show password"}
-                                >
-                                    {showPassword ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                                        </svg>
-                                    ) : (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074L3.707 2.293zM10 12a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                                            <path d="M2 10s.955-2.263 2.828-4.136A10.046 10.046 0 0110 3c4.478 0 8.268 2.943 9.542 7-.153.483-.32.95-.5 1.401l-1.473-1.473A8.014 8.014 0 0010 8c-2.04 0-3.87.768-5.172 2.035l-1.473-1.473A8.013 8.013 0 002 10z" />
-                                        </svg>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                        {authError && <p className="text-red-500 text-xs italic mb-4">{authError}</p>}
-                        <div className="flex items-center justify-between">
-                            <button className="submit-btn w-full" type="submit">
-                                Sign In
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        );
-    }
-
-    if (isLoadingData || !data) {
-        return <LoadingSpinner />;
-    }
+    const availableTabs = getAvailableTabs(adminRole);
 
     return (
-        <div className="bg-gray-900 min-h-screen text-white p-4 sm:p-8">
+        <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
-                <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-3xl font-bold text-red-500">Crate TV Admin</h1>
-                        <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-white">Logout</button>
-                    </div>
-                    {(role === 'super_admin' || role === 'festival_admin') && (
-                        <div className="flex items-center gap-2">
-                             <button onClick={handlePublish} disabled={publishStatus === 'publishing'} className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors">
-                                {publishStatus === 'publishing' ? 'Publishing...' : 'Publish Live Data'}
-                            </button>
-                            {publishMessage && <p className={`text-xs ${publishStatus === 'error' ? 'text-red-400' : 'text-green-400'}`}>{publishMessage}</p>}
-                        </div>
-                    )}
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-3xl font-bold">Admin Panel</h1>
+                    <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-white">Sign Out</button>
                 </div>
 
+                {isFirstLogin && (
+                    <div className="p-4 mb-4 text-yellow-800 bg-yellow-200 border border-yellow-300 rounded-md">
+                        <strong>First-time setup!</strong> No admin password is set. Please set the ADMIN_PASSWORD environment variable to secure this panel.
+                    </div>
+                )}
+                {error && <div className="p-4 mb-4 text-red-800 bg-red-200 border border-red-300 rounded-md"><strong>Error:</strong> {error}</div>}
+                
                 <div className="flex flex-wrap items-center gap-2 mb-6 border-b border-gray-700 pb-4">
-                    <TabButton tabId="analytics" label="Analytics" requiredRole={['super_admin', 'festival_admin']} />
-                    <TabButton tabId="movies" label="Movies" requiredRole={['super_admin', 'collaborator', 'festival_admin']} />
-                    <TabButton tabId="top-ten" label="Top 10" requiredRole={['super_admin', 'collaborator', 'festival_admin']} />
-                    <TabButton tabId="categories" label="Categories" requiredRole={['super_admin', 'collaborator']} />
-                    <TabButton tabId="festival" label="Festival" requiredRole={['super_admin', 'festival_admin', 'collaborator']} />
-                    <TabButton tabId="pipeline" label="Pipeline" requiredRole={['super_admin', 'collaborator', 'festival_admin']} />
-                    <TabButton tabId="about" label="About Page" requiredRole={['super_admin']} />
-                    <TabButton tabId="roku" label="Roku" requiredRole={['super_admin']} />
-                    <TabButton tabId="monetization" label="Monetization" requiredRole={['super_admin']} />
-                    <TabButton tabId="tools" label="Tools" requiredRole={['super_admin']} />
+                    {availableTabs.includes('analytics') && <TabButton tabId="analytics" label="Analytics" />}
+                    {availableTabs.includes('movies') && <TabButton tabId="movies" label="Movies" />}
+                    {availableTabs.includes('categories') && <TabButton tabId="categories" label="Categories" />}
+                    {availableTabs.includes('festival') && <TabButton tabId="festival" label="Festival" />}
+                    {availableTabs.includes('about') && <TabButton tabId="about" label="About Page" />}
+                    {availableTabs.includes('submissions') && <TabButton tabId="submissions" label="Submissions" />}
+                    {availableTabs.includes('pipeline') && <TabButton tabId="pipeline" label="Pipeline" />}
+                    {availableTabs.includes('payouts') && <TabButton tabId="payouts" label="Payouts" />}
+                    {availableTabs.includes('top-films') && <TabButton tabId="top-films" label="Top Films" />}
+                    {availableTabs.includes('emails') && <TabButton tabId="emails" label="Emails" />}
+                    {availableTabs.includes('watch-party') && <TabButton tabId="watch-party" label="Watch Parties" />}
+                    {availableTabs.includes('roku') && <TabButton tabId="roku" label="Roku" />}
+                    {availableTabs.includes('fallback') && <TabButton tabId="fallback" label="Fallback" />}
+                    {availableTabs.includes('analytics-festival') && <TabButton tabId="analytics-festival" label="Festival Analytics" />}
                 </div>
-                
-                {dbError && <div className="p-4 mb-4 text-red-300 bg-red-900/50 border border-red-700 rounded-md">{dbError}</div>}
 
-                {activeTab === 'analytics' && <AnalyticsPage viewMode={role === 'festival_admin' ? 'festival' : 'full'} />}
-                
-                {activeTab === 'top-ten' && <TopFilmsTab />}
-
-                {activeTab === 'movies' && (
-                    <div>
-                        {selectedMovie ? (
-                            <MovieEditor
-                                movie={selectedMovie}
-                                onSave={movie => { saveMovie(movie); setSelectedMovie(null); }}
-                                onCancel={() => setSelectedMovie(null)}
-                                onDelete={key => { deleteMovie(key); setSelectedMovie(null); }}
-                            />
-                        ) : (
-                            <div>
-                                <button onClick={handleCreateNewMovie} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md mb-4">
-                                    + Add New Movie
-                                </button>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                                    {Object.values(data.movies).sort((a: Movie, b: Movie) => a.title.localeCompare(b.title)).map((movie: Movie) => (
-                                        <div key={movie.key} onClick={() => setSelectedMovie(movie)} className="cursor-pointer group">
-                                            <img src={movie.poster} alt={movie.title} className="w-full aspect-[2/3] object-cover rounded-md border-2 border-transparent group-hover:border-red-500" />
-                                            <p className="text-sm mt-1 truncate group-hover:text-red-400">{movie.title}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-                
-                {activeTab === 'categories' && <CategoryEditor initialCategories={data.categories} allMovies={Object.values(data.movies)} onSave={saveCategories} />}
-                {activeTab === 'festival' && <FestivalEditor data={data.festivalData} config={data.festivalConfig} allMovies={data.movies} onDataChange={saveFestivalDays} onConfigChange={saveFestivalConfig} onSave={() => { /* Handled by individual change handlers */ }} />}
-                {activeTab === 'pipeline' && <MoviePipelineTab pipeline={data.moviePipeline} onCreateMovie={handleCreateMovieFromPipeline} />}
-                {activeTab === 'about' && <AboutEditor initialData={data.aboutData} onSave={saveAboutData} />}
-                {activeTab === 'roku' && <RokuAdminTab />}
-                {activeTab === 'monetization' && <MonetizationTab />}
-
-                {activeTab === 'tools' && (
-                    <div className="space-y-8">
-                        <EmailSender />
-                        <FallbackGenerator movies={data.movies} categories={data.categories} festivalData={data.festivalData} festivalConfig={data.festivalConfig} aboutData={data.aboutData} />
-                    </div>
-                )}
-
+                <div className="mt-6">
+                    {activeTab === 'movies' && <MovieEditor allMovies={Object.values(data.movies)} categories={data.categories} onSave={saveMovie} onDelete={deleteMovie} />}
+                    {activeTab === 'categories' && <CategoryEditor initialCategories={data.categories} allMovies={Object.values(data.movies)} onSave={saveCategories} />}
+                    {activeTab === 'festival' && <FestivalEditor data={data.festivalData} config={data.festivalConfig} allMovies={data.movies} onDataChange={(newData) => setData(d => d ? ({ ...d, festivalData: newData }) : null)} onConfigChange={(newConfig) => setData(d => d ? ({ ...d, festivalConfig: newConfig }) : null)} onSave={() => { if (data.festivalConfig) saveFestivalConfig(data.festivalConfig); saveFestivalDays(data.festivalData); }} />}
+                    {activeTab === 'about' && data.aboutData && <AboutEditor initialData={data.aboutData} onSave={saveAboutData} />}
+                    {activeTab === 'fallback' && <FallbackGenerator movies={data.movies} categories={data.categories} festivalData={data.festivalData} festivalConfig={data.festivalConfig} aboutData={data.aboutData} />}
+                    {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
+                    {activeTab === 'analytics-festival' && <AnalyticsPage viewMode="festival" />}
+                    {activeTab === 'submissions' && <ActorSubmissionsTab submissions={data.actorSubmissions} allMovies={data.movies} onApprove={approveActorSubmission} onReject={rejectActorSubmission} />}
+                    {activeTab === 'pipeline' && <MoviePipelineTab pipeline={data.moviePipeline} onCreateMovie={(item) => {/* Logic to open MovieEditor with pre-filled data */}} />}
+                    {activeTab === 'payouts' && <AdminPayoutsTab />}
+                    {activeTab === 'top-films' && <TopFilmsTab />}
+                    {activeTab === 'emails' && <EmailSender />}
+                    {activeTab === 'watch-party' && <WatchPartyAdminTab allMovies={data.movies} />}
+                    {activeTab === 'roku' && <RokuAdminTab />}
+                </div>
             </div>
         </div>
     );

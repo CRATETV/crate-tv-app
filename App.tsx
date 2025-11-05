@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+// FIX: Corrected import path for types.
 import { Movie, Actor, Category, FilmBlock, FestivalDay } from './types';
 import Header from './components/Header';
 import Hero from './components/Hero';

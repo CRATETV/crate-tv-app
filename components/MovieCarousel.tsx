@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import { Movie } from '../types';
 import MovieCard from './MovieCard';

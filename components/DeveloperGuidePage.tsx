@@ -1,6 +1,7 @@
 
 
 
+
 import React from 'react';
 import Header from './Header';
 // FIX: Corrected import path
@@ -123,44 +124,43 @@ Implement Feature A with new styling and adjustments`}
                         </section>
                         
                         <section>
-                            <h2 className="text-3xl font-bold text-white mb-4">How to Set Up the Roku Channel (SDK Method)</h2>
+                            <h2 className="text-3xl font-bold text-white mb-4">How to Set Up the Roku Channel (Automated SDK Method)</h2>
                             <p className="text-gray-300 mb-4">
-                                This project includes a full **SDK (Software Development Kit) channel** that loads its content from a feed URL. This is a one-time setup to get your channel published.
+                                This project includes a full **SDK (Software Development Kit) channel** that loads its content from a live feed. The Admin Panel automates the packaging process, so you never have to edit code or manually zip files. This is a one-time setup.
                             </p>
                             <p className="text-gray-300 mb-4">
                                 <strong className="text-yellow-400">Prerequisite:</strong> The Roku channel needs a public URL to fetch movie data from. Ensure your web application is deployed and accessible online before proceeding.
                             </p>
                         
-                             <h3 className="text-xl font-semibold text-white mt-6 mb-2">One-Time Setup and Publishing Process</h3>
+                             <h3 className="text-xl font-semibold text-white mt-6 mb-2">One-Time Publishing Process</h3>
                             <ol className="list-decimal list-inside space-y-4 text-gray-300 mb-4">
                                 <li>
-                                    <strong>Get Your Feed URL:</strong> Log into your Crate TV admin panel (`/admin`) and go to the **"Roku"** tab. It will display your unique feed URL for the SDK channel. Copy it.
-                                </li>
-                                <li>
-                                    <strong>Update the Channel Code:</strong>
+                                    <strong>Download Your Channel Package:</strong>
                                     <ul className="list-disc list-inside ml-6 mt-2">
-                                        <li>In your project files, open <code className="bg-gray-700 p-1 rounded-md">roku/components/HomeScene.brs</code>.</li>
-                                        <li>Find the line: <code className="bg-gray-700 p-1 rounded-md">m.contentTask.url = "..."</code></li>
-                                        <li>Replace the placeholder URL with the actual URL you copied in the previous step.</li>
+                                        <li>Log into your Crate TV admin panel (`/admin`).</li>
+                                        <li>Navigate to the **"Roku"** tab.</li>
+                                        <li>Click the **"Download Roku Package (.zip)"** button. A production-ready zip file will be downloaded to your computer.</li>
                                     </ul>
                                 </li>
                                 <li>
-                                    <strong>Add Channel Artwork:</strong> In the <code className="bg-gray-700 p-1 rounded-md">roku/images/</code> folder, you must add two images:
+                                    <strong>Add Channel Artwork (First-Time Only):</strong>
                                     <ul className="list-disc list-inside ml-6 mt-2">
-                                        <li><code className="bg-gray-700 p-1 rounded-md">logo_hd.png</code> (Recommended: 336x210 pixels)</li>
-                                        <li><code className="bg-gray-700 p-1 rounded-md">splash_hd.png</code> (Loading screen, must be 1920x1080 pixels)</li>
+                                        <li>Unzip the downloaded package.</li>
+                                        <li>In the `images/` folder, add your two required image files:
+                                            <ul className="list-disc list-inside ml-6 mt-2">
+                                                <li>`logo_hd.png` (Recommended: 336x210 pixels)</li>
+                                                <li>`splash_hd.png` (Loading screen, must be 1920x1080 pixels)</li>
+                                            </ul>
+                                        </li>
+                                        <li>Re-zip the **contents** of the folder (not the folder itself).</li>
                                     </ul>
                                 </li>
                                 <li>
-                                    <strong>Package Your Channel:</strong> Create a ZIP file containing **only the contents** of the `roku` directory (the `components`, `source`, `images`, and `manifest` files).
-                                    <p className="text-sm mt-1 text-yellow-400"><strong>Important:</strong> Do not put the `roku` folder itself in the ZIP file. The root of the ZIP file should be the channel's files and folders.</p>
-                                </li>
-                                <li>
-                                    <strong>Test & Publish:</strong>
+                                    <strong>Upload and Publish:</strong>
                                     <ul className="list-disc list-inside ml-6 mt-2">
                                         <li>Log into your <a href="https://developer.roku.com/" target="_blank" rel="noopener noreferrer" className="text-red-400 hover:underline">Roku Developer Dashboard</a>.</li>
                                         <li>Go to "Manage My Channels" and select your SDK channel.</li>
-                                        <li>Navigate to the "Package Upload" page and upload the ZIP file you just created.</li>
+                                        <li>Navigate to the "Package Upload" page and upload the ZIP file.</li>
                                         <li>Follow Roku's instructions to install a preview on your device, test it, and then submit it for publishing.</li>
                                     </ul>
                                 </li>

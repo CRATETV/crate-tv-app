@@ -11,18 +11,16 @@ export interface Movie {
   synopsis: string;
   cast: Actor[];
   director: string;
+  producers?: string;
   trailer: string;
   fullMovie: string;
   poster: string;
   tvPoster?: string;
-  likes: number;
+  likes?: number;
   rating?: number;
   releaseDateTime?: string;
   mainPageExpiry?: string;
   durationInMinutes?: number;
-  producers?: string;
-  isForSale?: boolean;
-  price?: number;
   hasCopyrightMusic?: boolean;
 }
 
@@ -32,16 +30,16 @@ export interface Category {
 }
 
 export interface FilmBlock {
-    id: string;
-    title: string;
-    time: string;
-    movieKeys: string[];
+  id: string;
+  title: string;
+  time: string;
+  movieKeys: string[];
 }
 
 export interface FestivalDay {
-    day: number;
-    date: string;
-    blocks: FilmBlock[];
+  day: number;
+  date: string;
+  blocks: FilmBlock[];
 }
 
 export interface FestivalConfig {
@@ -66,37 +64,56 @@ export interface AboutData {
   founderPhoto: string;
 }
 
+export interface User {
+  uid: string;
+  email: string | null;
+  name?: string;
+  avatar?: string;
+  isActor?: boolean;
+  isFilmmaker?: boolean;
+  isPremiumSubscriber?: boolean;
+  watchlist: string[];
+  watchedMovies: string[];
+  // Festival & Purchase related
+  hasFestivalAllAccess?: boolean;
+  unlockedBlockIds?: string[];
+  purchasedMovieKeys?: string[];
+}
+
 export interface ActorSubmission {
-    id: string;
-    actorName: string;
-    email: string;
-    bio: string;
-    photoUrl: string;
-    highResPhotoUrl: string;
-    imdbUrl?: string;
-    submissionDate: { seconds: number; nanoseconds: number; };
-    status: 'pending' | 'approved' | 'rejected';
+  id: string;
+  actorName: string;
+  email: string;
+  bio: string;
+  photoUrl: string;
+  highResPhotoUrl: string;
+  imdbUrl?: string;
+  submissionDate: {
+    seconds: number;
+    nanoseconds: number;
+  };
+  status: 'pending' | 'approved' | 'rejected';
 }
 
 export interface MoviePipelineEntry {
-    id: string;
-    title: string;
-    posterUrl: string;
-    movieUrl: string;
-    cast: string;
-    director: string;
-    submittedAt?: any; // Using `any` as it can be a server timestamp
-    status?: 'pending' | 'created';
+  id: string;
+  title: string;
+  posterUrl: string;
+  movieUrl: string;
+  cast: string;
+  director: string;
+  submittedAt: any; // Firestore timestamp
+  status: 'pending' | 'processed';
 }
 
 export interface LiveData {
-    movies: Record<string, Movie>;
-    categories: Record<string, Category>;
-    festivalData: FestivalDay[];
-    festivalConfig: FestivalConfig;
-    aboutData: AboutData;
-    actorSubmissions: ActorSubmission[];
-    moviePipeline: MoviePipelineEntry[];
+  movies: Record<string, Movie>;
+  categories: Record<string, Category>;
+  festivalData: FestivalDay[];
+  festivalConfig: FestivalConfig;
+  aboutData: AboutData;
+  actorSubmissions: ActorSubmission[];
+  moviePipeline: MoviePipelineEntry[];
 }
 
 export interface FetchResult {
@@ -105,26 +122,11 @@ export interface FetchResult {
   timestamp: number;
 }
 
-export interface User {
-    uid: string;
-    email: string;
-    name: string;
-    isActor: boolean;
-    isFilmmaker: boolean;
-    avatar: string;
-    isPremiumSubscriber?: boolean;
-    watchlist?: string[];
-    watchedMovies?: string[];
-    hasFestivalAllAccess?: boolean;
-    unlockedBlockIds?: string[];
-    purchasedMovieKeys?: string[];
-}
-
 export interface PayoutRequest {
   id: string;
   directorName: string;
-  amount: number; // in cents
-  payoutMethod: 'PayPal' | 'Venmo' | 'Other';
+  amount: number;
+  payoutMethod: string;
   payoutDetails: string;
   status: 'pending' | 'completed';
   requestDate: { seconds: number; nanoseconds: number; };
@@ -132,18 +134,55 @@ export interface PayoutRequest {
 }
 
 export interface AdminPayout {
-    id: string;
-    amount: number; // in cents
-    reason: string;
-    payoutDate: { seconds: number; nanoseconds: number; };
+  id: string;
+  amount: number;
+  reason: string;
+  payoutDate: { seconds: number, nanoseconds: number };
 }
 
 export interface BillSavingsTransaction {
-    id: string;
-    type: 'deposit' | 'withdrawal';
-    amount: number; // in cents
-    reason: string;
-    transactionDate: { seconds: number; nanoseconds: number; };
+  id: string;
+  type: 'deposit' | 'withdrawal';
+  amount: number;
+  reason: string;
+  transactionDate: { seconds: number, nanoseconds: number };
+}
+
+export interface AnalyticsData {
+  totalRevenue: number;
+  totalCrateTvRevenue: number;
+  totalAdminPayouts: number;
+  pastAdminPayouts: AdminPayout[];
+  billSavingsPotTotal: number;
+  billSavingsTransactions: BillSavingsTransaction[];
+  totalUsers: number;
+  viewCounts: Record<string, number>;
+  movieLikes: Record<string, number>;
+  filmmakerPayouts: FilmmakerPayout[];
+  viewLocations: Record<string, Record<string, number>>;
+  allUsers: { email: string }[];
+  actorUsers: { email: string }[];
+  filmmakerUsers: { email: string }[];
+  totalDonations: number;
+  totalSales: number;
+  totalMerchRevenue: number;
+  totalAdRevenue: number;
+  crateTvMerchCut: number;
+  merchSales: Record<string, { name: string; units: number; revenue: number; }>;
+  totalFestivalRevenue: number;
+  festivalPassSales: { units: number; revenue: number; };
+  festivalBlockSales: { units: number; revenue: number; };
+  salesByBlock: Record<string, { units: number; revenue: number; }>;
+}
+
+export interface FilmmakerPayout {
+    movieTitle: string;
+    totalDonations: number;
+    crateTvCut: number;
+    filmmakerDonationPayout: number;
+    totalAdRevenue: number;
+    filmmakerAdPayout: number;
+    totalFilmmakerPayout: number;
 }
 
 export interface FilmmakerFilmPerformance {
@@ -163,48 +202,13 @@ export interface FilmmakerAnalytics {
     films: FilmmakerFilmPerformance[];
 }
 
-export interface FilmmakerPayout {
-    movieTitle: string;
-    totalDonations: number;
-    crateTvCut: number;
-    filmmakerDonationPayout: number;
-    totalAdRevenue: number;
-    filmmakerAdPayout: number;
-    totalFilmmakerPayout: number;
-}
-
-export interface AnalyticsData {
-    totalRevenue: number;
-    totalCrateTvRevenue: number;
-    totalAdminPayouts: number;
-
-    pastAdminPayouts: AdminPayout[];
-    billSavingsPotTotal: number;
-    billSavingsTransactions: BillSavingsTransaction[];
-
-    totalUsers: number;
-    viewCounts: Record<string, number>;
-    movieLikes: Record<string, number>;
-    viewLocations: Record<string, Record<string, number>>;
-    
-    allUsers: { email: string }[];
-    actorUsers: { email: string }[];
-    filmmakerUsers: { email: string }[];
-    
-    totalDonations: number;
-    totalSales: number;
-    totalMerchRevenue: number;
-    totalAdRevenue: number;
-    
-    crateTvMerchCut: number;
-    merchSales: Record<string, { name: string; units: number; revenue: number }>;
-
-    totalFestivalRevenue: number;
-    festivalPassSales: { units: number; revenue: number };
-    festivalBlockSales: { units: number; revenue: number };
-    salesByBlock: Record<string, { units: number; revenue: number }>;
-
-    filmmakerPayouts: FilmmakerPayout[];
+export interface ActorProfile {
+    name: string;
+    slug: string;
+    bio: string;
+    photo: string;
+    highResPhoto: string;
+    imdbUrl: string;
 }
 
 export interface ActorPost {
@@ -213,15 +217,14 @@ export interface ActorPost {
     actorPhoto: string;
     content: string;
     imageUrl?: string;
-    timestamp: { seconds: number; nanoseconds: number; };
+    timestamp: any; // Firestore timestamp
     likes: string[];
 }
 
-export interface ActorProfile {
-    name: string;
-    slug: string;
-    bio: string;
-    photo: string;
-    highResPhoto: string;
-    imdbUrl?: string;
+export interface ChatMessage {
+  id: string;
+  userName: string;
+  userAvatar: string;
+  text: string;
+  timestamp: any; // Firestore timestamp
 }

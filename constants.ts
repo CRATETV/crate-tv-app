@@ -1,5 +1,3 @@
-
-
 // FIX: Imported types from the corrected types.ts file and removed duplicated type definitions.
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
 
