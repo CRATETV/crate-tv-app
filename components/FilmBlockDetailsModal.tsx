@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { Movie, FilmBlock } from '../types';
 import SquarePaymentModal from './SquarePaymentModal';
@@ -93,6 +94,7 @@ const FilmBlockDetailsModal: React.FC<FilmBlockDetailsModalProps> = ({ block, al
         {isPaymentModalOpen && (
             <SquarePaymentModal
                 paymentType="block"
+                block={block}
                 onClose={() => setIsPaymentModalOpen(false)}
                 onPaymentSuccess={handlePaymentSuccess}
             />

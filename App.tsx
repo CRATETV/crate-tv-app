@@ -307,11 +307,15 @@ const App: React.FC = () => {
   const handleDonationSuccess = (details: { amount: number; email?: string }) => {
       setLastDonationDetails(details);
       setIsDonationSuccessModalOpen(true);
+      // Don't close the payment modal here, let the success modal handle the final close
   };
 
   const handleCloseSupportModal = useCallback(() => {
-    setMovieForSupport(null);
-  }, []);
+    // If the success modal is open, don't close the movieForSupport yet
+    if (!isDonationSuccessModalOpen) {
+      setMovieForSupport(null);
+    }
+  }, [isDonationSuccessModalOpen]);
 
   const handleCloseSuccessModal = useCallback(() => {
     setIsDonationSuccessModalOpen(false);
