@@ -67,7 +67,6 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                         '.input-container': {
                             borderColor: '#4a4a6e',
                             borderRadius: '8px',
-                            backgroundColor: '#1f1f1f'
                         },
                         '.input-container.is-focus': {
                             borderColor: '#8b5cf6'

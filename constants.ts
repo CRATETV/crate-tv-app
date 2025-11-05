@@ -152,7 +152,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "https://cratetelevision.s3.amazonaws.com/LifelessTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/LIFELESS.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/Lifeless+poster+remake+.jpg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Lifeless.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/Lifeless.png",
     "likes": 0,
     "rating": 8.8
   },
@@ -227,7 +227,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Paycut.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Director's+cut+poster+.jpg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/Foodie+Call.png",
     "likes": 0,
     "rating": 9.2
   },
@@ -270,8 +270,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Michael Dwayne Paylor",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Lasley+cut.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/Foodie+Call.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/Foodie+Call.png",
     "likes": 0
   },
   "finallycaught": {
@@ -296,7 +296,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/(Copy)+Finally+Caught_FC3.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/finally+caught+poster+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/FinallyCaught.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/FinallyCaught.png",
     "likes": 0
   },
   "iloveyoublack": {
@@ -332,8 +332,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Anh Nguyen",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/I+Loveyou+in+black+Theatrical+cut.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/I+love+You-Black.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/I+love+You-Black.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/I+love+You-Black.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/I+love+You-Black.png",
     "likes": 0
   },
   "hair": {
@@ -358,7 +358,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/Hair+TrailerMP4.MP4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/HAIR.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/Hair+poster+209+X+209++(2).jpg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Hair.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/Hair.png",
     "likes": 0
   },
   "eharmonycs": {
@@ -383,7 +383,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "https://cratetelevision.s3.amazonaws.com/eHarmonycsTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/EHARMONYCS.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/eHarmonics+poster+remake++(1).png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/eHarmonycs.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/eHarmonycs.png",
     "likes": 0
   },
   "youvsthem": {
@@ -408,7 +408,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/youVs+Them.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/You+Vs+Them.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/YouVsThem.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/YouVsThem.png",
     "likes": 0
   },
   "autumn": {
@@ -483,7 +483,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "https://cratetelevision.s3.amazonaws.com/SilentLoveTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/SilentLove+Movie+05.14.2024-1+2.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/silent+Love++poster+remake+.jpg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/SilentLove.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/SilentLove.png",
     "likes": 0
   },
   "juniper": {
@@ -595,8 +595,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Akil Logan-Haye",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/CROSSROADS-OFFICIAL-FILM_360p.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Crossroads.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Crossroads.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/Crossroads.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/Crossroads.png",
     "likes": 12
   },
    "consumed": {
@@ -665,7 +665,7 @@ export const moviesData: Record<string, Movie> = {
     "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+trailer.mov",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Its+In+You.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+poster+jpeg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/ItsInYou.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/ItsInYou.png",
     "likes": 1
   },
   "unhinged": {

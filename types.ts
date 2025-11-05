@@ -22,6 +22,9 @@ export interface Movie {
   mainPageExpiry?: string;
   durationInMinutes?: number;
   hasCopyrightMusic?: boolean;
+  // New properties for Watch Party scheduling
+  isWatchPartyEnabled?: boolean;
+  watchPartyStartTime?: string;
 }
 
 export interface Category {

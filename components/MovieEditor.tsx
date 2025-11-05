@@ -24,6 +24,8 @@ const emptyMovie: Movie = {
     mainPageExpiry: '',
     durationInMinutes: 0,
     hasCopyrightMusic: false,
+    isWatchPartyEnabled: false,
+    watchPartyStartTime: '',
 };
 
 const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onSave, onDelete }) => {
@@ -60,7 +62,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onSave, onDelete }
         let processedValue: string | number | boolean = value;
         if (type === 'number') {
             processedValue = Number(value);
-        } else if (name === 'hasCopyrightMusic') {
+        } else if (name === 'hasCopyrightMusic' || name === 'isWatchPartyEnabled') {
             processedValue = (e.target as HTMLInputElement).checked;
         }
 
@@ -114,10 +116,11 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onSave, onDelete }
                 <button onClick={handleAddNew} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4">
                     + Add New Movie
                 </button>
-                <ul className="max-h-screen overflow-y-auto">
+                <ul className="max-h-screen overflow-y-auto space-y-2">
                     {filteredMovies.map(movie => (
-                        <li key={movie.key} onClick={() => handleSelectMovie(movie)} className={`p-2 rounded cursor-pointer text-sm ${selectedMovie?.key === movie.key ? 'bg-red-600' : 'hover:bg-gray-700'}`}>
-                            {movie.title}
+                        <li key={movie.key} onClick={() => handleSelectMovie(movie)} className={`flex items-center gap-3 p-2 rounded cursor-pointer ${selectedMovie?.key === movie.key ? 'bg-red-600' : 'hover:bg-gray-700'}`}>
+                            <img src={movie.poster} alt={movie.title} className="w-10 h-14 object-cover rounded flex-shrink-0 bg-gray-600" />
+                            <span className="text-sm truncate">{movie.title}</span>
                         </li>
                     ))}
                 </ul>
@@ -137,6 +140,13 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onSave, onDelete }
                         <div><label className={labelClasses}>Duration (minutes)</label><input type="number" name="durationInMinutes" value={selectedMovie.durationInMinutes || ''} onChange={handleChange} className={formInputClasses} /></div>
                         <div><label className={labelClasses}>Release Date/Time (optional)</label><input type="datetime-local" name="releaseDateTime" value={selectedMovie.releaseDateTime || ''} onChange={handleChange} className={formInputClasses} /></div>
                         <div><label className={labelClasses}>Main Page Expiry (optional)</label><input type="datetime-local" name="mainPageExpiry" value={selectedMovie.mainPageExpiry || ''} onChange={handleChange} className={formInputClasses} /></div>
+
+                        {/* Watch Party Section */}
+                        <div className="pt-4 border-t border-gray-700 space-y-4">
+                            <h4 className="text-md font-semibold text-pink-400">Watch Party Settings</h4>
+                            <div className="flex items-center gap-2"><input type="checkbox" name="isWatchPartyEnabled" checked={selectedMovie.isWatchPartyEnabled || false} onChange={handleChange} className="h-4 w-4" /><label className={labelClasses}>Enable Watch Party for this film</label></div>
+                            <div><label className={labelClasses}>Watch Party Start Time</label><input type="datetime-local" name="watchPartyStartTime" value={selectedMovie.watchPartyStartTime || ''} onChange={handleChange} className={formInputClasses} disabled={!selectedMovie.isWatchPartyEnabled} /></div>
+                        </div>
 
                         <div><label className={labelClasses}>Trailer URL</label><input type="text" name="trailer" value={selectedMovie.trailer} onChange={handleChange} className={formInputClasses} /><S3Uploader label="Or Upload Trailer" onUploadSuccess={url => handleUrlUpdate('trailer', url)} /></div>
                         <div><label className={labelClasses}>Full Movie URL</label><input type="text" name="fullMovie" value={selectedMovie.fullMovie} onChange={handleChange} className={formInputClasses} required /><S3Uploader label="Or Upload Movie" onUploadSuccess={url => handleUrlUpdate('fullMovie', url)} /></div>
