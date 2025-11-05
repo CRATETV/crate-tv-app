@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Movie } from '../types';
 import { isMovieReleased } from '../constants';
@@ -6,9 +7,13 @@ interface MovieCardProps {
   movie: Movie;
   onSelectMovie: (movie: Movie) => void;
   rank?: number;
+  isWatched?: boolean;
+  isLiked?: boolean;
+  onToggleLike?: (movieKey: string) => void;
+  onSupportMovie?: (movie: Movie) => void;
 }
 
-const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => {
+const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank, isWatched, isLiked, onToggleLike, onSupportMovie }) => {
   if (!movie) {
     return null;
   }
@@ -92,17 +97,52 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank }) => 
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out"></div>
       <div className="absolute bottom-0 left-0 right-0 p-3 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out">
         <h3 className="text-white font-bold text-base truncate">{movie.title}</h3>
-        {movie.synopsis && (
-          <p className="text-gray-300 text-xs mt-1 line-clamp-3" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></p>
+        
+        {isWatched ? (
+          <div className="mt-2 space-y-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+            <p className="text-xs text-gray-400">Enjoyed it? Let the creator know!</p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleLike?.(movie.key);
+                }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-bold transition-colors ${isLiked ? 'bg-red-500 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}`}
+                aria-label={isLiked ? 'Unlike film' : 'Like film'}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg>
+                {isLiked ? 'Liked' : 'Like'}
+              </button>
+              {!movie.hasCopyrightMusic && onSupportMovie && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSupportMovie(movie);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white transition-colors"
+                  aria-label="Support filmmaker"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" /></svg>
+                  Support
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
+            {movie.synopsis && (
+              <p className="text-gray-300 text-xs mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></p>
+            )}
+            <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+                <button
+                    onClick={(e) => { e.stopPropagation(); onSelectMovie(movie); }}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-1 px-3 rounded-md"
+                >
+                    Watch Now
+                </button>
+            </div>
+          </>
         )}
-        <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
-             <button
-                onClick={(e) => { e.stopPropagation(); onSelectMovie(movie); }}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-1 px-3 rounded-md"
-            >
-                Watch Now
-            </button>
-        </div>
       </div>
 
       {!released && (

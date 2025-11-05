@@ -8,9 +8,13 @@ interface MovieCarouselProps {
   movies: Movie[];
   onSelectMovie: (movie: Movie) => void;
   showRankings?: boolean;
+  watchedMovies: Set<string>;
+  likedMovies: Set<string>;
+  onToggleLike: (movieKey: string) => void;
+  onSupportMovie: (movie: Movie) => void;
 }
 
-const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, showRankings = false }) => {
+const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, showRankings = false, watchedMovies, likedMovies, onToggleLike, onSupportMovie }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -48,6 +52,10 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                   movie={movie}
                   onSelectMovie={onSelectMovie}
                   rank={showRankings ? index + 1 : undefined}
+                  isWatched={watchedMovies.has(movie.key)}
+                  isLiked={likedMovies.has(movie.key)}
+                  onToggleLike={onToggleLike}
+                  onSupportMovie={onSupportMovie}
                 />
               </div>
             );

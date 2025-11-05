@@ -1,8 +1,11 @@
 
+
+
 import React from 'react';
 import Header from './Header';
 // FIX: Corrected import path
 import Footer from './Footer';
+// FIX: Corrected the casing of the import from 'BackTotopButton' to 'BackToTopButton' to match the actual filename and prevent case-sensitivity issues.
 import BackToTopButton from './BackToTopButton';
 
 const CodeBlock: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -120,26 +123,50 @@ Implement Feature A with new styling and adjustments`}
                         </section>
                         
                         <section>
-                            <h2 className="text-3xl font-bold text-white mb-4">How to Set Up the Roku Channel (The Easy Way)</h2>
+                            <h2 className="text-3xl font-bold text-white mb-4">How to Set Up the Roku Channel (SDK Method)</h2>
                             <p className="text-gray-300 mb-4">
-                                Crate TV uses Roku's "Direct Publisher" system. This means our web app provides a special JSON feed, and Roku automatically builds and updates the channel for us. There is no longer a need to manually package or upload ZIP files.
+                                This project includes a full **SDK (Software Development Kit) channel** that loads its content from a feed URL. This is a one-time setup to get your channel published.
                             </p>
                             <p className="text-gray-300 mb-4">
                                 <strong className="text-yellow-400">Prerequisite:</strong> The Roku channel needs a public URL to fetch movie data from. Ensure your web application is deployed and accessible online before proceeding.
                             </p>
                         
-                            <h3 className="text-xl font-semibold text-white mt-6 mb-2">One-Time Setup in Roku Developer Dashboard</h3>
-                            <ol className="list-decimal list-inside space-y-2 text-gray-300 mb-4">
-                                <li>Log into your <a href="https://developer.roku.com/" target="_blank" rel="noopener noreferrer" className="text-red-400 hover:underline">Roku Developer Dashboard</a>.</li>
-                                <li>Go to "My Channels" and click "Add Channel".</li>
-                                <li>Select <strong className="text-white">"Direct Publisher"</strong> from the options.</li>
-                                <li>Follow the on-screen prompts to enter your channel properties (name, description, etc.).</li>
-                                <li>When you get to the <strong className="text-white">"Feed URL"</strong> section, paste the following URL, replacing <code className="bg-gray-700 p-1 rounded-md">[your-live-domain.com]</code> with your actual Vercel deployment URL:</li>
-                                <CodeBlock>{`https://[your-live-domain.com]/api/roku-direct-publisher-feed`}</CodeBlock>
-                                <li>Complete the rest of the channel setup (logos, etc.) and submit it for publishing.</li>
+                             <h3 className="text-xl font-semibold text-white mt-6 mb-2">One-Time Setup and Publishing Process</h3>
+                            <ol className="list-decimal list-inside space-y-4 text-gray-300 mb-4">
+                                <li>
+                                    <strong>Get Your Feed URL:</strong> Log into your Crate TV admin panel (`/admin`) and go to the **"Roku"** tab. It will display your unique feed URL for the SDK channel. Copy it.
+                                </li>
+                                <li>
+                                    <strong>Update the Channel Code:</strong>
+                                    <ul className="list-disc list-inside ml-6 mt-2">
+                                        <li>In your project files, open <code className="bg-gray-700 p-1 rounded-md">roku/components/HomeScene.brs</code>.</li>
+                                        <li>Find the line: <code className="bg-gray-700 p-1 rounded-md">m.contentTask.url = "..."</code></li>
+                                        <li>Replace the placeholder URL with the actual URL you copied in the previous step.</li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <strong>Add Channel Artwork:</strong> In the <code className="bg-gray-700 p-1 rounded-md">roku/images/</code> folder, you must add two images:
+                                    <ul className="list-disc list-inside ml-6 mt-2">
+                                        <li><code className="bg-gray-700 p-1 rounded-md">logo_hd.png</code> (Recommended: 336x210 pixels)</li>
+                                        <li><code className="bg-gray-700 p-1 rounded-md">splash_hd.png</code> (Loading screen, must be 1920x1080 pixels)</li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <strong>Package Your Channel:</strong> Create a ZIP file containing **only the contents** of the `roku` directory (the `components`, `source`, `images`, and `manifest` files).
+                                    <p className="text-sm mt-1 text-yellow-400"><strong>Important:</strong> Do not put the `roku` folder itself in the ZIP file. The root of the ZIP file should be the channel's files and folders.</p>
+                                </li>
+                                <li>
+                                    <strong>Test & Publish:</strong>
+                                    <ul className="list-disc list-inside ml-6 mt-2">
+                                        <li>Log into your <a href="https://developer.roku.com/" target="_blank" rel="noopener noreferrer" className="text-red-400 hover:underline">Roku Developer Dashboard</a>.</li>
+                                        <li>Go to "Manage My Channels" and select your SDK channel.</li>
+                                        <li>Navigate to the "Package Upload" page and upload the ZIP file you just created.</li>
+                                        <li>Follow Roku's instructions to install a preview on your device, test it, and then submit it for publishing.</li>
+                                    </ul>
+                                </li>
                             </ol>
                             <p className="text-gray-300">
-                                That's it! Once published, the Roku channel will automatically check the feed URL for new content. Any changes you "Publish" from the Crate TV admin panel will appear on the Roku channel automatically within 24 hours.
+                               Once published, any content you update and **"Publish"** in the Crate TV admin panel will automatically appear in your live Roku channel.
                             </p>
                         </section>
                     </div>

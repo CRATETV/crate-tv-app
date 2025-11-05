@@ -2,13 +2,19 @@ import React, { useMemo } from 'react';
 import { Movie, Category } from '../types';
 import MovieCarousel from './MovieCarousel';
 
+// FIX: Added missing props to the interface to align with MovieCarousel's requirements.
 interface FestivalLiveCarouselProps {
   allMovies: Movie[];
   allCategories: Record<string, Category>;
   onSelectMovie: (movie: Movie) => void;
+  watchedMovies: Set<string>;
+  likedMovies: Set<string>;
+  onToggleLike: (movieKey: string) => void;
+  onSupportMovie: (movie: Movie) => void;
 }
 
-const FestivalLiveCarousel: React.FC<FestivalLiveCarouselProps> = ({ allMovies, allCategories, onSelectMovie }) => {
+// FIX: Destructured the newly added props.
+const FestivalLiveCarousel: React.FC<FestivalLiveCarouselProps> = ({ allMovies, allCategories, onSelectMovie, watchedMovies, likedMovies, onToggleLike, onSupportMovie }) => {
   const festivalMovies = useMemo(() => {
     const festivalCategory = allCategories['pwff12thAnnual'];
     if (!festivalCategory || !festivalCategory.movieKeys) {
@@ -48,6 +54,11 @@ const FestivalLiveCarousel: React.FC<FestivalLiveCarouselProps> = ({ allMovies, 
         title={<TitleComponent />}
         movies={festivalMovies}
         onSelectMovie={onSelectMovie}
+        // FIX: Passed the required props down to the MovieCarousel component.
+        watchedMovies={watchedMovies}
+        likedMovies={likedMovies}
+        onToggleLike={onToggleLike}
+        onSupportMovie={onSupportMovie}
     />
   );
 };

@@ -157,6 +157,8 @@ const PremiumPage: React.FC = () => {
                     allMovies={movies}
                     allCategories={categories}
                     onSelectRecommendedMovie={handleSelectMovie}
+                    // FIX: Added missing 'onSupportMovie' prop to satisfy the MovieDetailsModalProps interface. In this context, "support" triggers the subscription flow.
+                    onSupportMovie={handleSubscribe}
                     onSubscribe={handleSubscribe}
                     isPremiumMovie={true}
                     isPremiumSubscriber={user?.isPremiumSubscriber}

@@ -123,10 +123,9 @@ const CreatorDashboardPage: React.FC = () => {
             />
             <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
                 <div className="max-w-7xl mx-auto">
-                    {/* Only show tabs if user has both roles */}
                     <div className="border-b border-gray-700 mb-8">
-                        {user.isFilmmaker && <TabButton tabName="filmmaker" label="Dashboard" />}
-                        {user.isActor && <TabButton tabName="actor" label="Actor Tools" />}
+                        {user.isFilmmaker && <TabButton tabName="filmmaker" label="Filmmaker" />}
+                        {user.isActor && <TabButton tabName="actor" label="Actor" />}
                         {user.isFilmmaker && <TabButton tabName="monetization" label="Monetization" />}
                     </div>
 

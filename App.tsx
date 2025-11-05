@@ -21,7 +21,8 @@ import { useFestival } from './contexts/FestivalContext';
 import { isMovieReleased } from './constants';
 import BottomNavBar from './components/BottomNavBar';
 import CollapsibleFooter from './components/CollapsibleFooter';
-import TopTenList from './components/TopTenList';
+import SquarePaymentModal from './components/SquarePaymentModal';
+import DonationSuccessModal from './components/DonationSuccessModal';
 
 type DisplayedCategory = {
   key: string;
@@ -38,6 +39,7 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
+  const [watchedMovies, setWatchedMovies] = useState<Set<string>>(new Set());
   const [isScrolled, setIsScrolled] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const [isStaging, setIsStaging] = useState(false);
@@ -45,6 +47,11 @@ const App: React.FC = () => {
   const [showFestivalLiveModal, setShowFestivalLiveModal] = useState(false);
   const [showNewFilmModal, setShowNewFilmModal] = useState(false);
   const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
+
+  // State for centrally managed modals
+  const [movieForSupport, setMovieForSupport] = useState<Movie | null>(null);
+  const [isDonationSuccessModalOpen, setIsDonationSuccessModalOpen] = useState(false);
+  const [lastDonationDetails, setLastDonationDetails] = useState<{amount: number; email?: string} | null>(null);
 
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
@@ -78,12 +85,27 @@ const App: React.FC = () => {
     if (storedLikedMovies) {
       setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
     }
+    
+    const storedWatchedMovies = localStorage.getItem('cratetv-watched-movies');
+    if (storedWatchedMovies) {
+        setWatchedMovies(new Set(JSON.parse(storedWatchedMovies)));
+    }
+
+    const handleWatchedUpdate = () => {
+        const updatedWatched = localStorage.getItem('cratetv-watched-movies');
+        if (updatedWatched) {
+            setWatchedMovies(new Set(JSON.parse(updatedWatched)));
+        }
+    };
+
+    window.addEventListener('watchedMoviesUpdated', handleWatchedUpdate);
 
     const handleScroll = () => setIsScrolled(window.pageYOffset > 10);
     window.addEventListener('scroll', handleScroll, { passive: true });
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('watchedMoviesUpdated', handleWatchedUpdate);
       if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
     };
   }, []);
@@ -296,6 +318,12 @@ const App: React.FC = () => {
     window.location.search = params.toString();
   };
 
+  const handleDonationSuccess = (details: { amount: number; email?: string }) => {
+      setMovieForSupport(null);
+      setLastDonationDetails(details);
+      setIsDonationSuccessModalOpen(true);
+  };
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
@@ -321,6 +349,10 @@ const App: React.FC = () => {
                     title=""
                     movies={searchResults}
                     onSelectMovie={handlePlayMovie}
+                    watchedMovies={watchedMovies}
+                    likedMovies={likedMovies}
+                    onToggleLike={toggleLikeMovie}
+                    onSupportMovie={setMovieForSupport}
                 />
             ) : (
                 <p className="text-gray-400">No results found.</p>
@@ -355,7 +387,11 @@ const App: React.FC = () => {
                                       </div>
                                   }
                                   movies={blockMovies}
-                                  onSelectMovie={handlePlayMovie} // Open details modal to show purchase options
+                                  onSelectMovie={handlePlayMovie}
+                                  watchedMovies={watchedMovies}
+                                  likedMovies={likedMovies}
+                                  onToggleLike={toggleLikeMovie}
+                                  onSupportMovie={setMovieForSupport}
                               />
                           );
                       }))}
@@ -363,7 +399,7 @@ const App: React.FC = () => {
                   )}
 
                 {nowPlayingMovie && isNowPlayingReleased && (
-                  <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handlePlayMovie} onPlayMovie={handlePlayMovie} />
+                  <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleOpenDetailsModal} onPlayMovie={handlePlayMovie} />
                 )}
                 <div>
                   {topTenMovies.length > 0 && (
@@ -374,6 +410,10 @@ const App: React.FC = () => {
                       movies={topTenMovies}
                       onSelectMovie={handlePlayMovie}
                       showRankings={true}
+                      watchedMovies={watchedMovies}
+                      likedMovies={likedMovies}
+                      onToggleLike={toggleLikeMovie}
+                      onSupportMovie={setMovieForSupport}
                     />
                   )}
                   {likedMovies.size === 0 ? (
@@ -404,6 +444,10 @@ const App: React.FC = () => {
                           }
                           movies={recommendedMovies}
                           onSelectMovie={handlePlayMovie}
+                          watchedMovies={watchedMovies}
+                          likedMovies={likedMovies}
+                          onToggleLike={toggleLikeMovie}
+                          onSupportMovie={setMovieForSupport}
                       />
                   ) : null}
                   {displayedCategories.map(cat => (
@@ -412,6 +456,10 @@ const App: React.FC = () => {
                       title={cat.title}
                       movies={cat.movies}
                       onSelectMovie={handlePlayMovie}
+                      watchedMovies={watchedMovies}
+                      likedMovies={likedMovies}
+                      onToggleLike={toggleLikeMovie}
+                      onSupportMovie={setMovieForSupport}
                     />
                   ))}
                 </div>
@@ -433,6 +481,7 @@ const App: React.FC = () => {
             allMovies={movies}
             allCategories={categories}
             onSelectRecommendedMovie={handlePlayMovie}
+            onSupportMovie={setMovieForSupport}
         />
       )}
       {selectedActor && (
@@ -469,6 +518,23 @@ const App: React.FC = () => {
             handleCloseNewFilmModal();
           }}
         />
+      )}
+      {movieForSupport && (
+          <SquarePaymentModal
+              movie={movieForSupport}
+              paymentType="donation"
+              onClose={() => setMovieForSupport(null)}
+              onPaymentSuccess={handleDonationSuccess}
+          />
+      )}
+      {isDonationSuccessModalOpen && lastDonationDetails && movieForSupport && (
+          <DonationSuccessModal
+              movieTitle={movieForSupport.title}
+              directorName={movieForSupport.director}
+              amount={lastDonationDetails.amount}
+              email={lastDonationDetails.email}
+              onClose={() => setIsDonationSuccessModalOpen(false)}
+          />
       )}
       <BottomNavBar 
         onSearchClick={() => setIsMobileSearchOpen(true)}
