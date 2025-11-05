@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Movie, Actor, Category, FilmBlock, FestivalDay } from './types';
 import Header from './components/Header';
@@ -311,6 +309,17 @@ const App: React.FC = () => {
       setIsDonationSuccessModalOpen(true);
   };
 
+  const handleCloseSupportModal = useCallback(() => {
+    setMovieForSupport(null);
+  }, []);
+
+  const handleCloseSuccessModal = useCallback(() => {
+    setIsDonationSuccessModalOpen(false);
+    setMovieForSupport(null);
+    setLastDonationDetails(null);
+  }, []);
+
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
@@ -510,7 +519,7 @@ const App: React.FC = () => {
           <SquarePaymentModal
               movie={movieForSupport}
               paymentType="donation"
-              onClose={() => setMovieForSupport(null)}
+              onClose={handleCloseSupportModal}
               onPaymentSuccess={handleDonationSuccess}
           />
       )}
@@ -520,10 +529,7 @@ const App: React.FC = () => {
               directorName={movieForSupport.director}
               amount={lastDonationDetails.amount}
               email={lastDonationDetails.email}
-              onClose={() => {
-                  setIsDonationSuccessModalOpen(false);
-                  setMovieForSupport(null);
-              }}
+              onClose={handleCloseSuccessModal}
           />
       )}
       <BottomNavBar 
