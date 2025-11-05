@@ -595,8 +595,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Akil Logan-Haye",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/CROSSROADS-OFFICIAL-FILM_360p.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/Crossroads.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/Crossroads.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads.png",
     "likes": 12
   },
    "consumed": {

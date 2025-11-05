@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { listenToAllAdminData, saveMovie, deleteMovie, saveCategories, saveFestivalConfig, saveFestivalDays, saveAboutData, approveActorSubmission, rejectActorSubmission } from './services/firebaseService';
+import { listenToAllAdminData, saveMovie, deleteMovie, saveCategories, saveFestivalConfig, saveFestivalDays, saveAboutData } from './services/firebaseService';
 import { LiveData, Movie, Category, FestivalConfig, FestivalDay, AboutData } from './types';
 import MovieEditor from './components/MovieEditor';
 import CategoryEditor from './components/CategoryEditor';
@@ -178,11 +178,11 @@ const AdminPage: React.FC = () => {
     const getAvailableTabs = (role: AdminRole): string[] => {
         switch (role) {
             case 'super_admin':
-                return ['analytics', 'movies', 'categories', 'festival', 'about', 'submissions', 'pipeline', 'payouts', 'top-films', 'emails', 'watch-party', 'roku', 'fallback'];
+                return ['analytics', 'movies', 'categories', 'festival', 'about', 'pipeline', 'payouts', 'top-films', 'emails', 'watch-party', 'roku', 'fallback'];
             case 'festival_admin':
                 return ['festival', 'analytics-festival'];
             case 'collaborator':
-                return ['movies', 'categories', 'pipeline', 'submissions'];
+                return ['movies', 'categories', 'pipeline'];
             default:
                 return [];
         }
@@ -211,7 +211,6 @@ const AdminPage: React.FC = () => {
                     {availableTabs.includes('categories') && <TabButton tabId="categories" label="Categories" />}
                     {availableTabs.includes('festival') && <TabButton tabId="festival" label="Festival" />}
                     {availableTabs.includes('about') && <TabButton tabId="about" label="About Page" />}
-                    {availableTabs.includes('submissions') && <TabButton tabId="submissions" label="Submissions" />}
                     {availableTabs.includes('pipeline') && <TabButton tabId="pipeline" label="Pipeline" />}
                     {availableTabs.includes('payouts') && <TabButton tabId="payouts" label="Payouts" />}
                     {availableTabs.includes('top-films') && <TabButton tabId="top-films" label="Top Films" />}
@@ -230,7 +229,6 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'fallback' && <FallbackGenerator movies={data.movies} categories={data.categories} festivalData={data.festivalData} festivalConfig={data.festivalConfig} aboutData={data.aboutData} />}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'analytics-festival' && <AnalyticsPage viewMode="festival" />}
-                    {activeTab === 'submissions' && <ActorSubmissionsTab submissions={data.actorSubmissions} allMovies={data.movies} onApprove={approveActorSubmission} onReject={rejectActorSubmission} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={data.moviePipeline} onCreateMovie={(item) => {/* Logic to open MovieEditor with pre-filled data */}} />}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
                     {activeTab === 'top-films' && <TopFilmsTab />}

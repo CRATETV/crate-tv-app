@@ -42,24 +42,69 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
       <div className="relative group">
         <div ref={scrollRef} className={carouselClasses}>
           {movies.map((movie, index) => {
-            const containerClasses = showRankings 
-                ? 'flex-shrink-0 w-[80vw] sm:w-[60vw] md:w-[45vw] lg:w-[35vw]' 
-                : 'flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw]';
-
-            return (
-              <div key={movie.key} className={containerClasses}>
-                <MovieCard
-                  movie={movie}
-                  onSelectMovie={onSelectMovie}
-                  rank={showRankings ? index + 1 : undefined}
-                  isWatched={watchedMovies.has(movie.key)}
-                  isOnWatchlist={watchlist.has(movie.key)}
-                  isLiked={likedMovies.has(movie.key)}
-                  onToggleLike={onToggleLike}
-                  onSupportMovie={onSupportMovie}
-                />
-              </div>
-            );
+             if (showRankings) {
+              const rank = index + 1;
+              const rankColors = [
+                '#FFC700', // Rank 1 Yellow
+                '#00E0FF', // Rank 2 Cyan
+                '#FF5733', // OrangeRed
+                '#DA70D6', // Orchid
+                '#32CD32', // LimeGreen
+                '#FF69B4', // HotPink
+                '#1E90FF', // DodgerBlue
+                '#FF8C00', // DarkOrange
+                '#ADFF2F', // GreenYellow
+                '#BA55D3'  // MediumOrchid
+              ];
+              const color = rankColors[index % rankColors.length];
+      
+              return (
+                  <div 
+                      key={movie.key} 
+                      className="flex-shrink-0 w-[80vw] sm:w-[60vw] md:w-[45vw] lg:w-[35vw] cursor-pointer group ranked-card-border"
+                      onClick={() => onSelectMovie(movie)}
+                      style={{ '--rank-color': color } as React.CSSProperties}
+                  >
+                      <div className="relative aspect-[16/9] rounded-lg bg-black overflow-hidden">
+                          <img 
+                              src={movie.poster}
+                              alt={movie.title}
+                              className="absolute top-0 right-0 h-full w-[55%] object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                              onContextMenu={(e) => e.preventDefault()}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent"></div>
+      
+                          <div className="absolute bottom-0 left-0 right-0 h-[30%] flex items-center px-4">
+                              <span 
+                                  className="font-black text-7xl lg:text-8xl leading-none select-none"
+                                  style={{ color: 'transparent', WebkitTextStroke: `2px ${color}` }}
+                              >
+                                  {rank}
+                              </span>
+                              <div className="ml-4 min-w-0">
+                                  <p className="text-xs sm:text-sm uppercase tracking-wider text-gray-400">Start Watching</p>
+                                  <h3 className="text-base sm:text-lg font-bold text-white truncate">{movie.title}</h3>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              );
+            } else {
+              const containerClasses = 'flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw]';
+              return (
+                <div key={movie.key} className={containerClasses}>
+                  <MovieCard
+                    movie={movie}
+                    onSelectMovie={onSelectMovie}
+                    isWatched={watchedMovies.has(movie.key)}
+                    isOnWatchlist={watchlist.has(movie.key)}
+                    isLiked={likedMovies.has(movie.key)}
+                    onToggleLike={onToggleLike}
+                    onSupportMovie={onSupportMovie}
+                  />
+                </div>
+              );
+            }
           })}
         </div>
         

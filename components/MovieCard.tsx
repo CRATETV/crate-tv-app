@@ -4,7 +4,6 @@ import { Movie } from '../types';
 interface MovieCardProps {
   movie: Movie;
   onSelectMovie: (movie: Movie) => void;
-  rank?: number;
   isWatched?: boolean;
   isOnWatchlist?: boolean;
   isLiked?: boolean;
@@ -12,7 +11,24 @@ interface MovieCardProps {
   onSupportMovie?: (movie: Movie) => void;
 }
 
-export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank, isWatched, isOnWatchlist, isLiked, onToggleLike, onSupportMovie }) => {
+// Set of movie keys that have wide-format posters and need 'object-contain'
+// to prevent text from being cropped.
+const widePosterKeys = new Set([
+  'theneighbours',
+  'newmovie1756485973547', // Burst
+  'unhinged',
+  'fatherdaughterdance',
+  'newmovie1756487390550', // I Still Love Her
+  'itsinyou',
+  'newmovie1756486933392', // Power Trip
+  'newmovie1756487626529', // Strange Encounters
+  'wrapitup',
+  'tedandnatalie',
+  'thefallofthehouseofusher',
+]);
+
+
+export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWatched, isOnWatchlist, isLiked, onToggleLike, onSupportMovie }) => {
   if (!movie) return null;
 
   const handleToggleLike = (e: React.MouseEvent) => {
@@ -25,6 +41,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank
     onSupportMovie?.(movie);
   }
 
+  const imageFitClass = widePosterKeys.has(movie.key) ? 'object-contain' : 'object-cover';
+
   return (
     <div
       className="group relative cursor-pointer aspect-[2/3] rounded-md overflow-hidden bg-gray-800 transition-transform duration-300 ease-in-out hover:scale-105 hover:z-10"
@@ -33,7 +51,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank
       <img
         src={movie.poster}
         alt={movie.title}
-        className="w-full h-full object-cover"
+        className={`w-full h-full ${imageFitClass}`}
         loading="lazy"
         onContextMenu={(e) => e.preventDefault()}
       />
@@ -47,22 +65,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, rank
       {isWatched && (
         <div className="absolute bottom-1 left-1 bg-red-600/80 text-white text-xs font-bold px-1.5 py-0.5 rounded">
           WATCHED
-        </div>
-      )}
-      {rank && (
-        <div 
-            className="absolute -left-8 -bottom-8 w-24 h-24 flex items-end justify-start"
-            style={{
-                transform: 'rotate(45deg)',
-                transformOrigin: 'bottom left',
-            }}
-        >
-            <span 
-                className="font-black text-6xl leading-none select-none text-transparent"
-                style={{ WebkitTextStroke: '2px white', textShadow: '0 0 5px black' }}
-            >
-                {rank}
-            </span>
         </div>
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
