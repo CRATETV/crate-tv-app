@@ -231,7 +231,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     <h1 className="text-lg font-bold">{movie.title} - Watch Party</h1>
                  </div>
                 <div className="flex-grow flex items-center justify-center">
-                    <video ref={videoRef} src={movie.fullMovie} controls className="w-full max-h-full" />
+                    <video ref={videoRef} src={movie.fullMovie} controls playsInline className="w-full max-h-full" />
                 </div>
             </div>
 
