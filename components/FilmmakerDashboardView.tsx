@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { FilmmakerAnalytics, Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import PayoutExplanationModal from './PayoutExplanationModal';
+import TopTenShareableImage from './TopTenShareableImage';
+import html2canvas from 'html2canvas';
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
 
@@ -85,11 +87,19 @@ const FilmmakerDashboardView: React.FC = () => {
     const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
     const [isExplanationModalOpen, setIsExplanationModalOpen] = useState(false);
     const [payoutStatus, setPayoutStatus] = useState<'idle' | 'requested'>('idle');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const shareableImageRef = useRef<HTMLDivElement>(null);
+    const [currentDate, setCurrentDate] = useState('');
 
     useEffect(() => {
+        setCurrentDate(new Date().toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        }));
+
         const fetchAnalyticsData = async () => {
             if (!user?.name) {
-                // This guard is crucial. It waits for the user object to be fully populated.
                 return;
             };
 
@@ -113,10 +123,6 @@ const FilmmakerDashboardView: React.FC = () => {
             }
         };
         
-        // The effect now depends on the entire user object.
-        // When the user logs in, the `user` object from `useAuth` will update,
-        // triggering this effect. The guard inside ensures we only fetch data
-        // once the user's name is actually available, resolving the race condition.
         fetchAnalyticsData();
     }, [user]);
 
@@ -128,18 +134,37 @@ const FilmmakerDashboardView: React.FC = () => {
             .slice(0, 10);
     }, [allMovies]);
 
-    const handleDownloadTopTen = () => {
-        const csvContent = "data:text/csv;charset=utf-8," 
-            + "Rank,Title,Director\n" 
-            + topTenMovies.map((m, i) => `${i + 1},"${m.title.replace(/"/g, '""')}","${m.director.replace(/"/g, '""')}"`).join("\n");
-        
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "crate-tv-top-10.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const handleShareTopTen = async () => {
+        if (!shareableImageRef.current || isGenerating) return;
+
+        setIsGenerating(true);
+        try {
+            const canvas = await html2canvas(shareableImageRef.current, {
+                useCORS: true,
+                backgroundColor: null,
+                scale: 1,
+            });
+
+            const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+            if (!blob) throw new Error('Failed to create image blob.');
+
+            const file = new File([blob], 'cratetv_top10.png', { type: 'image/png' });
+            
+            if (navigator.share && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: 'Top 10 on Crate TV',
+                    text: `Check out the current Top 10 films on Crate TV! #indiefilm #cratetv`,
+                    files: [file],
+                });
+            } else {
+                alert("Sharing is not supported on this browser. Try downloading the image instead from the public Top 10 page.");
+            }
+        } catch (error) {
+            console.error("Error sharing image:", error);
+            alert("Sorry, we couldn't generate the shareable image.");
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     if (isLoading || isFestivalLoading) {
@@ -232,8 +257,8 @@ const FilmmakerDashboardView: React.FC = () => {
                     <div>
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-2xl font-bold text-white">Top 10 on Crate TV</h2>
-                            <button onClick={handleDownloadTopTen} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-md text-xs">
-                                Download
+                            <button onClick={handleShareTopTen} disabled={isGenerating} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md text-xs">
+                                {isGenerating ? '...' : 'Share'}
                             </button>
                         </div>
                         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 space-y-3">
@@ -261,6 +286,14 @@ const FilmmakerDashboardView: React.FC = () => {
             )}
             {isExplanationModalOpen && (
                 <PayoutExplanationModal onClose={() => setIsExplanationModalOpen(false)} />
+            )}
+             {/* Hidden component for generating the shareable image */}
+            {topTenMovies.length > 0 && (
+                <div className="absolute -left-[9999px] top-0" aria-hidden="true">
+                    <div ref={shareableImageRef}>
+                        <TopTenShareableImage topFilms={topTenMovies} date={currentDate} />
+                    </div>
+                </div>
             )}
         </>
     );

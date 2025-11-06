@@ -87,7 +87,6 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isSending, setIsSending] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const [isMuted, setIsMuted] = useState(false); // Start unmuted after join
 
     const movie = movies[movieKey];
     const [initialStatus, setInitialStatus] = useState(() => getInitialStatus(movie));
@@ -155,7 +154,6 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (video) {
             // Unmute immediately. The user click gives us permission.
             video.muted = false;
-            setIsMuted(false);
             
             if (partyState) {
                 video.currentTime = partyState.currentTime;
@@ -169,6 +167,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const handleResumeFromHost = () => {
         const video = videoRef.current;
         if (video && video.paused) {
+            video.muted = false;
             video.play().catch(e => console.error("Could not resume video from prompt:", e));
         }
         setShowResumePrompt(false);
@@ -250,7 +249,6 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         ref={videoRef} 
                         src={movie.fullMovie} 
                         controls={isAdmin}
-                        muted={isMuted}
                         playsInline 
                         className="w-full max-h-full" 
                     />

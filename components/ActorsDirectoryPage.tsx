@@ -3,7 +3,10 @@ import Header from './Header';
 import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';
-import { ActorProfile } from '../types';
+import { ActorProfile, Movie } from '../types';
+import BottomNavBar from './BottomNavBar';
+import SearchOverlay from './SearchOverlay';
+import { useFestival } from '../contexts/FestivalContext';
 
 const ActorCard: React.FC<{ actor: ActorProfile }> = ({ actor }) => {
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -25,6 +28,8 @@ const ActorsDirectoryPage: React.FC = () => {
     const [actors, setActors] = useState<ActorProfile[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+    const { movies } = useFestival();
 
     useEffect(() => {
         const fetchActors = async () => {
@@ -46,6 +51,24 @@ const ActorsDirectoryPage: React.FC = () => {
         if (!searchTerm) return actors;
         return actors.filter(actor => actor.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }, [actors, searchTerm]);
+    
+    // This search is for the mobile overlay
+    const searchResults = useMemo(() => {
+        if (!searchTerm) return [];
+        return (Object.values(movies) as Movie[]).filter(movie =>
+            movie && (
+                (movie.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (movie.director || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (movie.cast || []).some(actor => (actor.name || '').toLowerCase().includes(searchTerm.toLowerCase()))
+            )
+        );
+    }, [searchTerm, movies]);
+
+    const handleSelectFromSearch = (movie: Movie) => {
+        setIsMobileSearchOpen(false);
+        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+        window.dispatchEvent(new Event('pushstate'));
+    };
 
     if (isLoading) {
         return <LoadingSpinner />;
@@ -53,8 +76,8 @@ const ActorsDirectoryPage: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={false} />
-            <main className="flex-grow pt-24 px-4 md:px-12">
+            <Header searchQuery={searchTerm} onSearch={setSearchTerm} isScrolled={true} onMobileSearchClick={() => setIsMobileSearchOpen(true)} showSearch={false} showNavLinks={false} />
+            <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-12">
                         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Meet the Actors</h1>
@@ -86,6 +109,16 @@ const ActorsDirectoryPage: React.FC = () => {
             </main>
             <Footer showActorLinks={true} />
             <BackToTopButton />
+            <BottomNavBar onSearchClick={() => setIsMobileSearchOpen(true)} />
+            {isMobileSearchOpen && (
+                <SearchOverlay
+                    searchQuery={searchTerm}
+                    onSearch={setSearchTerm}
+                    onClose={() => setIsMobileSearchOpen(false)}
+                    results={searchResults}
+                    onSelectMovie={handleSelectFromSearch}
+                />
+            )}
         </div>
     );
 };
