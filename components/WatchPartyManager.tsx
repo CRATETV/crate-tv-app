@@ -1,16 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Movie, WatchPartyState } from '../types';
-import ChatMonitorModal from './ChatMonitorModal';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
+import { useAuth } from '../contexts/AuthContext';
+import { avatars } from './avatars';
 
-interface MovieRowProps {
-    movie: Movie;
-    partyState?: WatchPartyState;
-    onChange: (updates: Partial<Movie>) => void;
-    onMonitorChat: (movieKey: string) => void;
-    onStartParty: (movieKey: string) => void;
-}
+// --- HELPER FUNCTIONS ---
 
 const getPartyStatusText = (movie: Movie, partyState?: WatchPartyState) => {
     if (!movie.isWatchPartyEnabled || !movie.watchPartyStartTime) {
@@ -30,7 +25,164 @@ const getPartyStatusText = (movie: Movie, partyState?: WatchPartyState) => {
     return { text: 'Ended', color: 'bg-gray-700' };
 };
 
-const MovieRow: React.FC<MovieRowProps> = ({ movie, partyState, onChange, onMonitorChat, onStartParty }) => {
+
+// --- CHILD COMPONENTS ---
+
+const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: string | null; avatar?: string; } | null }> = ({ movieKey, user }) => {
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [isSending, setIsSending] = useState(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const db = getDbInstance();
+        if (!db) return;
+        const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages').orderBy('timestamp', 'asc').limitToLast(100);
+        const unsubscribe = messagesRef.onSnapshot(snapshot => {
+            const fetchedMessages: ChatMessage[] = [];
+            snapshot.forEach(doc => { fetchedMessages.push({ id: doc.id, ...doc.data() } as ChatMessage); });
+            setMessages(fetchedMessages);
+        });
+        return () => unsubscribe();
+    }, [movieKey]);
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
+
+    const handleSendMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newMessage.trim() || !user) return;
+        setIsSending(true);
+        try {
+            await fetch('/api/send-chat-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey, userName: user.name || user.email, userAvatar: user.avatar || 'fox', text: newMessage }),
+            });
+            setNewMessage('');
+        } catch (error) {
+            console.error("Failed to send message:", error);
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    return (
+        <div className="w-full h-full flex flex-col bg-gray-900 border-l-2 border-gray-700">
+            <div className="p-4 text-lg font-bold border-b border-gray-700 flex-shrink-0">
+                <h2 className="text-base">Live Chat</h2>
+            </div>
+            <div className="flex-grow p-4 overflow-y-auto space-y-4">
+                {messages.map(msg => (
+                    <div key={msg.id} className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 p-1" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
+                        <div>
+                            <p className="font-bold text-sm text-white">{msg.userName}</p>
+                            <p className="text-sm text-gray-300 break-words">{msg.text}</p>
+                        </div>
+                    </div>
+                ))}
+                <div ref={messagesEndRef} />
+            </div>
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-700 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Say something..." className="form-input flex-grow" disabled={!user || isSending} />
+                    <button type="submit" className="submit-btn !px-4" disabled={!user || isSending || !newMessage.trim()}>Send</button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
+const WatchPartyControlRoom: React.FC<{
+    movie: Movie;
+    partyState: WatchPartyState | undefined;
+    onStartParty: () => void;
+    onSyncState: (state: Partial<WatchPartyState>) => void;
+}> = ({ movie, partyState, onStartParty, onSyncState }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const { user } = useAuth();
+    const lastSyncTime = useRef(0);
+
+    const handlePlay = () => onSyncState({ isPlaying: true });
+    const handlePause = () => videoRef.current && onSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime });
+    const handleSeeked = () => videoRef.current && onSyncState({ currentTime: videoRef.current.currentTime });
+    
+    // Periodically sync time while playing to keep viewers in check
+    const handleTimeUpdate = () => {
+        const video = videoRef.current;
+        if (video && !video.paused && (Date.now() - lastSyncTime.current > 5000)) {
+            lastSyncTime.current = Date.now();
+            onSyncState({ currentTime: video.currentTime });
+        }
+    };
+    
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !partyState) return;
+        
+        // This logic is for the admin's player to reflect the canonical state.
+        // It's less critical since the admin is the source of truth, but good for consistency.
+        if (partyState.isPlaying && video.paused) {
+            video.play().catch(e => console.warn("Admin autoplay was prevented", e));
+        } else if (!partyState.isPlaying && !video.paused) {
+            video.pause();
+        }
+
+        if (Math.abs(video.currentTime - partyState.currentTime) > 3) {
+            video.currentTime = partyState.currentTime;
+        }
+    }, [partyState]);
+    
+    const status = getPartyStatusText(movie, partyState);
+    const canStart = movie.isWatchPartyEnabled && movie.watchPartyStartTime && new Date() >= new Date(movie.watchPartyStartTime) && partyState?.status === 'waiting';
+
+    return (
+        <div className="mb-8 bg-black/50 p-6 rounded-lg border-2 border-pink-500">
+            <h2 className="text-2xl font-bold text-white mb-4">Current Watch Party Control Room</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-4">
+                    <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                        <video
+                            ref={videoRef}
+                            src={movie.fullMovie}
+                            onPlay={handlePlay}
+                            onPause={handlePause}
+                            onSeeked={handleSeeked}
+                            onTimeUpdate={handleTimeUpdate}
+                            controls
+                            className="w-full h-full"
+                        />
+                    </div>
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-800/50 p-4 rounded-lg">
+                        <div>
+                            <h3 className="text-xl font-bold">{movie.title}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className={`px-2 py-1 text-xs font-bold text-white rounded-full ${status.color}`}>
+                                    {status.text}
+                                </span>
+                                <span className="text-sm text-gray-400">
+                                    {movie.watchPartyStartTime && `Scheduled for: ${new Date(movie.watchPartyStartTime).toLocaleString()}`}
+                                </span>
+                            </div>
+                        </div>
+                        {canStart && (
+                            <button onClick={onStartParty} className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-md w-full sm:w-auto">
+                                Start Party For Everyone
+                            </button>
+                        )}
+                    </div>
+                </div>
+                <div className="lg:col-span-1 h-[60vh] md:h-auto min-h-[500px]">
+                     <EmbeddedChat movieKey={movie.key} user={user} />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange: (updates: Partial<Movie>) => void; }> = ({ movie, partyState, onChange }) => {
     const handleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
         onChange({ isWatchPartyEnabled: e.target.checked });
     };
@@ -40,7 +192,6 @@ const MovieRow: React.FC<MovieRowProps> = ({ movie, partyState, onChange, onMoni
     };
 
     const status = getPartyStatusText(movie, partyState);
-    const canStart = movie.isWatchPartyEnabled && movie.watchPartyStartTime && new Date() >= new Date(movie.watchPartyStartTime) && partyState?.status === 'waiting';
 
     return (
         <tr className="border-b border-gray-700">
@@ -65,35 +216,21 @@ const MovieRow: React.FC<MovieRowProps> = ({ movie, partyState, onChange, onMoni
                     disabled={!movie.isWatchPartyEnabled}
                 />
             </td>
-            <td className="p-3 flex gap-2">
-                <button 
-                    onClick={() => onStartParty(movie.key)}
-                    disabled={!canStart}
-                    className="text-xs bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-1 px-3 rounded-md"
-                >
-                    Start Party
-                </button>
-                <button onClick={() => onMonitorChat(movie.key)} className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md">
-                    Monitor Chat
-                </button>
-            </td>
         </tr>
     );
 };
 
-interface WatchPartyManagerProps {
-    allMovies: Record<string, Movie>;
-    onSave: (movie: Movie) => Promise<void>;
-}
 
-const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave }) => {
+// --- MAIN COMPONENT ---
+
+const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (movie: Movie) => Promise<void>; }> = ({ allMovies, onSave }) => {
     const [movieSettings, setMovieSettings] = useState<Record<string, Movie>>(allMovies);
     const [partyStates, setPartyStates] = useState<Record<string, WatchPartyState>>({});
     const [isSaving, setIsSaving] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [filter, setFilter] = useState('');
     const [showOnlyEnabled, setShowOnlyEnabled] = useState(false);
-    const [monitoringMovieKey, setMonitoringMovieKey] = useState<string | null>(null);
+    const { user } = useAuth();
     
     useEffect(() => {
         const db = getDbInstance();
@@ -107,6 +244,26 @@ const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave
         });
         return () => unsub();
     }, []);
+
+    // FIX: Explicitly cast `Object.values` to `Movie[]` to resolve type inference issues where properties on movie objects were not recognized.
+    const currentPartyMovie = useMemo(() => {
+        const now = new Date();
+        const enabledMovies = (Object.values(movieSettings) as Movie[])
+            .filter(m => m.isWatchPartyEnabled && m.watchPartyStartTime)
+            .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
+
+        const liveOrWaiting = enabledMovies.find(m => {
+            const state = partyStates[m.key];
+            const startTime = new Date(m.watchPartyStartTime!);
+            // A party is considered "active" if it's within the 4-hour window from its start time
+            return startTime <= now && (now.getTime() - startTime.getTime() < 4 * 60 * 60 * 1000);
+        });
+
+        if (liveOrWaiting) return liveOrWaiting;
+
+        const nextUpcoming = enabledMovies.find(m => new Date(m.watchPartyStartTime!) > now);
+        return nextUpcoming || null;
+    }, [movieSettings, partyStates]);
 
     const hasUnsavedChanges = useMemo(() => {
         return JSON.stringify(allMovies) !== JSON.stringify(movieSettings);
@@ -122,12 +279,9 @@ const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave
     const handleSaveAll = async () => {
         setIsSaving(true);
         setSaveStatus('idle');
-        const changedMovies: Movie[] = [];
-        for (const key in movieSettings) {
-            if (JSON.stringify(allMovies[key]) !== JSON.stringify(movieSettings[key])) {
-                changedMovies.push(movieSettings[key]);
-            }
-        }
+        const changedMovies = Object.keys(movieSettings)
+            .filter(key => JSON.stringify(allMovies[key]) !== JSON.stringify(movieSettings[key]))
+            .map(key => movieSettings[key]);
         
         try {
             await Promise.all(changedMovies.map(movie => onSave(movie)));
@@ -140,26 +294,37 @@ const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave
             setTimeout(() => setSaveStatus('idle'), 3000);
         }
     };
+
+    const handleSyncState = useCallback(async (newState: Partial<WatchPartyState>) => {
+        if (!user || !currentPartyMovie) return;
+        const db = getDbInstance();
+        if (!db) return;
+
+        const syncRef = db.collection('watch_parties').doc(currentPartyMovie.key);
+        await syncRef.set({
+            ...newState,
+            lastUpdatedBy: user.name || user.email,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+    }, [currentPartyMovie, user]);
     
-    const handleStartParty = async (movieKey: string) => {
+    const handleStartParty = async () => {
+        if (!currentPartyMovie) return;
         const password = sessionStorage.getItem('adminPassword');
         try {
             const response = await fetch('/api/start-watch-party', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ movieKey, password }),
+                body: JSON.stringify({ movieKey: currentPartyMovie.key, password }),
             });
             if (!response.ok) {
                 throw new Error((await response.json()).error || 'Failed to start party.');
             }
-            // The listener will automatically update the UI status.
         } catch (error) {
-            console.error("Failed to start party:", error);
             alert(`Error: Could not start the party. ${(error as Error).message}`);
         }
     };
 
-    // FIX: Cast the result of Object.values to Movie[] to provide a concrete type for the chained array methods.
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(movie => movie.title.toLowerCase().includes(filter.toLowerCase()))
         .filter(movie => !showOnlyEnabled || movieSettings[movie.key]?.isWatchPartyEnabled)
@@ -167,9 +332,18 @@ const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave
 
     return (
         <>
+            {currentPartyMovie && (
+                <WatchPartyControlRoom
+                    movie={currentPartyMovie}
+                    partyState={partyStates[currentPartyMovie.key]}
+                    onStartParty={handleStartParty}
+                    onSyncState={handleSyncState}
+                />
+            )}
+
             <div className="bg-gray-950 p-6 rounded-lg text-gray-200">
-                <h2 className="text-xl sm:text-2xl font-bold mb-4 text-pink-400">Watch Party Manager</h2>
-                <p className="text-sm text-gray-400 mb-6">Enable parties, set start times, and manually start events. Click "Save All Changes" to update schedules.</p>
+                <h2 className="text-xl sm:text-2xl font-bold mb-4 text-pink-400">Schedule a Watch Party</h2>
+                <p className="text-sm text-gray-400 mb-6">Enable a party and set a future start time. Only one party can be active or upcoming at a time. Click "Save All Changes" to publish your schedule.</p>
                 
                 <div className="flex flex-col sm:flex-row gap-4 mb-4">
                     <input
@@ -198,7 +372,6 @@ const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave
                                 <th className="p-3">Status</th>
                                 <th className="p-3">Enabled</th>
                                 <th className="p-3">Start Time</th>
-                                <th className="p-3">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -208,8 +381,6 @@ const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave
                                     movie={movieSettings[movie.key]} 
                                     partyState={partyStates[movie.key]}
                                     onChange={(updates) => handleMovieChange(movie.key, updates)} 
-                                    onMonitorChat={setMonitoringMovieKey} 
-                                    onStartParty={handleStartParty}
                                 />
                             ))}
                         </tbody>
@@ -228,14 +399,6 @@ const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave
                     {saveStatus === 'error' && <span className="text-red-500 text-sm">Failed to save changes.</span>}
                 </div>
             </div>
-
-            {monitoringMovieKey && (
-                <ChatMonitorModal
-                    movieKey={monitoringMovieKey}
-                    movieTitle={allMovies[monitoringMovieKey]?.title || ''}
-                    onClose={() => setMonitoringMovieKey(null)}
-                />
-            )}
         </>
     );
 };

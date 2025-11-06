@@ -17,6 +17,7 @@ const TalentPage: React.FC = () => {
                 isScrolled={true} 
                 onMobileSearchClick={() => {}}
                 showSearch={false} 
+                showNavLinks={false}
             />
             <main className="flex-grow">
                 {/* Hero Section */}
