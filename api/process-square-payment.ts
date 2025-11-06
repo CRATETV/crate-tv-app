@@ -92,6 +92,24 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
         const errorMessage = data.errors?.[0]?.detail || 'Payment failed.';
+        // Log failed payment attempt for security analysis
+        const initError = getInitializationError();
+        if (!initError) {
+            const db = getAdminDb();
+            if (db) {
+                await db.collection('security_events').add({
+                    type: 'FAILED_PAYMENT',
+                    ip,
+                    timestamp: FieldValue.serverTimestamp(),
+                    details: {
+                        error: errorMessage,
+                        amount: amountInCents,
+                        paymentType,
+                        userAgent: request.headers.get('user-agent'),
+                    }
+                });
+            }
+        }
         throw new Error(errorMessage);
     }
     
@@ -107,23 +125,6 @@ export async function POST(request: Request) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
     console.error("Square Payment Error:", errorMessage);
-
-    const initError = getInitializationError();
-    if (!initError) {
-        const db = getAdminDb();
-        if (db) {
-            await db.collection('security_events').add({
-                type: 'FAILED_PAYMENT',
-                ip,
-                timestamp: FieldValue.serverTimestamp(),
-                details: {
-                    error: errorMessage,
-                    userAgent: request.headers.get('user-agent'),
-                }
-            });
-        }
-    }
-    
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
