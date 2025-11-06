@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Movie, ChatMessage } from '../types';
+// FIX: Removed invalid file markers from the top and bottom of the file which were causing parsing errors.
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Movie, ChatMessage, WatchPartyState } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import { getDbInstance } from '../services/firebaseClient';
@@ -8,6 +9,7 @@ import { avatars } from './avatars';
 import Countdown from './Countdown';
 import WatchPartyLiveModal from './WatchPartyLiveModal';
 import SquarePaymentModal from './SquarePaymentModal';
+import firebase from 'firebase/compat/app';
 
 interface WatchPartyPageProps {
     movieKey: string;
@@ -58,6 +60,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [showLiveAnnouncement, setShowLiveAnnouncement] = useState(true);
+    const [showSyncInfo, setShowSyncInfo] = useState(!sessionStorage.getItem('hasSeenWatchPartySyncInfo'));
 
     const movie = movies[movieKey];
     const [status, setStatus] = useState(() => getWatchPartyStatus(movie));
@@ -67,9 +70,106 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [paymentSuccess, setPaymentSuccess] = useState(false); // Used to grant immediate access post-payment
     const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
 
+    // New state for sync
+    const isLocalAction = useRef(false);
+    // FIX: The component was using NodeJS.Timeout which is not available in the browser environment, causing a TypeScript error. This has been updated to use the standard `ReturnType<typeof setInterval>` which correctly resolves to `number` for browser-based timers.
+    const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
     const isPaidParty = useMemo(() => movie?.isWatchPartyEnabled && movie.isForSale, [movie]);
     const purchasedMovieKeysSet = useMemo(() => new Set(purchasedMovieKeys), [purchasedMovieKeys]);
     const hasAccess = !isPaidParty || purchasedMovieKeysSet.has(movieKey) || paymentSuccess;
+
+    const updateSyncState = useCallback(async (newState: Partial<WatchPartyState>) => {
+        if (!user || !hasAccess) return;
+        const db = getDbInstance();
+        if (!db) return;
+
+        isLocalAction.current = true;
+        const syncRef = db.collection('watch_parties').doc(movieKey);
+        await syncRef.set({
+            ...newState,
+            lastUpdatedBy: user.name || user.email,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        
+        // After a short delay, allow remote updates again
+        setTimeout(() => { isLocalAction.current = false; }, 100);
+
+    }, [movieKey, user, hasAccess]);
+
+    // Real-time listener for playback sync state
+    useEffect(() => {
+        if (status !== 'live' || !hasAccess) return;
+        const db = getDbInstance();
+        if (!db) return;
+
+        const syncRef = db.collection('watch_parties').doc(movieKey);
+        const unsubscribe = syncRef.onSnapshot(async (snapshot) => {
+            if (isLocalAction.current) return;
+            
+            const video = videoRef.current;
+            if (!video) return;
+
+            if (!snapshot.exists) {
+                // I'm the first one here, initialize the state
+                await syncRef.set({
+                    isPlaying: false,
+                    currentTime: 0,
+                    lastUpdatedBy: 'system',
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                });
+                return;
+            }
+
+            const data = snapshot.data() as WatchPartyState;
+
+            // Sync playback state
+            if (data.isPlaying && video.paused) {
+                video.play().catch(e => console.warn("Autoplay prevented:", e));
+            } else if (!data.isPlaying && !video.paused) {
+                video.pause();
+            }
+
+            // Sync current time, with a tolerance to prevent jerky playback
+            if (Math.abs(video.currentTime - data.currentTime) > 2) {
+                video.currentTime = data.currentTime;
+            }
+        });
+
+        return () => unsubscribe();
+    }, [status, hasAccess, movieKey]);
+    
+    // Set up periodic sync when playing
+    useEffect(() => {
+        if (syncIntervalRef.current) {
+            clearInterval(syncIntervalRef.current);
+        }
+        if (videoRef.current && !videoRef.current.paused) {
+            syncIntervalRef.current = setInterval(() => {
+                if (videoRef.current) {
+                    updateSyncState({ currentTime: videoRef.current.currentTime });
+                }
+            }, 10000); // Sync every 10 seconds
+        }
+        return () => {
+            if (syncIntervalRef.current) {
+                clearInterval(syncIntervalRef.current);
+            }
+        };
+    }, [videoRef.current?.paused, updateSyncState]);
+
+    const handlePlay = () => updateSyncState({ isPlaying: true });
+    const handlePause = () => {
+        if (videoRef.current) {
+            updateSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime });
+        }
+    };
+    const handleSeeked = () => {
+        if (videoRef.current) {
+            updateSyncState({ currentTime: videoRef.current.currentTime });
+        }
+    };
+
 
     useEffect(() => {
         // If the status changes (e.g. from context update), re-evaluate
@@ -146,6 +246,11 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     
     const handleGoBack = () => {
         window.history.back();
+    };
+
+    const handleDismissSyncInfo = () => {
+        setShowSyncInfo(false);
+        sessionStorage.setItem('hasSeenWatchPartySyncInfo', 'true');
     };
 
     if (isFestivalLoading) {
@@ -231,7 +336,16 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     <h1 className="text-lg font-bold">{movie.title} - Watch Party</h1>
                  </div>
                 <div className="flex-grow flex items-center justify-center">
-                    <video ref={videoRef} src={movie.fullMovie} controls playsInline className="w-full max-h-full" />
+                    <video
+                        ref={videoRef}
+                        src={movie.fullMovie}
+                        onPlay={handlePlay}
+                        onPause={handlePause}
+                        onSeeked={handleSeeked}
+                        controls
+                        playsInline
+                        className="w-full max-h-full"
+                    />
                 </div>
             </div>
 
@@ -247,6 +361,20 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     )}
                 </div>
                 
+                {/* How Sync Works Banner */}
+                {showSyncInfo && (
+                    <div className="p-3 bg-blue-900/50 border-b border-blue-800 flex items-start gap-3 text-sm flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        <div className="flex-grow">
+                            <p className="font-bold text-white">Everyone's Watching Together!</p>
+                            <p className="text-blue-200 text-xs">Playback is synchronized for all viewers. Pausing or seeking will affect everyone in the party.</p>
+                        </div>
+                        <button onClick={handleDismissSyncInfo} className="text-blue-300 hover:text-white flex-shrink-0 text-xl font-bold leading-none">&times;</button>
+                    </div>
+                )}
+
                 {/* Messages */}
                 <div className="flex-grow p-4 overflow-y-auto space-y-4">
                     {messages.map(msg => (

@@ -235,3 +235,10 @@ export interface ChatMessage {
   text: string;
   timestamp: any; // Firestore timestamp
 }
+
+export interface WatchPartyState {
+  isPlaying: boolean;
+  currentTime: number;
+  lastUpdatedBy?: string;
+  lastUpdated?: any; // Firestore server timestamp
+}
