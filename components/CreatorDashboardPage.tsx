@@ -54,7 +54,7 @@ const CreatorDashboardPage: React.FC = () => {
     };
     
     // FIX: Add a more robust guard. The child components (Filmmaker/Actor views)
-    // require the user's name to fetch their specific data. Waiting for `user.name`
+    // require the user's name to be present. Waiting for `user.name`
     // to be present prevents a race condition and the resulting infinite loading screen.
     if (!user || !user.name) {
         return <LoadingSpinner />;

@@ -273,3 +273,44 @@ export interface GrowthAnalyticsData {
     aboutData?: AboutData;
     avgMoMUserGrowth?: number;
 }
+
+// FIX: Added missing types for Filmmaker Analytics
+export interface FilmmakerFilmPerformance {
+  key: string;
+  title: string;
+  views: number;
+  likes: number;
+  donations: number;
+  adRevenue: number;
+}
+
+export interface FilmmakerAnalytics {
+  totalDonations: number;
+  totalAdRevenue: number;
+  totalPaidOut: number;
+  balance: number;
+  films: FilmmakerFilmPerformance[];
+}
+
+// --- NEW SECURITY TYPES ---
+
+export interface SecurityEvent {
+    id?: string;
+    type: 'FAILED_ADMIN_LOGIN' | 'FAILED_PAYMENT' | 'CONTACT_SENT' | 'SUBMISSION_SENT';
+    ip: string | null;
+    timestamp: any; // Firestore timestamp
+    details?: Record<string, any>;
+}
+
+export interface SecurityReport {
+    totalEvents: number;
+    eventsByType: Record<string, number>;
+    suspiciousIps: { ip: string; count: number; types: string[] }[];
+    recentEvents: SecurityEvent[];
+    threatLevel: 'red' | 'yellow' | 'green';
+}
+
+export interface AiSecurityAdvice {
+    summary: string;
+    recommendations: string[];
+}
