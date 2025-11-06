@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Movie, Actor } from '../types';
+import { Movie, Actor, Category } from '../types';
 import S3Uploader from './S3Uploader';
 
 interface MovieEditorProps {
@@ -30,7 +30,7 @@ const emptyMovie: Movie = {
     salePrice: 0,
 };
 
-const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onSave, onDelete }) => {
+const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, categories, onSave, onDelete }) => {
     const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
     const [isNew, setIsNew] = useState(false);
     const [filter, setFilter] = useState('');
@@ -96,6 +96,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onSave, onDelete }
             await onSave(movieToSave);
             alert('Movie saved successfully!');
             if (isNew) {
+                // After saving a new movie, reset the form for another new entry
                 handleAddNew();
             } else {
                 setSelectedMovie(null);
@@ -170,7 +171,11 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onSave, onDelete }
 
                         <div className="pt-4 border-t border-gray-700 space-y-4">
                             <h4 className="text-md font-semibold text-green-400">Monetization</h4>
-                            <div className="flex items-center gap-2"><input type="checkbox" name="isForSale" checked={selectedMovie.isForSale || false} onChange={handleChange} className="h-4 w-4" /><label className={labelClasses}>Enable for Individual Sale</label></div>
+                            <div className="flex items-center gap-2">
+                                <input type="checkbox" name="isForSale" checked={selectedMovie.isForSale || false} onChange={handleChange} className="h-4 w-4" />
+                                <label className={labelClasses}>Enable for Individual Sale</label>
+                            </div>
+                            <p className="text-xs text-gray-400 -mt-3 ml-6">Used for VOD purchase or for setting a price on a Watch Party.</p>
                             <div>
                                 <label className={labelClasses}>Sale Price (USD)</label>
                                 <input type="number" name="salePrice" value={selectedMovie.salePrice || ''} onChange={handleChange} className={formInputClasses} disabled={!selectedMovie.isForSale} min="0.99" step="0.01" />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import { avatars } from './avatars';
@@ -13,10 +13,10 @@ interface HeaderProps {
   showSearch?: boolean;
   onSignInClick?: () => void;
   showNavLinks?: boolean;
+  isBannerVisible?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onSearchSubmit, isStaging, showSearch = true, onSignInClick, showNavLinks = true }) => {
-  const [topOffset, setTopOffset] = useState(0);
+const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onMobileSearchClick, onSearchSubmit, isStaging, showSearch = true, onSignInClick, showNavLinks = true, isBannerVisible }) => {
   const { user, logout } = useAuth();
   const { isFestivalLive } = useFestival();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -24,11 +24,13 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onSe
   const menuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  // FIX: Imported `useMemo` from `react` to resolve the "Cannot find name 'useMemo'" error.
+  const topOffset = useMemo(() => {
     let offset = 0;
-    if (isStaging) offset += 32;
-    setTopOffset(offset);
-  }, [isStaging]);
+    if (isStaging) offset += 32; // Height of staging banner
+    if (isBannerVisible) offset += 48; // Height of watch party banner
+    return offset;
+  }, [isStaging, isBannerVisible]);
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -111,9 +113,9 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, isScrolled, onSe
                 onContextMenu={(e) => e.preventDefault()}
             />
         </a>
-        {showNavLinks && (
+        {showNavLinks && user && (
           <nav className="hidden md:flex items-center gap-2 md:gap-4">
-            {user && <a href="/classics" onClick={(e) => handleNavigate(e, '/classics')} className={`${linkBaseStyles} ${pathname.startsWith('/classics') ? activeLinkStyles : inactiveLinkStyles}`}>Classics</a>}
+            <a href="/classics" onClick={(e) => handleNavigate(e, '/classics')} className={`${linkBaseStyles} ${pathname.startsWith('/classics') ? activeLinkStyles : inactiveLinkStyles}`}>Classics</a>
             {isFestivalLive && (
               <a href="/festival" onClick={(e) => handleNavigate(e, '/festival')} className={`${linkBaseStyles} ${pathname.startsWith('/festival') ? activeLinkStyles : inactiveLinkStyles}`}>
                 Festival

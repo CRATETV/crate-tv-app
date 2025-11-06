@@ -24,11 +24,24 @@ import CollapsibleFooter from './components/CollapsibleFooter';
 import SquarePaymentModal from './components/SquarePaymentModal';
 import DonationSuccessModal from './components/DonationSuccessModal';
 import WatchPartyAnnouncementModal from './components/WatchPartyAnnouncementModal';
+import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 
 type DisplayedCategory = {
   key: string;
   title: React.ReactNode;
   movies: Movie[];
+};
+
+const getWatchPartyStatus = (movie: Movie | undefined): 'not_enabled' | 'upcoming' | 'live' | 'ended' => {
+    if (!movie?.isWatchPartyEnabled || !movie.watchPartyStartTime) {
+        return 'not_enabled';
+    }
+    const now = new Date();
+    const startTime = new Date(movie.watchPartyStartTime);
+    const endTime = new Date(startTime.getTime() + 4 * 60 * 60 * 1000);
+    if (now < startTime) return 'upcoming';
+    if (now >= startTime && now <= endTime) return 'live';
+    return 'ended';
 };
 
 const SkeletonCard: React.FC = () => (
@@ -53,7 +66,7 @@ const SkeletonCarousel: React.FC = () => (
 
 
 const App: React.FC = () => {
-  const { user, watchlist, watchedMovies, likedMovies: likedMoviesArray, toggleLikeMovie } = useAuth();
+  const { user, watchlist, watchedMovies, likedMovies: likedMoviesArray, toggleLikeMovie, purchasedMovieKeys } = useAuth();
   const { isLoading, movies, categories, festivalData, festivalConfig, isFestivalLive, dataSource } = useFestival();
   
   const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
@@ -69,6 +82,8 @@ const App: React.FC = () => {
   const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [liveWatchPartyMovie, setLiveWatchPartyMovie] = useState<Movie | null>(null);
+  const [activeWatchParty, setActiveWatchParty] = useState<Movie | null>(null);
+  const [bannerDismissedFor, setBannerDismissedFor] = useState<string | null>(null);
 
   // State for centrally managed modals
   const [movieForSupport, setMovieForSupport] = useState<Movie | null>(null);
@@ -81,6 +96,7 @@ const App: React.FC = () => {
   const watchedMoviesSet = useMemo(() => new Set(watchedMovies), [watchedMovies]);
   const watchlistSet = useMemo(() => new Set(watchlist), [watchlist]);
   const likedMovies = useMemo(() => new Set(likedMoviesArray), [likedMoviesArray]);
+  const purchasedMovieKeysSet = useMemo(() => new Set(purchasedMovieKeys), [purchasedMovieKeys]);
   
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -166,36 +182,51 @@ const App: React.FC = () => {
     }
   }, [isLoading, isFestivalLive]);
   
-    // Effect to check for live watch parties
-  useEffect(() => {
-    const checkWatchParties = () => {
-        if (!user || Object.keys(movies).length === 0) return;
+    // Effect to check for live watch parties (for announcements and banners)
+    useEffect(() => {
+        const checkWatchParties = () => {
+            if (Object.keys(movies).length === 0) return;
 
-        const now = Date.now();
-        for (const movie of Object.values(movies) as Movie[]) {
-            if (movie.isWatchPartyEnabled && movie.watchPartyStartTime) {
-                const startTime = new Date(movie.watchPartyStartTime).getTime();
-                // Check if it went live in the last 60 seconds
-                const justWentLive = now >= startTime && now < (startTime + 60 * 1000);
-                
-                if (justWentLive) {
-                    const hasSeen = sessionStorage.getItem(`seenWatchPartyAnnouncement_${movie.key}`);
-                    if (!hasSeen) {
-                        setLiveWatchPartyMovie(movie);
-                        sessionStorage.setItem(`seenWatchPartyAnnouncement_${movie.key}`, 'true');
-                        break; // Only show one announcement at a time
+            const now = Date.now();
+            let partyForAnnouncement: Movie | null = null;
+            let partyForBanner: Movie | null = null;
+
+            for (const movie of Object.values(movies) as Movie[]) {
+                if (getWatchPartyStatus(movie) === 'live') {
+                    // Check for announcement modal
+                    const justWentLive = now >= new Date(movie.watchPartyStartTime!).getTime() && now < (new Date(movie.watchPartyStartTime!).getTime() + 60 * 1000);
+                    if (justWentLive) {
+                        const hasSeen = sessionStorage.getItem(`seenWatchPartyAnnouncement_${movie.key}`);
+                        if (!hasSeen) {
+                            partyForAnnouncement = movie;
+                            sessionStorage.setItem(`seenWatchPartyAnnouncement_${movie.key}`, 'true');
+                        }
+                    }
+                    // Check for persistent banner
+                    const isPaid = movie.isForSale;
+                    const hasAccess = !isPaid || purchasedMovieKeysSet.has(movie.key);
+                    if (hasAccess && !partyForBanner) { // Find the first accessible live party for the banner
+                        partyForBanner = movie;
                     }
                 }
             }
-        }
-    };
+            
+            if (user && partyForAnnouncement) {
+                setLiveWatchPartyMovie(partyForAnnouncement);
+            }
+            
+            if (user && partyForBanner && partyForBanner.key !== bannerDismissedFor) {
+                setActiveWatchParty(partyForBanner);
+            } else {
+                setActiveWatchParty(null);
+            }
+        };
 
-    // Check immediately on load and then every 30 seconds
-    const interval = setInterval(checkWatchParties, 30000);
-    checkWatchParties(); // Also run once on mount
+        const interval = setInterval(checkWatchParties, 30000);
+        checkWatchParties();
 
-    return () => clearInterval(interval);
-  }, [movies, user]);
+        return () => clearInterval(interval);
+    }, [movies, user, bannerDismissedFor, purchasedMovieKeysSet]);
 
 
   const heroMovies = useMemo(() => {
@@ -243,7 +274,7 @@ const App: React.FC = () => {
         .map(key => movies[key])
         .filter((m): m is Movie => !!m);
 
-    const myListCategory: DisplayedCategory | null = watchlistMovies.length > 0 ? {
+    const myListCategory: DisplayedCategory | null = user && watchlistMovies.length > 0 ? {
         key: 'myList',
         title: 'My List',
         movies: watchlistMovies,
@@ -276,7 +307,7 @@ const App: React.FC = () => {
       
       return [myListCategory, ...standardCategories].filter((c): c is DisplayedCategory => !!c);
 
-  }, [categories, visibleMovies, watchlist, movies]);
+  }, [categories, visibleMovies, watchlist, movies, user]);
   
   const searchResults = useMemo(() => {
     if (!searchQuery) return [];
@@ -350,10 +381,21 @@ const App: React.FC = () => {
   if (isLoading) {
     return <LoadingSpinner />;
   }
+  
+  const isBannerVisible = !!activeWatchParty;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#141414]">
       {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
+      {activeWatchParty && (
+          <LiveWatchPartyBanner
+              movie={activeWatchParty}
+              onClose={() => {
+                  setBannerDismissedFor(activeWatchParty.key);
+                  setActiveWatchParty(null);
+              }}
+          />
+      )}
       <DataStatusIndicator source={dataSource} />
       <Header
         searchQuery={searchQuery}
@@ -361,9 +403,10 @@ const App: React.FC = () => {
         isScrolled={isScrolled}
         onMobileSearchClick={() => setIsMobileSearchOpen(true)}
         isStaging={isStaging}
+        isBannerVisible={isBannerVisible}
       />
       
-      <main className="flex-grow pb-24 md:pb-0">
+      <main className={`flex-grow pb-24 md:pb-0 transition-all duration-300 ${isBannerVisible ? 'pt-12' : ''}`}>
         {searchQuery && !isMobileSearchOpen ? (
            <div className="pt-8 md:pt-24 px-4 md:px-12">
             <h2 className="text-2xl font-bold mb-6 text-white">Search Results for "{searchQuery}"</h2>
@@ -442,7 +485,7 @@ const App: React.FC = () => {
                       onSupportMovie={setMovieForSupport}
                     />
                   )}
-                  {likedMoviesArray.length === 0 ? (
+                  {user && likedMoviesArray.length === 0 ? (
                       <div className="mb-8 md:mb-12">
                           <h2 className="text-lg md:text-2xl font-bold mb-4 text-white flex items-center gap-2">
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -457,9 +500,9 @@ const App: React.FC = () => {
                               </p>
                           </div>
                       </div>
-                  ) : isLoadingRecommendations ? (
+                  ) : user && isLoadingRecommendations ? (
                       <SkeletonCarousel />
-                  ) : recommendedMovies.length > 0 ? (
+                  ) : user && recommendedMovies.length > 0 ? (
                       <MovieCarousel
                           key="recommended"
                           title={
@@ -478,14 +521,14 @@ const App: React.FC = () => {
                           onToggleLike={toggleLikeMovie}
                           onSupportMovie={setMovieForSupport}
                       />
-                  ) : (
+                  ) : user ? (
                      <div className="mb-8 md:mb-12">
                         <h2 className="text-lg md:text-2xl font-bold mb-4 text-white flex items-center gap-2">Recommended For You</h2>
                         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-8 text-center text-gray-400">
                            <p>No recommendations found yet. Keep liking films to help us learn what you love!</p>
                         </div>
                      </div>
-                  )}
+                  ) : null}
                   {displayedCategories.map(cat => (
                     <MovieCarousel
                       key={cat.key}
