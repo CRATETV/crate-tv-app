@@ -89,7 +89,8 @@ const FilmmakerDashboardView: React.FC = () => {
     useEffect(() => {
         const fetchAnalyticsData = async () => {
             if (!user?.name) {
-                return; // Wait for user's name to be available
+                // This guard is crucial. It waits for the user object to be fully populated.
+                return;
             };
 
             setIsLoading(true);
@@ -111,12 +112,13 @@ const FilmmakerDashboardView: React.FC = () => {
                 setIsLoading(false);
             }
         };
-        // This effect depends on user.name. It will only run when user.name is available.
-        // This prevents the race condition and the infinite loading spinner.
-        if (user?.name) {
-            fetchAnalyticsData();
-        }
-    }, [user?.name]);
+        
+        // The effect now depends on the entire user object.
+        // When the user logs in, the `user` object from `useAuth` will update,
+        // triggering this effect. The guard inside ensures we only fetch data
+        // once the user's name is actually available, resolving the race condition.
+        fetchAnalyticsData();
+    }, [user]);
 
     const topTenMovies = useMemo(() => {
         if (!allMovies) return [];

@@ -5,25 +5,60 @@ import LoadingSpinner from './LoadingSpinner';
 
 const ACTOR_PASSWORD = 'cratebio';
 
-interface GreenRoomFeedProps {
-    actorName: string;
-}
+const TIME_UNITS = [
+  { unit: 'year', seconds: 31536000 },
+  { unit: 'month', seconds: 2592000 },
+  { unit: 'week', seconds: 604800 },
+  { unit: 'day', seconds: 86400 },
+  { unit: 'hour', seconds: 3600 },
+  { unit: 'minute', seconds: 60 },
+];
+
+const formatTimeAgo = (date: Date): string => {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  if (seconds < 10) return "just now";
+
+  for (const { unit, seconds: unitSeconds } of TIME_UNITS) {
+    const interval = Math.floor(seconds / unitSeconds);
+    if (interval >= 1) {
+      return `${interval} ${unit}${interval > 1 ? 's' : ''} ago`;
+    }
+  }
+  return `${Math.floor(seconds)} seconds ago`;
+};
+
+const TimeAgo: React.FC<{ timestamp: any }> = ({ timestamp }) => {
+    const [timeAgo, setTimeAgo] = useState('');
+
+    useEffect(() => {
+        const calculateAndSetTime = () => {
+            if (timestamp && typeof timestamp.seconds === 'number') {
+                const date = new Date(timestamp.seconds * 1000);
+                setTimeAgo(formatTimeAgo(date));
+            } else {
+                setTimeAgo('a moment ago');
+            }
+        };
+
+        calculateAndSetTime(); // Initial calculation
+        const intervalId = setInterval(calculateAndSetTime, 60000); // Update every minute
+
+        return () => clearInterval(intervalId); // Cleanup on unmount
+    }, [timestamp]);
+
+    return <p className="text-xs text-gray-400">{timeAgo}</p>;
+};
 
 const PostCard: React.FC<{ post: ActorPost; currentActor: string; onLike: (postId: string) => void; }> = ({ post, currentActor, onLike }) => {
-    // Defensive check: Ensure likes is an array before using .includes()
     const isLiked = (post.likes || []).includes(currentActor);
-    // Defensive check: Ensure timestamp exists and has seconds before creating a date
-    const postDate = post.timestamp && typeof post.timestamp.seconds === 'number'
-        ? new Date(post.timestamp.seconds * 1000).toLocaleString()
-        : 'just now';
-
+    
     return (
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
             <div className="flex items-center gap-3 mb-3">
                 <img src={post.actorPhoto} alt={post.actorName} className="w-10 h-10 rounded-full object-cover" />
                 <div>
                     <p className="font-bold text-white">{post.actorName}</p>
-                    <p className="text-xs text-gray-400">{postDate}</p>
+                    <TimeAgo timestamp={post.timestamp} />
                 </div>
             </div>
             <p className="text-gray-300 whitespace-pre-wrap mb-3">{post.content}</p>
@@ -45,6 +80,10 @@ const PostCard: React.FC<{ post: ActorPost; currentActor: string; onLike: (postI
     );
 };
 
+// FIX: Define the 'GreenRoomFeedProps' interface to resolve the TypeScript error.
+interface GreenRoomFeedProps {
+    actorName: string;
+}
 
 const GreenRoomFeed: React.FC<GreenRoomFeedProps> = ({ actorName }) => {
     const [posts, setPosts] = useState<ActorPost[]>([]);
@@ -65,7 +104,6 @@ const GreenRoomFeed: React.FC<GreenRoomFeedProps> = ({ actorName }) => {
             });
             if (!response.ok) throw new Error('Failed to fetch feed.');
             const data = await response.json();
-            // FIX: Filter out any invalid posts to prevent rendering crashes.
             const validPosts = (data.posts || []).filter((p: any) => p && p.id && p.actorName && p.content && p.timestamp);
             setPosts(validPosts);
         } catch (err) {
@@ -98,7 +136,6 @@ const GreenRoomFeed: React.FC<GreenRoomFeedProps> = ({ actorName }) => {
             });
             if (!response.ok) throw new Error((await response.json()).error || 'Failed to create post.');
             
-            // Reset form and refresh feed
             setNewPostContent('');
             setNewPostImageUrl('');
             await fetchPosts();
@@ -110,7 +147,6 @@ const GreenRoomFeed: React.FC<GreenRoomFeedProps> = ({ actorName }) => {
     };
     
     const handleLike = async (postId: string) => {
-        // Optimistic update
         setPosts(prevPosts => prevPosts.map(p => {
             if (p.id === postId) {
                 const currentLikes = p.likes || [];
@@ -129,7 +165,6 @@ const GreenRoomFeed: React.FC<GreenRoomFeedProps> = ({ actorName }) => {
                 body: JSON.stringify({ postId, actorName, password: ACTOR_PASSWORD }),
             });
         } catch (err) {
-            // Revert on error
             console.error("Failed to sync like:", err);
             fetchPosts(); 
         }

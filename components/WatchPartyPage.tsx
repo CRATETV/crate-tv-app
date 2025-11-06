@@ -1,4 +1,3 @@
-// FIX: Removed invalid file markers from the top and bottom of the file which were causing parsing errors.
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, ChatMessage, WatchPartyState } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -68,15 +67,18 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     // State for sync
     const [partyState, setPartyState] = useState<WatchPartyState | null>(null);
-    const isLocalAction = useRef(false);
+    const isLocalAction = useRef(false); // Used only by the admin
     const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    
+    const isAdmin = useMemo(() => user?.isFilmmaker, [user]);
 
     const isPaidParty = useMemo(() => movie?.isWatchPartyEnabled && movie.isForSale, [movie]);
     const purchasedMovieKeysSet = useMemo(() => new Set(purchasedMovieKeys), [purchasedMovieKeys]);
     const hasAccess = !isPaidParty || purchasedMovieKeysSet.has(movieKey) || paymentSuccess;
 
     const updateSyncState = useCallback(async (newState: Partial<WatchPartyState>) => {
-        if (!user || !hasAccess) return;
+        // Only the admin can update the state
+        if (!user || !hasAccess || !isAdmin) return;
         const db = getDbInstance();
         if (!db) return;
 
@@ -88,11 +90,11 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
         
-        setTimeout(() => { isLocalAction.current = false; }, 100);
+        setTimeout(() => { isLocalAction.current = false; }, 200); // Increase timeout slightly
 
-    }, [movieKey, user, hasAccess]);
+    }, [movieKey, user, hasAccess, isAdmin]);
     
-    // Real-time listener for playback sync state (both party status and video sync)
+    // Real-time listener for playback sync state (for ALL users)
     useEffect(() => {
         if (initialStatus !== 'live' || !hasAccess) return;
         const db = getDbInstance();
@@ -101,56 +103,57 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const syncRef = db.collection('watch_parties').doc(movieKey);
         const unsubscribe = syncRef.onSnapshot(async (snapshot) => {
             if (!snapshot.exists) {
-                // Document doesn't exist, create it in 'waiting' state
-                const initialState: WatchPartyState = { isPlaying: false, currentTime: 0, status: 'waiting', lastUpdatedBy: 'system' };
-                await syncRef.set(initialState);
-                setPartyState(initialState);
+                if (isAdmin) { // Only admin can create the initial state
+                    const initialState: WatchPartyState = { isPlaying: false, currentTime: 0, status: 'waiting', lastUpdatedBy: 'system' };
+                    await syncRef.set(initialState);
+                    setPartyState(initialState);
+                }
                 return;
             }
             
             const data = snapshot.data() as WatchPartyState;
             setPartyState(data);
             
-            if (isLocalAction.current || data.status !== 'live') return;
-            
-            const video = videoRef.current;
-            if (!video) return;
+            // Viewers (non-admins) react to state changes
+            if (!isAdmin) {
+                const video = videoRef.current;
+                if (!video || data.status !== 'live') return;
 
-            if (data.isPlaying && video.paused) {
-                video.play().catch(e => console.warn("Autoplay prevented:", e));
-            } else if (!data.isPlaying && !video.paused) {
-                video.pause();
-            }
+                if (data.isPlaying && video.paused) {
+                    video.play().catch(e => console.warn("Autoplay prevented:", e));
+                } else if (!data.isPlaying && !video.paused) {
+                    video.pause();
+                }
 
-            if (Math.abs(video.currentTime - data.currentTime) > 2) {
-                video.currentTime = data.currentTime;
+                if (Math.abs(video.currentTime - data.currentTime) > 2) {
+                    video.currentTime = data.currentTime;
+                }
             }
         });
 
         return () => unsubscribe();
-    }, [initialStatus, hasAccess, movieKey]);
+    }, [initialStatus, hasAccess, movieKey, isAdmin]);
 
-    // Set up periodic sync when playing
+    // Admin: Set up periodic sync when playing
     useEffect(() => {
         if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
 
-        if (videoRef.current && !videoRef.current.paused && partyState?.status === 'live') {
+        if (isAdmin && videoRef.current && !videoRef.current.paused && partyState?.status === 'live') {
             syncIntervalRef.current = setInterval(() => {
                 if (videoRef.current) {
                     updateSyncState({ currentTime: videoRef.current.currentTime });
                 }
-            }, 10000); // Sync every 10 seconds
+            }, 5000); // Sync every 5 seconds
         }
         return () => { if (syncIntervalRef.current) clearInterval(syncIntervalRef.current); };
-    }, [videoRef.current?.paused, partyState?.status, updateSyncState]);
+    }, [isAdmin, videoRef.current?.paused, partyState?.status, updateSyncState]);
 
-    const handlePlay = () => updateSyncState({ isPlaying: true });
-    const handlePause = () => videoRef.current && updateSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime });
-    const handleSeeked = () => videoRef.current && updateSyncState({ currentTime: videoRef.current.currentTime });
+    const handlePlay = () => isAdmin && updateSyncState({ isPlaying: true });
+    const handlePause = () => isAdmin && videoRef.current && updateSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime });
+    const handleSeeked = () => isAdmin && videoRef.current && updateSyncState({ currentTime: videoRef.current.currentTime });
 
     useEffect(() => { setInitialStatus(getInitialStatus(movie)); }, [movie]);
     
-    // Timer for countdown
     useEffect(() => {
         if (initialStatus === 'upcoming' && movie?.watchPartyStartTime) {
             const startTime = new Date(movie.watchPartyStartTime).getTime();
@@ -161,7 +164,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     // Real-time listener for chat messages
     useEffect(() => {
-        if (partyState?.status !== 'live' || !hasAccess) return;
+        if (initialStatus !== 'live' || !hasAccess) return; // Chat is visible before party starts
         const db = getDbInstance();
         if (!db) return;
         const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages').orderBy('timestamp', 'asc').limitToLast(100);
@@ -171,7 +174,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             setMessages(fetchedMessages);
         });
         return () => unsubscribe();
-    }, [movieKey, partyState?.status, hasAccess]);
+    }, [movieKey, initialStatus, hasAccess]);
 
     useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -180,12 +183,11 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (!newMessage.trim() || !user) return;
         setIsSending(true);
         try {
-            const response = await fetch('/api/send-chat-message', {
+            await fetch('/api/send-chat-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ movieKey, userName: user.name || user.email, userAvatar: user.avatar || 'fox', text: newMessage }),
             });
-            if (!response.ok) throw new Error('Failed to send message.');
             setNewMessage('');
         } catch (error) {
             console.error("Failed to send message:", error);
@@ -219,7 +221,23 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             <div className="relative w-full md:w-3/4 aspect-video md:aspect-auto flex-shrink-0 bg-black flex flex-col">
                  <button onClick={handleGoBack} className="absolute top-4 left-4 z-20 bg-black/50 rounded-full p-2 hover:bg-black/70" aria-label="Go Back"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
                  <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/70 to-transparent text-center z-10 pointer-events-none"><h1 className="text-lg font-bold">{movie.title} - Watch Party</h1></div>
-                <div className="flex-grow flex items-center justify-center"><video ref={videoRef} src={movie.fullMovie} onPlay={handlePlay} onPause={handlePause} onSeeked={handleSeeked} controls playsInline className="w-full max-h-full" /></div>
+                <div className="flex-grow flex items-center justify-center">
+                    <video 
+                        ref={videoRef} 
+                        src={movie.fullMovie} 
+                        onPlay={handlePlay} 
+                        onPause={handlePause} 
+                        onSeeked={handleSeeked} 
+                        controls={isAdmin} 
+                        playsInline 
+                        className="w-full max-h-full" 
+                    />
+                </div>
+                 {!isAdmin && partyState?.status === 'live' && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
+                        Playback is controlled by the host.
+                    </div>
+                )}
             </div>
             <div className="w-full md:w-1/4 flex-grow flex flex-col bg-gray-900 border-t-2 md:border-t-0 md:border-l-2 border-gray-700 min-h-0">
                  <div className="p-4 text-lg font-bold border-b border-gray-700 flex-shrink-0 flex justify-between items-center">
