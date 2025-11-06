@@ -118,14 +118,13 @@ export async function POST(request: Request) {
     }
 
     // --- Step 3: Set custom claim and Firestore profile (ROBUST METHOD) ---
-    const userProfileDoc = await db.collection('users').doc(userRecord.uid).get();
-    const existingProfileData = userProfileDoc.data();
-    
     const isDualRole = DUAL_ROLE_NAMES.has(trimmedName);
+    const existingClaims = userRecord.customClaims || {};
     
+    // Combine existing roles with the new role being granted
     const newClaims = {
-        isActor: true, // Granting actor role now
-        isFilmmaker: existingProfileData?.isFilmmaker === true || isDualRole // Preserve existing filmmaker role or grant if on the list
+        isActor: true, // Always grant actor role on this endpoint
+        isFilmmaker: existingClaims.isFilmmaker === true || isDualRole,
     };
 
     // Set the custom claims on the Auth user.

@@ -182,13 +182,40 @@ const WatchPartyControlRoom: React.FC<{
     );
 };
 
+// New helper function to format a UTC ISO string back into a 'YYYY-MM-DDTHH:MM' string for the input
+const formatISOForInput = (isoString?: string): string => {
+    if (!isoString) return '';
+    try {
+        const date = new Date(isoString);
+        // Check for invalid date
+        if (isNaN(date.getTime())) return '';
+        
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (e) {
+        return '';
+    }
+};
+
+
 const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange: (updates: Partial<Movie>) => void; }> = ({ movie, partyState, onChange }) => {
     const handleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
         onChange({ isWatchPartyEnabled: e.target.checked });
     };
 
     const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        onChange({ watchPartyStartTime: e.target.value });
+        // Convert the local datetime-local string to a UTC ISO string before saving
+        if (e.target.value) {
+            const localDate = new Date(e.target.value);
+            onChange({ watchPartyStartTime: localDate.toISOString() });
+        } else {
+            onChange({ watchPartyStartTime: '' });
+        }
     };
 
     const status = getPartyStatusText(movie, partyState);
@@ -210,7 +237,7 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
             <td className="p-3">
                 <input
                     type="datetime-local"
-                    value={movie.watchPartyStartTime || ''}
+                    value={formatISOForInput(movie.watchPartyStartTime)}
                     onChange={handleTimeChange}
                     className="form-input !py-1 text-sm"
                     disabled={!movie.isWatchPartyEnabled}
@@ -245,7 +272,6 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         return () => unsub();
     }, []);
 
-    // FIX: Explicitly cast `Object.values` to `Movie[]` to resolve type inference issues where properties on movie objects were not recognized.
     const currentPartyMovie = useMemo(() => {
         const now = new Date();
         const enabledMovies = (Object.values(movieSettings) as Movie[])

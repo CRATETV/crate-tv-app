@@ -64,6 +64,21 @@ const JoinPartyOverlay: React.FC<{ movie: Movie; onJoin: () => void }> = ({ movi
     </div>
 );
 
+const ResumePromptOverlay: React.FC<{ onResume: () => void }> = ({ onResume }) => (
+    <div 
+        className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-40 cursor-pointer"
+        onClick={onResume}
+    >
+        <div className="bg-white/10 rounded-full p-6 border-2 border-white/30 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+            </svg>
+        </div>
+        <p className="text-white font-bold text-lg">Host has resumed. Tap to play.</p>
+    </div>
+);
+
+
 const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const { user, purchasedMovieKeys, purchaseMovie } = useAuth();
     const { movies, isLoading: isFestivalLoading } = useFestival();
@@ -72,7 +87,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isSending, setIsSending] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const [isMuted, setIsMuted] = useState(true);
+    const [isMuted, setIsMuted] = useState(false); // Start unmuted after join
 
     const movie = movies[movieKey];
     const [initialStatus, setInitialStatus] = useState(() => getInitialStatus(movie));
@@ -82,6 +97,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
     const [userHasJoined, setUserHasJoined] = useState(false);
+    const [showResumePrompt, setShowResumePrompt] = useState(false);
 
     // State for sync
     const [partyState, setPartyState] = useState<WatchPartyState | null>(null);
@@ -118,7 +134,8 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 if (!video || data.status !== 'live') return;
 
                 if (data.isPlaying && video.paused) {
-                    video.play().catch(e => console.warn("Autoplay prevented:", e));
+                    // Don't call play() directly. Prompt the user to resume.
+                    setShowResumePrompt(true);
                 } else if (!data.isPlaying && !video.paused) {
                     video.pause();
                 }
@@ -136,18 +153,25 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         setUserHasJoined(true);
         const video = videoRef.current;
         if (video) {
-            video.muted = true; // Muting is crucial for autoplay success on mobile
-            setIsMuted(true);
-            video.play().catch(e => console.error("Could not start video on join:", e));
+            // Unmute immediately. The user click gives us permission.
+            video.muted = false;
+            setIsMuted(false);
             
-            // Sync immediately after joining
             if (partyState) {
                 video.currentTime = partyState.currentTime;
-                if (!partyState.isPlaying) {
-                    video.pause();
+                if (partyState.isPlaying) {
+                    video.play().catch(e => console.error("Could not start video on join:", e));
                 }
             }
         }
+    };
+
+    const handleResumeFromHost = () => {
+        const video = videoRef.current;
+        if (video && video.paused) {
+            video.play().catch(e => console.error("Could not resume video from prompt:", e));
+        }
+        setShowResumePrompt(false);
     };
 
 
@@ -221,7 +245,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             <div className="relative w-full md:w-3/4 aspect-video md:aspect-auto flex-shrink-0 bg-black flex flex-col">
                  <button onClick={handleGoBack} className="absolute top-4 left-4 z-20 bg-black/50 rounded-full p-2 hover:bg-black/70" aria-label="Go Back"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
                  <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/70 to-transparent text-center z-10 pointer-events-none"><h1 className="text-lg font-bold">{movie.title} - Watch Party</h1></div>
-                <div className="flex-grow flex items-center justify-center">
+                <div className="flex-grow flex items-center justify-center relative">
                     <video 
                         ref={videoRef} 
                         src={movie.fullMovie} 
@@ -230,27 +254,13 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         playsInline 
                         className="w-full max-h-full" 
                     />
+                    {showResumePrompt && <ResumePromptOverlay onResume={handleResumeFromHost} />}
                 </div>
                  {!isAdmin && partyState?.status === 'live' && (
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4">
                         <div className="bg-black/60 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
                             Playback is controlled by the host.
                         </div>
-                        <button 
-                            onClick={() => {
-                                if (videoRef.current) {
-                                    videoRef.current.muted = !videoRef.current.muted;
-                                    setIsMuted(videoRef.current.muted);
-                                }
-                            }}
-                            className="bg-black/60 p-2 rounded-full text-white backdrop-blur-sm"
-                        >
-                            {isMuted ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" /></svg>
-                            ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                            )}
-                        </button>
                     </div>
                 )}
             </div>
