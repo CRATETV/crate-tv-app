@@ -177,35 +177,46 @@
       }
        /* Print-specific styles */
       @media print {
-        body {
-          background-color: white !important;
-          color: black !important;
+        body * {
+          visibility: hidden;
+        }
+        .printable-area, .printable-area * {
+          visibility: visible;
         }
         .printable-area {
-          visibility: visible !important;
           position: absolute;
           left: 0;
           top: 0;
           width: 100%;
-          padding: 2rem;
-          color: black;
-          background-color: white !important;
+          padding: 1rem;
+          background: white !important;
+          color: black !important;
         }
-        .printable-area * {
-           visibility: visible !important;
+        .printable-area .bg-gray-800\/50, 
+        .printable-area .bg-gray-900\/50, 
+        .printable-area .bg-gray-900,
+        .printable-area .bg-blue-900\/30 {
+            background-color: #f9fafb !important;
+            border: 1px solid #e5e7eb !important;
+        }
+        .printable-area .border-gray-700,
+        .printable-area .border-blue-700,
+        .printable-area .border-purple-700 {
+            border-color: #e5e7eb !important;
+        }
+        .printable-area [class*="text-"] {
+            color: black !important;
+        }
+        .printable-area .text-green-400 { color: #166534 !important; } /* dark green */
+        .printable-area .text-purple-300,
+        .printable-area .text-purple-400 { color: #5b21b6 !important; }
+        .printable-area img {
+          -webkit-print-color-adjust: exact;
+          color-adjust: exact;
         }
         .no-print {
-          display: none !important;
+          display: none;
         }
-        body > div:not(.printable-area), body > header, body > footer {
-            display: none !important;
-        }
-         .printable-area .text-white { color: black !important; }
-        .printable-area .text-gray-300 { color: #333 !important; }
-        .printable-area .text-gray-400 { color: #555 !important; }
-        .printable-area .text-red-300 { color: #b91c1c !important; }
-        .printable-area .bg-gray-800\/50, .printable-area .bg-gray-900 { background-color: #f3f4f6 !important; }
-        .printable-area .border-gray-700 { border-color: #d1d5db !important; }
       }
       .ranked-card-border {
         border: 2px solid var(--rank-color, #374151);

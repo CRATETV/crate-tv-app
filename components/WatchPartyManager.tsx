@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Movie, WatchPartyState } from '../types';
 import ChatMonitorModal from './ChatMonitorModal';
 import { getDbInstance } from '../services/firebaseClient';
+import firebase from 'firebase/compat/app';
 
 interface MovieRowProps {
     movie: Movie;
@@ -158,6 +159,7 @@ const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave
         }
     };
 
+    // FIX: Cast the result of Object.values to Movie[] to provide a concrete type for the chained array methods.
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(movie => movie.title.toLowerCase().includes(filter.toLowerCase()))
         .filter(movie => !showOnlyEnabled || movieSettings[movie.key]?.isWatchPartyEnabled)

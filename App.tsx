@@ -25,6 +25,8 @@ import SquarePaymentModal from './components/SquarePaymentModal';
 import DonationSuccessModal from './components/DonationSuccessModal';
 import WatchPartyAnnouncementModal from './components/WatchPartyAnnouncementModal';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
+import InstallPwaBanner from './components/InstallPwaBanner';
+import InstallInstructionsModal from './components/InstallInstructionsModal';
 
 type DisplayedCategory = {
   key: string;
@@ -90,6 +92,11 @@ const App: React.FC = () => {
   const [isDonationSuccessModalOpen, setIsDonationSuccessModalOpen] = useState(false);
   const [lastDonationDetails, setLastDonationDetails] = useState<{amount: number; email?: string} | null>(null);
 
+  // PWA Install state
+  const [installPromptEvent, setInstallPromptEvent] = useState<Event | null>(null);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [showInstallInstructions, setShowInstallInstructions] = useState(false);
+
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   // Create memoized Sets for efficient `isWatched` and `isLiked` lookups in child components.
@@ -127,11 +134,46 @@ const App: React.FC = () => {
     const handleScroll = () => setIsScrolled(window.pageYOffset > 10);
     window.addEventListener('scroll', handleScroll, { passive: true });
     
+    // PWA Install Prompt Logic
+    const handleBeforeInstallPrompt = (e: Event) => {
+        e.preventDefault();
+        const hasDismissed = sessionStorage.getItem('pwaInstallDismissed');
+        if (!hasDismissed) {
+            setInstallPromptEvent(e);
+            setShowInstallPrompt(true);
+        }
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
     };
   }, []);
+
+  const handleInstallClick = () => {
+      if (installPromptEvent && (installPromptEvent as any).prompt) {
+          (installPromptEvent as any).prompt();
+          (installPromptEvent as any).userChoice.then((choiceResult: { outcome: string }) => {
+              if (choiceResult.outcome === 'accepted') {
+                  console.log('User accepted the install prompt');
+              }
+              setShowInstallPrompt(false);
+              setInstallPromptEvent(null);
+          });
+      } else {
+          // Fallback for browsers without direct prompt support (e.g., Safari)
+          setShowInstallInstructions(true);
+      }
+      setShowInstallPrompt(false);
+  };
+
+  const handleDismissInstall = () => {
+      sessionStorage.setItem('pwaInstallDismissed', 'true');
+      setShowInstallPrompt(false);
+  };
+
 
   useEffect(() => {
     const fetchRecommendations = async () => {
@@ -626,6 +668,12 @@ const App: React.FC = () => {
               email={lastDonationDetails.email}
               onClose={handleCloseSuccessModal}
           />
+      )}
+      {showInstallPrompt && (
+        <InstallPwaBanner onInstallClick={handleInstallClick} onDismiss={handleDismissInstall} />
+      )}
+      {showInstallInstructions && (
+        <InstallInstructionsModal onClose={() => setShowInstallInstructions(false)} />
       )}
       <BottomNavBar 
         onSearchClick={() => setIsMobileSearchOpen(true)}

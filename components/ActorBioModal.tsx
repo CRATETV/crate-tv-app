@@ -62,6 +62,9 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
     setIsSharing(true);
     setCopyStatus('idle');
 
+    const slug = actor.name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-');
+    const profileUrl = `${window.location.origin}/actors-directory/${slug}`;
+
     try {
         const canvas = await html2canvas(modalContentRef.current, {
             backgroundColor: '#2d3748', // Match the modal's background
@@ -75,21 +78,24 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
         }
 
         const file = new File([blob], `${actor.name.replace(/\s/g, '_')}_bio.png`, { type: 'image/png' });
+        
+        const shareData = {
+            title: `About ${actor.name} on Crate TV`,
+            text: `Check out this bio for ${actor.name} from Crate TV.`,
+            url: profileUrl,
+            files: [file]
+        };
 
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                files: [file],
-                title: `About ${actor.name}`,
-                text: `Check out this bio for ${actor.name} from Crate TV.`,
-            });
-        } else if (navigator.clipboard && navigator.clipboard.write) {
-            await navigator.clipboard.write([
-                new ClipboardItem({ 'image/png': blob })
-            ]);
+        if (navigator.canShare && navigator.canShare(shareData)) {
+            await navigator.share(shareData);
+        } else if (navigator.share) { // Fallback for browsers that can't share files
+             await navigator.share({ title: shareData.title, text: shareData.text, url: shareData.url });
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(profileUrl);
             setCopyStatus('copied');
             setTimeout(() => setCopyStatus('idle'), 2500);
         } else {
-            throw new Error('Image sharing is not supported on this browser.');
+            throw new Error('Sharing is not supported on this browser.');
         }
     } catch (error) {
         if (error instanceof Error && error.name !== 'AbortError') {
@@ -167,7 +173,7 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
                         )}
                     </button>
                     {copyStatus === 'copied' && (
-                        <span className="text-sm text-green-400 transition-opacity animate-[fadeIn_0.3s_ease-out]">Image copied!</span>
+                        <span className="text-sm text-green-400 transition-opacity animate-[fadeIn_0.3s_ease-out]">Link copied!</span>
                     )}
                     {copyStatus === 'error' && (
                         <span className="text-sm text-red-400 transition-opacity animate-[fadeIn_0.3s_ease-out]">Failed to share.</span>

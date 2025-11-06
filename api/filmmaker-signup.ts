@@ -7,6 +7,16 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
 
+// List of creators who should automatically get both Actor and Filmmaker roles.
+const DUAL_ROLE_NAMES = new Set([
+    'salome denoon',
+    'michael dwayne paylor',
+    'michelle reale-opalesky',
+    'darrah lashley',
+    'bubacarr sarge',
+    'joshua daniel'
+]);
+
 export async function POST(request: Request) {
   try {
     const { name, email } = await request.json();
@@ -59,16 +69,13 @@ export async function POST(request: Request) {
     const userProfileDoc = await db.collection('users').doc(userRecord.uid).get();
     const existingProfileData = userProfileDoc.data();
     
+    const isDualRole = DUAL_ROLE_NAMES.has(trimmedName);
+
     const newClaims = {
         isFilmmaker: true, // Granting filmmaker role now
-        isActor: existingProfileData?.isActor === true // Preserve existing actor role
+        isActor: existingProfileData?.isActor === true || isDualRole // Preserve existing actor role or grant if on the list
     };
     
-    // FIX: Manually grant dual roles to Salome Denoon to resolve access issues.
-    if (trimmedName === 'salome denoon') {
-        newClaims.isActor = true;
-    }
-
     await auth.setCustomUserClaims(userRecord.uid, newClaims);
     
     await db.collection('users').doc(userRecord.uid).set({ 

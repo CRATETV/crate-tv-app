@@ -7,6 +7,16 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
 
+// List of creators who should automatically get both Actor and Filmmaker roles.
+const DUAL_ROLE_NAMES = new Set([
+    'salome denoon',
+    'michael dwayne paylor',
+    'michelle reale-opalesky',
+    'darrah lashley',
+    'bubacarr sarge',
+    'joshua daniel'
+]);
+
 // Helper to create a URL-friendly slug from a name
 const slugify = (name: string): string => {
     return name
@@ -16,6 +26,7 @@ const slugify = (name: string): string => {
         .replace(/[\s_-]+/g, '-') // collapse whitespace and replace with -
         .replace(/^-+|-+$/g, ''); // remove leading/trailing dashes
 };
+
 
 export async function POST(request: Request) {
   try {
@@ -98,20 +109,15 @@ export async function POST(request: Request) {
     }
 
     // --- Step 3: Set custom claim and Firestore profile (ROBUST METHOD) ---
-    // Fetch the existing user profile from Firestore to get the most reliable role data.
     const userProfileDoc = await db.collection('users').doc(userRecord.uid).get();
     const existingProfileData = userProfileDoc.data();
     
-    // Determine the new, merged set of roles.
+    const isDualRole = DUAL_ROLE_NAMES.has(trimmedName);
+    
     const newClaims = {
         isActor: true, // Granting actor role now
-        isFilmmaker: existingProfileData?.isFilmmaker === true // Preserve existing filmmaker role
+        isFilmmaker: existingProfileData?.isFilmmaker === true || isDualRole // Preserve existing filmmaker role or grant if on the list
     };
-
-    // FIX: Manually grant dual roles to Salome Denoon to resolve access issues.
-    if (trimmedName === 'salome denoon') {
-        newClaims.isFilmmaker = true;
-    }
 
     // Set the custom claims on the Auth user.
     await auth.setCustomUserClaims(userRecord.uid, newClaims);

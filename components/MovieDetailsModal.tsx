@@ -180,6 +180,26 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     onSelectRecommendedMovie(selectedMovie); // Re-use the recommended movie logic
   };
 
+  const handleShareMovie = async () => {
+    const shareData = {
+        title: `Watch "${movie.title}" on Crate TV`,
+        text: (movie.synopsis || '').replace(/<br\s*\/?>/gi, ' ').substring(0, 200).trim() + '...',
+        url: `${window.location.origin}/movie/${movie.key}`
+    };
+    if (navigator.share) {
+        try {
+            await navigator.share(shareData);
+        } catch (error) {
+            console.error('Error sharing:', error);
+        }
+    } else {
+        // Fallback for browsers that don't support Web Share API
+        navigator.clipboard.writeText(shareData.url).then(() => {
+            alert("Link copied to clipboard!");
+        });
+    }
+  };
+
   const recommendedMovies = useMemo(() => {
     if (!movie) return [];
     const recommendedKeys = new Set<string>();
@@ -302,6 +322,9 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                 <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors ${isLiked ? 'text-red-500' : 'text-inherit'}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
+              </button>
+              <button onClick={handleShareMovie} className="h-10 w-10 flex items-center justify-center rounded-full border-2 border-gray-400 text-white hover:border-white transition" aria-label="Share movie">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 100-2.186m0 2.186c-.18.324-.283.696-.283 1.093s.103.77.283 1.093m0-2.186l-9.566-5.314" /></svg>
               </button>
             </div>
           </div>
