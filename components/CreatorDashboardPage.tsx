@@ -18,8 +18,17 @@ const CreatorDashboardPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     
     // Default to the most "active" role (filmmaker > actor), or whichever they have.
-    const defaultView = user?.isFilmmaker ? 'filmmaker' : 'actor';
-    const [activeView, setActiveView] = useState<'filmmaker' | 'actor'>(defaultView);
+    const [activeView, setActiveView] = useState<'filmmaker' | 'actor'>(() => 
+        user?.isFilmmaker ? 'filmmaker' : 'actor'
+    );
+    
+    // This effect ensures the view updates if the user object loads or changes after initial render.
+    useEffect(() => {
+        if (user) {
+            setActiveView(user.isFilmmaker ? 'filmmaker' : 'actor');
+        }
+    }, [user]);
+
 
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
         e.preventDefault();

@@ -23,6 +23,7 @@ import BottomNavBar from './components/BottomNavBar';
 import CollapsibleFooter from './components/CollapsibleFooter';
 import SquarePaymentModal from './components/SquarePaymentModal';
 import DonationSuccessModal from './components/DonationSuccessModal';
+import WatchPartyAnnouncementModal from './components/WatchPartyAnnouncementModal';
 
 type DisplayedCategory = {
   key: string;
@@ -67,6 +68,7 @@ const App: React.FC = () => {
   const [showNewFilmModal, setShowNewFilmModal] = useState(false);
   const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [liveWatchPartyMovie, setLiveWatchPartyMovie] = useState<Movie | null>(null);
 
   // State for centrally managed modals
   const [movieForSupport, setMovieForSupport] = useState<Movie | null>(null);
@@ -164,6 +166,38 @@ const App: React.FC = () => {
     }
   }, [isLoading, isFestivalLive]);
   
+    // Effect to check for live watch parties
+  useEffect(() => {
+    const checkWatchParties = () => {
+        if (!user || Object.keys(movies).length === 0) return;
+
+        const now = Date.now();
+        for (const movie of Object.values(movies) as Movie[]) {
+            if (movie.isWatchPartyEnabled && movie.watchPartyStartTime) {
+                const startTime = new Date(movie.watchPartyStartTime).getTime();
+                // Check if it went live in the last 60 seconds
+                const justWentLive = now >= startTime && now < (startTime + 60 * 1000);
+                
+                if (justWentLive) {
+                    const hasSeen = sessionStorage.getItem(`seenWatchPartyAnnouncement_${movie.key}`);
+                    if (!hasSeen) {
+                        setLiveWatchPartyMovie(movie);
+                        sessionStorage.setItem(`seenWatchPartyAnnouncement_${movie.key}`, 'true');
+                        break; // Only show one announcement at a time
+                    }
+                }
+            }
+        }
+    };
+
+    // Check immediately on load and then every 30 seconds
+    const interval = setInterval(checkWatchParties, 30000);
+    checkWatchParties(); // Also run once on mount
+
+    return () => clearInterval(interval);
+  }, [movies, user]);
+
+
   const heroMovies = useMemo(() => {
     if (!categories.featured?.movieKeys) return [];
     return categories.featured.movieKeys.map(key => movies[key]).filter(Boolean);
@@ -520,6 +554,17 @@ const App: React.FC = () => {
             handlePlayMovie(movies['consumed']);
             handleCloseNewFilmModal();
           }}
+        />
+      )}
+      {liveWatchPartyMovie && (
+        <WatchPartyAnnouncementModal
+            movie={liveWatchPartyMovie}
+            onClose={() => setLiveWatchPartyMovie(null)}
+            onJoin={() => {
+                window.history.pushState({}, '', `/watchparty/${liveWatchPartyMovie.key}`);
+                window.dispatchEvent(new Event('pushstate'));
+                setLiveWatchPartyMovie(null);
+            }}
         />
       )}
       {movieForSupport && !isDonationSuccessModalOpen && (

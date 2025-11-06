@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
@@ -70,6 +67,14 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick }) => {
                 label="Search"
                 onClick={onSearchClick}
             />
+            {user && (
+                 <NavItem 
+                    path="/classics" 
+                    activePath={activePath} 
+                    icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" /></svg>}
+                    label="Classics" 
+                />
+            )}
             {isFestivalLive && (
                 <NavItem 
                     path="/festival" 

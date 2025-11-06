@@ -95,7 +95,7 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
         const userProfile: User = {
             uid,
             email: data.email || '',
-            name: data.name,
+            name: data.name || data.email?.split('@')[0] || 'Creator',
             isActor: data.isActor === true, // Coerce to boolean, defaulting to false
             isFilmmaker: data.isFilmmaker === true, // Coerce to boolean, defaulting to false
             avatar: data.avatar || 'fox',
