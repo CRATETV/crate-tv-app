@@ -47,6 +47,19 @@ const AccountPage: React.FC = () => {
                                 ))}
                             </div>
                         </div>
+                        <div className="bg-gray-700/50 p-4 rounded-md">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <p className="text-sm text-gray-400">Roku Device</p>
+                                    <p className="text-lg text-white font-medium">
+                                        {user.rokuDeviceId ? `Linked (${user.rokuDeviceId.slice(0, 8)}...)` : 'Not Linked'}
+                                    </p>
+                                </div>
+                                <a href="/link-roku" onClick={(e) => handleNavigate(e, '/link-roku')} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md text-sm">
+                                    {user.rokuDeviceId ? 'Link New Device' : 'Link Device'}
+                                </a>
+                            </div>
+                        </div>
                     </div>
 
                     <button

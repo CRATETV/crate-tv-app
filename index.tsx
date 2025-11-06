@@ -45,6 +45,7 @@ import CreatorPortalPage from './components/CreatorPortalPage';
 import CreatorDashboardPage from './components/CreatorDashboardPage';
 import WatchPartyPage from './components/WatchPartyPage';
 import TalentPage from './components/TalentPage';
+import LinkRokuPage from './components/LinkRokuPage';
 
 
 const rootElement = document.getElementById('root');
@@ -114,6 +115,8 @@ const AppRouter: React.FC = () => {
       return user ? <App /> : <LandingPage />;
     case '/account':
       return user ? <AccountPage /> : <RedirectToLogin />;
+    case '/link-roku':
+      return user ? <LinkRokuPage /> : <RedirectToLogin />;
     case '/festival':
        return user ? <FestivalPage /> : <RedirectToLogin />;
     case '/watchlist':

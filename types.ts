@@ -1,4 +1,4 @@
-import { FieldValue } from 'firebase-admin/firestore';
+// types.ts
 
 export interface Actor {
   name: string;
@@ -24,10 +24,8 @@ export interface Movie {
   mainPageExpiry?: string;
   durationInMinutes?: number;
   hasCopyrightMusic?: boolean;
-  // New properties for Watch Party scheduling
   isWatchPartyEnabled?: boolean;
   watchPartyStartTime?: string;
-  // New properties for monetization
   isForSale?: boolean;
   salePrice?: number;
 }
@@ -73,115 +71,46 @@ export interface AboutData {
 }
 
 export interface User {
-  uid: string;
-  email: string | null;
-  name?: string;
-  avatar?: string;
-  isActor?: boolean;
-  isFilmmaker?: boolean;
-  isPremiumSubscriber?: boolean;
-  watchlist: string[];
-  watchedMovies: string[];
-  likedMovies: string[];
-  // Festival & Purchase related
-  hasFestivalAllAccess?: boolean;
-  unlockedBlockIds?: string[];
-  purchasedMovieKeys?: string[];
-}
-
-export interface ActorSubmission {
-  id: string;
-  actorName: string;
-  email: string;
-  bio: string;
-  photoUrl: string;
-  highResPhotoUrl: string;
-  imdbUrl?: string;
-  submissionDate: {
-    seconds: number;
-    nanoseconds: number;
-  };
-  status: 'pending' | 'approved' | 'rejected';
-}
-
-export interface MoviePipelineEntry {
-  id: string;
-  title: string;
-  posterUrl: string;
-  movieUrl: string;
-  cast: string;
-  director: string;
-  submittedAt: any; // Firestore timestamp
-  status: 'pending' | 'processed';
-}
-
-export interface LiveData {
-  movies: Record<string, Movie>;
-  categories: Record<string, Category>;
-  festivalData: FestivalDay[];
-  festivalConfig: FestivalConfig;
-  aboutData: AboutData;
-  actorSubmissions: ActorSubmission[];
-  moviePipeline: MoviePipelineEntry[];
-}
-
-export interface FetchResult {
-  data: LiveData;
-  source: 'live' | 'fallback';
-  timestamp: number;
+    uid: string;
+    email: string;
+    name?: string;
+    isActor?: boolean;
+    isFilmmaker?: boolean;
+    avatar?: string;
+    isPremiumSubscriber?: boolean;
+    watchlist?: string[];
+    watchedMovies?: string[];
+    likedMovies?: string[];
+    hasFestivalAllAccess?: boolean;
+    unlockedBlockIds?: string[];
+    purchasedMovieKeys?: string[];
+    rokuDeviceId?: string;
 }
 
 export interface PayoutRequest {
   id: string;
   directorName: string;
   amount: number;
-  payoutMethod: string;
+  payoutMethod: 'PayPal' | 'Venmo' | 'Other';
   payoutDetails: string;
   status: 'pending' | 'completed';
-  requestDate: { seconds: number; nanoseconds: number; };
-  completionDate?: { seconds: number; nanoseconds: number; };
+  requestDate: { seconds: number; nanoseconds: number };
+  completionDate?: { seconds: number; nanoseconds: number };
 }
 
 export interface AdminPayout {
-  id: string;
-  amount: number;
-  reason: string;
-  payoutDate: { seconds: number, nanoseconds: number };
+    id: string;
+    amount: number;
+    reason: string;
+    payoutDate: { seconds: number, nanoseconds: number };
 }
 
 export interface BillSavingsTransaction {
-  id: string;
-  type: 'deposit' | 'withdrawal';
-  amount: number;
-  reason: string;
-  transactionDate: { seconds: number, nanoseconds: number };
-}
-
-export interface AnalyticsData {
-  totalRevenue: number;
-  totalCrateTvRevenue: number;
-  totalAdminPayouts: number;
-  pastAdminPayouts: AdminPayout[];
-  billSavingsPotTotal: number;
-  billSavingsTransactions: BillSavingsTransaction[];
-  totalUsers: number;
-  viewCounts: Record<string, number>;
-  movieLikes: Record<string, number>;
-  filmmakerPayouts: FilmmakerPayout[];
-  viewLocations: Record<string, Record<string, number>>;
-  allUsers: { email: string }[];
-  actorUsers: { email: string }[];
-  filmmakerUsers: { email: string }[];
-  totalDonations: number;
-  totalSales: number;
-  totalMerchRevenue: number;
-  totalAdRevenue: number;
-  crateTvMerchCut: number;
-  merchSales: Record<string, { name: string; units: number; revenue: number; }>;
-  totalFestivalRevenue: number;
-  festivalPassSales: { units: number; revenue: number; };
-  festivalBlockSales: { units: number; revenue: number; };
-  salesByBlock: Record<string, { units: number; revenue: number; }>;
+    id: string;
+    type: 'deposit' | 'withdrawal';
+    amount: number;
+    reason: string;
+    transactionDate: { seconds: number; nanoseconds: number; };
 }
 
 export interface FilmmakerPayout {
@@ -194,40 +123,70 @@ export interface FilmmakerPayout {
     totalFilmmakerPayout: number;
 }
 
-export interface FilmmakerFilmPerformance {
-    key: string;
-    title: string;
-    views: number;
-    likes: number;
-    donations: number;
-    adRevenue: number;
-}
-
-export interface FilmmakerAnalytics {
+export interface AnalyticsData {
+    totalRevenue: number;
+    totalCrateTvRevenue: number;
+    totalAdminPayouts: number;
+    pastAdminPayouts: AdminPayout[];
+    billSavingsPotTotal: number;
+    billSavingsTransactions: BillSavingsTransaction[];
+    totalUsers: number;
+    viewCounts: Record<string, number>;
+    movieLikes: Record<string, number>;
+    filmmakerPayouts: FilmmakerPayout[];
+    viewLocations: Record<string, Record<string, number>>;
+    allUsers: { email: string }[];
+    actorUsers: { email: string }[];
+    filmmakerUsers: { email: string }[];
     totalDonations: number;
+    totalSales: number;
+    totalMerchRevenue: number;
     totalAdRevenue: number;
-    totalPaidOut: number;
-    balance: number;
-    films: FilmmakerFilmPerformance[];
+    crateTvMerchCut: number;
+    merchSales: Record<string, { name: string; units: number; revenue: number }>;
+    totalFestivalRevenue: number;
+    festivalPassSales: { units: number; revenue: number };
+    festivalBlockSales: { units: number; revenue: number };
+    salesByBlock: Record<string, { units: number; revenue: number }>;
 }
 
-export interface ActorProfile {
-    name: string;
-    slug: string;
-    bio: string;
-    photo: string;
-    highResPhoto: string;
-    imdbUrl: string;
-}
-
-export interface ActorPost {
+export interface ActorSubmission {
     id: string;
     actorName: string;
-    actorPhoto: string;
-    content: string;
-    imageUrl?: string;
-    timestamp: any; // Firestore timestamp
-    likes: string[];
+    email: string;
+    bio: string;
+    photoUrl: string;
+    highResPhotoUrl: string;
+    imdbUrl?: string;
+    submissionDate: { seconds: number, nanoseconds: number };
+    status: 'pending' | 'approved' | 'rejected';
+}
+
+export interface MoviePipelineEntry {
+    id: string;
+    title: string;
+    posterUrl: string;
+    movieUrl: string;
+    cast: string;
+    director: string;
+    submittedAt: any; // Firestore timestamp
+    status: 'pending' | 'processed';
+}
+
+export interface LiveData {
+    movies: Record<string, Movie>;
+    categories: Record<string, Category>;
+    festivalConfig: FestivalConfig;
+    festivalData: FestivalDay[];
+    aboutData: AboutData;
+    actorSubmissions: ActorSubmission[];
+    moviePipeline: MoviePipelineEntry[];
+}
+
+export interface FetchResult {
+    data: LiveData;
+    source: 'live' | 'fallback';
+    timestamp: number;
 }
 
 export interface ChatMessage {
@@ -242,67 +201,75 @@ export interface WatchPartyState {
   isPlaying: boolean;
   currentTime: number;
   status: 'waiting' | 'live' | 'ended';
-  lastUpdatedBy?: string;
-  lastUpdated?: any; // Firestore server timestamp
+  lastUpdatedBy: string;
+  lastUpdated?: any; // Firestore timestamp
 }
 
-// Types for the new Growth Analytics feature
+export interface ActorPost {
+    id: string;
+    actorName: string;
+    actorPhoto: string;
+    content: string;
+    imageUrl?: string;
+    timestamp: any; // Firestore timestamp
+    likes: string[];
+}
+
+export interface ActorProfile {
+    name: string;
+    slug: string;
+    bio: string;
+    photo: string;
+    highResPhoto: string;
+    imdbUrl: string;
+}
+
 export interface MonthlyDataPoint {
-  month: string; // e.g., "Jul '24"
+  month: string;
   value: number;
 }
 
-export interface GrowthAnalyticsData {
-  historical: {
-    users: MonthlyDataPoint[];
-    revenue: MonthlyDataPoint[];
-  };
-  projections: {
-    users: MonthlyDataPoint[];
-    revenue: MonthlyDataPoint[];
-  };
-  keyMetrics: {
-    totalUsers: number;
-    totalRevenue: number;
-    projectedUsersYtd: number;
-    projectedRevenueYtd: number;
-    // New detailed metrics
-    totalViews: number;
-    totalLikes: number;
-    totalWatchlistAdds: number;
-    totalFilms: number;
-    mostViewedFilm: { title: string; views: number };
-    mostLikedFilm: { title: string; likes: number };
-    avgRevenuePerUser: number;
-    totalDonations: number;
-    totalSales: number;
-    // New visitor metrics
-    totalVisitors: number;
-    conversionRate: number;
-    // New detailed breakdown metrics
-    audienceBreakdown: {
-        total: number;
-        actors: number;
-        filmmakers: number;
-    };
-    topCountries: { country: string; views: number }[];
-    topEarningFilms: {
-        title: string;
-        totalRevenue: number;
-        adRevenue: number;
-        donationRevenue: number;
-    }[];
-    // New active user metrics
-    dailyActiveUsers: number;
-    weeklyActiveUsers: number;
-  };
-  // Data for investor snapshot
-  aboutData?: AboutData;
-  avgMoMUserGrowth?: number;
-}
-
 export interface AiGrowthAdvice {
-  userGrowth: string[];
-  revenueGrowth: string[];
-  communityEngagement: string[];
+    userGrowth: string[];
+    revenueGrowth: string[];
+    communityEngagement: string[];
+}
+  
+export interface GrowthAnalyticsData {
+    historical: {
+        users: MonthlyDataPoint[];
+        revenue: MonthlyDataPoint[];
+    };
+    projections: {
+        users: MonthlyDataPoint[];
+        revenue: MonthlyDataPoint[];
+    };
+    keyMetrics: {
+        totalVisitors: number;
+        totalUsers: number;
+        conversionRate: number;
+        dailyActiveUsers: number;
+        weeklyActiveUsers: number;
+        totalRevenue: number;
+        projectedUsersYtd: number;
+        projectedRevenueYtd: number;
+        totalViews: number;
+        totalLikes: number;
+        totalWatchlistAdds: number;
+        totalFilms: number;
+        mostViewedFilm: { title: string; views: number };
+        mostLikedFilm: { title: string; likes: number };
+        avgRevenuePerUser: number;
+        totalDonations: number;
+        totalSales: number;
+        audienceBreakdown: {
+            total: number;
+            actors: number;
+            filmmakers: number;
+        };
+        topCountries: { country: string; views: number }[];
+        topEarningFilms: { title: string; totalRevenue: number }[];
+    };
+    aboutData?: AboutData;
+    avgMoMUserGrowth?: number;
 }

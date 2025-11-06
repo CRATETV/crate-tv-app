@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="AccountLinkScene" extends="Scene">
+    <script type="text/brightscript" uri="pkg:/components/AccountLinkScene.brs" />
+    <children>
+        <!-- Background -->
+        <Poster 
+            uri="pkg:/images/splash_hd.png" 
+            width="1920" 
+            height="1080"
+        />
+        <Rectangle color="0x000000B0" width="1920" height="1080" />
+
+        <!-- Centered Content Group -->
+        <Group translation="[960, 540]" horizAlign="center" vertAlign="center">
+            <Label 
+                text="Link Your Crate TV Account"
+                width="1200"
+                horizAlign="center"
+                font="font:LargeBoldSystemFont"
+            />
+            <Label
+                id="instructionsLabel"
+                text="1. Go to cratetv.net/link-roku on a computer or phone.
+2. Log in to your Crate TV account.
+3. Enter the code below:"
+                width="800"
+                wrap="true"
+                horizAlign="center"
+                translation="[0, 100]"
+                font="font:SmallSystemFont"
+            />
+            <Label 
+                id="codeLabel"
+                text="LOADING..."
+                width="1200"
+                horizAlign="center"
+                translation="[0, 250]"
+            >
+                <font role="sans" size="80" />
+            </Label>
+            <Label 
+                id="statusLabel"
+                text="Waiting for you to enter the code on the website..."
+                width="800"
+                horizAlign="center"
+                translation="[0, 350]"
+                font="font:SmallSystemFont"
+                color="0xFFFF00FF"
+            />
+        </Group>
+
+        <!-- Task node for checking link status -->
+        <Task id="statusCheckTask" />
+    </children>
+</component>

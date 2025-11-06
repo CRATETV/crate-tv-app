@@ -1,0 +1,1 @@
+full contents of api/generate-security-advice.ts

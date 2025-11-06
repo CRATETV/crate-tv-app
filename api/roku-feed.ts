@@ -2,7 +2,8 @@
 // It will be accessible at the path /api/roku-feed
 
 import { getApiData } from './_lib/data.js';
-import { Movie, Category, FestivalConfig } from '../types.js';
+import { Movie, Category, FestivalConfig, FestivalDay, FilmBlock } from '../types.js';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 
 interface RokuMovie {
     id: string;
@@ -65,7 +66,20 @@ const formatMovieForRoku = (movie: Movie, movieGenreMap: Map<string, string[]>):
 
 export async function GET(request: Request) {
   try {
-    const { movies: moviesData, categories: categoriesData, festivalConfig } = await getApiData();
+    const { searchParams } = new URL(request.url);
+    const deviceId = searchParams.get('deviceId');
+
+    let isDeviceLinked = false;
+    if (deviceId) {
+        const initError = getInitializationError();
+        const db = getAdminDb();
+        if (!initError && db) {
+            const linkDoc = await db.collection('roku_links').doc(deviceId).get();
+            isDeviceLinked = linkDoc.exists;
+        }
+    }
+
+    const { movies: moviesData, categories: categoriesData, festivalConfig, festivalData } = await getApiData();
     const visibleMovies = getVisibleMovies(moviesData);
     
     const movieGenreMap = new Map<string, string[]>();
@@ -83,32 +97,20 @@ export async function GET(request: Request) {
         }
     });
     
-    // 1. Get Hero Items from 'featured' category (Refactored for compiler stability)
     const heroMovieKeys: string[] = categoriesData['featured']?.movieKeys || [];
     const heroMovieObjects: (Movie | undefined)[] = heroMovieKeys.map((key: string) => visibleMovies[key]);
     const validHeroMovies: Movie[] = heroMovieObjects.filter((movie): movie is Movie => !!movie);
     const heroItems = validHeroMovies.map((movie: Movie) => formatMovieForRoku(movie, movieGenreMap));
         
-    // Helper function to process a single category into the Roku format
     const processCategory = (categoryData: Category): RokuCategory | null => {
-        if (!categoryData || !Array.isArray(categoryData.movieKeys)) {
-            return null;
-        }
-        // Refactored for clarity and compiler stability
+        if (!categoryData || !Array.isArray(categoryData.movieKeys)) return null;
         const movieObjects = categoryData.movieKeys.map((movieKey: string) => visibleMovies[movieKey]);
         const validMovies = movieObjects.filter((movie): movie is Movie => !!movie);
         const rokuMovies = validMovies.map((movie: Movie) => formatMovieForRoku(movie, movieGenreMap));
-          
-        if (rokuMovies.length > 0) {
-            return {
-                title: categoryData.title,
-                children: rokuMovies,
-            };
-        }
+        if (rokuMovies.length > 0) return { title: categoryData.title, children: rokuMovies };
         return null;
     };
     
-    // 2. Get Top 10 Movies (Rewritten with a for-loop for maximum compiler stability)
     const allVisibleMovies: Movie[] = Object.values(visibleMovies);
     const moviesWithLikes: Movie[] = [];
     for (const movie of allVisibleMovies) {
@@ -116,15 +118,7 @@ export async function GET(request: Request) {
             moviesWithLikes.push(movie);
         }
     }
-
-    // Sort the filtered movies by likes in descending order.
-    const sortedMovies = moviesWithLikes.sort((a: Movie, b: Movie) => {
-        const likesA = a.likes || 0;
-        const likesB = b.likes || 0;
-        return likesB - likesA;
-    });
-    
-    // Get the top 10.
+    const sortedMovies = moviesWithLikes.sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0));
     const topTenMovies = sortedMovies.slice(0, 10);
 
     const topTenCategory: Category | null = topTenMovies.length > 0 ? {
@@ -132,26 +126,43 @@ export async function GET(request: Request) {
         movieKeys: topTenMovies.map((m: Movie) => m.key)
     } : null;
 
-    // 3. Get Now Playing Movie
     const nowPlayingMovie = visibleMovies['consumed'];
     const nowPlayingCategory: Category | null = nowPlayingMovie ? {
         title: "Now Playing",
         movieKeys: ['consumed']
     } : null;
 
-    // 4. Handle Live Festival
     const isFestivalLive = festivalConfig?.startDate && festivalConfig?.endDate && 
                            new Date() >= new Date(festivalConfig.startDate) && 
                            new Date() < new Date(festivalConfig.endDate);
-    const liveFestivalCategory: Category | null = (isFestivalLive && categoriesData['pwff12thAnnual']) ? {
-        title: "Film Festival - LIVE NOW",
-        movieKeys: categoriesData['pwff12thAnnual'].movieKeys,
-    } : null;
+                           
+    const festivalCategories: Category[] = [];
+    if (isFestivalLive && festivalData) {
+        festivalData.forEach((day: FestivalDay) => {
+            day.blocks.forEach((block: FilmBlock) => {
+                festivalCategories.push({ title: `Day ${day.day}: ${block.title}`, movieKeys: block.movieKeys });
+            });
+        });
+    }
 
-    // 5. Assemble categories in order
-    const finalCategories: RokuCategory[] = [];
+    // --- Add Account Linking Category ---
+    const accountCategory: RokuCategory = {
+        title: "My Account",
+        children: [{
+            id: "link_account_action", // Special ID for the Roku app to identify this action
+            title: isDeviceLinked ? "Account Linked" : "Link This Device",
+            description: isDeviceLinked 
+                ? "Your Crate TV account is linked to this Roku device. Your purchases will be synced." 
+                : "Link your Crate TV account to sync purchases and unlock content. Select this item to get your unique link code.",
+            SDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png",
+            HDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png",
+            heroImage: "", streamUrl: "", director: "", actors: [], genres: [], rating: "", duration: ""
+        }]
+    };
+
+    const finalCategories: RokuCategory[] = [accountCategory];
     const orderedCategories: (Category | null)[] = [
-        liveFestivalCategory,
+        ...festivalCategories,
         nowPlayingCategory,
         topTenCategory,
     ];
@@ -183,7 +194,7 @@ export async function GET(request: Request) {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 's-maxage=600, stale-while-revalidate', // Cache for 10 minutes
+        'Cache-Control': 's-maxage=600, stale-while-revalidate',
       },
     });
   } catch (error) {
