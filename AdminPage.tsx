@@ -15,6 +15,7 @@ import TopFilmsTab from './components/TopFilmsTab';
 import EmailSender from './components/EmailSender';
 import RokuAdminTab from './components/RokuAdminTab';
 import WatchPartyManager from './components/WatchPartyManager';
+import GrowthAnalyticsTab from './components/GrowthAnalyticsTab';
 
 type AdminRole = 'super_admin' | 'festival_admin' | 'collaborator' | null;
 
@@ -178,7 +179,7 @@ const AdminPage: React.FC = () => {
     const getAvailableTabs = (role: AdminRole): string[] => {
         switch (role) {
             case 'super_admin':
-                return ['analytics', 'movies', 'categories', 'festival', 'about', 'pipeline', 'payouts', 'top-films', 'emails', 'watch-party', 'roku', 'fallback'];
+                return ['analytics', 'growth', 'movies', 'categories', 'festival', 'about', 'pipeline', 'payouts', 'top-films', 'emails', 'watch-party', 'roku', 'fallback'];
             case 'festival_admin':
                 return ['festival', 'analytics-festival'];
             case 'collaborator':
@@ -207,6 +208,7 @@ const AdminPage: React.FC = () => {
                 
                 <div className="flex flex-wrap items-center gap-2 mb-6 border-b border-gray-700 pb-4">
                     {availableTabs.includes('analytics') && <TabButton tabId="analytics" label="Analytics" />}
+                    {availableTabs.includes('growth') && <TabButton tabId="growth" label="Growth & AI" />}
                     {availableTabs.includes('movies') && <TabButton tabId="movies" label="Movies" />}
                     {availableTabs.includes('categories') && <TabButton tabId="categories" label="Categories" />}
                     {availableTabs.includes('festival') && <TabButton tabId="festival" label="Festival" />}
@@ -228,6 +230,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'about' && data.aboutData && <AboutEditor initialData={data.aboutData} onSave={saveAboutData} />}
                     {activeTab === 'fallback' && <FallbackGenerator movies={data.movies} categories={data.categories} festivalData={data.festivalData} festivalConfig={data.festivalConfig} aboutData={data.aboutData} />}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
+                    {activeTab === 'growth' && <GrowthAnalyticsTab />}
                     {activeTab === 'analytics-festival' && <AnalyticsPage viewMode="festival" />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={data.moviePipeline} onCreateMovie={(item) => {/* Logic to open MovieEditor with pre-filled data */}} />}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}

@@ -1,3 +1,5 @@
+import { FieldValue } from 'firebase-admin/firestore';
+
 export interface Actor {
   name: string;
   photo: string;
@@ -241,4 +243,33 @@ export interface WatchPartyState {
   currentTime: number;
   lastUpdatedBy?: string;
   lastUpdated?: any; // Firestore server timestamp
+}
+
+// Types for the new Growth Analytics feature
+export interface MonthlyDataPoint {
+  month: string; // e.g., "Jul '24"
+  value: number;
+}
+
+export interface GrowthAnalyticsData {
+  historical: {
+    users: MonthlyDataPoint[];
+    revenue: MonthlyDataPoint[];
+  };
+  projections: {
+    users: MonthlyDataPoint[];
+    revenue: MonthlyDataPoint[];
+  };
+  keyMetrics: {
+    totalUsers: number;
+    totalRevenue: number;
+    projectedUsersYtd: number;
+    projectedRevenueYtd: number;
+  };
+}
+
+export interface AiGrowthAdvice {
+  userGrowth: string[];
+  revenueGrowth: string[];
+  communityEngagement: string[];
 }
