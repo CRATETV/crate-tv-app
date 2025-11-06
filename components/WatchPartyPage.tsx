@@ -5,10 +5,30 @@ import { useFestival } from '../contexts/FestivalContext';
 import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
+import Countdown from './Countdown';
 
 interface WatchPartyPageProps {
     movieKey: string;
 }
+
+const getWatchPartyStatus = (movie: Movie | undefined): 'not_enabled' | 'upcoming' | 'live' | 'ended' => {
+    if (!movie?.isWatchPartyEnabled || !movie.watchPartyStartTime) {
+        return 'not_enabled';
+    }
+
+    const now = new Date();
+    const startTime = new Date(movie.watchPartyStartTime);
+    const endTime = new Date(startTime.getTime() + 4 * 60 * 60 * 1000); // Assume a 4-hour duration
+
+    if (now < startTime) {
+        return 'upcoming';
+    } else if (now >= startTime && now <= endTime) {
+        return 'live';
+    } else {
+        return 'ended';
+    }
+};
+
 
 const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const { user } = useAuth();
@@ -20,9 +40,31 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const movie = movies[movieKey];
+    const [status, setStatus] = useState(() => getWatchPartyStatus(movie));
+
+    useEffect(() => {
+        // If the status changes (e.g. from context update), re-evaluate
+        setStatus(getWatchPartyStatus(movie));
+    }, [movie]);
+    
+    // Timer to automatically switch from 'upcoming' to 'live'
+    useEffect(() => {
+        if (status === 'upcoming' && movie?.watchPartyStartTime) {
+            const startTime = new Date(movie.watchPartyStartTime).getTime();
+            const interval = setInterval(() => {
+                if (Date.now() >= startTime) {
+                    setStatus('live');
+                    clearInterval(interval);
+                }
+            }, 1000);
+            return () => clearInterval(interval);
+        }
+    }, [status, movie]);
 
     // Set up a real-time listener for chat messages
     useEffect(() => {
+        if (status !== 'live') return;
+
         const db = getDbInstance();
         if (!db) return;
 
@@ -37,7 +79,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
         // Cleanup listener on unmount
         return () => unsubscribe();
-    }, [movieKey]);
+    }, [movieKey, status]);
 
     // Auto-scroll to the latest message
     useEffect(() => {
@@ -83,8 +125,35 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     if (!movie) {
         return (
-            <div className="flex items-center justify-center h-screen bg-black text-white">
-                <p>Movie not found.</p>
+            <div className="flex flex-col items-center justify-center h-screen bg-black text-white p-4">
+                <h1 className="text-2xl font-bold mb-4">Movie Not Found</h1>
+                <button onClick={handleGoBack} className="submit-btn">Go Back</button>
+            </div>
+        );
+    }
+    
+    if (status === 'not_enabled' || status === 'ended') {
+        return (
+            <div className="flex flex-col items-center justify-center h-screen bg-black text-white p-4 text-center">
+                <h1 className="text-2xl font-bold mb-2">Watch Party {status === 'ended' ? 'Has Ended' : 'Not Available'}</h1>
+                <p className="text-gray-400 mb-6">This watch party for "{movie.title}" is not currently active.</p>
+                <button onClick={handleGoBack} className="submit-btn">Go Back</button>
+            </div>
+        );
+    }
+
+    if (status === 'upcoming' && movie.watchPartyStartTime) {
+         return (
+            <div className="flex flex-col items-center justify-center h-screen bg-black text-white p-4 text-center" style={{backgroundImage: `url(${movie.poster})`, backgroundSize: 'cover', backgroundPosition: 'center'}}>
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-lg"></div>
+                <div className="relative z-10">
+                    <h1 className="text-3xl md:text-5xl font-bold mb-2">Watch Party for "{movie.title}"</h1>
+                    <p className="text-lg md:text-xl text-gray-300 mb-6">Get ready! The party is about to begin.</p>
+                    <div className="bg-black/50 rounded-lg p-6 text-4xl md:text-6xl font-bold">
+                        <Countdown prefix="Starting in" targetDate={movie.watchPartyStartTime} onEnd={() => setStatus('live')} />
+                    </div>
+                    <button onClick={handleGoBack} className="submit-btn mt-8">Go Back</button>
+                </div>
             </div>
         );
     }

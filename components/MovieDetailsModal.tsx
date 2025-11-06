@@ -41,6 +41,24 @@ const RecommendedMovieCard: React.FC<{ movie: Movie; onClick: (movie: Movie) => 
     );
 };
 
+const getWatchPartyStatus = (movie: Movie): 'not_enabled' | 'upcoming' | 'live' | 'ended' => {
+    if (!movie?.isWatchPartyEnabled || !movie.watchPartyStartTime) {
+        return 'not_enabled';
+    }
+
+    const now = new Date();
+    const startTime = new Date(movie.watchPartyStartTime);
+    const endTime = new Date(startTime.getTime() + 4 * 60 * 60 * 1000); // Assume a 4-hour duration
+
+    if (now < startTime) {
+        return 'upcoming';
+    } else if (now >= startTime && now <= endTime) {
+        return 'live';
+    } else {
+        return 'ended';
+    }
+};
+
 
 const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({ 
   movie, 
@@ -65,8 +83,26 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const [released, setReleased] = useState(() => isMovieReleased(movie));
+  const [watchPartyStatus, setWatchPartyStatus] = useState(() => getWatchPartyStatus(movie));
   
   const isOnWatchlist = useMemo(() => watchlist.includes(movie.key), [watchlist, movie.key]);
+
+  useEffect(() => {
+    const status = getWatchPartyStatus(movie);
+    setWatchPartyStatus(status);
+    
+    if (status === 'upcoming' && movie.watchPartyStartTime) {
+        const startTime = new Date(movie.watchPartyStartTime).getTime();
+        const interval = setInterval(() => {
+            if (Date.now() >= startTime) {
+                setWatchPartyStatus('live');
+                clearInterval(interval);
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }
+  }, [movie]);
+
 
   useEffect(() => {
     if (released) return;
@@ -221,19 +257,25 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                         Join Premium to Watch
                     </button>
                   ) : movie.fullMovie ? (
-                    <>
                     <button onClick={handlePlayButtonClick} className="flex items-center justify-center px-4 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                         Play Full Movie
                     </button>
-                    <button onClick={handleWatchPartyClick} className="flex items-center justify-center px-4 py-2 bg-blue-600/80 text-white font-bold rounded-md hover:bg-blue-700/80 transition-colors">
+                  ) : null}
+                  {watchPartyStatus === 'live' && (
+                     <button onClick={handleWatchPartyClick} className="flex items-center justify-center px-4 py-2 bg-blue-600/80 text-white font-bold rounded-md hover:bg-blue-700/80 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
-                        Watch Party
+                        Join Watch Party
                     </button>
-                    </>
-                  ) : null}
+                  )}
+                  {watchPartyStatus === 'upcoming' && movie.watchPartyStartTime && (
+                     <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-600/50 text-white font-bold rounded-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <Countdown prefix="Starts in" targetDate={movie.watchPartyStartTime} onEnd={() => setWatchPartyStatus('live')} />
+                    </div>
+                  )}
                   {!movie.hasCopyrightMusic && (
                     <button onClick={() => onSupportMovie(movie)} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors">
                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">

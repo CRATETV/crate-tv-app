@@ -4,6 +4,7 @@ interface CountdownProps {
   targetDate: string;
   onEnd?: () => void;
   className?: string;
+  prefix?: string;
 }
 
 const calculateTimeLeft = (target: Date) => {
@@ -29,7 +30,7 @@ const calculateTimeLeft = (target: Date) => {
   return timeLeft;
 };
 
-const Countdown: React.FC<CountdownProps> = ({ targetDate, onEnd, className }) => {
+const Countdown: React.FC<CountdownProps> = ({ targetDate, onEnd, className, prefix = 'Premieres in' }) => {
   const [target] = useState(new Date(targetDate));
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft(target));
 
@@ -67,7 +68,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, onEnd, className }) =
 
   return (
     <span className={className}>
-      Premieres in {parts.slice(0, 3).join(' ')}
+      {prefix} {parts.slice(0, 3).join(' ')}
     </span>
   );
 };
