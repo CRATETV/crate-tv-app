@@ -1,5 +1,3 @@
-
-
 // This is a Vercel Serverless Function
 // Path: /api/filmmaker-signup
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';

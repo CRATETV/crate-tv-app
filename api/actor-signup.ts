@@ -1,5 +1,3 @@
-
-
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/actor-signup
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
