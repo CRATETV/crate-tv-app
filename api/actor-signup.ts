@@ -1,4 +1,5 @@
 
+
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/actor-signup
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -93,9 +94,7 @@ export async function POST(request: Request) {
         if (error.code === 'auth/user-not-found') {
             userRecord = await auth.createUser({ email, displayName: name });
         } else {
-             if(error.code === 'auth/email-already-exists') {
-                throw new Error("This email is already associated with an account. Please use a different email or contact support.");
-             }
+            // Rethrow other unexpected errors from getUserByEmail
             throw error;
         }
     }

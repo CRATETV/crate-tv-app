@@ -41,7 +41,7 @@ const TimeAgo: React.FC<{ timestamp: any }> = ({ timestamp }) => {
         };
 
         calculateAndSetTime(); // Initial calculation
-        const intervalId = setInterval(calculateAndSetTime, 60000); // Update every minute
+        const intervalId = setInterval(calculateAndSetTime, 30000); // Update every 30 seconds
 
         return () => clearInterval(intervalId); // Cleanup on unmount
     }, [timestamp]);

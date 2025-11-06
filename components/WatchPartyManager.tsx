@@ -141,14 +141,20 @@ const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave
     };
     
     const handleStartParty = async (movieKey: string) => {
-        const db = getDbInstance();
-        if (!db) return;
-        const docRef = db.collection('watch_parties').doc(movieKey);
+        const password = sessionStorage.getItem('adminPassword');
         try {
-            await docRef.set({ status: 'live' }, { merge: true });
-        } catch(error) {
+            const response = await fetch('/api/start-watch-party', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey, password }),
+            });
+            if (!response.ok) {
+                throw new Error((await response.json()).error || 'Failed to start party.');
+            }
+            // The listener will automatically update the UI status.
+        } catch (error) {
             console.error("Failed to start party:", error);
-            alert("Error: Could not start the party. Check console for details.");
+            alert(`Error: Could not start the party. ${(error as Error).message}`);
         }
     };
 
