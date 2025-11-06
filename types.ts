@@ -241,6 +241,7 @@ export interface ChatMessage {
 export interface WatchPartyState {
   isPlaying: boolean;
   currentTime: number;
+  status: 'waiting' | 'live' | 'ended';
   lastUpdatedBy?: string;
   lastUpdated?: any; // Firestore server timestamp
 }
@@ -265,7 +266,39 @@ export interface GrowthAnalyticsData {
     totalRevenue: number;
     projectedUsersYtd: number;
     projectedRevenueYtd: number;
+    // New detailed metrics
+    totalViews: number;
+    totalLikes: number;
+    totalWatchlistAdds: number;
+    totalFilms: number;
+    mostViewedFilm: { title: string; views: number };
+    mostLikedFilm: { title: string; likes: number };
+    avgRevenuePerUser: number;
+    totalDonations: number;
+    totalSales: number;
+    // New visitor metrics
+    totalVisitors: number;
+    conversionRate: number;
+    // New detailed breakdown metrics
+    audienceBreakdown: {
+        total: number;
+        actors: number;
+        filmmakers: number;
+    };
+    topCountries: { country: string; views: number }[];
+    topEarningFilms: {
+        title: string;
+        totalRevenue: number;
+        adRevenue: number;
+        donationRevenue: number;
+    }[];
+    // New active user metrics
+    dailyActiveUsers: number;
+    weeklyActiveUsers: number;
   };
+  // Data for investor snapshot
+  aboutData?: AboutData;
+  avgMoMUserGrowth?: number;
 }
 
 export interface AiGrowthAdvice {

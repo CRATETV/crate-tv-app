@@ -1,26 +1,54 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { Movie } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Movie, WatchPartyState } from '../types';
 import ChatMonitorModal from './ChatMonitorModal';
+import { getDbInstance } from '../services/firebaseClient';
 
 interface MovieRowProps {
     movie: Movie;
+    partyState?: WatchPartyState;
     onChange: (updates: Partial<Movie>) => void;
     onMonitorChat: (movieKey: string) => void;
+    onStartParty: (movieKey: string) => void;
 }
 
-const MovieRow: React.FC<MovieRowProps> = ({ movie, onChange, onMonitorChat }) => {
+const getPartyStatusText = (movie: Movie, partyState?: WatchPartyState) => {
+    if (!movie.isWatchPartyEnabled || !movie.watchPartyStartTime) {
+        return { text: 'Disabled', color: 'bg-gray-500' };
+    }
+    const now = new Date();
+    const startTime = new Date(movie.watchPartyStartTime);
+    if (now < startTime) {
+        return { text: 'Upcoming', color: 'bg-blue-500' };
+    }
+    if (partyState?.status === 'live') {
+        return { text: 'Live', color: 'bg-red-500 animate-pulse' };
+    }
+    if (partyState?.status === 'waiting') {
+        return { text: 'Waiting for Host', color: 'bg-yellow-500' };
+    }
+    return { text: 'Ended', color: 'bg-gray-700' };
+};
+
+const MovieRow: React.FC<MovieRowProps> = ({ movie, partyState, onChange, onMonitorChat, onStartParty }) => {
     const handleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const isEnabled = e.target.checked;
-        onChange({ isWatchPartyEnabled: isEnabled });
+        onChange({ isWatchPartyEnabled: e.target.checked });
     };
 
     const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         onChange({ watchPartyStartTime: e.target.value });
     };
 
+    const status = getPartyStatusText(movie, partyState);
+    const canStart = movie.isWatchPartyEnabled && movie.watchPartyStartTime && new Date() >= new Date(movie.watchPartyStartTime) && partyState?.status === 'waiting';
+
     return (
         <tr className="border-b border-gray-700">
             <td className="p-3 font-medium text-white">{movie.title}</td>
+            <td className="p-3">
+                <span className={`px-2 py-1 text-xs font-bold text-white rounded-full ${status.color}`}>
+                    {status.text}
+                </span>
+            </td>
             <td className="p-3">
                 <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" checked={movie.isWatchPartyEnabled || false} onChange={handleToggle} className="sr-only peer" />
@@ -36,7 +64,14 @@ const MovieRow: React.FC<MovieRowProps> = ({ movie, onChange, onMonitorChat }) =
                     disabled={!movie.isWatchPartyEnabled}
                 />
             </td>
-            <td className="p-3">
+            <td className="p-3 flex gap-2">
+                <button 
+                    onClick={() => onStartParty(movie.key)}
+                    disabled={!canStart}
+                    className="text-xs bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-1 px-3 rounded-md"
+                >
+                    Start Party
+                </button>
                 <button onClick={() => onMonitorChat(movie.key)} className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md">
                     Monitor Chat
                 </button>
@@ -52,11 +87,25 @@ interface WatchPartyManagerProps {
 
 const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave }) => {
     const [movieSettings, setMovieSettings] = useState<Record<string, Movie>>(allMovies);
+    const [partyStates, setPartyStates] = useState<Record<string, WatchPartyState>>({});
     const [isSaving, setIsSaving] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [filter, setFilter] = useState('');
     const [showOnlyEnabled, setShowOnlyEnabled] = useState(false);
     const [monitoringMovieKey, setMonitoringMovieKey] = useState<string | null>(null);
+    
+    useEffect(() => {
+        const db = getDbInstance();
+        if (!db) return;
+        const unsub = db.collection('watch_parties').onSnapshot(snapshot => {
+            const states: Record<string, WatchPartyState> = {};
+            snapshot.forEach(doc => {
+                states[doc.id] = doc.data() as WatchPartyState;
+            });
+            setPartyStates(states);
+        });
+        return () => unsub();
+    }, []);
 
     const hasUnsavedChanges = useMemo(() => {
         return JSON.stringify(allMovies) !== JSON.stringify(movieSettings);
@@ -90,6 +139,18 @@ const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave
             setTimeout(() => setSaveStatus('idle'), 3000);
         }
     };
+    
+    const handleStartParty = async (movieKey: string) => {
+        const db = getDbInstance();
+        if (!db) return;
+        const docRef = db.collection('watch_parties').doc(movieKey);
+        try {
+            await docRef.set({ status: 'live' }, { merge: true });
+        } catch(error) {
+            console.error("Failed to start party:", error);
+            alert("Error: Could not start the party. Check console for details.");
+        }
+    };
 
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(movie => movie.title.toLowerCase().includes(filter.toLowerCase()))
@@ -100,7 +161,7 @@ const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave
         <>
             <div className="bg-gray-950 p-6 rounded-lg text-gray-200">
                 <h2 className="text-xl sm:text-2xl font-bold mb-4 text-pink-400">Watch Party Manager</h2>
-                <p className="text-sm text-gray-400 mb-6">Enable watch parties and set start times for any film. Click "Save All Changes" to make them live.</p>
+                <p className="text-sm text-gray-400 mb-6">Enable parties, set start times, and manually start events. Click "Save All Changes" to update schedules.</p>
                 
                 <div className="flex flex-col sm:flex-row gap-4 mb-4">
                     <input
@@ -126,6 +187,7 @@ const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave
                         <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
                             <tr>
                                 <th className="p-3">Film Title</th>
+                                <th className="p-3">Status</th>
                                 <th className="p-3">Enabled</th>
                                 <th className="p-3">Start Time</th>
                                 <th className="p-3">Actions</th>
@@ -136,8 +198,10 @@ const WatchPartyManager: React.FC<WatchPartyManagerProps> = ({ allMovies, onSave
                                 <MovieRow 
                                     key={movie.key} 
                                     movie={movieSettings[movie.key]} 
+                                    partyState={partyStates[movie.key]}
                                     onChange={(updates) => handleMovieChange(movie.key, updates)} 
                                     onMonitorChat={setMonitoringMovieKey} 
+                                    onStartParty={handleStartParty}
                                 />
                             ))}
                         </tbody>

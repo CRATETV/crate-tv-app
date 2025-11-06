@@ -14,7 +14,7 @@ interface TopTenShareableImageProps {
 const TopTenShareableImage: React.FC<TopTenShareableImageProps> = ({ topFilms, date }) => {
   const containerStyle: React.CSSProperties = {
     width: '1080px',
-    height: '1080px',
+    height: '1350px',
     fontFamily: "'Inter', sans-serif",
   };
 

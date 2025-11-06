@@ -1,9 +1,10 @@
 import { getAdminAuth, getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { GrowthAnalyticsData, MonthlyDataPoint } from '../types.js';
+import { GrowthAnalyticsData, MonthlyDataPoint, User, Movie, AboutData } from '../types.js';
 
 interface SquarePayment {
   created_at: string;
   amount_money: { amount: number };
+  note?: string;
 }
 
 async function fetchAllSquarePayments(accessToken: string, locationId: string | undefined): Promise<SquarePayment[]> {
@@ -69,50 +70,198 @@ const generateProjections = (historical: MonthlyDataPoint[], monthsToProject: nu
 export async function POST(request: Request) {
     try {
         const { password } = await request.json();
-        // Authentication...
         if (password !== process.env.ADMIN_PASSWORD && password !== process.env.ADMIN_MASTER_PASSWORD) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
         }
 
-        // --- Firebase/Square Init ---
         const initError = getInitializationError();
         if (initError) throw new Error(`Firebase Admin SDK Error: ${initError}`);
         const auth = getAdminAuth();
-        if (!auth) throw new Error("Firebase Auth connection failed.");
+        const db = getAdminDb();
+        if (!auth || !db) throw new Error("Firebase Auth or DB connection failed.");
         
         const isProduction = process.env.VERCEL_ENV === 'production';
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
-        const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
         if (!accessToken) throw new Error("Square Access Token not configured.");
 
         // --- Fetch Data in Parallel ---
-        const allUsersPromise = auth.listUsers(1000).then(result => result.users);
-        const allPaymentsPromise = fetchAllSquarePayments(accessToken, locationId);
-        
-        const [allUsers, allPayments] = await Promise.all([allUsersPromise, allPaymentsPromise]);
+        const listAllAuthUsers = async () => {
+            const allUsers = [];
+            let pageToken;
+            do {
+                const listUsersResult = await auth.listUsers(1000, pageToken);
+                allUsers.push(...listUsersResult.users);
+                pageToken = listUsersResult.pageToken;
+            } while (pageToken);
+            return allUsers;
+        };
+
+        const [
+            allAuthUsers,
+            allPayments,
+            usersDocs,
+            moviesDocs,
+            viewsDocs,
+            locationsDocs,
+            aboutDoc
+        ] = await Promise.all([
+            listAllAuthUsers(),
+            fetchAllSquarePayments(accessToken, isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID),
+            db.collection('users').get(),
+            db.collection('movies').get(),
+            db.collection('view_counts').get(),
+            db.collection('view_locations').get(),
+            db.collection('content').doc('about').get(),
+        ]);
 
         // --- Process Data ---
-        const userData = allUsers.map(u => ({ date: new Date(u.metadata.creationTime), value: 1 }));
-        const revenueData = allPayments.map(p => ({ date: new Date(p.created_at), value: p.amount_money.amount }));
+        const registeredUsers = allAuthUsers.filter(u => u.email);
+        const totalVisitors = usersDocs.size;
+        const totalUsers = registeredUsers.length;
+        const conversionRate = totalVisitors > 0 ? (totalUsers / totalVisitors) * 100 : 0;
 
-        const historicalUsers = groupDataByMonth(userData);
+        // Calculate DAU and WAU
+        const now = new Date();
+        const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+        const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+        let dailyActiveUsers = 0;
+        let weeklyActiveUsers = 0;
+
+        for (const user of registeredUsers) {
+            const lastSignIn = new Date(user.metadata.lastSignInTime);
+            if (lastSignIn >= sevenDaysAgo) {
+                weeklyActiveUsers++;
+                if (lastSignIn >= twentyFourHoursAgo) {
+                    dailyActiveUsers++;
+                }
+            }
+        }
+        
+        let actorCount = 0;
+        let filmmakerCount = 0;
+        usersDocs.forEach(doc => {
+            const user = doc.data() as User;
+            if (user.isActor) actorCount++;
+            if (user.isFilmmaker) filmmakerCount++;
+        });
+
+        const countryMap: Record<string, number> = {};
+        locationsDocs.forEach(doc => {
+            const locations = doc.data();
+            for (const country in locations) {
+                countryMap[country] = (countryMap[country] || 0) + locations[country];
+            }
+        });
+        const topCountries = Object.entries(countryMap)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5)
+            .map(([country, views]) => ({ country, views }));
+
+        const revenueData = allPayments.map(p => ({ date: new Date(p.created_at), value: p.amount_money.amount }));
         const historicalRevenue = groupDataByMonth(revenueData);
+        const totalRevenue = revenueData.reduce((sum, item) => sum + item.value, 0);
+        
+        const userData = registeredUsers.map(u => ({ date: new Date(u.metadata.creationTime), value: 1 }));
+        const historicalUsers = groupDataByMonth(userData);
+
+        let totalWatchlistAdds = 0;
+        usersDocs.forEach(doc => {
+            const user = doc.data() as User;
+            if (user.watchlist) totalWatchlistAdds += user.watchlist.length;
+        });
+
+        const totalViews = viewsDocs.docs.reduce((sum, doc) => sum + (doc.data().count || 0), 0);
+        const totalLikes = moviesDocs.docs.reduce((sum, doc) => sum + (doc.data().likes || 0), 0);
+        const totalFilms = moviesDocs.size;
+
+        const allMovies: Record<string, Movie> = {};
+        moviesDocs.forEach(doc => { allMovies[doc.id] = doc.data() as Movie; });
+        const viewCounts: Record<string, number> = {};
+        viewsDocs.forEach(doc => { viewCounts[doc.id] = doc.data().count || 0; });
+        
+        const donationsByFilmTitle: Record<string, number> = {};
+        allPayments.forEach(p => {
+            if (p.note?.includes('Support for film')) {
+                const titleMatch = p.note.match(/Support for film: "(.*?)"/);
+                if (titleMatch) {
+                    donationsByFilmTitle[titleMatch[1]] = (donationsByFilmTitle[titleMatch[1]] || 0) + p.amount_money.amount;
+                }
+            }
+        });
+
+        const topEarningFilms = Object.values(allMovies).map(movie => {
+            const adRevenue = ((viewCounts[movie.key] || 0) / 1000) * 500; // AD_CPM_IN_CENTS
+            const donationRevenue = donationsByFilmTitle[movie.title] || 0;
+            return {
+                title: movie.title,
+                totalRevenue: adRevenue + donationRevenue,
+                adRevenue,
+                donationRevenue
+            };
+        }).sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 5);
+        
+        let mostViewedFilm = { title: 'N/A', views: 0 };
+        viewsDocs.forEach(doc => {
+            const count = doc.data().count || 0;
+            if (count > mostViewedFilm.views) {
+                const movie = allMovies[doc.id];
+                if(movie) mostViewedFilm = { title: movie.title, views: count };
+            }
+        });
+        let mostLikedFilm = { title: 'N/A', likes: 0 };
+        moviesDocs.forEach(doc => {
+            const likes = doc.data().likes || 0;
+            if (likes > mostLikedFilm.likes) {
+                mostLikedFilm = { title: doc.data().title, likes: likes };
+            }
+        });
 
         const projectedUsers = generateProjections(historicalUsers, 6);
         const projectedRevenue = generateProjections(historicalRevenue, 6);
+        const avgRevenuePerUser = totalUsers > 0 ? totalRevenue / totalUsers : 0;
+        const aboutData = aboutDoc.exists ? aboutDoc.data() as AboutData : null;
 
-        const totalUsers = allUsers.length;
-        const totalRevenue = revenueData.reduce((sum, item) => sum + item.value, 0);
+        let avgMoMUserGrowth = 0;
+        if(historicalUsers.length > 1) {
+            const growthRates = [];
+            for (let i = 1; i < historicalUsers.length; i++) {
+                if (historicalUsers[i-1].value > 0) {
+                    const rate = ((historicalUsers[i].value - historicalUsers[i-1].value) / historicalUsers[i-1].value) * 100;
+                    growthRates.push(rate);
+                }
+            }
+            if (growthRates.length > 0) {
+                avgMoMUserGrowth = growthRates.reduce((a, b) => a + b, 0) / growthRates.length;
+            }
+        }
 
         const data: GrowthAnalyticsData = {
             historical: { users: historicalUsers, revenue: historicalRevenue },
             projections: { users: projectedUsers, revenue: projectedRevenue },
             keyMetrics: {
+                totalVisitors,
                 totalUsers,
+                conversionRate,
+                dailyActiveUsers,
+                weeklyActiveUsers,
                 totalRevenue,
                 projectedUsersYtd: totalUsers + projectedUsers.reduce((sum, p) => sum + p.value, 0),
                 projectedRevenueYtd: totalRevenue + projectedRevenue.reduce((sum, p) => sum + p.value, 0),
+                totalViews,
+                totalLikes,
+                totalWatchlistAdds,
+                totalFilms,
+                mostViewedFilm,
+                mostLikedFilm,
+                avgRevenuePerUser,
+                totalDonations: Object.values(donationsByFilmTitle).reduce((s, a) => s + a, 0),
+                totalSales: allPayments.filter(p => !p.note?.includes('Support for film')).reduce((s, p) => s + p.amount_money.amount, 0),
+                audienceBreakdown: { total: totalUsers, actors: actorCount, filmmakers: filmmakerCount },
+                topCountries,
+                topEarningFilms,
             },
+            aboutData: aboutData || undefined,
+            avgMoMUserGrowth,
         };
 
         return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });

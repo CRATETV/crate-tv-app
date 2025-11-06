@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { FilmmakerAnalytics, Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -89,8 +88,8 @@ const FilmmakerDashboardView: React.FC = () => {
 
     useEffect(() => {
         const fetchAnalyticsData = async () => {
-            if (!user || !user.name) {
-                return;
+            if (!user?.name) {
+                return; // Wait for user's name to be available
             };
 
             setIsLoading(true);
@@ -112,9 +111,12 @@ const FilmmakerDashboardView: React.FC = () => {
                 setIsLoading(false);
             }
         };
-
-        fetchAnalyticsData();
-    }, [user]);
+        // This effect depends on user.name. It will only run when user.name is available.
+        // This prevents the race condition and the infinite loading spinner.
+        if (user?.name) {
+            fetchAnalyticsData();
+        }
+    }, [user?.name]);
 
     const topTenMovies = useMemo(() => {
         if (!allMovies) return [];

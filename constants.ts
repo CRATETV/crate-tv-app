@@ -1,4 +1,3 @@
-// FIX: Imported types from the corrected types.ts file and removed duplicated type definitions.
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
 
 // Utility function to robustly check if a movie is past its release time.
@@ -595,7 +594,7 @@ export const moviesData: Record<string, Movie> = {
     "director": "Akil Logan-Haye",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/CROSSROADS-OFFICIAL-FILM_360p.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads+Poster.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads.png",
     "likes": 12
   },

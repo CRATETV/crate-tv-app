@@ -181,40 +181,31 @@
           background-color: white !important;
           color: black !important;
         }
-        body * {
-          visibility: hidden;
-        }
-        .printable-area, .printable-area *, .printable-top-ten, .printable-top-ten *, .printable-film-report, .printable-film-report * {
-          visibility: visible;
-        }
-        .printable-area, .printable-film-report {
+        .printable-area {
+          visibility: visible !important;
           position: absolute;
           left: 0;
           top: 0;
           width: 100%;
           padding: 2rem;
           color: black;
+          background-color: white !important;
         }
-        .printable-top-ten {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
+        .printable-area * {
+           visibility: visible !important;
         }
-        .printable-area .text-white, .printable-top-ten .text-white, .printable-film-report .text-white { color: black !important; }
-        .printable-area .text-gray-300, .printable-top-ten .text-gray-300, .printable-film-report .text-gray-300 { color: #333 !important; }
-        .printable-area .text-gray-400, .printable-top-ten .text-gray-400, .printable-film-report .text-gray-400 { color: #555 !important; }
-        .printable-area .text-yellow-400, .printable-film-report .text-yellow-400 { color: #ca8a04 !important; }
-        .printable-area .text-green-400, .printable-film-report .text-green-400 { color: #166534 !important; }
-        .printable-area .text-red-400, .printable-film-report .text-red-400 { color: #991b1b !important; }
-        .printable-area .bg-gray-800\/50 { background-color: #f3f4f6 !important; }
-        .printable-area .border-gray-700 { border-color: #d1d5db !important; }
-        .printable-top-ten .text-gray-800 { color: #ccc !important; }
-        .printable-top-ten .group:hover { background-color: transparent !important; }
-        .printable-top-ten .bg-gradient-to-b, .printable-top-ten .bg-gradient-to-r { background-image: none !important; }
         .no-print {
           display: none !important;
         }
+        body > div:not(.printable-area), body > header, body > footer {
+            display: none !important;
+        }
+         .printable-area .text-white { color: black !important; }
+        .printable-area .text-gray-300 { color: #333 !important; }
+        .printable-area .text-gray-400 { color: #555 !important; }
+        .printable-area .text-red-300 { color: #b91c1c !important; }
+        .printable-area .bg-gray-800\/50, .printable-area .bg-gray-900 { background-color: #f3f4f6 !important; }
+        .printable-area .border-gray-700 { border-color: #d1d5db !important; }
       }
       .ranked-card-border {
         border: 2px solid var(--rank-color, #374151);
