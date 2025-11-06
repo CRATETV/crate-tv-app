@@ -139,7 +139,10 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     video.pause();
                 }
 
-                if (Math.abs(video.currentTime - data.currentTime) > 2) {
+                // More aggressive time sync to prevent drift
+                const timeDifference = Math.abs(video.currentTime - data.currentTime);
+                if (timeDifference > 1.5) {
+                    console.log(`Syncing time. Host: ${data.currentTime}, Client: ${video.currentTime}, Diff: ${timeDifference}`);
                     video.currentTime = data.currentTime;
                 }
             }
