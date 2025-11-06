@@ -65,6 +65,42 @@ export async function POST(request: Request) {
       zip.file(relativePath, fileContent);
     }
 
+    // --- Dynamically add manifest and required images ---
+    const logoUrl = "https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png";
+    const splashUrl = "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG";
+
+    const [logoResponse, splashResponse] = await Promise.all([
+        fetch(logoUrl),
+        fetch(splashUrl)
+    ]);
+
+    if (!logoResponse.ok || !splashResponse.ok) {
+        throw new Error("Failed to fetch required Roku images from S3.");
+    }
+
+    const logoBuffer = await logoResponse.arrayBuffer();
+    const splashBuffer = await splashResponse.arrayBuffer();
+
+    zip.file("images/logo_hd.png", logoBuffer);
+    zip.file("images/splash_hd.png", splashBuffer);
+    
+    const manifestContent = `
+title=Crate TV
+major_version=1
+minor_version=2
+build_version=0
+
+# Roku Channel Store Artwork
+mm_icon_focus_hd=pkg:/images/logo_hd.png
+
+# Splash Screen
+splash_screen_hd=pkg:/images/splash_hd.png
+splash_color=#141414
+    `.trim();
+
+    zip.file("manifest", manifestContent);
+    // --- End of dynamic additions ---
+
     const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
 
     // The Vercel/Node.js runtime's `Response` constructor can accept a Buffer directly.
