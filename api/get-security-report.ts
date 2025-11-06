@@ -1,5 +1,5 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { SecurityEvent, SecurityReport } from '../../types.js';
+import { SecurityEvent, SecurityReport } from '../types.js';
 
 const SUSPICIOUS_IP_THRESHOLD = 5; // An IP is suspicious if it generates this many events in 24 hours
 const FAILED_LOGIN_WARN_THRESHOLD = 10;

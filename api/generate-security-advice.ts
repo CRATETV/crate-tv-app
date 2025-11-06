@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { SecurityReport } from '../../types';
+import { SecurityReport, AiSecurityAdvice } from '../types.js';
 
 export async function POST(request: Request) {
   try {
