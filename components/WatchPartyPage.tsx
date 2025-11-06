@@ -141,7 +141,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
                 // More aggressive time sync to prevent drift
                 const timeDifference = Math.abs(video.currentTime - data.currentTime);
-                if (timeDifference > 1.5) {
+                if (timeDifference > 2.5) {
                     console.log(`Syncing time. Host: ${data.currentTime}, Client: ${video.currentTime}, Diff: ${timeDifference}`);
                     video.currentTime = data.currentTime;
                 }
@@ -252,7 +252,9 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         ref={videoRef} 
                         src={movie.fullMovie} 
                         controls={isAdmin}
-                        playsInline 
+                        playsInline
+                        autoPlay
+                        muted
                         className="w-full max-h-full" 
                     />
                     {showResumePrompt && <ResumePromptOverlay onResume={handleResumeFromHost} />}

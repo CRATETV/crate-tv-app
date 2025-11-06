@@ -42,25 +42,48 @@ const TopTenPage: React.FC = () => {
 
         setIsGenerating(true);
         try {
+            // A small delay can help ensure images are rendered before canvas capture
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             const canvas = await html2canvas(shareableImageRef.current, {
                 useCORS: true,
                 backgroundColor: null,
-                scale: 1, // Use scale 1 for 1080x1080
+                scale: 1,
             });
 
             const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
             if (!blob) throw new Error('Failed to create image blob.');
 
             const file = new File([blob], 'cratetv_top10.png', { type: 'image/png' });
-            
+            const shareUrl = `${window.location.origin}/top-ten`;
+            const shareTitle = 'Top 10 on Crate TV';
+            const shareText = `Check out the current Top 10 films on Crate TV! #indiefilm #cratetv`;
+
             if (navigator.share && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: 'Top 10 on Crate TV',
-                    text: `Check out the current Top 10 films on Crate TV! #indiefilm #cratetv`,
-                    files: [file],
+                 try {
+                    await navigator.share({
+                        title: shareTitle,
+                        text: shareText,
+                        files: [file],
+                    });
+                } catch (error) {
+                    console.warn("Sharing with file failed, falling back to URL share:", error);
+                    // Fallback to sharing URL if file sharing is aborted or fails
+                    await navigator.share({
+                        title: shareTitle,
+                        text: shareText,
+                        url: shareUrl,
+                    });
+                }
+            } else if (navigator.share) {
+                // Fallback for browsers that can share but not files
+                 await navigator.share({
+                    title: shareTitle,
+                    text: shareText,
+                    url: shareUrl,
                 });
             } else {
-                // Fallback for browsers that don't support Web Share API with files
+                // Fallback for browsers that don't support Web Share API at all (e.g., desktop)
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
                 link.download = 'cratetv_top10.png';
@@ -72,7 +95,7 @@ const TopTenPage: React.FC = () => {
 
         } catch (error) {
             console.error("Error generating or sharing image:", error);
-            alert("Sorry, we couldn't generate the shareable image. Please try again.");
+            alert("Sorry, there was an issue creating the shareable image. Please try again.");
         } finally {
             setIsGenerating(false);
         }
