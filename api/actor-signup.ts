@@ -30,10 +30,13 @@ const slugify = (name: string): string => {
 
 export async function POST(request: Request) {
   try {
-    const { name, email } = await request.json();
+    const { name, email, password } = await request.json();
 
-    if (!name || !email) {
-      return new Response(JSON.stringify({ error: 'Name and email are required.' }), { status: 400, headers: {'Content-Type': 'application/json'} });
+    if (!name || !email || !password) {
+      return new Response(JSON.stringify({ error: 'Name, email, and password are required.' }), { status: 400, headers: {'Content-Type': 'application/json'} });
+    }
+     if (password.length < 6) {
+        return new Response(JSON.stringify({ error: 'Password must be at least 6 characters long.' }), { status: 400, headers: {'Content-Type': 'application/json'} });
     }
 
     // --- Firebase Admin Init ---
@@ -97,13 +100,19 @@ export async function POST(request: Request) {
 
     // --- Step 2: Create or Find Firebase user ---
     let userRecord;
+    let userExists = false; // Flag to track if user was created or found
     try {
         userRecord = await auth.getUserByEmail(email);
+        userExists = true;
     } catch (error: any) {
         if (error.code === 'auth/user-not-found') {
-            userRecord = await auth.createUser({ email, displayName: name });
+            // User does not exist, create them with the provided password
+            userRecord = await auth.createUser({ email, password, displayName: name });
         } else {
-            // Rethrow other unexpected errors from getUserByEmail
+            // Rethrow other unexpected errors from getUserByEmail, like 'auth/email-already-exists' from another provider
+             if (error.code === 'auth/email-already-exists') {
+                throw new Error('This email is already in use. Please log in or use a different email.');
+            }
             throw error;
         }
     }
@@ -129,49 +138,18 @@ export async function POST(request: Request) {
         ...newClaims
     }, { merge: true });
 
-
-    // --- Step 4: Generate password creation link ---
-    const actionCodeSettings = {
-        url: new URL('/portal', request.url).href, // Correctly redirect to the unified portal
-        handleCodeInApp: false,
-    };
-    const link = await auth.generatePasswordResetLink(email, actionCodeSettings);
-
-    // --- Step 5: Send Email with Resend ---
-    const emailHtml = `
-      <div>
-        <h1>Welcome to the Crate TV Actor Portal, ${name}!</h1>
-        <p>We've created an account for you in the Crate TV family. To access the portal and manage your public profile, you first need to create a secure password.</p>
-        <p>Click the link below to set your password:</p>
-        <p><a href="${link}" style="color: #6d28d9; text-decoration: none; font-weight: bold;">Create Your Password</a></p>
-        <p>This link is valid for a limited time. Once your password is set, you can log in to the Actor Portal at any time.</p>
-        <p>We look forward to seeing your updates!</p>
-        <p>- The Crate TV Team</p>
-      </div>
-    `;
-    
-    const emailText = `
-        Welcome to the Crate TV Actor Portal, ${name}!\n\n
-        We've created an account for you in the Crate TV family. To access the portal and manage your public profile, you first need to create a secure password.\n\n
-        Copy and paste the following link into your browser to set your password:\n${link}\n\n
-        This link is valid for a limited time.\n\n
-        - The Crate TV Team
-    `;
-
-    const { error } = await resend.emails.send({
-        from: `Crate TV <${fromEmail}>`,
-        to: [email],
-        subject: `Create Your Password for the Crate TV Actor Portal`,
-        html: emailHtml,
-        text: emailText,
-    });
-
-    if (error) {
-        console.error('Resend error:', error);
-        throw new Error('Could not send the access email. Please try again later.');
+    // --- Step 4: Return success message ---
+    if (userExists) {
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'An account with this email already exists. We have activated the Actor Portal for you.'
+        }), { status: 200, headers: {'Content-Type': 'application/json'} });
+    } else {
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Your account has been created and the Actor Portal is now active.'
+        }), { status: 200, headers: {'Content-Type': 'application/json'} });
     }
-
-    return new Response(JSON.stringify({ success: true, message: 'Verification successful. Email sent.' }), { status: 200, headers: {'Content-Type': 'application/json'} });
 
   } catch (error) {
     console.error("Error in actor-signup API:", error);

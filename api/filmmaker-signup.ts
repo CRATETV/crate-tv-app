@@ -19,10 +19,13 @@ const DUAL_ROLE_NAMES = new Set([
 
 export async function POST(request: Request) {
   try {
-    const { name, email } = await request.json();
+    const { name, email, password } = await request.json();
 
-    if (!name || !email) {
-      return new Response(JSON.stringify({ error: 'Name and email are required.' }), { status: 400, headers: {'Content-Type': 'application/json'} });
+    if (!name || !email || !password) {
+      return new Response(JSON.stringify({ error: 'Name, email, and password are required.' }), { status: 400, headers: {'Content-Type': 'application/json'} });
+    }
+    if (password.length < 6) {
+        return new Response(JSON.stringify({ error: 'Password must be at least 6 characters long.' }), { status: 400, headers: {'Content-Type': 'application/json'} });
     }
 
     // --- Firebase Admin Init ---
@@ -54,13 +57,17 @@ export async function POST(request: Request) {
     
     // --- Step 2: Create or Find Firebase user ---
     let userRecord;
+    let userExists = false;
     try {
         userRecord = await auth.getUserByEmail(email);
+        userExists = true;
     } catch (error: any) {
         if (error.code === 'auth/user-not-found') {
-            userRecord = await auth.createUser({ email, displayName: name });
+            userRecord = await auth.createUser({ email, password, displayName: name });
         } else {
-            // Rethrow other unexpected errors from getUserByEmail
+             if (error.code === 'auth/email-already-exists') {
+                throw new Error('This email is already in use. Please log in or use a different email.');
+            }
             throw error;
         }
     }
@@ -84,47 +91,18 @@ export async function POST(request: Request) {
         ...newClaims
     }, { merge: true });
 
-    // --- Step 4: Generate password creation link ---
-    const actionCodeSettings = {
-        url: new URL('/portal', request.url).href,
-        handleCodeInApp: false,
-    };
-    const link = await auth.generatePasswordResetLink(email, actionCodeSettings);
-
-    // --- Step 5: Send Email with Resend ---
-    const emailHtml = `
-      <div>
-        <h1>Welcome to the Crate TV Filmmaker Dashboard, ${name}!</h1>
-        <p>We've verified your name in our records and created an account for you. To access your dashboard and view your film's performance, you first need to create a secure password.</p>
-        <p>Click the link below to set your password:</p>
-        <p><a href="${link}" style="color: #6d28d9; text-decoration: none; font-weight: bold;">Create Your Password</a></p>
-        <p>This link is valid for a limited time. Once your password is set, you can log in to the Filmmaker Dashboard at any time.</p>
-        <p>- The Crate TV Team</p>
-      </div>
-    `;
-    
-    const emailText = `
-        Welcome to the Crate TV Filmmaker Dashboard, ${name}!\n\n
-        We've verified your name in our records and created an account for you. To access your dashboard and view your film's performance, you first need to create a secure password.\n\n
-        Copy and paste the following link into your browser to set your password:\n${link}\n\n
-        This link is valid for a limited time.\n\n
-        - The Crate TV Team
-    `;
-
-    const { error } = await resend.emails.send({
-        from: `Crate TV <${fromEmail}>`,
-        to: [email],
-        subject: `Create Your Password for the Crate TV Filmmaker Dashboard`,
-        html: emailHtml,
-        text: emailText,
-    });
-
-    if (error) {
-        console.error('Resend error:', error);
-        throw new Error('Could not send the access email. Please try again later.');
+    // --- Step 4: Return response ---
+    if (userExists) {
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'An account with this email already exists. We have activated the Filmmaker Dashboard for you.'
+        }), { status: 200, headers: {'Content-Type': 'application/json'} });
+    } else {
+        return new Response(JSON.stringify({
+            success: true,
+            message: 'Your account has been created and the Filmmaker Dashboard is now active.'
+        }), { status: 200, headers: {'Content-Type': 'application/json'} });
     }
-
-    return new Response(JSON.stringify({ success: true, message: 'Verification successful. Email sent.' }), { status: 200, headers: {'Content-Type': 'application/json'} });
 
   } catch (error) {
     console.error("Error in filmmaker-signup API:", error);

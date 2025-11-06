@@ -6,7 +6,6 @@ import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
 import Countdown from './Countdown';
-import WatchPartyLiveModal from './WatchPartyLiveModal';
 import SquarePaymentModal from './SquarePaymentModal';
 import firebase from 'firebase/compat/app';
 
@@ -45,6 +44,25 @@ const WatchPartyPaywall: React.FC<{ movie: Movie; onPay: () => void; }> = ({ mov
     </div>
 );
 
+const JoinPartyOverlay: React.FC<{ movie: Movie; onJoin: () => void }> = ({ movie, onJoin }) => (
+    <div className="flex flex-col items-center justify-center h-screen bg-black text-white p-4 text-center" style={{backgroundImage: `url(${movie.poster})`, backgroundSize: 'cover', backgroundPosition: 'center'}}>
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-md"></div>
+        <div className="relative z-10 animate-[fadeIn_0.5s_ease-out]">
+            <h1 className="text-3xl sm:text-5xl font-extrabold mb-3" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.7)' }}>
+                The Party is Starting!
+            </h1>
+            <p className="text-xl sm:text-2xl font-semibold text-gray-200 mb-8">
+                "{movie.title}"
+            </p>
+            <button 
+                onClick={onJoin}
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 font-bold text-xl py-4 px-12 rounded-lg transition-transform hover:scale-105 shadow-lg"
+            >
+                Join Now
+            </button>
+        </div>
+    </div>
+);
 
 const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const { user, purchasedMovieKeys, purchaseMovie } = useAuth();
@@ -54,8 +72,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isSending, setIsSending] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const [showLiveAnnouncement, setShowLiveAnnouncement] = useState(true);
-    const [showSyncInfo, setShowSyncInfo] = useState(!sessionStorage.getItem('hasSeenWatchPartySyncInfo'));
+    const [isMuted, setIsMuted] = useState(true);
 
     const movie = movies[movieKey];
     const [initialStatus, setInitialStatus] = useState(() => getInitialStatus(movie));
@@ -64,37 +81,18 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isPaying, setIsPaying] = useState(false);
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
+    const [userHasJoined, setUserHasJoined] = useState(false);
 
     // State for sync
     const [partyState, setPartyState] = useState<WatchPartyState | null>(null);
-    const isLocalAction = useRef(false); // Used only by the admin
-    const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     
     const isAdmin = useMemo(() => user?.isFilmmaker, [user]);
 
     const isPaidParty = useMemo(() => movie?.isWatchPartyEnabled && movie.isForSale, [movie]);
     const purchasedMovieKeysSet = useMemo(() => new Set(purchasedMovieKeys), [purchasedMovieKeys]);
     const hasAccess = !isPaidParty || purchasedMovieKeysSet.has(movieKey) || paymentSuccess;
-
-    const updateSyncState = useCallback(async (newState: Partial<WatchPartyState>) => {
-        // Only the admin can update the state
-        if (!user || !hasAccess || !isAdmin) return;
-        const db = getDbInstance();
-        if (!db) return;
-
-        isLocalAction.current = true;
-        const syncRef = db.collection('watch_parties').doc(movieKey);
-        await syncRef.set({
-            ...newState,
-            lastUpdatedBy: user.name || user.email,
-            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-        }, { merge: true });
-        
-        setTimeout(() => { isLocalAction.current = false; }, 200); // Increase timeout slightly
-
-    }, [movieKey, user, hasAccess, isAdmin]);
     
-    // Real-time listener for playback sync state (for ALL users)
+    // Real-time listener for playback sync state
     useEffect(() => {
         if (initialStatus !== 'live' || !hasAccess) return;
         const db = getDbInstance();
@@ -103,7 +101,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const syncRef = db.collection('watch_parties').doc(movieKey);
         const unsubscribe = syncRef.onSnapshot(async (snapshot) => {
             if (!snapshot.exists) {
-                if (isAdmin) { // Only admin can create the initial state
+                if (isAdmin) {
                     const initialState: WatchPartyState = { isPlaying: false, currentTime: 0, status: 'waiting', lastUpdatedBy: 'system' };
                     await syncRef.set(initialState);
                     setPartyState(initialState);
@@ -114,8 +112,8 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             const data = snapshot.data() as WatchPartyState;
             setPartyState(data);
             
-            // Viewers (non-admins) react to state changes
-            if (!isAdmin) {
+            // Viewers react to state changes only AFTER they've joined
+            if (!isAdmin && userHasJoined) {
                 const video = videoRef.current;
                 if (!video || data.status !== 'live') return;
 
@@ -132,25 +130,26 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         });
 
         return () => unsubscribe();
-    }, [initialStatus, hasAccess, movieKey, isAdmin]);
+    }, [initialStatus, hasAccess, movieKey, isAdmin, userHasJoined]);
 
-    // Admin: Set up periodic sync when playing
-    useEffect(() => {
-        if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
-
-        if (isAdmin && videoRef.current && !videoRef.current.paused && partyState?.status === 'live') {
-            syncIntervalRef.current = setInterval(() => {
-                if (videoRef.current) {
-                    updateSyncState({ currentTime: videoRef.current.currentTime });
+    const handleJoin = () => {
+        setUserHasJoined(true);
+        const video = videoRef.current;
+        if (video) {
+            video.muted = true; // Muting is crucial for autoplay success on mobile
+            setIsMuted(true);
+            video.play().catch(e => console.error("Could not start video on join:", e));
+            
+            // Sync immediately after joining
+            if (partyState) {
+                video.currentTime = partyState.currentTime;
+                if (!partyState.isPlaying) {
+                    video.pause();
                 }
-            }, 5000); // Sync every 5 seconds
+            }
         }
-        return () => { if (syncIntervalRef.current) clearInterval(syncIntervalRef.current); };
-    }, [isAdmin, videoRef.current?.paused, partyState?.status, updateSyncState]);
+    };
 
-    const handlePlay = () => isAdmin && updateSyncState({ isPlaying: true });
-    const handlePause = () => isAdmin && videoRef.current && updateSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime });
-    const handleSeeked = () => isAdmin && videoRef.current && updateSyncState({ currentTime: videoRef.current.currentTime });
 
     useEffect(() => { setInitialStatus(getInitialStatus(movie)); }, [movie]);
     
@@ -164,7 +163,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     // Real-time listener for chat messages
     useEffect(() => {
-        if (initialStatus !== 'live' || !hasAccess) return; // Chat is visible before party starts
+        if (!hasAccess) return;
         const db = getDbInstance();
         if (!db) return;
         const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages').orderBy('timestamp', 'asc').limitToLast(100);
@@ -174,7 +173,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             setMessages(fetchedMessages);
         });
         return () => unsubscribe();
-    }, [movieKey, initialStatus, hasAccess]);
+    }, [movieKey, hasAccess]);
 
     useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -197,7 +196,6 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     };
     
     const handleGoBack = () => window.history.back();
-    const handleDismissSyncInfo = () => { setShowSyncInfo(false); sessionStorage.setItem('hasSeenWatchPartySyncInfo', 'true'); };
 
     if (isFestivalLoading) return <LoadingSpinner />;
 
@@ -213,7 +211,9 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return <div className="flex flex-col items-center justify-center h-screen bg-black text-white p-4 text-center" style={{backgroundImage: `url(${movie.poster})`, backgroundSize: 'cover', backgroundPosition: 'center'}}><div className="absolute inset-0 bg-black/80 backdrop-blur-lg"></div><div className="relative z-10 animate-[fadeIn_1s_ease-out]"><h1 className="text-3xl md:text-5xl font-bold mb-2">The Party is About to Begin!</h1><p className="text-lg md:text-xl text-gray-300 mb-6">Waiting for the host to start the film for everyone...</p><div className="bg-black/50 rounded-lg p-6"><LoadingSpinner /></div><button onClick={handleGoBack} className="text-gray-400 hover:text-white transition mt-8">Go Back</button></div></div>;
     }
     
-    if (initialStatus === 'live' && partyState?.status === 'live' && showLiveAnnouncement) return <WatchPartyLiveModal movie={movie} onJoin={() => setShowLiveAnnouncement(false)} />;
+    if (initialStatus === 'live' && partyState?.status === 'live' && !userHasJoined) {
+        return <JoinPartyOverlay movie={movie} onJoin={handleJoin} />;
+    }
 
     return (
         <>
@@ -225,17 +225,32 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     <video 
                         ref={videoRef} 
                         src={movie.fullMovie} 
-                        onPlay={handlePlay} 
-                        onPause={handlePause} 
-                        onSeeked={handleSeeked} 
-                        controls={isAdmin} 
+                        controls={isAdmin}
+                        muted={isMuted}
                         playsInline 
                         className="w-full max-h-full" 
                     />
                 </div>
                  {!isAdmin && partyState?.status === 'live' && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
-                        Playback is controlled by the host.
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4">
+                        <div className="bg-black/60 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
+                            Playback is controlled by the host.
+                        </div>
+                        <button 
+                            onClick={() => {
+                                if (videoRef.current) {
+                                    videoRef.current.muted = !videoRef.current.muted;
+                                    setIsMuted(videoRef.current.muted);
+                                }
+                            }}
+                            className="bg-black/60 p-2 rounded-full text-white backdrop-blur-sm"
+                        >
+                            {isMuted ? (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" /></svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                            )}
+                        </button>
                     </div>
                 )}
             </div>
@@ -244,7 +259,6 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     <h2 className="text-base">Live Chat</h2>
                     {!movie.hasCopyrightMusic && (<button onClick={() => setIsDonationModalOpen(true)} className="flex items-center gap-1 text-xs bg-purple-600 hover:bg-purple-700 text-white font-bold py-1 px-3 rounded-md"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" /></svg> Support Filmmaker</button>)}
                 </div>
-                {showSyncInfo && (<div className="p-3 bg-blue-900/50 border-b border-blue-800 flex items-start gap-3 text-sm flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg><div className="flex-grow"><p className="font-bold text-white">Everyone's Watching Together!</p><p className="text-blue-200 text-xs">Playback is synchronized for all viewers. Pausing or seeking will affect everyone in the party.</p></div><button onClick={handleDismissSyncInfo} className="text-blue-300 hover:text-white flex-shrink-0 text-xl font-bold leading-none">&times;</button></div>)}
                 <div className="flex-grow p-4 overflow-y-auto space-y-4">{messages.map(msg => (<div key={msg.id} className="flex items-start gap-3"><div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 p-1" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} /><div><p className="font-bold text-sm text-white">{msg.userName}</p><p className="text-sm text-gray-300 break-words">{msg.text}</p></div></div>))}<div ref={messagesEndRef} /></div>
                 <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-700 flex-shrink-0"><div className="flex items-center gap-2"><input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Say something..." className="form-input flex-grow" disabled={!user || isSending} /><button type="submit" className="submit-btn !px-4" disabled={!user || isSending || !newMessage.trim()}>Send</button></div>{!user && <p className="text-xs text-yellow-400 mt-2 text-center">You must be logged in to chat.</p>}</form>
             </div>
