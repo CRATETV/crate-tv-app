@@ -102,7 +102,9 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
             isPremiumSubscriber: data.isPremiumSubscriber === true, // Default to false
 // FIX: Explicitly type the 'item' in the array filter as 'any' to help TypeScript's type inference. This resolves the 'unknown[]' is not assignable to 'string[]' error by ensuring the type guard correctly narrows the array type.
             watchlist: Array.isArray(data.watchlist) ? data.watchlist.filter((item: any): item is string => typeof item === 'string') : [],
+// FIX: Explicitly type the 'item' in the array filter as 'any' to help TypeScript's type inference. This resolves the 'unknown[]' is not assignable to 'string[]' error by ensuring the type guard correctly narrows the array type.
             watchedMovies: Array.isArray(data.watchedMovies) ? data.watchedMovies.filter((item: any): item is string => typeof item === 'string') : [],
+            likedMovies: Array.isArray(data.likedMovies) ? data.likedMovies.filter((item: any): item is string => typeof item === 'string') : [],
             hasFestivalAllAccess: data.hasFestivalAllAccess === true,
 // FIX: Explicitly type the 'item' in the array filter as 'any' to help TypeScript's type inference. This resolves the 'unknown[]' is not assignable to 'string[]' error by ensuring the type guard correctly narrows the array type.
             unlockedBlockIds: Array.isArray(data.unlockedBlockIds) ? data.unlockedBlockIds.filter((item: any): item is string => typeof item === 'string') : [],
@@ -128,6 +130,7 @@ export const createUserProfile = async (uid: string, email: string, name?: strin
         isPremiumSubscriber: false,
         watchlist: [], // Initialize watchlist for account-based storage
         watchedMovies: [], // Initialize watched history
+        likedMovies: [],
         hasFestivalAllAccess: false,
         unlockedBlockIds: [],
         purchasedMovieKeys: [],

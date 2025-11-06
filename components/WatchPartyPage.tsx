@@ -6,6 +6,7 @@ import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
 import Countdown from './Countdown';
+import WatchPartyLiveModal from './WatchPartyLiveModal';
 
 interface WatchPartyPageProps {
     movieKey: string;
@@ -38,6 +39,7 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isSending, setIsSending] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [showLiveAnnouncement, setShowLiveAnnouncement] = useState(true);
 
     const movie = movies[movieKey];
     const [status, setStatus] = useState(() => getWatchPartyStatus(movie));
@@ -157,6 +159,16 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             </div>
         );
     }
+    
+    if (status === 'live' && showLiveAnnouncement) {
+        return (
+            <WatchPartyLiveModal 
+                movie={movie} 
+                onJoin={() => setShowLiveAnnouncement(false)} 
+            />
+        );
+    }
+
 
     return (
         <div className="flex flex-col lg:flex-row h-screen bg-black text-white font-sans">

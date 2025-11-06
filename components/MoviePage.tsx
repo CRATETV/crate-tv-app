@@ -36,7 +36,7 @@ const setMetaTag = (attr: 'name' | 'property', value: string, content: string) =
 };
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { user, markAsWatched } = useAuth();
+  const { user, markAsWatched, likedMovies: likedMoviesArray, toggleLikeMovie } = useAuth();
   const { isLoading: isDataLoading, movies: allMovies, categories: allCategories, dataSource } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
@@ -46,7 +46,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const hasTrackedViewRef = useRef(false);
-  const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
 
   // Player state
   const [isPlaying, setIsPlaying] = useState(false);
@@ -73,7 +72,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const adsManagerRef = useRef<any>(null);
   const [isAdPlaying, setIsAdPlaying] = useState(false);
 
-  const isLiked = useMemo(() => likedMovies.has(movieKey), [likedMovies, movieKey]);
+  const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
   const [released, setReleased] = useState(() => isMovieReleased(movie));
 
   const playContent = useCallback(() => {
@@ -147,8 +146,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   useEffect(() => {
     const isStagingActive = sessionStorage.getItem('crateTvStaging') === 'true';
     if (isStagingActive) setIsStaging(true);
-    const storedLikes = localStorage.getItem('cratetv-likedMovies');
-    if (storedLikes) setLikedMovies(new Set(JSON.parse(storedLikes)));
     hasTrackedViewRef.current = false; // Reset view tracking on movie key change
   }, [movieKey]);
   
@@ -290,19 +287,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     const handleGoHome = () => {
         window.history.pushState({}, '', '/');
         window.dispatchEvent(new Event('pushstate'));
-    };
-    
-    const toggleLikeMovie = async (key: string) => {
-        const newLiked = new Set(likedMovies);
-        const action = newLiked.has(key) ? 'unlike' : 'like';
-        action === 'like' ? newLiked.add(key) : newLiked.delete(key);
-        setLikedMovies(newLiked);
-        localStorage.setItem('cratetv-likedMovies', JSON.stringify(Array.from(newLiked)));
-        await fetch('/api/toggle-like', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ movieKey: key, action }),
-        });
     };
     
     if (isDataLoading || !movie) {

@@ -14,7 +14,7 @@ import AdminPayoutsTab from './components/AdminPayoutsTab';
 import TopFilmsTab from './components/TopFilmsTab';
 import EmailSender from './components/EmailSender';
 import RokuAdminTab from './components/RokuAdminTab';
-import WatchPartyAdminTab from './components/WatchPartyAdminTab';
+import WatchPartyManager from './components/WatchPartyManager';
 
 type AdminRole = 'super_admin' | 'festival_admin' | 'collaborator' | null;
 
@@ -215,7 +215,7 @@ const AdminPage: React.FC = () => {
                     {availableTabs.includes('payouts') && <TabButton tabId="payouts" label="Payouts" />}
                     {availableTabs.includes('top-films') && <TabButton tabId="top-films" label="Top Films" />}
                     {availableTabs.includes('emails') && <TabButton tabId="emails" label="Emails" />}
-                    {availableTabs.includes('watch-party') && <TabButton tabId="watch-party" label="Watch Parties" />}
+                    {availableTabs.includes('watch-party') && <TabButton tabId="watch-party" label="Watch Party Manager" />}
                     {availableTabs.includes('roku') && <TabButton tabId="roku" label="Roku" />}
                     {availableTabs.includes('fallback') && <TabButton tabId="fallback" label="Fallback" />}
                     {availableTabs.includes('analytics-festival') && <TabButton tabId="analytics-festival" label="Festival Analytics" />}
@@ -233,7 +233,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
                     {activeTab === 'top-films' && <TopFilmsTab />}
                     {activeTab === 'emails' && <EmailSender />}
-                    {activeTab === 'watch-party' && <WatchPartyAdminTab allMovies={data.movies} />}
+                    {activeTab === 'watch-party' && <WatchPartyManager allMovies={data.movies} onSave={saveMovie} />}
                     {activeTab === 'roku' && <RokuAdminTab />}
                 </div>
             </div>

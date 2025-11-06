@@ -22,6 +22,8 @@ interface AuthContextType {
     toggleWatchlist: (movieKey: string) => Promise<void>;
     watchedMovies: string[];
     markAsWatched: (movieKey: string) => Promise<void>;
+    likedMovies: string[];
+    toggleLikeMovie: (movieKey: string) => Promise<void>;
     // Festival & Purchase related
     hasFestivalAllAccess: boolean;
     unlockedFestivalBlockIds: Set<string>;
@@ -139,9 +141,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(currentUser => currentUser ? ({ ...currentUser, avatar: avatarId }) : null);
     };
 
-    // --- Watchlist & Watched History ---
+    // --- Watchlist, Watched History, and Liked Movies ---
     const watchlist = user?.watchlist || [];
     const watchedMovies = user?.watchedMovies || [];
+    const likedMovies = user?.likedMovies || [];
 
     const toggleWatchlist = useCallback(async (movieKey: string) => {
         if (!user) return;
@@ -160,6 +163,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await updateUserProfile(user.uid, { watchedMovies: newWatchedMovies });
         setUser(currentUser => currentUser ? ({ ...currentUser, watchedMovies: newWatchedMovies }) : null);
     }, [user, watchedMovies]);
+
+    const toggleLikeMovie = useCallback(async (movieKey: string) => {
+        if (!user) {
+            console.log("User must be logged in to like movies.");
+            return;
+        }
+
+        const newLikedMovies = likedMovies.includes(movieKey)
+            ? likedMovies.filter(key => key !== movieKey)
+            : [...likedMovies, movieKey];
+        
+        const action = likedMovies.includes(movieKey) ? 'unlike' : 'like';
+
+        // Optimistically update the local user state for immediate UI feedback
+        setUser(currentUser => currentUser ? ({ ...currentUser, likedMovies: newLikedMovies }) : null);
+
+        // Update Firestore for persistence and the public counter API in parallel
+        await Promise.all([
+            updateUserProfile(user.uid, { likedMovies: newLikedMovies }),
+            fetch('/api/toggle-like', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey, action }),
+            }).catch(err => {
+                console.error("Failed to sync public like count:", err);
+            })
+        ]);
+    }, [user, likedMovies]);
 
 
     // --- Purchases & Subscriptions ---
@@ -214,6 +245,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         toggleWatchlist,
         watchedMovies,
         markAsWatched,
+        likedMovies,
+        toggleLikeMovie,
         hasFestivalAllAccess,
         unlockedFestivalBlockIds,
         purchasedMovieKeys,

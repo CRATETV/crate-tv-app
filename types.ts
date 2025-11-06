@@ -80,6 +80,7 @@ export interface User {
   isPremiumSubscriber?: boolean;
   watchlist: string[];
   watchedMovies: string[];
+  likedMovies: string[];
   // Festival & Purchase related
   hasFestivalAllAccess?: boolean;
   unlockedBlockIds?: string[];

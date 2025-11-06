@@ -52,14 +52,13 @@ const SkeletonCarousel: React.FC = () => (
 
 
 const App: React.FC = () => {
-  const { user, watchlist, watchedMovies } = useAuth();
+  const { user, watchlist, watchedMovies, likedMovies: likedMoviesArray, toggleLikeMovie } = useAuth();
   const { isLoading, movies, categories, festivalData, festivalConfig, isFestivalLive, dataSource } = useFestival();
   
   const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const [likedMovies, setLikedMovies] = useState<Set<string>>(new Set());
   const [isScrolled, setIsScrolled] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const [isStaging, setIsStaging] = useState(false);
@@ -76,9 +75,10 @@ const App: React.FC = () => {
 
   const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
-  // Create a memoized Set for efficient `isWatched` lookups in child components.
+  // Create memoized Sets for efficient `isWatched` and `isLiked` lookups in child components.
   const watchedMoviesSet = useMemo(() => new Set(watchedMovies), [watchedMovies]);
   const watchlistSet = useMemo(() => new Set(watchlist), [watchlist]);
+  const likedMovies = useMemo(() => new Set(likedMoviesArray), [likedMoviesArray]);
   
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -106,11 +106,6 @@ const App: React.FC = () => {
         setShowNewFilmModal(true);
     }
 
-    const storedLikedMovies = localStorage.getItem('cratetv-likedMovies');
-    if (storedLikedMovies) {
-      setLikedMovies(new Set(JSON.parse(storedLikedMovies)));
-    }
-
     const handleScroll = () => setIsScrolled(window.pageYOffset > 10);
     window.addEventListener('scroll', handleScroll, { passive: true });
     
@@ -122,14 +117,14 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const fetchRecommendations = async () => {
-        if (likedMovies.size === 0 || Object.keys(movies).length === 0) {
+        if (likedMoviesArray.length === 0 || Object.keys(movies).length === 0) {
             setRecommendedMovies([]);
             return;
         }
 
         setIsLoadingRecommendations(true);
         try {
-            const likedTitles = Array.from(likedMovies).map(key => movies[key]?.title).filter(Boolean);
+            const likedTitles = likedMoviesArray.map(key => movies[key]?.title).filter(Boolean);
             if (likedTitles.length === 0) return;
 
             const response = await fetch('/api/generate-recommendations', {
@@ -157,7 +152,7 @@ const App: React.FC = () => {
         }
     };
     fetchRecommendations();
-  }, [likedMovies, movies]);
+  }, [likedMoviesArray, movies]);
 
   useEffect(() => {
     if (!isLoading && isFestivalLive) {
@@ -291,39 +286,6 @@ const App: React.FC = () => {
     handlePlayMovie(movie);
   };
   
-  useEffect(() => {
-    try {
-      localStorage.setItem('cratetv-likedMovies', JSON.stringify(Array.from(likedMovies)));
-    } catch (e) {
-      console.warn("Could not write liked movies to localStorage.", e);
-    }
-  }, [likedMovies]);
-
-  const toggleLikeMovie = useCallback(async (movieKey: string) => {
-    const newLikedMovies = new Set(likedMovies);
-    const action = newLikedMovies.has(movieKey) ? 'unlike' : 'like';
-
-    if (action === 'unlike') {
-        newLikedMovies.delete(movieKey);
-    } else {
-        newLikedMovies.add(movieKey);
-    }
-    setLikedMovies(newLikedMovies);
-
-    try {
-        const response = await fetch('/api/toggle-like', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ movieKey, action }),
-        });
-        if (!response.ok) {
-            console.error("Failed to sync like with server.");
-        }
-    } catch (error) {
-        console.error("Failed to send like update to server:", error);
-    }
-  }, [likedMovies]);
-  
   const exitStaging = () => {
     sessionStorage.removeItem('crateTvStaging');
     const params = new URLSearchParams(window.location.search);
@@ -446,7 +408,7 @@ const App: React.FC = () => {
                       onSupportMovie={setMovieForSupport}
                     />
                   )}
-                  {likedMovies.size === 0 ? (
+                  {likedMoviesArray.length === 0 ? (
                       <div className="mb-8 md:mb-12">
                           <h2 className="text-lg md:text-2xl font-bold mb-4 text-white flex items-center gap-2">
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
