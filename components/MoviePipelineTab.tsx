@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MoviePipelineEntry } from '../types';
-import { addMoviePipelineEntry, deleteMoviePipelineEntry } from '../services/firebaseService';
+import { deleteMoviePipelineEntry } from '../services/firebaseService';
 
 interface MoviePipelineTabProps {
     pipeline: MoviePipelineEntry[];
@@ -8,113 +8,73 @@ interface MoviePipelineTabProps {
 }
 
 const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, onCreateMovie }) => {
-    const [newEntry, setNewEntry] = useState({ title: '', posterUrl: '', movieUrl: '', cast: '', director: '' });
-    const [isAdding, setIsAdding] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setNewEntry(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleAddEntry = async () => {
-        if (!newEntry.title) return;
-        setIsSubmitting(true);
-        try {
-            await addMoviePipelineEntry(newEntry);
-            setNewEntry({ title: '', posterUrl: '', movieUrl: '', cast: '', director: '' });
-            setIsAdding(false);
-        } catch (error) {
-            console.error("Failed to add pipeline entry:", error);
-            // You might want to show an error to the user here
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+    const [processingId, setProcessingId] = useState<string | null>(null);
 
     const handleDelete = async (id: string) => {
-        if (window.confirm("Are you sure you want to delete this pipeline entry?")) {
+        if (!window.confirm("Are you sure you want to permanently delete this submission? This cannot be undone.")) return;
+        setProcessingId(id);
+        try {
             await deleteMoviePipelineEntry(id);
+            // Parent component's data refresh will handle UI update.
+        } catch (error) {
+            alert(`Failed to delete submission: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setProcessingId(null);
         }
     };
 
-    const handleDownload = () => {
-        const csvContent = "data:text/csv;charset=utf-8," 
-            + "Title,Poster URL,Movie URL,Cast,Director\n" 
-            + pipeline.map(item => `"${item.title.replace(/"/g, '""')}","${item.posterUrl}","${item.movieUrl}","${item.cast.replace(/"/g, '""')}","${item.director.replace(/"/g, '""')}"`).join("\n");
-        
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "movie_pipeline.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const handleCreate = (item: MoviePipelineEntry) => {
+        setProcessingId(item.id);
+        onCreateMovie(item);
+        // Parent component will handle deleting the item from the pipeline after creation.
     };
 
-    const inputClass = "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-blue-500";
+    if (!pipeline || pipeline.length === 0) {
+        return (
+            <div className="text-center py-16 bg-gray-800/50 rounded-lg">
+                <h3 className="text-xl font-bold text-white">Pipeline is Empty</h3>
+                <p className="text-gray-400 mt-2">No new films have been submitted.</p>
+            </div>
+        );
+    }
 
     return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-white">Movie Submission Pipeline</h2>
-                <button onClick={handleDownload} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md text-sm">Download CSV</button>
-            </div>
-            
-            <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                    <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
-                        <tr>
-                            <th className="p-3">Title</th>
-                            <th className="p-3">Poster URL</th>
-                            <th className="p-3">Movie URL</th>
-                            <th className="p-3">Cast</th>
-                            <th className="p-3">Director(s)</th>
-                            <th className="p-3">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {pipeline.map(item => (
-                            <tr key={item.id} className="border-b border-gray-700">
-                                <td className="p-3 font-medium text-white">{item.title}</td>
-                                <td className="p-3 text-sm text-gray-400 truncate max-w-xs">{item.posterUrl}</td>
-                                <td className="p-3 text-sm text-gray-400 truncate max-w-xs">{item.movieUrl}</td>
-                                <td className="p-3 text-sm text-gray-400">{item.cast}</td>
-                                <td className="p-3 text-sm text-gray-400">{item.director}</td>
-                                <td className="p-3 flex gap-2">
-                                    <button onClick={() => onCreateMovie(item)} className="text-xs bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-md">Create Movie</button>
-                                    <button onClick={() => handleDelete(item.id)} className="text-xs bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-md">Delete</button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-            
-            {isAdding ? (
-                <div className="mt-6 bg-gray-900/50 p-4 rounded-lg border border-gray-700 space-y-4">
-                    <h3 className="text-lg font-semibold text-white">Add New Pipeline Entry</h3>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input type="text" name="title" value={newEntry.title} onChange={handleInputChange} placeholder="Movie Title" className={inputClass} required />
-                        <input type="text" name="director" value={newEntry.director} onChange={handleInputChange} placeholder="Director(s), comma-separated" className={inputClass} />
-                        <div className="md:col-span-2">
-                            <input type="text" name="cast" value={newEntry.cast} onChange={handleInputChange} placeholder="Main Cast, comma-separated" className={inputClass} />
+        <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-white">Submission Pipeline ({pipeline.length})</h2>
+            {pipeline.map(item => (
+                <div key={item.id} className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="md:col-span-1 flex flex-col items-center">
+                            <img src={item.posterUrl} alt={item.title} className="w-48 h-auto object-contain rounded-md mb-4"/>
+                            <div className="flex gap-4">
+                                <a href={item.posterUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">View Poster</a>
+                                <a href={item.movieUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">View Movie</a>
+                            </div>
                         </div>
-                        <input type="url" name="posterUrl" value={newEntry.posterUrl} onChange={handleInputChange} placeholder="Poster Image URL" className={inputClass} />
-                        <input type="url" name="movieUrl" value={newEntry.movieUrl} onChange={handleInputChange} placeholder="Full Movie File URL" className={inputClass} />
-                    </div>
-                    <div className="flex gap-4">
-                        <button onClick={handleAddEntry} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">
-                            {isSubmitting ? 'Saving...' : 'Save Entry'}
-                        </button>
-                        <button onClick={() => setIsAdding(false)} className="text-gray-400 hover:text-white text-sm">Cancel</button>
+                        <div className="md:col-span-3">
+                            <h3 className="text-xl font-bold text-white">{item.title}</h3>
+                            <p className="text-sm text-gray-400">by {item.director}</p>
+                            <p className="text-sm mt-2"><strong>Cast:</strong> {item.cast}</p>
+                             <div className="flex gap-4 mt-6">
+                                <button
+                                    onClick={() => handleCreate(item)}
+                                    disabled={processingId === item.id}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md disabled:bg-gray-600"
+                                >
+                                    {processingId === item.id ? 'Creating...' : 'Create Movie'}
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(item.id)}
+                                    disabled={processingId === item.id}
+                                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md disabled:bg-gray-600"
+                                >
+                                    {processingId === item.id ? 'Deleting...' : 'Delete Submission'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            ) : (
-                <button onClick={() => setIsAdding(true)} className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">
-                    + Add New Entry
-                </button>
-            )}
+            ))}
         </div>
     );
 };

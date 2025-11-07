@@ -111,6 +111,7 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
             unlockedBlockIds: Array.isArray(data.unlockedBlockIds) ? data.unlockedBlockIds.filter((item: any): item is string => typeof item === 'string') : [],
 // FIX: Explicitly type the 'item' in the array filter as 'any' to help TypeScript's type inference. This resolves the 'unknown[]' is not assignable to 'string[]' error by ensuring the type guard correctly narrows the array type.
             purchasedMovieKeys: Array.isArray(data.purchasedMovieKeys) ? data.purchasedMovieKeys.filter((item: any): item is string => typeof item === 'string') : [],
+            rokuDeviceId: data.rokuDeviceId || undefined,
         };
         return userProfile;
     }

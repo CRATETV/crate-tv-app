@@ -28,12 +28,11 @@ const S3Uploader: React.FC<S3UploaderProps> = ({ onUploadSuccess, label }) => {
     setError('');
 
     try {
-      // Step 1: Get presigned URL from our secure API
       const password = sessionStorage.getItem('adminPassword');
       if (!password) {
-          throw new Error("Admin password not found. Please log in again.");
+        throw new Error("Authentication error. Please log in again to upload files.");
       }
-
+      
       const presignedUrlResponse = await fetch('/api/generate-presigned-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -50,7 +49,6 @@ const S3Uploader: React.FC<S3UploaderProps> = ({ onUploadSuccess, label }) => {
       }
       const { signedUrl, publicUrl } = await presignedUrlResponse.json();
 
-      // Step 2: Upload the file directly to S3 using the presigned URL
       const xhr = new XMLHttpRequest();
       xhr.open('PUT', signedUrl, true);
       xhr.setRequestHeader('Content-Type', file.type);
@@ -76,9 +74,8 @@ const S3Uploader: React.FC<S3UploaderProps> = ({ onUploadSuccess, label }) => {
       };
 
       xhr.send(file);
-
     } catch (err) {
-      const message = err instanceof Error ? err.message : "An unknown error occurred.";
+      const message = err instanceof Error ? err.message : 'An unknown error occurred.';
       console.error(err);
       setError(message);
       setStatus('error');
@@ -87,13 +84,13 @@ const S3Uploader: React.FC<S3UploaderProps> = ({ onUploadSuccess, label }) => {
 
   return (
     <div className="bg-gray-700/50 p-3 rounded-md border border-gray-600">
-        <label className="block text-xs font-medium text-gray-400 mb-1">{label}</label>
+        <label className="block text-sm font-medium text-gray-400 mb-2">{label}</label>
         <div className="flex items-center gap-2">
             <input
                 ref={fileInputRef}
                 type="file"
                 onChange={handleFileChange}
-                className="text-sm text-gray-300 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-600 file:text-gray-300 hover:file:bg-gray-500 flex-grow w-full"
+                className="text-sm text-gray-300 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-600 file:text-gray-300 hover:file:bg-gray-500 w-full"
             />
             {file && (
                 <button
@@ -111,7 +108,7 @@ const S3Uploader: React.FC<S3UploaderProps> = ({ onUploadSuccess, label }) => {
                 <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${progress}%` }}></div>
             </div>
         )}
-        {status === 'success' && <p className="text-green-400 text-xs mt-1">Upload successful!</p>}
+        {status === 'success' && <p className="text-green-400 text-xs mt-1">Upload successful! Save the changes to finalize.</p>}
         {status === 'error' && <p className="text-red-400 text-xs mt-1">{error}</p>}
     </div>
   );
