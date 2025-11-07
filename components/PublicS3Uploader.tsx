@@ -3,9 +3,10 @@ import React, { useState, useRef } from 'react';
 interface PublicS3UploaderProps {
   onUploadSuccess: (url: string) => void;
   label: string;
+  accept?: string;
 }
 
-const PublicS3Uploader: React.FC<PublicS3UploaderProps> = ({ onUploadSuccess, label }) => {
+const PublicS3Uploader: React.FC<PublicS3UploaderProps> = ({ onUploadSuccess, label, accept = "image/png, image/jpeg, image/webp" }) => {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [progress, setProgress] = useState(0);
@@ -86,7 +87,7 @@ const PublicS3Uploader: React.FC<PublicS3UploaderProps> = ({ onUploadSuccess, la
             <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/png, image/jpeg, image/webp"
+                accept={accept}
                 onChange={handleFileChange}
                 className="text-sm text-gray-300 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-600 file:text-gray-300 hover:file:bg-gray-500 flex-grow w-full"
             />
