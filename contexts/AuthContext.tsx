@@ -18,6 +18,7 @@ interface AuthContextType {
     logout: () => Promise<void>;
     sendPasswordReset: (email: string) => Promise<void>;
     setAvatar: (avatarId: string) => Promise<void>;
+    getUserIdToken: () => Promise<string | null>;
     watchlist: string[];
     toggleWatchlist: (movieKey: string) => Promise<void>;
     watchedMovies: string[];
@@ -134,6 +135,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await auth.sendPasswordResetEmail(email);
     };
 
+    const getUserIdToken = useCallback(async (): Promise<string | null> => {
+        const auth = getAuthInstance();
+        if (auth?.currentUser) {
+            try {
+                // Force refresh to get a fresh token. Important for security.
+                return await auth.currentUser.getIdToken(true);
+            } catch (error) {
+                console.error("Error getting user ID token:", error);
+                return null;
+            }
+        }
+        return null;
+    }, []);
+
     // --- Profile Actions ---
     const setAvatar = async (avatarId: string) => {
         if (!user) return;
@@ -240,6 +255,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         signUp,
         logout,
         sendPasswordReset,
+        getUserIdToken,
         setAvatar,
         watchlist,
         toggleWatchlist,

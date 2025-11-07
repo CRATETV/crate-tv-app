@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ActorPost } from '../types';
 import PublicS3Uploader from './PublicS3Uploader';
 import LoadingSpinner from './LoadingSpinner';
@@ -32,8 +32,12 @@ const TimeAgo: React.FC<{ timestamp: any }> = ({ timestamp }) => {
 
     useEffect(() => {
         const calculateAndSetTime = () => {
-            if (timestamp && typeof timestamp.seconds === 'number') {
-                const date = new Date(timestamp.seconds * 1000);
+            // FIX: Handle both client-side Firestore timestamps (`seconds`) and
+            // server-side JSON-serialized timestamps (`_seconds`).
+            const seconds = timestamp?.seconds ?? timestamp?._seconds;
+
+            if (seconds && typeof seconds === 'number') {
+                const date = new Date(seconds * 1000);
                 setTimeAgo(formatTimeAgo(date));
             } else {
                 setTimeAgo('a moment ago');

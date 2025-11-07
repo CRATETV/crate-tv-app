@@ -36,7 +36,7 @@ const setMetaTag = (attr: 'name' | 'property', value: string, content: string) =
 };
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { user, markAsWatched, likedMovies: likedMoviesArray, toggleLikeMovie } = useAuth();
+  const { user, markAsWatched, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken } = useAuth();
   const { isLoading: isDataLoading, movies: allMovies, categories: allCategories, dataSource } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
@@ -75,21 +75,29 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
   const [released, setReleased] = useState(() => isMovieReleased(movie));
 
-  const playContent = useCallback(() => {
+  const playContent = useCallback(async () => {
     setIsAdPlaying(false);
     if (videoRef.current) {
         if (!hasTrackedViewRef.current && movie?.key) {
             hasTrackedViewRef.current = true;
-            fetch('/api/track-view', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ movieKey: movie.key }),
-            }).catch(err => console.error("Failed to track view:", err));
+            const token = await getUserIdToken();
+            if (token) {
+                fetch('/api/track-view', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ movieKey: movie.key }),
+                }).catch(err => console.error("Failed to track view:", err));
+            } else {
+                 console.warn("Could not track view: user token not available.");
+            }
         }
         videoRef.current.play().catch(e => console.error("Content play failed", e));
         setIsPlaying(true);
     }
-  }, [movie?.key]);
+  }, [movie?.key, getUserIdToken]);
   
   const initializeAds = useCallback(() => {
     const productionAdTag = localStorage.getItem('productionAdTagUrl');
@@ -166,8 +174,53 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   useEffect(() => {
     if (movie) {
         document.title = `${movie.title || 'Untitled Film'} | Crate TV`;
+        const synopsisText = (movie.synopsis || '').replace(/<br\s*\/?>/gi, ' ').trim();
+        const pageUrl = window.location.href;
+
+        // Set standard meta tags for sharing
         setMetaTag('property', 'og:title', movie.title || 'Crate TV Film');
-        setMetaTag('name', 'description', (movie.synopsis || '').replace(/<br\s*\/?>/gi, ' ').trim());
+        setMetaTag('name', 'description', synopsisText);
+        setMetaTag('property', 'og:description', synopsisText);
+        setMetaTag('property', 'og:image', movie.poster || '');
+        setMetaTag('property', 'og:url', pageUrl);
+        setMetaTag('property', 'og:type', 'video.movie');
+
+        // Add JSON-LD Structured Data for Rich Search Results
+        const schema = {
+          "@context": "https://schema.org",
+          "@type": "Movie",
+          "name": movie.title,
+          "description": synopsisText,
+          "image": movie.poster,
+          "url": pageUrl,
+          "director": movie.director.split(',').map(name => ({ "@type": "Person", "name": name.trim() })),
+          "actor": movie.cast.map(actor => ({ "@type": "Person", "name": actor.name })),
+          ...(movie.rating && {
+            "aggregateRating": {
+              "@type": "AggregateRating",
+              "ratingValue": movie.rating.toString(),
+              "bestRating": "10",
+              "ratingCount": "1" // Placeholder since we don't track number of ratings
+            }
+          })
+        };
+        
+        let scriptTag = document.getElementById('movie-schema');
+        if (!scriptTag) {
+            scriptTag = document.createElement('script');
+            scriptTag.id = 'movie-schema';
+            scriptTag.type = 'application/ld+json';
+            document.head.appendChild(scriptTag);
+        }
+        scriptTag.textContent = JSON.stringify(schema);
+
+        // Cleanup function to remove script tag on unmount
+        return () => {
+            const script = document.getElementById('movie-schema');
+            if (script) {
+                document.head.removeChild(script);
+            }
+        };
     }
  }, [movie]);
 

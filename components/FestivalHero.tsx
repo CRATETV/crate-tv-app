@@ -26,14 +26,14 @@ const FestivalHero: React.FC<FestivalHeroProps> = ({ festivalConfig }) => {
       <div className="absolute inset-0 bg-black/60"></div>
       
       {/* Content */}
-      <div className="relative z-10 flex flex-col justify-center items-center h-full text-center px-4 text-white">
+      <div className="relative z-10 flex flex-col justify-center h-full px-4 md:px-12 pb-24 md:pb-16 text-white items-center text-center">
         <div className="bg-red-600 text-white font-bold text-sm px-4 py-1 rounded-full mb-4 animate-[slideInUp_0.5s_ease-out]">
           FESTIVAL IS LIVE NOW
         </div>
         <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold mb-4 max-w-3xl animate-[slideInUp_0.7s_ease-out] drop-shadow-lg">
           {festivalConfig.title}
         </h1>
-        <p className="text-sm md:text-base lg:text-lg max-w-2xl mx-auto mb-8 animate-[slideInUp_0.9s_ease-out]">
+        <p className="text-sm md:text-base lg:text-lg max-w-xl mb-8 animate-[slideInUp_0.9s_ease-out]">
           {festivalConfig.description}
         </p>
         <div className="animate-[slideInUp_1.1s_ease-out]">
