@@ -76,6 +76,13 @@ const AdminPage: React.FC = () => {
         setIsDataLoading(false);
     };
 
+    const handleLogout = () => {
+        sessionStorage.removeItem('adminPassword');
+        setIsAuthenticated(false);
+        setRole(null);
+        setPassword('');
+    };
+
     // --- Save Handlers ---
     const handleFestivalSave = async () => {
         const db = getDbInstance();
@@ -166,7 +173,7 @@ const AdminPage: React.FC = () => {
 
     const tabs: { id: string; label: string; roles: string[] }[] = [
         { id: 'analytics', label: 'Analytics', roles: ['super_admin', 'master'] },
-        { id: 'movies', label: 'Movie Editor', roles: ['super_admin', 'master'] },
+        { id: 'movies', label: 'Movie Editor', roles: ['super_admin', 'master', 'collaborator'] },
         { id: 'categories', label: 'Category Editor', roles: ['super_admin', 'master'] },
         { id: 'festival', label: 'Festival Editor', roles: ['super_admin', 'master', 'festival_admin'] },
         { id: 'payouts', label: 'Payouts', roles: ['super_admin', 'master'] },
@@ -183,7 +190,15 @@ const AdminPage: React.FC = () => {
 
     return (
         <div className="bg-gray-900 min-h-screen text-white p-4 sm:p-8">
-            <h1 className="text-3xl font-bold mb-6">Crate TV Admin Panel</h1>
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold">Crate TV Admin Panel</h1>
+                <button
+                    onClick={handleLogout}
+                    className="bg-gray-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors"
+                >
+                    Log Out
+                </button>
+            </div>
             <div className="flex flex-wrap border-b border-gray-700 mb-6">
                 {accessibleTabs.map(tab => (
                     <button

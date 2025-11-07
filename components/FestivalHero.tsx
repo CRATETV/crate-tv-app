@@ -17,7 +17,7 @@ const FestivalHero: React.FC<FestivalHeroProps> = ({ festivalConfig }) => {
   };
 
   return (
-    <div className="relative w-full h-[56.25vw] max-h-[70vh] bg-black overflow-hidden">
+    <div className="relative w-full h-[80vh] sm:h-[70vh] bg-black overflow-hidden">
       {/* Background with a subtle animation */}
       <div 
         className="absolute inset-0 bg-gradient-to-br from-purple-900 via-red-900 to-black animate-[pulse_10s_ease-in-out_infinite]"
@@ -26,7 +26,7 @@ const FestivalHero: React.FC<FestivalHeroProps> = ({ festivalConfig }) => {
       <div className="absolute inset-0 bg-black/60"></div>
       
       {/* Content */}
-      <div className="relative z-10 flex flex-col justify-center h-full px-4 md:px-12 pb-24 md:pb-16 text-white items-center text-center">
+      <div className="relative z-10 flex flex-col justify-center h-full px-4 md:px-12 py-12 text-white items-center text-center">
         <div className="bg-red-600 text-white font-bold text-sm px-4 py-1 rounded-full mb-4 animate-[slideInUp_0.5s_ease-out]">
           FESTIVAL IS LIVE NOW
         </div>

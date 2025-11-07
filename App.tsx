@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -261,7 +259,7 @@ const App: React.FC = () => {
                 )}
                 
                 <div className="px-4 md:px-12 relative z-10">
-                    <div className="-mt-8 md:-mt-20 space-y-8 md:space-y-12">
+                    <div className={`${isFestivalLive ? 'mt-4 md:-mt-16' : '-mt-8 md:-mt-20'} space-y-8 md:space-y-12`}>
                         {nowPlayingMovie && <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} />}
                         
                         {topTenMovies.length > 0 && (

@@ -60,23 +60,24 @@ const ServiceReminder: React.FC<{ serviceName: string; logoUrl: string; billingU
         : 'Not set';
 
     const handleMarkAsPaid = () => {
-        if (status.nextBillDate) {
-            // To advance, create a new date from the *current* next bill date,
-            // advance it by one month, and save that as the new anchor.
-            const currentBillDate = status.nextBillDate;
-            const nextMonthDate = new Date(currentBillDate);
-            nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+        if (!status.nextBillDate) return;
+        
+        const currentBillDate = status.nextBillDate;
+        const nextPeriodDate = new Date(currentBillDate);
+        
+        // Advance to the next month from the *current* due date
+        nextPeriodDate.setMonth(nextPeriodDate.getMonth() + 1);
 
-            // Handle month-end issues (e.g., Jan 31 -> Feb 28)
-            if (nextMonthDate.getDate() !== currentBillDate.getDate()) {
-                nextMonthDate.setDate(0);
-            }
-
-            const newDateString = nextMonthDate.toISOString().split('T')[0];
-            localStorage.setItem(storageKey, newDateString);
-            setSavedDate(newDateString);
-            setInputDate(newDateString);
+        // If advancing the month changed the day (e.g., from Jan 31 to Feb 28),
+        // reset to the last day of the correct month. This is the crucial fix.
+        if (nextPeriodDate.getDate() !== currentBillDate.getDate()) {
+            nextPeriodDate.setDate(0);
         }
+
+        const newDateString = nextPeriodDate.toISOString().split('T')[0];
+        localStorage.setItem(storageKey, newDateString);
+        setSavedDate(newDateString);
+        setInputDate(newDateString);
     };
 
     return (
@@ -116,6 +117,7 @@ const ServiceReminder: React.FC<{ serviceName: string; logoUrl: string; billingU
                          <button 
                             onClick={handleMarkAsPaid} 
                             disabled={status.diffDays > 0}
+                            title={status.diffDays > 0 ? `This button becomes active on the due date.` : 'Mark this bill as paid'}
                             className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold text-sm py-2 px-4 rounded-md transition-colors w-full"
                          >
                             Mark as Paid

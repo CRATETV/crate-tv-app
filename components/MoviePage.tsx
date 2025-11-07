@@ -53,11 +53,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Start muted for autoplay
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTapRef = useRef(0);
   const [seekAnim, setSeekAnim] = useState<'rewind' | 'forward' | null>(null);
+  const [showMuteHint, setShowMuteHint] = useState(false);
   
   // Modal & Search State
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -74,6 +75,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
   const [released, setReleased] = useState(() => isMovieReleased(movie));
+  const isTouchDevice = useMemo(() => 'ontouchstart' in window || navigator.maxTouchPoints > 0, []);
 
   const playContent = useCallback(async () => {
     setIsAdPlaying(false);
@@ -177,7 +179,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         const synopsisText = (movie.synopsis || '').replace(/<br\s*\/?>/gi, ' ').trim();
         const pageUrl = window.location.href;
 
-        // Set standard meta tags for sharing
         setMetaTag('property', 'og:title', movie.title || 'Crate TV Film');
         setMetaTag('name', 'description', synopsisText);
         setMetaTag('property', 'og:description', synopsisText);
@@ -185,7 +186,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         setMetaTag('property', 'og:url', pageUrl);
         setMetaTag('property', 'og:type', 'video.movie');
 
-        // Add JSON-LD Structured Data for Rich Search Results
         const schema = {
           "@context": "https://schema.org",
           "@type": "Movie",
@@ -200,26 +200,23 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
               "@type": "AggregateRating",
               "ratingValue": movie.rating.toString(),
               "bestRating": "10",
-              "ratingCount": "1" // Placeholder since we don't track number of ratings
+              "ratingCount": "1" // Placeholder
             }
           })
         };
         
-        let scriptTag = document.getElementById('movie-schema');
+        let scriptTag = document.getElementById('movie-schema') as HTMLScriptElement | null;
         if (!scriptTag) {
             scriptTag = document.createElement('script');
             scriptTag.id = 'movie-schema';
-            scriptTag.type = 'application/ld+json';
             document.head.appendChild(scriptTag);
         }
+        scriptTag.type = 'application/ld+json';
         scriptTag.textContent = JSON.stringify(schema);
 
-        // Cleanup function to remove script tag on unmount
         return () => {
             const script = document.getElementById('movie-schema');
-            if (script) {
-                document.head.removeChild(script);
-            }
+            if (script) document.head.removeChild(script);
         };
     }
  }, [movie]);
@@ -236,11 +233,18 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         const video = videoRef.current;
         if (!video) return;
         
-        const handlePlay = () => { setIsPlaying(true); setIsPaused(false); handlePlayerInteraction(); };
+        const handlePlay = () => { 
+            setIsPlaying(true); 
+            setIsPaused(false); 
+            handlePlayerInteraction();
+            if (video.muted && isTouchDevice) {
+                setShowMuteHint(true);
+                setTimeout(() => setShowMuteHint(false), 5000);
+            }
+        };
         const handlePause = () => { setIsPlaying(false); if (!video.ended) setIsPaused(true); };
         const handleTimeUpdate = () => {
             setCurrentTime(video.currentTime);
-            // Mark as watched if over 90% complete
             if (video.duration > 0 && (video.currentTime / video.duration) > 0.9) {
                 markAsWatched(movieKey);
             }
@@ -279,11 +283,34 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             clearInterval(progressInterval);
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
         };
-    }, [movieKey, handlePlayerInteraction, markAsWatched]);
+    }, [movieKey, handlePlayerInteraction, markAsWatched, isTouchDevice]);
+
+    // Autoplay fallback effect
+    useEffect(() => {
+        const video = videoRef.current;
+        if (video && movie?.fullMovie && released && !isAdPlaying) {
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.warn("Autoplay was prevented. User interaction required.", error);
+                    if (!isPlaying) {
+                        setIsPaused(true);
+                    }
+                });
+            }
+        }
+    }, [movie?.fullMovie, released, isAdPlaying, isPlaying]);
+
 
     const handlePlayPause = useCallback(() => {
         if (videoRef.current) {
-            videoRef.current.paused ? videoRef.current.play() : videoRef.current.pause();
+            if (videoRef.current.muted) {
+                videoRef.current.muted = false;
+                setIsMuted(false);
+                setShowMuteHint(false);
+            } else {
+                videoRef.current.paused ? videoRef.current.play() : videoRef.current.pause();
+            }
         }
     }, []);
 
@@ -306,13 +333,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     const handleFullscreen = async () => {
         const player = playerContainerRef.current;
         if (!player) return;
-
         try {
             if (document.fullscreenElement) {
                 await document.exitFullscreen();
             } else {
                 await player.requestFullscreen();
-                // After entering fullscreen, try to lock orientation
                 if (screen.orientation && (screen.orientation as any).lock) {
                     await (screen.orientation as any).lock('landscape');
                 }
@@ -366,13 +391,28 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 src={movie.fullMovie} 
                                 className="w-full h-full"
                                 playsInline
+                                muted
                                 onContextMenu={(e) => e.preventDefault()} 
                                 controlsList="nodownload"
                                 autoPlay
                                 onClick={handlePlayPause}
                             />
-                            {/* Double tap overlays */}
-                             <div className="absolute top-0 left-0 h-full w-1/3 z-30" onDoubleClick={(e) => handleTapToSeek(e, 'rewind')}></div>
+                            {showMuteHint && (
+                                <button 
+                                    className="absolute top-4 right-4 bg-black/60 text-white text-sm px-3 py-1.5 rounded-full backdrop-blur-sm animate-pulse z-40 pointer-events-auto"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (videoRef.current) {
+                                            videoRef.current.muted = false;
+                                            setIsMuted(false);
+                                        }
+                                        setShowMuteHint(false);
+                                    }}
+                                >
+                                    Tap to unmute
+                                </button>
+                            )}
+                            <div className="absolute top-0 left-0 h-full w-1/3 z-30" onDoubleClick={(e) => handleTapToSeek(e, 'rewind')}></div>
                              <div className="absolute top-0 right-0 h-full w-1/3 z-30" onDoubleClick={(e) => handleTapToSeek(e, 'forward')}></div>
 
                              {seekAnim && (
@@ -400,7 +440,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 <button onClick={(e) => { e.stopPropagation(); handleGoHome(); }} className="absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 pointer-events-auto" aria-label="Back to Home"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
                                 {/* Bottom Controls */}
                                 <div className="absolute bottom-0 left-0 right-0 px-4 pt-4 pb-8 md:p-4 bg-gradient-to-t from-black/70 to-transparent pointer-events-auto">
-                                    {/* Timeline */}
                                     <input type="range" min="0" max={duration} value={currentTime} onChange={e => handleSeek(Number(e.target.value))} className="w-full h-1 bg-gray-500/50 rounded-lg appearance-none cursor-pointer range-sm" />
                                     <div className="flex justify-between items-center mt-2">
                                         <div className="flex items-center gap-4">
