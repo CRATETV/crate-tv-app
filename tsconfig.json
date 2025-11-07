@@ -23,6 +23,7 @@
     "vite.config.ts", 
     "MoviePage.tsx", 
     "ClassicsPage.tsx",
-    "components/PremiumPage.tsx"
+    "components/PremiumPage.tsx",
+    "WatchPartyManager.tsx"
   ]
 }

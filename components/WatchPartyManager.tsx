@@ -38,9 +38,9 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
         const db = getDbInstance();
         if (!db) return;
         const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages').orderBy('timestamp', 'asc').limitToLast(100);
-        const unsubscribe = messagesRef.onSnapshot(snapshot => {
+        const unsubscribe = messagesRef.onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
             const fetchedMessages: ChatMessage[] = [];
-            snapshot.forEach(doc => { fetchedMessages.push({ id: doc.id, ...doc.data() } as ChatMessage); });
+            snapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => { fetchedMessages.push({ id: doc.id, ...doc.data() } as ChatMessage); });
             setMessages(fetchedMessages);
         });
         return () => unsubscribe();
@@ -259,9 +259,9 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
-        const unsub = db.collection('watch_parties').onSnapshot(snapshot => {
+        const unsub = db.collection('watch_parties').onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
             const states: Record<string, WatchPartyState> = {};
-            snapshot.forEach(doc => {
+            snapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
                 states[doc.id] = doc.data() as WatchPartyState;
             });
             setPartyStates(states);
