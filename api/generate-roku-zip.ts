@@ -4,7 +4,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import JSZip from 'jszip';
-import { Buffer } from 'buffer';
 
 // Helper to recursively read a directory
 async function readDirectory(dirPath: string): Promise<string[]> {
@@ -75,8 +74,8 @@ splash_screen_hd=pkg:/images/splash_hd.png
     zip.file('images/logo_hd.png', logoBuffer);
     zip.file('images/splash_hd.png', splashBuffer);
 
-    // Generate the final zip file as a buffer
-    const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+    // Generate the final zip file as a standard ArrayBuffer
+    const zipBuffer = await zip.generateAsync({ type: 'arraybuffer' });
 
     // Return the zip file to the client
     return new Response(zipBuffer, {
