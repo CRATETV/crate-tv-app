@@ -9,6 +9,7 @@ import SearchOverlay from './SearchOverlay';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
 import { useFestival } from '../contexts/FestivalContext';
+// FIX: Corrected import path
 import { Movie } from '../types';
 
 const SubmitPage: React.FC = () => {

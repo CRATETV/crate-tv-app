@@ -1,110 +1,54 @@
-import { LiveData, FetchResult } from '../types';
-import { moviesData, categoriesData, festivalData, festivalConfigData, aboutData } from '../constants';
+import { Movie, Category, FestivalDay, FestivalConfig, AboutData } from '../types';
 
-const CACHE_KEY = 'cratetv-live-data';
-const CACHE_TIMESTAMP_KEY = 'cratetv-live-data-timestamp';
-const CACHE_DURATION = 60 * 1000; // 1 minute
+interface LiveData {
+    movies: Record<string, Movie>;
+    categories: Record<string, Category>;
+    festivalData: FestivalDay[];
+    festivalConfig: FestivalConfig;
+    aboutData: AboutData;
+}
 
-// Updated to include a timestamp.
-const getFallbackData = (): FetchResult => ({
-  data: {
-    movies: moviesData,
-    categories: categoriesData,
-    festivalData: festivalData,
-    festivalConfig: festivalConfigData,
-    aboutData: aboutData,
-    actorSubmissions: [],
-    // FIX: Added missing moviePipeline property to match LiveData type.
-    moviePipeline: [],
-  },
-  source: 'fallback',
-  timestamp: Date.now(),
-});
+interface FetchResult {
+    data: LiveData;
+    source: 'live' | 'fallback';
+}
 
-export const invalidateCache = () => {
-    try {
-      localStorage.removeItem(CACHE_KEY);
-      localStorage.removeItem(CACHE_TIMESTAMP_KEY);
-    } catch (e) {
-      console.warn("Could not invalidate localStorage cache.", e);
-    }
-};
+// In-memory cache
+let cachedData: LiveData | null = null;
+let lastFetchTimestamp = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-export const fetchAndCacheLiveData = async (options?: { force?: boolean }): Promise<FetchResult> => {
+export const fetchAndCacheLiveData = async (options: { force?: boolean } = {}): Promise<FetchResult> => {
     const now = Date.now();
-    
-    // --- CACHE READ LOGIC ---
-    if (!options?.force) {
-        try {
-            const cachedTimestampStr = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-            const cachedJsonStr = localStorage.getItem(CACHE_KEY);
-
-            if (cachedJsonStr && cachedTimestampStr) {
-                const cacheTime = parseInt(cachedTimestampStr, 10);
-                const isCacheFresh = (now - cacheTime) < CACHE_DURATION;
-
-                if (isCacheFresh) {
-                    console.log(`[Cache] Using fresh localStorage data from ${new Date(cacheTime).toLocaleTimeString()}.`);
-                    const cachePayload = JSON.parse(cachedJsonStr); // This is { data, source }
-                    return { ...cachePayload, timestamp: cacheTime };
-                }
-            }
-        } catch (e) {
-            console.warn("Could not read/parse localStorage cache. Invalidating and fetching fresh data.", e);
-            invalidateCache();
-        }
+    if (!options.force && cachedData && (now - lastFetchTimestamp < CACHE_DURATION)) {
+        return { data: cachedData, source: 'live' };
     }
-    
-    // --- NETWORK FETCH LOGIC ---
-    console.log(`[Network] Fetching fresh data. Forced: ${!!options?.force}`);
 
     try {
-        const configResponse = await fetch('/api/data-config', { method: 'POST' });
-        if (!configResponse.ok) throw new Error('Could not fetch data configuration.');
-        const { liveDataUrl } = await configResponse.json();
-
-        if (!liveDataUrl) {
-            console.warn("Live data URL not provided by server. Using fallback data.");
-            return getFallbackData();
+        const response = await fetch('/api/get-live-data');
+        if (!response.ok) {
+            throw new Error('Failed to fetch live data from API.');
         }
-
-        // Fetch main data and live likes in parallel for speed
-        const [dataResponse, likesResponse] = await Promise.all([
-            fetch(`${liveDataUrl}?t=${now}`), // Use timestamp to bust browser cache
-            fetch('/api/get-movie-likes')
-        ]);
+        const data: LiveData = await response.json();
         
-        if (!dataResponse.ok) throw new Error(`Failed to fetch live data from ${liveDataUrl}`);
-        const data: LiveData = await dataResponse.json();
+        cachedData = data;
+        lastFetchTimestamp = now;
         
-        // Merge live likes into the movie data
-        if (likesResponse.ok) {
-            const liveLikes: Record<string, number> = await likesResponse.json();
-            for (const key in liveLikes) {
-                if (data.movies[key]) {
-                    data.movies[key].likes = liveLikes[key];
-                }
-            }
-            console.log("[Likes] Successfully merged live like counts.");
-        } else {
-            console.warn("[Likes] Could not fetch live like counts. Top 10 list may be stale.");
-        }
-
-        const result: FetchResult = { data, source: 'live', timestamp: now };
-        
-        try {
-            // Store only the payload, not the full FetchResult with timestamp
-            const cachePayload = { data, source: 'live' };
-            localStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload));
-            localStorage.setItem(CACHE_TIMESTAMP_KEY, now.toString());
-        } catch(e) {
-            console.warn("Could not write to localStorage cache.", e);
-        }
-
-        return result;
-
+        return { data, source: 'live' };
     } catch (error) {
-        console.error("Failed to fetch live data, using fallback.", error);
-        return getFallbackData();
+        console.error("Live data fetch failed, using fallback:", error);
+        // As a fallback, you might want to import from constants.ts, but that can be complex.
+        // The robust fallback is already handled server-side in the API.
+        // For the client, if the API fails, it might be better to show an error.
+        // However, to keep the app running, we'll simulate a fallback.
+        const { moviesData, categoriesData, festivalData, festivalConfigData, aboutData } = await import('../constants');
+        const fallbackData = {
+            movies: moviesData,
+            categories: categoriesData,
+            festivalData: festivalData,
+            festivalConfig: festivalConfigData,
+            aboutData: aboutData
+        };
+        return { data: fallbackData, source: 'fallback' };
     }
 };

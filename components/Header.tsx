@@ -48,21 +48,19 @@ const Header: React.FC<HeaderProps> = ({
     return (
         <header className={`fixed top-0 left-0 right-0 z-30 transition-colors duration-300 ${isScrolled ? 'bg-black/80 backdrop-blur-sm' : 'bg-transparent'}`}>
             {isStaging && <div className="bg-yellow-500 text-black text-center py-1 text-sm font-bold">Staging Environment</div>}
-            <div className={`flex items-center justify-between px-4 md:px-12 transition-all duration-300 ${isStaging ? 'h-14' : 'h-16'}`}>
+            <div className={`flex items-center px-4 md:px-12 transition-all duration-300 ${isStaging ? 'h-14' : 'h-16'}`}>
                 <div className="flex items-center gap-8">
-                    <a href="/" onClick={(e) => handleNavigate(e, '/')}>
+                    <a href="/" onClick={(e) => handleNavigate(e, '/')} className="hidden md:block">
                         <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" className="w-24 h-auto" />
                     </a>
                      {showNavLinks && (
                         <nav className="hidden md:flex items-center gap-6">
                             <a href="/" onClick={(e) => handleNavigate(e, '/')} className="text-sm font-medium text-white hover:text-gray-300 transition-colors">Home</a>
                             <a href="/classics" onClick={(e) => handleNavigate(e, '/classics')} className="text-sm font-medium text-white hover:text-gray-300 transition-colors">Classics</a>
-                            <a href="/top-ten" onClick={(e) => handleNavigate(e, '/top-ten')} className="text-sm font-medium text-white hover:text-gray-300 transition-colors">Top 10</a>
-                             <a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="text-sm font-medium text-white hover:text-gray-300 transition-colors">Portals</a>
                         </nav>
                      )}
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 ml-auto">
                     {showSearch && (
                         <div className="hidden md:flex items-center gap-2">
                              <form onSubmit={(e) => { e.preventDefault(); onSearchSubmit?.(searchQuery); }}>

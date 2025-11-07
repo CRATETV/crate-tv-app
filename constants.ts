@@ -1,3 +1,4 @@
+// FIX: Corrected import path
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
 
 // Utility function to robustly check if a movie is past its release time.

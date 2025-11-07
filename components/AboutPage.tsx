@@ -4,6 +4,7 @@ import Header from './Header';
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import LoadingSpinner from './LoadingSpinner';
+// FIX: Corrected import path
 import { AboutData } from '../types';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';

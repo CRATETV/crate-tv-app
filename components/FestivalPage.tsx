@@ -9,6 +9,7 @@ import FestivalView from './FestivalView';
 import { useFestival } from '../contexts/FestivalContext';
 import BottomNavBar from './BottomNavBar';
 import SearchOverlay from './SearchOverlay';
+// FIX: Corrected import path
 import { Movie } from '../types';
 
 

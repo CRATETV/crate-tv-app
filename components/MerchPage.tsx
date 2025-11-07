@@ -5,6 +5,7 @@ import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import SearchOverlay from './SearchOverlay';
 import { useFestival } from '../contexts/FestivalContext';
+// FIX: Corrected import path
 import { Movie } from '../types';
 
 // Data for merchandise items

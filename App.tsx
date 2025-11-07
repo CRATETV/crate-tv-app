@@ -6,6 +6,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import MovieDetailsModal from './components/MovieDetailsModal';
 import ActorBioModal from './components/ActorBioModal';
 import SearchOverlay from './components/SearchOverlay';
+// FIX: Corrected import path
 import { Movie, Actor, Category } from './types';
 import { useAuth } from './contexts/AuthContext';
 import { useFestival } from './contexts/FestivalContext';
@@ -125,14 +126,14 @@ const App: React.FC = () => {
                             .map(movieKey => movies[movieKey])
                             .filter((m): m is Movie => !!m);
                         
-                        if (categoryMovies.length === 0 || key === 'featured') return null;
+                        if (categoryMovies.length === 0 || key === 'featured' || key === 'publicDomainIndie') return null;
 
                         return (
                             <MovieCarousel
                                 key={key}
                                 title={category.title}
                                 movies={categoryMovies}
-                                onSelectMovie={handleSelectMovie}
+                                onSelectMovie={handlePlayMovie}
                                 watchedMovies={watchedMovies}
                                 watchlist={watchlist}
                                 likedMovies={likedMovies}

@@ -12,15 +12,12 @@ import App from './App';
 // FIX: Corrected import path
 import AdminPage from './AdminPage';
 import LandingPage from './components/LandingPage';
-// FIX: Corrected import path
 import ClassicsPage from './components/ClassicsPage';
 import SubmitPage from './components/SubmitPage';
-// FIX: Corrected import path
 import MoviePage from './components/MoviePage';
 import MerchPage from './components/MerchPage';
 import ContactPage from './components/ContactPage';
 import AboutPage from './components/AboutPage';
-// FIX: Corrected import path
 import LoginPage from './components/LoginPage';
 import AccountPage from './components/AccountPage';
 import FestivalPage from './components/FestivalPage';
@@ -28,14 +25,11 @@ import FilmFestivalModule from './FilmFestivalModule';
 import DeveloperGuidePage from './components/DeveloperGuidePage';
 import ThankYouPage from './components/ThankYouPage';
 import TopTenPage from './components/TopTenPage';
-// FIX: Corrected import path
 import ActorPortalPage from './components/ActorPortalPage';
 import ActorSignupPage from './components/ActorSignupPage';
 import ActorsDirectoryPage from './components/ActorsDirectoryPage';
 import ActorProfilePage from './components/ActorProfilePage';
-// FIX: Corrected import path
 import WatchlistPage from './components/WatchlistPage';
-// FIX: Corrected import path
 import FilmmakerPortalPage from './components/FilmmakerPortalPage';
 import FilmmakerSignupPage from './components/FilmmakerSignupPage';
 import RokuGuidePage from './components/RokuGuidePage';
