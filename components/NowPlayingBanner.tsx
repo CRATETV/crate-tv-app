@@ -20,7 +20,7 @@ const NowPlayingBanner: React.FC<NowPlayingBannerProps> = ({ movie, onSelectMovi
 
   return (
     <div
-      className="relative w-full h-auto min-h-[16rem] md:min-h-[20rem] rounded-lg overflow-hidden cursor-pointer group mb-8 md:mb-12"
+      className="relative w-full h-auto min-h-[16rem] md:min-h-[20rem] rounded-lg overflow-hidden cursor-pointer group mb-8 md:mb-12 bg-black"
       onClick={() => onSelectMovie(movie)}
       role="button"
       aria-label={`View details for ${movie.title}`}

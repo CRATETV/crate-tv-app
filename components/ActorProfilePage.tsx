@@ -83,7 +83,7 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
                             src={`/api/proxy-image?url=${encodeURIComponent(profile.highResPhoto)}`}
                             alt={profile.name}
                             crossOrigin="anonymous"
-                            className="w-48 h-48 rounded-full object-cover border-4 border-purple-500 flex-shrink-0"
+                            className="w-48 h-48 rounded-full object-cover border-4 border-purple-500 flex-shrink-0 bg-gray-700"
                         />
                         <div>
                             <h1 className="text-4xl font-bold text-white">{profile.name}</h1>

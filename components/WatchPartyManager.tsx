@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -189,7 +191,7 @@ const formatISOForInput = (isoString?: string): string => {
         const date = new Date(isoString);
         if (isNaN(date.getTime())) return '';
         
-        // getFullYear, getMonth, etc. all return values in the local timezone.
+        // getFullYear, getMonth, etc. all return values in the user's local timezone.
         // This is exactly what we need to format for the datetime-local input.
         const year = date.getFullYear();
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -348,6 +350,12 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
             if (!response.ok) {
                 throw new Error((await response.json()).error || 'Failed to start party.');
             }
+            // Success! Now notify other tabs.
+            localStorage.setItem('crate-tv-event', JSON.stringify({
+                type: 'WATCH_PARTY_LIVE',
+                movieKey: currentPartyMovie.key,
+                timestamp: Date.now()
+            }));
         } catch (error) {
             alert(`Error: Could not start the party. ${(error as Error).message}`);
         }

@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -18,6 +20,7 @@ import BottomNavBar from './components/BottomNavBar';
 import SquarePaymentModal from './components/SquarePaymentModal';
 import FestivalLiveModal from './components/FestivalLiveModal';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
+import WatchPartyAnnouncementModal from './components/WatchPartyAnnouncementModal';
 
 const App: React.FC = () => {
     // Hooks
@@ -34,6 +37,7 @@ const App: React.FC = () => {
     const [supportMovieModal, setSupportMovieModal] = useState<Movie | null>(null);
     const [showFestivalModal, setShowFestivalModal] = useState(false);
     const [liveWatchParty, setLiveWatchParty] = useState<Movie | null>(null);
+    const [announcementMovieModal, setAnnouncementMovieModal] = useState<Movie | null>(null);
     
     // Memos for performance
     const heroMovies = useMemo(() => {
@@ -127,7 +131,41 @@ const App: React.FC = () => {
         }
     }, [heroMovies.length]);
 
-    // Effect for live event notifications
+    // Effect for localStorage events from other tabs (e.g., admin panel)
+    useEffect(() => {
+        const handleStorageEvent = (event: StorageEvent) => {
+            if (event.key === 'crate-tv-event' && event.newValue) {
+                try {
+                    const data = JSON.parse(event.newValue);
+                    if (data.type === 'FESTIVAL_LIVE') {
+                        // Don't show if already seen in this session
+                        if (!sessionStorage.getItem('festivalModalSeen')) {
+                            setShowFestivalModal(true);
+                        }
+                    } else if (data.type === 'WATCH_PARTY_LIVE' && data.movieKey) {
+                        const movie = movies[data.movieKey];
+                        if (movie) {
+                            // Don't show if already dismissed in this session
+                            if (sessionStorage.getItem('livePartyAnnouncementDismissed') !== movie.key) {
+                                setAnnouncementMovieModal(movie);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error parsing storage event", e);
+                }
+            }
+        };
+
+        window.addEventListener('storage', handleStorageEvent);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageEvent);
+        };
+    }, [movies]);
+
+
+    // Effect for live event notifications on page load
     useEffect(() => {
         if (isLoading) return;
 
@@ -136,7 +174,7 @@ const App: React.FC = () => {
             setShowFestivalModal(true);
         }
 
-        // Watch Party Check
+        // Watch Party Check for banner
         const fourHours = 4 * 60 * 60 * 1000;
         const now = Date.now();
         // FIX: Explicitly cast Object.values(movies) to Movie[] to resolve 'unknown' type error on `m`.
@@ -223,7 +261,7 @@ const App: React.FC = () => {
                 )}
                 
                 <div className="px-4 md:px-12 relative z-10">
-                    <div className="-mt-12 md:-mt-20 space-y-8 md:space-y-12">
+                    <div className="-mt-8 md:-mt-20 space-y-8 md:space-y-12">
                         {nowPlayingMovie && <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} />}
                         
                         {topTenMovies.length > 0 && (
@@ -339,6 +377,20 @@ const App: React.FC = () => {
                 />
             )}
             {showFestivalModal && <FestivalLiveModal onClose={handleCloseFestivalModal} onNavigate={handleNavigateToFestival} />}
+            {announcementMovieModal && (
+                <WatchPartyAnnouncementModal 
+                    movie={announcementMovieModal}
+                    onClose={() => {
+                        sessionStorage.setItem('livePartyAnnouncementDismissed', announcementMovieModal.key);
+                        setAnnouncementMovieModal(null);
+                    }}
+                    onJoin={() => {
+                        setAnnouncementMovieModal(null);
+                        window.history.pushState({}, '', `/watchparty/${announcementMovieModal.key}`);
+                        window.dispatchEvent(new Event('pushstate'));
+                    }}
+                />
+            )}
         </div>
     );
 };

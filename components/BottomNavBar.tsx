@@ -53,7 +53,13 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick }) => {
     const accountPath = user ? '/account' : '/login';
 
     return (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 w-full h-20 bg-black/80 backdrop-blur-sm border-t border-gray-800 z-40 flex justify-around items-center">
+        <div 
+            className="md:hidden fixed bottom-0 left-0 right-0 w-full h-20 bg-black/80 backdrop-blur-sm border-t border-gray-800 z-40 flex justify-around items-start pt-2"
+            style={{ 
+                height: `calc(5rem + env(safe-area-inset-bottom))`,
+                paddingBottom: `env(safe-area-inset-bottom)`
+            }}
+        >
             <NavItem 
                 path="/" 
                 activePath={activePath} 

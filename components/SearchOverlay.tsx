@@ -45,6 +45,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ searchQuery, onSearch, on
       className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col p-4 animate-[fadeIn_0.2s_ease-out]"
       role="dialog"
       aria-modal="true"
+      style={{ paddingBottom: `calc(1rem + env(safe-area-inset-bottom))` }}
     >
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-xl font-bold text-white">Search</h2>

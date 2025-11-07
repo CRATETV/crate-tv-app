@@ -1,3 +1,5 @@
+
+
 import React, { useState } from 'react';
 import { Movie, FestivalDay, FestivalConfig } from '../types';
 
@@ -84,7 +86,7 @@ const formatISOForInput = (isoString?: string): string => {
     try {
         const date = new Date(isoString);
         if (isNaN(date.getTime())) return '';
-        // getFullYear, getMonth, etc. all return values in the local timezone.
+        // getFullYear, getMonth, etc. all return values in the user's local timezone.
         // This is exactly what we need to format for the datetime-local input.
         const year = date.getFullYear();
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -218,6 +220,12 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
         startDate: now.toISOString(),
         endDate: endDate.toISOString(),
     });
+
+    // INSTANTLY NOTIFY OTHER TABS
+    localStorage.setItem('crate-tv-event', JSON.stringify({
+        type: 'FESTIVAL_LIVE',
+        timestamp: Date.now()
+    }));
   };
 
   if (!config) {
