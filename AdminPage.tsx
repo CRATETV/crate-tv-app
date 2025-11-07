@@ -11,9 +11,10 @@ import EmailSender from './components/EmailSender';
 import FallbackGenerator from './components/FallbackGenerator';
 import RokuAdminTab from './components/RokuAdminTab';
 import MoviePipelineTab from './components/MoviePipelineTab';
-import { PayoutRequest, ActorSubmission, MoviePipelineEntry } from './types';
+import { PayoutRequest, ActorSubmission, MoviePipelineEntry, Movie, FestivalDay, FestivalConfig } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
 import ContractsTab from './components/ContractsTab';
+import { getDbInstance } from './services/firebaseClient';
 
 const AdminPage: React.FC = () => {
     const [password, setPassword] = useState('');
@@ -22,13 +23,23 @@ const AdminPage: React.FC = () => {
     const [role, setRole] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState('analytics');
     
-    // Additional state for data fetched after auth
     const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
     const [actorSubmissions, setActorSubmissions] = useState<ActorSubmission[]>([]);
     const [moviePipeline, setMoviePipeline] = useState<MoviePipelineEntry[]>([]);
     const [isDataLoading, setIsDataLoading] = useState(true);
 
-    const { movies, categories, festivalData, festivalConfig, aboutData, isLoading: isFestivalLoading } = useFestival();
+    const { movies, categories, festivalData: initialFestivalData, festivalConfig: initialFestivalConfig, aboutData, isLoading: isFestivalLoading } = useFestival();
+    
+    // State for editable festival data
+    const [localFestivalData, setLocalFestivalData] = useState<FestivalDay[]>([]);
+    const [localFestivalConfig, setLocalFestivalConfig] = useState<FestivalConfig | null>(null);
+
+    // Sync local state when context data loads/changes
+    useEffect(() => {
+        setLocalFestivalData(initialFestivalData);
+        setLocalFestivalConfig(initialFestivalConfig);
+    }, [initialFestivalData, initialFestivalConfig]);
+
 
     useEffect(() => {
         const storedPassword = sessionStorage.getItem('adminPassword');
@@ -61,10 +72,54 @@ const AdminPage: React.FC = () => {
     
     const fetchAllAdminData = async (pw: string) => {
         setIsDataLoading(true);
-        // Implement fetching for payouts, submissions, etc.
         // This is a placeholder for where you'd fetch all necessary admin data
         setIsDataLoading(false);
     };
+
+    // --- Save Handlers ---
+    const handleFestivalSave = async () => {
+        const db = getDbInstance();
+        if (!db || !localFestivalConfig) {
+            alert("Database not connected. Cannot save.");
+            return;
+        }
+
+        try {
+            const batch = db.batch();
+
+            // Save config
+            const configRef = db.collection('festival').doc('config');
+            batch.set(configRef, localFestivalConfig);
+
+            // Save schedule/days
+            const daysCollectionRef = db.collection('festival').doc('schedule').collection('days');
+            
+            const existingDaysSnapshot = await daysCollectionRef.get();
+            existingDaysSnapshot.forEach(doc => batch.delete(doc.ref));
+
+            localFestivalData.forEach(day => {
+                const dayRef = daysCollectionRef.doc(`day${day.day}`);
+                batch.set(dayRef, { ...day, day: Number(day.day) });
+            });
+
+            await batch.commit();
+            alert('Festival settings saved and published live!');
+        } catch (error) {
+            console.error("Error saving festival settings:", error);
+            alert("Failed to save festival settings. Check console for details.");
+        }
+    };
+
+    const handleMovieSave = async (movie: Movie) => {
+        const db = getDbInstance();
+        if (!db) {
+            throw new Error("Database not connected. Cannot save movie.");
+        }
+        
+        const movieRef = db.collection('movies').doc(movie.key);
+        await movieRef.set(movie, { merge: true });
+    };
+
 
     const handlePasswordSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -145,13 +200,32 @@ const AdminPage: React.FC = () => {
                 {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                 {activeTab === 'movies' && <MovieEditor allMovies={Object.values(movies)} categories={categories} onSave={async () => {}} onDelete={async () => {}} />}
                 {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={async () => {}} />}
-                {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={() => {}} onConfigChange={() => {}} onSave={() => {}} />}
+                
+                {activeTab === 'festival' && localFestivalConfig && (
+                    <FestivalEditor 
+                        data={localFestivalData} 
+                        config={localFestivalConfig} 
+                        allMovies={movies} 
+                        onDataChange={setLocalFestivalData} 
+                        onConfigChange={setLocalFestivalConfig} 
+                        onSave={handleFestivalSave} 
+                    />
+                )}
+
                 {activeTab === 'payouts' && <PayoutsTab payoutRequests={payoutRequests} onCompletePayout={async () => {}} />}
                 {activeTab === 'contracts' && <ContractsTab />}
                 {activeTab === 'security' && <SecurityTab />}
-                {activeTab === 'watch-party' && <WatchPartyManager allMovies={movies} onSave={async () => {}} />}
+                
+                {activeTab === 'watch-party' && (
+                    <WatchPartyManager 
+                        allMovies={movies} 
+                        onSave={handleMovieSave} 
+                    />
+                )}
+                
                 {activeTab === 'email' && <EmailSender />}
-                {activeTab === 'fallback' && aboutData && festivalConfig && <FallbackGenerator movies={movies} categories={categories} festivalData={festivalData} festivalConfig={festivalConfig} aboutData={aboutData} />}
+                {/* FIX: Replaced the undefined 'festivalConfig' variable with 'localFestivalConfig' in the conditional render for the FallbackGenerator component. The original variable was renamed during destructuring from the useFestival hook, causing a reference error. */}
+                {activeTab === 'fallback' && aboutData && localFestivalConfig && <FallbackGenerator movies={movies} categories={categories} festivalData={localFestivalData} festivalConfig={localFestivalConfig} aboutData={aboutData} />}
                 {activeTab === 'roku' && <RokuAdminTab />}
                 {activeTab === 'movie-pipeline' && <MoviePipelineTab pipeline={moviePipeline} onCreateMovie={() => {}} />}
             </div>
