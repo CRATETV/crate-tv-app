@@ -34,6 +34,9 @@ const widePosterKeys = new Set([
   'intrusivethoughts',
   'smirk',
   'results',
+  'hair',
+  'iloveyoublack',
+  'newmovie1756741314485', // What If
 ]);
 
 

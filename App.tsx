@@ -223,7 +223,7 @@ const App: React.FC = () => {
                 )}
                 
                 <div className="px-4 md:px-12 relative z-10">
-                    <div className="-mt-8 md:-mt-20 space-y-8 md:space-y-12">
+                    <div className="-mt-12 md:-mt-20 space-y-8 md:space-y-12">
                         {nowPlayingMovie && <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} />}
                         
                         {topTenMovies.length > 0 && (
