@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 
 interface S3UploaderProps {
-  onUploadSuccess: (url: string) => void;
+  onUploadSuccess: (url: string, file?: File) => void;
   label: string;
 }
 
@@ -63,7 +63,7 @@ const S3Uploader: React.FC<S3UploaderProps> = ({ onUploadSuccess, label }) => {
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           setStatus('success');
-          onUploadSuccess(publicUrl);
+          onUploadSuccess(publicUrl, file);
         } else {
           throw new Error(`Upload failed with status: ${xhr.status}`);
         }

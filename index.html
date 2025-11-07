@@ -150,6 +150,13 @@
         border-color: #8b5cf6;
         box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
       }
+      .form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #9CA3AF;
+        margin-bottom: 0.5rem;
+      }
       @keyframes pulse-bg {
         50% {
           background-color: #4b5563; /* Tailwind gray-600 */
@@ -224,7 +231,7 @@
         transition: box-shadow 0.3s ease-in-out;
       }
       .ranked-card-border:hover {
-        box-shadow: 0 0 15px 3px rgba(167, 139, 250, 0.5);
+        box-shadow: 0 0 15px 3px var(--rank-color);
       }
     </style>
 

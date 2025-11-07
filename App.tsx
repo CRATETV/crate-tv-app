@@ -27,6 +27,7 @@ const App: React.FC = () => {
     const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+    const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
     
     // Memos for performance
     const heroMovies = useMemo(() => {
@@ -36,6 +37,13 @@ const App: React.FC = () => {
             .map(key => movies[key])
             .filter((m): m is Movie => !!m);
     }, [movies, categories.featured]);
+
+    const topTenMovies = useMemo(() => {
+        return (Object.values(movies) as Movie[])
+            .filter((movie: Movie): movie is Movie => !!movie && typeof movie.likes === 'number')
+            .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
+            .slice(0, 10);
+    }, [movies]);
 
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
@@ -53,6 +61,14 @@ const App: React.FC = () => {
     const likedMovies = useMemo(() => new Set(likedMoviesArray), [likedMoviesArray]);
     const watchlist = useMemo(() => new Set(watchlistArray), [watchlistArray]);
     const watchedMovies = useMemo(() => new Set(watchedMoviesArray), [watchedMoviesArray]);
+
+    const watchlistMovies = useMemo(() => {
+        return (watchlistArray || [])
+            .map(key => movies[key])
+            .filter((m): m is Movie => !!m)
+            .reverse(); // Show most recently added first
+    }, [movies, watchlistArray]);
+
 
     // Handlers
     const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
@@ -87,6 +103,41 @@ const App: React.FC = () => {
             return () => clearInterval(interval);
         }
     }, [heroMovies.length]);
+    
+    useEffect(() => {
+        if (likedMovies.size === 0 || Object.keys(movies).length === 0) {
+            setRecommendedMovies([]);
+            return;
+        }
+
+        const fetchRecommendations = async () => {
+            try {
+                const likedTitles = Array.from(likedMovies).map(key => movies[key]?.title).filter(Boolean);
+                
+                const response = await fetch('/api/generate-recommendations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ likedTitles, allMovies: movies }),
+                });
+
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const recommendedKeys: string[] = data.recommendedKeys || [];
+                
+                const recMovies = recommendedKeys
+                    .map(key => movies[key])
+                    .filter((m): m is Movie => !!m && !likedMovies.has(m.key));
+
+                setRecommendedMovies(recMovies);
+            } catch (error) {
+                console.error("Failed to fetch AI recommendations:", error);
+            }
+        };
+
+        fetchRecommendations();
+    }, [likedMovies, movies]);
+
 
      if (isLoading) {
         return <LoadingSpinner />;
@@ -119,6 +170,51 @@ const App: React.FC = () => {
                 
                 <div className="px-4 md:px-12 -mt-8 md:-mt-20 relative z-10 space-y-8 md:space-y-12">
                     {nowPlayingMovie && <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} />}
+
+                    {topTenMovies.length > 0 && (
+                        <MovieCarousel
+                            key="top-ten"
+                            title="Top 10 on Crate TV Today"
+                            movies={topTenMovies}
+                            onSelectMovie={handlePlayMovie}
+                            showRankings={true}
+                            watchedMovies={watchedMovies}
+                            watchlist={watchlist}
+                            likedMovies={likedMovies}
+                            onToggleLike={toggleLikeMovie}
+                            onSupportMovie={handleSupportMovie}
+                            allCategories={categories}
+                        />
+                    )}
+
+                    {watchlistMovies.length > 0 && (
+                        <MovieCarousel
+                            key="watchlist"
+                            title="My List"
+                            movies={watchlistMovies}
+                            onSelectMovie={handlePlayMovie}
+                            watchedMovies={watchedMovies}
+                            watchlist={watchlist}
+                            likedMovies={likedMovies}
+                            onToggleLike={toggleLikeMovie}
+                            onSupportMovie={handleSupportMovie}
+                        />
+                    )}
+
+                    {recommendedMovies.length > 0 && (
+                        <MovieCarousel
+                            key="recommendations"
+                            title="Recommended for You"
+                            movies={recommendedMovies}
+                            onSelectMovie={handlePlayMovie}
+                            watchedMovies={watchedMovies}
+                            watchlist={watchlist}
+                            likedMovies={likedMovies}
+                            onToggleLike={toggleLikeMovie}
+                            onSupportMovie={handleSupportMovie}
+                        />
+                    )}
+
 
                     {// FIX: Explicitly type `category` as `Category` to resolve properties on the 'unknown' type.
                     Object.entries(categories).map(([key, category]: [string, Category]) => {

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Movie } from '../types';
+import { Movie, Category } from '../types';
 import { MovieCard } from './MovieCard';
 
 interface MovieCarouselProps {
@@ -12,9 +12,10 @@ interface MovieCarouselProps {
   likedMovies: Set<string>;
   onToggleLike: (movieKey: string) => void;
   onSupportMovie: (movie: Movie) => void;
+  allCategories?: Record<string, Category>;
 }
 
-const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, showRankings = false, watchedMovies, watchlist, likedMovies, onToggleLike, onSupportMovie }) => {
+const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, showRankings = false, watchedMovies, watchlist, likedMovies, onToggleLike, onSupportMovie, allCategories }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -45,14 +46,14 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
              if (showRankings) {
               const rank = index + 1;
               const rankColors = [
-                '#FFC700', // Rank 1 Yellow
-                '#00E0FF', // Rank 2 Cyan
-                '#FF5733', // OrangeRed
-                '#DA70D6', // Orchid
-                '#32CD32', // LimeGreen
+                '#FFD700', // Gold
+                '#E50914', // Red
+                '#1E90FF', // Blue
+                '#32CD32', // Green
+                '#F37F1B', // Orange
+                '#9400D3', // DarkViolet
+                '#00CED1', // DarkTurquoise
                 '#FF69B4', // HotPink
-                '#1E90FF', // DodgerBlue
-                '#FF8C00', // DarkOrange
                 '#ADFF2F', // GreenYellow
                 '#BA55D3'  // MediumOrchid
               ];
@@ -61,7 +62,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
               return (
                   <div 
                       key={movie.key} 
-                      className="flex-shrink-0 w-[80vw] sm:w-[60vw] md:w-[45vw] lg:w-[35vw] cursor-pointer group ranked-card-border"
+                      className="flex-shrink-0 w-[80vw] sm:w-[60vw] md:w-[45vw] lg:w-[35vw] cursor-pointer group ranked-card-border rounded-lg"
                       onClick={() => onSelectMovie(movie)}
                       style={{ '--rank-color': color } as React.CSSProperties}
                   >
@@ -74,14 +75,14 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                           />
                           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent"></div>
       
-                          <div className="absolute bottom-0 left-0 right-0 h-[30%] flex items-center px-4">
+                          <div className="absolute bottom-0 left-0 p-4 w-full h-full flex items-start flex-col justify-between">
                               <span 
-                                  className="font-black text-7xl lg:text-8xl leading-none select-none"
+                                  className="font-black text-8xl lg:text-9xl leading-none select-none -ml-2"
                                   style={{ color: 'transparent', WebkitTextStroke: `2px ${color}` }}
                               >
                                   {rank}
                               </span>
-                              <div className="ml-4 min-w-0">
+                              <div className="min-w-0 max-w-[45%]">
                                   <p className="text-xs sm:text-sm uppercase tracking-wider text-gray-400">Start Watching</p>
                                   <h3 className="text-base sm:text-lg font-bold text-white truncate">{movie.title}</h3>
                               </div>

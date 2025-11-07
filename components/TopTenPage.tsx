@@ -1,30 +1,18 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useMemo } from 'react';
 import Header from './Header';
-import Footer from './Footer';
+import CollapsibleFooter from './CollapsibleFooter';
 import BackToTopButton from './BackToTopButton';
 import { Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import BottomNavBar from './BottomNavBar';
-import CollapsibleFooter from './CollapsibleFooter';
 import { useFestival } from '../contexts/FestivalContext';
-import TopTenList from './TopTenList';
-import TopTenShareableImage from './TopTenShareableImage';
-import html2canvas from 'html2canvas';
+import { useAuth } from '../contexts/AuthContext';
+import MovieCarousel from './MovieCarousel';
 
 const TopTenPage: React.FC = () => {
     const { isLoading, movies } = useFestival();
-    const [currentDate, setCurrentDate] = useState('');
-    const [isGenerating, setIsGenerating] = useState(false);
-    const shareableImageRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        setCurrentDate(new Date().toLocaleDateString(undefined, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-        }));
-    }, []);
-
+    const { likedMovies, toggleLikeMovie, watchlist, watchedMovies } = useAuth();
+    
     const topTenMovies = useMemo(() => {
         return Object.values(movies)
             .filter((movie: Movie): movie is Movie => !!movie && typeof movie.likes === 'number')
@@ -33,77 +21,15 @@ const TopTenPage: React.FC = () => {
     }, [movies]);
     
     const handleSelectMovie = (movie: Movie) => {
-        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+        window.history.pushState({}, '', `/movie/${movie.key}`);
         window.dispatchEvent(new Event('pushstate'));
-    };
-
-    const handleShareImage = async () => {
-        if (!shareableImageRef.current || isGenerating) return;
-
-        setIsGenerating(true);
-        try {
-            // A small delay can help ensure images are rendered before canvas capture
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            const canvas = await html2canvas(shareableImageRef.current, {
-                useCORS: true,
-                backgroundColor: null,
-                scale: 1,
-            });
-
-            const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
-            if (!blob) throw new Error('Failed to create image blob.');
-
-            const file = new File([blob], 'cratetv_top10.png', { type: 'image/png' });
-            const shareUrl = `${window.location.origin}/top-ten`;
-            const shareTitle = 'Top 10 on Crate TV';
-            const shareText = `Check out the current Top 10 films on Crate TV! #indiefilm #cratetv`;
-
-            if (navigator.share && navigator.canShare({ files: [file] })) {
-                 try {
-                    await navigator.share({
-                        title: shareTitle,
-                        text: shareText,
-                        files: [file],
-                    });
-                } catch (error) {
-                    console.warn("Sharing with file failed, falling back to URL share:", error);
-                    // Fallback to sharing URL if file sharing is aborted or fails
-                    await navigator.share({
-                        title: shareTitle,
-                        text: shareText,
-                        url: shareUrl,
-                    });
-                }
-            } else if (navigator.share) {
-                // Fallback for browsers that can share but not files
-                 await navigator.share({
-                    title: shareTitle,
-                    text: shareText,
-                    url: shareUrl,
-                });
-            } else {
-                // Fallback for browsers that don't support Web Share API at all (e.g., desktop)
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = 'cratetv_top10.png';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-            }
-
-        } catch (error) {
-            console.error("Error generating or sharing image:", error);
-            alert("Sorry, there was an issue creating the shareable image. Please try again.");
-        } finally {
-            setIsGenerating(false);
-        }
     };
 
     if (isLoading) {
         return <LoadingSpinner />;
     }
+    
+    const heroMovie = topTenMovies[0];
 
     return (
         <div className="flex flex-col min-h-screen bg-black text-white">
@@ -115,43 +41,48 @@ const TopTenPage: React.FC = () => {
                 showSearch={false}
                 showNavLinks={false}
             />
-            <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
-                <div className="max-w-4xl mx-auto">
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center text-center sm:text-left mb-12">
-                        <div>
-                             <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-2">
-                                Top 10 Today
+            <main className="flex-grow pt-16 pb-24 md:pb-0">
+                {heroMovie && (
+                     <div className="relative w-full h-[50vh] md:h-[60vh] bg-black mb-12">
+                         <img
+                            src={`/api/proxy-image?url=${encodeURIComponent(heroMovie.poster)}`}
+                            alt=""
+                            className="absolute inset-0 w-full h-full object-cover opacity-30 blur-sm"
+                            onContextMenu={(e) => e.preventDefault()}
+                            crossOrigin="anonymous"
+                         />
+                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+                         <div className="relative z-10 flex flex-col justify-end h-full p-4 md:p-12 text-center items-center">
+                            <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-2" style={{ textShadow: '0 4px 15px rgba(0,0,0,0.7)' }}>
+                                Top 10 on Crate TV
                             </h1>
-                            <p className="text-lg text-gray-400">{currentDate}</p>
-                        </div>
-                         <button
-                            onClick={handleShareImage}
-                            disabled={isGenerating}
-                            className="mt-4 sm:mt-0 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm no-print disabled:bg-blue-800 disabled:cursor-wait self-center sm:self-auto"
-                        >
-                            {isGenerating ? 'Generating...' : 'Share as Image'}
-                        </button>
-                    </div>
-
-                    <TopTenList movies={topTenMovies} onSelectMovie={handleSelectMovie} />
+                            <p className="text-lg text-gray-300">The most-loved films by the community, right now.</p>
+                         </div>
+                     </div>
+                )}
+               
+                <div className="max-w-7xl mx-auto px-4 md:px-12 -mt-20">
+                    <MovieCarousel
+                        title=""
+                        movies={topTenMovies}
+                        onSelectMovie={handleSelectMovie}
+                        showRankings={true}
+                        watchedMovies={new Set(watchedMovies)}
+                        watchlist={new Set(watchlist)}
+                        likedMovies={new Set(likedMovies)}
+                        onToggleLike={toggleLikeMovie}
+                        onSupportMovie={() => { /* Not applicable here */ }}
+                    />
                 </div>
             </main>
             <CollapsibleFooter />
             <BackToTopButton />
-             <BottomNavBar 
+            <BottomNavBar 
                 onSearchClick={() => {
                     window.history.pushState({}, '', '/');
                     window.dispatchEvent(new Event('pushstate'));
                 }}
             />
-            {/* Hidden component for generating the shareable image */}
-            {topTenMovies.length > 0 && (
-                <div className="absolute -left-[9999px] top-0" aria-hidden="true">
-                    <div ref={shareableImageRef}>
-                        <TopTenShareableImage topFilms={topTenMovies} date={currentDate} />
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
