@@ -49,11 +49,12 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
       onClick={() => onSelectMovie(movie)}
     >
       <img
-        src={movie.poster}
+        src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
         alt={movie.title}
         className={`w-full h-full ${imageFitClass}`}
         loading="lazy"
         onContextMenu={(e) => e.preventDefault()}
+        crossOrigin="anonymous"
       />
       {isOnWatchlist && (
         <div className="absolute top-2 right-2 bg-black/60 rounded-full p-1.5" title="On My List">

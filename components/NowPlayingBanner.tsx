@@ -27,10 +27,11 @@ const NowPlayingBanner: React.FC<NowPlayingBannerProps> = ({ movie, onSelectMovi
     >
       {/* Background Image */}
       <img
-        src={movie.poster}
+        src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
         alt="" // Decorative
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         onContextMenu={(e) => e.preventDefault()}
+        crossOrigin="anonymous"
       />
       
       {/* Gradient Overlay */}

@@ -1,11 +1,15 @@
 import { GoogleGenAI, Type } from '@google/genai';
+import { GrowthAnalyticsData, AiGrowthAdvice, Movie } from '../types.js';
 
 export async function POST(request: Request) {
   try {
-    const { password, metrics } = await request.json();
+    const { password, metrics } = (await request.json()) as { password: string, report: GrowthAnalyticsData, metrics: GrowthAnalyticsData['keyMetrics'] };
 
     // --- Authentication ---
-    if (password !== process.env.ADMIN_PASSWORD && process.env.ADMIN_MASTER_PASSWORD) {
+    const primaryAdminPassword = process.env.ADMIN_PASSWORD;
+    const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
+    // FIX: Corrected the logical AND to check against the master password correctly.
+    if (password !== primaryAdminPassword && password !== masterPassword) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
     if (!process.env.API_KEY) {

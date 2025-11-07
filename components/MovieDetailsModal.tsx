@@ -30,11 +30,12 @@ const RecommendedMovieCard: React.FC<{ movie: Movie; onClick: (movie: Movie) => 
             onClick={() => onClick(movie)}
         >
               <img
-                  src={movie.poster}
+                  src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
                   alt={movie.title}
                   className="w-full h-full object-cover"
                   loading="lazy"
                   onContextMenu={(e) => e.preventDefault()}
+                  crossOrigin="anonymous"
               />
             <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         </div>
@@ -255,10 +256,11 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
         <div className="relative w-full aspect-video bg-black">
           <div className="relative w-full h-full">
             <img
-                src={movie.poster}
+                src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
                 alt={movie.title}
                 className="w-full h-full object-cover"
                 onContextMenu={(e) => e.preventDefault()}
+                crossOrigin="anonymous"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-transparent to-transparent"></div>
           </div>

@@ -22,10 +22,11 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
       <div className="absolute inset-0">
         <img
           key={currentMovie.key}
-          src={currentMovie.poster}
+          src={`/api/proxy-image?url=${encodeURIComponent(currentMovie.poster)}`}
           alt="" // Decorative
           className="w-full h-full object-cover animate-[fadeIn_1s_ease-in-out]"
           onContextMenu={(e) => e.preventDefault()}
+          crossOrigin="anonymous"
         />
         {/* Darkened top gradient for better header contrast */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-black/80"></div>

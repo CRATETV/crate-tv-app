@@ -265,7 +265,7 @@ const FilmmakerDashboardView: React.FC = () => {
                             {topTenMovies.length > 0 ? topTenMovies.map((movie, index) => (
                                 <div key={movie.key} className="flex items-center gap-4 py-2 border-b border-gray-700 last:border-b-0">
                                     <span className="font-black text-3xl text-gray-600 w-8 text-center flex-shrink-0">{index + 1}</span>
-                                    <img src={movie.poster} alt="" className="w-10 h-14 object-cover rounded-md flex-shrink-0" />
+                                    <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="w-10 h-14 object-cover rounded-md flex-shrink-0" crossOrigin="anonymous"/>
                                     <div className="min-w-0">
                                         <p className="font-semibold text-white text-sm truncate">{movie.title}</p>
                                         <p className="text-xs text-gray-400 truncate">{movie.director}</p>

@@ -1,4 +1,4 @@
-// types.ts
+// FIX: Define all necessary types for the application.
 
 export interface Actor {
   name: string;
@@ -71,20 +71,58 @@ export interface AboutData {
 }
 
 export interface User {
-    uid: string;
-    email: string;
-    name?: string;
-    isActor?: boolean;
-    isFilmmaker?: boolean;
-    avatar?: string;
-    isPremiumSubscriber?: boolean;
-    watchlist?: string[];
-    watchedMovies?: string[];
-    likedMovies?: string[];
-    hasFestivalAllAccess?: boolean;
-    unlockedBlockIds?: string[];
-    purchasedMovieKeys?: string[];
-    rokuDeviceId?: string;
+  uid: string;
+  email: string | null;
+  name?: string;
+  isActor?: boolean;
+  isFilmmaker?: boolean;
+  avatar?: string;
+  isPremiumSubscriber?: boolean;
+  watchlist?: string[];
+  watchedMovies?: string[];
+  likedMovies?: string[];
+  // Festival & Purchase related
+  hasFestivalAllAccess?: boolean;
+  unlockedBlockIds?: string[];
+  purchasedMovieKeys?: string[];
+  rokuDeviceId?: string;
+}
+
+export interface ActorSubmission {
+  id: string;
+  actorName: string;
+  email: string;
+  bio: string;
+  photoUrl: string;
+  highResPhotoUrl: string;
+  imdbUrl?: string;
+  submissionDate: { seconds: number; nanoseconds: number };
+  status: 'pending' | 'approved' | 'rejected';
+}
+
+export interface MoviePipelineEntry {
+    id: string;
+    title: string;
+    posterUrl: string;
+    movieUrl: string;
+    cast: string;
+    director: string;
+}
+
+export interface LiveData {
+  movies: Record<string, Movie>;
+  categories: Record<string, Category>;
+  festivalData: FestivalDay[];
+  festivalConfig: FestivalConfig;
+  aboutData: AboutData;
+  actorSubmissions: ActorSubmission[];
+  moviePipeline: MoviePipelineEntry[];
+}
+
+export interface FetchResult {
+  data: LiveData;
+  source: 'live' | 'fallback';
+  timestamp: number;
 }
 
 export interface PayoutRequest {
@@ -94,15 +132,15 @@ export interface PayoutRequest {
   payoutMethod: 'PayPal' | 'Venmo' | 'Other';
   payoutDetails: string;
   status: 'pending' | 'completed';
-  requestDate: { seconds: number; nanoseconds: number };
-  completionDate?: { seconds: number; nanoseconds: number };
+  requestDate: { seconds: number; nanoseconds: number; };
+  completionDate?: { seconds: number; nanoseconds: number; };
 }
 
 export interface AdminPayout {
     id: string;
     amount: number;
     reason: string;
-    payoutDate: { seconds: number, nanoseconds: number };
+    payoutDate: { seconds: number; nanoseconds: number; };
 }
 
 export interface BillSavingsTransaction {
@@ -150,51 +188,15 @@ export interface AnalyticsData {
     salesByBlock: Record<string, { units: number; revenue: number }>;
 }
 
-export interface ActorSubmission {
-    id: string;
-    actorName: string;
-    email: string;
-    bio: string;
-    photoUrl: string;
-    highResPhotoUrl: string;
-    imdbUrl?: string;
-    submissionDate: { seconds: number, nanoseconds: number };
-    status: 'pending' | 'approved' | 'rejected';
-}
-
-export interface MoviePipelineEntry {
-    id: string;
-    title: string;
-    posterUrl: string;
-    movieUrl: string;
-    cast: string;
-    director: string;
-    submittedAt: any; // Firestore timestamp
-    status: 'pending' | 'processed';
-}
-
-export interface LiveData {
-    movies: Record<string, Movie>;
-    categories: Record<string, Category>;
-    festivalConfig: FestivalConfig;
-    festivalData: FestivalDay[];
-    aboutData: AboutData;
-    actorSubmissions: ActorSubmission[];
-    moviePipeline: MoviePipelineEntry[];
-}
-
-export interface FetchResult {
-    data: LiveData;
-    source: 'live' | 'fallback';
-    timestamp: number;
-}
-
 export interface ChatMessage {
   id: string;
   userName: string;
   userAvatar: string;
   text: string;
-  timestamp: any; // Firestore timestamp
+  timestamp: {
+    seconds: number;
+    nanoseconds: number;
+  };
 }
 
 export interface WatchPartyState {
@@ -212,7 +214,7 @@ export interface ActorPost {
     content: string;
     imageUrl?: string;
     timestamp: any; // Firestore timestamp
-    likes: string[];
+    likes?: string[];
 }
 
 export interface ActorProfile {
@@ -224,17 +226,32 @@ export interface ActorProfile {
     imdbUrl: string;
 }
 
-export interface MonthlyDataPoint {
-  month: string;
-  value: number;
+export interface SecurityEvent {
+    id: string;
+    type: string;
+    ip: string;
+    timestamp: any; // Firestore timestamp
+    details: any;
 }
 
-export interface AiGrowthAdvice {
-    userGrowth: string[];
-    revenueGrowth: string[];
-    communityEngagement: string[];
+export interface SecurityReport {
+    totalEvents: number;
+    eventsByType: Record<string, number>;
+    suspiciousIps: { ip: string; count: number; types: string[] }[];
+    recentEvents: SecurityEvent[];
+    threatLevel: 'red' | 'yellow' | 'green';
 }
-  
+
+export interface AiSecurityAdvice {
+    summary: string;
+    recommendations: string[];
+}
+
+export interface MonthlyDataPoint {
+    month: string;
+    value: number;
+}
+
 export interface GrowthAnalyticsData {
     historical: {
         users: MonthlyDataPoint[];
@@ -262,11 +279,7 @@ export interface GrowthAnalyticsData {
         avgRevenuePerUser: number;
         totalDonations: number;
         totalSales: number;
-        audienceBreakdown: {
-            total: number;
-            actors: number;
-            filmmakers: number;
-        };
+        audienceBreakdown: { total: number; actors: number; filmmakers: number };
         topCountries: { country: string; views: number }[];
         topEarningFilms: { title: string; totalRevenue: number }[];
     };
@@ -274,43 +287,26 @@ export interface GrowthAnalyticsData {
     avgMoMUserGrowth?: number;
 }
 
-// FIX: Added missing types for Filmmaker Analytics
+export interface AiGrowthAdvice {
+    userGrowth: string[];
+    revenueGrowth: string[];
+    communityEngagement: string[];
+}
+
+// FIX: Added missing types for Filmmaker Analytics.
 export interface FilmmakerFilmPerformance {
-  key: string;
-  title: string;
-  views: number;
-  likes: number;
-  donations: number;
-  adRevenue: number;
+    key: string;
+    title: string;
+    views: number;
+    likes: number;
+    donations: number;
+    adRevenue: number;
 }
 
 export interface FilmmakerAnalytics {
-  totalDonations: number;
-  totalAdRevenue: number;
-  totalPaidOut: number;
-  balance: number;
-  films: FilmmakerFilmPerformance[];
-}
-
-// --- NEW SECURITY TYPES ---
-
-export interface SecurityEvent {
-    id?: string;
-    type: 'FAILED_ADMIN_LOGIN' | 'FAILED_PAYMENT' | 'CONTACT_SENT' | 'SUBMISSION_SENT';
-    ip: string | null;
-    timestamp: any; // Firestore timestamp
-    details?: Record<string, any>;
-}
-
-export interface SecurityReport {
-    totalEvents: number;
-    eventsByType: Record<string, number>;
-    suspiciousIps: { ip: string; count: number; types: string[] }[];
-    recentEvents: SecurityEvent[];
-    threatLevel: 'red' | 'yellow' | 'green';
-}
-
-export interface AiSecurityAdvice {
-    summary: string;
-    recommendations: string[];
+    totalDonations: number;
+    totalAdRevenue: number;
+    totalPaidOut: number;
+    balance: number;
+    films: FilmmakerFilmPerformance[];
 }

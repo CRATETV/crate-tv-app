@@ -1,19 +1,19 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
-import ActorBioModal from './ActorBioModal';
-import Header from './Header';
-import Footer from './Footer';
-import LoadingSpinner from './LoadingSpinner';
-import BackToTopButton from './BackToTopButton';
-import SearchOverlay from './SearchOverlay';
-import StagingBanner from './StagingBanner';
-import DirectorCreditsModal from './DirectorCreditsModal';
-import Countdown from './Countdown';
-import CastButton from './CastButton';
-import RokuBanner from './RokuBanner';
-import SquarePaymentModal from './SquarePaymentModal';
-import { isMovieReleased } from '../constants';
+import ActorBioModal from './components/ActorBioModal';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import LoadingSpinner from './components/LoadingSpinner';
+import BackToTopButton from './components/BackToTopButton';
+import SearchOverlay from './components/SearchOverlay';
+import StagingBanner from './components/StagingBanner';
+import DirectorCreditsModal from './components/DirectorCreditsModal';
+import Countdown from './components/Countdown';
+import CastButton from './components/CastButton';
+import RokuBanner from './components/RokuBanner';
+import SquarePaymentModal from './components/SquarePaymentModal';
+import { isMovieReleased } from './constants';
 
 declare const google: any; // Declare Google IMA SDK global
 
@@ -50,11 +50,12 @@ const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
             className="group relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 bg-gray-900"
         >
               <img 
-                  src={movie.poster} 
+                  src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
                   alt={movie.title} 
                   className="w-full h-full object-cover"
                   loading="lazy"
                   onContextMenu={(e) => e.preventDefault()}
+                  crossOrigin="anonymous"
               />
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
         </a>
@@ -347,11 +348,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
                     {playerMode !== 'full' && (
                         <>
-                            <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" onContextMenu={(e) => e.preventDefault()} />
+                            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" onContextMenu={(e) => e.preventDefault()} crossOrigin="anonymous" />
                             
                             {released ? (
                                 <div className="relative w-full h-full flex items-center justify-center">
-                                    <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} />
+                                    <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} crossOrigin="anonymous" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                                     <button 
                                         onClick={() => setPlayerMode('full')}
@@ -488,6 +489,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     onSearch={setSearchQuery}
                     onClose={() => setIsMobileSearchOpen(false)}
                     onSubmit={handleSearchSubmit}
+                    results={[]}
+                    onSelectMovie={() => {}}
                 />
             )}
             {isSupportModalOpen && movie && (

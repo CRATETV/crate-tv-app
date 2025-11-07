@@ -29,7 +29,7 @@ const WatchPartyAnnouncementModal: React.FC<WatchPartyAnnouncementModalProps> = 
         className="relative bg-gray-900 rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden border-2 border-purple-500"
         onClick={(e) => e.stopPropagation()}
       >
-        <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 blur-sm" />
+        <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 blur-sm" crossOrigin="anonymous"/>
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
         
         <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-white z-10">
@@ -45,7 +45,7 @@ const WatchPartyAnnouncementModal: React.FC<WatchPartyAnnouncementModalProps> = 
                  </div>
             </div>
             <h2 className="text-3xl font-extrabold text-white mb-3 tracking-tight">Watch Party Starting!</h2>
-            <img src={movie.poster} alt={movie.title} className="w-40 h-auto rounded-md shadow-lg my-4 border-2 border-gray-600" />
+            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt={movie.title} className="w-40 h-auto rounded-md shadow-lg my-4 border-2 border-gray-600" crossOrigin="anonymous"/>
             <h3 className="text-2xl font-bold text-white mb-6">"{movie.title}"</h3>
             
             <div className="flex flex-col sm:flex-row gap-4 w-full">

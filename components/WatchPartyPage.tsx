@@ -28,7 +28,8 @@ const getInitialStatus = (movie: Movie | undefined): 'not_enabled' | 'upcoming' 
 };
 
 const WatchPartyPaywall: React.FC<{ movie: Movie; onPay: () => void; }> = ({ movie, onPay }) => (
-    <div className="flex flex-col items-center justify-center h-screen bg-black text-white p-4 text-center" style={{backgroundImage: `url(${movie.poster})`, backgroundSize: 'cover', backgroundPosition: 'center'}}>
+    <div className="relative flex flex-col items-center justify-center h-screen bg-black text-white p-4 text-center">
+        <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover" crossOrigin="anonymous"/>
         <div className="absolute inset-0 bg-black/80 backdrop-blur-lg"></div>
         <div className="relative z-10">
             <h1 className="text-3xl md:text-5xl font-bold mb-2">Join the Watch Party</h1>
@@ -45,7 +46,8 @@ const WatchPartyPaywall: React.FC<{ movie: Movie; onPay: () => void; }> = ({ mov
 );
 
 const JoinPartyOverlay: React.FC<{ movie: Movie; onJoin: () => void }> = ({ movie, onJoin }) => (
-    <div className="flex flex-col items-center justify-center h-screen bg-black text-white p-4 text-center" style={{backgroundImage: `url(${movie.poster})`, backgroundSize: 'cover', backgroundPosition: 'center'}}>
+    <div className="relative flex flex-col items-center justify-center h-screen bg-black text-white p-4 text-center">
+        <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover" crossOrigin="anonymous"/>
         <div className="absolute inset-0 bg-black/80 backdrop-blur-md"></div>
         <div className="relative z-10 animate-[fadeIn_0.5s_ease-out]">
             <h1 className="text-3xl sm:text-5xl font-extrabold mb-3" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.7)' }}>
@@ -229,12 +231,12 @@ const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     
     if (initialStatus === 'not_enabled' || initialStatus === 'ended') return <div className="flex flex-col items-center justify-center h-screen bg-black text-white p-4 text-center"><h1 className="text-2xl font-bold mb-2">Watch Party {initialStatus === 'ended' ? 'Has Ended' : 'Not Available'}</h1><p className="text-gray-400 mb-6">This watch party for "{movie.title}" is not currently active.</p><button onClick={handleGoBack} className="submit-btn">Go Back</button></div>;
 
-    if (initialStatus === 'upcoming' && movie.watchPartyStartTime) return <div className="flex flex-col items-center justify-center h-screen bg-black text-white p-4 text-center" style={{backgroundImage: `url(${movie.poster})`, backgroundSize: 'cover', backgroundPosition: 'center'}}><div className="absolute inset-0 bg-black/80 backdrop-blur-lg"></div><div className="relative z-10"><h1 className="text-3xl md:text-5xl font-bold mb-2">Watch Party for "{movie.title}"</h1><p className="text-lg md:text-xl text-gray-300 mb-6">Get ready! The party is about to begin.</p><div className="bg-black/50 rounded-lg p-6 text-4xl md:text-6xl font-bold"><Countdown prefix="Starting in" targetDate={movie.watchPartyStartTime} onEnd={() => setInitialStatus('live')} /></div><button onClick={handleGoBack} className="submit-btn mt-8">Go Back</button></div></div>;
+    if (initialStatus === 'upcoming' && movie.watchPartyStartTime) return <div className="relative flex flex-col items-center justify-center h-screen bg-black text-white p-4 text-center"><img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover" crossOrigin="anonymous"/><div className="absolute inset-0 bg-black/80 backdrop-blur-lg"></div><div className="relative z-10"><h1 className="text-3xl md:text-5xl font-bold mb-2">Watch Party for "{movie.title}"</h1><p className="text-lg md:text-xl text-gray-300 mb-6">Get ready! The party is about to begin.</p><div className="bg-black/50 rounded-lg p-6 text-4xl md:text-6xl font-bold"><Countdown prefix="Starting in" targetDate={movie.watchPartyStartTime} onEnd={() => setInitialStatus('live')} /></div><button onClick={handleGoBack} className="submit-btn mt-8">Go Back</button></div></div>;
     
     if (initialStatus === 'live' && !hasAccess) return <><WatchPartyPaywall movie={movie} onPay={() => setIsPaying(true)} />{isPaying && <SquarePaymentModal movie={movie} paymentType="movie" onClose={() => setIsPaying(false)} onPaymentSuccess={async () => { await purchaseMovie(movieKey); setIsPaying(false); setPaymentSuccess(true); }} />}</>;
     
     if (initialStatus === 'live' && partyState?.status === 'waiting') {
-        return <div className="flex flex-col items-center justify-center h-screen bg-black text-white p-4 text-center" style={{backgroundImage: `url(${movie.poster})`, backgroundSize: 'cover', backgroundPosition: 'center'}}><div className="absolute inset-0 bg-black/80 backdrop-blur-lg"></div><div className="relative z-10 animate-[fadeIn_1s_ease-out]"><h1 className="text-3xl md:text-5xl font-bold mb-2">The Party is About to Begin!</h1><p className="text-lg md:text-xl text-gray-300 mb-6">Waiting for the host to start the film for everyone...</p><div className="bg-black/50 rounded-lg p-6"><LoadingSpinner /></div><button onClick={handleGoBack} className="text-gray-400 hover:text-white transition mt-8">Go Back</button></div></div>;
+        return <div className="relative flex flex-col items-center justify-center h-screen bg-black text-white p-4 text-center"><img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover" crossOrigin="anonymous" /><div className="absolute inset-0 bg-black/80 backdrop-blur-lg"></div><div className="relative z-10 animate-[fadeIn_1s_ease-out]"><h1 className="text-3xl md:text-5xl font-bold mb-2">The Party is About to Begin!</h1><p className="text-lg md:text-xl text-gray-300 mb-6">Waiting for the host to start the film for everyone...</p><div className="bg-black/50 rounded-lg p-6"><LoadingSpinner /></div><button onClick={handleGoBack} className="text-gray-400 hover:text-white transition mt-8">Go Back</button></div></div>;
     }
     
     if (initialStatus === 'live' && partyState?.status === 'live' && !userHasJoined) {

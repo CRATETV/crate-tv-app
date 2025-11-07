@@ -66,6 +66,36 @@ const SkeletonCarousel: React.FC = () => (
   </div>
 );
 
+const SubmitFilmCta: React.FC = () => {
+    const handleNavigate = (e: React.MouseEvent, path: string) => {
+        e.preventDefault();
+        window.history.pushState({}, '', path);
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
+    return (
+        <div className="relative bg-black py-16 md:py-20 px-4 my-12">
+             <div 
+                className="absolute inset-0 bg-cover bg-center opacity-20"
+                style={{ backgroundImage: `url('https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg')`}}
+            ></div>
+            <div className="relative z-10 max-w-4xl mx-auto text-center">
+                <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-4">Have a Film? Get it Seen.</h2>
+                <p className="text-lg text-gray-300 max-w-2xl mx-auto mb-8">
+                    Crate TV is built to champion independent creators. Share your story with a global audience that craves original, powerful cinema.
+                </p>
+                <a 
+                    href="/submit"
+                    onClick={(e) => handleNavigate(e, '/submit')}
+                    className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-transform hover:scale-105 shadow-lg shadow-red-900/50"
+                >
+                    Submit Your Film
+                </a>
+            </div>
+        </div>
+    );
+};
+
 
 const App: React.FC = () => {
   const { user, watchlist, watchedMovies, likedMovies: likedMoviesArray, toggleLikeMovie, purchasedMovieKeys } = useAuth();
@@ -586,6 +616,7 @@ const App: React.FC = () => {
                   ))}
                 </div>
               </div>
+              <SubmitFilmCta />
             </>
         )}
       </main>

@@ -26,10 +26,11 @@ const TopTenList: React.FC<TopTenListProps> = ({ movies, onSelectMovie }) => {
                     </div>
                     <div className="relative w-20 h-28 flex-shrink-0 rounded-md overflow-hidden shadow-lg transition-transform duration-300 group-hover:scale-105">
                         <img 
-                            src={movie.poster} 
+                            src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
                             alt={movie.title} 
                             className="w-full h-full object-cover" 
                             onContextMenu={(e) => e.preventDefault()} 
+                            crossOrigin="anonymous"
                         />
                     </div>
                     <div className="flex-grow min-w-0 pl-6">
