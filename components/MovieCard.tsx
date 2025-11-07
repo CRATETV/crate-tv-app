@@ -25,6 +25,15 @@ const widePosterKeys = new Set([
   'wrapitup',
   'tedandnatalie',
   'thefallofthehouseofusher',
+  'consumed',
+  'slap',
+  'twopeasinapod',
+  'crossroads',
+  'newmovie1756487215116', // Fling
+  'newmovie1756501125076', // of Bees and Boobs
+  'intrusivethoughts',
+  'smirk',
+  'results',
 ]);
 
 

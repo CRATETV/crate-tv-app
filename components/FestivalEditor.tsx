@@ -79,15 +79,19 @@ interface FestivalEditorProps {
     onSave: () => void;
 }
 
-// Helper to format a Date object into a string for datetime-local input
-const toDateTimeLocalString = (date: Date) => {
-    const ten = (i: number) => (i < 10 ? '0' : '') + i;
-    const YYYY = date.getFullYear();
-    const MM = ten(date.getMonth() + 1);
-    const DD = ten(date.getDate());
-    const HH = ten(date.getHours());
-    const mm = ten(date.getMinutes());
-    return `${YYYY}-${MM}-${DD}T${HH}:${mm}`;
+// Correctly formats a UTC ISO string for a datetime-local input, accounting for timezone.
+const formatISOForInput = (isoString?: string): string => {
+    if (!isoString) return '';
+    try {
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) return '';
+        // Create a new date that is offset by the timezone, so the final ISO string's YYYY-MM-DDTHH:MM part matches the local time.
+        const tzoffset = date.getTimezoneOffset() * 60000; //offset in milliseconds
+        const localISOTime = new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
+        return localISOTime;
+    } catch (e) {
+        return '';
+    }
 };
 
 // The FestivalEditor component for managing festival data
@@ -137,8 +141,12 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   };
 
   const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    onConfigChange({ ...config, [name]: value });
+    const { name, value, type } = e.target;
+    let finalValue: any = value;
+    if (type === 'datetime-local') {
+        finalValue = value ? new Date(value).toISOString() : '';
+    }
+    onConfigChange({ ...config, [name]: finalValue });
   };
   
   const addDay = () => {
@@ -202,8 +210,8 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
 
     onConfigChange({ 
         ...config, 
-        startDate: toDateTimeLocalString(now),
-        endDate: toDateTimeLocalString(endDate),
+        startDate: now.toISOString(),
+        endDate: endDate.toISOString(),
     });
   };
 
@@ -243,11 +251,11 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="startDate" className="block text-sm font-medium text-gray-300">Start Date & Time</label>
-              <input type="datetime-local" name="startDate" value={config.startDate || ''} onChange={handleConfigChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
+              <input type="datetime-local" name="startDate" value={formatISOForInput(config.startDate)} onChange={handleConfigChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
             </div>
             <div>
               <label htmlFor="endDate" className="block text-sm font-medium text-gray-300">End Date & Time</label>
-              <input type="datetime-local" name="endDate" value={config.endDate || ''} onChange={handleConfigChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
+              <input type="datetime-local" name="endDate" value={formatISOForInput(config.endDate)} onChange={handleConfigChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
             </div>
           </div>
           <div className="pt-4 mt-4 border-t border-gray-800">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Movie } from '../types';
+import { Movie, Actor } from '../types';
 import S3Uploader from './S3Uploader';
 
 interface MovieEditorProps {
@@ -35,7 +35,6 @@ export const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onSave, onD
     const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
     const [isNew, setIsNew] = useState(false);
     const [filter, setFilter] = useState('');
-    const [castJson, setCastJson] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
@@ -44,14 +43,12 @@ export const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onSave, onD
 
     const handleSelectMovie = (movie: Movie) => {
         setSelectedMovie(JSON.parse(JSON.stringify(movie))); // Deep copy to avoid direct mutation
-        setCastJson(JSON.stringify(movie.cast, null, 2));
         setIsNew(false);
     };
 
     const handleCreateNew = () => {
         const newMovie = { ...emptyMovie, key: `newmovie${Date.now()}` };
         setSelectedMovie(newMovie);
-        setCastJson('[]');
         setIsNew(true);
     };
 
@@ -68,6 +65,29 @@ export const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onSave, onD
 
         setSelectedMovie({ ...selectedMovie, [name]: processedValue });
     };
+
+    const handleCastMemberChange = (index: number, field: keyof Actor, value: string) => {
+        if (!selectedMovie) return;
+        const updatedCast = [...selectedMovie.cast];
+        const actorToUpdate = { ...updatedCast[index] };
+        (actorToUpdate as any)[field] = value;
+        updatedCast[index] = actorToUpdate;
+        setSelectedMovie({ ...selectedMovie, cast: updatedCast });
+    };
+    
+    const addCastMember = () => {
+        if (!selectedMovie) return;
+        const newCastMember: Actor = { name: '', photo: '', bio: '', highResPhoto: '' };
+        setSelectedMovie({ ...selectedMovie, cast: [...selectedMovie.cast, newCastMember] });
+    };
+
+    const removeCastMember = (index: number) => {
+        if (!selectedMovie) return;
+        setSelectedMovie({
+            ...selectedMovie,
+            cast: selectedMovie.cast.filter((_, i) => i !== index),
+        });
+    };
     
     const handleUrlUpdate = (field: keyof Movie, url: string) => {
         if (selectedMovie) {
@@ -75,33 +95,17 @@ export const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onSave, onD
         }
     };
     
-    const handleCastChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setCastJson(e.target.value);
-        try {
-            const parsedCast = JSON.parse(e.target.value);
-            if (Array.isArray(parsedCast) && selectedMovie) {
-                setSelectedMovie({ ...selectedMovie, cast: parsedCast });
-            }
-        } catch (error) {
-            // Ignore parse errors while typing
-        }
-    };
-    
     const handleSave = async () => {
         if (!selectedMovie) return;
         setIsSaving(true);
         try {
-            // Final validation of cast JSON
-            const parsedCast = JSON.parse(castJson);
-            const movieToSave = { ...selectedMovie, cast: parsedCast };
-            await onSave(movieToSave, isNew);
+            await onSave(selectedMovie, isNew);
             if (isNew) {
-                // After saving a new movie, it's no longer "new"
                 setIsNew(false);
             }
             alert('Movie saved successfully! Publish your changes to make them live.');
         } catch (error) {
-            alert("Error parsing Cast JSON. Please ensure it is a valid JSON array of objects.");
+            alert("Error saving movie. Please check all fields.");
         } finally {
             setIsSaving(false);
         }
@@ -145,14 +149,15 @@ export const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onSave, onD
                         + New
                     </button>
                 </div>
-                <ul className="overflow-y-auto">
+                <ul className="overflow-y-auto space-y-2">
                     {filteredMovies.map(movie => (
                         <li 
                             key={movie.key}
                             onClick={() => handleSelectMovie(movie)}
-                            className={`p-2 rounded-md cursor-pointer text-sm ${selectedMovie?.key === movie.key ? 'bg-red-600 text-white' : 'hover:bg-gray-700'}`}
+                            className={`p-2 rounded-md cursor-pointer flex items-center gap-3 ${selectedMovie?.key === movie.key ? 'bg-red-600 text-white' : 'hover:bg-gray-700'}`}
                         >
-                            {movie.title}
+                            <img src={movie.poster} alt={movie.title} className="w-10 h-14 object-cover rounded-sm flex-shrink-0" />
+                            <span className="text-sm">{movie.title}</span>
                         </li>
                     ))}
                 </ul>
@@ -170,10 +175,19 @@ export const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onSave, onD
                         
                         <div><label className="form-label">Synopsis</label><textarea name="synopsis" value={selectedMovie.synopsis} onChange={handleChange} className="form-input" rows={4}></textarea></div>
                         
-                        <div>
-                            <label className="form-label">Cast (JSON Array)</label>
-                            <textarea name="cast" value={castJson} onChange={handleCastChange} className="form-input font-mono text-xs" rows={8}></textarea>
-                            <p className="text-xs text-gray-400 mt-1">Edit the JSON array directly. Each object must have name, photo, bio, highResPhoto properties.</p>
+                        {/* New Cast Editor */}
+                        <div className="space-y-4">
+                            <h4 className="text-lg font-semibold border-b border-gray-700 pb-2">Cast Members</h4>
+                            {selectedMovie.cast.map((actor, index) => (
+                                <div key={index} className="bg-gray-800/50 p-3 rounded-md border border-gray-600 space-y-2 relative">
+                                    <button type="button" onClick={() => removeCastMember(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-400">&times;</button>
+                                    <input type="text" placeholder="Actor Name" value={actor.name} onChange={e => handleCastMemberChange(index, 'name', e.target.value)} className="form-input text-sm" />
+                                    <input type="text" placeholder="Photo URL" value={actor.photo} onChange={e => handleCastMemberChange(index, 'photo', e.target.value)} className="form-input text-sm" />
+                                    <textarea placeholder="Bio" value={actor.bio} onChange={e => handleCastMemberChange(index, 'bio', e.target.value)} className="form-input text-sm" rows={2}></textarea>
+                                    <input type="text" placeholder="High-Res Photo URL" value={actor.highResPhoto} onChange={e => handleCastMemberChange(index, 'highResPhoto', e.target.value)} className="form-input text-sm" />
+                                </div>
+                            ))}
+                            <button type="button" onClick={addCastMember} className="text-sm bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md">+ Add Actor</button>
                         </div>
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

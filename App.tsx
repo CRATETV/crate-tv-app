@@ -15,6 +15,9 @@ import NowPlayingBanner from './components/NowPlayingBanner';
 import BackToTopButton from './components/BackToTopButton';
 import CollapsibleFooter from './components/CollapsibleFooter';
 import BottomNavBar from './components/BottomNavBar';
+import SquarePaymentModal from './components/SquarePaymentModal';
+import FestivalLiveModal from './components/FestivalLiveModal';
+import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 
 const App: React.FC = () => {
     // Hooks
@@ -28,6 +31,9 @@ const App: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
+    const [supportMovieModal, setSupportMovieModal] = useState<Movie | null>(null);
+    const [showFestivalModal, setShowFestivalModal] = useState(false);
+    const [liveWatchParty, setLiveWatchParty] = useState<Movie | null>(null);
     
     // Memos for performance
     const heroMovies = useMemo(() => {
@@ -90,9 +96,26 @@ const App: React.FC = () => {
     };
 
     const handleSupportMovie = (movie: Movie) => {
-        setDetailsMovie(movie);
-        // A real implementation would likely open a specific tab or view in the modal
+        setSupportMovieModal(movie);
     };
+
+    const handleCloseFestivalModal = () => {
+        sessionStorage.setItem('festivalModalSeen', 'true');
+        setShowFestivalModal(false);
+    };
+
+    const handleNavigateToFestival = () => {
+        handleCloseFestivalModal();
+        window.history.pushState({}, '', '/festival');
+        window.dispatchEvent(new Event('pushstate'));
+    }
+
+    const handleDismissPartyBanner = () => {
+        if (liveWatchParty) {
+            sessionStorage.setItem('livePartyBannerDismissed', liveWatchParty.key);
+        }
+        setLiveWatchParty(null);
+    }
     
     // Effects
     useEffect(() => {
@@ -103,6 +126,34 @@ const App: React.FC = () => {
             return () => clearInterval(interval);
         }
     }, [heroMovies.length]);
+
+    // Effect for live event notifications
+    useEffect(() => {
+        if (isLoading) return;
+
+        // Festival Check
+        if (isFestivalLive && !sessionStorage.getItem('festivalModalSeen')) {
+            setShowFestivalModal(true);
+        }
+
+        // Watch Party Check
+        const fourHours = 4 * 60 * 60 * 1000;
+        const now = Date.now();
+        // FIX: Explicitly cast Object.values(movies) to Movie[] to resolve 'unknown' type error on `m`.
+        const activeParty = (Object.values(movies) as Movie[]).find(m => {
+            if (!m || !m.isWatchPartyEnabled || !m.watchPartyStartTime) return false;
+            const startTime = new Date(m.watchPartyStartTime).getTime();
+            // A party is "active" if it started and is less than 4 hours old
+            return now >= startTime && (now - startTime < fourHours);
+        });
+
+        if (activeParty && sessionStorage.getItem('livePartyBannerDismissed') !== activeParty.key) {
+            setLiveWatchParty(activeParty);
+        } else {
+            setLiveWatchParty(null);
+        }
+
+    }, [isLoading, isFestivalLive, movies]);
     
     useEffect(() => {
         if (likedMovies.size === 0 || Object.keys(movies).length === 0) {
@@ -144,14 +195,17 @@ const App: React.FC = () => {
     }
 
     const nowPlayingMovie = movies['consumed'];
+    const bannerHeight = liveWatchParty ? '3rem' : '0px';
 
     return (
         <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+            {liveWatchParty && <LiveWatchPartyBanner movie={liveWatchParty} onClose={handleDismissPartyBanner} />}
             <Header 
                 searchQuery={searchQuery} 
                 onSearch={setSearchQuery} 
                 onSearchSubmit={handleSearchSubmit}
                 onMobileSearchClick={() => setIsMobileSearchOpen(true)}
+                topOffset={bannerHeight}
             />
             <main className="flex-grow pb-24 md:pb-0">
                 {isFestivalLive ? (
@@ -168,67 +222,31 @@ const App: React.FC = () => {
                     )
                 )}
                 
-                <div className="px-4 md:px-12 -mt-8 md:-mt-20 relative z-10 space-y-8 md:space-y-12">
-                    {nowPlayingMovie && <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} />}
-
-                    {topTenMovies.length > 0 && (
-                        <MovieCarousel
-                            key="top-ten"
-                            title="Top 10 on Crate TV Today"
-                            movies={topTenMovies}
-                            onSelectMovie={handlePlayMovie}
-                            showRankings={true}
-                            watchedMovies={watchedMovies}
-                            watchlist={watchlist}
-                            likedMovies={likedMovies}
-                            onToggleLike={toggleLikeMovie}
-                            onSupportMovie={handleSupportMovie}
-                            allCategories={categories}
-                        />
-                    )}
-
-                    {watchlistMovies.length > 0 && (
-                        <MovieCarousel
-                            key="watchlist"
-                            title="My List"
-                            movies={watchlistMovies}
-                            onSelectMovie={handlePlayMovie}
-                            watchedMovies={watchedMovies}
-                            watchlist={watchlist}
-                            likedMovies={likedMovies}
-                            onToggleLike={toggleLikeMovie}
-                            onSupportMovie={handleSupportMovie}
-                        />
-                    )}
-
-                    {recommendedMovies.length > 0 && (
-                        <MovieCarousel
-                            key="recommendations"
-                            title="Recommended for You"
-                            movies={recommendedMovies}
-                            onSelectMovie={handlePlayMovie}
-                            watchedMovies={watchedMovies}
-                            watchlist={watchlist}
-                            likedMovies={likedMovies}
-                            onToggleLike={toggleLikeMovie}
-                            onSupportMovie={handleSupportMovie}
-                        />
-                    )}
-
-
-                    {// FIX: Explicitly type `category` as `Category` to resolve properties on the 'unknown' type.
-                    Object.entries(categories).map(([key, category]: [string, Category]) => {
-                        const categoryMovies = category.movieKeys
-                            .map(movieKey => movies[movieKey])
-                            .filter((m): m is Movie => !!m);
+                <div className="px-4 md:px-12 relative z-10">
+                    <div className="-mt-8 md:-mt-20 space-y-8 md:space-y-12">
+                        {nowPlayingMovie && <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} />}
                         
-                        if (categoryMovies.length === 0 || key === 'featured' || key === 'publicDomainIndie') return null;
-
-                        return (
+                        {topTenMovies.length > 0 && (
                             <MovieCarousel
-                                key={key}
-                                title={category.title}
-                                movies={categoryMovies}
+                                key="top-ten"
+                                title="Top 10 on Crate TV Today"
+                                movies={topTenMovies}
+                                onSelectMovie={handlePlayMovie}
+                                showRankings={true}
+                                watchedMovies={watchedMovies}
+                                watchlist={watchlist}
+                                likedMovies={likedMovies}
+                                onToggleLike={toggleLikeMovie}
+                                onSupportMovie={handleSupportMovie}
+                                allCategories={categories}
+                            />
+                        )}
+
+                        {watchlistMovies.length > 0 && (
+                            <MovieCarousel
+                                key="watchlist"
+                                title="My List"
+                                movies={watchlistMovies}
                                 onSelectMovie={handlePlayMovie}
                                 watchedMovies={watchedMovies}
                                 watchlist={watchlist}
@@ -236,8 +254,46 @@ const App: React.FC = () => {
                                 onToggleLike={toggleLikeMovie}
                                 onSupportMovie={handleSupportMovie}
                             />
-                        );
-                    })}
+                        )}
+
+                        {recommendedMovies.length > 0 && (
+                            <MovieCarousel
+                                key="recommendations"
+                                title="Recommended for You"
+                                movies={recommendedMovies}
+                                onSelectMovie={handlePlayMovie}
+                                watchedMovies={watchedMovies}
+                                watchlist={watchlist}
+                                likedMovies={likedMovies}
+                                onToggleLike={toggleLikeMovie}
+                                onSupportMovie={handleSupportMovie}
+                            />
+                        )}
+
+
+                        {// FIX: Explicitly type `category` as `Category` to resolve properties on the 'unknown' type.
+                        Object.entries(categories).map(([key, category]: [string, Category]) => {
+                            const categoryMovies = category.movieKeys
+                                .map(movieKey => movies[movieKey])
+                                .filter((m): m is Movie => !!m);
+                            
+                            if (categoryMovies.length === 0 || key === 'featured' || key === 'publicDomainIndie') return null;
+
+                            return (
+                                <MovieCarousel
+                                    key={key}
+                                    title={category.title}
+                                    movies={categoryMovies}
+                                    onSelectMovie={handlePlayMovie}
+                                    watchedMovies={watchedMovies}
+                                    watchlist={watchlist}
+                                    likedMovies={likedMovies}
+                                    onToggleLike={toggleLikeMovie}
+                                    onSupportMovie={handleSupportMovie}
+                                />
+                            );
+                        })}
+                    </div>
                 </div>
             </main>
 
@@ -271,6 +327,18 @@ const App: React.FC = () => {
                   onSelectMovie={handleSelectFromSearch}
                 />
             )}
+            {supportMovieModal && (
+                <SquarePaymentModal
+                    movie={supportMovieModal}
+                    paymentType="donation"
+                    onClose={() => setSupportMovieModal(null)}
+                    onPaymentSuccess={() => {
+                        setSupportMovieModal(null);
+                        // Optionally show a "thank you" toast/notification here
+                    }}
+                />
+            )}
+            {showFestivalModal && <FestivalLiveModal onClose={handleCloseFestivalModal} onNavigate={handleNavigateToFestival} />}
         </div>
     );
 };

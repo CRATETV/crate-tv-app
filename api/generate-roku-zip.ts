@@ -35,14 +35,15 @@ export async function POST(request: Request) {
 
     const zip = new JSZip();
 
-    // Add all files from the local /roku directory to the zip
+    // Add all files from the local /roku directory to the zip. This will
+    // automatically include any images placed in the /roku/images/ folder.
     for (const file of files) {
         const content = await fs.readFile(file);
         const zipPath = path.relative(rokuDir, file);
         zip.file(zipPath, content);
     }
     
-    // Create the manifest file dynamically
+    // Create the manifest file dynamically, pointing to the artwork expected to be in the zip
     zip.file('manifest', `
 title=Crate TV
 major_version=1
@@ -52,27 +53,6 @@ mm_icon_focus_hd=pkg:/images/logo_hd.png
 mm_icon_side_hd=pkg:/images/logo_hd.png
 splash_screen_hd=pkg:/images/splash_hd.png
 `.trim());
-
-    // Fetch and add the required Roku images from S3
-    const logoUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/roku-assets/logo_hd.png';
-    const splashUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/roku-assets/splash_hd.png';
-
-    const [logoResponse, splashResponse] = await Promise.all([
-        fetch(logoUrl),
-        fetch(splashUrl)
-    ]);
-
-    if (!logoResponse.ok || !splashResponse.ok) {
-        throw new Error('Failed to fetch required Roku channel images from asset storage.');
-    }
-
-    const [logoBuffer, splashBuffer] = await Promise.all([
-        logoResponse.arrayBuffer(),
-        splashResponse.arrayBuffer()
-    ]);
-
-    zip.file('images/logo_hd.png', logoBuffer);
-    zip.file('images/splash_hd.png', splashBuffer);
 
     // Generate the final zip file as a standard ArrayBuffer
     const zipBuffer = await zip.generateAsync({ type: 'arraybuffer' });

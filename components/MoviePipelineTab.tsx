@@ -7,8 +7,22 @@ interface MoviePipelineTabProps {
     onCreateMovie: (item: MoviePipelineEntry) => void;
 }
 
+const emptyEntry = {
+    title: '',
+    director: '',
+    cast: '',
+    synopsis: '',
+    posterUrl: '',
+    movieUrl: '',
+    submitterEmail: ''
+};
+
 const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, onCreateMovie }) => {
     const [processingId, setProcessingId] = useState<string | null>(null);
+    const [isFormVisible, setIsFormVisible] = useState(false);
+    const [newEntry, setNewEntry] = useState(emptyEntry);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState('');
 
     const handleDelete = async (id: string) => {
         if (!window.confirm("Are you sure you want to permanently delete this submission? This cannot be undone.")) return;
@@ -29,18 +43,95 @@ const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, onCreateM
         // Parent component will handle deleting the item from the pipeline after creation.
     };
 
-    if (!pipeline || pipeline.length === 0) {
-        return (
-            <div className="text-center py-16 bg-gray-800/50 rounded-lg">
-                <h3 className="text-xl font-bold text-white">Pipeline is Empty</h3>
-                <p className="text-gray-400 mt-2">No new films have been submitted.</p>
-            </div>
-        );
-    }
+    const handleManualSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        setError('');
+        try {
+            const response = await fetch('/api/send-submission', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    filmTitle: newEntry.title,
+                    ...newEntry
+                })
+            });
+            if (!response.ok) throw new Error((await response.json()).error || "Failed to add to pipeline.");
+            alert("Film added to pipeline successfully! You can now find it below to create the movie.");
+            setNewEntry(emptyEntry);
+            setIsFormVisible(false);
+            // NOTE: A full data refresh would be needed to see the new entry immediately.
+            // For now, the user is notified to find it below.
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setNewEntry(prev => ({ ...prev, [name]: value }));
+    };
+
+    const formInputClasses = "form-input";
 
     return (
         <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Submission Pipeline ({pipeline.length})</h2>
+            
+            <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                <button onClick={() => setIsFormVisible(!isFormVisible)} className="text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">
+                    {isFormVisible ? 'Cancel Manual Entry' : '+ Add Entry Manually'}
+                </button>
+
+                {isFormVisible && (
+                    <form onSubmit={handleManualSubmit} className="mt-6 space-y-4 animate-[fadeIn_0.5s_ease-out]">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <div>
+                                <label className="form-label">Film Title</label>
+                                <input type="text" name="title" value={newEntry.title} onChange={handleInputChange} className={formInputClasses} required />
+                            </div>
+                            <div>
+                                <label className="form-label">Director's Name</label>
+                                <input type="text" name="director" value={newEntry.director} onChange={handleInputChange} className={formInputClasses} required />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="form-label">Main Cast (comma-separated)</label>
+                            <input type="text" name="cast" value={newEntry.cast} onChange={handleInputChange} className={formInputClasses} required />
+                        </div>
+                        <div>
+                            <label className="form-label">Contact Email</label>
+                            <input type="email" name="submitterEmail" value={newEntry.submitterEmail} onChange={handleInputChange} className={formInputClasses} required />
+                        </div>
+                        <div>
+                            <label className="form-label">Synopsis</label>
+                            <textarea name="synopsis" value={newEntry.synopsis} onChange={handleInputChange} rows={3} className={formInputClasses} required></textarea>
+                        </div>
+                        <div>
+                            <label className="form-label">Poster URL</label>
+                            <input type="text" name="posterUrl" value={newEntry.posterUrl} onChange={handleInputChange} className={formInputClasses} required />
+                        </div>
+                        <div>
+                            <label className="form-label">Movie File URL</label>
+                            <input type="text" name="movieUrl" value={newEntry.movieUrl} onChange={handleInputChange} className={formInputClasses} required />
+                        </div>
+                         {error && <p className="text-red-400 text-sm">{error}</p>}
+                        <button type="submit" className="submit-btn" disabled={isSubmitting}>
+                            {isSubmitting ? 'Adding...' : 'Add to Pipeline'}
+                        </button>
+                    </form>
+                )}
+            </div>
+
+            {pipeline.length === 0 && !isFormVisible && (
+                <div className="text-center py-16 bg-gray-800/50 rounded-lg">
+                    <h3 className="text-xl font-bold text-white">Pipeline is Empty</h3>
+                    <p className="text-gray-400 mt-2">No new films have been submitted. You can add one manually above.</p>
+                </div>
+            )}
+
             {pipeline.map(item => (
                 <div key={item.id} className="bg-gray-800 p-6 rounded-lg border border-gray-700">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
