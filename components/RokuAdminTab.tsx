@@ -45,14 +45,14 @@ const RokuAdminTab: React.FC = () => {
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
                 <h2 className="text-2xl font-bold text-purple-400 mb-4">Publish Your Roku SDK Channel</h2>
                 <p className="text-gray-300 mb-6">
-                    This tool automates the Roku channel creation process. It dynamically inserts your live content feed URL into the channel code and packages everything into a zip file, ready for you to upload to your Roku Developer account.
+                    This tool automates the Roku channel creation process. It packages all necessary channel code and automatically includes the latest Crate TV branding (logo and splash screen) into a zip file, ready for you to upload to your Roku Developer account.
                 </p>
             </div>
 
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
                  <h3 className="text-xl font-semibold text-white mb-4">One-Click Package Download</h3>
                  <p className="text-gray-400 mb-6">
-                     Click the button below to download your production-ready Roku channel package. This tool automatically includes the latest Crate TV branding (logo and splash screen) in your channel package.
+                     Click the button below to download your production-ready Roku channel package. This is a complete package with artwork included.
                  </p>
                  <button 
                     onClick={handleDownload}

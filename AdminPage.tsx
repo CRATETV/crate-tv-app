@@ -10,7 +10,8 @@ import WatchPartyManager from './components/WatchPartyManager';
 import EmailSender from './components/EmailSender';
 import FallbackGenerator from './components/FallbackGenerator';
 import RokuAdminTab from './components/RokuAdminTab';
-import MoviePipelineTab from './components/MoviePipelineTab';
+// FIX: Changed to a named import as MoviePipelineTab does not have a default export.
+import { MoviePipelineTab } from './components/MoviePipelineTab';
 import { PayoutRequest, ActorSubmission, MoviePipelineEntry, Movie, FestivalDay, FestivalConfig, Actor } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
 import ContractsTab from './components/ContractsTab';
@@ -62,16 +63,6 @@ const AdminPage: React.FC = () => {
         }
     }, []);
 
-    useEffect(() => {
-        const storedPassword = sessionStorage.getItem('adminPassword');
-        if (storedPassword) {
-            setPassword(storedPassword);
-            handleLogin(storedPassword);
-        } else {
-            setIsDataLoading(false);
-        }
-    }, []);
-
     const handleLogin = async (pw: string) => {
         try {
             const response = await fetch('/api/admin-login', {
@@ -92,6 +83,17 @@ const AdminPage: React.FC = () => {
             alert('Login failed');
         }
     };
+    
+    useEffect(() => {
+        const storedPassword = sessionStorage.getItem('adminPassword');
+        if (storedPassword) {
+            setPassword(storedPassword);
+            handleLogin(storedPassword);
+        } else {
+            setIsDataLoading(false);
+        }
+    }, [handleLogin]);
+
 
     const handleLogout = () => {
         sessionStorage.removeItem('adminPassword');
@@ -186,15 +188,10 @@ const AdminPage: React.FC = () => {
             mainPageExpiry: '',
         };
         
-        // This logic is currently in MovieEditor, but should be here
-        // setSelectedMovie(newMovie);
-        // setIsNew(true);
         alert("Movie Editor will now be populated with this film's data. Please switch to the 'Movie Editor' tab to finalize and save it.");
         setPipelineSourceId(item.id);
         setActiveTab('movies');
         
-        // We can't directly set MovieEditor state from here without major refactoring
-        // so we can use a temporary localStorage item as a bridge
         localStorage.setItem('__temp_new_movie_from_pipeline', JSON.stringify(newMovie));
     };
 

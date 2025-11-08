@@ -53,12 +53,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(true); // Start muted for autoplay
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastTapRef = useRef(0);
   const [seekAnim, setSeekAnim] = useState<'rewind' | 'forward' | null>(null);
-  const [showMuteHint, setShowMuteHint] = useState(false);
   
   // Modal & Search State
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -75,7 +72,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
   const [released, setReleased] = useState(() => isMovieReleased(movie));
-  const isTouchDevice = useMemo(() => 'ontouchstart' in window || navigator.maxTouchPoints > 0, []);
 
   const playContent = useCallback(async () => {
     setIsAdPlaying(false);
@@ -237,10 +233,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             setIsPlaying(true); 
             setIsPaused(false); 
             handlePlayerInteraction();
-            if (video.muted && isTouchDevice) {
-                setShowMuteHint(true);
-                setTimeout(() => setShowMuteHint(false), 5000);
-            }
         };
         const handlePause = () => { setIsPlaying(false); if (!video.ended) setIsPaused(true); };
         const handleTimeUpdate = () => {
@@ -283,7 +275,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             clearInterval(progressInterval);
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
         };
-    }, [movieKey, handlePlayerInteraction, markAsWatched, isTouchDevice]);
+    }, [movieKey, handlePlayerInteraction, markAsWatched]);
 
     // Autoplay fallback effect
     useEffect(() => {
@@ -303,13 +295,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
 
     const handlePlayPause = useCallback(() => {
-        if (videoRef.current) {
-            if (videoRef.current.muted) {
-                videoRef.current.muted = false;
-                setIsMuted(false);
-                setShowMuteHint(false);
+        const video = videoRef.current;
+        if (video) {
+            if (video.muted) {
+                video.muted = false;
+            }
+            if (video.paused) {
+                video.play();
             } else {
-                videoRef.current.paused ? videoRef.current.play() : videoRef.current.pause();
+                video.pause();
             }
         }
     }, []);
@@ -347,16 +341,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         }
     };
 
-    const handleTapToSeek = (e: React.MouseEvent<HTMLDivElement>, direction: 'rewind' | 'forward') => {
-        const now = new Date().getTime();
-        if (now - lastTapRef.current < 300) { // Double tap
-            direction === 'rewind' ? handleRewind() : handleForward();
-            lastTapRef.current = 0; // Reset tap
-        } else {
-            lastTapRef.current = now;
-        }
-    };
-
     const handleShowDetails = () => {
         videoRef.current?.pause();
         setIsDetailsModalOpen(true);
@@ -380,7 +364,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     ref={playerContainerRef}
                     className="relative w-full aspect-video bg-black secure-video-container"
                     onMouseMove={handlePlayerInteraction}
-                    onMouseLeave={() => { if (isPlaying) setShowControls(false); }}
+                    onClick={handlePlayerInteraction}
                 >
                     <div ref={adContainerRef} className={`absolute inset-0 z-20 ${isAdPlaying ? '' : 'pointer-events-none'}`} />
                     
@@ -395,25 +379,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 onContextMenu={(e) => e.preventDefault()} 
                                 controlsList="nodownload"
                                 autoPlay
-                                onClick={handlePlayPause}
                             />
-                            {showMuteHint && (
-                                <button 
-                                    className="absolute top-4 right-4 bg-black/60 text-white text-sm px-3 py-1.5 rounded-full backdrop-blur-sm animate-pulse z-40 pointer-events-auto"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (videoRef.current) {
-                                            videoRef.current.muted = false;
-                                            setIsMuted(false);
-                                        }
-                                        setShowMuteHint(false);
-                                    }}
-                                >
-                                    Tap to unmute
-                                </button>
-                            )}
-                            <div className="absolute top-0 left-0 h-full w-1/3 z-30" onDoubleClick={(e) => handleTapToSeek(e, 'rewind')}></div>
-                             <div className="absolute top-0 right-0 h-full w-1/3 z-30" onDoubleClick={(e) => handleTapToSeek(e, 'forward')}></div>
+                            <div className="absolute top-0 left-0 h-full w-1/3 z-30" onDoubleClick={handleRewind}></div>
+                             <div className="absolute top-0 right-0 h-full w-1/3 z-30" onDoubleClick={handleForward}></div>
 
                              {seekAnim && (
                                 <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 flex items-center justify-center p-4 bg-black/50 rounded-full animate-seek`}>

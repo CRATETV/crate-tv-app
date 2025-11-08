@@ -18,7 +18,8 @@ const emptyEntry = {
     submitterEmail: ''
 };
 
-const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, onCreateMovie, onRefresh }) => {
+// FIX: Export the component to allow named imports from other files.
+export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, onCreateMovie, onRefresh }) => {
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [isFormVisible, setIsFormVisible] = useState(false);
     const [newEntry, setNewEntry] = useState(emptyEntry);
@@ -125,49 +126,41 @@ const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, onCreateM
                 )}
             </div>
 
-            {pipeline.length === 0 && !isFormVisible && (
-                <div className="text-center py-16 bg-gray-800/50 rounded-lg">
-                    <h3 className="text-xl font-bold text-white">Pipeline is Empty</h3>
-                    <p className="text-gray-400 mt-2">No new films have been submitted. You can add one manually above.</p>
+            {pipeline.length > 0 ? (
+                <div className="space-y-4">
+                    {pipeline.map(item => (
+                        <div key={item.id} className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+                            <div className="flex flex-col md:flex-row gap-4">
+                                <img src={item.posterUrl} alt={item.title} className="w-24 h-36 object-cover rounded-md flex-shrink-0" />
+                                <div className="flex-grow">
+                                    <h3 className="text-lg font-bold text-white">{item.title}</h3>
+                                    <p className="text-sm text-gray-400">by {item.director}</p>
+                                    <p className="text-xs text-gray-500 mt-1">Submitted by: {item.submitterEmail}</p>
+                                    <p className="text-sm text-gray-300 mt-2 line-clamp-2">{item.synopsis}</p>
+                                </div>
+                                <div className="flex flex-col gap-2 flex-shrink-0">
+                                    <button
+                                        onClick={() => handleCreate(item)}
+                                        disabled={processingId === item.id}
+                                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md text-sm w-full"
+                                    >
+                                        {processingId === item.id ? '...' : 'Create Movie'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(item.id)}
+                                        disabled={processingId === item.id}
+                                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm w-full"
+                                    >
+                                        {processingId === item.id ? '...' : 'Delete'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
+            ) : (
+                <p className="text-gray-500 text-center py-8">The submission pipeline is empty.</p>
             )}
-
-            {pipeline.map(item => (
-                <div key={item.id} className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div className="md:col-span-1 flex flex-col items-center">
-                            <img src={item.posterUrl} alt={item.title} className="w-48 h-auto object-contain rounded-md mb-4"/>
-                            <div className="flex gap-4">
-                                <a href={item.posterUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">View Poster</a>
-                                <a href={item.movieUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">View Movie</a>
-                            </div>
-                        </div>
-                        <div className="md:col-span-3">
-                            <h3 className="text-xl font-bold text-white">{item.title}</h3>
-                            <p className="text-sm text-gray-400">by {item.director}</p>
-                            <p className="text-sm mt-2"><strong>Cast:</strong> {item.cast}</p>
-                             <div className="flex gap-4 mt-6">
-                                <button
-                                    onClick={() => handleCreate(item)}
-                                    disabled={processingId === item.id}
-                                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md disabled:bg-gray-600"
-                                >
-                                    {processingId === item.id ? 'Creating...' : 'Create Movie'}
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(item.id)}
-                                    disabled={processingId === item.id}
-                                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md disabled:bg-gray-600"
-                                >
-                                    {processingId === item.id ? 'Deleting...' : 'Delete Submission'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            ))}
         </div>
     );
 };
-
-export default MoviePipelineTab;

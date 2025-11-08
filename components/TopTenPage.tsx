@@ -40,11 +40,7 @@ const TopTenPage: React.FC = () => {
             const canvas = await html2canvas(shareableImageRef.current, {
                 useCORS: true,
                 backgroundColor: null,
-<<<<<<< HEAD
                 scale: 1, // Reduced scale for stability
-=======
-                scale: 1.5,
->>>>>>> db02b7586a04927b40e0b6786963c4772569af4d
             });
 
             const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));

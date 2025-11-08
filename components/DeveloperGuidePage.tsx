@@ -137,7 +137,7 @@ Implement Feature A with new styling and adjustments`}
                                     <ul className="list-disc list-inside ml-6 mt-2">
                                         <li>Log into your Crate TV admin panel (`/admin`).</li>
                                         <li>Navigate to the **"Roku"** tab.</li>
-                                        <li>Click the **"Download Roku Package (.zip)"** button. The downloaded ZIP file is a complete, production-ready package with all necessary artwork included automatically.</li>
+                                        <li>Click the **"Download Roku Package (.zip)"** button. The downloaded ZIP file is a complete, production-ready package. It automatically includes the latest Crate TV branding (logo and splash screen), so no manual image handling is required.</li>
                                     </ul>
                                 </li>
                                 <li>

@@ -139,20 +139,12 @@ This project includes a full **SDK (Software Development Kit) channel** that loa
 
 **Prerequisite**: You must have deployed your Crate TV web application. The Roku channel needs a public URL to fetch movie data from.
 
-### One-Time Setup: Add Channel Artwork
-Before you package your channel for the first time, you must add your channel's artwork to the project. This is a one-time step.
-1. Navigate to the `roku/images/` folder in the project's source code.
-2. Place your two required image files inside this folder:
-   - `logo_hd.png` (Recommended: 336x210 pixels)
-   - `splash_hd.png` (The loading screen, must be exactly 1920x1080 pixels)
-3. Commit these images to your repository.
-
 ### Publishing Process
 1.  **Download Your Channel Package**:
     *   Log into your Crate TV admin panel (`/admin`).
     *   Navigate to the **"Roku"** tab.
     *   Click the **"Download Roku Package (.zip)"** button.
-    *   The downloaded ZIP file is a complete, production-ready package that now includes your artwork.
+    *   The downloaded ZIP file is a complete, production-ready package. It automatically includes the latest Crate TV branding (logo and splash screen), so no manual image handling is required.
 
 2.  **Upload and Publish**:
     *   Log into your **[Roku Developer Dashboard](https://developer.roku.com/)**.
