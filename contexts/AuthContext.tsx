@@ -18,6 +18,7 @@ interface AuthContextType {
     logout: () => Promise<void>;
     sendPasswordReset: (email: string) => Promise<void>;
     setAvatar: (avatarId: string) => Promise<void>;
+    updateName: (name: string) => Promise<void>;
     getUserIdToken: () => Promise<string | null>;
     watchlist: string[];
     toggleWatchlist: (movieKey: string) => Promise<void>;
@@ -155,6 +156,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await updateUserProfile(user.uid, { avatar: avatarId });
         setUser(currentUser => currentUser ? ({ ...currentUser, avatar: avatarId }) : null);
     };
+    
+    const updateName = useCallback(async (name: string) => {
+        if (!user) return;
+        await updateUserProfile(user.uid, { name });
+        setUser(currentUser => currentUser ? ({ ...currentUser, name }) : null);
+    }, [user]);
 
     // --- Watchlist, Watched History, and Liked Movies ---
     const watchlist = user?.watchlist || [];
@@ -257,6 +264,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         sendPasswordReset,
         getUserIdToken,
         setAvatar,
+        updateName,
         watchlist,
         toggleWatchlist,
         watchedMovies,

@@ -79,11 +79,8 @@ const Header: React.FC<HeaderProps> = ({
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center">
-                        <a href="/" onClick={(e) => handleNavigate(e, '/')} className="flex-shrink-0">
-                             <img className="h-8 w-auto" src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" />
-                        </a>
                         {showNavLinks && user && (
-                            <nav className="hidden md:block ml-10">
+                            <nav className="hidden md:block">
                                 <div className="flex items-baseline space-x-4">
                                     {navLinks.map(link => (
                                         <a key={link.path} href={link.path} onClick={(e) => handleNavigate(e, link.path)} className="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
@@ -97,22 +94,17 @@ const Header: React.FC<HeaderProps> = ({
 
                     <div className="flex items-center gap-4">
                         {showSearch && user && (
-                            <>
-                                <div className="hidden md:block">
-                                    <form onSubmit={(e) => { e.preventDefault(); onSearchSubmit?.(searchQuery); }}>
-                                        <input
-                                            type="search"
-                                            value={searchQuery}
-                                            onChange={(e) => onSearch(e.target.value)}
-                                            placeholder="Search..."
-                                            className="bg-gray-700/50 text-white placeholder-gray-400 px-3 py-1.5 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                                        />
-                                    </form>
-                                </div>
-                                <button onClick={onMobileSearchClick} className="md:hidden text-gray-300 hover:text-white">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                </button>
-                            </>
+                            <div className="hidden md:block">
+                                <form onSubmit={(e) => { e.preventDefault(); onSearchSubmit?.(searchQuery); }}>
+                                    <input
+                                        type="search"
+                                        value={searchQuery}
+                                        onChange={(e) => onSearch(e.target.value)}
+                                        placeholder="Search..."
+                                        className="bg-gray-700/50 text-white placeholder-gray-400 px-3 py-1.5 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    />
+                                </form>
+                            </div>
                         )}
                         
                         {user ? (

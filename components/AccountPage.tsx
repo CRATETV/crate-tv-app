@@ -6,17 +6,31 @@ import { avatars } from './avatars';
 import LoadingSpinner from './LoadingSpinner';
 
 const AccountPage: React.FC = () => {
-    const { user, logout, setAvatar } = useAuth();
+    const { user, logout, setAvatar, updateName } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
     const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || 'fox');
+    const [displayName, setDisplayName] = useState(user?.name || '');
 
-    const handleSaveAvatar = async () => {
-        if (!user || user.avatar === selectedAvatar) return;
+    const handleSaveChanges = async () => {
+        if (!user) return;
+        
+        const avatarChanged = user.avatar !== selectedAvatar;
+        const nameChanged = user.name !== displayName && displayName.trim() !== '';
+
+        if (!avatarChanged && !nameChanged) return;
+
         setIsSaving(true);
         try {
-            await setAvatar(selectedAvatar);
+            const promises = [];
+            if (avatarChanged) {
+                promises.push(setAvatar(selectedAvatar));
+            }
+            if (nameChanged) {
+                promises.push(updateName(displayName.trim()));
+            }
+            await Promise.all(promises);
         } catch (error) {
-            console.error("Failed to save avatar", error);
+            console.error("Failed to save changes", error);
             // Optionally show an error to the user
         } finally {
             setIsSaving(false);
@@ -32,6 +46,8 @@ const AccountPage: React.FC = () => {
     if (!user) {
         return <LoadingSpinner />;
     }
+    
+    const hasChanges = user.avatar !== selectedAvatar || (user.name !== displayName && displayName.trim() !== '');
 
     return (
         <div className="flex flex-col min-h-screen bg-black text-white">
@@ -62,48 +78,53 @@ const AccountPage: React.FC = () => {
                                         />
                                     ))}
                                 </div>
-                                <button
-                                    onClick={handleSaveAvatar}
-                                    disabled={isSaving || user.avatar === selectedAvatar}
-                                    className="submit-btn w-full mt-6"
-                                >
-                                    {isSaving ? 'Saving...' : 'Save Avatar'}
-                                </button>
                             </div>
 
                             {/* Account Details */}
-                            <div className="md:col-span-2">
+                            <div className="md:col-span-2 space-y-4">
                                 <h2 className="text-xl font-semibold mb-4">Your Details</h2>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="text-sm text-gray-400">Email</label>
-                                        <p className="text-lg">{user.email}</p>
+                                <div>
+                                    <label className="text-sm text-gray-400">Email</label>
+                                    <p className="text-lg">{user.email}</p>
+                                </div>
+                                 <div>
+                                    <label htmlFor="displayName" className="text-sm text-gray-400">Display Name</label>
+                                    <input
+                                        id="displayName"
+                                        type="text"
+                                        value={displayName}
+                                        onChange={(e) => setDisplayName(e.target.value)}
+                                        className="form-input mt-1 w-full text-lg"
+                                        placeholder="Enter your name"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm text-gray-400">Roles</label>
+                                    <div className="flex flex-wrap gap-2 mt-1">
+                                        {user.isActor && <span className="badge">Actor</span>}
+                                        {user.isFilmmaker && <span className="badge">Filmmaker</span>}
+                                        {user.isPremiumSubscriber && <span className="badge bg-yellow-500 text-black">Premium</span>}
+                                        {!user.isActor && !user.isFilmmaker && !user.isPremiumSubscriber && <span className="text-gray-500 text-sm">No special roles assigned.</span>}
                                     </div>
-                                     <div>
-                                        <label className="text-sm text-gray-400">Display Name</label>
-                                        <p className="text-lg">{user.name}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-sm text-gray-400">Roles</label>
-                                        <div className="flex flex-wrap gap-2 mt-1">
-                                            {user.isActor && <span className="badge">Actor</span>}
-                                            {user.isFilmmaker && <span className="badge">Filmmaker</span>}
-                                            {user.isPremiumSubscriber && <span className="badge bg-yellow-500 text-black">Premium</span>}
-                                            {!user.isActor && !user.isFilmmaker && !user.isPremiumSubscriber && <span className="text-gray-500 text-sm">No special roles assigned.</span>}
-                                        </div>
-                                    </div>
-                                    
-                                     <div className="pt-4 mt-4 border-t border-gray-700">
-                                        <a href="/link-roku" onClick={(e) => handleNavigate(e, '/link-roku')} className="text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-2">
-                                            Link a Roku Device
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
-                                        </a>
-                                    </div>
+                                </div>
+                                
+                                 <div className="pt-4 mt-4 border-t border-gray-700">
+                                    <a href="/link-roku" onClick={(e) => handleNavigate(e, '/link-roku')} className="text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-2">
+                                        Link a Roku Device
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                                    </a>
                                 </div>
                             </div>
                         </div>
-                         <div className="mt-8 border-t border-gray-700 pt-6 text-center">
-                            <button onClick={logout} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-md transition-colors">
+                         <div className="mt-8 border-t border-gray-700 pt-6 flex flex-col sm:flex-row justify-center items-center gap-4">
+                            <button
+                                onClick={handleSaveChanges}
+                                disabled={isSaving || !hasChanges}
+                                className="submit-btn w-full sm:w-auto"
+                            >
+                                {isSaving ? 'Saving...' : 'Save Changes'}
+                            </button>
+                            <button onClick={logout} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-md transition-colors w-full sm:w-auto">
                                 Sign Out
                             </button>
                         </div>

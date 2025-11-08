@@ -49,39 +49,68 @@ const AdminPage: React.FC = () => {
 
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);
+        setError('');
+        const errors: string[] = [];
+    
         try {
-            const [
-                dataRes,
-                pipelineRes,
-                actorSubmissionsRes,
-                payoutsRes
-            ] = await Promise.all([
+            const results = await Promise.allSettled([
                 fetch('/api/get-live-data'),
                 fetch('/api/get-pipeline-data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) }),
                 fetch('/api/get-actor-submissions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) }),
                 fetch('/api/get-payouts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) })
             ]);
-
-            if (!dataRes.ok || !pipelineRes.ok || !actorSubmissionsRes.ok || !payoutsRes.ok) {
-                 throw new Error('Failed to fetch one or more data sources.');
+    
+            // Process live data
+            const dataResResult = results[0];
+            if (dataResResult.status === 'fulfilled' && dataResResult.value.ok) {
+                const data = await dataResResult.value.json();
+                setMovies(data.movies || {});
+                setCategories(data.categories || {});
+                setAboutData(data.aboutData || null);
+                setFestivalData(data.festivalData || []);
+                setFestivalConfig(data.festivalConfig || null);
+            } else {
+                errors.push('Failed to fetch live site data.');
+                console.error('Failed to fetch live site data:', dataResResult.status === 'rejected' ? dataResResult.reason : `Status ${dataResResult.value?.status}`);
             }
-            
-            const data = await dataRes.json();
-            const pipelineData = await pipelineRes.json();
-            const actorSubmissionsData = await actorSubmissionsRes.json();
-            const payoutsData = await payoutsRes.json();
-
-            setMovies(data.movies || {});
-            setCategories(data.categories || {});
-            setAboutData(data.aboutData || null);
-            setFestivalData(data.festivalData || []);
-            setFestivalConfig(data.festivalConfig || null);
-            setPipeline(pipelineData.pipeline || []);
-            setActorSubmissions(actorSubmissionsData.submissions || []);
-            setPayoutRequests(payoutsData.payoutRequests || []);
-
+    
+            // Process pipeline data
+            const pipelineResResult = results[1];
+            if (pipelineResResult.status === 'fulfilled' && pipelineResResult.value.ok) {
+                const pipelineData = await pipelineResResult.value.json();
+                setPipeline(pipelineData.pipeline || []);
+            } else {
+                errors.push('Failed to fetch submission pipeline.');
+                console.error('Failed to fetch pipeline data:', pipelineResResult.status === 'rejected' ? pipelineResResult.reason : `Status ${pipelineResResult.value?.status}`);
+            }
+    
+            // Process actor submissions
+            const actorSubmissionsResResult = results[2];
+            if (actorSubmissionsResResult.status === 'fulfilled' && actorSubmissionsResResult.value.ok) {
+                const actorSubmissionsData = await actorSubmissionsResResult.value.json();
+                setActorSubmissions(actorSubmissionsData.submissions || []);
+            } else {
+                errors.push('Failed to fetch actor submissions.');
+                console.error('Failed to fetch actor submissions:', actorSubmissionsResResult.status === 'rejected' ? actorSubmissionsResResult.reason : `Status ${actorSubmissionsResResult.value?.status}`);
+            }
+    
+            // Process payouts
+            const payoutsResResult = results[3];
+            if (payoutsResResult.status === 'fulfilled' && payoutsResResult.value.ok) {
+                const payoutsData = await payoutsResResult.value.json();
+                setPayoutRequests(payoutsData.payoutRequests || []);
+            } else {
+                errors.push('Failed to fetch payout requests.');
+                 console.error('Failed to fetch payouts:', payoutsResResult.status === 'rejected' ? payoutsResResult.reason : `Status ${payoutsResResult.value?.status}`);
+            }
+    
+            if (errors.length > 0) {
+                setError(`Could not load some data: ${errors.join(' ')}`);
+            }
+    
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load data.');
+            // This catch block is for network errors or other unexpected issues before Promise.allSettled runs
+            setError(err instanceof Error ? err.message : 'A critical error occurred while loading data.');
         } finally {
             setIsLoading(false);
         }
