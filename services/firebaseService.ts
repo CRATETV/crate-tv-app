@@ -13,7 +13,18 @@ export const addMoviePipelineEntry = async (entry: Omit<MoviePipelineEntry, 'id'
 };
 
 export const deleteMoviePipelineEntry = async (id: string) => {
-    const db = getDbInstance();
-    if (!db) throw new Error("Firestore not initialized");
-    await db.collection('movie_pipeline').doc(id).delete();
+    const password = sessionStorage.getItem('adminPassword');
+    if (!password) {
+        throw new Error("Authentication required to delete pipeline entries.");
+    }
+    const response = await fetch('/api/delete-pipeline-entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, password })
+    });
+
+    if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete pipeline entry.');
+    }
 };

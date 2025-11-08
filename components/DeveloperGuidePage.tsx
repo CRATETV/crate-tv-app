@@ -124,33 +124,20 @@ Implement Feature A with new styling and adjustments`}
                         <section>
                             <h2 className="text-3xl font-bold text-white mb-4">How to Set Up the Roku Channel (Automated SDK Method)</h2>
                             <p className="text-gray-300 mb-4">
-                                This project includes a full **SDK (Software Development Kit) channel** that loads its content from a live feed. The Admin Panel automates the packaging process, so you never have to edit code or manually zip files. This is a one-time setup.
+                                This project includes a full **SDK (Software Development Kit) channel** that loads its content from a live feed. The Admin Panel automates the packaging process, so you never have to edit code or manually zip files.
                             </p>
                             <p className="text-gray-300 mb-4">
                                 <strong className="text-yellow-400">Prerequisite:</strong> The Roku channel needs a public URL to fetch movie data from. Ensure your web application is deployed and accessible online before proceeding.
                             </p>
                         
-                             <h3 className="text-xl font-semibold text-white mt-6 mb-2">One-Time Publishing Process</h3>
+                             <h3 className="text-xl font-semibold text-white mt-6 mb-2">Publishing Process</h3>
                             <ol className="list-decimal list-inside space-y-4 text-gray-300 mb-4">
                                 <li>
                                     <strong>Download Your Channel Package:</strong>
                                     <ul className="list-disc list-inside ml-6 mt-2">
                                         <li>Log into your Crate TV admin panel (`/admin`).</li>
                                         <li>Navigate to the **"Roku"** tab.</li>
-                                        <li>Click the **"Download Roku Package (.zip)"** button. A production-ready zip file will be downloaded to your computer.</li>
-                                    </ul>
-                                </li>
-                                <li>
-                                    <strong>Add Channel Artwork (First-Time Only):</strong>
-                                    <ul className="list-disc list-inside ml-6 mt-2">
-                                        <li>Unzip the downloaded package.</li>
-                                        <li>In the `images/` folder, add your two required image files:
-                                            <ul className="list-disc list-inside ml-6 mt-2">
-                                                <li>`logo_hd.png` (Recommended: 336x210 pixels)</li>
-                                                <li>`splash_hd.png` (Loading screen, must be 1920x1080 pixels)</li>
-                                            </ul>
-                                        </li>
-                                        <li>Re-zip the **contents** of the folder (not the folder itself).</li>
+                                        <li>Click the **"Download Roku Package (.zip)"** button. The downloaded ZIP file is a complete, production-ready package with all necessary artwork included automatically.</li>
                                     </ul>
                                 </li>
                                 <li>
@@ -164,7 +151,7 @@ Implement Feature A with new styling and adjustments`}
                                 </li>
                             </ol>
                             <p className="text-gray-300">
-                               Once published, any content you update and **"Publish"** in the Crate TV admin panel will automatically appear in your live Roku channel.
+                               Once published, any content you update and **"Publish"** in the Crate TV admin panel will automatically appear in your live Roku channel. You only need to re-package and re-upload if you make changes to the channel's source code itself.
                             </p>
                         </section>
                     </div>

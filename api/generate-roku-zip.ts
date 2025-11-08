@@ -31,19 +31,41 @@ export async function POST(request: Request) {
     }
 
     const rokuDir = path.join((process as any).cwd(), 'roku');
-    const files = await readDirectory(rokuDir);
+    // Read all files, but filter out the placeholder 'images' directory, as we'll fetch them live.
+    const allFiles = await readDirectory(rokuDir);
+    const filesToInclude = allFiles.filter(file => !file.includes(path.join('roku', 'images')));
 
     const zip = new JSZip();
 
-    // Add all files from the local /roku directory to the zip. This will
-    // automatically include any images placed in the /roku/images/ folder.
-    for (const file of files) {
+    // Add all local files (components, scripts, etc.) from the /roku directory to the zip.
+    for (const file of filesToInclude) {
         const content = await fs.readFile(file);
         const zipPath = path.relative(rokuDir, file);
         zip.file(zipPath, content);
     }
     
-    // Create the manifest file dynamically, pointing to the artwork expected to be in the zip
+    // --- AUTOMATION: Fetch branding images from S3 and add them to the zip ---
+    const logoUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png';
+    const splashUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/intro-poster.jpg';
+
+    const [logoResponse, splashResponse] = await Promise.all([
+        fetch(logoUrl),
+        fetch(splashUrl)
+    ]);
+
+    if (!logoResponse.ok || !splashResponse.ok) {
+        throw new Error('Failed to fetch required branding images from S3. Please check the URLs.');
+    }
+
+    const logoBuffer = await logoResponse.arrayBuffer();
+    const splashBuffer = await splashResponse.arrayBuffer();
+
+    // Add the fetched images to the zip with the correct paths and names required by Roku.
+    zip.file('images/logo_hd.png', logoBuffer);
+    zip.file('images/splash_hd.png', splashBuffer);
+    // --- END OF AUTOMATION ---
+
+    // Create the manifest file dynamically, pointing to the artwork now in the zip
     zip.file('manifest', `
 title=Crate TV
 major_version=1

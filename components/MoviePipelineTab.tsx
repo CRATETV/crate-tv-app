@@ -5,6 +5,7 @@ import { deleteMoviePipelineEntry } from '../services/firebaseService';
 interface MoviePipelineTabProps {
     pipeline: MoviePipelineEntry[];
     onCreateMovie: (item: MoviePipelineEntry) => void;
+    onRefresh: () => void;
 }
 
 const emptyEntry = {
@@ -17,7 +18,7 @@ const emptyEntry = {
     submitterEmail: ''
 };
 
-const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, onCreateMovie }) => {
+const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, onCreateMovie, onRefresh }) => {
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [isFormVisible, setIsFormVisible] = useState(false);
     const [newEntry, setNewEntry] = useState(emptyEntry);
@@ -29,7 +30,7 @@ const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, onCreateM
         setProcessingId(id);
         try {
             await deleteMoviePipelineEntry(id);
-            // Parent component's data refresh will handle UI update.
+            onRefresh(); // Refresh parent data
         } catch (error) {
             alert(`Failed to delete submission: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
@@ -60,8 +61,7 @@ const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, onCreateM
             alert("Film added to pipeline successfully! You can now find it below to create the movie.");
             setNewEntry(emptyEntry);
             setIsFormVisible(false);
-            // NOTE: A full data refresh would be needed to see the new entry immediately.
-            // For now, the user is notified to find it below.
+            onRefresh();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred.');
         } finally {

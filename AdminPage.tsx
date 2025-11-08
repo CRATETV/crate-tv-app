@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useFestival } from './contexts/FestivalContext';
 import { MovieEditor } from './components/MovieEditor';
 import CategoryEditor from './components/CategoryEditor';
@@ -11,10 +11,12 @@ import EmailSender from './components/EmailSender';
 import FallbackGenerator from './components/FallbackGenerator';
 import RokuAdminTab from './components/RokuAdminTab';
 import MoviePipelineTab from './components/MoviePipelineTab';
-import { PayoutRequest, ActorSubmission, MoviePipelineEntry, Movie, FestivalDay, FestivalConfig } from './types';
+import { PayoutRequest, ActorSubmission, MoviePipelineEntry, Movie, FestivalDay, FestivalConfig, Actor } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
 import ContractsTab from './components/ContractsTab';
 import { getDbInstance } from './services/firebaseClient';
+import { deleteMoviePipelineEntry } from './services/firebaseService';
+
 
 const AdminPage: React.FC = () => {
     const [password, setPassword] = useState('');
@@ -27,6 +29,7 @@ const AdminPage: React.FC = () => {
     const [actorSubmissions, setActorSubmissions] = useState<ActorSubmission[]>([]);
     const [moviePipeline, setMoviePipeline] = useState<MoviePipelineEntry[]>([]);
     const [isDataLoading, setIsDataLoading] = useState(true);
+    const [pipelineSourceId, setPipelineSourceId] = useState<string | null>(null);
 
     const { movies, categories, festivalData: initialFestivalData, festivalConfig: initialFestivalConfig, aboutData, isLoading: isFestivalLoading } = useFestival();
     
@@ -40,12 +43,32 @@ const AdminPage: React.FC = () => {
         setLocalFestivalConfig(initialFestivalConfig);
     }, [initialFestivalData, initialFestivalConfig]);
 
+    const fetchAdminData = useCallback(async (pw: string) => {
+        setIsDataLoading(true);
+        try {
+            const pipelineRes = await fetch('/api/get-pipeline-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pw })
+            });
+            if (!pipelineRes.ok) throw new Error('Failed to fetch pipeline data.');
+            const pipelineData = await pipelineRes.json();
+            setMoviePipeline(pipelineData.pipeline || []);
+
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsDataLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
         const storedPassword = sessionStorage.getItem('adminPassword');
         if (storedPassword) {
             setPassword(storedPassword);
             handleLogin(storedPassword);
+        } else {
+            setIsDataLoading(false);
         }
     }, []);
 
@@ -61,19 +84,13 @@ const AdminPage: React.FC = () => {
                 sessionStorage.setItem('adminPassword', pw);
                 setIsAuthenticated(true);
                 setRole(data.role);
-                fetchAllAdminData(pw);
+                fetchAdminData(pw);
             } else {
                 alert('Invalid password');
             }
         } catch (error) {
             alert('Login failed');
         }
-    };
-    
-    const fetchAllAdminData = async (pw: string) => {
-        setIsDataLoading(true);
-        // This is a placeholder for where you'd fetch all necessary admin data
-        setIsDataLoading(false);
     };
 
     const handleLogout = () => {
@@ -117,7 +134,7 @@ const AdminPage: React.FC = () => {
         }
     };
 
-    const handleMovieSave = async (movie: Movie) => {
+    const handleMovieSave = async (movie: Movie, isNewMovie: boolean) => {
         const db = getDbInstance();
         if (!db) {
             throw new Error("Database not connected. Cannot save movie.");
@@ -125,6 +142,60 @@ const AdminPage: React.FC = () => {
         
         const movieRef = db.collection('movies').doc(movie.key);
         await movieRef.set(movie, { merge: true });
+
+        // Auto-delete from pipeline if it was created from there
+        if (isNewMovie && pipelineSourceId) {
+            try {
+                await deleteMoviePipelineEntry(pipelineSourceId);
+                setPipelineSourceId(null);
+                fetchAdminData(password); // Refresh pipeline data
+            } catch (error) {
+                console.error("Failed to auto-delete from pipeline:", error);
+                alert("Movie was saved, but failed to remove it from the pipeline. Please delete it manually.");
+            }
+        }
+    };
+
+    const handleCreateMovieFromPipeline = (item: MoviePipelineEntry) => {
+        const castArray: Actor[] = item.cast.split(',').map(name => ({
+            name: name.trim(),
+            photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
+            bio: 'Information regarding this actor is currently unavailable.',
+            highResPhoto: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
+        }));
+        
+        const newMovie: Movie = {
+            key: `newmovie${Date.now()}`,
+            title: item.title,
+            synopsis: item.synopsis,
+            cast: castArray,
+            director: item.director,
+            producers: '',
+            trailer: '',
+            fullMovie: item.movieUrl,
+            poster: item.posterUrl,
+            tvPoster: item.posterUrl,
+            releaseDateTime: new Date().toISOString(),
+            durationInMinutes: 0,
+            rating: 0,
+            hasCopyrightMusic: false,
+            isWatchPartyEnabled: false,
+            watchPartyStartTime: '',
+            isForSale: false,
+            salePrice: 0,
+            mainPageExpiry: '',
+        };
+        
+        // This logic is currently in MovieEditor, but should be here
+        // setSelectedMovie(newMovie);
+        // setIsNew(true);
+        alert("Movie Editor will now be populated with this film's data. Please switch to the 'Movie Editor' tab to finalize and save it.");
+        setPipelineSourceId(item.id);
+        setActiveTab('movies');
+        
+        // We can't directly set MovieEditor state from here without major refactoring
+        // so we can use a temporary localStorage item as a bridge
+        localStorage.setItem('__temp_new_movie_from_pipeline', JSON.stringify(newMovie));
     };
 
 
@@ -213,7 +284,7 @@ const AdminPage: React.FC = () => {
             
             <div className="bg-gray-800 p-6 rounded-lg">
                 {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
-                {activeTab === 'movies' && <MovieEditor allMovies={Object.values(movies)} categories={categories} onSave={async () => {}} onDelete={async () => {}} />}
+                {activeTab === 'movies' && <MovieEditor allMovies={Object.values(movies)} categories={categories} onSave={handleMovieSave} onDelete={async () => {}} />}
                 {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={async () => {}} />}
                 
                 {activeTab === 'festival' && localFestivalConfig && (
@@ -234,15 +305,14 @@ const AdminPage: React.FC = () => {
                 {activeTab === 'watch-party' && (
                     <WatchPartyManager 
                         allMovies={movies} 
-                        onSave={handleMovieSave} 
+                        onSave={async (movie) => handleMovieSave(movie, false)} 
                     />
                 )}
                 
                 {activeTab === 'email' && <EmailSender />}
-                {/* FIX: Replaced the undefined 'festivalConfig' variable with 'localFestivalConfig' in the conditional render for the FallbackGenerator component. The original variable was renamed during destructuring from the useFestival hook, causing a reference error. */}
                 {activeTab === 'fallback' && aboutData && localFestivalConfig && <FallbackGenerator movies={movies} categories={categories} festivalData={localFestivalData} festivalConfig={localFestivalConfig} aboutData={aboutData} />}
                 {activeTab === 'roku' && <RokuAdminTab />}
-                {activeTab === 'movie-pipeline' && <MoviePipelineTab pipeline={moviePipeline} onCreateMovie={() => {}} />}
+                {activeTab === 'movie-pipeline' && <MoviePipelineTab pipeline={moviePipeline} onCreateMovie={handleCreateMovieFromPipeline} onRefresh={() => fetchAdminData(password)} />}
             </div>
         </div>
     );

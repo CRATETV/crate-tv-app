@@ -52,7 +52,7 @@ const RokuAdminTab: React.FC = () => {
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
                  <h3 className="text-xl font-semibold text-white mb-4">One-Click Package Download</h3>
                  <p className="text-gray-400 mb-6">
-                     Click the button below to download your production-ready Roku channel package. No manual code editing required. You will need to add your channel's artwork to the zip file the first time you do this.
+                     Click the button below to download your production-ready Roku channel package. This tool automatically includes the latest Crate TV branding (logo and splash screen) in your channel package.
                  </p>
                  <button 
                     onClick={handleDownload}
