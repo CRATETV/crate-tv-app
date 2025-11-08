@@ -114,7 +114,7 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
                                         key={movie.key} 
                                         movie={movie} 
                                         onSelectMovie={handleSelectMovie} 
-                                        isLiked={likedMovies.has(movie.key)}
+                                        isLiked={likedMovies.includes(movie.key)}
                                         onToggleLike={toggleLikeMovie}
                                         isOnWatchlist={watchlist.includes(movie.key)}
                                         onToggleWatchlist={toggleWatchlist}
