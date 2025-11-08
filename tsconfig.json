@@ -24,6 +24,7 @@
     "MoviePage.tsx", 
     "ClassicsPage.tsx",
     "components/PremiumPage.tsx",
-    "WatchPartyManager.tsx"
+    "WatchPartyManager.tsx",
+    "FilmmakerPortalPage.tsx"
   ]
 }
