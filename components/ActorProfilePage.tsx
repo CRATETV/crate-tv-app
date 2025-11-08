@@ -55,7 +55,7 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
 
     if (error) {
         return (
-            <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+            <div className="flex flex-col min-h-screen text-white">
                 <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
                 <main className="flex-grow flex items-center justify-center text-center p-4">
                     <h1 className="text-2xl font-bold text-red-500">{error}</h1>
@@ -68,7 +68,7 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
     if (!profile) return null;
 
     return (
-        <div className="flex flex-col min-h-screen bg-gray-900 text-white">
+        <div className="flex flex-col min-h-screen text-white">
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
             <main className="flex-grow pt-24 px-4 md:px-12">
                 <div className="max-w-5xl mx-auto">

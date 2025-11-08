@@ -257,7 +257,7 @@ const AdminPage: React.FC = () => {
     const accessibleTabs = tabs.filter(tab => role && tab.roles.includes(role));
 
     return (
-        <div className="bg-gray-900 min-h-screen text-white p-4 sm:p-8">
+        <div className="min-h-screen text-white p-4 sm:p-8">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold">Crate TV Admin Panel</h1>
                 <button

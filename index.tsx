@@ -37,7 +37,8 @@ import LoadingSpinner from './components/LoadingSpinner';
 import Intro from './components/Intro';
 import CreatorPortalPage from './components/CreatorPortalPage';
 import CreatorDashboardPage from './components/CreatorDashboardPage';
-import WatchPartyPage from './components/WatchPartyPage';
+// FIX: Changed to a named import to resolve module resolution error.
+import { WatchPartyPage } from './components/WatchPartyPage';
 import TalentPage from './components/TalentPage';
 import LinkRokuPage from './components/LinkRokuPage';
 

@@ -11,11 +11,12 @@ interface MovieCarouselProps {
   watchlist: Set<string>;
   likedMovies: Set<string>;
   onToggleLike: (movieKey: string) => void;
+  onToggleWatchlist: (movieKey: string) => void;
   onSupportMovie: (movie: Movie) => void;
   allCategories?: Record<string, Category>;
 }
 
-const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, showRankings = false, watchedMovies, watchlist, likedMovies, onToggleLike, onSupportMovie, allCategories }) => {
+const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, showRankings = false, watchedMovies, watchlist, likedMovies, onToggleLike, onToggleWatchlist, onSupportMovie, allCategories }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -101,6 +102,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                     isOnWatchlist={watchlist.has(movie.key)}
                     isLiked={likedMovies.has(movie.key)}
                     onToggleLike={onToggleLike}
+                    onToggleWatchlist={onToggleWatchlist}
                     onSupportMovie={onSupportMovie}
                   />
                 </div>

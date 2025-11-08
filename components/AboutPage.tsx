@@ -25,7 +25,7 @@ const AboutPage: React.FC = () => {
 
     if (!aboutData) {
         return (
-            <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+            <div className="flex flex-col min-h-screen text-white">
                  <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
                  <main className="flex-grow flex items-center justify-center text-center p-4">
                     <p>Could not load page content. Please try again later.</p>
@@ -35,7 +35,7 @@ const AboutPage: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+        <div className="flex flex-col min-h-screen text-white">
             <Header 
                 searchQuery="" 
                 onSearch={() => {}} 

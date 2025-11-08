@@ -9,16 +9,21 @@ import { useFestival } from '../contexts/FestivalContext';
 import { useAuth } from '../contexts/AuthContext';
 import MovieCarousel from './MovieCarousel';
 import TopTenShareableImage from './TopTenShareableImage';
-import html2canvas from 'html2canvas';
+// Lazy load html2canvas by removing the static import
+// import html2canvas from 'html2canvas';
 
 const TopTenPage: React.FC = () => {
-    const { isLoading, movies } = useFestival();
-    const { likedMovies, toggleLikeMovie, watchlist, watchedMovies } = useAuth();
+    const { isLoading, movies, categories } = useFestival();
+    const { likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
     
     const [isGenerating, setIsGenerating] = useState(false);
     const [desktopShareStatus, setDesktopShareStatus] = useState<'idle' | 'success'>('idle');
     const shareableImageRef = useRef<HTMLDivElement>(null);
     const currentDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+    const likedMovies = useMemo(() => new Set(likedMoviesArray), [likedMoviesArray]);
+    const watchlist = useMemo(() => new Set(watchlistArray), [watchlistArray]);
+    const watchedMovies = useMemo(() => new Set(watchedMoviesArray), [watchedMoviesArray]);
 
     const topTenMovies = useMemo(() => {
         return Object.values(movies)
@@ -37,10 +42,13 @@ const TopTenPage: React.FC = () => {
 
         setIsGenerating(true);
         try {
+            // Dynamically import html2canvas only when needed
+            const { default: html2canvas } = await import('html2canvas');
+            
             const canvas = await html2canvas(shareableImageRef.current, {
                 useCORS: true,
                 backgroundColor: null,
-                scale: 1, // Reduced scale for stability
+                scale: 1,
             });
 
             const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
@@ -51,14 +59,12 @@ const TopTenPage: React.FC = () => {
             const shareText = `Check out the current Top 10 films on Crate TV! #indiefilm #cratetv\n${shareUrl}`;
             
             if (navigator.share && navigator.canShare({ files: [file] })) {
-                // Native mobile sharing
                 await navigator.share({
                     title: 'Top 10 on Crate TV',
                     text: shareText,
                     files: [file],
                 });
             } else {
-                // Desktop fallback: copy link and download image
                 try {
                     await navigator.clipboard.writeText(shareText);
                     setDesktopShareStatus('success');
@@ -72,8 +78,6 @@ const TopTenPage: React.FC = () => {
                     document.body.removeChild(link);
                     URL.revokeObjectURL(link.href);
                 } catch (copyError) {
-                    console.error("Could not copy text, falling back to download only:", copyError);
-                    // If clipboard fails for any reason, just download the image.
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
                     link.download = 'cratetv_top10.png';
@@ -102,7 +106,7 @@ const TopTenPage: React.FC = () => {
     const heroMovie = topTenMovies[0];
 
     return (
-        <div className="flex flex-col min-h-screen bg-black text-white">
+        <div className="flex flex-col min-h-screen text-white">
             <Header
                 searchQuery=""
                 onSearch={() => {}}
@@ -160,15 +164,18 @@ const TopTenPage: React.FC = () => {
                
                 <div className="max-w-7xl mx-auto px-4 md:px-12 -mt-20">
                     <MovieCarousel
+                        key="top-ten"
                         title=""
                         movies={topTenMovies}
                         onSelectMovie={handleSelectMovie}
                         showRankings={true}
-                        watchedMovies={new Set(watchedMovies)}
-                        watchlist={new Set(watchlist)}
-                        likedMovies={new Set(likedMovies)}
+                        watchedMovies={watchedMovies}
+                        watchlist={watchlist}
+                        likedMovies={likedMovies}
                         onToggleLike={toggleLikeMovie}
+                        onToggleWatchlist={toggleWatchlist}
                         onSupportMovie={() => { /* Not applicable here */ }}
+                        allCategories={categories}
                     />
                 </div>
             </main>

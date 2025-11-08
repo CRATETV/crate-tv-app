@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Header from './Header';
 import Hero from './Hero';
@@ -66,7 +67,7 @@ const LandingPage: React.FC = () => {
 
     return (
         <>
-            <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+            <div className="flex flex-col min-h-screen text-white">
                 <Header
                     searchQuery=""
                     onSearch={() => {}}

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnalyticsData, Movie, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
-import html2canvas from 'html2canvas';
 import TopTenShareableImage from './TopTenShareableImage';
+// import html2canvas from 'html2canvas'; // Removed for lazy-loading
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
 const formatNumber = (num: number) => num.toLocaleString();
@@ -73,6 +73,9 @@ const TopFilmsTab: React.FC = () => {
 
         setIsGenerating(true);
         try {
+            // Dynamically import html2canvas only when needed for performance
+            const { default: html2canvas } = await import('html2canvas');
+
             const canvas = await html2canvas(shareableImageRef.current, {
                 useCORS: true,
                 backgroundColor: null,

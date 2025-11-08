@@ -51,7 +51,10 @@
       }
       body {
         font-family: 'Roboto', sans-serif;
-        background-color: #141414;
+        background-color: #101010; /* Fallback */
+        background-image: radial-gradient(ellipse at center top, #1c1c1c 0%, #101010 100%);
+        background-attachment: fixed; /* This is key for a smooth, non-repeating gradient */
+        min-height: 100vh;
       }
       #root {
         animation: fadeIn 0.5s ease-out;
@@ -147,6 +150,7 @@
         padding: 0.75rem 1rem;
         border-radius: 0.5rem;
         transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        color-scheme: dark; /* This hints to the browser to use light-colored UI for internal elements like the calendar icon */
       }
       .form-input:focus {
         outline: none;
@@ -314,7 +318,7 @@
 </script>
   <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-[#141414] text-white">
+  <body class="text-white">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

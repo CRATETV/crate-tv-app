@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Actor } from '../types';
 import { generateActorFact, findImdbUrl } from '../services/geminiService';
-import html2canvas from 'html2canvas';
+// import html2canvas from 'html2canvas'; // Removed for lazy-loading
 
 interface ActorBioModalProps {
   actor: Actor;
@@ -66,6 +66,9 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
     const profileUrl = `${window.location.origin}/actors-directory/${slug}`;
 
     try {
+        // Dynamically import html2canvas only when needed for performance
+        const { default: html2canvas } = await import('html2canvas');
+        
         const canvas = await html2canvas(modalContentRef.current, {
             backgroundColor: '#2d3748', // Match the modal's background
             useCORS: true, // Important for external images

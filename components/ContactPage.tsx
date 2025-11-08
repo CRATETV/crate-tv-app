@@ -52,7 +52,7 @@ const ContactPage: React.FC = () => {
     const formInputClasses = "form-input";
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+        <div className="flex flex-col min-h-screen text-white">
             <Header 
                 searchQuery="" 
                 onSearch={() => {}} 

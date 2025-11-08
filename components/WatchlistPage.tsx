@@ -12,7 +12,7 @@ import BottomNavBar from './BottomNavBar';
 import { useFestival } from '../contexts/FestivalContext';
 
 const WatchlistPage: React.FC = () => {
-    const { user, watchlist } = useAuth();
+    const { user, watchlist, toggleWatchlist, likedMovies, toggleLikeMovie, watchedMovies } = useAuth();
     const { isLoading, movies } = useFestival();
 
     const watchlistMovies = useMemo(() => {
@@ -31,7 +31,7 @@ const WatchlistPage: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+        <div className="flex flex-col min-h-screen text-white">
             <Header 
                 searchQuery="" 
                 onSearch={() => {}} 
@@ -45,13 +45,22 @@ const WatchlistPage: React.FC = () => {
                     {watchlistMovies.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
                             {watchlistMovies.map(movie => (
-                                <MovieCard key={movie.key} movie={movie} onSelectMovie={handleSelectMovie} />
+                                <MovieCard 
+                                    key={movie.key} 
+                                    movie={movie} 
+                                    onSelectMovie={handleSelectMovie} 
+                                    isOnWatchlist={true}
+                                    onToggleWatchlist={toggleWatchlist}
+                                    isLiked={likedMovies.includes(movie.key)}
+                                    onToggleLike={toggleLikeMovie}
+                                    isWatched={watchedMovies.includes(movie.key)}
+                                />
                             ))}
                         </div>
                     ) : (
                         <div className="text-center py-20">
                             <h2 className="text-2xl font-semibold text-gray-300">Your List is Empty</h2>
-                            <p className="text-gray-500 mt-2">Add shows and movies to your list to watch them later.</p>
+                            <p className="text-gray-500 mt-2">Use the (+) icon on any film to save it for later.</p>
                         </div>
                     )}
                 </div>

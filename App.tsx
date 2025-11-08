@@ -22,7 +22,7 @@ import WatchPartyAnnouncementModal from './components/WatchPartyAnnouncementModa
 
 const App: React.FC = () => {
     // Hooks
-    const { user, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, watchedMovies: watchedMoviesArray } = useAuth();
+    const { user, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
     const { isLoading, movies, categories, isFestivalLive, festivalConfig } = useFestival();
     
     // State
@@ -234,7 +234,7 @@ const App: React.FC = () => {
     const bannerHeight = liveWatchParty ? '3rem' : '0px';
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+        <div className="flex flex-col min-h-screen text-white">
             {liveWatchParty && <LiveWatchPartyBanner movie={liveWatchParty} onClose={handleDismissPartyBanner} />}
             <Header 
                 searchQuery={searchQuery} 
@@ -273,6 +273,7 @@ const App: React.FC = () => {
                                 watchlist={watchlist}
                                 likedMovies={likedMovies}
                                 onToggleLike={toggleLikeMovie}
+                                onToggleWatchlist={toggleWatchlist}
                                 onSupportMovie={handleSupportMovie}
                                 allCategories={categories}
                             />
@@ -288,6 +289,7 @@ const App: React.FC = () => {
                                 watchlist={watchlist}
                                 likedMovies={likedMovies}
                                 onToggleLike={toggleLikeMovie}
+                                onToggleWatchlist={toggleWatchlist}
                                 onSupportMovie={handleSupportMovie}
                             />
                         )}
@@ -302,6 +304,7 @@ const App: React.FC = () => {
                                 watchlist={watchlist}
                                 likedMovies={likedMovies}
                                 onToggleLike={toggleLikeMovie}
+                                onToggleWatchlist={toggleWatchlist}
                                 onSupportMovie={handleSupportMovie}
                             />
                         )}
@@ -325,6 +328,7 @@ const App: React.FC = () => {
                                     watchlist={watchlist}
                                     likedMovies={likedMovies}
                                     onToggleLike={toggleLikeMovie}
+                                    onToggleWatchlist={toggleWatchlist}
                                     onSupportMovie={handleSupportMovie}
                                 />
                             );

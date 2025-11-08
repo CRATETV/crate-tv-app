@@ -10,7 +10,7 @@ const TalentPage: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-black text-white">
+        <div className="flex flex-col min-h-screen text-white">
             <Header 
                 searchQuery="" 
                 onSearch={() => {}} 
@@ -42,7 +42,7 @@ const TalentPage: React.FC = () => {
                 </div>
 
                 {/* Features Section */}
-                <div className="py-20 md:py-24 bg-[#141414]">
+                <div className="py-20 md:py-24">
                     <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-12">
                         <div className="text-center">
                             <h3 className="text-2xl font-bold text-white mb-3">Authentic Performances</h3>

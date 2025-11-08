@@ -325,19 +325,37 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }, [currentTime, duration]);
     
     const handleFullscreen = async () => {
-        const player = playerContainerRef.current;
+        const player = playerContainerRef.current as any; // Use 'any' to access prefixed methods
         if (!player) return;
+
+        const isInFullscreen = document.fullscreenElement || (document as any).webkitFullscreenElement;
+
         try {
-            if (document.fullscreenElement) {
-                await document.exitFullscreen();
+            if (isInFullscreen) {
+                if (document.exitFullscreen) {
+                    await document.exitFullscreen();
+                } else if ((document as any).webkitExitFullscreen) {
+                    (document as any).webkitExitFullscreen();
+                }
             } else {
-                await player.requestFullscreen();
-                if (screen.orientation && (screen.orientation as any).lock) {
-                    await (screen.orientation as any).lock('landscape');
+                if (player.requestFullscreen) {
+                    await player.requestFullscreen();
+                } else if (player.webkitRequestFullscreen) {
+                    // This is the key for iOS Safari
+                    player.webkitRequestFullscreen();
+                }
+                
+                // Screen orientation lock is experimental and can fail gracefully.
+                try {
+                    if (screen.orientation && (screen.orientation as any).lock) {
+                        await (screen.orientation as any).lock('landscape');
+                    }
+                } catch (orientationError) {
+                    console.warn("Screen orientation lock failed:", orientationError);
                 }
             }
         } catch (error) {
-            console.error("Fullscreen or orientation lock failed:", error);
+            console.error("Fullscreen request failed:", error);
         }
     };
 
@@ -356,7 +374,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-black text-white">
+        <div className="flex flex-col min-h-screen text-white">
             {isStaging && <StagingBanner onExit={() => { sessionStorage.removeItem('crateTvStaging'); window.location.reload(); }} isOffline={dataSource === 'fallback'} />}
             
             <main ref={mainRef} className="flex-grow flex items-center justify-center">

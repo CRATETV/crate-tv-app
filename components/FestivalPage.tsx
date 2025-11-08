@@ -65,7 +65,7 @@ const FestivalPage: React.FC = () => {
 
     if (!festivalConfig || (!isFestivalLive && !isStaging)) {
         return (
-             <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+             <div className="flex flex-col min-h-screen text-white">
                 <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
                 <main className="flex-grow flex items-center justify-center text-center p-4">
                     <div>
@@ -79,7 +79,7 @@ const FestivalPage: React.FC = () => {
     }
     
     return (
-        <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+        <div className="flex flex-col min-h-screen text-white">
             {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => setIsMobileSearchOpen(true)} showSearch={false} />
             

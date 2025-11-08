@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Movie } from '../types';
 
@@ -9,10 +10,11 @@ interface MovieCardProps {
   isOnWatchlist?: boolean;
   isLiked?: boolean;
   onToggleLike?: (movieKey: string) => void;
+  onToggleWatchlist?: (movieKey: string) => void;
   onSupportMovie?: (movie: Movie) => void;
 }
 
-export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWatched, isOnWatchlist, isLiked, onToggleLike, onSupportMovie }) => {
+export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWatched, isOnWatchlist, isLiked, onToggleLike, onToggleWatchlist, onSupportMovie }) => {
   if (!movie) return null;
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
 
@@ -21,6 +23,11 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
     setIsAnimatingLike(true);
     setTimeout(() => setIsAnimatingLike(false), 500); // Duration of the heartbeat animation
     onToggleLike?.(movie.key);
+  };
+
+  const handleToggleWatchlist = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleWatchlist?.(movie.key);
   };
 
   const handleSupport = (e: React.MouseEvent) => {
@@ -41,13 +48,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
         onContextMenu={(e) => e.preventDefault()}
         crossOrigin="anonymous"
       />
-      {isOnWatchlist && (
-        <div className="absolute top-2 right-2 bg-black/60 rounded-full p-1.5" title="On My List">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-            </svg>
-        </div>
-      )}
+      
       {isWatched && (
         <div className="absolute bottom-1 left-1 bg-red-600/80 text-white text-xs font-bold px-1.5 py-0.5 rounded">
           WATCHED
@@ -62,6 +63,19 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
         <div className="flex items-end justify-between">
             <h3 className="text-white font-bold text-sm truncate pr-2">{movie.title}</h3>
             <div className="flex items-center gap-2 flex-shrink-0">
+                {onToggleWatchlist && (
+                  <button onClick={handleToggleWatchlist} className="p-1.5 rounded-full bg-black/50 hover:bg-white/20" title={isOnWatchlist ? "Remove from My List" : "Add to My List"}>
+                    {isOnWatchlist ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                    )}
+                  </button>
+                )}
                 {onToggleLike && (
                     <button onClick={handleToggleLike} className={`p-1.5 rounded-full bg-black/50 hover:bg-red-500/80 ${isAnimatingLike ? 'animate-heartbeat' : ''}`}>
                         <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-colors ${isLiked ? 'text-red-500' : 'text-white'}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

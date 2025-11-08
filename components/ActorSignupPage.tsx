@@ -39,7 +39,7 @@ const ActorSignupPage: React.FC = () => {
 
     if (status === 'success') {
         return (
-            <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+            <div className="flex flex-col min-h-screen text-white">
                 <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
                 <main className="flex-grow flex items-center justify-center text-center p-4">
                     <div className="max-w-2xl bg-gray-800/50 border border-gray-700 rounded-lg p-8 sm:p-12 animate-[fadeIn_0.5s_ease-out]">
@@ -66,7 +66,7 @@ const ActorSignupPage: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-black text-white">
+        <div className="flex flex-col min-h-screen text-white">
              <style>{`
                 body {
                     background-image: url('https://cratetelevision.s3.us-east-1.amazonaws.com/actor-bg.jpg');

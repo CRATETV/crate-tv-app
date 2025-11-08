@@ -4,15 +4,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import BackToTopButton from './BackToTopButton';
 import LoadingSpinner from './LoadingSpinner';
-import { fetchAndCacheLiveData } from '../services/dataService';
-import { Movie, Category } from '../types';
+import { Movie } from '../types';
 import { MovieCard } from './MovieCard';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
 import { useFestival } from '../contexts/FestivalContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const ClassicsPage: React.FC = () => {
     const { isLoading: isFestivalLoading, movies, categories } = useFestival();
+    const { user, watchlist, toggleWatchlist, likedMovies, toggleLikeMovie, watchedMovies } = useAuth();
 
     const classicMovies = useMemo(() => {
         const classicsCategory = categories.publicDomainIndie;
@@ -32,7 +33,7 @@ const ClassicsPage: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#141414] text-white">
+        <div className="flex flex-col min-h-screen text-white">
             <Header 
                 searchQuery="" 
                 onSearch={() => {}} 
@@ -62,7 +63,16 @@ const ClassicsPage: React.FC = () => {
                     {classicMovies.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
                             {classicMovies.map(movie => (
-                                <MovieCard key={movie.key} movie={movie} onSelectMovie={handleSelectMovie} />
+                                <MovieCard 
+                                    key={movie.key} 
+                                    movie={movie} 
+                                    onSelectMovie={handleSelectMovie} 
+                                    isOnWatchlist={watchlist.includes(movie.key)}
+                                    onToggleWatchlist={toggleWatchlist}
+                                    isLiked={likedMovies.includes(movie.key)}
+                                    onToggleLike={toggleLikeMovie}
+                                    isWatched={watchedMovies.includes(movie.key)}
+                                />
                             ))}
                         </div>
                     ) : (
