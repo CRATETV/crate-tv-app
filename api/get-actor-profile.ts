@@ -1,23 +1,34 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/get-actor-profile
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { ActorProfile, Movie, Actor } from '../types.js';
 
 const slugify = (name: string) => name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
 
 export async function POST(request: Request) {
   try {
-    const { actorName, password } = await request.json();
+    const authHeader = request.headers.get('Authorization');
+    const token = authHeader?.split('Bearer ')[1];
 
-    if (password !== 'cratebio' || !actorName) {
-      return new Response(JSON.stringify({ error: 'Unauthorized or missing actor name.' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    if (!token) {
+        return new Response(JSON.stringify({ error: 'Authentication required.' }), { status: 401, headers: { 'Content-Type': 'application/json' }});
     }
 
     const initError = getInitializationError();
     if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
     
     const db = getAdminDb();
-    if (!db) throw new Error("Database connection failed.");
+    const auth = getAdminAuth();
+    if (!db || !auth) throw new Error("Database or Auth connection failed.");
+
+    const decodedToken = await auth.verifyIdToken(token);
+    const uid = decodedToken.uid;
+
+    const userDoc = await db.collection('users').doc(uid).get();
+    if (!userDoc.exists || !userDoc.data()?.name) {
+        return new Response(JSON.stringify({ error: "Your user profile could not be found or is incomplete. Please contact support." }), { status: 404, headers: { 'Content-Type': 'application/json' }});
+    }
+    const actorName = userDoc.data()!.name;
 
     const actorSlug = slugify(actorName);
     const actorProfileRef = db.collection('actor_profiles').doc(actorSlug);

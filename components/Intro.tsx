@@ -7,8 +7,8 @@ interface IntroProps {
 const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const desktopSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/mobile+intro+that+matches+webapp.mp4";
-  const mobileSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/intro+for+cellphone1080p.mp4"; 
+  const desktopSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/mobile%20intro%20that%20matches%20webapp.mp4";
+  const mobileSrc = "https://cratetelevision.s3.us-east-1.amazonaws.com/intro%20for%20cellphone1080p.mp4"; 
 
   const getInitialVideoSrc = () => {
     if (typeof window !== 'undefined') {

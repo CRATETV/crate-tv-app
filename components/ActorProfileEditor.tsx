@@ -1,48 +1,57 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ActorProfile } from '../types';
 import PublicS3Uploader from './PublicS3Uploader';
 import LoadingSpinner from './LoadingSpinner';
-
-const ACTOR_PASSWORD = 'cratebio';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ActorProfileEditorProps {
     actorName: string;
 }
 
 const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) => {
+    const { getUserIdToken } = useAuth();
     const [profile, setProfile] = useState<Partial<ActorProfile>>({ bio: '', photo: '', highResPhoto: '', imdbUrl: '' });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    useEffect(() => {
-        const fetchProfile = async () => {
-            setIsLoading(true);
-            setError('');
-            try {
-                const response = await fetch('/api/get-actor-profile', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ actorName, password: ACTOR_PASSWORD })
-                });
-                if (!response.ok) throw new Error((await response.json()).error || 'Failed to fetch profile.');
-                const data = await response.json();
-                setProfile(data.profile);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Could not load your profile data.');
-            } finally {
-                setIsLoading(false);
+    const fetchProfile = useCallback(async () => {
+        setIsLoading(true);
+        setError('');
+        try {
+            const token = await getUserIdToken();
+            if (!token) {
+                throw new Error("You must be logged in to view your profile.");
             }
-        };
-        fetchProfile();
-    }, [actorName]);
+            const response = await fetch('/api/get-actor-profile', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+            });
+            if (!response.ok) throw new Error((await response.json()).error || 'Failed to fetch profile.');
+            const data = await response.json();
+            setProfile(data.profile);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Could not load your profile data.');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [getUserIdToken]);
 
+    useEffect(() => {
+        fetchProfile();
+    }, [fetchProfile]);
+
+    // FIX: Define handleInputChange to update state from form inputs.
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setProfile(prev => ({ ...prev, [name]: value }));
     };
 
+    // FIX: Define handleUrlUpdate to update state from S3Uploader component.
     const handleUrlUpdate = (field: keyof ActorProfile, url: string) => {
         setProfile(prev => ({ ...prev, [field]: url }));
     };
@@ -54,12 +63,17 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
         setSuccess('');
 
         try {
+            const token = await getUserIdToken();
+            if (!token) {
+                throw new Error("Authentication session has expired. Please log in again.");
+            }
             const response = await fetch('/api/update-actor-profile', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
-                    actorName,
-                    password: ACTOR_PASSWORD,
                     bio: profile.bio,
                     photoUrl: profile.photo,
                     highResPhotoUrl: profile.highResPhoto,

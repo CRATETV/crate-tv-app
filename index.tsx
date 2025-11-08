@@ -39,6 +39,7 @@ import CreatorDashboardPage from './components/CreatorDashboardPage';
 import { WatchPartyPage } from './components/WatchPartyPage';
 import TalentPage from './components/TalentPage';
 import LinkRokuPage from './components/LinkRokuPage';
+import BingoPage from './components/BingoPage';
 
 
 const rootElement = document.getElementById('root');
@@ -163,7 +164,9 @@ const AppRouter: React.FC = () => {
     case '/roku-guide':
       return <RokuGuidePage />;
     case '/talent':
-        return <TalentPage />;
+      return <TalentPage />;
+    case '/bingo':
+      return <BingoPage />;
       
     // Legacy Protected Actor Route (now redirects to unified portal)
     case '/actor-portal': {
