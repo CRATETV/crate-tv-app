@@ -153,6 +153,15 @@ const AdminPage: React.FC = () => {
         }
     };
     
+    const handleLogout = () => {
+        sessionStorage.removeItem('adminPassword');
+        setIsAuthenticated(false);
+        setPassword('');
+        setRole(null);
+        setAllowedTabs([]);
+        setError('');
+    };
+
     useEffect(() => {
         if (!role) return;
 
@@ -222,7 +231,15 @@ const AdminPage: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-8">
             <div className="max-w-7xl mx-auto">
-                <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+                    <button
+                        onClick={handleLogout}
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+                    >
+                        Sign Out
+                    </button>
+                </div>
                 <div className="flex flex-wrap items-center gap-2 mb-8 border-b border-gray-700 pb-4">
                    {allowedTabs.map(tabId => (
                         <TabButton key={tabId} tabId={tabId} label={ALL_TABS[tabId as keyof typeof ALL_TABS]} />
