@@ -9,12 +9,11 @@ inject();
 
 // Import all page components
 import App from './App';
-// FIX: Corrected import path
 import AdminPage from './AdminPage';
 import LandingPage from './components/LandingPage';
 import ClassicsPage from './components/ClassicsPage';
 import SubmitPage from './components/SubmitPage';
-import MoviePage from './components/MoviePage';
+import { MoviePage } from './components/MoviePage';
 import MerchPage from './components/MerchPage';
 import ContactPage from './components/ContactPage';
 import AboutPage from './components/AboutPage';
@@ -37,7 +36,6 @@ import LoadingSpinner from './components/LoadingSpinner';
 import Intro from './components/Intro';
 import CreatorPortalPage from './components/CreatorPortalPage';
 import CreatorDashboardPage from './components/CreatorDashboardPage';
-// FIX: Changed to a named import to resolve module resolution error.
 import { WatchPartyPage } from './components/WatchPartyPage';
 import TalentPage from './components/TalentPage';
 import LinkRokuPage from './components/LinkRokuPage';

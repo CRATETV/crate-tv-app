@@ -5,6 +5,7 @@ import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import { useAuth } from '../contexts/AuthContext';
+// FIX: Corrected import path for avatars
 import { avatars } from './avatars';
 
 // --- HELPER FUNCTIONS ---

@@ -4,6 +4,7 @@ import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
 import SearchOverlay from './SearchOverlay';
 import { useFestival } from '../contexts/FestivalContext';
+// FIX: Corrected import path for Movie type
 import { Movie } from '../types';
 
 const CreatorPortalPage: React.FC = () => {

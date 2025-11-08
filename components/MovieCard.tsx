@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { Movie } from '../types';
 
@@ -37,7 +35,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
 
   return (
     <div
-      className="group relative cursor-pointer aspect-[2/3] rounded-md overflow-hidden bg-black transition-transform duration-300 ease-in-out hover:scale-105 hover:z-10"
+      className="group relative cursor-pointer aspect-[2/3] rounded-md overflow-hidden bg-transparent transition-transform duration-300 ease-in-out hover:scale-105 hover:z-10"
       onClick={() => onSelectMovie(movie)}
     >
       <img
@@ -61,7 +59,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
             dangerouslySetInnerHTML={{ __html: movie.synopsis || '' }}
         ></p>
         <div className="flex items-end justify-between">
-            <h3 className="text-white font-bold text-sm truncate pr-2">{movie.title}</h3>
+            <h3 className="text-white font-bold text-sm truncate pr-2 hidden md:block">{movie.title}</h3>
             <div className="flex items-center gap-2 flex-shrink-0">
                 {onToggleWatchlist && (
                   <button onClick={handleToggleWatchlist} className="p-1.5 rounded-full bg-black/50 hover:bg-white/20" title={isOnWatchlist ? "Remove from My List" : "Add to My List"}>

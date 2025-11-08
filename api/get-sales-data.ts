@@ -162,7 +162,7 @@ export async function POST(request: Request) {
         const merchSales: Record<string, { name: string; units: number; revenue: number }> = {};
         let festivalPassSales = { units: 0, revenue: 0 };
         let festivalBlockSales = { units: 0, revenue: 0 };
-        const salesByBlock: Record<string, { units: number; revenue: number }> = {};
+        const salesByBlock: Record<string, { units: number, revenue: number }> = {};
 
         allPayments.forEach(p => {
             const details = parseNote(p.note);

@@ -67,7 +67,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                       onClick={() => onSelectMovie(movie)}
                       style={{ '--rank-color': color } as React.CSSProperties}
                   >
-                      <div className="relative aspect-[16/9] rounded-lg bg-black overflow-hidden">
+                      <div className="relative aspect-[16/9] rounded-lg bg-transparent overflow-hidden">
                           <img 
                               src={movie.poster}
                               alt={movie.title}

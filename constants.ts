@@ -1,4 +1,3 @@
-
 // FIX: Corrected import path
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
 
@@ -132,15 +131,15 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Darrah Lashley",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+head+shot.png",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah%20head%20shot.png",
         "bio": "Darrah Lashley is a talented and versatile actress known for her captivating performances. Darrah has received several accolades due to her exceptional talent and dedication to work in independent films and theater productions, showcasing her range and depth.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah%20bio%20picjpg.jpg"
       },
       {
         "name": "Ajinkya Dhage",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/AJ+Photo.png",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/AJ%20Photo.png",
         "bio": "With a strong foundation in the Meisner technique, Ajinkya has honed his craft through years of dedicated study and practice, becoming a prominent figure in the local theater scene.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Aj+bio+photo.png"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Aj%20bio%20photo.png"
       },
       {
         "name": "Kathryn Wylde",
@@ -152,8 +151,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Darrah Lashley",
     "trailer": "https://cratetelevision.s3.amazonaws.com/LifelessTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/LIFELESS.mp4",
-    "poster": "https://cratetelevision.s3.amazonaws.com/Lifeless+poster+remake+.jpg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/Lifeless.png",
+    "poster": "https://cratetelevision.s3.amazonaws.com/Lifeless%20poster%20remake%20.jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant%20tv%20posters%20folder/Lifeless.png",
     "likes": 0,
     "rating": 8.8
   },
@@ -164,28 +163,28 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Alana Hill",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana+Hill+2+.png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana%20Hill%202%20.png",
         "bio": "Actress Alana Hill has deeply moved audiences with her compelling performances, showcasing a beautiful blend of emotional depth and impressive versatility.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana+Hill+2+.png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana%20Hill%202%20.png"
       },
       {
         "name": "David Auspitz",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David%20A.png",
         "bio": "David Auspitz is a versatile actor with a knack for both comedic and dramatic roles. He brings a unique charm to every character he portrays, making him a beloved figure in the industry.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David%20A.png"
       },
       {
         "name": "Pratigya Paudel",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Pratigya+Paudel.png",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Pratigya%20Paudel.png",
         "bio": "Pratigya Paudel is a versatile talent who seamlessly transitions between acting, writing, directing, and modeling.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Pratigya+Paudel.png"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Pratigya%20Paudel.png"
       }
     ],
     "director": "Alana Hill",
     "trailer": "https://cratetelevision.s3.amazonaws.com/Almas+vow+cut+trailer.mp4",
-    "fullMovie": "https://cratetelevision.s3.amazonaws.com/Almas+Vows+-+Alana+Hill.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Alma's+vows+poster+remake+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Alma's+vows+poster+remake+.png",
+    "fullMovie": "https://cratetelevision.s3.amazonaws.com/Almas%20Vows%20-%20Alana%20Hill.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Alma%27s%20vows%20poster%20remake%20.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Alma%27s%20vows%20poster%20remake%20.png",
     "likes": 0
   },
   "foodiecalldirectorscut": {
@@ -195,9 +194,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Darrah Lashley",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+head+shot.png",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah%20head%20shot.png",
         "bio": "Darrah Lashley is a talented and versatile actress known for her captivating performances. Darrah has received several accolades due to her exceptional talent and dedication to work in independent films and theater productions, showcasing her range and depth.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah%20bio%20picjpg.jpg"
       },
       {
         "name": "Salome Denoon",
@@ -219,16 +218,16 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Akil Logan Haye",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil+Logan+Haye.png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil%20Logan%20Haye.png",
         "bio": "Akil Logan Haye is a stage and film actor and the driving force behind Pursuit of Excellence, a production company where he serves as CEO. His creative vision informs both his performances and his leadership.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil+Logan+Haye.png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil%20Logan%20Haye.png"
       }
     ],
     "director": "Michael Dwayne Paylor",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Paycut.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Director's+cut+poster+.jpg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/Foodie+Call.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie%20Call%20Director%27s%20cut%20poster%20.jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant%20tv%20posters%20folder/Foodie%20Call.png",
     "likes": 0,
     "rating": 9.2
   },
@@ -239,9 +238,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Darrah Lashley",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+head+shot.png",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah%20head%20shot.png",
         "bio": "Darrah Lashley is a talented and versatile actress known for her captivating performances. Darrah has received several accolades due to her exceptional talent and dedication to work in independent films and theater productions, showcasing her range and depth.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah%20bio%20picjpg.jpg"
       },
       {
         "name": "Salome Denoon",
@@ -263,16 +262,16 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Akil Logan Haye",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil+Logan+Haye.png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil%20Logan%20Haye.png",
         "bio": "Akil Logan Haye is a stage and film actor and the driving force behind Pursuit of Excellence, a production company where he serves as CEO. His creative vision informs both his performances and his leadership.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil+Logan+Haye.png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil%20Logan%20Haye.png"
       }
     ],
     "director": "Michael Dwayne Paylor",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Lasley+cut.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/Foodie+Call.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/Foodie+Call.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant%20tv%20posters%20folder/Foodie%20Call.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant%20tv%20posters%20folder/Foodie%20Call.png",
     "likes": 0
   },
   "finallycaught": {
@@ -282,9 +281,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Michelle Reale-Opalesky",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle%20Reale-Opalesky.jpg",
         "bio": "Michelle Reale-Opalesky is a captivating actor with a remarkable range. She effortlessly inhabits diverse roles and seamlessly transitions between drama and comedy.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle%20Reale-Opalesky.jpg"
       },
       {
         "name": "Cathrine Tillotson",
@@ -296,8 +295,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Sarah Morrison-Cleary",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/(Copy)+Finally+Caught_FC3.mp4",
-    "poster": "https://cratetelevision.s3.amazonaws.com/finally+caught+poster+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/FinallyCaught.png",
+    "poster": "https://cratetelevision.s3.amazonaws.com/finally%20caught%20poster%20.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant%20tv%20posters%20folder/FinallyCaught.png",
     "likes": 0
   },
   "iloveyoublack": {
@@ -313,15 +312,15 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Thatia MomPremier",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Tathia+Mompri_6705.jpg",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Tathia%20Mompri_6705.jpg",
         "bio": "Thatia MomPremier is a dynamic force on stage and screen. As a powerhouse of an actor, she commands attention in every performance, bringing her unique energy and presence to both film and theater.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Tathia+Mompri_6705.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Tathia%20Mompri_6705.jpg"
       },
       {
         "name": "Charles Ellis Washington",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Charles+Ellis+Wahington.JPG",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Charles%20Ellis%20Wahington.JPG",
         "bio": "Charles Ellis Washington is an actor who brings a controlled intensity and smooth presence to his work in film and theater, creating memorable performances.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Charles+Ellis+Wahington.JPG"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Charles%20Ellis%20Wahington.JPG"
       },
       {
         "name": "Isabelle Dessalines",
@@ -333,8 +332,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Anh Nguyen",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/I+Loveyou+in+black+Theatrical+cut.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/I+love+You-Black.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/I+love+You-Black.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant%20tv%20posters%20folder/I%20love%20You-Black.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant%20tv%20posters%20folder/I%20love%20You-Black.png",
     "likes": 0
   },
   "hair": {
@@ -344,22 +343,22 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Darrah Lashley",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+head+shot.png",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah%20head%20shot.png",
         "bio": "Darrah Lashley is a talented and versatile actress known for her captivating performances. Darrah has received several accolades due to her exceptional talent and dedication to work in independent films and theater productions, showcasing her range and depth.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah%20bio%20picjpg.jpg"
       },
       {
         "name": "Joshua Daniel",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua%20Daniel%20(2).png",
         "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua%20Daniel%20(2).png"
       }
     ],
     "director": "Joshua Daniel",
     "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/Hair+TrailerMP4.MP4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/HAIR.mp4",
-    "poster": "https://cratetelevision.s3.amazonaws.com/Hair+poster+209+X+209++(2).jpg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/Hair.png",
+    "poster": "https://cratetelevision.s3.amazonaws.com/Hair%20poster%20209%20X%20209%20%20(2).jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant%20tv%20posters%20folder/Hair.png",
     "likes": 0
   },
   "eharmonycs": {
@@ -383,8 +382,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "RT Bowersox",
     "trailer": "https://cratetelevision.s3.amazonaws.com/eHarmonycsTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/EHARMONYCS.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/eHarmonics+poster+remake++(1).png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/eHarmonycs.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/eHarmonics%20poster%20remake%20%20(1).png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant%20tv%20posters%20folder/eHarmonycs.png",
     "likes": 0
   },
   "youvsthem": {
@@ -394,22 +393,22 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Joshua Daniel",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua%20Daniel%20(2).png",
         "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua%20Daniel%20(2).png"
       },
       {
         "name": "Darrah Lashley",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+head+shot.png",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah%20head%20shot.png",
         "bio": "Darrah Lashley is a talented and versatile actress known for her captivating performances. Darrah has received several accolades due to her exceptional talent and dedication to work in independent films and theater productions, showcasing her range and depth.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah%20bio%20picjpg.jpg"
       }
     ],
     "director": "Joshua Daniel",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/youVs+Them.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/You+Vs+Them.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/YouVsThem.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/You%20Vs%20Them.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant%20tv%20posters%20folder/YouVsThem.png",
     "likes": 0
   },
   "autumn": {
@@ -419,9 +418,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Alana Hill",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana+Hill+2+.png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana%20Hill%202%20.png",
         "bio": "Actress Alana Hill has deeply moved audiences with her compelling performances, showcasing a beautiful blend of emotional depth and impressive versatility.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana+Hill+2+.png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana%20Hill%202%20.png"
       },
       {
         "name": "Luke Yong Kwon",
@@ -432,9 +431,9 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "David Auspitz",
     "trailer": "https://cratetelevision.s3.amazonaws.com/AutumnTrailer.mp4",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn+-+Alana+Hill.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn+poster+remake+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn+poster+remake+.png",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn%20-%20Alana%20Hill.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn%20poster%20remake%20.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn%20poster%20remake%20.png",
     "likes": 0
   },
   "streeteatstheboot": {
@@ -458,8 +457,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Andrew W Trimble",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/Street+Eats+THE+BOOT-A+Louisiana+Food+Truck+Journey.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/street+Eats+the+Boot+trailer+overlay++(1).jpeg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/street+Eats+the+Boot+trailer+overlay++(1).jpeg",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/street%20Eats%20the%20Boot%20trailer%20overlay%20%20(1).jpeg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/street%20Eats%20the%20Boot%20trailer%20overlay%20%20(1).jpeg",
     "likes": 0
   },
   "silentlove": {
@@ -475,16 +474,16 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Joshua Daniel",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua%20Daniel%20(2).png",
         "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua%20Daniel%20(2).png"
       }
     ],
     "director": "Salome Denoon",
     "trailer": "https://cratetelevision.s3.amazonaws.com/SilentLoveTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/SilentLove+Movie+05.14.2024-1+2.mp4",
-    "poster": "https://cratetelevision.s3.amazonaws.com/silent+Love++poster+remake+.jpg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/SilentLove.png",
+    "poster": "https://cratetelevision.s3.amazonaws.com/silent%20Love%20%20poster%20remake%20.jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant%20tv%20posters%20folder/SilentLove.png",
     "likes": 0
   },
   "juniper": {
@@ -494,15 +493,15 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Pratigya Paudel",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Pratigya+Paudel.png",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Pratigya%20Paudel.png",
         "bio": "Pratigya Paudel is a versatile talent who seamlessly transitions between acting, writing, directing, and modeling.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Pratigya+Paudel.png"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Pratigya%20Paudel.png"
       },
       {
         "name": "Julianne Lea",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Julianne+Lea.jpg",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Julianne%20Lea.jpg",
         "bio": "Julianne Lea is a talented actress with a passion for storytelling. She has a diverse portfolio, including roles in acting producing and set design.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Julianne+Lea.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Julianne%20Lea.jpg"
       }
     ],
     "director": "Pratigya Paudel",
@@ -526,22 +525,22 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Bubacarr Sarge",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr%20Sarge.JPG",
         "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr%20Sarge.JPG"
       },
       {
         "name": "Ed Aristone",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Ed+Aristone+.webp",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Ed%20Aristone%20.webp",
         "bio": "Ed Aristone, an award-winning actor and Playhouse West-Philadelphia associate teacher, with extensive film and stage experience alongside directing and producing, emphasizes dedicated role research and collaborative passion, driven by a belief in acting as a gift to inspire humanity.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Ed+Aristone+.webp"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Ed%20Aristone%20.webp"
       }
     ],
     "director": "Shamira Womack",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Drive+(2).mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Drive+Poster.jpeg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Drive+Poster.jpeg",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Drive%20Poster.jpeg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Drive%20Poster.jpeg",
     "likes": 15
   },
   "wrapitup": {
@@ -551,9 +550,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Akil Logan-Haye",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil+Logan+Haye.png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil%20Logan%20Haye.png",
         "bio": "Akil Logan-Haye is a stage and film actor and the driving force behind Pursuit of Excellence, a production company where he serves as CEO. His creative vision informs both his performances and his leadership.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil+Logan+Haye.png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Akil%20Logan%20Haye.png"
       },
       {
         "name": "Brooke Storms",
@@ -571,8 +570,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Jordan Fox, Darrah Lashley ",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Wrap+it+up+.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Wrap+it+up.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Wrap+it+up.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Wrap%20it%20up.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Wrap%20it%20up.png",
     "likes": 12
   },
   "crossroads": {
@@ -582,9 +581,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Shamira Womack",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Shamira+Womack.jpg",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Shamira%20Womack.jpg",
         "bio": "Shamira Womack is a dynamic and multifaceted talent, carving a unique space in the world of film. As an actor, writer, director, and filmmaker, Womack demonstrates a remarkable versatility and a deep commitment to the craft of storytelling",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Shamira+Womack.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Shamira%20Womack.jpg"
       },
       {
         "name": "Lam Wonkeryor",
@@ -596,7 +595,7 @@ export const moviesData: Record<string, Movie> = {
     "director": "Akil Logan-Haye",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/CROSSROADS-OFFICIAL-FILM_360p.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads+Poster.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads%20Poster.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads.png",
     "likes": 12
   },
@@ -621,8 +620,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Richard Frohman",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/consumed+.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed+Poster.JPG",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed%20Poster.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Consumed%20Poster.JPG",
     "likes": 0
   },
   "fatherdaughterdance": {
@@ -632,9 +631,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Charles Ellis Washington",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Charles+Ellis+Wahington.JPG",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Charles%20Ellis%20Wahington.JPG",
         "bio": "Charles Ellis Washington is an actor who brings a controlled intensity and smooth presence to his work in film and theater, creating memorable performances.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Charles+Ellis+Wahington.JPG"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Charles%20Ellis%20Wahington.JPG"
       },
       {
         "name": "Sylvette Mikel",
@@ -645,9 +644,9 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Charles Ellis Washington",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/father+daughter+dance.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Father+Daughter+Dance+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Father+Daughter+Dance+.png",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/father%20daughter%20dance.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Father%20Daughter%20Dance%20.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Father%20Daughter%20Dance%20.png",
     "likes": 12
   },
   "itsinyou": {
@@ -663,10 +662,10 @@ export const moviesData: Record<string, Movie> = {
       }
     ],
     "director": "Robert Graves",
-    "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+trailer.mov",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Its+In+You.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+poster+jpeg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters+folder/ItsInYou.png",
+    "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/it%27s%20in%20you%20trailer.mov",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Its%20In%20You.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/it%27s%20in%20you%20poster%20jpeg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant%20tv%20posters%20folder/ItsInYou.png",
     "likes": 1
   },
   "unhinged": {
@@ -684,8 +683,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Robert Graves",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+Unhinged-+A+film+by+Robert+Graves+%26+Philaye+Films.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+unhinged+Movie+poster+.JPG",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+unhinged+Movie+poster+.JPG",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The%20unhinged%20Movie%20poster%20.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The%20unhinged%20Movie%20poster%20.JPG",
     "likes": 0
   },
   "smirk": {
@@ -701,16 +700,16 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Vigneshwar Raju",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Vingneshwar+Raju.JPG",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Vingneshwar%20Raju.JPG",
         "bio": "Driven by experimental cinema, Vigneshwar Raju, an actor-director, seeks to dissolve the lines between reality and imagination. His work delves into the depths of human experience through innovative visual storytelling.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Vingneshwar+Raju.JPG"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Vingneshwar%20Raju.JPG"
       }
     ],
     "director": "Vigneshwar Raju",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/smirk.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/smirk+poster+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/smirk+poster+.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/smirk%20poster%20.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/smirk%20poster%20.png",
     "likes": 10
   },
   "intrusivethoughts": {
@@ -746,8 +745,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Akil Logan-Haye",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Intrusive+Thoughts+Final.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/Intrusive+Thoughts+for+instant+tv+Channel++(1920+x+1080+px)+(1080+x+1620+px).png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/Intrusive+Thoughts+for+instant+tv+Channel++(1920+x+1080+px)+(1080+x+1620+px).png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized%202/Intrusive%20Thoughts%20for%20instant%20tv%20Channel%20%20(1920%20x%201080%20px)(1080%20x%201620%20px).png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized%202/Intrusive%20Thoughts%20for%20instant%20tv%20Channel%20%20(1920%20x%201080%20px)(1080%20x%201620%20px).png",
     "likes": 0
   },
   "newmovie1756485973547": {
@@ -781,16 +780,16 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Shamira Womack",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Shamira+Womack.jpg",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Shamira%20Womack.jpg",
         "bio": "Shamira Womack is a dynamic and multifaceted talent, carving a unique space in the world of film. As an actor, writer, director, and filmmaker, Womack demonstrates a remarkable versatility and a deep commitment to the craft of storytelling",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Shamira+Womack.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Shamira%20Womack.jpg"
       }
     ],
     "director": "Sarah Morrison-Cleary",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/BURST+Sarah+Morrison-Cleary.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/Burst.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/Burst.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp%20posters/Burst.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized%202/Burst.png",
     "likes": 0
   },
   "newmovie1756486933392": {
@@ -800,9 +799,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Bubacarr Sarge",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr%20Sarge.JPG",
         "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr%20Sarge.JPG"
       },
       {
         "name": "Joe Henderson",
@@ -825,9 +824,9 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Joshua Daniel",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Power+Trip+Bubacarr+Sarge.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/powertrip.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/Power+Trip.png",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Power%20Trip%20Bubacarr%20Sarge.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp%20posters/powertrip.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized%202/Power%20Trip.png",
     "likes": 0
   },
   "newmovie1756487215116": {
@@ -850,9 +849,9 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Jason V. Henderson",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fling+Jason+V+Henderson.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/fling+webapp.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/fling+Instant+tv+poster.png",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fling%20Jason%20V%20Henderson.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp%20posters/fling%20webapp.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized%202/fling%20Instant%20tv%20poster.png",
     "likes": 0
   },
   "newmovie1756487390550": {
@@ -875,9 +874,9 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Vigneshwar Raju",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/IStillLoveHer+Patrick+Thomas+Kasey.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/I+still+Love+Her.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/I+still+love+her+poster+.png",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/IStillLoveHer%20Patrick%20Thomas%20Kasey.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp%20posters/I%20still%20Love%20Her.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized%202/I%20still%20love%20her%20poster%20.png",
     "likes": 0
   },
   "newmovie1756487626529": {
@@ -887,9 +886,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Bubacarr Sarge",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr%20Sarge.JPG",
         "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr%20Sarge.JPG"
       },
       {
         "name": "Sarah Morrison-Cleary",
@@ -906,9 +905,9 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Bubacarr Sarge",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/STRANGE+ENCOUNTERS+Bubacarr+Sarge.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/Strange+ENcounters.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/strange+Encounters+instant+tv.+poster.png",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/STRANGE%20ENCOUNTERS%20Bubacarr%20Sarge.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp%20posters/Strange%20ENcounters.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized%202/strange%20Encounters%20instant%20tv.%20poster.png",
     "likes": 0
   },
   "newmovie1756501125076": {
@@ -937,9 +936,9 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Myra Adrian Nelson",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Of+Bees+of+Boobs+Screener.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/of+bees+and+boobs+webapp+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/of+bees+and+boobs+instant+tv+.JPG",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Of%20Bees%20of%20Boobs%20Screener.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/of%20bees%20and%20boobs%20webapp%20.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized%202/of%20bees%20and%20boobs%20instant%20tv%20.JPG",
     "likes": 0
   },
   "newmovie1756741314485": {
@@ -955,21 +954,21 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Joshua Daniel",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua%20Daniel%20(2).png",
         "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua%20Daniel%20(2).png"
       },
       {
         "name": "Bubacarr Sarge",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr%20Sarge.JPG",
         "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr%20Sarge.JPG"
       },
       {
         "name": "Michelle Reale-Opalesky",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle%20Reale-Opalesky.jpg",
         "bio": "Michelle Reale-Opalesky is a captivating actor with a remarkable range. She effortlessly inhabits diverse roles and seamlessly transitions between drama and comedy.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle%20Reale-Opalesky.jpg"
       },
       {
         "name": "Kayla McFarlane",
@@ -980,9 +979,9 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Jalina Wayser ",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/What+If++The+Movie.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/what+If+poster+for+instant+tv.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/what+If+poster+for+instant+tv.png",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/What%20If%20%20The%20Movie.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized%202/what%20If%20poster%20for%20instant%20tv.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized%202/what%20If%20poster%20for%20instant%20tv.png",
     "likes": 0
   },
   "results": {
@@ -992,9 +991,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Michelle Reale-Opalesky",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle%20Reale-Opalesky.jpg",
         "bio": "Michelle Reale-Opalesky is a captivating actor with a remarkable range. She effortlessly inhabits diverse roles and seamlessly transitions between drama and comedy.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle%20Reale-Opalesky.jpg"
       },
       {
         "name": "Sarah Morrison-Cleary",
@@ -1011,7 +1010,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Michelle Reale-Opalesky",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results+.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results%20.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results.png",
     "likes": 0
@@ -1035,9 +1034,9 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Alana Hill",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana+Hill+2+.png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana%20Hill%202%20.png",
         "bio": "Actress Alana Hill has deeply moved audiences with her compelling performances, showcasing a beautiful blend of emotional depth and impressive versatility.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana+Hill+2+.png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Alana%20Hill%202%20.png"
       },
       {
         "name": "Tev",
@@ -1059,14 +1058,14 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Ajinkya Dhage",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/AJ+Photo.png",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/AJ%20Photo.png",
         "bio": "With a strong foundation in the Meisner technique, Ajinkya has honed his craft through years of dedicated study and practice, becoming a prominent figure in the local theater scene.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Aj+bio+photo.png"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Aj%20bio%20photo.png"
       }
     ],
     "director": "Shaunpaul Costello, Seth Sharpe",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/SLAP+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/SLAP%20-%20Shaunpaul%20Costello%20(1080p,%20h264,%20youtube).mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
     "likes": 0
@@ -1097,7 +1096,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Seth Sharpe",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/NEIGHBORS+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/NEIGHBORS%20-%20Shaunpaul%20Costello%20(1080p,%20h264,%20youtube).mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Neighbors.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Neighbors.png",
     "likes": 0
@@ -1128,9 +1127,9 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Shaunpaul Costello",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+in+a+Pod.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+pod+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+pod+.png",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two%20Peas%20in%20a%20Pod.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two%20Peas%20In%20A%20pod%20.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two%20Peas%20In%20A%20pod%20.png",
     "likes": 0
   },
   "tedandnatalie": {
@@ -1153,9 +1152,9 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Michelle M. Williams",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Natalie.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted%20and%20Natalie.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted%20and%20Nathalie%20.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted%20and%20Nathalie%20.JPG",
     "likes": 0
   },
   "atriptothemoon": {
@@ -1165,16 +1164,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Georges Méliès",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Me%CC%81lie%CC%80s_portrait_(cropped).png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Me%CC%81lie%CC%80s_portrait_(cropped).png",
         "bio": "Georges Méliès was a French illusionist and film director who led many technical and narrative developments in the earliest days of cinema.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Me%CC%81lie%CC%80s_portrait_(cropped).png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Me%CC%81lie%CC%80s_portrait_(cropped).png"
       }
     ],
     "director": "Georges Méliès",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/A+Trip+to+the+Moon+-+the+1902+Science+Fiction+Film+by+Georges+Me%CC%81lie%CC%80s+-+Open+Culture+(480p%2C+h264%2C+youtube).mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/A%20Trip%20to%20the%20Moon%20-%20the%201902%20Science%20Fiction%20Film%20by%20Georges%20Me%CC%81lie%CC%80s%20-%20Open%20Culture%20(480p,%20h264,%20youtube).mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/a%20trip%20to%20the%20moon%20.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/a%20trip%20to%20the%20moon%20.webp",
     "likes": 0,
     "releaseDateTime": "1902-09-01T12:00:00Z"
   },
@@ -1185,16 +1184,16 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Lois Weber",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/LoisWeber.jpg",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/LoisWeber.jpg",
         "bio": "Lois Weber was an American silent film actress, screenwriter, producer, and director, considered one of the most important and prolific female filmmakers in the early era of American cinema.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/LoisWeber.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/LoisWeber.jpg"
       }
     ],
     "director": "Lois Weber, Phillips Smalley",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Suspense.+(Rex+Motion+Picture+Co.+US+1913).mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/suspense+movie+poster+.jpeg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/suspense+movie+poster+.jpeg",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Suspense.%20(Rex%20Motion%20Picture%20Co.%20US%201913).mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/suspense%20movie%20poster%20.jpeg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/suspense%20movie%20poster%20.jpeg",
     "likes": 0,
     "releaseDateTime": "1913-07-06T12:00:00Z"
   },
@@ -1205,9 +1204,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Charlie Chaplin",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Charlie_Chaplin_portrait.jpg",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Charlie_Chaplin_portrait.jpg",
         "bio": "Sir Charles Spencer 'Charlie' Chaplin KBE was an English comic actor, filmmaker, and composer who rose to fame in the era of silent film.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Charlie_Chaplin_portrait.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Charlie_Chaplin_portrait.jpg"
       },
       {
         "name": "Edna Purviance",
@@ -1218,9 +1217,9 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Charlie Chaplin",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/ThePawnshop.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/'The_Pawnshop'.jpg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/'The_Pawnshop'.jpg",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/ThePawnshop.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/'The_Pawnshop'.jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/'The_Pawnshop'.jpg",
     "likes": 0,
     "releaseDateTime": "1916-10-02T12:00:00Z"
   },
@@ -1231,9 +1230,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
        {
         "name": "Charlie Chaplin",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Charlie_Chaplin_portrait.jpg",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Charlie_Chaplin_portrait.jpg",
         "bio": "Sir Charles Spencer 'Charlie' Chaplin KBE was an English comic actor, filmmaker, and composer who rose to fame in the era of silent film.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Charlie_Chaplin_portrait.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Charlie_Chaplin_portrait.jpg"
       },
       {
         "name": "Edna Purviance",
@@ -1244,9 +1243,9 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Charlie Chaplin",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The+Immigrant+(1917).mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The_Immigrant_1917.JPG",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The_Immigrant_1917.JPG",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/The%20Immigrant%20(1917).mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/The_Immigrant_1917.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/The_Immigrant_1917.JPG",
     "likes": 0,
     "releaseDateTime": "1917-06-17T12:00:00Z"
   },
@@ -1257,9 +1256,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [],
     "director": "James Sibley Watson, Melville Webber",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The-Fall-of-the-House-of-Usher-1928-Film-Guild_360p.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Fall+of+House+Of+Usher+.jpeg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Fall+of+House+Of+Usher+.jpeg",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/The-Fall-of-the-House-of-Usher-1928-Film-Guild_360p.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/the%20Fall%20of%20House%20Of%20Usher%20.jpeg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/the%20Fall%20of%20House%20Of%20Usher%20.jpeg",
     "likes": 0,
     "releaseDateTime": "1928-10-28T12:00:00Z"
   },
@@ -1270,9 +1269,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [],
     "director": "Luis Buñuel",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Un+Chien+Andalou+-+(1929)+-+(1080p+-+x265).mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Un+Chien+Andalou.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Un+Chien+Andalou.webp",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Un%20Chien%20Andalou%20-%20(1929)%20-%20(1080p%20-%20x265).mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Un%20Chien%20Andalou.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Un%20Chien%20Andalou.webp",
     "likes": 0,
     "releaseDateTime": "1929-06-06T12:00:00Z"
   },
@@ -1290,9 +1289,9 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Maya Deren, Alexander Hammid",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Meshes-of-the-Afternoon-4K-AI-Upscaling_720p.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Meshes_of_the_Afternoon_1.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Meshes_of_the_Afternoon_1.png",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Meshes-of-the-Afternoon-4K-AI-Upscaling_720p.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Meshes_of_the_Afternoon_1.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Meshes_of_the_Afternoon_1.png",
     "likes": 0,
     "releaseDateTime": "1943-01-01T12:00:00Z"
   },
@@ -1310,9 +1309,9 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Edward Bernds",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/BridelessGroom720p.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Bridelessgroom_1sht.jpg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Bridelessgroom_1sht.jpg",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/BridelessGroom720p.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Bridelessgroom_1sht.jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public%20domain%20movies%20/Bridelessgroom_1sht.jpg",
     "likes": 0,
     "releaseDateTime": "1947-09-11T12:00:00Z"
   }

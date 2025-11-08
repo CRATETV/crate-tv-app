@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Header from './Header';
 import Hero from './Hero';
@@ -75,6 +73,7 @@ const LandingPage: React.FC = () => {
                     onMobileSearchClick={() => {}}
                     showSearch={false}
                     onSignInClick={() => openAuthModal('login')}
+                    showNavLinks={false}
                 />
                 <main className="flex-grow">
                     {heroMovies.length > 0 && (

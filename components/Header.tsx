@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { avatars } from './avatars';
 
 interface HeaderProps {
     searchQuery: string;
@@ -10,87 +9,127 @@ interface HeaderProps {
     isScrolled?: boolean;
     showSearch?: boolean;
     onSignInClick?: () => void;
-    isStaging?: boolean;
     showNavLinks?: boolean;
     topOffset?: string;
+    isStaging?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ 
-    searchQuery, 
-    onSearch, 
+const Header: React.FC<HeaderProps> = ({
+    searchQuery,
+    onSearch,
     onSearchSubmit,
     onMobileSearchClick,
-    isScrolled: propScrolled,
+    isScrolled: isScrolledProp,
     showSearch = true,
     onSignInClick,
-    isStaging,
     showNavLinks = true,
     topOffset = '0px',
+    isStaging,
 }) => {
-    const { user } = useAuth();
-    const [isScrolled, setIsScrolled] = useState(propScrolled || false);
-    const [isSearchActive, setIsSearchActive] = useState(false);
+    const { user, logout } = useAuth();
+    const [isScrolled, setIsScrolled] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+    const profileMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (propScrolled !== undefined) {
-            setIsScrolled(propScrolled);
-            return;
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 10);
         };
-        const handleScroll = () => setIsScrolled(window.scrollY > 10);
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
-    }, [propScrolled]);
+    }, []);
+    
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+                setIsProfileMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
-    const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+
+    const handleNavigate = (e: React.MouseEvent, path: string) => {
         e.preventDefault();
         window.history.pushState({}, '', path);
         window.dispatchEvent(new Event('pushstate'));
+        setIsMenuOpen(false);
+        setIsProfileMenuOpen(false);
     };
 
+    const handleLogout = async () => {
+        await logout();
+        setIsProfileMenuOpen(false);
+        // The router will handle redirecting to the landing page
+    };
+
+    const headerClasses = `fixed top-0 left-0 right-0 z-40 transition-colors duration-300 ${isScrolled || isScrolledProp ? 'bg-black/80 backdrop-blur-sm' : 'bg-transparent'}`;
+    
+    const navLinks = [
+        { path: '/', label: 'Home' },
+        { path: '/classics', label: 'Classics' },
+        { path: '/top-ten', label: 'Top 10' },
+        { path: '/watchlist', label: 'My List' },
+    ];
+
     return (
-        <header 
-            className={`fixed left-0 right-0 z-30 transition-all duration-300 ${isScrolled ? 'bg-black/80 backdrop-blur-sm' : 'bg-transparent'}`}
-            style={{ top: topOffset }}
-        >
-            {isStaging && <div className="bg-yellow-500 text-black text-center py-1 text-sm font-bold">Staging Environment</div>}
-            <div className={`flex items-center px-4 md:px-12 transition-all duration-300 ${isStaging ? 'h-14' : 'h-16'}`}>
-                <div className="flex items-center gap-8">
-                    <a href="/" onClick={(e) => handleNavigate(e, '/')} className="hidden md:block">
-                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" className="w-24 h-auto" />
-                    </a>
-                     {showNavLinks && (
-                        <nav className="hidden md:flex items-center gap-6">
-                            <a href="/" onClick={(e) => handleNavigate(e, '/')} className="text-sm font-medium text-white hover:text-gray-300 transition-colors">Home</a>
-                            <a href="/classics" onClick={(e) => handleNavigate(e, '/classics')} className="text-sm font-medium text-white hover:text-gray-300 transition-colors">Classics</a>
-                        </nav>
-                     )}
-                </div>
-                <div className="flex items-center gap-4 ml-auto">
-                    {showSearch && (
-                        <div className="hidden md:flex items-center gap-2">
-                             <form onSubmit={(e) => { e.preventDefault(); onSearchSubmit?.(searchQuery); }}>
-                                <input
-                                    type="search"
-                                    value={searchQuery}
-                                    onChange={(e) => onSearch(e.target.value)}
-                                    placeholder="Search..."
-                                    className={`bg-black/50 border border-gray-600 rounded-md py-1 px-3 text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all ${isSearchActive || searchQuery ? 'w-48 opacity-100' : 'w-0 opacity-0'}`}
-                                    onFocus={() => setIsSearchActive(true)}
-                                    onBlur={() => { if(!searchQuery) setIsSearchActive(false);}}
-                                />
-                            </form>
-                            <button onClick={() => setIsSearchActive(!isSearchActive)} className="text-white hover:text-gray-300">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                            </button>
-                        </div>
-                    )}
-                    <div className="hidden md:block">
+        <header className={headerClasses} style={{ top: topOffset }}>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between h-16">
+                    <div className="flex items-center">
+                        <a href="/" onClick={(e) => handleNavigate(e, '/')} className="flex-shrink-0">
+                             <img className="h-8 w-auto" src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" />
+                        </a>
+                        {showNavLinks && user && (
+                            <nav className="hidden md:block ml-10">
+                                <div className="flex items-baseline space-x-4">
+                                    {navLinks.map(link => (
+                                        <a key={link.path} href={link.path} onClick={(e) => handleNavigate(e, link.path)} className="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+                                            {link.label}
+                                        </a>
+                                    ))}
+                                </div>
+                            </nav>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        {showSearch && user && (
+                            <>
+                                <div className="hidden md:block">
+                                    <form onSubmit={(e) => { e.preventDefault(); onSearchSubmit?.(searchQuery); }}>
+                                        <input
+                                            type="search"
+                                            value={searchQuery}
+                                            onChange={(e) => onSearch(e.target.value)}
+                                            placeholder="Search..."
+                                            className="bg-gray-700/50 text-white placeholder-gray-400 px-3 py-1.5 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        />
+                                    </form>
+                                </div>
+                                <button onClick={onMobileSearchClick} className="md:hidden text-gray-300 hover:text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                </button>
+                            </>
+                        )}
+                        
                         {user ? (
-                            <a href="/account" onClick={(e) => handleNavigate(e, '/account')} className="w-8 h-8 rounded-full bg-gray-700 p-1" dangerouslySetInnerHTML={{ __html: avatars[user.avatar || 'fox'] }} />
-                        ) : onSignInClick ? (
+                            <div className="relative" ref={profileMenuRef}>
+                                <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} className="flex items-center gap-2">
+                                    <span className="text-white text-sm font-medium hidden sm:block">{user.name || user.email}</span>
+                                </button>
+                                {isProfileMenuOpen && (
+                                    <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5">
+                                        <a href="/account" onClick={(e) => handleNavigate(e, '/account')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Account</a>
+                                        {(user.isActor || user.isFilmmaker) && <a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Creator Dashboard</a>}
+                                        <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign out</button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : onSignInClick && (
                             <button onClick={onSignInClick} className="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-4 rounded-md text-sm">Sign In</button>
-                        ) : (
-                             <a href="/login" onClick={(e) => handleNavigate(e, '/login')} className="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-4 rounded-md text-sm">Sign In</a>
                         )}
                     </div>
                 </div>

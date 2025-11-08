@@ -1,11 +1,42 @@
-// This file centralizes the avatar definitions to be used across the application.
-export const avatars: Record<string, string> = {
-    'fox': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill="#f97316" d="M20.5 13c-1.5 0-2.5-1.5-4-1.5s-2.5 1.5-4 1.5-2.5-1.5-4-1.5-2.5 1.5-4 1.5v-2c1.5 0 2.5-1.5 4-1.5s2.5 1.5 4 1.5 2.5-1.5 4-1.5 2.5 1.5 4 1.5v2z"/><path fill="#fff" d="M15.5 13c-1.5 0-2.5-1.5-4-1.5s-2.5 1.5-4 1.5S5 11.5 6.5 11.5 9 13 10.5 13s2.5-1.5 4-1.5 2.5 1.5 4-1.5.5-1.5-1-1.5-2.5 1.5-4 1.5-2.5-1.5-4-1.5-2.5 1.5-4 1.5-2.5-1.5-4-1.5c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h15c1.1 0 2-.9 2-2v-2c0-1.1-.9-2-2-2zM4.5 3.5l-1 4 2-1 1-4-2 1z"/><path fill="#111827" d="M9.5 8.5a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"/></svg>',
-    'astronaut': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#60A5FA" d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path fill="#FFFFFF" d="M12 4a8 8 0 100 16 8 8 0 000-16z"/><path fill="#1F2937" d="M12 5a7 7 0 100 14 7 7 0 000-14z"/><path fill="#FBBF24" d="M12 5a7 7 0 100 14 7 7 0 000-14z" opacity=".3"/><path fill="#FFFFFF" d="M16 11H8c-.6 0-1 .4-1 1v2c0 .6.4 1 1 1h8c.6 0 1-.4 1-1v-2c0-.6-.4-1-1-1z"/></svg>',
-    'skull': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="a" gradientUnits="userSpaceOnUse" x1="12" y1="2" x2="12" y2="22"><stop offset="0" stop-color="#EC4899"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs><path fill="url(#a)" d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-3 7a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zm-3 10c-3 0-5-2-5-5h10c0 3-2 5-5 5z"/></svg>',
-    'tv': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#9CA3AF" d="M21 7H3a2 2 0 00-2 2v10a2 2 0 002 2h18a2 2 0 002-2V9a2 2 0 00-2-2z"/><path fill="#4B5563" d="M19 9H5v8h14V9z"/><defs><linearGradient id="b" gradientUnits="userSpaceOnUse" x1="12" y1="9" x2="12" y2="17"><stop offset="0" stop-color="#34D399"/><stop offset=".5" stop-color="#FBBF24"/><stop offset="1" stop-color="#F87171"/></linearGradient></defs><path fill="url(#b)" d="M19 9H5v8h14V9z"/><path fill="#9CA3AF" d="M16 5h-3l1-2h1l1 2zm6 1l-1-2h-3l1 2h3zM7 5H4l1-2h2l-1 2zM9 22h6v-2H9v2z"/></svg>',
-    'spraycan': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#3B82F6" d="M15 4H9v2h6V4z"/><path fill="#9CA3AF" d="M17 6H7a1 1 0 00-1 1v13a1 1 0 001 1h10a1 1 0 001-1V7a1 1 0 00-1-1z"/><path fill="#F87171" d="M10 2h4v2h-4z"/><path fill="#FFFFFF" d="M16 11a1 1 0 01-1 1H9a1 1 0 01-1-1V9a1 1 0 011-1h6a1 1 0 011 1v2z"/></svg>',
-    'flame': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="d" gradientUnits="userSpaceOnUse" x1="12" y1="5" x2="12" y2="21"><stop offset="0" stop-color="#F97316"/><stop offset="1" stop-color="#FBBF24"/></linearGradient></defs><path fill="url(#d)" d="M12 21c-3.5-2-7-5.5-7-10.5C5 5.5 8.5 2 12 2s7 3.5 7 8.5c0 5-3.5 8.5-7 10.5z"/><path fill="#FFFFFF" opacity=".3" d="M12 6c-2 0-3 2-3 4s1 4 3 4 3-2 3-4-1-4-3-4z"/></svg>',
-    'crystal': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="e" gradientUnits="userSpaceOnUse" x1="12" y1="3" x2="12" y2="21"><stop offset="0" stop-color="#A78BFA"/><stop offset="1" stop-color="#3B82F6"/></linearGradient></defs><path fill="url(#e)" d="M12 3l-10 8 10 10 10-10-10-8zm0 2.24L19.76 11 12 18.76 4.24 11 12 5.24z"/></svg>',
-    'planet': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#84CC16" d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path fill="#10B981" d="M12 4a8 8 0 100 16 8 8 0 000-16z"/><path d="M21 15a9 9 0 00-18 0" stroke="#FDE047" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
+export const avatars: { [key: string]: string } = {
+    fox: `
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="#F97316"/>
+            <path d="M12 12l-4 4h8l-4-4z" fill="white"/>
+            <path d="M12 8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" fill="white"/>
+        </svg>
+    `,
+    bear: `
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="#78350F"/>
+            <circle cx="9.5" cy="9.5" r="1.5" fill="white"/>
+            <circle cx="14.5" cy="9.5" r="1.5" fill="white"/>
+            <path d="M12 14c-1.66 0-3 1.34-3 3h6c0-1.66-1.34-3-3-3z" fill="white"/>
+        </svg>
+    `,
+    cat: `
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="#6B7280"/>
+            <path d="M9 14h6v2H9v-2z" fill="white"/>
+            <path d="M15.5 9.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5.67-1.5 1.5-1.5 1.5.67 1.5 1.5z" fill="white"/>
+            <path d="M10 9.5c0 .83-.67 1.5-1.5 1.5S7 10.33 7 9.5 7.67 8 8.5 8s1.5.67 1.5 1.5z" fill="white"/>
+        </svg>
+    `,
+     owl: `
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="#3F6212"/>
+            <circle cx="9" cy="10" r="2" fill="yellow"/>
+            <circle cx="15" cy="10" r="2" fill="yellow"/>
+            <path d="M12 14l-2 2h4l-2-2z" fill="white"/>
+        </svg>
+    `,
+    penguin: `
+         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="#000000"/>
+            <path d="M12 5c-2.76 0-5 2.24-5 5v5h10v-5c0-2.76-2.24-5-5-5z" fill="white"/>
+            <circle cx="9" cy="9" r="1" fill="black"/>
+            <circle cx="15" cy="9" r="1" fill="black"/>
+            <path d="M11 12h2v2h-2z" fill="#F97316"/>
+        </svg>
+    `,
 };
