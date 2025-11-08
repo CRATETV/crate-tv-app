@@ -4,6 +4,7 @@ import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';
 import { avatars } from './avatars';
 import LoadingSpinner from './LoadingSpinner';
+import BottomNavBar from './BottomNavBar';
 
 const AccountPage: React.FC = () => {
     const { user, logout, setAvatar, updateName } = useAuth();
@@ -43,6 +44,12 @@ const AccountPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    const handleMobileSearchClick = () => {
+        // Navigate to home, where search is handled
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new Event('pushstate'));
+    }
+
     if (!user) {
         return <LoadingSpinner />;
     }
@@ -58,7 +65,7 @@ const AccountPage: React.FC = () => {
                 onMobileSearchClick={() => {}}
                 showSearch={false}
             />
-            <main className="flex-grow pt-24 px-4 md:px-12">
+            <main className="flex-grow pt-24 px-4 md:px-12 pb-24 md:pb-0">
                 <div className="max-w-4xl mx-auto">
                     <h1 className="text-4xl font-bold mb-8">Account Settings</h1>
 
@@ -132,6 +139,7 @@ const AccountPage: React.FC = () => {
                 </div>
             </main>
             <CollapsibleFooter />
+            <BottomNavBar onSearchClick={handleMobileSearchClick} />
         </div>
     );
 };

@@ -58,8 +58,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
             className="text-gray-300 text-xs line-clamp-3 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             dangerouslySetInnerHTML={{ __html: movie.synopsis || '' }}
         ></p>
-        <div className="flex items-end justify-between">
-            <h3 className="text-white font-bold text-sm truncate pr-2 hidden md:block">{movie.title}</h3>
+        <div className="flex items-end justify-end">
             <div className="flex items-center gap-2 flex-shrink-0">
                 {onToggleWatchlist && (
                   <button onClick={handleToggleWatchlist} className="p-1.5 rounded-full bg-black/50 hover:bg-white/20" title={isOnWatchlist ? "Remove from My List" : "Add to My List"}>

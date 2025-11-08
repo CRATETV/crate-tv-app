@@ -154,8 +154,8 @@ export async function GET(request: Request) {
             description: isDeviceLinked 
                 ? "Your Crate TV account is linked to this Roku device. Your purchases will be synced." 
                 : "Link your Crate TV account to sync purchases and unlock content. Select this item to get your unique link code.",
-            SDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png",
-            HDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png",
+            SDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed.png",
+            HDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed.png",
             heroImage: "", streamUrl: "", director: "", actors: [], genres: [], rating: "", duration: ""
         }]
     };

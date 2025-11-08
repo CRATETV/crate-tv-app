@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, ActorSubmission, PayoutRequest } from './types';
+import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, PayoutRequest } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
 import MovieEditor from './components/MovieEditor';
 import CategoryEditor from './components/CategoryEditor';
@@ -13,9 +13,25 @@ import FallbackGenerator from './components/FallbackGenerator';
 import EmailSender from './components/EmailSender';
 import ContractsTab from './components/ContractsTab';
 import AdminPayoutsTab from './components/AdminPayoutsTab';
-// FIX: Changed to named import to match the export in ActorSubmissionsTab.tsx
-import { ActorSubmissionsTab } from './components/ActorSubmissionsTab';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
+import PermissionsManager from './components/PermissionsManager';
+
+const ALL_TABS: Record<string, string> = {
+    analytics: 'Analytics',
+    movies: 'Movies',
+    pipeline: 'Pipeline',
+    payouts: 'Payouts',
+    categories: 'Categories',
+    festival: 'Festival',
+    watchParty: 'Watch Party',
+    about: 'About Page',
+    email: 'Email',
+    contracts: 'File Cabinet',
+    security: 'Security',
+    roku: 'Roku',
+    fallback: 'Fallback Data',
+    permissions: 'Permissions'
+};
 
 
 const AdminPage: React.FC = () => {
@@ -32,8 +48,9 @@ const AdminPage: React.FC = () => {
     const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
     const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
-    const [actorSubmissions, setActorSubmissions] = useState<ActorSubmission[]>([]);
     const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
+    const [permissions, setPermissions] = useState<Record<string, string[]>>({});
+    const [allowedTabs, setAllowedTabs] = useState<string[]>([]);
 
     const [activeTab, setActiveTab] = useState('analytics');
 
@@ -56,8 +73,8 @@ const AdminPage: React.FC = () => {
             const results = await Promise.allSettled([
                 fetch('/api/get-live-data'),
                 fetch('/api/get-pipeline-data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) }),
-                fetch('/api/get-actor-submissions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) }),
-                fetch('/api/get-payouts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) })
+                fetch('/api/get-payouts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) }),
+                fetch('/api/get-admin-permissions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) })
             ]);
     
             // Process live data
@@ -71,7 +88,6 @@ const AdminPage: React.FC = () => {
                 setFestivalConfig(data.festivalConfig || null);
             } else {
                 errors.push('Failed to fetch live site data.');
-                console.error('Failed to fetch live site data:', dataResResult.status === 'rejected' ? dataResResult.reason : `Status ${dataResResult.value?.status}`);
             }
     
             // Process pipeline data
@@ -81,27 +97,24 @@ const AdminPage: React.FC = () => {
                 setPipeline(pipelineData.pipeline || []);
             } else {
                 errors.push('Failed to fetch submission pipeline.');
-                console.error('Failed to fetch pipeline data:', pipelineResResult.status === 'rejected' ? pipelineResResult.reason : `Status ${pipelineResResult.value?.status}`);
-            }
-    
-            // Process actor submissions
-            const actorSubmissionsResResult = results[2];
-            if (actorSubmissionsResResult.status === 'fulfilled' && actorSubmissionsResResult.value.ok) {
-                const actorSubmissionsData = await actorSubmissionsResResult.value.json();
-                setActorSubmissions(actorSubmissionsData.submissions || []);
-            } else {
-                errors.push('Failed to fetch actor submissions.');
-                console.error('Failed to fetch actor submissions:', actorSubmissionsResResult.status === 'rejected' ? actorSubmissionsResResult.reason : `Status ${actorSubmissionsResResult.value?.status}`);
             }
     
             // Process payouts
-            const payoutsResResult = results[3];
+            const payoutsResResult = results[2];
             if (payoutsResResult.status === 'fulfilled' && payoutsResResult.value.ok) {
                 const payoutsData = await payoutsResResult.value.json();
                 setPayoutRequests(payoutsData.payoutRequests || []);
             } else {
                 errors.push('Failed to fetch payout requests.');
-                 console.error('Failed to fetch payouts:', payoutsResResult.status === 'rejected' ? payoutsResResult.reason : `Status ${payoutsResResult.value?.status}`);
+            }
+
+            // Process permissions
+            const permsResResult = results[3];
+            if (permsResResult.status === 'fulfilled' && permsResResult.value.ok) {
+                const permsData = await permsResResult.value.json();
+                setPermissions(permsData.permissions || {});
+            } else {
+                errors.push('Failed to fetch user role permissions.');
             }
     
             if (errors.length > 0) {
@@ -109,7 +122,6 @@ const AdminPage: React.FC = () => {
             }
     
         } catch (err) {
-            // This catch block is for network errors or other unexpected issues before Promise.allSettled runs
             setError(err instanceof Error ? err.message : 'A critical error occurred while loading data.');
         } finally {
             setIsLoading(false);
@@ -141,6 +153,30 @@ const AdminPage: React.FC = () => {
         }
     };
     
+    useEffect(() => {
+        if (!role) return;
+
+        let tabs: string[] = [];
+        if (role === 'super_admin' || role === 'master') {
+            tabs = Object.keys(ALL_TABS);
+        } else {
+            // Default permissions for built-in roles if not defined in DB
+            const defaultPermissions: Record<string, string[]> = {
+                collaborator: ['movies', 'categories', 'pipeline', 'fallback'],
+                festival_admin: ['festival'],
+            };
+            tabs = permissions[role] || defaultPermissions[role] || [];
+        }
+        
+        setAllowedTabs(tabs);
+        
+        if (tabs.length > 0 && !tabs.includes(activeTab)) {
+            setActiveTab(tabs[0]);
+        } else if (tabs.length === 0) {
+            setError("Your role does not have any permissions assigned.");
+        }
+    }, [role, permissions, activeTab]);
+
     // Renders the login form
     if (!isAuthenticated) {
         return (
@@ -188,20 +224,9 @@ const AdminPage: React.FC = () => {
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
                 <div className="flex flex-wrap items-center gap-2 mb-8 border-b border-gray-700 pb-4">
-                   <TabButton tabId="analytics" label="Analytics" />
-                   <TabButton tabId="movies" label="Movies" />
-                   <TabButton tabId="pipeline" label="Pipeline" />
-                   <TabButton tabId="actorSubmissions" label="Actor Submissions" />
-                   <TabButton tabId="payouts" label="Payouts" />
-                   <TabButton tabId="categories" label="Categories" />
-                   <TabButton tabId="festival" label="Festival" />
-                   <TabButton tabId="watchParty" label="Watch Party" />
-                   <TabButton tabId="about" label="About Page" />
-                   <TabButton tabId="email" label="Email" />
-                   <TabButton tabId="contracts" label="File Cabinet" />
-                   <TabButton tabId="security" label="Security" />
-                   <TabButton tabId="roku" label="Roku" />
-                   <TabButton tabId="fallback" label="Fallback Data" />
+                   {allowedTabs.map(tabId => (
+                        <TabButton key={tabId} tabId={tabId} label={ALL_TABS[tabId as keyof typeof ALL_TABS]} />
+                   ))}
                 </div>
                 
                 {error && <div className="p-4 mb-4 text-red-300 bg-red-900/50 border border-red-700 rounded-md">{error}</div>}
@@ -210,7 +235,6 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => console.log('Create movie from:', item)} onRefresh={() => fetchAllData(password)} />}
-                    {activeTab === 'actorSubmissions' && <ActorSubmissionsTab submissions={actorSubmissions} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => console.log('Save categories:', newData)} />}
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={setFestivalData} onConfigChange={setFestivalConfig} onSave={() => console.log('Save festival')} />}
@@ -221,6 +245,13 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'security' && <SecurityTab />}
                     {activeTab === 'roku' && <RokuAdminTab />}
                     {activeTab === 'fallback' && <FallbackGenerator movies={movies} categories={categories} festivalData={festivalData} festivalConfig={festivalConfig} aboutData={aboutData} />}
+                    {activeTab === 'permissions' && (role === 'super_admin' || role === 'master') && 
+                        <PermissionsManager 
+                            allTabs={ALL_TABS}
+                            initialPermissions={permissions}
+                            onRefresh={() => fetchAllData(password)}
+                        />
+                    }
                 </div>
             </div>
         </div>

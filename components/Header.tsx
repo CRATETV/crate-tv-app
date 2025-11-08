@@ -70,7 +70,6 @@ const Header: React.FC<HeaderProps> = ({
     const navLinks = [
         { path: '/', label: 'Home' },
         { path: '/classics', label: 'Classics' },
-        { path: '/top-ten', label: 'Top 10' },
         { path: '/watchlist', label: 'My List' },
     ];
 
