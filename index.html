@@ -278,6 +278,31 @@
         transform: scale(1);
       }
 
+      /* Restored colorful border for Top 10 Carousel on Homepage */
+      .ranked-card-border {
+        position: relative;
+      }
+      .ranked-card-border::before {
+        content: '';
+        position: absolute;
+        inset: -2px; /* Create space for the border outside the card */
+        border-radius: 0.625rem; /* A bit larger than the card's rounded-lg (0.5rem) */
+        padding: 2px; /* border thickness */
+        background: linear-gradient(135deg, var(--rank-color, #888), #101010 60%);
+        -webkit-mask:
+            linear-gradient(#fff 0 0) content-box,
+            linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+                mask-composite: exclude;
+        pointer-events: none;
+        z-index: -1; /* Place it behind the card */
+        transition: opacity 0.3s ease;
+        opacity: 0.8;
+      }
+      .ranked-card-border:hover::before {
+        opacity: 1;
+      }
+
       @keyframes slideInUp {
         from {
           opacity: 0;

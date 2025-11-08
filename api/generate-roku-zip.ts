@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     }
     
     // --- AUTOMATION: Fetch branding images from S3 and add them to the zip ---
-    const logoUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/+Logo+(320+x+320+px)+(1920+x+1080+px)+(540+x+405+px).png';
+    const logoUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png';
     const splashUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/intro-poster.jpg';
 
     const [logoResponse, splashResponse] = await Promise.all([
@@ -89,7 +89,7 @@ minor_version=1
 build_version=0
 mm_icon_focus_hd=pkg:/images/logo_hd.png
 mm_icon_side_hd=pkg:/images/logo_hd.png
-splash_screen_hd=pkg:/images/splash_hd.png
+splash_screen_hd=pkg:/images/logo_hd.png
 `.trim());
 
     // Generate the final zip file as a standard ArrayBuffer

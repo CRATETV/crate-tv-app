@@ -25,7 +25,7 @@ const TopTenShareableImage: React.FC<TopTenShareableImageProps> = ({ topFilms, d
       {/* Header */}
       <div className="flex justify-between items-start mb-12 flex-shrink-0">
         <img 
-          src={`/api/proxy-image?url=${encodeURIComponent("https://cratetelevision.s3.us-east-1.amazonaws.com/+Logo+(320+x+320+px)+(1920+x+1080+px)+(540+x+405+px).png")}`} 
+          src={`/api/proxy-image?url=${encodeURIComponent("https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png")}`} 
           alt="Crate TV Logo" 
           className="w-56" 
           crossOrigin="anonymous" 

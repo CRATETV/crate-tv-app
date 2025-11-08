@@ -102,7 +102,7 @@ const FilmReportModal: React.FC<FilmReportModalProps> = ({ filmData, onClose }) 
             <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
                 <div className="printable-film-report p-8">
                     <div className="text-center mb-8">
-                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/+Logo+(320+x+320+px)+(1920+x+1080+px)+(540+x+405+px).png" alt="Crate TV" className="w-32 h-auto mx-auto mb-4" />
+                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" className="w-32 h-auto mx-auto mb-4" />
                         <h2 className="text-2xl font-bold text-white">Film Performance Report</h2>
                         <p className="text-sm text-gray-500">Generated on {new Date().toLocaleDateString()}</p>
                     </div>
