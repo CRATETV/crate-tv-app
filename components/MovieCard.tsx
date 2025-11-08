@@ -12,35 +12,6 @@ interface MovieCardProps {
   onSupportMovie?: (movie: Movie) => void;
 }
 
-// Set of movie keys that have wide-format posters and need 'object-contain'
-// to prevent text from being cropped.
-const widePosterKeys = new Set([
-  'theneighbours',
-  'newmovie1756485973547', // Burst
-  'unhinged',
-  'fatherdaughterdance',
-  'newmovie1756487390550', // I Still Love Her
-  'itsinyou',
-  'newmovie1756486933392', // Power Trip
-  'newmovie1756487626529', // Strange Encounters
-  'wrapitup',
-  'tedandnatalie',
-  'thefallofthehouseofusher',
-  'consumed',
-  'slap',
-  'twopeasinapod',
-  'crossroads',
-  'newmovie1756487215116', // Fling
-  'newmovie1756501125076', // of Bees and Boobs
-  'intrusivethoughts',
-  'smirk',
-  'results',
-  'hair',
-  'iloveyoublack',
-  'newmovie1756741314485', // What If
-]);
-
-
 export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWatched, isOnWatchlist, isLiked, onToggleLike, onSupportMovie }) => {
   if (!movie) return null;
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
@@ -57,17 +28,15 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
     onSupportMovie?.(movie);
   }
 
-  const imageFitClass = widePosterKeys.has(movie.key) ? 'object-contain' : 'object-cover';
-
   return (
     <div
-      className="group relative cursor-pointer aspect-[2/3] rounded-md overflow-hidden bg-gray-800 transition-transform duration-300 ease-in-out hover:scale-105 hover:z-10"
+      className="group relative cursor-pointer aspect-[2/3] rounded-md overflow-hidden bg-black transition-transform duration-300 ease-in-out hover:scale-105 hover:z-10"
       onClick={() => onSelectMovie(movie)}
     >
       <img
         src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
         alt={movie.title}
-        className={`w-full h-full ${imageFitClass}`}
+        className={`w-full h-full object-contain`}
         loading="lazy"
         onContextMenu={(e) => e.preventDefault()}
         crossOrigin="anonymous"

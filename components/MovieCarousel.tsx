@@ -70,7 +70,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                           <img 
                               src={movie.poster}
                               alt={movie.title}
-                              className="absolute top-0 right-0 h-full w-[55%] object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                              className="absolute top-0 right-0 h-full w-[55%] object-contain object-center group-hover:scale-105 transition-transform duration-300"
                               onContextMenu={(e) => e.preventDefault()}
                           />
                           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent"></div>
