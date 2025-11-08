@@ -66,7 +66,7 @@ const LoginPage: React.FC = () => {
     return (
         <div className="min-h-screen text-white flex flex-col">
             <header className="absolute top-0 left-0 p-8">
-                 <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed.png" alt="Crate TV" className="w-32 h-auto" />
+                 <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" className="w-32 h-auto" />
             </header>
             <main className="flex-grow flex items-center justify-center">
                 <div className="w-full max-w-md bg-black/70 backdrop-blur-sm p-8 rounded-lg">

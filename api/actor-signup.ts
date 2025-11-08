@@ -130,10 +130,11 @@ export async function POST(request: Request) {
     // Set the custom claims on the Auth user.
     await auth.setCustomUserClaims(userRecord.uid, newClaims);
     
-    // Update the user's document in Firestore with the merged roles.
+    // Update the user's document in Firestore with the merged roles and the stable profile slug.
     await db.collection('users').doc(userRecord.uid).set({ 
         name: bestActorData.name, 
         email, 
+        actorProfileSlug: actorSlug,
         ...newClaims
     }, { merge: true });
 

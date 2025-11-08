@@ -59,8 +59,8 @@ const formatMovieForRoku = (movie: Movie, movieGenreMap: Map<string, string[]>):
         director: movie.director || '',
         actors: movie.cast ? movie.cast.map(c => c.name || '') : [],
         genres: movieGenreMap.get(movie.key) || [],
-        rating: movie.rating ? movie.rating.toFixed(1) : "",
-        duration: movie.durationInMinutes ? `${movie.durationInMinutes} min` : "",
+        rating: movie.rating ? movie.rating.toFixed(1) : "0.0", // Default to string "0.0"
+        duration: movie.durationInMinutes ? `${movie.durationInMinutes} min` : "0 min", // Default duration
     };
 };
 
@@ -149,13 +149,13 @@ export async function GET(request: Request) {
     const accountCategory: RokuCategory = {
         title: "My Account",
         children: [{
-            id: "link_account_action", // Special ID for the Roku app to identify this action
+            id: isDeviceLinked ? "account_linked" : "link_account_action", // Special ID for the Roku app to identify this action
             title: isDeviceLinked ? "Account Linked" : "Link This Device",
             description: isDeviceLinked 
                 ? "Your Crate TV account is linked to this Roku device. Your purchases will be synced." 
                 : "Link your Crate TV account to sync purchases and unlock content. Select this item to get your unique link code.",
-            SDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed.png",
-            HDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed.png",
+            SDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png",
+            HDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png",
             heroImage: "", streamUrl: "", director: "", actors: [], genres: [], rating: "", duration: ""
         }]
     };
@@ -188,13 +188,14 @@ export async function GET(request: Request) {
     const content = {
       heroItems: heroItems,
       categories: finalCategories,
+      isLinked: isDeviceLinked, // Pass link status directly
     };
 
     return new Response(JSON.stringify(content, null, 2), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 's-maxage=600, stale-while-revalidate',
+        'Cache-Control': 's-maxage=60, stale-while-revalidate',
       },
     });
   } catch (error) {

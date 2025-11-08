@@ -61,7 +61,7 @@ const LinkRokuPage: React.FC = () => {
                 <div className="w-full max-w-lg text-center">
                     <h1 className="text-4xl font-bold mb-4">Link Your Roku Device</h1>
                     <p className="text-gray-400 mb-8">
-                        Enter the code displayed on your TV screen to connect your Crate TV account and sync your purchases.
+                        Enter the 6-character code displayed on your TV screen to connect your Crate TV account and sync your purchases.
                     </p>
 
                     <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-8">
@@ -81,9 +81,11 @@ const LinkRokuPage: React.FC = () => {
                                     id="rokuCode"
                                     value={code}
                                     onChange={(e) => setCode(e.target.value.toUpperCase())}
-                                    className="form-input text-center text-2xl tracking-[.25em] font-mono"
+                                    className="form-input text-center text-3xl tracking-[.5em] font-mono"
                                     placeholder="ABC-123"
                                     required
+                                    maxLength={7}
+                                    minLength={6}
                                 />
                                 <button
                                     type="submit"

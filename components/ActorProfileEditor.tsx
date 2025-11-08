@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { ActorProfile } from '../types';
 import PublicS3Uploader from './PublicS3Uploader';
@@ -45,13 +46,11 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
         fetchProfile();
     }, [fetchProfile]);
 
-    // FIX: Define handleInputChange to update state from form inputs.
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setProfile(prev => ({ ...prev, [name]: value }));
     };
 
-    // FIX: Define handleUrlUpdate to update state from S3Uploader component.
     const handleUrlUpdate = (field: keyof ActorProfile, url: string) => {
         setProfile(prev => ({ ...prev, [field]: url }));
     };

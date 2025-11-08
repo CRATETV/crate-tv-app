@@ -7,23 +7,16 @@ import LoadingSpinner from './LoadingSpinner';
 import BottomNavBar from './BottomNavBar';
 import { useFestival } from '../contexts/FestivalContext';
 import { useAuth } from '../contexts/AuthContext';
-import MovieCarousel from './MovieCarousel';
 import TopTenShareableImage from './TopTenShareableImage';
 // Lazy load html2canvas by removing the static import
 // import html2canvas from 'html2canvas';
 
 const TopTenPage: React.FC = () => {
-    const { isLoading, movies, categories } = useFestival();
-    const { likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
-    
+    const { isLoading, movies } = useFestival();
     const [isGenerating, setIsGenerating] = useState(false);
     const [desktopShareStatus, setDesktopShareStatus] = useState<'idle' | 'success'>('idle');
     const shareableImageRef = useRef<HTMLDivElement>(null);
     const currentDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
-    const likedMovies = useMemo(() => new Set(likedMoviesArray), [likedMoviesArray]);
-    const watchlist = useMemo(() => new Set(watchlistArray), [watchlistArray]);
-    const watchedMovies = useMemo(() => new Set(watchedMoviesArray), [watchedMoviesArray]);
 
     const topTenMovies = useMemo(() => {
         return Object.values(movies)
@@ -65,7 +58,7 @@ const TopTenPage: React.FC = () => {
                     files: [file],
                 });
             } else {
-                try {
+                 try {
                     await navigator.clipboard.writeText(shareText);
                     setDesktopShareStatus('success');
                     setTimeout(() => setDesktopShareStatus('idle'), 3000);
@@ -98,15 +91,15 @@ const TopTenPage: React.FC = () => {
         }
     };
 
-
     if (isLoading) {
         return <LoadingSpinner />;
     }
-    
+
     const heroMovie = topTenMovies[0];
+    const remainingMovies = topTenMovies.slice(1);
 
     return (
-        <div className="flex flex-col min-h-screen text-white">
+        <div className="flex flex-col min-h-screen text-white top-ten-page-bg">
             <Header
                 searchQuery=""
                 onSearch={() => {}}
@@ -117,66 +110,83 @@ const TopTenPage: React.FC = () => {
             />
             <main className="flex-grow pt-16 pb-24 md:pb-0">
                 {heroMovie && (
-                     <div className="relative w-full h-[50vh] md:h-[60vh] bg-black mb-12">
+                     <div className="relative w-full h-[60vh] md:h-[70vh] bg-black mb-12 flex items-center justify-center animate-slide-in-up">
                          <img
                             src={`/api/proxy-image?url=${encodeURIComponent(heroMovie.poster)}`}
                             alt=""
-                            className="absolute inset-0 w-full h-full object-cover opacity-30 blur-sm"
+                            className="absolute inset-0 w-full h-full object-cover opacity-20 blur-xl"
                             onContextMenu={(e) => e.preventDefault()}
                             crossOrigin="anonymous"
                          />
                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
-                         <div className="relative z-10 flex flex-col justify-end h-full p-4 md:p-12 text-center items-center">
-                            <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-2" style={{ textShadow: '0 4px 15px rgba(0,0,0,0.7)' }}>
-                                Top 10 on Crate TV
-                            </h1>
-                            <p className="text-lg text-gray-300">The most-loved films by the community, right now.</p>
-                             <div className="relative mt-6">
+                         <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 px-4">
+                            <img 
+                                src={`/api/proxy-image?url=${encodeURIComponent(heroMovie.poster)}`}
+                                alt={heroMovie.title}
+                                className="w-48 md:w-64 h-auto rounded-lg shadow-2xl shadow-black"
+                                crossOrigin="anonymous"
+                            />
+                            <div className="text-center md:text-left">
+                                <p className="text-xl font-bold text-purple-400">#1 on Crate TV Today</p>
+                                <h1 className="text-4xl md:text-6xl font-extrabold text-white mt-2 mb-4" style={{ textShadow: '0 4px 15px rgba(0,0,0,0.7)' }}>
+                                    {heroMovie.title}
+                                </h1>
                                 <button
-                                    onClick={handleShare}
-                                    disabled={isGenerating}
-                                    className="bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 backdrop-blur-sm disabled:bg-gray-500/50"
+                                    onClick={() => handleSelectMovie(heroMovie)}
+                                    className="bg-white text-black font-bold py-3 px-8 rounded-lg transition-transform hover:scale-105"
                                 >
-                                    {isGenerating ? (
-                                        <>
-                                            <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            Generating...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>
-                                            Share List
-                                        </>
-                                    )}
+                                    Watch Now
                                 </button>
-                                 {desktopShareStatus === 'success' && (
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max bg-green-600 text-white text-xs font-bold py-1 px-3 rounded-lg animate-[fadeIn_0.5s_ease-out]">
-                                        Image downloaded & link copied!
-                                    </div>
-                                )}
                             </div>
                          </div>
                      </div>
                 )}
                
-                <div className="max-w-7xl mx-auto px-4 md:px-12 -mt-20">
-                    <MovieCarousel
-                        key="top-ten"
-                        title=""
-                        movies={topTenMovies}
-                        onSelectMovie={handleSelectMovie}
-                        showRankings={true}
-                        watchedMovies={watchedMovies}
-                        watchlist={watchlist}
-                        likedMovies={likedMovies}
-                        onToggleLike={toggleLikeMovie}
-                        onToggleWatchlist={toggleWatchlist}
-                        onSupportMovie={() => { /* Not applicable here */ }}
-                        allCategories={categories}
-                    />
+                <div className="max-w-4xl mx-auto px-4 md:px-8">
+                    <div className="flex justify-between items-center mb-6 animate-slide-in-up" style={{ animationDelay: '200ms' }}>
+                        <h2 className="text-3xl font-bold">Top 10 Today</h2>
+                        <div className="relative">
+                            <button
+                                onClick={handleShare}
+                                disabled={isGenerating}
+                                className="bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-5 rounded-lg transition-colors flex items-center gap-2 backdrop-blur-sm disabled:bg-gray-500/50"
+                            >
+                                {isGenerating ? 'Generating...' : 'Share'}
+                            </button>
+                             {desktopShareStatus === 'success' && (
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max bg-green-600 text-white text-xs font-bold py-1 px-3 rounded-lg animate-[fadeIn_0.5s_ease-out]">
+                                    Image downloaded & link copied!
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        {remainingMovies.map((movie, index) => (
+                            <div 
+                                key={movie.key} 
+                                className="top-ten-item group animate-slide-in-up" 
+                                style={{ animationDelay: `${300 + index * 100}ms` }}
+                                onClick={() => handleSelectMovie(movie)}
+                            >
+                                <div className="flex items-center gap-5">
+                                    <span className="rank-number">{index + 2}</span>
+                                    <img 
+                                        src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} 
+                                        alt=""
+                                        className="poster-img"
+                                        crossOrigin="anonymous"
+                                    />
+                                    <h3 className="text-lg md:text-xl font-bold text-white flex-grow">{movie.title}</h3>
+                                    <div className="play-icon">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </main>
             <CollapsibleFooter />

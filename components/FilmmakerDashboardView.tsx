@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { FilmmakerAnalytics, Movie } from '../types';
+import { FilmmakerAnalytics, Movie, FilmmakerFilmPerformance } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
@@ -72,6 +72,59 @@ const PayoutModal: React.FC<{ balance: number; directorName: string; onClose: ()
                         <button type="submit" className="submit-btn w-full mt-6" disabled={status === 'submitting'}>{status === 'submitting' ? 'Submitting...' : 'Confirm Request'}</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    );
+};
+
+const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; poster: string }> = ({ film, poster }) => {
+    return (
+        <div className="bg-gray-800/50 border border-gray-700 p-4 rounded-lg flex flex-col md:flex-row gap-6">
+            <img src={`/api/proxy-image?url=${encodeURIComponent(poster)}`} alt={film.title} className="w-32 h-48 object-cover rounded-md flex-shrink-0 self-center md:self-start shadow-lg" crossOrigin="anonymous"/>
+            <div className="flex-grow">
+                <h3 className="font-bold text-xl text-white">{film.title}</h3>
+                
+                {/* Engagement Stats */}
+                <div className="grid grid-cols-3 gap-4 my-4 text-center">
+                    <div title="Total Views">
+                        <p className="text-gray-400 text-sm flex items-center justify-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" /></svg>
+                            Views
+                        </p>
+                        <p className="font-bold text-2xl">{film.views.toLocaleString()}</p>
+                    </div>
+                    <div title="Total Likes">
+                        <p className="text-gray-400 text-sm flex items-center justify-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg>
+                            Likes
+                        </p>
+                        <p className="font-bold text-2xl text-red-400">{film.likes.toLocaleString()}</p>
+                    </div>
+                    <div title="Added to My List">
+                        <p className="text-gray-400 text-sm flex items-center justify-center gap-1.5">
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
+                            My List
+                        </p>
+                        <p className="font-bold text-2xl text-blue-400">{film.watchlistAdds.toLocaleString()}</p>
+                    </div>
+                </div>
+
+                {/* Financials */}
+                <div className="bg-gray-900/50 p-4 rounded-md space-y-2 border border-gray-700">
+                    <h4 className="font-semibold text-gray-300">Earnings Breakdown</h4>
+                    <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Donation Earnings (70% of {formatCurrency(film.grossDonations)})</span>
+                        <span className="font-semibold text-green-400">{formatCurrency(film.netDonationEarnings)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Ad Revenue Earnings (50% of {formatCurrency(film.grossAdRevenue)})</span>
+                        <span className="font-semibold text-green-400">{formatCurrency(film.netAdEarnings)}</span>
+                    </div>
+                    <div className="flex justify-between text-lg font-bold border-t border-gray-600 pt-2 mt-2">
+                        <span className="text-white">Your Total Earnings</span>
+                        <span className="text-green-400">{formatCurrency(film.totalEarnings)}</span>
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -193,8 +246,8 @@ const FilmmakerDashboardView: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <StatCard title="Available Balance" value={formatCurrency(analytics.balance)} />
                         <StatCard title="Total Paid Out" value={formatCurrency(analytics.totalPaidOut)} />
-                        <StatCard title="Total Ad Revenue" value={formatCurrency(analytics.totalAdRevenue)} />
-                        <StatCard title="Total Donations" value={formatCurrency(analytics.totalDonations)} />
+                        <StatCard title="Total Ad Earnings" value={formatCurrency(analytics.totalAdRevenue)} />
+                        <StatCard title="Total Donation Earnings" value={formatCurrency(analytics.totalDonations)} />
                     </div>
                     <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
@@ -219,34 +272,14 @@ const FilmmakerDashboardView: React.FC = () => {
                     </div>
                     <div>
                         <h2 className="text-2xl font-bold text-white mb-4">Your Film Performance</h2>
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             {analytics.films && analytics.films.map(film => {
                                 const movieDetails = allMovies[film.key];
                                 if (!movieDetails) {
                                     console.warn(`Movie with key ${film.key} not found in allMovies context.`);
                                     return null;
                                 }
-                                return (
-                                    <div key={film.key} className="bg-gray-800/50 border border-gray-700 p-4 rounded-lg">
-                                        <h3 className="font-bold text-lg text-white flex items-center gap-2">
-                                            {film.title}
-                                            {movieDetails.hasCopyrightMusic && (
-                                                <span title="This film contains copyrighted music and is not eligible for donations." className="text-xs font-normal bg-yellow-800 text-yellow-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                        <path d="M18 3a1 1 0 00-1.196-.98l-15 2A1 1 0 001 5v11.5a1.5 1.5 0 002.047 1.424L7.5 15.451v-3.924L16.5 13.95V9.451L18 8.783V3z" />
-                                                    </svg>
-                                                    Copyright Music
-                                                </span>
-                                            )}
-                                        </h3>
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2 text-center">
-                                            <div><p className="text-gray-400 text-sm">Views</p><p className="font-bold text-xl">{film.views.toLocaleString()}</p></div>
-                                            <div><p className="text-gray-400 text-sm">Likes</p><p className="font-bold text-xl">{film.likes.toLocaleString()}</p></div>
-                                            <div><p className="text-gray-400 text-sm">Donations</p><p className="font-bold text-xl text-green-400">{formatCurrency(film.donations)}</p></div>
-                                            <div><p className="text-gray-400 text-sm">Ad Revenue</p><p className="font-bold text-xl text-blue-400">{formatCurrency(film.adRevenue)}</p></div>
-                                        </div>
-                                    </div>
-                                );
+                                return <FilmPerformanceCard key={film.key} film={film} poster={movieDetails.poster} />;
                             })}
                         </div>
                     </div>

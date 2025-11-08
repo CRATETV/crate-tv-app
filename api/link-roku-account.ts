@@ -20,18 +20,39 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     if (!db) throw new Error("Database connection failed.");
 
+    // --- New logic: Find deviceId from the user-friendly code ---
+    const codeQuery = await db.collection('roku_codes').where('code', '==', rokuLinkCode.trim().toUpperCase()).limit(1).get();
+    
+    if (codeQuery.empty) {
+        return new Response(JSON.stringify({ error: 'Invalid or expired link code. Please try generating a new code on your Roku device.' }), {
+            status: 404, headers: { 'Content-Type': 'application/json' }
+        });
+    }
+
+    const codeDoc = codeQuery.docs[0];
+    const { deviceId } = codeDoc.data();
+
+    if (!deviceId) {
+         return new Response(JSON.stringify({ error: 'Code found, but is invalid. Please try again.' }), {
+            status: 400, headers: { 'Content-Type': 'application/json' }
+        });
+    }
+
     const batch = db.batch();
 
     // 1. Update the user's document with their Roku device ID
     const userRef = db.collection('users').doc(uid);
-    batch.update(userRef, { rokuDeviceId: rokuLinkCode });
+    batch.update(userRef, { rokuDeviceId: deviceId });
 
     // 2. Create a reverse-lookup document for the Roku device to easily check its link status
-    const linkRef = db.collection('roku_links').doc(rokuLinkCode);
+    const linkRef = db.collection('roku_links').doc(deviceId);
     batch.set(linkRef, { 
         userId: uid,
         linkedAt: FieldValue.serverTimestamp()
     });
+
+    // 3. Delete the temporary code now that it has been used
+    batch.delete(codeDoc.ref);
 
     await batch.commit();
 

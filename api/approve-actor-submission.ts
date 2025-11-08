@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     // 2. If we found the user, also update their 'users' collection document for consistency
     if (userRecord) {
         const userProfileRef = db.collection('users').doc(userRecord.uid);
-        batch.set(userProfileRef, { isActor: true }, { merge: true });
+        batch.set(userProfileRef, { isActor: true, actorProfileSlug: actorSlug }, { merge: true });
     }
 
     // 3. Update the actor's info across all movies they appear in

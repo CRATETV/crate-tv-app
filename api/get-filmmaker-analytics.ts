@@ -1,10 +1,11 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/get-filmmaker-analytics
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, PayoutRequest } from '../types.js';
+import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, PayoutRequest, User } from '../types.js';
 
 const AD_CPM_IN_CENTS = 500; // $5.00 per 1000 views
 const AD_REVENUE_FILMMAKER_SHARE = 0.50; // 50%
+const DONATION_PLATFORM_CUT = 0.30;
 
 export async function POST(request: Request) {
     try {
@@ -14,7 +15,7 @@ export async function POST(request: Request) {
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
         let isAuthenticated = false;
-        // This endpoint can be accessed by filmmakers, so we don't check for admin password
+        // This endpoint can be accessed by filmmakers, so we don't check for admin password unless provided
         if (password) {
              if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
               isAuthenticated = true;
@@ -43,17 +44,20 @@ export async function POST(request: Request) {
         const moviesPromise = db.collection('movies').get();
         const viewsPromise = db.collection('view_counts').get();
         const payoutsPromise = db.collection('payout_requests').where('directorName', '==', directorName).where('status', '==', 'completed').get();
+        const usersPromise = db.collection('users').get();
         
         const [
             donationsSnapshot,
             moviesSnapshot,
             viewsSnapshot,
-            payoutsSnapshot
+            payoutsSnapshot,
+            usersSnapshot
         ] = await Promise.all([
             donationsPromise,
             moviesPromise,
             viewsPromise,
-            payoutsPromise
+            payoutsPromise,
+            usersPromise
         ]);
 
         // 4. Process Data
@@ -64,6 +68,16 @@ export async function POST(request: Request) {
 
         const viewCounts: Record<string, number> = {};
         viewsSnapshot.forEach(doc => { viewCounts[doc.id] = doc.data().count || 0; });
+
+        const watchlistCounts: Record<string, number> = {};
+        usersSnapshot.forEach(doc => {
+            const user = doc.data() as User;
+            if (user.watchlist && Array.isArray(user.watchlist)) {
+                user.watchlist.forEach(movieKey => {
+                    watchlistCounts[movieKey] = (watchlistCounts[movieKey] || 0) + 1;
+                });
+            }
+        });
 
         const filmmakerFilms = Object.values(allMovies).filter(movie => {
             const directors = (movie.director || '').split(',').map(d => d.trim().toLowerCase());
@@ -77,33 +91,36 @@ export async function POST(request: Request) {
             return new Response(JSON.stringify({ analytics: emptyAnalytics }), { status: 200, headers: { 'Content-Type': 'application/json' }});
         }
         
-        let totalDonations = 0;
-        let totalAdRevenue = 0;
-        const filmPerformances: FilmmakerFilmPerformance[] = [];
-
-        // Aggregate donations by movieKey first for efficiency
         const donationsByFilm: Record<string, number> = {};
         donationsSnapshot.forEach(doc => {
             const donation = doc.data();
             donationsByFilm[donation.movieKey] = (donationsByFilm[donation.movieKey] || 0) + donation.amount;
         });
 
+        let totalFilmmakerDonationEarnings = 0;
+        let totalFilmmakerAdRevenue = 0;
+        const filmPerformances: FilmmakerFilmPerformance[] = [];
+
         filmmakerFilms.forEach(film => {
-            const filmDonations = donationsByFilm[film.key] || 0;
+            const grossDonations = donationsByFilm[film.key] || 0;
+            const grossAdRevenue = ((viewCounts[film.key] || 0) / 1000) * AD_CPM_IN_CENTS;
+            const netDonationEarnings = grossDonations * (1 - DONATION_PLATFORM_CUT);
+            const netAdEarnings = grossAdRevenue * AD_REVENUE_FILMMAKER_SHARE;
 
-            const filmAdRevenue = ((viewCounts[film.key] || 0) / 1000) * AD_CPM_IN_CENTS;
-            const filmmakerAdShare = filmAdRevenue * AD_REVENUE_FILMMAKER_SHARE;
-
-            totalDonations += filmDonations;
-            totalAdRevenue += filmmakerAdShare;
+            totalFilmmakerDonationEarnings += netDonationEarnings;
+            totalFilmmakerAdRevenue += netAdEarnings;
             
             filmPerformances.push({
                 key: film.key,
                 title: film.title,
                 views: viewCounts[film.key] || 0,
                 likes: allMovies[film.key].likes || 0,
-                donations: filmDonations,
-                adRevenue: filmmakerAdShare,
+                watchlistAdds: watchlistCounts[film.key] || 0,
+                grossDonations,
+                grossAdRevenue,
+                netDonationEarnings,
+                netAdEarnings,
+                totalEarnings: netDonationEarnings + netAdEarnings,
             });
         });
 
@@ -111,13 +128,11 @@ export async function POST(request: Request) {
             .map(doc => doc.data() as PayoutRequest)
             .reduce((sum, req) => sum + req.amount, 0);
 
-        const crateTvDonationCut = Math.round(totalDonations * 0.30);
-        const filmmakerTotalDonationEarnings = totalDonations - crateTvDonationCut;
-        const balance = (filmmakerTotalDonationEarnings + totalAdRevenue) - totalPaidOut;
+        const balance = (totalFilmmakerDonationEarnings + totalFilmmakerAdRevenue) - totalPaidOut;
 
         const analytics: FilmmakerAnalytics = {
-            totalDonations,
-            totalAdRevenue,
+            totalDonations: totalFilmmakerDonationEarnings,
+            totalAdRevenue: totalFilmmakerAdRevenue,
             totalPaidOut,
             balance,
             films: filmPerformances.sort((a,b) => b.views - a.views),

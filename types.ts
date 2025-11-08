@@ -85,6 +85,7 @@ export interface User {
   unlockedBlockIds?: string[];
   purchasedMovieKeys?: string[];
   rokuDeviceId?: string;
+  actorProfileSlug?: string;
 }
 
 export interface MoviePipelineEntry {
@@ -220,13 +221,17 @@ export interface FilmmakerFilmPerformance {
     title: string;
     views: number;
     likes: number;
-    donations: number; // in cents
-    adRevenue: number; // in cents
+    watchlistAdds: number;
+    grossDonations: number; // in cents
+    grossAdRevenue: number; // in cents
+    netDonationEarnings: number; // in cents
+    netAdEarnings: number; // in cents
+    totalEarnings: number; // in cents
 }
 
 export interface FilmmakerAnalytics {
-    totalDonations: number; // in cents
-    totalAdRevenue: number; // in cents
+    totalDonations: number; // NET total donation earnings for filmmaker, in cents
+    totalAdRevenue: number; // NET total ad revenue earnings for filmmaker, in cents
     totalPaidOut: number; // in cents
     balance: number; // in cents
     films: FilmmakerFilmPerformance[];
