@@ -10,6 +10,8 @@ import PauseOverlay from './PauseOverlay';
 import MovieDetailsModal from './MovieDetailsModal';
 import SquarePaymentModal from './SquarePaymentModal';
 import CastButton from './CastButton';
+// FIX: Add missing import for the Countdown component
+import Countdown from './Countdown';
 
 
 declare const google: any; // Declare Google IMA SDK global
@@ -424,4 +426,87 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     <input type="range" min="0" max={duration} value={currentTime} onChange={e => handleSeek(Number(e.target.value))} className="w-full h-1 bg-gray-500/50 rounded-lg appearance-none cursor-pointer range-sm" />
                                     <div className="flex justify-between items-center mt-2">
                                         <div className="flex items-center gap-4">
-                                            <button onClick={handlePlayPause} className="control-bar-button"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">{isPlaying ? <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /> : <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8--- START OF FILE components/SynopsisModal.tsx ---
+                                            <button onClick={handlePlayPause} className="control-bar-button">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                                                    {isPlaying 
+                                                        ? <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /> 
+                                                        : <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                                    }
+                                                </svg>
+                                            </button>
+                                            <span className="text-xs">{formatTime(currentTime)} / {formatTime(duration)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <CastButton videoElement={videoRef.current} />
+                                            <button onClick={handleFullscreen} className="control-bar-button" aria-label="Toggle fullscreen">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 0h-4m4 0l-5-5" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="relative w-full h-full flex flex-col items-center justify-center text-center p-4">
+                            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover blur-md opacity-30" crossOrigin="anonymous" />
+                            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 z-10">Coming Soon</h2>
+                            {movie.releaseDateTime && (
+                                <div className="bg-black/50 rounded-lg p-4 z-10">
+                                    <Countdown 
+                                        targetDate={movie.releaseDateTime} 
+                                        onEnd={() => setReleased(true)} 
+                                        className="text-xl md:text-3xl text-white" 
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </main>
+            {selectedActor && (
+                <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />
+            )}
+            {isDetailsModalOpen && movie && (
+                <MovieDetailsModal 
+                    movie={movie} 
+                    isLiked={isLiked}
+                    onToggleLike={() => toggleLikeMovie(movieKey)}
+                    onClose={() => setIsDetailsModalOpen(false)} 
+                    onSelectActor={setSelectedActor}
+                    allMovies={allMovies}
+                    allCategories={allCategories}
+                    onSelectRecommendedMovie={(m) => {
+                        setIsDetailsModalOpen(false);
+                        // Navigate to the new movie page
+                        window.history.pushState({}, '', `/movie/${m.key}`);
+                        window.dispatchEvent(new Event('pushstate'));
+                    }}
+                    onPlayMovie={(m) => {
+                        setIsDetailsModalOpen(false);
+                        window.history.pushState({}, '', `/movie/${m.key}`);
+                        window.dispatchEvent(new Event('pushstate'));
+                    }}
+                    onSupportMovie={() => {
+                        setIsDetailsModalOpen(false);
+                        setIsSupportModalOpen(true);
+                    }}
+                />
+            )}
+            {isSupportModalOpen && movie && (
+                <SquarePaymentModal
+                    movie={movie}
+                    paymentType="donation"
+                    onClose={() => setIsSupportModalOpen(false)}
+                    onPaymentSuccess={() => {
+                        setIsSupportModalOpen(false);
+                        // Optionally show a "thank you" toast/notification here
+                    }}
+                />
+            )}
+        </div>
+    );
+};
+
+export default MoviePage;

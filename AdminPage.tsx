@@ -13,7 +13,8 @@ import FallbackGenerator from './components/FallbackGenerator';
 import EmailSender from './components/EmailSender';
 import ContractsTab from './components/ContractsTab';
 import AdminPayoutsTab from './components/AdminPayoutsTab';
-import ActorSubmissionsTab from './components/ActorSubmissionsTab';
+// FIX: Changed to named import to match the export in ActorSubmissionsTab.tsx
+import { ActorSubmissionsTab } from './components/ActorSubmissionsTab';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
 
 

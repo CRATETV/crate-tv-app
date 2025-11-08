@@ -113,7 +113,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh }) => {
                 <select onChange={(e) => handleSelectMovie(e.target.value)} className="form-input max-w-xs" defaultValue="">
                     <option value="" disabled>Select a movie to edit...</option>
                     <option value="new">-- Create New Movie --</option>
-                    {Object.values(allMovies).sort((a,b) => a.title.localeCompare(b.title)).map(movie => (
+                    {/* FIX: Cast Object.values to Movie[] to provide a concrete type for sorting and mapping. */}
+                    {(Object.values(allMovies) as Movie[]).sort((a, b) => a.title.localeCompare(b.title)).map(movie => (
                         <option key={movie.key} value={movie.key}>{movie.title}</option>
                     ))}
                 </select>
