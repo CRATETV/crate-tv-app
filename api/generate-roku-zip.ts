@@ -58,8 +58,17 @@ export async function POST(request: Request) {
     }
     
     // --- AUTOMATION: Fetch branding images from S3 and add them to the zip ---
-    const logoUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png';
-    const splashUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/Logo%20(320%20x%20320%20px)%20(1920%20x%201080%20px)%20(540%20x%20405%20px).png';
+    // Construct the base URL from the incoming request to reliably call our own proxy API.
+    const host = request.headers.get('host');
+    const protocol = host?.startsWith('localhost') ? 'http' : 'https';
+    const baseUrl = `${protocol}://${host}`;
+
+    const originalLogoUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png';
+    const originalSplashUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/Logo%20(320%20x%20320%20px)%20(1920%20x%201080%20px)%20(540%20x%20405%20px).png';
+
+    // Use the app's own image proxy to fetch the images, which is more reliable for complex URLs.
+    const logoUrl = `${baseUrl}/api/proxy-image?url=${encodeURIComponent(originalLogoUrl)}`;
+    const splashUrl = `${baseUrl}/api/proxy-image?url=${encodeURIComponent(originalSplashUrl)}`;
 
     const [logoResponse, splashResponse] = await Promise.all([
         fetch(logoUrl),
@@ -67,7 +76,7 @@ export async function POST(request: Request) {
     ]);
 
     if (!logoResponse.ok || !splashResponse.ok) {
-        throw new Error('Failed to fetch required branding images from S3. Please check the URLs.');
+        throw new Error('Failed to fetch required branding images from S3 via proxy. Please check the URLs and proxy status.');
     }
 
     const logoBuffer = await logoResponse.arrayBuffer();
