@@ -58,8 +58,8 @@ export async function POST(request: Request) {
     }
     
     // --- AUTOMATION: Fetch branding images directly from S3 and add them to the zip ---
+    // FIX: Corrected the logo URL to include the trailing space before the file extension, matching the rest of the app.
     const logoUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png';
-    // FIX: Replaced the faulty, complex URL with a reliable one from the app's assets.
     const splashUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/intro-poster.jpg';
 
     const [logoResponse, splashResponse] = await Promise.all([
@@ -68,7 +68,8 @@ export async function POST(request: Request) {
     ]);
 
     if (!logoResponse.ok || !splashResponse.ok) {
-        throw new Error('Failed to fetch required branding images directly from S3. Please check the S3 URLs and permissions.');
+        let failedUrl = !logoResponse.ok ? logoUrl : splashUrl;
+        throw new Error(`Failed to fetch required branding images directly from S3. Please check the S3 URLs and permissions. Failed URL: ${failedUrl}`);
     }
 
     const logoBuffer = await logoResponse.arrayBuffer();

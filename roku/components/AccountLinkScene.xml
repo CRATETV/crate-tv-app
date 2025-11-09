@@ -49,7 +49,17 @@
             />
         </Group>
 
-        <!-- Task node for checking link status -->
-        <Task id="statusCheckTask" />
+        <!-- Node for getting the link code -->
+        <UrlTransfer id="getCodeTask" />
+
+        <!-- Node for checking link status -->
+        <UrlTransfer id="statusCheckTask" />
+        
+        <!-- Timer for polling the status -->
+        <Timer 
+            id="statusCheckTimer"
+            duration="5"
+            repeat="true"
+        />
     </children>
 </component>

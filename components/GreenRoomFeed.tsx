@@ -39,6 +39,9 @@ const TimeAgo: React.FC<{ timestamp: any }> = ({ timestamp }) => {
             if (seconds && typeof seconds === 'number') {
                 const date = new Date(seconds * 1000);
                 setTimeAgo(formatTimeAgo(date));
+            } else if (timestamp && typeof timestamp === 'object' && !timestamp.seconds) {
+                // This is likely a pending write (FieldValue.serverTimestamp()) which is not yet a valid React child.
+                setTimeAgo('sending...');
             } else {
                 setTimeAgo('a moment ago');
             }
