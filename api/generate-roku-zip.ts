@@ -1,3 +1,4 @@
+
 import { promises as fs } from 'fs';
 import path from 'path';
 import JSZip from 'jszip';
@@ -44,41 +45,23 @@ export async function POST(request: Request) {
     }
 
     const rokuDir = path.join((process as any).cwd(), 'roku');
-    // Read all files, but filter out the placeholder 'images' directory, as we'll fetch them live.
-    const allFiles = await readDirectory(rokuDir);
-    const filesToInclude = allFiles.filter(file => !file.includes(path.join('roku', 'images')));
+    // Read all files, including the 'images' directory.
+    const filesToInclude = await readDirectory(rokuDir);
 
     const zip = new JSZip();
 
-    // Add all local files (components, scripts, etc.) from the /roku directory to the zip.
+    // Add all local files (components, scripts, images etc.) from the /roku directory to the zip.
     for (const file of filesToInclude) {
         const content = await fs.readFile(file);
         const zipPath = path.relative(rokuDir, file);
-        zip.file(zipPath, content);
+        // Add a check to avoid adding empty placeholder directories or files like .DS_Store
+        if (content.length > 0) {
+            zip.file(zipPath, content);
+        }
     }
     
-    // --- AUTOMATION: Fetch branding images directly from S3 and add them to the zip ---
-    // FIX: Corrected the logo URL to include the trailing space before the file extension, matching the rest of the app.
-    const logoUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png';
-    const splashUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/intro-poster.jpg';
-
-    const [logoResponse, splashResponse] = await Promise.all([
-        fetch(logoUrl),
-        fetch(splashUrl)
-    ]);
-
-    if (!logoResponse.ok || !splashResponse.ok) {
-        let failedUrl = !logoResponse.ok ? logoUrl : splashUrl;
-        throw new Error(`Failed to fetch required branding images directly from S3. Please check the S3 URLs and permissions. Failed URL: ${failedUrl}`);
-    }
-
-    const logoBuffer = await logoResponse.arrayBuffer();
-    const splashBuffer = await splashResponse.arrayBuffer();
-
-    // Add the fetched images to the zip with the correct paths and names required by Roku.
-    zip.file('images/logo_hd.png', logoBuffer);
-    zip.file('images/splash_hd.png', splashBuffer);
-    // --- END OF AUTOMATION ---
+    // --- The image fetching logic is now removed. ---
+    // The files are expected to be in `roku/images/` and will be picked up by `readDirectory`.
 
     // Create the manifest file dynamically, pointing to the artwork now in the zip
     zip.file('manifest', `
@@ -107,6 +90,12 @@ fonts=hd,sd
   } catch (error) {
     console.error("Error generating Roku ZIP:", error);
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    if (errorMessage.includes('ENOENT') && errorMessage.includes('roku/images')) {
+        return new Response(JSON.stringify({ error: "Could not find branding images. Please make sure you have placed 'logo_hd.png' and 'splash_hd.png' inside the 'roku/images' directory." }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
     return new Response(JSON.stringify({ error: errorMessage }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },

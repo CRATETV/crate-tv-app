@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { avatars } from './avatars';
 
 interface HeaderProps {
     searchQuery: string;
@@ -113,11 +114,12 @@ const Header: React.FC<HeaderProps> = ({
                         
                         {user ? (
                             <div className="relative" ref={profileMenuRef}>
-                                <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} className="flex items-center gap-2">
-                                    <span className="text-white text-sm font-medium hidden sm:block">{user.name || user.email}</span>
+                                <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} className="flex items-center gap-2 rounded-full p-1 transition-colors hover:bg-gray-700/50">
+                                    <div className="w-8 h-8 rounded-full bg-gray-700 overflow-hidden" dangerouslySetInnerHTML={{ __html: avatars[user.avatar || 'fox'] }} />
+                                    <span className="text-white text-sm font-medium hidden sm:block pr-2">{user.name || user.email}</span>
                                 </button>
                                 {isProfileMenuOpen && (
-                                    <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5">
+                                    <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 z-50">
                                         <a href="/account" onClick={(e) => handleNavigate(e, '/account')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Account</a>
                                         {(user.isActor || user.isFilmmaker) && <a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Creator Dashboard</a>}
                                         <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign out</button>
