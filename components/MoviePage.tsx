@@ -423,7 +423,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 muted
                                 onContextMenu={(e) => e.preventDefault()} 
                                 controlsList="nodownload"
-                                autoPlay
+                                preload="metadata"
                             />
 
                              {seekAnim && (
