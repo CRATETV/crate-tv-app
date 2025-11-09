@@ -27,6 +27,26 @@
             width="240"
             height="360"
         />
+
+        <!-- Watched Badge -->
+        <Group id="watchedBadge" visible="false">
+            <Rectangle
+                width="80"
+                height="30"
+                color="0xAA0000B0" 
+                translation="[5, 5]"
+            >
+                <Label
+                    text="WATCHED"
+                    width="80"
+                    height="30"
+                    color="0xFFFFFFFF"
+                    font="font:ExtraSmallBoldSystemFont"
+                    horizAlign="center"
+                    vertAlign="center"
+                />
+            </Rectangle>
+        </Group>
     </children>
 
 </component>

@@ -2,7 +2,7 @@
 // It will be accessible at the path /api/roku-feed
 
 import { getApiData } from './_lib/data.js';
-import { Movie, Category, FestivalConfig, FestivalDay, FilmBlock } from '../types.js';
+import { Movie, Category, FestivalConfig, FestivalDay, FilmBlock, User } from '../types.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 
 interface RokuMovie {
@@ -18,6 +18,9 @@ interface RokuMovie {
     genres: string[];
     rating: string;
     duration: string;
+    isLiked: boolean;
+    isOnWatchlist: boolean;
+    isWatched: boolean;
 }
 
 interface RokuCategory {
@@ -45,22 +48,24 @@ const getVisibleMovies = (moviesData: Record<string, Movie>): Record<string, Mov
     return visibleMovies;
 };
 
-const formatMovieForRoku = (movie: Movie, movieGenreMap: Map<string, string[]>): RokuMovie | null => {
+const formatMovieForRoku = (movie: Movie, movieGenreMap: Map<string, string[]>, user: User | null): RokuMovie | null => {
     if (!movie) return null;
-    // Ensure all fields are strings or arrays of strings to prevent crashes on 'invalid' data in BrightScript
     return {
         id: movie.key || '',
         title: movie.title || 'Untitled Film',
         description: (movie.synopsis || '').replace(/<br\s*\/?>/gi, '\n').trim(),
         SDPosterUrl: movie.tvPoster || movie.poster || '',
         HDPosterUrl: movie.tvPoster || movie.poster || '',
-        heroImage: movie.poster || movie.tvPoster || '', // Use main poster for hero
+        heroImage: movie.poster || movie.tvPoster || '',
         streamUrl: movie.fullMovie || '',
         director: movie.director || '',
         actors: movie.cast ? movie.cast.map(c => c.name || '') : [],
         genres: movieGenreMap.get(movie.key) || [],
-        rating: movie.rating ? movie.rating.toFixed(1) : "0.0", // Default to string "0.0"
-        duration: movie.durationInMinutes ? `${movie.durationInMinutes} min` : "0 min", // Default duration
+        rating: movie.rating ? movie.rating.toFixed(1) : "0.0",
+        duration: movie.durationInMinutes ? `${movie.durationInMinutes} min` : "0 min",
+        isLiked: user?.likedMovies?.includes(movie.key) ?? false,
+        isOnWatchlist: user?.watchlist?.includes(movie.key) ?? false,
+        isWatched: user?.watchedMovies?.includes(movie.key) ?? false,
     };
 };
 
@@ -69,13 +74,24 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const deviceId = searchParams.get('deviceId');
 
+    let user: User | null = null;
     let isDeviceLinked = false;
+
     if (deviceId) {
         const initError = getInitializationError();
         const db = getAdminDb();
         if (!initError && db) {
             const linkDoc = await db.collection('roku_links').doc(deviceId).get();
-            isDeviceLinked = linkDoc.exists;
+            if (linkDoc.exists) {
+                isDeviceLinked = true;
+                const uid = linkDoc.data()?.userId;
+                if (uid) {
+                    const userDoc = await db.collection('users').doc(uid).get();
+                    if (userDoc.exists) {
+                        user = { uid, ...userDoc.data() } as User;
+                    }
+                }
+            }
         }
     }
 
@@ -98,28 +114,33 @@ export async function GET(request: Request) {
     });
     
     const heroMovieKeys: string[] = categoriesData['featured']?.movieKeys || [];
-    const heroMovieObjects: (Movie | undefined)[] = heroMovieKeys.map((key: string) => visibleMovies[key]);
-    const validHeroMovies: Movie[] = heroMovieObjects.filter((movie): movie is Movie => !!movie);
-    const heroItems = validHeroMovies.map((movie: Movie) => formatMovieForRoku(movie, movieGenreMap));
+    const heroItems = heroMovieKeys
+        .map((key: string) => visibleMovies[key])
+        .filter((movie): movie is Movie => !!movie)
+        .map((movie: Movie) => formatMovieForRoku(movie, movieGenreMap, user));
         
     const processCategory = (categoryData: Category): RokuCategory | null => {
         if (!categoryData || !Array.isArray(categoryData.movieKeys)) return null;
-        const movieObjects = categoryData.movieKeys.map((movieKey: string) => visibleMovies[movieKey]);
-        const validMovies = movieObjects.filter((movie): movie is Movie => !!movie);
-        const rokuMovies = validMovies.map((movie: Movie) => formatMovieForRoku(movie, movieGenreMap));
+        const rokuMovies = categoryData.movieKeys
+            .map(movieKey => visibleMovies[movieKey])
+            .filter((movie): movie is Movie => !!movie)
+            .map(movie => formatMovieForRoku(movie, movieGenreMap, user));
         if (rokuMovies.length > 0) return { title: categoryData.title, children: rokuMovies };
         return null;
     };
     
-    const allVisibleMovies: Movie[] = Object.values(visibleMovies);
-    const moviesWithLikes: Movie[] = [];
-    for (const movie of allVisibleMovies) {
-        if (movie && typeof movie.likes === 'number') {
-            moviesWithLikes.push(movie);
-        }
+    // Create My List category if user is linked and has items
+    let myListCategory: Category | null = null;
+    if (user && user.watchlist && user.watchlist.length > 0) {
+        myListCategory = {
+            title: "My List",
+            movieKeys: [...user.watchlist].reverse() // Show most recently added first
+        };
     }
-    const sortedMovies = moviesWithLikes.sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0));
-    const topTenMovies = sortedMovies.slice(0, 10);
+    
+    const topTenMovies = (Object.values(visibleMovies) as Movie[])
+        .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
+        .slice(0, 10);
 
     const topTenCategory: Category | null = topTenMovies.length > 0 ? {
         title: "Top 10 on Crate TV Today",
@@ -145,23 +166,24 @@ export async function GET(request: Request) {
         });
     }
 
-    // --- Add Account Linking Category ---
     const accountCategory: RokuCategory = {
         title: "My Account",
         children: [{
-            id: isDeviceLinked ? "account_linked" : "link_account_action", // Special ID for the Roku app to identify this action
+            id: isDeviceLinked ? "account_linked" : "link_account_action",
             title: isDeviceLinked ? "Account Linked" : "Link This Device",
             description: isDeviceLinked 
-                ? "Your Crate TV account is linked to this Roku device. Your purchases will be synced." 
-                : "Link your Crate TV account to sync purchases and unlock content. Select this item to get your unique link code.",
-            SDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png",
-            HDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png",
-            heroImage: "", streamUrl: "", director: "", actors: [], genres: [], rating: "", duration: ""
+                ? "Your Crate TV account is linked to this Roku device. Your purchases, likes, and watchlist will be synced." 
+                : "Link your Crate TV account to sync content. Select this item to get your unique link code.",
+            SDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png",
+            HDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png",
+            heroImage: "", streamUrl: "", director: "", actors: [], genres: [], rating: "", duration: "",
+            isLiked: false, isOnWatchlist: false, isWatched: false
         }]
     };
 
     const finalCategories: RokuCategory[] = [accountCategory];
     const orderedCategories: (Category | null)[] = [
+        myListCategory, // Add My List to the top
         ...festivalCategories,
         nowPlayingCategory,
         topTenCategory,
@@ -188,7 +210,8 @@ export async function GET(request: Request) {
     const content = {
       heroItems: heroItems,
       categories: finalCategories,
-      isLinked: isDeviceLinked, // Pass link status directly
+      isLinked: isDeviceLinked,
+      uid: user?.uid, // Pass uid for client-side actions
     };
 
     return new Response(JSON.stringify(content, null, 2), {

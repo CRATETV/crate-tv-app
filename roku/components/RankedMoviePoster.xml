@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="RankedMoviePoster" extends="Group">
+    <script type="text/brightscript" uri="pkg:/components/RankedMoviePoster.brs" />
+    <interface>
+        <field id="itemContent" type="node" onChange="onContentChange" />
+        <field id="focusPercent" type="float" onChange="onFocusChange" />
+        <field id="rowItemIndex" type="integer" />
+    </interface>
+    <children>
+        <Rectangle 
+            id="focusRing"
+            color="0xFFFFFFFF"
+            width="462" 
+            height="265"
+            translation="[-6, -6]"
+            visible="false"
+        />
+        <Group>
+            <Label
+                id="rankLabel"
+                font="font:LargeBoldSystemFont"
+                horizAlign="center"
+                vertAlign="center"
+                height="253"
+                width="200"
+            />
+            <Poster
+                id="tilePoster"
+                width="240"
+                height="253"
+                translation="[210, 0]"
+            />
+        </Group>
+    </children>
+</component>

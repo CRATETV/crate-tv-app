@@ -20,9 +20,10 @@
                     translation="[0, 450]" 
                     layoutDirection="horiz" 
                     itemSpacing="[20, 0]" 
-                    buttons='["Play"]'
+                    buttons='["Play", "Add to My List", "Like"]'
                 />
             </Group>
         </Group>
+        <Task id="actionTask" />
     </children>
 </component>

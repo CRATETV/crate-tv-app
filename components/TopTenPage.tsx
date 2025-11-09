@@ -19,9 +19,10 @@ const TopTenPage: React.FC = () => {
     const currentDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
     const topTenMovies = useMemo(() => {
-        return Object.values(movies)
-            .filter((movie: Movie): movie is Movie => !!movie && typeof movie.likes === 'number')
-            .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
+        // FIX: Explicitly cast Object.values(movies) to Movie[] to resolve 'unknown' type error on `sort`.
+        return (Object.values(movies) as Movie[])
+            .filter((movie): movie is Movie => !!movie && !!movie.title) // Ensure movie is valid
+            .sort((a, b) => (b.likes || 0) - (a.likes || 0))
             .slice(0, 10);
     }, [movies]);
     

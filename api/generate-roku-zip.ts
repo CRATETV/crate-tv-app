@@ -1,6 +1,3 @@
-// This is a Vercel Serverless Function
-// It will be accessible at the path /api/generate-roku-zip
-
 import { promises as fs } from 'fs';
 import path from 'path';
 import JSZip from 'jszip';
@@ -61,7 +58,7 @@ export async function POST(request: Request) {
     }
     
     // --- AUTOMATION: Fetch branding images from S3 and add them to the zip ---
-    const logoUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png';
+    const logoUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png';
     const splashUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/intro-poster.jpg';
 
     const [logoResponse, splashResponse] = await Promise.all([
@@ -85,11 +82,12 @@ export async function POST(request: Request) {
     zip.file('manifest', `
 title=Crate TV
 major_version=1
-minor_version=1
+minor_version=2
 build_version=0
 mm_icon_focus_hd=pkg:/images/logo_hd.png
 mm_icon_side_hd=pkg:/images/logo_hd.png
 splash_screen_hd=pkg:/images/splash_hd.png
+fonts=hd,sd
 `.trim());
 
     // Generate the final zip file as a standard ArrayBuffer

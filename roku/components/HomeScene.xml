@@ -20,8 +20,8 @@
         <Group id="contentGroup" visible="false">
             <!-- Hero Section -->
             <Group id="heroGroup">
-                <Poster id="heroPoster" width="1920" height="720" />
-                <Rectangle id="heroGradient" color="0x000000AA" width="1000" height="720" />
+                <Poster id="heroBackground" width="1920" height="1080" />
+                <Rectangle id="heroGradient" color="0x000000AA" width="1280" height="1080" />
                 <Label 
                     id="heroTitle"
                     width="880"
@@ -36,6 +36,13 @@
                     maxLines="3"
                     translation="[80, 320]"
                     font="font:SmallSystemFont"
+                />
+                 <ButtonGroup 
+                    id="heroButtons" 
+                    translation="[80, 450]" 
+                    layoutDirection="horiz" 
+                    itemSpacing="[20, 0]" 
+                    buttons='["Play", "More Info"]'
                 />
             </Group>
 

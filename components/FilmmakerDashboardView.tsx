@@ -181,9 +181,10 @@ const FilmmakerDashboardView: React.FC = () => {
 
     const topTenMovies = useMemo(() => {
         if (!allMovies) return [];
-        return Object.values(allMovies)
-            .filter((movie: Movie): movie is Movie => !!movie && typeof movie.likes === 'number')
-            .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
+        // FIX: Explicitly cast Object.values(allMovies) to Movie[] to resolve 'unknown' type error.
+        return (Object.values(allMovies) as Movie[])
+            .filter((movie): movie is Movie => !!movie && !!movie.title) // Ensure movie is valid
+            .sort((a, b) => (b.likes || 0) - (a.likes || 0))
             .slice(0, 10);
     }, [allMovies]);
 
