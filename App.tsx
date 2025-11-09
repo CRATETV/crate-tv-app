@@ -8,6 +8,7 @@ import ActorBioModal from './components/ActorBioModal';
 import SearchOverlay from './components/SearchOverlay';
 // FIX: Corrected import path
 import { Movie, Actor, Category } from './types';
+import { isMovieReleased } from './constants';
 import { useAuth } from './contexts/AuthContext';
 import { useFestival } from './contexts/FestivalContext';
 import FestivalHero from './components/FestivalHero';
@@ -43,15 +44,22 @@ const App: React.FC = () => {
         if (!featuredCategory?.movieKeys) return [];
         return featuredCategory.movieKeys
             .map(key => movies[key])
-            .filter((m): m is Movie => !!m);
+            .filter((m): m is Movie => !!m && isMovieReleased(m));
     }, [movies, categories.featured]);
 
     const topTenMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
-            .filter((movie): movie is Movie => !!movie && !!movie.title) // Ensure movie is valid
+            .filter((movie): movie is Movie => !!movie && !!movie.title && isMovieReleased(movie)) // Ensure movie is valid and released
             .sort((a, b) => (b.likes || 0) - (a.likes || 0))
             .slice(0, 10);
     }, [movies]);
+    
+    const comingSoonMovies = useMemo(() => {
+        return (Object.values(movies) as Movie[])
+            .filter((m): m is Movie => !!m && !!m.releaseDateTime && !isMovieReleased(m))
+            .sort((a, b) => new Date(a.releaseDateTime!).getTime() - new Date(b.releaseDateTime!).getTime());
+    }, [movies]);
+
 
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
@@ -214,7 +222,7 @@ const App: React.FC = () => {
                 
                 const recMovies = recommendedKeys
                     .map(key => movies[key])
-                    .filter((m): m is Movie => !!m && !likedMovies.has(m.key));
+                    .filter((m): m is Movie => !!m && !likedMovies.has(m.key) && isMovieReleased(m));
 
                 setRecommendedMovies(recMovies);
             } catch (error) {
@@ -259,8 +267,24 @@ const App: React.FC = () => {
                 )}
                 
                 <div className="px-4 md:px-12 relative z-10">
-                    <div className={`${isFestivalLive ? 'mt-4 md:-mt-16' : '-mt-8 md:-mt-20'} space-y-8 md:space-y-12`}>
+                    <div className={`${isFestivalLive ? 'mt-4 md:-mt-16' : 'mt-4 md:-mt-16'} space-y-8 md:space-y-12`}>
                         {nowPlayingMovie && <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} />}
+                        
+                        {comingSoonMovies.length > 0 && (
+                            <MovieCarousel
+                                key="coming-soon"
+                                title="Coming Soon"
+                                movies={comingSoonMovies}
+                                onSelectMovie={handleSelectMovie}
+                                isComingSoonCarousel={true}
+                                watchedMovies={watchedMovies}
+                                watchlist={watchlist}
+                                likedMovies={likedMovies}
+                                onToggleLike={toggleLikeMovie}
+                                onToggleWatchlist={toggleWatchlist}
+                                onSupportMovie={handleSupportMovie}
+                            />
+                        )}
                         
                         {topTenMovies.length > 0 && (
                             <MovieCarousel
@@ -314,7 +338,7 @@ const App: React.FC = () => {
                         Object.entries(categories).map(([key, category]: [string, Category]) => {
                             const categoryMovies = category.movieKeys
                                 .map(movieKey => movies[movieKey])
-                                .filter((m): m is Movie => !!m);
+                                .filter((m): m is Movie => !!m && isMovieReleased(m));
                             
                             if (categoryMovies.length === 0 || key === 'featured' || key === 'publicDomainIndie') return null;
 

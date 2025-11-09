@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="HomeScene" extends="Scene">
 
@@ -46,7 +47,21 @@
                 />
             </Group>
 
-            <!-- Movie Carousels -->
+            <!-- Top Ten Carousel -->
+            <RowList
+                id="topTenRowList"
+                translation="[80, 600]"
+                itemComponentName="RankedMoviePoster"
+                itemSize="[450, 253]"
+                rowItemSpacing="[ [30, 0] ]"
+                numRows="1"
+                rowHeights="[253]"
+                rowLabelOffset="[ [0, -50] ]"
+                rowFocusAnimationStyle="floatingFocus"
+                visible="false"
+            />
+
+            <!-- Regular Movie Carousels -->
             <RowList 
                 id="categoryRowList"
                 translation="[80, 750]"
@@ -59,9 +74,6 @@
                 rowFocusAnimationStyle="floatingFocus"
             />
         </Group>
-
-        <!-- Task node for fetching data -->
-        <Task id="contentTask" uri="pkg:/components/ContentTask.xml" />
     </children>
 
 </component>

@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Movie } from '../types';
 
@@ -35,7 +36,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col justify-center h-full px-4 md:px-12 pb-16 md:pb-24 text-white">
+      <div className="relative z-10 flex flex-col justify-center h-full px-4 md:px-12 pt-20 pb-16 md:pb-24 text-white">
         <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold mb-4 max-w-xl animate-[slideInUp_0.5s_ease-out] drop-shadow-lg">
           {currentMovie.title}
         </h1>

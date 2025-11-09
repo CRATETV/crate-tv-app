@@ -1,3 +1,4 @@
+
 // This is a Vercel Serverless Function that generates a feed for the custom Roku channel.
 // It will be accessible at the path /api/roku-feed
 
@@ -21,6 +22,7 @@ interface RokuMovie {
     isLiked: boolean;
     isOnWatchlist: boolean;
     isWatched: boolean;
+    itemComponentName?: string;
 }
 
 interface RokuCategory {
@@ -142,10 +144,13 @@ export async function GET(request: Request) {
         .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
         .slice(0, 10);
 
-    const topTenCategory: Category | null = topTenMovies.length > 0 ? {
+    const topTenCategoryRaw: Category | null = topTenMovies.length > 0 ? {
         title: "Top 10 on Crate TV Today",
         movieKeys: topTenMovies.map((m: Movie) => m.key)
     } : null;
+
+    const topTenCategory = topTenCategoryRaw ? processCategory(topTenCategoryRaw) : null;
+
 
     const nowPlayingMovie = visibleMovies['consumed'];
     const nowPlayingCategory: Category | null = nowPlayingMovie ? {
@@ -165,20 +170,23 @@ export async function GET(request: Request) {
             });
         });
     }
+    
+    const accountItem: RokuMovie = {
+        id: isDeviceLinked ? "account_linked" : "link_account_action",
+        title: isDeviceLinked ? `Account Linked` : "Link This Device",
+        description: isDeviceLinked 
+            ? `Your Crate TV account (${user?.email || '...'}) is linked to this Roku device.`
+            : "Link your Crate TV account to sync content. Select this item to get your unique link code.",
+        SDPosterUrl: "pkg:/images/logo_hd.png",
+        HDPosterUrl: "pkg:/images/logo_hd.png",
+        heroImage: "", streamUrl: "", director: "", actors: [], genres: [], rating: "", duration: "",
+        isLiked: false, isOnWatchlist: false, isWatched: false,
+        itemComponentName: "ActionItem"
+    };
 
     const accountCategory: RokuCategory = {
         title: "My Account",
-        children: [{
-            id: isDeviceLinked ? "account_linked" : "link_account_action",
-            title: isDeviceLinked ? "Account Linked" : "Link This Device",
-            description: isDeviceLinked 
-                ? "Your Crate TV account is linked to this Roku device. Your purchases, likes, and watchlist will be synced." 
-                : "Link your Crate TV account to sync content. Select this item to get your unique link code.",
-            SDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png",
-            HDPosterUrl: "https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png",
-            heroImage: "", streamUrl: "", director: "", actors: [], genres: [], rating: "", duration: "",
-            isLiked: false, isOnWatchlist: false, isWatched: false
-        }]
+        children: [accountItem]
     };
 
     const finalCategories: RokuCategory[] = [accountCategory];
@@ -186,10 +194,10 @@ export async function GET(request: Request) {
         myListCategory, // Add My List to the top
         ...festivalCategories,
         nowPlayingCategory,
-        topTenCategory,
+        // Top ten is now handled separately
     ];
 
-    const processedKeys = new Set(['featured', 'pwff12thAnnual', 'consumed']);
+    const processedKeys = new Set(['featured', 'pwff12thAnnual', 'consumed', 'topTen']);
     const remainingCategoryOrder = ["newReleases", "awardWinners", "comedy", "drama", "documentary", "exploreTitles", "publicDomainIndie"];
     
     remainingCategoryOrder.forEach((key: string) => {
@@ -209,6 +217,7 @@ export async function GET(request: Request) {
 
     const content = {
       heroItems: heroItems,
+      topTenCategory: topTenCategory,
       categories: finalCategories,
       isLinked: isDeviceLinked,
       uid: user?.uid, // Pass uid for client-side actions

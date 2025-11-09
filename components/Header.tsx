@@ -79,7 +79,7 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center">
                         <a href="/" onClick={(e) => handleNavigate(e, '/')} className="flex-shrink-0" aria-label="Crate TV Home">
-                           <img className="hidden md:block h-10 w-auto" src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" alt="Crate TV" />
+                           <img className="hidden md:block h-10 w-auto" src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed.png" alt="Crate TV" />
                         </a>
                         {showNavLinks && user && (
                             <nav className="hidden md:block ml-10">

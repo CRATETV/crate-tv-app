@@ -58,8 +58,8 @@ export async function POST(request: Request) {
     }
     
     // --- AUTOMATION: Fetch branding images from S3 and add them to the zip ---
-    const logoUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png';
-    const splashUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/intro-poster.jpg';
+    const logoUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed.png';
+    const splashUrl = 'https://cratetelevision.s3.us-east-1.amazonaws.com/Logo%20(320%20x%20320%20px)%20(1920%20x%201080%20px)%20(540%20x%20405%20px).png';
 
     const [logoResponse, splashResponse] = await Promise.all([
         fetch(logoUrl),
