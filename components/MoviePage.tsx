@@ -58,7 +58,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [seekAnim, setSeekAnim] = useState<'rewind' | 'forward' | null>(null);
-  const singleClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clickTimeout = useRef<number | null>(null);
   
   // Modal & Search State
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -278,7 +278,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             video.removeEventListener('ended', handleEnded);
             clearInterval(progressInterval);
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-            if (singleClickTimerRef.current) clearTimeout(singleClickTimerRef.current);
+            if (clickTimeout.current) clearTimeout(clickTimeout.current);
         };
     }, [movieKey, handlePlayerInteraction, markAsWatched, handleGoHome]);
 
@@ -290,13 +290,11 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
                     console.warn("Autoplay was prevented. User interaction required.", error);
-                    if (!isPlaying) {
-                        setIsPaused(true);
-                    }
+                    setIsPaused(true);
                 });
             }
         }
-    }, [movie?.fullMovie, released, isAdPlaying, isPlaying]);
+    }, [movie?.fullMovie, released, isAdPlaying]);
 
 
     const handlePlayPause = useCallback(() => {
@@ -318,16 +316,18 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
     
     const handleRewind = useCallback(() => {
-        handleSeek(Math.max(0, currentTime - 10));
+        if (!videoRef.current) return;
+        handleSeek(Math.max(0, videoRef.current.currentTime - 10));
         setSeekAnim('rewind');
         setTimeout(() => setSeekAnim(null), 500);
-    }, [currentTime]);
+    }, []);
 
     const handleForward = useCallback(() => {
-        handleSeek(Math.min(duration, currentTime + 10));
+        if (!videoRef.current) return;
+        handleSeek(Math.min(videoRef.current.duration || Infinity, videoRef.current.currentTime + 10));
         setSeekAnim('forward');
         setTimeout(() => setSeekAnim(null), 500);
-    }, [currentTime, duration]);
+    }, []);
     
     const handleFullscreen = async () => {
         const player = playerContainerRef.current as any; // Use 'any' to access prefixed methods
@@ -369,18 +369,32 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         setIsDetailsModalOpen(true);
     };
     
-    const handleVideoClick = useCallback(() => {
+    const handleContainerClick = useCallback((e: React.MouseEvent) => {
         handlePlayerInteraction();
-        if (singleClickTimerRef.current) {
-            clearTimeout(singleClickTimerRef.current);
-            singleClickTimerRef.current = null;
+
+        if (clickTimeout.current) {
+            // This is a double-click. Clear the single-click timer.
+            clearTimeout(clickTimeout.current);
+            clickTimeout.current = null;
+
+            // Determine action based on click position
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const width = rect.width;
+
+            if (clickX < width / 3) {
+                handleRewind();
+            } else if (clickX > (width * 2) / 3) {
+                handleForward();
+            }
         } else {
-            singleClickTimerRef.current = setTimeout(() => {
+            // This is the first click. Set a timeout to wait for a potential second click.
+            clickTimeout.current = window.setTimeout(() => {
                 handlePlayPause();
-                singleClickTimerRef.current = null;
+                clickTimeout.current = null;
             }, 250);
         }
-    }, [handlePlayerInteraction, handlePlayPause]);
+    }, [handlePlayerInteraction, handlePlayPause, handleRewind, handleForward]);
     
     if (isDataLoading || !movie) {
         return <LoadingSpinner />;
@@ -395,7 +409,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     ref={playerContainerRef}
                     className="relative w-full aspect-video bg-black secure-video-container"
                     onMouseMove={handlePlayerInteraction}
-                    onClick={handleVideoClick}
+                    onClick={handleContainerClick}
                 >
                     <div ref={adContainerRef} className={`absolute inset-0 z-20 ${isAdPlaying ? '' : 'pointer-events-none'}`} />
                     
@@ -411,8 +425,6 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 controlsList="nodownload"
                                 autoPlay
                             />
-                            <div className="absolute top-0 left-0 h-full w-1/3 z-30" onDoubleClick={handleRewind}></div>
-                             <div className="absolute top-0 right-0 h-full w-1/3 z-30" onDoubleClick={handleForward}></div>
 
                              {seekAnim && (
                                 <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 flex items-center justify-center p-4 bg-black/50 rounded-full animate-seek`}>
