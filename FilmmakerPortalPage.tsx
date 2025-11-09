@@ -223,8 +223,10 @@ const FilmmakerPortalPage: React.FC = () => {
                                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2 text-center">
                                                 <div><p className="text-gray-400 text-sm">Views</p><p className="font-bold text-xl">{film.views.toLocaleString()}</p></div>
                                                 <div><p className="text-gray-400 text-sm">Likes</p><p className="font-bold text-xl">{film.likes.toLocaleString()}</p></div>
-                                                <div><p className="text-gray-400 text-sm">Donations</p><p className="font-bold text-xl text-green-400">{formatCurrency(film.donations)}</p></div>
-                                                <div><p className="text-gray-400 text-sm">Ad Revenue</p><p className="font-bold text-xl text-blue-400">{formatCurrency(film.adRevenue)}</p></div>
+                                                {/* FIX: Use 'grossDonations' instead of 'donations' to match the type definition. */}
+                                                <div><p className="text-gray-400 text-sm">Donations</p><p className="font-bold text-xl text-green-400">{formatCurrency(film.grossDonations)}</p></div>
+                                                {/* FIX: Use 'grossAdRevenue' instead of 'adRevenue' to match the type definition. */}
+                                                <div><p className="text-gray-400 text-sm">Ad Revenue</p><p className="font-bold text-xl text-blue-400">{formatCurrency(film.grossAdRevenue)}</p></div>
                                             </div>
                                         </div>
                                     ))}

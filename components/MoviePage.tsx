@@ -513,10 +513,9 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         window.history.pushState({}, '', `/movie/${m.key}`);
                         window.dispatchEvent(new Event('pushstate'));
                     }}
-                    onPlayMovie={(m) => {
+                    onPlayMovie={() => {
                         setIsDetailsModalOpen(false);
-                        window.history.pushState({}, '', `/movie/${m.key}`);
-                        window.dispatchEvent(new Event('pushstate'));
+                        videoRef.current?.play();
                     }}
                     onSupportMovie={() => {
                         setIsDetailsModalOpen(false);
