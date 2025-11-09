@@ -73,7 +73,7 @@ const Header: React.FC<HeaderProps> = ({
         { path: '/watchlist', label: 'My List' },
     ];
     
-    const logoUrl = "https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed.png";
+    const logoUrl = "https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png";
 
     return (
         <header className={headerClasses} style={{ top: topOffset }}>

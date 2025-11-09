@@ -49,7 +49,7 @@ const AboutPage: React.FC = () => {
                 <div className="max-w-4xl mx-auto">
                     <div className="mb-12 text-center animate-fadeInHeroContent">
                         <img
-                            src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed.png"
+                            src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png"
                             alt="Crate TV Logo"
                             className="mx-auto w-full max-w-md"
                             onContextMenu={(e) => e.preventDefault()}

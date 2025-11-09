@@ -21,11 +21,11 @@ const TopTenShareableImage: React.FC<TopTenShareableImageProps> = ({ topFilms, d
   };
 
   return (
-    <div style={containerStyle} className="text-white p-20 flex flex-col">
+    <div style={containerStyle} className="text-white p-12 flex flex-col">
       {/* Header */}
-      <div className="flex justify-between items-start mb-12 flex-shrink-0">
+      <div className="flex justify-between items-start mb-8 flex-shrink-0">
         <img 
-          src={`/api/proxy-image?url=${encodeURIComponent("https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed.png")}`} 
+          src={`/api/proxy-image?url=${encodeURIComponent("https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png")}`} 
           alt="Crate TV Logo" 
           className="w-56" 
           crossOrigin="anonymous" 
@@ -37,11 +37,11 @@ const TopTenShareableImage: React.FC<TopTenShareableImageProps> = ({ topFilms, d
       </div>
 
       {/* List */}
-      <div className="flex-grow space-y-5">
+      <div className="flex-grow space-y-3">
         {topFilms.map((film, index) => (
-          <div key={film.key} className="flex items-center gap-6 bg-white/5 p-4 rounded-xl">
+          <div key={film.key} className="flex items-center gap-6 bg-white/5 p-3 rounded-xl">
             <span 
-              className="text-8xl font-black w-28 text-center"
+              className="text-7xl font-black w-28 text-center"
               style={{ color: 'transparent', WebkitTextStroke: '2px #A78BFA' }}
             >
               {index + 1}
@@ -49,16 +49,16 @@ const TopTenShareableImage: React.FC<TopTenShareableImageProps> = ({ topFilms, d
             <img 
               src={film.poster ? `/api/proxy-image?url=${encodeURIComponent(film.poster)}` : ''} 
               alt={film.title} 
-              className="w-24 h-36 object-cover rounded-md shadow-lg" 
+              className="w-20 h-28 object-cover rounded-md shadow-lg" 
               crossOrigin="anonymous" 
             />
-            <span className="text-3xl font-bold flex-1">{film.title}</span>
+            <span className="text-2xl font-bold flex-1">{film.title}</span>
           </div>
         ))}
       </div>
       
       {/* Footer */}
-      <div className="text-center mt-12 flex-shrink-0">
+      <div className="text-center mt-8 flex-shrink-0">
         <p className="text-5xl font-bold tracking-widest text-gray-300">CRATETV.NET</p>
       </div>
     </div>

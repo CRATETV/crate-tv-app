@@ -38,7 +38,7 @@ const setMetaTag = (attr: 'name' | 'property', value: string, content: string) =
 };
 
 export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { user, markAsWatched, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken } = useAuth();
+  const { user, markAsWatched, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist } = useAuth();
   const { isLoading: isDataLoading, movies: allMovies, categories: allCategories, dataSource } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
@@ -58,6 +58,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [seekAnim, setSeekAnim] = useState<'rewind' | 'forward' | null>(null);
+  const singleClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Modal & Search State
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -73,6 +74,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [isAdPlaying, setIsAdPlaying] = useState(false);
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
+  const isOnWatchlist = useMemo(() => watchlist.includes(movieKey), [watchlist, movieKey]);
   const [released, setReleased] = useState(() => isMovieReleased(movie));
 
   const playContent = useCallback(async () => {
@@ -222,6 +224,11 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         }
     }, [isPlaying]);
 
+    const handleGoHome = useCallback(() => {
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new Event('pushstate'));
+    }, []);
+
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
@@ -271,8 +278,9 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             video.removeEventListener('ended', handleEnded);
             clearInterval(progressInterval);
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+            if (singleClickTimerRef.current) clearTimeout(singleClickTimerRef.current);
         };
-    }, [movieKey, handlePlayerInteraction, markAsWatched]);
+    }, [movieKey, handlePlayerInteraction, markAsWatched, handleGoHome]);
 
     // Autoplay fallback effect
     useEffect(() => {
@@ -360,11 +368,19 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         videoRef.current?.pause();
         setIsDetailsModalOpen(true);
     };
-
-    const handleGoHome = () => {
-        window.history.pushState({}, '', '/');
-        window.dispatchEvent(new Event('pushstate'));
-    };
+    
+    const handleVideoClick = useCallback(() => {
+        handlePlayerInteraction();
+        if (singleClickTimerRef.current) {
+            clearTimeout(singleClickTimerRef.current);
+            singleClickTimerRef.current = null;
+        } else {
+            singleClickTimerRef.current = setTimeout(() => {
+                handlePlayPause();
+                singleClickTimerRef.current = null;
+            }, 250);
+        }
+    }, [handlePlayerInteraction, handlePlayPause]);
     
     if (isDataLoading || !movie) {
         return <LoadingSpinner />;
@@ -379,7 +395,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     ref={playerContainerRef}
                     className="relative w-full aspect-video bg-black secure-video-container"
                     onMouseMove={handlePlayerInteraction}
-                    onClick={handlePlayerInteraction}
+                    onClick={handleVideoClick}
                 >
                     <div ref={adContainerRef} className={`absolute inset-0 z-20 ${isAdPlaying ? '' : 'pointer-events-none'}`} />
                     
@@ -417,6 +433,8 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     isLiked={isLiked}
                                     onToggleLike={() => toggleLikeMovie(movieKey)}
                                     onSupport={() => setIsSupportModalOpen(true)}
+                                    isOnWatchlist={isOnWatchlist}
+                                    onToggleWatchlist={() => toggleWatchlist(movieKey)}
                                 />
                             )}
                            <div className={`absolute inset-0 z-30 transition-opacity duration-300 pointer-events-none ${showControls ? 'opacity-100' : 'opacity-0'}`}>
@@ -426,7 +444,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     <input type="range" min="0" max={duration} value={currentTime} onChange={e => handleSeek(Number(e.target.value))} className="w-full h-1 bg-gray-500/50 rounded-lg appearance-none cursor-pointer range-sm" />
                                     <div className="flex justify-between items-center mt-2">
                                         <div className="flex items-center gap-4">
-                                            <button onClick={handlePlayPause} className="control-bar-button">
+                                            <button onClick={(e) => { e.stopPropagation(); handlePlayPause(); }} className="control-bar-button">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
                                                     {isPlaying 
                                                         ? <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /> 
@@ -438,7 +456,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <CastButton videoElement={videoRef.current} />
-                                            <button onClick={handleFullscreen} className="control-bar-button" aria-label="Toggle fullscreen">
+                                            <button onClick={(e) => { e.stopPropagation(); handleFullscreen(); }} className="control-bar-button" aria-label="Toggle fullscreen">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 0h-4m4 0l-5-5" />
                                                 </svg>
