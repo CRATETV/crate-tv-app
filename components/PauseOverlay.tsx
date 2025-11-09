@@ -101,4 +101,68 @@ const PauseOverlay: React.FC<PauseOverlayProps> = ({
                      {!movie.hasCopyrightMusic && (
                         <MobileActionButton onClick={(e) => { e.stopPropagation(); onSupport(); }} title="Support">
                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-300" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 
+                                <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" />
+                            </svg>
+                        </MobileActionButton>
+                     )}
+                     <MobileActionButton onClick={(e) => { e.stopPropagation(); onMoreDetails(); }} title="More Info">
+                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                     </MobileActionButton>
+                </div>
+            </div>
+        );
+    }
+    
+    // Desktop View
+    return (
+        <div 
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-40 animate-controls-fade-in"
+            onClick={onResume}
+        >
+            <div className="text-center text-white" onClick={stopPropagation}>
+                <h1 className="text-5xl font-bold mb-2">{movie.title}</h1>
+                <p className="text-lg text-gray-300 mb-1">by {movie.director}</p>
+                <p className="text-gray-400 max-w-2xl mx-auto line-clamp-2" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></p>
+                
+                <div className="flex items-center justify-center gap-12 my-8">
+                    <button onClick={onRewind} className="p-3" aria-label="Rewind 10 seconds">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <button onClick={onResume} className="transform hover:scale-105 transition-transform" aria-label="Resume playback">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                    </button>
+                    <button onClick={onForward} className="p-3" aria-label="Forward 10 seconds">
+                       <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                </div>
+
+                <div className="flex items-center justify-center gap-10 bg-black/30 p-4 rounded-xl">
+                    <ActionButton onClick={(e) => { e.stopPropagation(); onToggleLike(); }} title={isLiked ? "Unlike" : "Like"}>
+                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 transition-colors ${isLiked ? 'text-red-500' : 'text-white'}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                    </ActionButton>
+                    <ActionButton onClick={(e) => { e.stopPropagation(); onToggleWatchlist(); }} title={isOnWatchlist ? "In My List" : "My List"}>
+                       {isOnWatchlist ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                       ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                       )}
+                    </ActionButton>
+                    {!movie.hasCopyrightMusic && (
+                        <ActionButton onClick={(e) => { e.stopPropagation(); onSupport(); }} title="Support">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-300" viewBox="0 0 20 20" fill="currentColor">
+                               <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" />
+                            </svg>
+                        </ActionButton>
+                    )}
+                    <ActionButton onClick={(e) => { e.stopPropagation(); onMoreDetails(); }} title="More Info">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </ActionButton>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default PauseOverlay;
