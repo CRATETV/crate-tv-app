@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Movie } from '../types';
 
@@ -55,7 +56,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
       )}
 
       {isWatched && (
-        <div className="absolute bottom-1 left-1 bg-red-600/80 text-white text-xs font-bold px-1.5 py-0.5 rounded z-10">
+        <div className="absolute top-2 right-2 bg-red-600/80 text-white text-xs font-bold px-2 py-1 rounded-md backdrop-blur-sm z-10">
           WATCHED
         </div>
       )}
