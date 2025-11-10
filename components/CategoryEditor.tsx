@@ -72,9 +72,10 @@ interface CategoryEditorProps {
   initialCategories: Record<string, Category>;
   allMovies: Movie[];
   onSave: (newCategories: Record<string, Category>) => void;
+  isSaving: boolean;
 }
 
-const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allMovies, onSave }) => {
+const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allMovies, onSave, isSaving }) => {
   const [categories, setCategories] = useState<Record<string, Category>>(initialCategories);
   const [editingCategoryKey, setEditingCategoryKey] = useState<string | null>(null);
 
@@ -152,9 +153,10 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
       <div className="mt-8 pt-6 border-t border-gray-700">
         <button
           onClick={() => onSave(categories)}
-          className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-5 rounded-md transition-colors"
+          disabled={isSaving}
+          className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-5 rounded-md transition-colors"
         >
-          Save Category Changes
+          {isSaving ? 'Saving...' : 'Save Category Changes'}
         </button>
       </div>
 

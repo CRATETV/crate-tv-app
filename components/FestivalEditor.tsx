@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { Movie, FestivalDay, FestivalConfig } from '../types';
 
@@ -78,6 +76,7 @@ interface FestivalEditorProps {
     onDataChange: (data: FestivalDay[]) => void;
     onConfigChange: (config: FestivalConfig) => void;
     onSave: () => void;
+    isSaving: boolean;
 }
 
 // Correctly formats a UTC ISO string for a datetime-local input, accounting for timezone.
@@ -102,9 +101,7 @@ const formatISOForInput = (isoString?: string): string => {
 };
 
 // The FestivalEditor component for managing festival data
-const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies, onDataChange, onConfigChange, onSave }) => {
-  const [isSaving, setIsSaving] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies, onDataChange, onConfigChange, onSave, isSaving }) => {
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
 
   const handleDayChange = (dayIndex: number, field: keyof FestivalDay, value: string) => {
@@ -199,13 +196,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   };
 
   const handleSave = () => {
-    setIsSaving(true);
     onSave();
-    setTimeout(() => {
-      setIsSaving(false);
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 2000);
-    }, 500);
   };
   
   const handleGoLive = () => {
@@ -343,7 +334,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
           disabled={isSaving}
           className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-5 rounded-md transition-colors"
         >
-          {isSaving ? 'Saving...' : (showSuccess ? 'Saved Successfully!' : 'Save Festival Settings')}
+          {isSaving ? 'Saving...' : 'Save Festival Settings'}
         </button>
       </div>
       

@@ -62,7 +62,8 @@ export async function POST(request: Request) {
             case 'categories':
                 for (const [id, docData] of Object.entries(data)) {
                     const docRef = db.collection(type).doc(id);
-                    batch.set(docRef, docData, { merge: true });
+                    // FIX: Cast `docData` to `object` to satisfy Firestore's `set` method signature.
+                    batch.set(docRef, docData as object, { merge: true });
                 }
                 break;
             case 'about':

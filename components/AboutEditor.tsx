@@ -5,9 +5,10 @@ import S3Uploader from './S3Uploader';
 interface AboutEditorProps {
     initialData: AboutData;
     onSave: (data: AboutData) => void;
+    isSaving: boolean;
 }
 
-const AboutEditor: React.FC<AboutEditorProps> = ({ initialData, onSave }) => {
+const AboutEditor: React.FC<AboutEditorProps> = ({ initialData, onSave, isSaving }) => {
     const [data, setData] = useState(initialData);
 
     useEffect(() => {
@@ -93,9 +94,10 @@ const AboutEditor: React.FC<AboutEditorProps> = ({ initialData, onSave }) => {
             <div className="mt-8 pt-6 border-t border-gray-700">
                 <button
                     onClick={handleSave}
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-5 rounded-md transition-colors"
+                    disabled={isSaving}
+                    className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-5 rounded-md transition-colors"
                 >
-                    Save 'About Us' Content
+                    {isSaving ? 'Saving...' : "Save 'About Us' Content"}
                 </button>
             </div>
         </div>
