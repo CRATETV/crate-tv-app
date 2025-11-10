@@ -238,7 +238,7 @@ const App: React.FC = () => {
         return <LoadingSpinner />;
     }
 
-    const nowPlayingMovie = movies['consumed'];
+    const nowPlayingMovie = movies['geminitimeservice'];
     const bannerHeight = liveWatchParty ? '3rem' : '0px';
 
     return (
