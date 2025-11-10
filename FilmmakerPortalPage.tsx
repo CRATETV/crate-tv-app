@@ -84,7 +84,8 @@ const FilmmakerPortalPage: React.FC = () => {
     const filmPerformanceData = useMemo((): FilmPerformanceData[] => {
         if (!analyticsData || !allMovies || !directorName) return [];
         
-        const filmmakerFilms = Object.values(allMovies).filter(movie => 
+        // FIX: Cast Object.values(allMovies) to Movie[] to resolve properties on 'unknown' type.
+        const filmmakerFilms = (Object.values(allMovies) as Movie[]).filter(movie => 
             movie.director.toLowerCase().includes(directorName.toLowerCase())
         );
 

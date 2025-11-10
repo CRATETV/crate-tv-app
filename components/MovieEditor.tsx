@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Movie, Actor } from '../types';
-import S3Uploader from './S3Uploader';
 
 interface MovieEditorProps {
     allMovies: Record<string, Movie>;
@@ -74,11 +73,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh }) => {
         setSelectedMovie({ ...selectedMovie, cast: newCast });
     };
 
-    const handleUrlUpdate = (field: keyof Movie, url: string) => {
-        if (!selectedMovie) return;
-        setSelectedMovie({ ...selectedMovie, [field]: url });
-    };
-
     const handleSave = async () => {
         if (!selectedMovie) return;
         setIsSaving(true);
@@ -148,9 +142,18 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh }) => {
                     </div>
 
                     <div className="space-y-4">
-                        <S3Uploader label="Full Movie File" onUploadSuccess={(url) => handleUrlUpdate('fullMovie', url)} />
-                        <S3Uploader label="Web Poster (2:3)" onUploadSuccess={(url) => handleUrlUpdate('poster', url)} />
-                        <S3Uploader label="TV Poster (16:9)" onUploadSuccess={(url) => handleUrlUpdate('tvPoster', url)} />
+                        <div>
+                            <label className="form-label">Full Movie URL</label>
+                            <input type="text" name="fullMovie" value={selectedMovie.fullMovie} onChange={handleChange} className="form-input" placeholder="https://cratetelevision.s3..." />
+                        </div>
+                        <div>
+                            <label className="form-label">Web Poster URL (2:3)</label>
+                            <input type="text" name="poster" value={selectedMovie.poster} onChange={handleChange} className="form-input" placeholder="https://cratetelevision.s3..." />
+                        </div>
+                        <div>
+                            <label className="form-label">TV Poster URL (16:9)</label>
+                            <input type="text" name="tvPoster" value={selectedMovie.tvPoster} onChange={handleChange} className="form-input" placeholder="https://cratetelevision.s3..." />
+                        </div>
                     </div>
 
                     <div>
