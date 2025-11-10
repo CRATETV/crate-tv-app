@@ -25,7 +25,7 @@ import DeveloperGuidePage from './components/DeveloperGuidePage';
 import ThankYouPage from './components/ThankYouPage';
 import TopTenPage from './components/TopTenPage';
 import ActorPortalPage from './components/ActorPortalPage';
-import ActorSignupPage from './components/ActorSignupPage';
+import ActorSignupPage from './ActorSignupPage';
 import ActorsDirectoryPage from './components/ActorsDirectoryPage';
 import ActorProfilePage from './components/ActorProfilePage';
 import WatchlistPage from './components/WatchlistPage';

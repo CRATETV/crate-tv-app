@@ -2,6 +2,11 @@
 // It will be accessible at the path /api/approve-actor-submission
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { Movie, ActorProfile } from '../types.js';
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
+
 
 // Helper to create a URL-friendly slug from a name
 const slugify = (name: string): string => {
@@ -54,17 +59,24 @@ export async function POST(request: Request) {
     if (!submissionData) throw new Error("Submission data is empty.");
 
     const { actorName, bio, photoUrl, highResPhotoUrl, imdbUrl, email } = submissionData;
+    let userExists = false;
 
     // --- Grant Actor Role (Custom Claim) ---
     let userRecord;
     try {
         userRecord = await auth.getUserByEmail(email);
+        userExists = true;
         await auth.setCustomUserClaims(userRecord.uid, {
             ...userRecord.customClaims,
             isActor: true
         });
     } catch (error: any) {
-        console.warn(`Could not find user with email ${email} to set custom claims. Proceeding without setting role. Error: ${error.message}`);
+        if (error.code === 'auth/user-not-found') {
+            // User does not exist, we will instruct them to sign up.
+            console.log(`User with email ${email} not found. They will be prompted to create an account.`);
+        } else {
+            console.warn(`Could not set custom claims for ${email}. Error: ${error.message}`);
+        }
     }
     
     const batch = db.batch();
@@ -121,9 +133,47 @@ export async function POST(request: Request) {
 
     await batch.commit();
 
+    // 5. Send notification email to the actor
+    const signupUrl = 'https://cratetv.net/login?view=signup';
+    const loginUrl = 'https://cratetv.net/login?redirect=/portal';
+
+    const { subject, html } = userExists
+        ? {
+            subject: 'Your Crate TV Actor Portal is Active!',
+            html: `
+                <h1>Welcome to the Crate TV Actor Portal!</h1>
+                <p>Hello ${actorName},</p>
+                <p>We're excited to let you know that your profile has been approved and your Actor Portal is now active. You can log in to your existing account to access new tools and manage your profile.</p>
+                <p><a href="${loginUrl}">Log in to your Portal</a></p>
+                <p>Thank you for being part of our community!</p>
+                <p>- The Crate TV Team</p>
+            `
+          }
+        : {
+            subject: 'Your Crate TV Profile has been Approved!',
+            html: `
+                <h1>Congratulations! Your Crate TV Profile is Live!</h1>
+                <p>Hello ${actorName},</p>
+                <p>We're excited to let you know that your profile submission has been approved and is now live in our Actors Directory.</p>
+                <p><strong>Next Step:</strong> Create your account to access the Actor Portal where you can manage your profile and use our exclusive actor tools.</p>
+                <p><a href="${signupUrl}">Create Your Account Now</a></p>
+                <p><strong>Important:</strong> Please use the same email address you submitted with (${email}) when signing up.</p>
+                <p>Welcome to the community!</p>
+                <p>- The Crate TV Team</p>
+            `
+          };
+
+    await resend.emails.send({
+      from: `Crate TV <${fromEmail}>`,
+      to: email,
+      subject,
+      html,
+    });
+
+
     return new Response(JSON.stringify({ 
         success: true, 
-        message: `Approved ${actorName}. Created/updated public profile, updated ${moviesUpdatedCount} film(s), and granted actor role.` 
+        message: `Approved ${actorName}. Created/updated public profile, updated ${moviesUpdatedCount} film(s), and sent notification email.` 
     }), { status: 200, headers: { 'Content-Type': 'application/json' }});
 
   } catch (error) {

@@ -203,7 +203,8 @@ const App: React.FC = () => {
         const newFilmKey = 'geminitimeservice'; // The film to announce
         const newFilm = movies[newFilmKey];
         if (newFilm && !sessionStorage.getItem('newFilmModalSeen')) {
-            setNewFilmAnnouncement(newFilm);
+            // Re-disabled for now, can be re-enabled later.
+            // setNewFilmAnnouncement(newFilm);
         }
 
     }, [isLoading, isFestivalLive, movies]);
