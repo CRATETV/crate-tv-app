@@ -16,7 +16,7 @@ export const categoriesData: Record<string, Category> = {
   },
   newReleases: {
     title: 'New Releases',
-    movieKeys: ['theneighbours', 'twopeasinapod', 'slap', 'tedandnatalie', 'itsinyou']
+    movieKeys: ['geminitimeservice', 'theneighbours', 'twopeasinapod', 'slap', 'tedandnatalie', 'itsinyou']
   },
   awardWinners: {
     title: 'Award-Winning Films',
@@ -1154,6 +1154,38 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted%20and%20Natalie.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted%20and%20Nathalie.JPG",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted%20and%20Nathalie.JPG",
+    "likes": 0
+  },
+  "geminitimeservice": {
+    "key": "geminitimeservice",
+    "title": "Gemini Time Service",
+    "synopsis": "In a world where everyone knows their expiration date, Fern is anxious about her broken time device and seeks help in an unexpected place.",
+    "cast": [
+      {
+        "name": "Cyan Zhong",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Sumner Sykes",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Sara Montse",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Cyan Zhong",
+    "producers": "Cyan Zhong",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini+Time+Service+-+xiani+zhong+(1080p%2C+h264%2C+youtube).mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemeni+Time+Service.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemeni+Time+Service.JPG",
     "likes": 0
   },
   "atriptothemoon": {

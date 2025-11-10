@@ -150,10 +150,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh }) => {
                             <label className="form-label">Web Poster URL (2:3)</label>
                             <input type="text" name="poster" value={selectedMovie.poster} onChange={handleChange} className="form-input" placeholder="https://cratetelevision.s3..." />
                         </div>
-                        <div>
-                            <label className="form-label">TV Poster URL (16:9)</label>
-                            <input type="text" name="tvPoster" value={selectedMovie.tvPoster} onChange={handleChange} className="form-input" placeholder="https://cratetelevision.s3..." />
-                        </div>
                     </div>
 
                     <div>
