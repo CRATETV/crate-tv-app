@@ -20,6 +20,7 @@ import SquarePaymentModal from './components/SquarePaymentModal';
 import FestivalLiveModal from './components/FestivalLiveModal';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import WatchPartyAnnouncementModal from './components/WatchPartyAnnouncementModal';
+import NewFilmAnnouncementModal from './components/NewFilmAnnouncementModal';
 
 const App: React.FC = () => {
     // Hooks
@@ -37,6 +38,7 @@ const App: React.FC = () => {
     const [showFestivalModal, setShowFestivalModal] = useState(false);
     const [liveWatchParty, setLiveWatchParty] = useState<Movie | null>(null);
     const [announcementMovieModal, setAnnouncementMovieModal] = useState<Movie | null>(null);
+    const [newFilmAnnouncement, setNewFilmAnnouncement] = useState<Movie | null>(null);
     
     // Memos for performance
     const heroMovies = useMemo(() => {
@@ -197,6 +199,13 @@ const App: React.FC = () => {
             setLiveWatchParty(null);
         }
 
+        // New Film Announcement Check
+        const newFilmKey = 'geminitimeservice'; // The film to announce
+        const newFilm = movies[newFilmKey];
+        if (newFilm && !sessionStorage.getItem('newFilmModalSeen')) {
+            setNewFilmAnnouncement(newFilm);
+        }
+
     }, [isLoading, isFestivalLive, movies]);
     
     useEffect(() => {
@@ -268,7 +277,13 @@ const App: React.FC = () => {
                 
                 <div className="px-4 md:px-12 relative z-10">
                     <div className={`${isFestivalLive ? 'mt-4 md:-mt-16' : 'mt-4 md:-mt-16'} space-y-8 md:space-y-12`}>
-                        {nowPlayingMovie && <NowPlayingBanner movie={nowPlayingMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} />}
+                        {nowPlayingMovie && isMovieReleased(nowPlayingMovie) && (
+                            <NowPlayingBanner 
+                                movie={nowPlayingMovie} 
+                                onSelectMovie={handleSelectMovie} 
+                                onPlayMovie={handlePlayMovie} 
+                            />
+                        )}
                         
                         {comingSoonMovies.length > 0 && (
                             <MovieCarousel
@@ -414,6 +429,20 @@ const App: React.FC = () => {
                         setAnnouncementMovieModal(null);
                         window.history.pushState({}, '', `/watchparty/${announcementMovieModal.key}`);
                         window.dispatchEvent(new Event('pushstate'));
+                    }}
+                />
+            )}
+            {newFilmAnnouncement && (
+                <NewFilmAnnouncementModal
+                    movie={newFilmAnnouncement}
+                    onClose={() => {
+                        sessionStorage.setItem('newFilmModalSeen', 'true');
+                        setNewFilmAnnouncement(null);
+                    }}
+                    onWatchNow={() => {
+                        sessionStorage.setItem('newFilmModalSeen', 'true');
+                        setNewFilmAnnouncement(null);
+                        handlePlayMovie(newFilmAnnouncement);
                     }}
                 />
             )}

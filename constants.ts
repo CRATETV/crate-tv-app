@@ -1,4 +1,5 @@
 
+
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
 
 // Utility function to robustly check if a movie is past its release time.
@@ -17,7 +18,7 @@ export const categoriesData: Record<string, Category> = {
   },
   newReleases: {
     title: 'New Releases',
-    movieKeys: ['geminitimeservice', 'results', 'theneighbours', 'twopeasinapod', 'slap', 'tedandnatalie', 'itsinyou']
+    movieKeys: ['results', 'theneighbours', 'twopeasinapod', 'slap', 'tedandnatalie', 'itsinyou']
   },
   awardWinners: {
     title: 'Award-Winning Films',
