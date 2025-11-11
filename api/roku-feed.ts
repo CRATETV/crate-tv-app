@@ -1,5 +1,3 @@
-
-
 // This is a Vercel Serverless Function that generates a feed for the custom Roku channel.
 // It will be accessible at the path /api/roku-feed
 
@@ -153,12 +151,12 @@ export async function GET(request: Request) {
     const topTenCategory = topTenCategoryRaw ? processCategory(topTenCategoryRaw) : null;
 
 
-    const nowPlayingKey = categoriesData['nowPlaying']?.movieKeys[0];
-    const nowPlayingMovie = nowPlayingKey ? visibleMovies[nowPlayingKey] : null;
+    const nowStreamingKey = categoriesData['nowStreaming']?.movieKeys[0];
+    const nowStreamingMovie = nowStreamingKey ? visibleMovies[nowStreamingKey] : null;
 
-    const nowPlayingCategory: Category | null = nowPlayingMovie ? {
-        title: "Now Playing",
-        movieKeys: [nowPlayingKey]
+    const nowStreamingCategory: Category | null = nowStreamingMovie ? {
+        title: "Now Streaming",
+        movieKeys: [nowStreamingKey]
     } : null;
 
     const isFestivalLive = festivalConfig?.startDate && festivalConfig?.endDate && 
@@ -196,11 +194,11 @@ export async function GET(request: Request) {
     const orderedCategories: (Category | null)[] = [
         myListCategory, // Add My List to the top
         ...festivalCategories,
-        nowPlayingCategory,
+        nowStreamingCategory,
         // Top ten is now handled separately
     ];
 
-    const processedKeys = new Set(['featured', 'pwff12thAnnual', 'nowPlaying', 'topTen']);
+    const processedKeys = new Set(['featured', 'pwff12thAnnual', 'nowStreaming', 'topTen']);
     const remainingCategoryOrder = ["newReleases", "awardWinners", "comedy", "drama", "documentary", "exploreTitles", "publicDomainIndie"];
     
     remainingCategoryOrder.forEach((key: string) => {

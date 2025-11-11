@@ -180,6 +180,27 @@ const AdminPage: React.FC = () => {
         }
     };
 
+    const handleSetNowStreaming = async (movieKey: string) => {
+        setIsSaving(true);
+        setSaveMessage('');
+        setSaveError('');
+        const password = sessionStorage.getItem('adminPassword');
+        try {
+            const response = await fetch('/api/publish-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password, type: 'set_now_streaming', data: { key: movieKey } }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to set Now Streaming.');
+            setSaveMessage(`Successfully set new "Now Streaming" film!`);
+            fetchAllData(password!); // Refresh all data after a successful save
+        } catch (err) {
+            setSaveError(err instanceof Error ? err.message : 'An error occurred while setting Now Streaming.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const handleLogin = async (e?: React.FormEvent | null, storedPassword?: string) => {
         e?.preventDefault();
@@ -320,7 +341,7 @@ const AdminPage: React.FC = () => {
 
                 <div>
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
-                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data: any) => handleSaveData('movies', data)} onDeleteMovie={handleDeleteMovie} />}
+                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data: any) => handleSaveData('movies', data)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => console.log('Create movie from:', item)} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}

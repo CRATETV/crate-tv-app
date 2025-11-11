@@ -93,11 +93,15 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                         liveCategories[doc.id] = doc.data() as Category;
                     });
                     
-                    // If the live data from Firestore is missing the 'nowPlaying' category,
-                    // merge the fallback 'nowPlaying' category from constants.ts.
-                    // This makes the banner resilient to accidental data deletion.
-                    if (!liveCategories.nowPlaying && categoriesData.nowPlaying) {
-                        liveCategories.nowPlaying = categoriesData.nowPlaying;
+                    // ROBUST FALLBACK: If the live 'nowStreaming' category is missing,
+                    // has no movieKeys property, or has an empty movieKeys array,
+                    // merge the fallback data to ensure the banner is always visible.
+                    const liveNowStreaming = liveCategories.nowStreaming;
+                    if (
+                        (!liveNowStreaming || !liveNowStreaming.movieKeys || liveNowStreaming.movieKeys.length === 0) &&
+                        categoriesData.nowStreaming
+                    ) {
+                        liveCategories.nowStreaming = categoriesData.nowStreaming;
                     }
 
                     setCategories(liveCategories);

@@ -24,16 +24,21 @@ interface MovieDetailsModalProps {
 }
 
 const RecommendedMovieCard: React.FC<{ movie: Movie; onClick: (movie: Movie) => void; }> = ({ movie, onClick }) => {
+    const [isImageLoaded, setIsImageLoaded] = useState(false);
     return (
         <div
             className="group relative cursor-pointer rounded-md overflow-hidden aspect-[3/4] bg-gray-900"
             onClick={() => onClick(movie)}
         >
+              {!isImageLoaded && (
+                <div className="absolute inset-0 bg-gray-800 animate-pulse"></div>
+              )}
               <img
                   src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
                   alt={movie.title}
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
                   loading="lazy"
+                  onLoad={() => setIsImageLoaded(true)}
                   onContextMenu={(e) => e.preventDefault()}
                   crossOrigin="anonymous"
               />

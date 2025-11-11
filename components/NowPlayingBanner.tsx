@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Movie } from '../types';
 
-interface NowPlayingBannerProps {
+interface NowStreamingBannerProps {
   movie: Movie;
   onSelectMovie: (movie: Movie) => void;
   onPlayMovie: (movie: Movie) => void;
 }
 
-const NowPlayingBanner: React.FC<NowPlayingBannerProps> = ({ movie, onSelectMovie, onPlayMovie }) => {
+const NowStreamingBanner: React.FC<NowStreamingBannerProps> = ({ movie, onSelectMovie, onPlayMovie }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Check if synopsis is long by stripping HTML tags and checking length.
@@ -70,4 +70,4 @@ const NowPlayingBanner: React.FC<NowPlayingBannerProps> = ({ movie, onSelectMovi
   );
 };
 
-export default NowPlayingBanner;
+export default NowStreamingBanner;

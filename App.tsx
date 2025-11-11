@@ -12,7 +12,7 @@ import { isMovieReleased } from './constants';
 import { useAuth } from './contexts/AuthContext';
 import { useFestival } from './contexts/FestivalContext';
 import FestivalHero from './components/FestivalHero';
-import NowPlayingBanner from './components/NowPlayingBanner';
+import NowStreamingBanner from './components/NowStreamingBanner';
 import BackToTopButton from './components/BackToTopButton';
 import CollapsibleFooter from './components/CollapsibleFooter';
 import BottomNavBar from './components/BottomNavBar';
@@ -25,7 +25,7 @@ import NewFilmAnnouncementModal from './components/NewFilmAnnouncementModal';
 const App: React.FC = () => {
     // Hooks
     const { user, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
-    const { isLoading, movies, categories, isFestivalLive, festivalConfig } = useFestival();
+    const { isLoading, movies, categories, isFestivalLive, festivalConfig, dataSource } = useFestival();
     
     // State
     const [heroIndex, setHeroIndex] = useState(0);
@@ -62,8 +62,8 @@ const App: React.FC = () => {
             .sort((a, b) => new Date(a.releaseDateTime!).getTime() - new Date(b.releaseDateTime!).getTime());
     }, [movies]);
 
-    const nowPlayingKey = useMemo(() => categories.nowPlaying?.movieKeys[0], [categories.nowPlaying]);
-    const nowPlayingMovie = useMemo(() => nowPlayingKey ? movies[nowPlayingKey] : null, [movies, nowPlayingKey]);
+    const nowStreamingKey = useMemo(() => categories.nowStreaming?.movieKeys[0], [categories.nowStreaming]);
+    const nowStreamingMovie = useMemo(() => nowStreamingKey ? movies[nowStreamingKey] : null, [movies, nowStreamingKey]);
 
 
     const searchResults = useMemo(() => {
@@ -172,7 +172,7 @@ const App: React.FC = () => {
 
     // Effect for live event notifications on page load
     useEffect(() => {
-        if (isLoading) return;
+        if (isLoading || !dataSource) return;
 
         // Festival Check
         if (isFestivalLive && !sessionStorage.getItem('festivalModalSeen')) {
@@ -197,13 +197,13 @@ const App: React.FC = () => {
         }
 
         // New Film Announcement Check
-        const newFilmKey = nowPlayingKey; // Use the configurable now playing movie
+        const newFilmKey = nowStreamingKey; // Use the configurable now streaming movie
         const newFilm = newFilmKey ? movies[newFilmKey] : null;
-        if (newFilm && !sessionStorage.getItem('newFilmModalSeen')) {
+        if (newFilm && isMovieReleased(newFilm) && !sessionStorage.getItem('newFilmModalSeen')) {
             setNewFilmAnnouncement(newFilm);
         }
 
-    }, [isLoading, isFestivalLive, movies, nowPlayingKey]);
+    }, [isLoading, isFestivalLive, dataSource, movies, nowStreamingKey]);
     
     useEffect(() => {
         if (likedMovies.size === 0 || Object.keys(movies).length === 0) {
@@ -272,9 +272,9 @@ const App: React.FC = () => {
                 
                 <div className="px-4 md:px-12 relative z-10">
                     <div className={`${isFestivalLive ? 'mt-4 md:-mt-16' : 'mt-4 md:-mt-16'} space-y-8 md:space-y-12`}>
-                        {nowPlayingMovie && isMovieReleased(nowPlayingMovie) && (
-                            <NowPlayingBanner 
-                                movie={nowPlayingMovie} 
+                        {nowStreamingMovie && isMovieReleased(nowStreamingMovie) && (
+                            <NowStreamingBanner 
+                                movie={nowStreamingMovie} 
                                 onSelectMovie={handleSelectMovie} 
                                 onPlayMovie={handlePlayMovie} 
                             />
@@ -371,7 +371,7 @@ const App: React.FC = () => {
                                     .map(movieKey => movies[movieKey])
                                     .filter((m): m is Movie => !!m && isMovieReleased(m));
                                 
-                                if (categoryMovies.length === 0 || key === 'featured' || key === 'publicDomainIndie' || key === 'nowPlaying') return null;
+                                if (categoryMovies.length === 0 || key === 'featured' || key === 'publicDomainIndie' || key === 'nowStreaming') return null;
 
                                 return (
                                     <MovieCarousel

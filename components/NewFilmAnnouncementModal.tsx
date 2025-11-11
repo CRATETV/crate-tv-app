@@ -43,7 +43,7 @@ const NewFilmAnnouncementModal: React.FC<NewFilmAnnouncementModalProps> = ({ mov
         </button>
 
         <div className="relative z-10 p-8 flex flex-col items-center text-center">
-            <h2 className="text-4xl font-extrabold text-white mb-2 tracking-tight" style={{textShadow: '0 2px 5px rgba(255,0,0,0.5)'}}>Now Playing!</h2>
+            <h2 className="text-4xl font-extrabold text-white mb-2 tracking-tight" style={{textShadow: '0 2px 5px rgba(255,0,0,0.5)'}}>Now Streaming!</h2>
             <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt={movie.title} className="w-48 h-auto rounded-md shadow-lg my-4 border-2 border-gray-600" crossOrigin="anonymous"/>
             <h3 className="text-3xl font-bold text-white mb-3">{movie.title}</h3>
             <div className="text-gray-300 mb-8">

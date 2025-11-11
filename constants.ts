@@ -10,8 +10,8 @@ export const isMovieReleased = (movie: Movie | undefined | null): boolean => {
 };
 
 export const categoriesData: Record<string, Category> = {
-  nowPlaying: {
-    title: 'Now Playing',
+  nowStreaming: {
+    title: 'Now Streaming',
     movieKeys: ['geminitimeservice']
   },
   featured: {

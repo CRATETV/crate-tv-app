@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Movie } from '../types';
 
@@ -17,6 +18,7 @@ interface MovieCardProps {
 export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWatched, isOnWatchlist, isLiked, onToggleLike, onToggleWatchlist, onSupportMovie, isComingSoon }) => {
   if (!movie) return null;
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   const handleToggleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -40,11 +42,15 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
       className="group relative cursor-pointer aspect-[2/3] rounded-md overflow-hidden bg-transparent transition-transform duration-300 ease-in-out hover:scale-105 hover:z-10"
       onClick={() => onSelectMovie(movie)}
     >
+      {!isImageLoaded && (
+        <div className="absolute inset-0 bg-gray-800 animate-pulse"></div>
+      )}
       <img
         src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
         alt={movie.title}
-        className="w-full h-full object-cover"
+        className={`w-full h-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
         loading="lazy"
+        onLoad={() => setIsImageLoaded(true)}
         onContextMenu={(e) => e.preventDefault()}
         crossOrigin="anonymous"
       />

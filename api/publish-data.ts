@@ -149,7 +149,7 @@ export async function POST(request: Request) {
             });
         }
 
-        const validTypes = ['movies', 'categories', 'festival', 'about', 'delete_movie'];
+        const validTypes = ['movies', 'categories', 'festival', 'about', 'delete_movie', 'set_now_streaming'];
         if (!validTypes.includes(type)) {
             return new Response(JSON.stringify({ error: `Invalid data type provided: ${type}` }), {
                 status: 400,
@@ -182,6 +182,16 @@ export async function POST(request: Request) {
                         });
                     }
                 });
+                break;
+            }
+            case 'set_now_streaming': {
+                const { key } = data;
+                if (!key) throw new Error('Movie key is required to set as Now Streaming.');
+                const nowStreamingRef = db.collection('categories').doc('nowStreaming');
+                batch.set(nowStreamingRef, {
+                    title: 'Now Streaming',
+                    movieKeys: [key]
+                }, { merge: true });
                 break;
             }
             case 'movies':
