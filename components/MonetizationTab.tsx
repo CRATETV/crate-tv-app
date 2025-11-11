@@ -21,7 +21,7 @@ const MonetizationTab: React.FC = () => {
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
                 <h3 className="text-xl font-semibold text-white mb-2">Programmatic Video Ads (VAST)</h3>
                 <p className="text-gray-400 mb-4">
-                    Enter the VAST ad tag URL provided by your video ad network (e.g., Google Ad Manager). This will enable pre-roll video ads on all eligible films. If left blank, no ads will be shown.
+                    Enter the VAST ad tag URL provided by your video ad network (e.g., Google Ad Manager, VDO.AI, etc.). This will enable pre-roll video ads on all eligible films. If left blank, a sample ad will be used for testing purposes.
                 </p>
                 <div>
                     <label htmlFor="adTagUrl" className="block text-sm font-medium text-gray-300 mb-1">Production VAST Ad Tag URL</label>

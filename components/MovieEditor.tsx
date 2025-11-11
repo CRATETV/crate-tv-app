@@ -4,6 +4,7 @@ import { Movie, Actor } from '../types';
 interface MovieEditorProps {
     allMovies: Record<string, Movie>;
     onRefresh: () => void;
+    onSave: (movieData: Record<string, Movie>) => Promise<void>;
 }
 
 const emptyMovie: Movie = {
@@ -29,11 +30,25 @@ const emptyMovie: Movie = {
     mainPageExpiry: '',
 };
 
-const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh }) => {
+const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave }) => {
     const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
-    const [message, setMessage] = useState('');
+
+    // This effect keeps the editor form open and populated with fresh data after a save/refresh.
+    useEffect(() => {
+        if (selectedMovie) {
+            const updatedMovie = allMovies[selectedMovie.key];
+            if (updatedMovie) {
+                // Only update if the data has actually changed to avoid losing input focus
+                if (JSON.stringify(selectedMovie) !== JSON.stringify(updatedMovie)) {
+                    setSelectedMovie(updatedMovie);
+                }
+            } else {
+                // The movie was deleted, so close the editor
+                setSelectedMovie(null);
+            }
+        }
+    }, [allMovies, selectedMovie]);
 
     const handleSelectMovie = (key: string) => {
         if (key === 'new') {
@@ -72,34 +87,20 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh }) => {
     
     const removeCastMember = (index: number) => {
         if (!selectedMovie) return;
-        const newCast = selectedMovie.cast.filter((_, i) => i !== index);
+        const newCast = selectedMovie.cast.filter((_: Actor, i: number) => i !== index);
         setSelectedMovie({ ...selectedMovie, cast: newCast });
     };
 
     const handleSave = async () => {
         if (!selectedMovie) return;
         setIsSaving(true);
-        setStatus('idle');
-
-        const password = sessionStorage.getItem('adminPassword');
         try {
-            const response = await fetch('/api/publish-data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password, type: 'movies', data: { [selectedMovie.key]: selectedMovie } }),
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Failed to save.');
-            
-            setStatus('success');
-            setMessage('Movie saved successfully!');
-            onRefresh(); // Refresh data in parent
+            await onSave({ [selectedMovie.key]: selectedMovie });
         } catch (err) {
-            setStatus('error');
-            setMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
+            // Error is handled by the parent component's toast
+            console.error("Save failed:", err);
         } finally {
             setIsSaving(false);
-            setTimeout(() => setStatus('idle'), 3000);
         }
     };
 
@@ -107,10 +108,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh }) => {
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl sm:text-2xl font-bold text-red-400">Movie Editor</h2>
-                <select onChange={(e) => handleSelectMovie(e.target.value)} className="form-input max-w-xs" defaultValue="">
+                <select onChange={(e) => handleSelectMovie(e.target.value)} className="form-input max-w-xs" value={selectedMovie?.key || ""}>
                     <option value="" disabled>Select a movie to edit...</option>
                     <option value="new">-- Create New Movie --</option>
-                    {/* FIX: Cast Object.values to Movie[] to provide a concrete type for sorting and mapping. */}
                     {(Object.values(allMovies) as Movie[]).sort((a, b) => a.title.localeCompare(b.title)).map(movie => (
                         <option key={movie.key} value={movie.key}>{movie.title}</option>
                     ))}
@@ -157,7 +157,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh }) => {
 
                     <div>
                         <h3 className="text-lg font-semibold text-gray-300 mb-2">Cast</h3>
-                        {selectedMovie.cast.map((actor, index) => (
+                        {selectedMovie.cast.map((actor: Actor, index: number) => (
                              <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border-b border-gray-700">
                                 <input type="text" value={actor.name} onChange={(e) => handleCastChange(index, 'name', e.target.value)} placeholder="Actor Name" className="form-input !py-1 text-sm" />
                                 <input type="text" value={actor.bio} onChange={(e) => handleCastChange(index, 'bio', e.target.value)} placeholder="Bio" className="form-input !py-1 text-sm" />
@@ -196,8 +196,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh }) => {
                         <button onClick={handleSave} disabled={isSaving} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-5 rounded-md transition-colors">
                             {isSaving ? 'Publishing...' : 'Save & Publish Movie'}
                         </button>
-                         {status === 'success' && <p className="text-green-500 text-sm">{message}</p>}
-                         {status === 'error' && <p className="text-red-500 text-sm">{message}</p>}
                     </div>
                 </div>
             )}

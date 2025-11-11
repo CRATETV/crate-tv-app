@@ -16,6 +16,7 @@ import AdminPayoutsTab from './components/AdminPayoutsTab';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
 import PermissionsManager from './components/PermissionsManager';
 import SaveStatusToast from './components/SaveStatusToast';
+import MonetizationTab from './components/MonetizationTab';
 
 const ALL_TABS: Record<string, string> = {
     analytics: 'Analytics',
@@ -28,6 +29,7 @@ const ALL_TABS: Record<string, string> = {
     about: 'About Page',
     email: 'Email',
     contracts: 'File Cabinet',
+    monetization: 'Monetization',
     security: 'Security',
     roku: 'Roku',
     fallback: 'Fallback Data',
@@ -295,7 +297,7 @@ const AdminPage: React.FC = () => {
 
                 <div>
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
-                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} />}
+                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data: any) => handleSaveData('movies', data)} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => console.log('Create movie from:', item)} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
@@ -304,6 +306,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'about' && aboutData && <AboutEditor initialData={aboutData} onSave={(newData) => handleSaveData('about', newData)} isSaving={isSaving} />}
                     {activeTab === 'email' && <EmailSender />}
                     {activeTab === 'contracts' && <ContractsTab />}
+                    {activeTab === 'monetization' && <MonetizationTab />}
                     {activeTab === 'security' && <SecurityTab />}
                     {activeTab === 'roku' && <RokuAdminTab />}
                     {activeTab === 'fallback' && <FallbackGenerator movies={movies} categories={categories} festivalData={festivalData} festivalConfig={festivalConfig} aboutData={aboutData} />}

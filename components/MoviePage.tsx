@@ -133,8 +133,13 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     adsLoader.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, () => playContent(), false);
     
     const adsRequest = new google.ima.AdsRequest();
-    // Using a sample skippable pre-roll tag. This would come from AdSense.
-    adsRequest.adTagUrl = 'https://storage.googleapis.com/interactive-media-ads/ad-tags/unknown/vast_skippable.xml';
+    
+    // Dynamically load the VAST tag from localStorage or use a fallback
+    const customAdTag = localStorage.getItem('productionAdTagUrl');
+    const sampleAdTag = 'https://storage.googleapis.com/interactive-media-ads/ad-tags/unknown/vast_skippable.xml';
+    
+    adsRequest.adTagUrl = customAdTag || sampleAdTag;
+    console.log(`Using VAST Ad Tag: ${adsRequest.adTagUrl}`);
     
     adsLoader.requestAds(adsRequest);
   }, [released, playContent]);
@@ -380,162 +385,3 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             // Determine action based on click position
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
             const clickX = e.clientX - rect.left;
-            const width = rect.width;
-
-            if (clickX < width / 3) {
-                handleRewind();
-            } else if (clickX > (width * 2) / 3) {
-                handleForward();
-            }
-        } else {
-            // This is the first click. Set a timeout to wait for a potential second click.
-            clickTimeout.current = window.setTimeout(() => {
-                handlePlayPause();
-                clickTimeout.current = null;
-            }, 250);
-        }
-    }, [handlePlayerInteraction, handlePlayPause, handleRewind, handleForward]);
-    
-    if (isDataLoading || !movie) {
-        return <LoadingSpinner />;
-    }
-
-    return (
-        <div className="flex flex-col min-h-screen text-white">
-            {isStaging && <StagingBanner onExit={() => { sessionStorage.removeItem('crateTvStaging'); window.location.reload(); }} isOffline={dataSource === 'fallback'} />}
-            
-            <main ref={mainRef} className="flex-grow flex items-center justify-center">
-                <div 
-                    ref={playerContainerRef}
-                    className="relative w-full aspect-video bg-black secure-video-container"
-                    onMouseMove={handlePlayerInteraction}
-                    onClick={handleContainerClick}
-                >
-                    <div ref={adContainerRef} className={`absolute inset-0 z-20 ${isAdPlaying ? '' : 'pointer-events-none'}`} />
-                    
-                    {movie.fullMovie && released ? (
-                        <>
-                            <video 
-                                ref={videoRef} 
-                                src={movie.fullMovie} 
-                                className="w-full h-full"
-                                playsInline
-                                muted
-                                onContextMenu={(e) => e.preventDefault()} 
-                                controlsList="nodownload"
-                                preload="metadata"
-                            />
-
-                             {seekAnim && (
-                                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 flex items-center justify-center p-4 bg-black/50 rounded-full animate-seek`}>
-                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        {seekAnim === 'rewind' ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />}
-                                    </svg>
-                                </div>
-                            )}
-
-                            {isPaused && (
-                                <PauseOverlay
-                                    movie={movie}
-                                    onMoreDetails={handleShowDetails}
-                                    onSelectActor={setSelectedActor}
-                                    onResume={handlePlayPause}
-                                    onRewind={handleRewind}
-                                    onForward={handleForward}
-                                    isLiked={isLiked}
-                                    onToggleLike={() => toggleLikeMovie(movieKey)}
-                                    onSupport={() => setIsSupportModalOpen(true)}
-                                    isOnWatchlist={isOnWatchlist}
-                                    onToggleWatchlist={() => toggleWatchlist(movieKey)}
-                                />
-                            )}
-                           <div className={`absolute inset-0 z-30 transition-opacity duration-300 pointer-events-none ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-                                <button onClick={(e) => { e.stopPropagation(); handleGoHome(); }} className="absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 pointer-events-auto" aria-label="Back to Home"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-                                {/* Bottom Controls */}
-                                <div className="absolute bottom-0 left-0 right-0 px-4 pt-4 pb-8 md:p-4 bg-gradient-to-t from-black/70 to-transparent pointer-events-auto">
-                                    <input type="range" min="0" max={duration} value={currentTime} onChange={e => handleSeek(Number(e.target.value))} className="w-full h-1 bg-gray-500/50 rounded-lg appearance-none cursor-pointer range-sm" />
-                                    <div className="flex justify-between items-center mt-2">
-                                        <div className="flex items-center gap-4">
-                                            <button onClick={(e) => { e.stopPropagation(); handlePlayPause(); }} className="control-bar-button">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                                                    {isPlaying 
-                                                        ? <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /> 
-                                                        : <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                                                    }
-                                                </svg>
-                                            </button>
-                                            <span className="text-xs">{formatTime(currentTime)} / {formatTime(duration)}</span>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            <CastButton videoElement={videoRef.current} />
-                                            <button onClick={(e) => { e.stopPropagation(); handleFullscreen(); }} className="control-bar-button" aria-label="Toggle fullscreen">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 0h-4m4 0l-5-5" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="relative w-full h-full flex flex-col items-center justify-center text-center p-4">
-                            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover blur-md opacity-30" crossOrigin="anonymous" />
-                            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 z-10">Coming Soon</h2>
-                            {movie.releaseDateTime && (
-                                <div className="bg-black/50 rounded-lg p-4 z-10">
-                                    <Countdown 
-                                        targetDate={movie.releaseDateTime} 
-                                        onEnd={() => setReleased(true)} 
-                                        className="text-xl md:text-3xl text-white" 
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </main>
-            {selectedActor && (
-                <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />
-            )}
-            {isDetailsModalOpen && movie && (
-                <MovieDetailsModal 
-                    movie={movie} 
-                    isLiked={isLiked}
-                    onToggleLike={() => toggleLikeMovie(movieKey)}
-                    onClose={() => setIsDetailsModalOpen(false)} 
-                    onSelectActor={setSelectedActor}
-                    allMovies={allMovies}
-                    allCategories={allCategories}
-                    onSelectRecommendedMovie={(m) => {
-                        setIsDetailsModalOpen(false);
-                        // Navigate to the new movie page
-                        window.history.pushState({}, '', `/movie/${m.key}`);
-                        window.dispatchEvent(new Event('pushstate'));
-                    }}
-                    onPlayMovie={() => {
-                        setIsDetailsModalOpen(false);
-                        videoRef.current?.play();
-                    }}
-                    onSupportMovie={() => {
-                        setIsDetailsModalOpen(false);
-                        setIsSupportModalOpen(true);
-                    }}
-                />
-            )}
-            {isSupportModalOpen && movie && (
-                <SquarePaymentModal
-                    movie={movie}
-                    paymentType="donation"
-                    onClose={() => setIsSupportModalOpen(false)}
-                    onPaymentSuccess={() => {
-                        setIsSupportModalOpen(false);
-                        // Optionally show a "thank you" toast/notification here
-                    }}
-                />
-            )}
-        </div>
-    );
-};
-
-export default MoviePage;
