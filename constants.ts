@@ -204,7 +204,7 @@ export const moviesData: Record<string, Movie> = {
     "director": "Darrah Lashley",
     "trailer": "https://cratetelevision.s3.amazonaws.com/LifelessTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/LIFELESS.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless+1st+poster.jpg",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless+poster+remake.jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless+1st+poster.jpg",
     "likes": 0,
     "rating": 8.8
@@ -236,7 +236,7 @@ export const moviesData: Record<string, Movie> = {
     "director": "Alana Hill",
     "trailer": "https://cratetelevision.s3.amazonaws.com/Almas+vow+cut+trailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/Almas+Vows+-+Alana+Hill.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/alma's+vows+pic.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Alma's+vows+poster+remake.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/alma's+vows+pic.png",
     "likes": 0
   },
@@ -410,8 +410,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Joshua Daniel",
     "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/Hair+TrailerMP4.MP4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/HAIR.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Hair+poster.jpg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Hair+poster.jpg",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Hair+poster+209+X+209+(2).jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Hair+poster+209+X+209+(2).jpg",
     "likes": 0
   },
   "eharmonycs": {
@@ -435,8 +435,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "RT Bowersox",
     "trailer": "https://cratetelevision.s3.amazonaws.com/eHarmonycsTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/EHARMONYCS.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/eHarmonics+poster.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/eHarmonics+poster.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/eHarmonics+poster+remake+(1).png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/eHarmonics+poster+remake+(1).png",
     "likes": 0
   },
   "youvsthem": {
@@ -706,7 +706,7 @@ export const moviesData: Record<string, Movie> = {
   "itsinyou": {
     "key": "itsinyou",
     "title": "It's In You",
-    "synopsis": "A problematic pastor must fight for his life when he is invaded by a violent and vengeful spirit.",
+    "synopsis": "A problematic pastor must fight for his life when a violent and vengeful spirit invades him.",
     "cast": [
       {
         "name": "Robert Graves",
@@ -854,7 +854,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Bubacarr Sarge",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
-        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
@@ -941,7 +941,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Bubacarr Sarge",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
-        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
@@ -991,8 +991,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Myra Adrian Nelson",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Of+Bees+of+Boobs+Screener.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/of+bees+and+boobs+webapp+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/of+bees+and+boobs+instant+tv+.JPG",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/of+bees+and+boobs+webapp.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/of+bees+and+boobs+instant+tv.JPG",
     "likes": 0
   },
   "newmovie1756741314485": {
@@ -1015,7 +1015,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Bubacarr Sarge",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
-        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "bio": "Bubacarr Sarge is an award-winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
@@ -1034,7 +1034,7 @@ export const moviesData: Record<string, Movie> = {
     "director": "Jalina Wayser ",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/What+If++The+Movie.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/I+love+you+black.+poster+.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/I+love+you+black.+poster.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/what+If+poster+for+instant+tv+(1920+x+1080+px)+(1925+x+1085+px)+(1920+x+1080+px).png",
     "likes": 0
   },
@@ -1192,19 +1192,19 @@ export const moviesData: Record<string, Movie> = {
     "synopsis": "A chance encounter between two strangers, Ted and Natalie, sparks an immediate and intense connection, but their time together is fleeting.",
     "cast": [
       {
-        "name": "Salome Denoon",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png",
-        "bio": "Salome Denoon is a versatile artist whose creative pursuits span performance, writing, editing, and digital media. As an actress, she has graced both stage and screen. She also brings her talents to the digital realm as the developer of Crate TV.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
+        "name": "Dana Godfrey",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
-        "name": "David Auspitz",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png",
-        "bio": "David Auspitz is a versatile actor with a knack for both comedic and dramatic roles. He brings a unique charm to every character he portrays, making him a beloved figure in the industry.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/David+A.png"
+        "name": "Patrick Thomas Kasey",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
-    "director": "David Auspitz",
+    "director": "Michelle M. Charles",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Natalie.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie.JPG",
@@ -1247,8 +1247,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Lois Weber, Phillips Smalley",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Suspense.+(Rex+Motion+Picture+Co.+US+1913).mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/suspense+movie+poster+.jpeg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/suspense+movie+poster+.jpeg",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/suspense+movie+poster.jpeg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/suspense+movie+poster.jpeg",
     "likes": 0,
     "releaseDateTime": "1913-07-06T12:00:00Z"
   },
@@ -1312,8 +1312,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "James Sibley Watson, Melville Webber",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The-Fall-of-the-House-of-Usher-1928-Film-Guild_360p.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Fall+of+House+Of+Usher+.jpeg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Fall+of+House+Of+Usher+.jpeg",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Fall+of+House+Of+Usher.jpeg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Fall+of+House+Of+Usher.jpeg",
     "likes": 0,
     "releaseDateTime": "1928-10-28T12:00:00Z"
   },
