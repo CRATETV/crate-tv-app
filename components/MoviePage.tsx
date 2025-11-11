@@ -385,3 +385,105 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             // Determine action based on click position
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
             const clickX = e.clientX - rect.left;
+            const thirdOfWidth = rect.width / 3;
+            
+            if (clickX < thirdOfWidth) {
+                handleRewind();
+            } else if (clickX > (rect.width - thirdOfWidth)) {
+                handleForward();
+            } else {
+                handlePlayPause();
+            }
+        } else {
+            // This is the first click. Set a timer for a potential second click.
+            clickTimeout.current = window.setTimeout(() => {
+                // Timer expired, it was a single click. Just toggle controls.
+                clickTimeout.current = null;
+            }, 300); // 300ms window for a double-click
+        }
+    }, [handlePlayerInteraction, handleRewind, handleForward, handlePlayPause]);
+
+    if (isDataLoading) {
+        return <LoadingSpinner />;
+    }
+    
+    if (!movie) {
+         return (
+             <div className="flex flex-col min-h-screen bg-black text-white items-center justify-center text-center p-4">
+                <h1 className="text-4xl font-bold mb-4">Film Not Found</h1>
+                <p className="text-gray-400 mb-6">The film you're looking for doesn't exist or may have been removed.</p>
+                <button onClick={handleGoHome} className="submit-btn">Return to Home</button>
+            </div>
+        );
+    }
+    
+    if (!released) {
+        return (
+            <div className="flex flex-col min-h-screen bg-black text-white items-center justify-center text-center p-4">
+                <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 blur-md" />
+                <div className="relative z-10">
+                    <h1 className="text-4xl font-bold mb-4">Coming Soon</h1>
+                    <p className="text-gray-300 mb-6">"{movie.title}" is not yet released.</p>
+                    {movie.releaseDateTime && <Countdown targetDate={movie.releaseDateTime} onEnd={() => setReleased(true)} className="text-2xl" />}
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <main ref={mainRef} className="flex flex-col min-h-screen bg-black text-white">
+            {isStaging && <StagingBanner onExit={() => { sessionStorage.removeItem('crateTvStaging'); window.location.reload(); }} isOffline={dataSource === 'fallback'} />}
+            
+            <div
+                ref={playerContainerRef}
+                className="relative w-full h-screen bg-black secure-video-container"
+                onMouseMove={handlePlayerInteraction}
+                onMouseLeave={() => { if (isPlaying) setShowControls(false); }}
+                onClick={handleContainerClick}
+            >
+                <button onClick={handleGoHome} className="absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 z-30 opacity-50 hover:opacity-100 transition-opacity" aria-label="Back to Home">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                </button>
+
+                <div ref={adContainerRef} className="absolute inset-0 z-20" />
+                
+                <video
+                    ref={videoRef}
+                    src={movie.fullMovie}
+                    className="w-full h-full object-contain"
+                    playsInline
+                    onContextMenu={(e) => e.preventDefault()}
+                    controlsList="nodownload"
+                />
+
+                {isPaused && !isAdPlaying && (
+                    <PauseOverlay
+                        movie={movie}
+                        onMoreDetails={handleShowDetails}
+                        onSelectActor={setSelectedActor}
+                        onResume={handlePlayPause}
+                        onRewind={handleRewind}
+                        onForward={handleForward}
+                        isLiked={isLiked}
+                        onToggleLike={() => toggleLikeMovie(movieKey)}
+                        onSupport={() => setIsSupportModalOpen(true)}
+                        isOnWatchlist={isOnWatchlist}
+                        onToggleWatchlist={() => toggleWatchlist(movieKey)}
+                    />
+                )}
+                
+                <CastButton videoElement={videoRef.current} />
+
+                {/* Seek Animation Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+                    {seekAnim === 'rewind' && <div className="animate-seek text-white text-5xl">« 10s</div>}
+                    {seekAnim === 'forward' && <div className="animate-seek text-white text-5xl">10s »</div>}
+                </div>
+            </div>
+
+            {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
+            {isDetailsModalOpen && <MovieDetailsModal movie={movie} isLiked={isLiked} onToggleLike={() => toggleLikeMovie(movieKey)} onClose={() => { setIsDetailsModalOpen(false); videoRef.current?.play(); }} onSelectActor={setSelectedActor} allMovies={allMovies} allCategories={allCategories} onSelectRecommendedMovie={() => {}} onSupportMovie={() => setIsSupportModalOpen(true)} />}
+            {isSupportModalOpen && <SquarePaymentModal movie={movie} paymentType="donation" onClose={() => setIsSupportModalOpen(false)} onPaymentSuccess={() => { setIsSupportModalOpen(false); }} />}
+        </main>
+    );
+};
