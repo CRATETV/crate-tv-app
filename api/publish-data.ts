@@ -2,8 +2,8 @@
 // It will be accessible at the path /api/publish-data
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-// FIX: Import the Firestore type to resolve the 'Cannot find namespace' error.
 import { Firestore } from 'firebase-admin/firestore';
+import { Movie } from '../types.js';
 
 const checkAuth = (password: string | null) => {
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
@@ -37,8 +37,31 @@ const assembleLiveData = async (db: Firestore) => {
         db.collection('festival').doc('schedule').collection('days').get()
     ]);
 
-    const moviesData: Record<string, any> = {};
-    moviesSnap.forEach(doc => moviesData[doc.id] = doc.data());
+    // Deduplication logic for movies
+    const uniqueMoviesByTitle: Map<string, Movie> = new Map();
+    moviesSnap.forEach(doc => {
+        const movie = { key: doc.id, ...doc.data() } as Movie;
+        if (!movie.title) return; // Skip movies without a title
+
+        const normalizedTitle = movie.title.trim().toLowerCase();
+        const existingMovie = uniqueMoviesByTitle.get(normalizedTitle);
+
+        // If a movie with this title doesn't exist, add it.
+        if (!existingMovie) {
+            uniqueMoviesByTitle.set(normalizedTitle, movie);
+        } else {
+            // If the new movie has a fullMovie URL and the existing one doesn't, replace it.
+            // This prioritizes the more complete entry.
+            if (movie.fullMovie && !existingMovie.fullMovie) {
+                uniqueMoviesByTitle.set(normalizedTitle, movie);
+            }
+        }
+    });
+
+    const moviesData: Record<string, Movie> = {};
+    for (const movie of uniqueMoviesByTitle.values()) {
+        moviesData[movie.key] = movie;
+    }
 
     const categoriesData: Record<string, any> = {};
     categoriesSnap.forEach(doc => categoriesData[doc.id] = doc.data());
@@ -126,6 +149,33 @@ export async function POST(request: Request) {
 
         switch (type) {
             case 'movies':
+                const newKeys = Object.keys(data).filter(key => key.startsWith('newmovie'));
+                if (newKeys.length > 0) {
+                    const newReleasesRef = db.collection('categories').doc('newReleases');
+                    try {
+                        const newReleasesDoc = await newReleasesRef.get();
+                        if (newReleasesDoc.exists) {
+                            const existingKeys = newReleasesDoc.data()?.movieKeys || [];
+                            // Prepend new keys and ensure no duplicates
+                            const allKeys = [...newKeys, ...existingKeys];
+                            const uniqueKeys = [...new Set(allKeys)];
+                            batch.update(newReleasesRef, { movieKeys: uniqueKeys });
+                        } else {
+                            batch.set(newReleasesRef, {
+                                title: 'New Releases',
+                                movieKeys: newKeys
+                            });
+                        }
+                    } catch (e) {
+                        console.error("Could not update 'newReleases' category:", e);
+                    }
+                }
+
+                for (const [id, docData] of Object.entries(data)) {
+                    const docRef = db.collection(type).doc(id);
+                    batch.set(docRef, docData as object, { merge: true });
+                }
+                break;
             case 'categories':
                 for (const [id, docData] of Object.entries(data)) {
                     const docRef = db.collection(type).doc(id);

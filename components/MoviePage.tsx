@@ -309,7 +309,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 video.muted = false;
             }
             if (video.paused) {
-                video.play();
+                video.play().catch(e => console.error("Error attempting to play video:", e));
             } else {
                 video.pause();
             }
@@ -334,7 +334,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         setTimeout(() => setSeekAnim(null), 500);
     }, []);
     
-    const handleFullscreen = async () => {
+    const handleFullscreen = useCallback(async () => {
         const player = playerContainerRef.current as any; // Use 'any' to access prefixed methods
         if (!player) return;
 
@@ -367,7 +367,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         } catch (error) {
             console.error("Fullscreen request failed:", error);
         }
-    };
+    }, []);
 
     const handleShowDetails = () => {
         videoRef.current?.pause();
@@ -377,31 +377,28 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     const handleContainerClick = useCallback((e: React.MouseEvent) => {
         handlePlayerInteraction();
 
-        if (clickTimeout.current) {
-            // This is a double-click. Clear the single-click timer.
+        if (clickTimeout.current) { // DOUBLE CLICK
             clearTimeout(clickTimeout.current);
             clickTimeout.current = null;
-
-            // Determine action based on click position
+            
             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const thirdOfWidth = rect.width / 3;
-            
+
             if (clickX < thirdOfWidth) {
                 handleRewind();
             } else if (clickX > (rect.width - thirdOfWidth)) {
                 handleForward();
             } else {
-                handlePlayPause();
+                handleFullscreen(); // Double-click center for fullscreen
             }
-        } else {
-            // This is the first click. Set a timer for a potential second click.
+        } else { // SINGLE CLICK
             clickTimeout.current = window.setTimeout(() => {
-                // Timer expired, it was a single click. Just toggle controls.
                 clickTimeout.current = null;
-            }, 300); // 300ms window for a double-click
+                handlePlayPause(); // Single click toggles play/pause
+            }, 300); // 300ms window to detect double click
         }
-    }, [handlePlayerInteraction, handleRewind, handleForward, handlePlayPause]);
+    }, [handlePlayerInteraction, handleRewind, handleForward, handlePlayPause, handleFullscreen]);
 
     if (isDataLoading) {
         return <LoadingSpinner />;

@@ -31,71 +31,77 @@ const emptyMovie: Movie = {
 };
 
 const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave }) => {
-    const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+    const [selectedMovieKey, setSelectedMovieKey] = useState<string>('');
+    const [formData, setFormData] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
-    // This effect keeps the editor form open and populated with fresh data after a save/refresh.
+    // This effect populates the form when a movie is selected from the dropdown
+    // or when the `allMovies` prop is updated after a save.
     useEffect(() => {
-        if (selectedMovie) {
-            const updatedMovie = allMovies[selectedMovie.key];
-            if (updatedMovie) {
-                // Only update if the data has actually changed to avoid losing input focus
-                if (JSON.stringify(selectedMovie) !== JSON.stringify(updatedMovie)) {
-                    setSelectedMovie(updatedMovie);
-                }
+        if (selectedMovieKey) {
+            const movieData = allMovies[selectedMovieKey];
+            if (movieData) {
+                setFormData(movieData);
+            } else if (selectedMovieKey.startsWith('newmovie')) {
+                // It's a new movie that isn't in allMovies yet
+                setFormData({ ...emptyMovie, key: selectedMovieKey });
             } else {
-                // The movie was deleted, so close the editor
-                setSelectedMovie(null);
+                // The selected movie no longer exists (e.g., was deleted)
+                setSelectedMovieKey('');
+                setFormData(null);
             }
+        } else {
+            setFormData(null);
         }
-    }, [allMovies, selectedMovie]);
+    }, [selectedMovieKey, allMovies]);
+
 
     const handleSelectMovie = (key: string) => {
         if (key === 'new') {
-            setSelectedMovie({ ...emptyMovie, key: `newmovie${Date.now()}` });
+            setSelectedMovieKey(`newmovie${Date.now()}`);
         } else {
-            setSelectedMovie(allMovies[key]);
+            setSelectedMovieKey(key);
         }
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        if (!selectedMovie) return;
+        if (!formData) return;
         const { name, value, type } = e.target;
         
         if (type === 'checkbox') {
              const { checked } = e.target as HTMLInputElement;
-             setSelectedMovie({ ...selectedMovie, [name]: checked });
+             setFormData({ ...formData, [name]: checked });
         } else if (type === 'datetime-local') {
-             setSelectedMovie({ ...selectedMovie, [name]: value ? new Date(value).toISOString() : '' });
+             setFormData({ ...formData, [name]: value ? new Date(value).toISOString() : '' });
         } else {
-            setSelectedMovie({ ...selectedMovie, [name]: value });
+            setFormData({ ...formData, [name]: value });
         }
     };
 
     const handleCastChange = (index: number, field: keyof Actor, value: string) => {
-        if (!selectedMovie) return;
-        const newCast = [...selectedMovie.cast];
+        if (!formData) return;
+        const newCast = [...formData.cast];
         newCast[index] = { ...newCast[index], [field]: value };
-        setSelectedMovie({ ...selectedMovie, cast: newCast });
+        setFormData({ ...formData, cast: newCast });
     };
 
     const addCastMember = () => {
-        if (!selectedMovie) return;
+        if (!formData) return;
         const newCastMember: Actor = { name: '', photo: '', bio: '', highResPhoto: '' };
-        setSelectedMovie({ ...selectedMovie, cast: [...selectedMovie.cast, newCastMember] });
+        setFormData({ ...formData, cast: [...formData.cast, newCastMember] });
     };
     
     const removeCastMember = (index: number) => {
-        if (!selectedMovie) return;
-        const newCast = selectedMovie.cast.filter((_: Actor, i: number) => i !== index);
-        setSelectedMovie({ ...selectedMovie, cast: newCast });
+        if (!formData) return;
+        const newCast = formData.cast.filter((_: Actor, i: number) => i !== index);
+        setFormData({ ...formData, cast: newCast });
     };
 
     const handleSave = async () => {
-        if (!selectedMovie) return;
+        if (!formData) return;
         setIsSaving(true);
         try {
-            await onSave({ [selectedMovie.key]: selectedMovie });
+            await onSave({ [formData.key]: formData });
         } catch (err) {
             // Error is handled by the parent component's toast
             console.error("Save failed:", err);
@@ -108,7 +114,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave 
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl sm:text-2xl font-bold text-red-400">Movie Editor</h2>
-                <select onChange={(e) => handleSelectMovie(e.target.value)} className="form-input max-w-xs" value={selectedMovie?.key || ""}>
+                <select onChange={(e) => handleSelectMovie(e.target.value)} className="form-input max-w-xs" value={selectedMovieKey}>
                     <option value="" disabled>Select a movie to edit...</option>
                     <option value="new">-- Create New Movie --</option>
                     {(Object.values(allMovies) as Movie[]).sort((a, b) => a.title.localeCompare(b.title)).map(movie => (
@@ -117,47 +123,47 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave 
                 </select>
             </div>
 
-            {selectedMovie && (
+            {formData && (
                 <div className="space-y-6 bg-gray-800 p-6 rounded-lg border border-gray-700">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="form-label">Key (ID)</label>
-                            <input type="text" name="key" value={selectedMovie.key} readOnly className="form-input bg-gray-600 cursor-not-allowed" />
+                            <input type="text" name="key" value={formData.key} readOnly className="form-input bg-gray-600 cursor-not-allowed" />
                         </div>
                         <div>
                             <label className="form-label">Title</label>
-                            <input type="text" name="title" value={selectedMovie.title} onChange={handleChange} className="form-input" />
+                            <input type="text" name="title" value={formData.title} onChange={handleChange} className="form-input" />
                         </div>
                     </div>
                     <div>
                         <label className="form-label">Synopsis (HTML allowed)</label>
-                        <textarea name="synopsis" value={selectedMovie.synopsis} onChange={handleChange} rows={5} className="form-input" />
+                        <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={5} className="form-input" />
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="form-label">Director(s)</label>
-                            <input type="text" name="director" value={selectedMovie.director} onChange={handleChange} className="form-input" placeholder="Comma-separated" />
+                            <input type="text" name="director" value={formData.director} onChange={handleChange} className="form-input" placeholder="Comma-separated" />
                         </div>
                         <div>
                             <label className="form-label">Producer(s)</label>
-                            <input type="text" name="producers" value={selectedMovie.producers || ''} onChange={handleChange} className="form-input" placeholder="Comma-separated" />
+                            <input type="text" name="producers" value={formData.producers || ''} onChange={handleChange} className="form-input" placeholder="Comma-separated" />
                         </div>
                     </div>
 
                     <div className="space-y-4">
                         <div>
                             <label className="form-label">Full Movie URL</label>
-                            <input type="text" name="fullMovie" value={selectedMovie.fullMovie} onChange={handleChange} className="form-input" placeholder="https://cratetelevision.s3..." />
+                            <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="form-input" placeholder="https://cratetelevision.s3..." />
                         </div>
                         <div>
                             <label className="form-label">Web Poster URL (2:3)</label>
-                            <input type="text" name="poster" value={selectedMovie.poster} onChange={handleChange} className="form-input" placeholder="https://cratetelevision.s3..." />
+                            <input type="text" name="poster" value={formData.poster} onChange={handleChange} className="form-input" placeholder="https://cratetelevision.s3..." />
                         </div>
                     </div>
 
                     <div>
                         <h3 className="text-lg font-semibold text-gray-300 mb-2">Cast</h3>
-                        {selectedMovie.cast.map((actor: Actor, index: number) => (
+                        {formData.cast.map((actor: Actor, index: number) => (
                              <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border-b border-gray-700">
                                 <input type="text" value={actor.name} onChange={(e) => handleCastChange(index, 'name', e.target.value)} placeholder="Actor Name" className="form-input !py-1 text-sm" />
                                 <input type="text" value={actor.bio} onChange={(e) => handleCastChange(index, 'bio', e.target.value)} placeholder="Bio" className="form-input !py-1 text-sm" />
@@ -175,18 +181,18 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div>
                                 <label className="form-label text-xs">Rating (0-10)</label>
-                                <input type="number" name="rating" value={selectedMovie.rating || 0} onChange={handleChange} className="form-input" step="0.1" min="0" max="10" />
+                                <input type="number" name="rating" value={formData.rating || 0} onChange={handleChange} className="form-input" step="0.1" min="0" max="10" />
                             </div>
                             <div>
                                 <label className="form-label text-xs">Duration (minutes)</label>
-                                <input type="number" name="durationInMinutes" value={selectedMovie.durationInMinutes || 0} onChange={handleChange} className="form-input" />
+                                <input type="number" name="durationInMinutes" value={formData.durationInMinutes || 0} onChange={handleChange} className="form-input" />
                             </div>
                              <div>
                                 <label className="form-label text-xs">Release Date/Time</label>
-                                <input type="datetime-local" name="releaseDateTime" value={(selectedMovie.releaseDateTime || '').slice(0, 16)} onChange={handleChange} className="form-input" />
+                                <input type="datetime-local" name="releaseDateTime" value={(formData.releaseDateTime || '').slice(0, 16)} onChange={handleChange} className="form-input" />
                             </div>
                              <div className="flex items-center pt-6">
-                                <input type="checkbox" id="copyright" name="hasCopyrightMusic" checked={selectedMovie.hasCopyrightMusic || false} onChange={handleChange} className="h-4 w-4 bg-gray-600 border-gray-500 text-red-500 rounded" />
+                                <input type="checkbox" id="copyright" name="hasCopyrightMusic" checked={formData.hasCopyrightMusic || false} onChange={handleChange} className="h-4 w-4 bg-gray-600 border-gray-500 text-red-500 rounded" />
                                 <label htmlFor="copyright" className="ml-2 text-sm text-gray-300">Has Copyright Music</label>
                             </div>
                         </div>

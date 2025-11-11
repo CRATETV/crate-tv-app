@@ -58,10 +58,31 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             try {
                 // Set up listeners for live data.
                 const moviesUnsub = db.collection('movies').onSnapshot(snapshot => {
-                    const liveMovies: Record<string, Movie> = {};
+                    const uniqueMoviesByTitle: Map<string, Movie> = new Map();
                     snapshot.forEach(doc => {
-                        liveMovies[doc.id] = { key: doc.id, ...doc.data() } as Movie;
+                        const movie = { key: doc.id, ...doc.data() } as Movie;
+                        if (!movie.title) return; // Skip movies without a title
+
+                        const normalizedTitle = movie.title.trim().toLowerCase();
+                        const existingMovie = uniqueMoviesByTitle.get(normalizedTitle);
+
+                        // If a movie with this title doesn't exist, add it.
+                        if (!existingMovie) {
+                            uniqueMoviesByTitle.set(normalizedTitle, movie);
+                        } else {
+                            // If the new movie has a fullMovie URL and the existing one doesn't, replace it.
+                            // This prioritizes the more complete entry.
+                            if (movie.fullMovie && !existingMovie.fullMovie) {
+                                uniqueMoviesByTitle.set(normalizedTitle, movie);
+                            }
+                        }
                     });
+
+                    // Convert the map of unique movies back to the Record<string, Movie> format
+                    const liveMovies: Record<string, Movie> = {};
+                    for (const movie of uniqueMoviesByTitle.values()) {
+                        liveMovies[movie.key] = movie;
+                    }
                     setMovies(liveMovies);
                 });
                 unsubscribes.push(moviesUnsub);

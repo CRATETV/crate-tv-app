@@ -88,8 +88,7 @@ export const categoriesData: Record<string, Category> = {
       'slap',
       'consumed',
       'itsinyou',
-      'unhinged',
-      'results'
+      'unhinged'
     ]
   },
   documentary: {
@@ -118,7 +117,7 @@ export const categoriesData: Record<string, Category> = {
 export const moviesData: Record<string, Movie> = {
   "geminitimeservice": {
     "key": "geminitimeservice",
-    "title": "Gemeni Time Service",
+    "title": "Gemini Time Service",
     "synopsis": "In a world where everyone knows their expiration date, Fern is anxious about her broken time device, and seeks help in an unexpected place.",
     "cast": [
       {
@@ -806,7 +805,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756485973547": {
     "key": "newmovie1756485973547",
-    "title": "Burst ",
+    "title": "Burst",
     "synopsis": "When two people with anger issues meet to do their community service, they pick up more than trash.",
     "cast": [
       {
@@ -849,7 +848,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756486933392": {
     "key": "newmovie1756486933392",
-    "title": "Power Trip ",
+    "title": "Power Trip",
     "synopsis": "A Traffic stop goes terribly bad.",
     "cast": [
       {
@@ -886,7 +885,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756487215116": {
     "key": "newmovie1756487215116",
-    "title": "Fling ",
+    "title": "Fling",
     "synopsis": "When a casual hookup between two strangers unexpectedly turns into dinner, what begins as flirtation spirals into something deeper.",
     "cast": [
       {
@@ -911,7 +910,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756487390550": {
     "key": "newmovie1756487390550",
-    "title": "I Still Love Her ",
+    "title": "I Still Love Her",
     "synopsis": "A boyfriend and his girlfriend quibble about the girlfriend’s boneheaded mistake.",
     "cast": [
       {
@@ -936,7 +935,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756487626529": {
     "key": "newmovie1756487626529",
-    "title": "Strange Encounters ",
+    "title": "Strange Encounters",
     "synopsis": " A black man experiences some strange encounters on his daily jog.",
     "cast": [
       {
@@ -998,7 +997,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "newmovie1756741314485": {
     "key": "newmovie1756741314485",
-    "title": "What If ",
+    "title": "What If",
     "synopsis": "Desperately seeking love and a date for her cousin's wedding, Sophia bypasses the usual suspects and takes a wild chance on a psychic medium.",
     "cast": [
       {
@@ -1127,7 +1126,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "theneighbours": {
     "key": "theneighbours",
-    "title": " Neighbours",
+    "title": "Neighbours",
     "synopsis": "A comedic drama with a dark twist.",
     "cast": [
       {
