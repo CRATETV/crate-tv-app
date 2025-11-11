@@ -121,7 +121,7 @@ export const moviesData: Record<string, Movie> = {
     "synopsis": "In a world where everyone knows their expiration date, Fern is anxious about her broken time device, and seeks help in an unexpected place.",
     "cast": [
       {
-        "name": "Cyan Zhong",
+        "name": "Xiani Zhong",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
         "bio": "Information regarding this actor is currently unavailable.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
@@ -204,8 +204,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Darrah Lashley",
     "trailer": "https://cratetelevision.s3.amazonaws.com/LifelessTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/LIFELESS.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless+1st+poster.jpg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless+1st+poster.jpg",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless+poster+remake+.jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless+poster+remake+.jpg",
     "likes": 0,
     "rating": 8.8
   },
@@ -236,8 +236,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Alana Hill",
     "trailer": "https://cratetelevision.s3.amazonaws.com/Almas+vow+cut+trailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/Almas+Vows+-+Alana+Hill.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/alma's+vows+pic.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/alma's+vows+pic.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Alma's+vows+poster+remake+.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Alma's+vows+poster+remake+.png",
     "likes": 0,
     "rating": 8.5
   },

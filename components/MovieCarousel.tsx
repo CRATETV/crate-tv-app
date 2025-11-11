@@ -70,10 +70,11 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                   >
                       <div className="relative aspect-[16/9] rounded-lg bg-transparent overflow-hidden">
                           <img 
-                              src={movie.poster}
+                              src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
                               alt={movie.title}
                               className="absolute top-0 right-0 h-full w-[55%] object-contain object-center group-hover:scale-105 transition-transform duration-300"
                               onContextMenu={(e) => e.preventDefault()}
+                              crossOrigin="anonymous"
                           />
                           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent"></div>
       
