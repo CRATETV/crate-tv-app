@@ -51,7 +51,7 @@ const App: React.FC = () => {
 
     const topTenMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
-            .filter((movie): movie is Movie => !!movie && !!movie.title && isMovieReleased(movie)) // Ensure movie is valid and released
+            .filter((movie): movie is Movie => !!movie && !!movie.title) // Ensure movie is valid
             .sort((a, b) => (b.likes || 0) - (a.likes || 0))
             .slice(0, 10);
     }, [movies]);
@@ -369,7 +369,7 @@ const App: React.FC = () => {
                             Object.entries(categories).map(([key, category]: [string, Category]) => {
                                 const categoryMovies = category.movieKeys
                                     .map(movieKey => movies[movieKey])
-                                    .filter((m): m is Movie => !!m && isMovieReleased(m));
+                                    .filter((m): m is Movie => !!m);
                                 
                                 if (categoryMovies.length === 0 || key === 'featured' || key === 'publicDomainIndie' || key === 'nowStreaming') return null;
 

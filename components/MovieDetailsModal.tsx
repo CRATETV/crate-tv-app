@@ -31,7 +31,7 @@ const RecommendedMovieCard: React.FC<{ movie: Movie; onClick: (movie: Movie) => 
             onClick={() => onClick(movie)}
         >
               {!isImageLoaded && (
-                <div className="absolute inset-0 bg-gray-800 animate-pulse"></div>
+                <div className="absolute inset-0 shimmer-bg"></div>
               )}
               <img
                   src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}

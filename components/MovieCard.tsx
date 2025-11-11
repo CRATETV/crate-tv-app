@@ -37,13 +37,29 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
     onSupportMovie?.(movie);
   }
 
+  if (!movie.poster) {
+    return (
+        <div
+          className="group relative cursor-pointer aspect-[2/3] rounded-md overflow-hidden bg-gray-800 flex flex-col items-center justify-center p-3 text-center"
+          onClick={() => onSelectMovie(movie)}
+        >
+          {isComingSoon && (
+            <div className="absolute top-2 left-2 bg-purple-600/80 text-white text-xs font-bold px-2 py-1 rounded-md backdrop-blur-sm z-10">
+              COMING SOON
+            </div>
+          )}
+          <p className="text-white font-bold">{movie.title}</p>
+        </div>
+    );
+  }
+
   return (
     <div
       className="group relative cursor-pointer aspect-[2/3] rounded-md overflow-hidden bg-transparent transition-transform duration-300 ease-in-out hover:scale-105 hover:z-10"
       onClick={() => onSelectMovie(movie)}
     >
       {!isImageLoaded && (
-        <div className="absolute inset-0 bg-gray-800 animate-pulse"></div>
+        <div className="absolute inset-0 shimmer-bg"></div>
       )}
       <img
         src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
