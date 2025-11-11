@@ -92,6 +92,14 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                     snapshot.forEach(doc => {
                         liveCategories[doc.id] = doc.data() as Category;
                     });
+                    
+                    // If the live data from Firestore is missing the 'nowPlaying' category,
+                    // merge the fallback 'nowPlaying' category from constants.ts.
+                    // This makes the banner resilient to accidental data deletion.
+                    if (!liveCategories.nowPlaying && categoriesData.nowPlaying) {
+                        liveCategories.nowPlaying = categoriesData.nowPlaying;
+                    }
+
                     setCategories(liveCategories);
                 });
                 unsubscribes.push(categoriesUnsub);
