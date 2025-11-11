@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 
         const data = await getApiData({ noCache });
 
-        // --- START OF DEDUPLICATION LOGIC ---
+        // --- START OF DEDUPLICATION AND NORMALIZATION LOGIC ---
         if (data && data.movies) {
             const uniqueMoviesByTitle: Map<string, Movie> = new Map();
             Object.values(data.movies).forEach((movie: any) => {
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
             }
             data.movies = dedupedMovies;
         }
-        // --- END OF DEDUPLICATION LOGIC ---
+        // --- END OF LOGIC ---
 
 
         return new Response(JSON.stringify(data), {

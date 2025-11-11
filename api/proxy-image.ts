@@ -10,9 +10,16 @@ export async function GET(request: Request) {
       return new Response('A valid Crate TV S3 image URL is required.', { status: 400 });
     }
 
-    const imageResponse = await fetch(imageUrl);
+    // FIX: S3 URLs use %20 for spaces, not '+'. Some URLs in the data are
+    // formatted with '+'. This replaces them to ensure the fetch request is valid.
+    const correctedImageUrl = imageUrl.replace(/\+/g, '%20');
+
+    const imageResponse = await fetch(correctedImageUrl);
+    
     if (!imageResponse.ok) {
-      return new Response('Failed to fetch image from source.', { status: imageResponse.status });
+      // Provide more debug info on failure
+      console.error(`Proxy failed to fetch: ${correctedImageUrl}, Status: ${imageResponse.status}`);
+      return new Response(`Failed to fetch image from source. Status: ${imageResponse.status}`, { status: imageResponse.status });
     }
 
     const imageBuffer = await imageResponse.arrayBuffer();
