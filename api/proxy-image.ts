@@ -3,16 +3,23 @@
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const imageUrl = searchParams.get('url');
+    let imageUrl = searchParams.get('url');
 
     // Add a security check to only proxy images from our own S3 bucket
     if (!imageUrl || !imageUrl.startsWith('https://cratetelevision.s3.')) {
       return new Response('A valid Crate TV S3 image URL is required.', { status: 400 });
     }
 
-    // FIX: S3 URLs use %20 for spaces, not '+'. Some URLs in the data are
-    // formatted with '+'. This replaces them to ensure the fetch request is valid.
-    const correctedImageUrl = imageUrl.replace(/\+/g, '%20');
+    // Trim whitespace from the URL which can cause issues.
+    imageUrl = imageUrl.trim();
+
+    // Robustly encode special characters for S3.
+    // The browser/server decodes the query param, so we need to re-encode spaces, +, ', etc.
+    // before fetching. Using chained replace calls is more reliable than a single regex for this.
+    const correctedImageUrl = imageUrl
+        .replace(/\+/g, '%20') // Replace '+' with space encoding
+        .replace(/\s/g, '%20') // Replace actual spaces with encoding
+        .replace(/'/g, '%27'); // Replace apostrophes with encoding
 
     const imageResponse = await fetch(correctedImageUrl);
     
