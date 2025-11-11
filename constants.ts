@@ -142,7 +142,7 @@ export const moviesData: Record<string, Movie> = {
     "director": "Xiani Zhong",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini+Time+Service+-+xiani+zhong+(1080p%2C+h264%2C+youtube).mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemeni+Time+Service.JPG",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini+Time+Service.JPG",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini+Time+Service.JPG",
     "likes": 0
   },
@@ -204,11 +204,7 @@ export const moviesData: Record<string, Movie> = {
     "director": "Darrah Lashley",
     "trailer": "https://cratetelevision.s3.amazonaws.com/LifelessTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/LIFELESS.mp4",
-<<<<<<< HEAD
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless+poster+remake.jpg",
-=======
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless+poster+remake+.jpg",
->>>>>>> 4885179d89241261f1dad99ec56d609fb211e586
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless+1st+poster.jpg",
     "likes": 0,
     "rating": 8.8
@@ -240,11 +236,7 @@ export const moviesData: Record<string, Movie> = {
     "director": "Alana Hill",
     "trailer": "https://cratetelevision.s3.amazonaws.com/Almas+vow+cut+trailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/Almas+Vows+-+Alana+Hill.mp4",
-<<<<<<< HEAD
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Alma's+vows+poster+remake.png",
-=======
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Alma's+vows+poster+remake+.png",
->>>>>>> 4885179d89241261f1dad99ec56d609fb211e586
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/alma's+vows+pic.png",
     "likes": 0
   },
@@ -287,8 +279,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Michael Dwayne Paylor",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Paycut.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Director's+cut+poster+.jpg.",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Director's+cut+poster+.jpg.",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Director's+cut+poster.jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Director's+cut+poster.jpg",
     "likes": 0,
     "rating": 9.2
   },
@@ -418,13 +410,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Joshua Daniel",
     "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/Hair+TrailerMP4.MP4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/HAIR.mp4",
-<<<<<<< HEAD
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Hair+poster+209+X+209+(2).jpg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Hair+poster+209+X+209+(2).jpg",
-=======
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Hair+poster+209+X+209++(2).jpg",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Hair+poster+209+X+209++(2).jpg",
->>>>>>> 4885179d89241261f1dad99ec56d609fb211e586
     "likes": 0
   },
   "eharmonycs": {
@@ -448,13 +435,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "RT Bowersox",
     "trailer": "https://cratetelevision.s3.amazonaws.com/eHarmonycsTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/EHARMONYCS.mp4",
-<<<<<<< HEAD
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/eHarmonics+poster+remake+(1).png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/eHarmonics+poster+remake+(1).png",
-=======
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/eHarmonics+poster+remake++(1).png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/eHarmonics+poster+remake++(1).png",
->>>>>>> 4885179d89241261f1dad99ec56d609fb211e586
     "likes": 0
   },
   "youvsthem": {
@@ -503,8 +485,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "David Auspitz",
     "trailer": "https://cratetelevision.s3.amazonaws.com/AutumnTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn+-+Alana+Hill.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn+poster+remake+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn+poster+remake+.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn+poster+remake.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn+poster+remake.png",
     "likes": 0
   },
   "streeteatstheboot": {
@@ -553,8 +535,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Salome Denoon",
     "trailer": "https://cratetelevision.s3.amazonaws.com/SilentLoveTrailer.mp4",
     "fullMovie": "https://cratetelevision.s3.amazonaws.com/SilentLove+Movie+05.14.2024-1+2.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/silent+Love+poster+",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/silent+Love+poster+",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/silent+Love+poster+remake.jpg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/silent+Love+poster+remake.jpg",
     "likes": 0
   },
   "juniper": {
@@ -717,7 +699,7 @@ export const moviesData: Record<string, Movie> = {
     "director": "Charles Ellis Washington",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/father+daughter+dance.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Father+Daughter+Dance+.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Father+Daughter+Dance.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Father+Daughter+Dance.png",
     "likes": 12
   },
@@ -734,10 +716,10 @@ export const moviesData: Record<string, Movie> = {
       }
     ],
     "director": "Robert Graves",
-    "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/it' 's+in+you+trailer.mov",
+    "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+trailer.mov",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Its+In+You.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+poster+jpeg.",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+poster+jpeg.",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+poster.jpeg",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+poster.jpeg",
     "likes": 1
   },
   "unhinged": {
@@ -755,8 +737,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Robert Graves",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+Unhinged-+A+film+by+Robert+Graves+%26+Philaye+Films.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+unhinged+Movie+poster+.JPG",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+unhinged+Movie+poster+.JPG",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+unhinged+Movie+poster.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/The+unhinged+Movie+poster.JPG",
     "likes": 0
   },
   "smirk": {
@@ -780,8 +762,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Vigneshwar Raju",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/smirk.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/smirk+poster+.png",
-    "tvPoster": "",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/smirk+poster.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/smirk+poster.png",
     "likes": 10
   },
   "intrusivethoughts": {
@@ -1200,8 +1182,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Shaunpaul Costello",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+in+a+Pod.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+pod+.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+pod+.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+Pod.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+Pod.png",
     "likes": 0
   },
   "tedandnatalie": {
@@ -1211,7 +1193,6 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Dana Godfrey",
-<<<<<<< HEAD
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
         "bio": "Information regarding this actor is currently unavailable.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
@@ -1221,20 +1202,13 @@ export const moviesData: Record<string, Movie> = {
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
         "bio": "Information regarding this actor is currently unavailable.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-=======
-        "photo": 
-      },
-      {
-        "name": "Patrick Thomas Kasey",
-        "photo": 
->>>>>>> 4885179d89241261f1dad99ec56d609fb211e586
       }
     ],
     "director": "Michelle M. Charles",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Natalie.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie.JPG",
     "likes": 0
   },
   
