@@ -12,7 +12,7 @@ import { isMovieReleased } from './constants';
 import { useAuth } from './contexts/AuthContext';
 import { useFestival } from './contexts/FestivalContext';
 import FestivalHero from './components/FestivalHero';
-import NowStreamingBanner from './components/NowStreamingBanner';
+import NowStreamingBanner from './components/NowPlayingBanner';
 import BackToTopButton from './components/BackToTopButton';
 import CollapsibleFooter from './components/CollapsibleFooter';
 import BottomNavBar from './components/BottomNavBar';

@@ -59,6 +59,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [seekAnim, setSeekAnim] = useState<'rewind' | 'forward' | null>(null);
   const clickTimeout = useRef<number | null>(null);
+  const [isVideoReady, setIsVideoReady] = useState(false);
   
   // Modal & Search State
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -262,12 +263,16 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             localStorage.removeItem(`cratetv-progress-${movieKey}`);
             handleGoHome();
         };
+        const handleCanPlay = () => {
+            setIsVideoReady(true);
+        };
 
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
         video.addEventListener('timeupdate', handleTimeUpdate);
         video.addEventListener('loadedmetadata', handleLoadedMetadata);
         video.addEventListener('ended', handleEnded);
+        video.addEventListener('canplay', handleCanPlay);
 
         const progressInterval = setInterval(() => {
             if (video.currentTime > 1 && !video.paused) {
@@ -281,6 +286,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             video.removeEventListener('timeupdate', handleTimeUpdate);
             video.removeEventListener('loadedmetadata', handleLoadedMetadata);
             video.removeEventListener('ended', handleEnded);
+            video.removeEventListener('canplay', handleCanPlay);
             clearInterval(progressInterval);
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
             if (clickTimeout.current) clearTimeout(clickTimeout.current);
@@ -443,11 +449,25 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 </button>
 
                 <div ref={adContainerRef} className="absolute inset-0 z-20" />
+
+                {!isVideoReady && !isAdPlaying && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
+                        <img 
+                            src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} 
+                            alt="" 
+                            className="w-full h-full object-cover blur-sm opacity-50" 
+                            crossOrigin="anonymous"
+                        />
+                        <div className="absolute">
+                            <LoadingSpinner />
+                        </div>
+                    </div>
+                )}
                 
                 <video
                     ref={videoRef}
                     src={movie.fullMovie}
-                    className="w-full h-full object-contain"
+                    className={`w-full h-full object-contain transition-opacity duration-500 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}
                     playsInline
                     onContextMenu={(e) => e.preventDefault()}
                     controlsList="nodownload"

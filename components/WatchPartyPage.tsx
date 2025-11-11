@@ -87,6 +87,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     
     const videoRef = useRef<HTMLVideoElement>(null);
     const [partyState, setPartyState] = useState<WatchPartyState>();
+    const [isVideoReady, setIsVideoReady] = useState(false);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -100,6 +101,20 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return () => unsubscribe();
     }, [movieKey]);
     
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        const handleCanPlay = () => setIsVideoReady(true);
+        video.addEventListener('canplay', handleCanPlay);
+
+        return () => {
+            if (video) {
+                video.removeEventListener('canplay', handleCanPlay);
+            }
+        };
+    }, []);
+
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !partyState) return;
@@ -149,11 +164,24 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 <button onClick={handleGoHome} className="absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 z-20" aria-label="Back to Home">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                 </button>
-                <div className="w-full aspect-video bg-black flex-shrink-0">
+                <div className="w-full aspect-video bg-black flex-shrink-0 relative">
+                    {!isVideoReady && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
+                            <img 
+                                src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} 
+                                alt="" 
+                                className="w-full h-full object-cover blur-sm opacity-50" 
+                                crossOrigin="anonymous"
+                            />
+                            <div className="absolute">
+                                <LoadingSpinner />
+                            </div>
+                        </div>
+                    )}
                     <video
                         ref={videoRef}
                         src={movie.fullMovie}
-                        className="w-full h-full"
+                        className={`w-full h-full transition-opacity duration-500 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}
                         playsInline
                         controls={false} // Controls are handled by the host
                     />
