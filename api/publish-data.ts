@@ -2,7 +2,7 @@
 // It will be accessible at the path /api/publish-data
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { Firestore } from 'firebase-admin/firestore';
+import { Firestore, FieldValue } from 'firebase-admin/firestore';
 import { Movie } from '../types.js';
 
 const checkAuth = (password: string | null) => {
@@ -27,6 +27,23 @@ const checkAuth = (password: string | null) => {
     return isAuthenticated;
 };
 
+// More robust title normalization and typo correction
+const normalizeTitle = (title: string): string => {
+    if (!title) return '';
+    let normalized = title
+        .replace(/[\u200B-\u200D\uFEFF]/g, '') // remove zero-width spaces
+        .replace(/\s+/g, ' ') // collapse whitespace
+        .trim()
+        .toLowerCase();
+    
+    // Specific fix for the user's reported issue
+    if (normalized.startsWith('gemeni time service')) {
+        normalized = normalized.replace('gemeni', 'gemini');
+    }
+    return normalized;
+};
+
+
 // Function to fetch all data from Firestore and assemble it for publishing
 const assembleLiveData = async (db: Firestore) => {
     const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap] = await Promise.all([
@@ -43,7 +60,7 @@ const assembleLiveData = async (db: Firestore) => {
         const movie = { key: doc.id, ...doc.data() } as Movie;
         if (!movie.title) return; // Skip movies without a title
 
-        const normalizedTitle = movie.title.trim().toLowerCase();
+        const normalizedTitle = normalizeTitle(movie.title);
         const existingMovie = uniqueMoviesByTitle.get(normalizedTitle);
 
         // If a movie with this title doesn't exist, add it.
@@ -132,7 +149,7 @@ export async function POST(request: Request) {
             });
         }
 
-        const validTypes = ['movies', 'categories', 'festival', 'about'];
+        const validTypes = ['movies', 'categories', 'festival', 'about', 'delete_movie'];
         if (!validTypes.includes(type)) {
             return new Response(JSON.stringify({ error: `Invalid data type provided: ${type}` }), {
                 status: 400,
@@ -148,6 +165,25 @@ export async function POST(request: Request) {
         const batch = db.batch();
 
         switch (type) {
+            case 'delete_movie': {
+                const { key } = data;
+                if (!key) throw new Error('Movie key is required for deletion.');
+        
+                const movieRef = db.collection('movies').doc(key);
+                batch.delete(movieRef);
+        
+                // Also remove from all categories
+                const categoriesSnap = await db.collection('categories').get();
+                categoriesSnap.forEach(doc => {
+                    const categoryData = doc.data();
+                    if (categoryData.movieKeys && Array.isArray(categoryData.movieKeys) && categoryData.movieKeys.includes(key)) {
+                        batch.update(doc.ref, {
+                            movieKeys: FieldValue.arrayRemove(key)
+                        });
+                    }
+                });
+                break;
+            }
             case 'movies':
                 const newKeys = Object.keys(data).filter(key => key.startsWith('newmovie'));
                 if (newKeys.length > 0) {
@@ -172,7 +208,7 @@ export async function POST(request: Request) {
                 }
 
                 for (const [id, docData] of Object.entries(data)) {
-                    const docRef = db.collection(type).doc(id);
+                    const docRef = db.collection('movies').doc(id);
                     batch.set(docRef, docData as object, { merge: true });
                 }
                 break;

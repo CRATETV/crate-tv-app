@@ -5,6 +5,7 @@ interface MovieEditorProps {
     allMovies: Record<string, Movie>;
     onRefresh: () => void;
     onSave: (movieData: Record<string, Movie>) => Promise<void>;
+    onDeleteMovie: (movieKey: string) => Promise<void>;
 }
 
 const emptyMovie: Movie = {
@@ -30,10 +31,11 @@ const emptyMovie: Movie = {
     mainPageExpiry: '',
 };
 
-const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave }) => {
+const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave, onDeleteMovie }) => {
     const [selectedMovieKey, setSelectedMovieKey] = useState<string>('');
     const [formData, setFormData] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // This effect populates the form when a movie is selected from the dropdown
     // or when the `allMovies` prop is updated after a save.
@@ -107,6 +109,26 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave 
             console.error("Save failed:", err);
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!formData || !formData.key) return;
+        const title = formData.title || 'this movie';
+        if (!window.confirm(`Are you sure you want to permanently delete "${title}"? This will remove it from all categories and cannot be undone.`)) {
+            return;
+        }
+
+        setIsDeleting(true);
+        try {
+            await onDeleteMovie(formData.key);
+            // After successful deletion, clear the form
+            setSelectedMovieKey('');
+            setFormData(null);
+        } catch (err) {
+            console.error("Delete failed:", err);
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -198,10 +220,21 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave 
                         </div>
                     </div>
                     
-                    <div className="pt-6 mt-6 border-t border-gray-700 flex items-center gap-4">
-                        <button onClick={handleSave} disabled={isSaving} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-5 rounded-md transition-colors">
+                    <div className="pt-6 mt-6 border-t border-gray-700 flex items-center justify-between gap-4">
+                        <button onClick={handleSave} disabled={isSaving || isDeleting} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-5 rounded-md transition-colors disabled:bg-gray-600">
                             {isSaving ? 'Publishing...' : 'Save & Publish Movie'}
                         </button>
+                        
+                        {formData && !formData.key.startsWith('newmovie') && (
+                            <button 
+                                type="button"
+                                onClick={handleDelete}
+                                disabled={isSaving || isDeleting}
+                                className="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-gray-600"
+                            >
+                                {isDeleting ? 'Deleting...' : 'Delete Movie'}
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
