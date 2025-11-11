@@ -4,6 +4,7 @@ import { Movie, Actor } from '../types';
 interface MovieEditorProps {
     allMovies: Record<string, Movie>;
     onRefresh: () => void;
+    onSave: (movieData: Record<string, Movie>) => Promise<void>;
 }
 
 const emptyMovie: Movie = {
@@ -29,11 +30,20 @@ const emptyMovie: Movie = {
     mainPageExpiry: '',
 };
 
-const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh }) => {
+const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave }) => {
     const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
-    const [message, setMessage] = useState('');
+    
+    // This effect keeps the editor form open and populated with fresh data after a save/refresh.
+    useEffect(() => {
+        if (selectedMovie) {
+            const updatedMovie = allMovies[selectedMovie.key];
+            if (updatedMovie) {
+                setSelectedMovie(updatedMovie);
+            }
+        }
+    }, [allMovies]);
+
 
     const handleSelectMovie = (key: string) => {
         if (key === 'new') {
@@ -79,27 +89,14 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh }) => {
     const handleSave = async () => {
         if (!selectedMovie) return;
         setIsSaving(true);
-        setStatus('idle');
-
-        const password = sessionStorage.getItem('adminPassword');
         try {
-            const response = await fetch('/api/publish-data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password, type: 'movies', data: { [selectedMovie.key]: selectedMovie } }),
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Failed to save.');
-            
-            setStatus('success');
-            setMessage('Movie saved successfully!');
-            onRefresh(); // Refresh data in parent
+            // Call the parent save function, which handles API calls and status messages
+            await onSave({ [selectedMovie.key]: selectedMovie });
         } catch (err) {
-            setStatus('error');
-            setMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
+            // Parent will handle showing the error toast
+            console.error(err);
         } finally {
             setIsSaving(false);
-            setTimeout(() => setStatus('idle'), 3000);
         }
     };
 
@@ -196,8 +193,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh }) => {
                         <button onClick={handleSave} disabled={isSaving} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-5 rounded-md transition-colors">
                             {isSaving ? 'Publishing...' : 'Save & Publish Movie'}
                         </button>
-                         {status === 'success' && <p className="text-green-500 text-sm">{message}</p>}
-                         {status === 'error' && <p className="text-red-500 text-sm">{message}</p>}
                     </div>
                 </div>
             )}

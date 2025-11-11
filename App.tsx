@@ -62,6 +62,9 @@ const App: React.FC = () => {
             .sort((a, b) => new Date(a.releaseDateTime!).getTime() - new Date(b.releaseDateTime!).getTime());
     }, [movies]);
 
+    const nowPlayingKey = useMemo(() => categories.nowPlaying?.movieKeys[0], [categories.nowPlaying]);
+    const nowPlayingMovie = useMemo(() => nowPlayingKey ? movies[nowPlayingKey] : null, [movies, nowPlayingKey]);
+
 
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
@@ -99,12 +102,6 @@ const App: React.FC = () => {
         setIsMobileSearchOpen(false);
         setSearchQuery('');
         handleSelectMovie(movie);
-    };
-
-    const handleSearchSubmit = (query: string) => {
-        if (searchResults.length > 0) {
-            handleSelectMovie(searchResults[0]);
-        }
     };
 
     const handleSupportMovie = (movie: Movie) => {
@@ -200,14 +197,13 @@ const App: React.FC = () => {
         }
 
         // New Film Announcement Check
-        const newFilmKey = 'geminitimeservice'; // The film to announce
-        const newFilm = movies[newFilmKey];
+        const newFilmKey = nowPlayingKey; // Use the configurable now playing movie
+        const newFilm = newFilmKey ? movies[newFilmKey] : null;
         if (newFilm && !sessionStorage.getItem('newFilmModalSeen')) {
-            // Re-disabled for now, can be re-enabled later.
-            // setNewFilmAnnouncement(newFilm);
+            setNewFilmAnnouncement(newFilm);
         }
 
-    }, [isLoading, isFestivalLive, movies]);
+    }, [isLoading, isFestivalLive, movies, nowPlayingKey]);
     
     useEffect(() => {
         if (likedMovies.size === 0 || Object.keys(movies).length === 0) {
@@ -248,7 +244,6 @@ const App: React.FC = () => {
         return <LoadingSpinner />;
     }
 
-    const nowPlayingMovie = movies['geminitimeservice'];
     const bannerHeight = liveWatchParty ? '3rem' : '0px';
 
     return (
@@ -257,7 +252,6 @@ const App: React.FC = () => {
             <Header 
                 searchQuery={searchQuery} 
                 onSearch={setSearchQuery} 
-                onSearchSubmit={handleSearchSubmit}
                 onMobileSearchClick={() => setIsMobileSearchOpen(true)}
                 topOffset={bannerHeight}
             />
@@ -286,83 +280,12 @@ const App: React.FC = () => {
                             />
                         )}
                         
-                        {comingSoonMovies.length > 0 && (
-                            <MovieCarousel
-                                key="coming-soon"
-                                title="Coming Soon"
-                                movies={comingSoonMovies}
-                                onSelectMovie={handleSelectMovie}
-                                isComingSoonCarousel={true}
-                                watchedMovies={watchedMovies}
-                                watchlist={watchlist}
-                                likedMovies={likedMovies}
-                                onToggleLike={toggleLikeMovie}
-                                onToggleWatchlist={toggleWatchlist}
-                                onSupportMovie={handleSupportMovie}
-                            />
-                        )}
-                        
-                        {topTenMovies.length > 0 && (
-                            <MovieCarousel
-                                key="top-ten"
-                                title="Top 10 on Crate TV Today"
-                                movies={topTenMovies}
-                                onSelectMovie={handlePlayMovie}
-                                showRankings={true}
-                                watchedMovies={watchedMovies}
-                                watchlist={watchlist}
-                                likedMovies={likedMovies}
-                                onToggleLike={toggleLikeMovie}
-                                onToggleWatchlist={toggleWatchlist}
-                                onSupportMovie={handleSupportMovie}
-                                allCategories={categories}
-                            />
-                        )}
-
-                        {watchlistMovies.length > 0 && (
-                            <MovieCarousel
-                                key="watchlist"
-                                title="My List"
-                                movies={watchlistMovies}
-                                onSelectMovie={handlePlayMovie}
-                                watchedMovies={watchedMovies}
-                                watchlist={watchlist}
-                                likedMovies={likedMovies}
-                                onToggleLike={toggleLikeMovie}
-                                onToggleWatchlist={toggleWatchlist}
-                                onSupportMovie={handleSupportMovie}
-                            />
-                        )}
-
-                        {recommendedMovies.length > 0 && (
-                            <MovieCarousel
-                                key="recommendations"
-                                title="Recommended for You"
-                                movies={recommendedMovies}
-                                onSelectMovie={handlePlayMovie}
-                                watchedMovies={watchedMovies}
-                                watchlist={watchlist}
-                                likedMovies={likedMovies}
-                                onToggleLike={toggleLikeMovie}
-                                onToggleWatchlist={toggleWatchlist}
-                                onSupportMovie={handleSupportMovie}
-                            />
-                        )}
-
-
-                        {// FIX: Explicitly type `category` as `Category` to resolve properties on the 'unknown' type.
-                        Object.entries(categories).map(([key, category]: [string, Category]) => {
-                            const categoryMovies = category.movieKeys
-                                .map(movieKey => movies[movieKey])
-                                .filter((m): m is Movie => !!m && isMovieReleased(m));
-                            
-                            if (categoryMovies.length === 0 || key === 'featured' || key === 'publicDomainIndie') return null;
-
-                            return (
+                        {searchQuery ? (
+                            searchResults.length > 0 ? (
                                 <MovieCarousel
-                                    key={key}
-                                    title={category.title}
-                                    movies={categoryMovies}
+                                    key="search-results"
+                                    title={`Search Results for "${searchQuery}"`}
+                                    movies={searchResults}
                                     onSelectMovie={handlePlayMovie}
                                     watchedMovies={watchedMovies}
                                     watchlist={watchlist}
@@ -371,8 +294,102 @@ const App: React.FC = () => {
                                     onToggleWatchlist={toggleWatchlist}
                                     onSupportMovie={handleSupportMovie}
                                 />
-                            );
-                        })}
+                            ) : (
+                                <div className="text-center text-gray-400 py-8">
+                                    <p>No results found for "{searchQuery}"</p>
+                                </div>
+                            )
+                        ) : (
+                          <>
+                            {comingSoonMovies.length > 0 && (
+                                <MovieCarousel
+                                    key="coming-soon"
+                                    title="Coming Soon"
+                                    movies={comingSoonMovies}
+                                    onSelectMovie={handleSelectMovie}
+                                    isComingSoonCarousel={true}
+                                    watchedMovies={watchedMovies}
+                                    watchlist={watchlist}
+                                    likedMovies={likedMovies}
+                                    onToggleLike={toggleLikeMovie}
+                                    onToggleWatchlist={toggleWatchlist}
+                                    onSupportMovie={handleSupportMovie}
+                                />
+                            )}
+                            
+                            {topTenMovies.length > 0 && (
+                                <MovieCarousel
+                                    key="top-ten"
+                                    title="Top 10 on Crate TV Today"
+                                    movies={topTenMovies}
+                                    onSelectMovie={handlePlayMovie}
+                                    showRankings={true}
+                                    watchedMovies={watchedMovies}
+                                    watchlist={watchlist}
+                                    likedMovies={likedMovies}
+                                    onToggleLike={toggleLikeMovie}
+                                    onToggleWatchlist={toggleWatchlist}
+                                    onSupportMovie={handleSupportMovie}
+                                    allCategories={categories}
+                                />
+                            )}
+
+                            {watchlistMovies.length > 0 && (
+                                <MovieCarousel
+                                    key="watchlist"
+                                    title="My List"
+                                    movies={watchlistMovies}
+                                    onSelectMovie={handlePlayMovie}
+                                    watchedMovies={watchedMovies}
+                                    watchlist={watchlist}
+                                    likedMovies={likedMovies}
+                                    onToggleLike={toggleLikeMovie}
+                                    onToggleWatchlist={toggleWatchlist}
+                                    onSupportMovie={handleSupportMovie}
+                                />
+                            )}
+
+                            {recommendedMovies.length > 0 && (
+                                <MovieCarousel
+                                    key="recommendations"
+                                    title="Recommended for You"
+                                    movies={recommendedMovies}
+                                    onSelectMovie={handlePlayMovie}
+                                    watchedMovies={watchedMovies}
+                                    watchlist={watchlist}
+                                    likedMovies={likedMovies}
+                                    onToggleLike={toggleLikeMovie}
+                                    onToggleWatchlist={toggleWatchlist}
+                                    onSupportMovie={handleSupportMovie}
+                                />
+                            )}
+
+
+                            {// FIX: Explicitly type `category` as `Category` to resolve properties on the 'unknown' type.
+                            Object.entries(categories).map(([key, category]: [string, Category]) => {
+                                const categoryMovies = category.movieKeys
+                                    .map(movieKey => movies[movieKey])
+                                    .filter((m): m is Movie => !!m && isMovieReleased(m));
+                                
+                                if (categoryMovies.length === 0 || key === 'featured' || key === 'publicDomainIndie' || key === 'nowPlaying') return null;
+
+                                return (
+                                    <MovieCarousel
+                                        key={key}
+                                        title={category.title}
+                                        movies={categoryMovies}
+                                        onSelectMovie={handlePlayMovie}
+                                        watchedMovies={watchedMovies}
+                                        watchlist={watchlist}
+                                        likedMovies={likedMovies}
+                                        onToggleLike={toggleLikeMovie}
+                                        onToggleWatchlist={toggleWatchlist}
+                                        onSupportMovie={handleSupportMovie}
+                                    />
+                                );
+                            })}
+                          </>
+                        )}
                     </div>
                 </div>
             </main>
@@ -402,7 +419,7 @@ const App: React.FC = () => {
                   searchQuery={searchQuery}
                   onSearch={setSearchQuery}
                   onClose={() => setIsMobileSearchOpen(false)}
-                  onSubmit={handleSearchSubmit}
+                  onSubmit={() => {}}
                   results={searchResults}
                   onSelectMovie={handleSelectFromSearch}
                 />

@@ -46,8 +46,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
             }
             // On successful login or signup, the AuthProvider handles the state change. We just close the modal.
             onClose();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+        } catch (err: any) {
+            if (err.code === 'auth/invalid-credential') {
+                setError('Incorrect email or password. Please try again.');
+            } else {
+                setError(err.message || 'An unknown error occurred.');
+            }
         } finally {
             setIsLoading(false);
         }

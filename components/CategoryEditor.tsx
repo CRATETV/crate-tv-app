@@ -156,7 +156,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
           disabled={isSaving}
           className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-5 rounded-md transition-colors"
         >
-          {isSaving ? 'Saving...' : 'Save Category Changes'}
+          {isSaving ? 'Publishing...' : 'Save & Publish Categories'}
         </button>
       </div>
 

@@ -15,6 +15,7 @@ import ContractsTab from './components/ContractsTab';
 import AdminPayoutsTab from './components/AdminPayoutsTab';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
 import PermissionsManager from './components/PermissionsManager';
+import SaveStatusToast from './components/SaveStatusToast';
 
 const ALL_TABS: Record<string, string> = {
     analytics: 'Analytics',
@@ -76,7 +77,7 @@ const AdminPage: React.FC = () => {
     
         try {
             const results = await Promise.allSettled([
-                fetch('/api/get-live-data'),
+                fetch('/api/get-live-data?noCache=true'),
                 fetch('/api/get-pipeline-data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) }),
                 fetch('/api/get-payouts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) }),
                 fetch('/api/get-admin-permissions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) })
@@ -133,7 +134,7 @@ const AdminPage: React.FC = () => {
         }
     }, []);
 
-    const handleSaveData = async (type: 'categories' | 'about' | 'festival', dataToSave: any) => {
+    const handleSaveData = async (type: 'movies' | 'categories' | 'about' | 'festival', dataToSave: any) => {
         setIsSaving(true);
         setSaveMessage('');
         setSaveError('');
@@ -146,16 +147,12 @@ const AdminPage: React.FC = () => {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Failed to save.');
-            setSaveMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} saved successfully!`);
+            setSaveMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} saved & published successfully!`);
             fetchAllData(password!); // Refresh all data after a successful save
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : 'An error occurred while saving.');
         } finally {
             setIsSaving(false);
-            setTimeout(() => {
-                setSaveMessage('');
-                setSaveError('');
-            }, 5000);
         }
     };
 
@@ -279,8 +276,6 @@ const AdminPage: React.FC = () => {
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-bold">Admin Dashboard</h1>
                     <div className="flex items-center gap-4">
-                        {saveMessage && <span className="text-sm text-green-400">{saveMessage}</span>}
-                        {saveError && <span className="text-sm text-red-400">{saveError}</span>}
                         {isSaving && <div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-white"></div>}
                         <button
                             onClick={handleLogout}
@@ -300,12 +295,12 @@ const AdminPage: React.FC = () => {
 
                 <div>
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
-                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} />}
+                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => console.log('Create movie from:', item)} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={setFestivalData} onConfigChange={setFestivalConfig} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}
-                    {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (movie) => console.log('Save movie:', movie)} />}
+                    {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (movie) => handleSaveData('movies', { [movie.key]: movie })} />}
                     {activeTab === 'about' && aboutData && <AboutEditor initialData={aboutData} onSave={(newData) => handleSaveData('about', newData)} isSaving={isSaving} />}
                     {activeTab === 'email' && <EmailSender />}
                     {activeTab === 'contracts' && <ContractsTab />}
@@ -321,6 +316,17 @@ const AdminPage: React.FC = () => {
                     }
                 </div>
             </div>
+            
+            {(saveMessage || saveError) && (
+                <SaveStatusToast
+                    message={saveMessage || saveError}
+                    isError={!!saveError}
+                    onClose={() => {
+                        setSaveMessage('');
+                        setSaveError('');
+                    }}
+                />
+            )}
         </div>
     );
 };

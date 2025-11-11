@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { FestivalProvider } from './contexts/FestivalContext';
 import { inject } from '@vercel/analytics';
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
+import UpdateBanner from './components/UpdateBanner';
 
 // Inject Vercel Analytics
 inject();
@@ -206,6 +208,31 @@ const MainApp: React.FC = () => {
     return (Date.now() - parseInt(lastSeen, 10)) > oneDay;
   });
 
+  const [showUpdateBanner, setShowUpdateBanner] = useState(false);
+  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+
+  const onUpdate = (registration: ServiceWorkerRegistration) => {
+    setShowUpdateBanner(true);
+    setWaitingWorker(registration.waiting);
+  };
+
+  const handleRefresh = () => {
+    waitingWorker?.postMessage({ type: 'SKIP_WAITING' });
+    setShowUpdateBanner(false);
+  };
+
+  useEffect(() => {
+    serviceWorkerRegistration.register({ onUpdate });
+
+    // This listener waits for the new service worker to take control and then reloads the page.
+    let refreshing = false;
+    navigator.serviceWorker?.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+    });
+  }, []);
+
   const handleIntroEnd = () => {
     localStorage.setItem('introSeenTimestamp', Date.now().toString());
     setShowIntro(false);
@@ -215,6 +242,12 @@ const MainApp: React.FC = () => {
     <AuthProvider>
       <FestivalProvider>
         {showIntro ? <Intro onIntroEnd={handleIntroEnd} /> : <AppRouter />}
+        {showUpdateBanner && (
+            <UpdateBanner 
+                onRefresh={handleRefresh} 
+                onDismiss={() => setShowUpdateBanner(false)} 
+            />
+        )}
       </FestivalProvider>
     </AuthProvider>
   );
@@ -225,16 +258,3 @@ root.render(
     <MainApp />
   </React.StrictMode>
 );
-
-// Register the Service Worker for PWA functionality
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(registration => {
-        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-      })
-      .catch(error => {
-        console.log('ServiceWorker registration failed: ', error);
-      });
-  });
-}

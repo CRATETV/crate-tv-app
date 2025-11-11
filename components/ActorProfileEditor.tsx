@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { ActorProfile } from '../types';
 import PublicS3Uploader from './PublicS3Uploader';
@@ -123,29 +122,11 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
                     <div className="space-y-4">
                         <label className="block text-sm font-medium text-gray-400">Profile Photo (Square)</label>
                         {profile.photo && <img src={profile.photo} alt="Profile preview" className="w-32 h-32 object-cover rounded-lg border-2 border-gray-600" />}
-                         <input
-                            type="text"
-                            name="photo"
-                            value={profile.photo || ''}
-                            onChange={handleInputChange}
-                            className="form-input"
-                            placeholder="Paste image URL or upload"
-                            required
-                        />
                         <PublicS3Uploader label="Upload New Photo" onUploadSuccess={(url) => handleUrlUpdate('photo', url)} />
                     </div>
                      <div className="space-y-4">
                         <label className="block text-sm font-medium text-gray-400">High-Res Photo (for Bio Modal)</label>
                         {profile.highResPhoto && <img src={profile.highResPhoto} alt="High-res preview" className="w-32 h-32 object-cover rounded-lg border-2 border-gray-600" />}
-                        <input
-                            type="text"
-                            name="highResPhoto"
-                            value={profile.highResPhoto || ''}
-                            onChange={handleInputChange}
-                            className="form-input"
-                            placeholder="Paste image URL or upload"
-                            required
-                        />
                         <PublicS3Uploader label="Upload High-Res Photo" onUploadSuccess={(url) => handleUrlUpdate('highResPhoto', url)} />
                     </div>
                 </div>

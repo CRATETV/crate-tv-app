@@ -1,6 +1,9 @@
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/publish-data
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+// FIX: Import the Firestore type to resolve the 'Cannot find namespace' error.
+import { Firestore } from 'firebase-admin/firestore';
 
 const checkAuth = (password: string | null) => {
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
@@ -23,6 +26,70 @@ const checkAuth = (password: string | null) => {
     }
     return isAuthenticated;
 };
+
+// Function to fetch all data from Firestore and assemble it for publishing
+const assembleLiveData = async (db: Firestore) => {
+    const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap] = await Promise.all([
+        db.collection('movies').get(),
+        db.collection('categories').get(),
+        db.collection('content').doc('about').get(),
+        db.collection('festival').doc('config').get(),
+        db.collection('festival').doc('schedule').collection('days').get()
+    ]);
+
+    const moviesData: Record<string, any> = {};
+    moviesSnap.forEach(doc => moviesData[doc.id] = doc.data());
+
+    const categoriesData: Record<string, any> = {};
+    categoriesSnap.forEach(doc => categoriesData[doc.id] = doc.data());
+
+    const aboutData = aboutSnap.exists ? aboutSnap.data() : null;
+    const festivalConfig = festivalConfigSnap.exists ? festivalConfigSnap.data() : null;
+
+    const festivalData: any[] = [];
+    festivalDaysSnap.forEach(doc => festivalData.push(doc.data()));
+    festivalData.sort((a, b) => a.day - b.day);
+
+    return {
+        movies: moviesData,
+        categories: categoriesData,
+        aboutData,
+        festivalConfig,
+        festivalData
+    };
+};
+
+const publishToS3 = async (liveData: any) => {
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    let region = process.env.AWS_S3_REGION;
+
+    if (!bucketName || !region || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+        throw new Error("AWS S3 environment variables are not fully configured for publishing.");
+    }
+
+    if (region === 'global') {
+        region = 'us-east-1';
+    }
+
+    const s3Client = new S3Client({
+        region,
+        credentials: {
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        },
+    });
+
+    const command = new PutObjectCommand({
+        Bucket: bucketName,
+        Key: 'live-data.json',
+        Body: JSON.stringify(liveData, null, 2),
+        ContentType: 'application/json',
+        CacheControl: 'public, s-maxage=60, stale-while-revalidate=300' // Set cache headers
+    });
+
+    await s3Client.send(command);
+};
+
 
 export async function POST(request: Request) {
     try {
@@ -62,7 +129,6 @@ export async function POST(request: Request) {
             case 'categories':
                 for (const [id, docData] of Object.entries(data)) {
                     const docRef = db.collection(type).doc(id);
-                    // FIX: Cast `docData` to `object` to satisfy Firestore's `set` method signature.
                     batch.set(docRef, docData as object, { merge: true });
                 }
                 break;
@@ -87,7 +153,11 @@ export async function POST(request: Request) {
 
         await batch.commit();
 
-        return new Response(JSON.stringify({ success: true, message: `Data of type '${type}' published successfully.` }), {
+        // After successfully saving to Firestore, regenerate and publish the live-data.json to S3
+        const liveData = await assembleLiveData(db);
+        await publishToS3(liveData);
+
+        return new Response(JSON.stringify({ success: true, message: `Data of type '${type}' saved and published successfully.` }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
         });

@@ -4,7 +4,10 @@ import { getApiData } from './_lib/data.js';
 
 export async function GET(request: Request) {
     try {
-        const data = await getApiData();
+        const { searchParams } = new URL(request.url);
+        const noCache = searchParams.get('noCache') === 'true';
+
+        const data = await getApiData({ noCache });
         return new Response(JSON.stringify(data), {
             status: 200,
             headers: {

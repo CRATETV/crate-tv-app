@@ -38,8 +38,12 @@ const LoginPage: React.FC = () => {
                 // After signup, onAuthStateChanged in AuthContext will handle
                 // updating the user state, which triggers the AppRouter to show the correct page.
             }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+        } catch (err: any) {
+            if (err.code === 'auth/invalid-credential') {
+                setError('Incorrect email or password. Please try again.');
+            } else {
+                setError(err.message || 'An unknown error occurred.');
+            }
         } finally {
             setIsLoading(false);
         }

@@ -334,7 +334,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
           disabled={isSaving}
           className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-5 rounded-md transition-colors"
         >
-          {isSaving ? 'Saving...' : 'Save Festival Settings'}
+          {isSaving ? 'Publishing...' : 'Save & Publish Festival'}
         </button>
       </div>
       

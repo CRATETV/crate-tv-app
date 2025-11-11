@@ -76,11 +76,13 @@ const CreatorDashboardPage: React.FC = () => {
                 <div className="max-w-7xl mx-auto">
                      <div className="mb-8">
                         <h1 className="text-4xl font-bold text-white">Welcome, {user.name}</h1>
+                        {isDualRole && (
+                            <p className="text-gray-400 mt-2">You have access to both Filmmaker and Actor portals. Switch between them below.</p>
+                        )}
                     </div>
 
                     {isDualRole ? (
                         <div className="mb-8">
-                            <p className="text-gray-400 mt-2 mb-4">You have access to both Filmmaker and Actor portals. Switch between them below.</p>
                             <div className="flex items-center gap-2 md:gap-6 border-b border-gray-700">
                                 <button
                                     onClick={() => setActiveView('filmmaker')}
@@ -100,32 +102,34 @@ const CreatorDashboardPage: React.FC = () => {
                         </div>
                     ) : null}
 
-                    {activeView === 'filmmaker' && user.isFilmmaker && (
-                        <>
-                            <FilmmakerDashboardView />
-                            {!user.isActor && (
-                                <div className="mt-12 text-center bg-gray-800/50 border border-gray-700 p-8 rounded-lg">
-                                    <h3 className="text-2xl font-bold text-white">Unlock the Actor Portal</h3>
-                                    <p className="text-gray-300 my-4 max-w-lg mx-auto">Create a public profile, connect in the Green Room, and access tools like our AI Monologue Generator.</p>
-                                    <a href="/actor-signup" onClick={(e) => handleNavigate(e, '/actor-signup')} className="submit-btn inline-block bg-purple-600 hover:bg-purple-700">Activate Actor Tools</a>
-                                    <p className="text-xs text-gray-500 mt-2">This will add actor features to your existing account.</p>
-                                </div>
-                            )}
-                        </>
-                    )}
-                    {activeView === 'actor' && user.isActor && (
-                         <>
-                            <ActorPortalView />
-                            {!user.isFilmmaker && (
-                                 <div className="mt-12 text-center bg-gray-800/50 border border-gray-700 p-8 rounded-lg">
-                                    <h3 className="text-2xl font-bold text-white">Unlock the Filmmaker Dashboard</h3>
-                                    <p className="text-gray-300 my-4 max-w-lg mx-auto">Access your film's performance analytics, track revenue, and manage payouts.</p>
-                                    <a href="/filmmaker-signup" onClick={(e) => handleNavigate(e, '/filmmaker-signup')} className="submit-btn inline-block bg-purple-600 hover:bg-purple-700">Activate Filmmaker Tools</a>
-                                    <p className="text-xs text-gray-500 mt-2">This will add filmmaker features to your existing account.</p>
-                                </div>
-                            )}
-                        </>
-                    )}
+                    <div className="mt-8">
+                        {activeView === 'filmmaker' && user.isFilmmaker && (
+                            <>
+                                <FilmmakerDashboardView />
+                                {!user.isActor && (
+                                    <div className="mt-12 text-center bg-gray-800/50 border border-gray-700 p-8 rounded-lg">
+                                        <h3 className="text-2xl font-bold text-white">Unlock the Actor Portal</h3>
+                                        <p className="text-gray-300 my-4 max-w-lg mx-auto">Create a public profile, connect in the Green Room, and access tools like our AI Monologue Generator.</p>
+                                        <a href="/actor-signup" onClick={(e) => handleNavigate(e, '/actor-signup')} className="submit-btn inline-block bg-purple-600 hover:bg-purple-700">Activate Actor Tools</a>
+                                        <p className="text-xs text-gray-500 mt-2">This will add actor features to your existing account.</p>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                        {activeView === 'actor' && user.isActor && (
+                            <>
+                                <ActorPortalView />
+                                {!user.isFilmmaker && (
+                                    <div className="mt-12 text-center bg-gray-800/50 border border-gray-700 p-8 rounded-lg">
+                                        <h3 className="text-2xl font-bold text-white">Unlock the Filmmaker Dashboard</h3>
+                                        <p className="text-gray-300 my-4 max-w-lg mx-auto">Access your film's performance analytics, track revenue, and manage payouts.</p>
+                                        <a href="/filmmaker-signup" onClick={(e) => handleNavigate(e, '/filmmaker-signup')} className="submit-btn inline-block bg-purple-600 hover:bg-purple-700">Activate Filmmaker Tools</a>
+                                        <p className="text-xs text-gray-500 mt-2">This will add filmmaker features to your existing account.</p>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
 
                 </div>
             </main>

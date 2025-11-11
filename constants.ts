@@ -10,13 +10,18 @@ export const isMovieReleased = (movie: Movie | undefined | null): boolean => {
 };
 
 export const categoriesData: Record<string, Category> = {
+  nowPlaying: {
+    title: 'Now Playing',
+    movieKeys: ['geminitimeservice']
+  },
   featured: {
     title: 'Featured Films',
-    movieKeys: ['consumed', 'newmovie1756741314485', 'lifeless', 'foodiecalldirectorscut', 'juniper']
+    movieKeys: ['consumed', 'results', 'newmovie1756741314485', 'lifeless', 'foodiecalldirectorscut', 'juniper']
   },
   newReleases: {
     title: 'New Releases',
     movieKeys: [
+        'geminitimeservice',
         'thatloud',
         'results',
         'newmovie1756741314485', // What If
@@ -62,6 +67,7 @@ export const categoriesData: Record<string, Category> = {
   drama: {
     title: 'Dramas',
     movieKeys: [
+      'geminitimeservice',
       'results',
       'lifeless',
       'almasvows',
@@ -82,7 +88,8 @@ export const categoriesData: Record<string, Category> = {
       'slap',
       'consumed',
       'itsinyou',
-      'unhinged'
+      'unhinged',
+      'results'
     ]
   },
   documentary: {
@@ -109,6 +116,37 @@ export const categoriesData: Record<string, Category> = {
 };
 
 export const moviesData: Record<string, Movie> = {
+  "geminitimeservice": {
+    "key": "geminitimeservice",
+    "title": "Gemeni Time Service",
+    "synopsis": "In a world where everyone knows their expiration date, Fern is anxious about her broken time device, and seeks help in an unexpected place.",
+    "cast": [
+      {
+        "name": "Cyan Zhong",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Sara Montse",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Sumner Sykes",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Xiani Zhong",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini+Time+Service+-+xiani+zhong+(1080p%2C+h264%2C+youtube).mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemeni+Time+Service.JPG",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemeni+Time+Service.JPG",
+    "likes": 0
+  },
   "thatloud": {
     "key": "thatloud",
     "title": "That Loud",

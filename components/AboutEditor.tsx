@@ -97,7 +97,7 @@ const AboutEditor: React.FC<AboutEditorProps> = ({ initialData, onSave, isSaving
                     disabled={isSaving}
                     className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-5 rounded-md transition-colors"
                 >
-                    {isSaving ? 'Saving...' : "Save 'About Us' Content"}
+                    {isSaving ? 'Publishing...' : "Save & Publish About Page"}
                 </button>
             </div>
         </div>

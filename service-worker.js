@@ -70,3 +70,11 @@ self.addEventListener('activate', event => {
     })
   );
 });
+
+// This listener allows the new service worker to take control immediately
+// when instructed by the client page.
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});

@@ -60,9 +60,9 @@ const fetchFromS3 = async (client: S3Client, bucketName: string, key: string) =>
 }
 
 
-export const getApiData = async () => {
+export const getApiData = async (options: { noCache?: boolean } = {}) => {
     const now = Date.now();
-    if (cachedData && (now - lastFetchTime < CACHE_DURATION)) {
+    if (!options.noCache && cachedData && (now - lastFetchTime < CACHE_DURATION)) {
         return cachedData;
     }
 
