@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Movie, Actor } from '../types';
 
@@ -234,7 +235,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave,
                             {isSaving ? 'Publishing...' : 'Save & Publish Movie'}
                         </button>
                         
-                        {formData && !formData.key.startsWith('newmovie') && (
+                        {formData && (
                              <button
                                 type="button"
                                 onClick={handleSetNowStreamingClick}

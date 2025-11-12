@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -325,7 +326,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                     </tbody>
                                 </table>
                             </div>
-                            <BillingReminders />
                         </div>
                     )}
                     
@@ -363,6 +363,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                     transactions={analyticsData.billSavingsTransactions}
                                     onRefreshData={fetchData}
                                 />
+                                <BillingReminders />
                             </div>
                         </div>
                     )}
