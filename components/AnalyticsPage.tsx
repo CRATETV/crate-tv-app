@@ -325,6 +325,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                     </tbody>
                                 </table>
                             </div>
+                            <BillingReminders />
                         </div>
                     )}
                     
