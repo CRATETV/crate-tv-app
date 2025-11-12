@@ -17,6 +17,7 @@ import { MoviePipelineTab } from './components/MoviePipelineTab';
 import PermissionsManager from './components/PermissionsManager';
 import SaveStatusToast from './components/SaveStatusToast';
 import MonetizationTab from './components/MonetizationTab';
+import AdminGuide from './components/AdminGuide';
 
 const ALL_TABS: Record<string, string> = {
     analytics: 'Analytics',
@@ -32,6 +33,7 @@ const ALL_TABS: Record<string, string> = {
     monetization: 'Monetization',
     security: 'Security',
     roku: 'Roku',
+    guide: 'Developer Guide',
     fallback: 'Fallback Data',
     permissions: 'Permissions'
 };
@@ -245,7 +247,7 @@ const AdminPage: React.FC = () => {
         } else {
             // Default permissions for built-in roles if not defined in DB
             const defaultPermissions: Record<string, string[]> = {
-                collaborator: ['movies', 'categories', 'pipeline', 'fallback'],
+                collaborator: ['movies', 'categories', 'pipeline', 'fallback', 'guide'],
                 festival_admin: ['festival'],
             };
             tabs = permissions[role] || defaultPermissions[role] || [];
@@ -353,6 +355,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'monetization' && <MonetizationTab />}
                     {activeTab === 'security' && <SecurityTab />}
                     {activeTab === 'roku' && <RokuAdminTab />}
+                    {activeTab === 'guide' && <AdminGuide />}
                     {activeTab === 'fallback' && <FallbackGenerator movies={movies} categories={categories} festivalData={festivalData} festivalConfig={festivalConfig} aboutData={aboutData} />}
                     {activeTab === 'permissions' && (role === 'super_admin' || role === 'master') && 
                         <PermissionsManager 

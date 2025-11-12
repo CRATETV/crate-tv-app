@@ -163,13 +163,21 @@ export async function GET(request: Request) {
                            new Date() >= new Date(festivalConfig.startDate) && 
                            new Date() < new Date(festivalConfig.endDate);
                            
-    const festivalCategories: Category[] = [];
+    let festivalContent = null;
     if (isFestivalLive && festivalData) {
-        festivalData.forEach((day: FestivalDay) => {
-            day.blocks.forEach((block: FilmBlock) => {
-                festivalCategories.push({ title: `Day ${day.day}: ${block.title}`, movieKeys: block.movieKeys });
-            });
-        });
+        festivalContent = {
+            config: festivalConfig,
+            days: festivalData.map((day: FestivalDay) => ({
+                ...day,
+                blocks: day.blocks.map((block: FilmBlock) => ({
+                    ...block,
+                    children: block.movieKeys
+                        .map(key => visibleMovies[key])
+                        .filter((m): m is Movie => !!m)
+                        .map(m => formatMovieForRoku(m, movieGenreMap, user))
+                }))
+            }))
+        };
     }
     
     const accountItem: RokuMovie = {
@@ -193,9 +201,7 @@ export async function GET(request: Request) {
     const finalCategories: RokuCategory[] = [accountCategory];
     const orderedCategories: (Category | null)[] = [
         myListCategory, // Add My List to the top
-        ...festivalCategories,
         nowStreamingCategory,
-        // Top ten is now handled separately
     ];
 
     const processedKeys = new Set(['featured', 'pwff12thAnnual', 'nowStreaming', 'topTen']);
@@ -222,6 +228,8 @@ export async function GET(request: Request) {
       categories: finalCategories,
       isLinked: isDeviceLinked,
       uid: user?.uid, // Pass uid for client-side actions
+      isFestivalLive: isFestivalLive,
+      festivalContent: festivalContent,
     };
 
     return new Response(JSON.stringify(content, null, 2), {
