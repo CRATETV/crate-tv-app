@@ -37,6 +37,14 @@ const setMetaTag = (attr: 'name' | 'property', value: string, content: string) =
   element.setAttribute('content', content);
 };
 
+// A local, simplified spinner for the video preloader to avoid layout conflicts.
+const VideoPreloaderSpinner: React.FC = () => (
+    <div className="relative w-16 h-16">
+        <div className="absolute inset-0 border-4 border-dashed rounded-full animate-spin border-red-500"></div>
+        <div className="absolute inset-3 border-4 border-dashed rounded-full animate-spin border-blue-500" style={{ animationDirection: 'reverse' }}></div>
+    </div>
+);
+
 export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const { user, markAsWatched, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist } = useAuth();
   const { isLoading: isDataLoading, movies: allMovies, categories: allCategories, dataSource } = useFestival();
@@ -459,7 +467,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             crossOrigin="anonymous"
                         />
                         <div className="absolute">
-                            <LoadingSpinner />
+                            <VideoPreloaderSpinner />
                         </div>
                     </div>
                 )}

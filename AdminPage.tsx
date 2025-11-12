@@ -30,7 +30,7 @@ const ALL_TABS: Record<string, string> = {
     about: 'About Page',
     email: 'Email',
     contracts: 'File Cabinet',
-    monetization: 'Monetization',
+    monetization: 'AI Monetization',
     security: 'Security',
     roku: 'Roku',
     guide: 'Developer Guide',
