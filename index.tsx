@@ -194,7 +194,55 @@ const AppRouter: React.FC = () => {
   }
 };
 
+const SideloadingInstructions: React.FC = () => (
+  <div style={{
+    backgroundColor: '#141414',
+    color: 'white',
+    fontFamily: 'Inter, sans-serif',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100vh',
+    padding: '2rem',
+    textAlign: 'center',
+  }}>
+    <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#EF4444', marginBottom: '1rem' }}>Initialization Error</h1>
+    <p style={{ fontSize: '1.1rem', maxWidth: '600px', marginBottom: '1.5rem' }}>
+      This application requires a development server to run correctly. Please do not open the <strong>index.html</strong> file directly.
+    </p>
+    <p style={{ fontSize: '1.1rem', maxWidth: '600px', marginBottom: '2rem' }}>
+      To start the app, run the following commands in your project's terminal:
+    </p>
+    <pre style={{
+      backgroundColor: '#1F2937',
+      padding: '1rem 1.5rem',
+      borderRadius: '0.5rem',
+      fontSize: '1rem',
+      textAlign: 'left',
+      color: '#A5B4FC',
+      border: '1px solid #374151',
+    }}>
+      <code>
+        <div style={{color: '#6B7280'}}># 1. Install dependencies (if you haven't already)</div>
+        <div>npm install</div>
+        <br/>
+        <div style={{color: '#6B7280'}}># 2. Start the development server</div>
+        <div>npm run dev</div>
+      </code>
+    </pre>
+     <p style={{ fontSize: '0.9rem', color: '#6B7280', marginTop: '2rem' }}>
+        The app will then be available at <a href="http://localhost:5373" style={{color: '#8B5CF6', textDecoration: 'underline'}}>http://localhost:5373</a>.
+    </p>
+  </div>
+);
+
+
 const MainApp: React.FC = () => {
+  if (window.location.protocol === 'file:') {
+    return <SideloadingInstructions />;
+  }
+
   const [showIntro, setShowIntro] = useState(() => {
     const lastSeen = localStorage.getItem('introSeenTimestamp');
     if (!lastSeen) {

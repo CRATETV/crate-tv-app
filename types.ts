@@ -122,6 +122,17 @@ export interface ActorProfile {
     imdbUrl: string;
 }
 
+// FIX: Added missing ActorPost interface.
+export interface ActorPost {
+    id: string;
+    actorName: string;
+    actorPhoto: string;
+    content: string;
+    imageUrl?: string;
+    timestamp: any; // Firestore Timestamp
+    likes: string[];
+}
+
 export interface PayoutRequest {
   id: string;
   directorName: string;
@@ -288,14 +299,4 @@ export interface WatchPartyState {
     status: 'waiting' | 'live' | 'ended';
     lastUpdatedBy: string;
     lastUpdated?: any; // Firestore Timestamp
-}
-
-export interface ActorPost {
-    id: string;
-    actorName: string;
-    actorPhoto: string;
-    content: string;
-    imageUrl?: string;
-    timestamp: any; // Firestore Timestamp
-    likes: string[];
 }

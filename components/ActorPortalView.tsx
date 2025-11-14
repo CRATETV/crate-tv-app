@@ -1,5 +1,4 @@
 import React from 'react';
-import GreenRoomFeed from './GreenRoomFeed';
 import { useAuth } from '../contexts/AuthContext';
 import PlayFinder from './PlayFinder';
 import ActorProfileEditor from './ActorProfileEditor';
@@ -41,7 +40,6 @@ const ActorPortalView: React.FC = () => {
                 {/* Right Column: Tools */}
                 <div className="space-y-8">
                     <PlayFinder />
-                    <GreenRoomFeed actorName={user.name} />
                 </div>
             </div>
         </div>
