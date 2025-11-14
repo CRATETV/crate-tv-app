@@ -1,0 +1,64 @@
+import fs from 'fs/promises';
+import path from 'path';
+import JSZip from 'jszip';
+// FIX: The `process` global is not available by default in some strict TypeScript or module contexts. Importing it directly from the 'process' module resolves the error where 'cwd' and 'exit' properties were not found.
+import process from 'process';
+
+// Helper to recursively read a directory
+async function readDirectory(dirPath) {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    const files = await Promise.all(entries.map((entry) => {
+        const res = path.resolve(dirPath, entry.name);
+        return entry.isDirectory() ? readDirectory(res) : res;
+    }));
+    return files.flat();
+}
+
+async function main() {
+    console.log('Starting Roku channel packaging...');
+
+    const projectRoot = process.cwd();
+    const rokuDir = path.join(projectRoot, 'roku');
+    const distDir = path.join(projectRoot, 'dist');
+    const outputZipPath = path.join(distDir, 'cratetv-roku-channel.zip');
+
+    try {
+        // Ensure dist directory exists
+        await fs.mkdir(distDir, { recursive: true });
+
+        const filesToInclude = await readDirectory(rokuDir);
+        const zip = new JSZip();
+
+        // Add all files from /roku to the zip
+        for (const file of filesToInclude) {
+            const content = await fs.readFile(file);
+            const zipPath = path.relative(rokuDir, file);
+            if (content.length > 0) {
+                zip.file(zipPath, content);
+            }
+        }
+        
+        // Create the manifest file
+        zip.file('manifest', `
+title=Crate TV
+major_version=1
+minor_version=2
+build_version=0
+mm_icon_focus_hd=pkg:/images/logo_hd.png
+mm_icon_side_hd=pkg:/images/logo_hd.png
+splash_screen_hd=pkg:/images/splash_hd.png
+fonts=hd,sd
+`.trim());
+
+        // Generate and write the zip file
+        const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+        await fs.writeFile(outputZipPath, zipBuffer);
+
+        console.log(`✅ Roku channel successfully packaged at: ${outputZipPath}`);
+    } catch (error) {
+        console.error('❌ Error packaging Roku channel:', error);
+        process.exit(1);
+    }
+}
+
+main();

@@ -258,6 +258,7 @@ export interface AnalyticsData {
     totalUsers: number;
     viewCounts: Record<string, number>;
     movieLikes: Record<string, number>;
+    watchlistCounts: Record<string, number>;
     filmmakerPayouts: FilmmakerPayout[];
     viewLocations: Record<string, Record<string, number>>;
     allUsers: { email: string }[];

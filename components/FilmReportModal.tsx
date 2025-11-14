@@ -9,6 +9,7 @@ interface FilmReportModalProps {
         director: string;
         views: number;
         likes: number;
+        watchlistAdds: number;
         donations: number;
         crateTvCut: number;
         filmmakerDonationPayout: number;
@@ -74,6 +75,7 @@ const FilmReportModal: React.FC<FilmReportModalProps> = ({ filmData, onClose }) 
             ["--- Performance ---", ""],
             ["Total Views", filmData.views],
             ["Total Likes", filmData.likes],
+            ["Total 'My List' Adds", filmData.watchlistAdds],
             ["--- Financials (in Cents) ---", ""],
             ["Total Donations Received", filmData.donations],
             ["Filmmaker Donation Payout (70%)", filmData.filmmakerDonationPayout],
@@ -116,6 +118,7 @@ const FilmReportModal: React.FC<FilmReportModalProps> = ({ filmData, onClose }) 
                         <h4 className="text-lg font-semibold text-gray-300 mt-6 mb-2">Performance Metrics</h4>
                         <ReportRow label="Total Views" value={formatNumber(filmData.views)} />
                         <ReportRow label="Total Likes" value={formatNumber(filmData.likes)} />
+                        <ReportRow label="Total 'My List' Adds" value={formatNumber(filmData.watchlistAdds)} />
 
                         <h4 className="text-lg font-semibold text-gray-300 mt-6 mb-2">Financial Breakdown</h4>
                         <ReportRow label="Total Donations Received" value={formatCurrency(filmData.donations)} />

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -23,6 +24,7 @@ type FilmPerformanceData = {
     director: string;
     views: number;
     likes: number;
+    watchlistAdds: number;
     donations: number;
     crateTvCut: number;
     filmmakerDonationPayout: number;
@@ -133,6 +135,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                 director: movie.director,
                 views: analyticsData.viewCounts[movie.key] || 0,
                 likes: analyticsData.movieLikes[movie.key] || 0,
+                watchlistAdds: analyticsData.watchlistCounts[movie.key] || 0,
                 donations: payoutInfo?.totalDonations || 0,
                 crateTvCut: payoutInfo?.crateTvCut || 0,
                 filmmakerDonationPayout: payoutInfo?.filmmakerDonationPayout || 0,
@@ -268,6 +271,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                             <SortableHeader sortKey="title">Film</SortableHeader>
                                             <SortableHeader sortKey="views">Views</SortableHeader>
                                             <SortableHeader sortKey="likes">Likes</SortableHeader>
+                                            <SortableHeader sortKey="watchlistAdds">My List Adds</SortableHeader>
                                             <SortableHeader sortKey="donations">Donations</SortableHeader>
                                             <SortableHeader sortKey="adRevenue">Ad Revenue</SortableHeader>
                                             <SortableHeader sortKey="totalFilmmakerPayout">Total Payout</SortableHeader>
@@ -281,6 +285,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                                 <td className="p-3 font-medium text-white">{film.title}</td>
                                                 <td className="p-3">{formatNumber(film.views)}</td>
                                                 <td className="p-3 font-semibold text-red-400">{formatNumber(film.likes)}</td>
+                                                <td className="p-3 font-semibold text-blue-400">{formatNumber(film.watchlistAdds)}</td>
                                                 <td className="p-3">{formatCurrency(film.donations)}</td>
                                                 <td className="p-3">{formatCurrency(film.adRevenue)}</td>
                                                 <td className="p-3 font-bold text-green-400">{formatCurrency(film.totalFilmmakerPayout)}</td>
@@ -290,7 +295,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                             </tr>
                                             {expandedRowKey === film.key && (
                                                 <tr className="bg-gray-800/80">
-                                                    <td colSpan={7} className="p-4">
+                                                    <td colSpan={8} className="p-4">
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                             <div>
                                                                 <h5 className="font-semibold text-gray-300 mb-2">Financial Breakdown for "{film.title}"</h5>

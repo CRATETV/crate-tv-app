@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // Path: /api/get-sales-data
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
-import { AnalyticsData, Movie, PayoutRequest, AdminPayout, BillSavingsTransaction } from '../types.js';
+import { AnalyticsData, Movie, PayoutRequest, AdminPayout, BillSavingsTransaction, User } from '../types.js';
 
 interface SquarePayment {
   id: string;
@@ -123,8 +123,9 @@ export async function POST(request: Request) {
         const allUsers: { email: string }[] = [];
         const actorUsers: { email: string }[] = [];
         const filmmakerUsers: { email: string }[] = [];
+        const watchlistCounts: Record<string, number> = {};
         usersSnapshot?.forEach(doc => {
-            const userData = doc.data();
+            const userData = doc.data() as User;
             if (userData.email) {
                 allUsers.push({ email: userData.email });
                 if (userData.isActor) {
@@ -133,6 +134,11 @@ export async function POST(request: Request) {
                 if (userData.isFilmmaker) {
                     filmmakerUsers.push({ email: userData.email });
                 }
+            }
+            if (userData.watchlist && Array.isArray(userData.watchlist)) {
+                userData.watchlist.forEach(movieKey => {
+                    watchlistCounts[movieKey] = (watchlistCounts[movieKey] || 0) + 1;
+                });
             }
         });
 
@@ -217,7 +223,7 @@ export async function POST(request: Request) {
         });
 
         const analyticsData: AnalyticsData = {
-            totalRevenue, totalCrateTvRevenue, totalAdminPayouts, pastAdminPayouts, billSavingsPotTotal, billSavingsTransactions, totalUsers: allUsers.length, viewCounts, movieLikes, filmmakerPayouts, viewLocations, allUsers, actorUsers, filmmakerUsers,
+            totalRevenue, totalCrateTvRevenue, totalAdminPayouts, pastAdminPayouts, billSavingsPotTotal, billSavingsTransactions, totalUsers: allUsers.length, viewCounts, movieLikes, watchlistCounts, filmmakerPayouts, viewLocations, allUsers, actorUsers, filmmakerUsers,
             totalDonations, totalSales, totalMerchRevenue, totalAdRevenue, crateTvMerchCut, merchSales,
             totalFestivalRevenue, festivalPassSales, festivalBlockSales, salesByBlock,
         };
