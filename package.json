@@ -7,8 +7,8 @@
     "dev": "vite --port 5373",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "build:roku": "curl -X POST -H \"Content-Type: application/json\" -d '{\"password\":\"'\"$ADMIN_MASTER_PASSWORD\"'\"}' http://localhost:5373/api/generate-roku-zip -o dist/cratetv-roku-channel.zip",
-    "deploy:roku": "roku-deploy --out-dir ./dist"
+    "build:roku": "mkdir -p dist && curl -X POST -H \"Content-Type: application/json\" http://localhost:5373/api/generate-roku-zip -o dist/cratetv-roku-channel.zip",
+    "deploy:roku": "roku-deploy"
   },
   "dependencies": {
     "@google/genai": "^0.15.0",

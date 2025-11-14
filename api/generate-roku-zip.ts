@@ -15,27 +15,37 @@ async function readDirectory(dirPath: string): Promise<string[]> {
 
 export async function POST(request: Request) {
   try {
-    const { password } = await request.json();
-
-    // --- Authentication ---
-    const primaryAdminPassword = process.env.ADMIN_PASSWORD;
-    const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
     let isAuthenticated = false;
-
-    if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
+    const host = request.headers.get('host');
+    
+    // For local development, trust requests from localhost for the build script
+    if (host?.startsWith('localhost') || host?.startsWith('127.0.0.1')) {
         isAuthenticated = true;
     } else {
-        // Check for custom roles
-        for (const key in process.env) {
-            if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
+        // For all other requests (like from the live Admin Panel), require a password.
+        try {
+            const { password } = await request.json();
+            const primaryAdminPassword = process.env.ADMIN_PASSWORD;
+            const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
+            
+            if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
                 isAuthenticated = true;
-                break;
+            } else {
+                for (const key in process.env) {
+                    if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
+                        isAuthenticated = true;
+                        break;
+                    }
+                }
             }
+        } catch (e) {
+            // This can fail if no JSON body is sent, which is fine.
+            // isAuthenticated will remain false.
         }
     }
-
+    
     // Also allow for first-time setup mode if no passwords are set at all
-    const anyPasswordSet = primaryAdminPassword || masterPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
+    const anyPasswordSet = process.env.ADMIN_PASSWORD || process.env.ADMIN_MASTER_PASSWORD || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
     if (!anyPasswordSet) {
         isAuthenticated = true; 
     }
