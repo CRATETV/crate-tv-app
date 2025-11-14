@@ -193,7 +193,8 @@ export async function POST(request: Request) {
             }
         });
 
-        const totalAdRevenue = (Object.values(viewCounts).reduce((s, c) => s + c, 0) / 1000) * AD_CPM_IN_CENTS;
+        // FIX: Explicitly cast the `reduce` accumulator's current value `c` to a Number to prevent type errors.
+        const totalAdRevenue = (Object.values(viewCounts).reduce((s, c) => s + Number(c || 0), 0) / 1000) * AD_CPM_IN_CENTS;
         const totalFestivalRevenue = festivalPassSales.revenue + festivalBlockSales.revenue;
         const totalRevenue = totalDonations + totalSales + totalMerchRevenue + totalAdRevenue + totalFestivalRevenue;
 

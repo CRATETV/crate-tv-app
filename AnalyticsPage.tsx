@@ -295,7 +295,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                 <StatCard title="Grand Total Revenue" value={formatCurrency(analyticsData.totalRevenue)} />
                                 <StatCard title="Total Platform Revenue" value={formatCurrency(analyticsData.totalCrateTvRevenue)} />
                                 <StatCard title="Total Users" value={formatNumber(analyticsData.totalUsers)} />
-                                <StatCard title="Total Film Views" value={formatNumber((Object.values(analyticsData.viewCounts) as number[]).reduce((s, c) => s + (c || 0), 0))} />
+                                {/* FIX: Explicitly cast the value from `Object.values` to a number inside the `reduce` function to prevent type errors. */}
+                                <StatCard title="Total Film Views" value={formatNumber((Object.values(analyticsData.viewCounts) as number[]).reduce((s, c) => s + (Number(c) || 0), 0))} />
                             </div>
                             
                             <BillingReminders />

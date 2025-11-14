@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
@@ -69,27 +69,129 @@ const AudienceEmailList: React.FC<{ title: string; users: { email: string }[] }>
     );
 };
 
+const countryNameMap: Record<string, string> = {
+    US: 'United States',
+    CA: 'Canada',
+    GB: 'United Kingdom',
+    AU: 'Australia',
+    DE: 'Germany',
+    FR: 'France',
+    IN: 'India',
+    JP: 'Japan',
+    BR: 'Brazil',
+    MX: 'Mexico',
+    unknown: 'Unknown',
+};
+
+const CountrySnapshot: React.FC<{ 
+    movie: Movie; 
+    locations: Record<string, number>;
+}> = ({ movie, locations }) => {
+    const snapshotRef = useRef<HTMLDivElement>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const handleShare = async () => {
+        if (!snapshotRef.current || isGenerating) return;
+        setIsGenerating(true);
+        try {
+            const { default: html2canvas } = await import('html2canvas');
+            const canvas = await html2canvas(snapshotRef.current, {
+                useCORS: true, 
+                backgroundColor: '#111827', // Tailwind gray-900
+            });
+            
+            const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+            if (!blob) throw new Error('Could not create image from snapshot.');
+    
+            const file = new File([blob], `cratetv_viewership_${movie.key}.png`, { type: 'image/png' });
+            
+            if (navigator.share && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: `Viewership for ${movie.title}`,
+                    text: `Here's the country-wise traffic bifurcation for "${movie.title}" on Crate TV.`,
+                    files: [file]
+                });
+            } else {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `cratetv_viewership_${movie.key}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+            }
+        } catch (error) {
+            console.error('Sharing failed:', error);
+            alert('Could not generate snapshot. Please try again.');
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const sortedLocations = Object.entries(locations).sort(([, a], [, b]) => b - a);
+    const totalViews = sortedLocations.reduce((sum, [, count]) => sum + count, 0);
+
+    return (
+        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 mt-4">
+            <div ref={snapshotRef} className="bg-gray-900 p-6 rounded-md">
+                <div className="flex justify-between items-start mb-4">
+                    <img src={`/api/proxy-image?url=${encodeURIComponent("https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png")}`} alt="Crate TV" className="w-24 h-auto" crossOrigin="anonymous"/>
+                    <div className="text-right">
+                        <p className="text-xs text-gray-400">As of {new Date().toLocaleDateString()}</p>
+                        <p className="font-bold text-white text-lg">Total Views: {formatNumber(totalViews)}</p>
+                    </div>
+                </div>
+                <h4 className="text-lg font-bold text-white mb-3">Viewership Snapshot: <span className="text-purple-400">{movie.title}</span></h4>
+                <div className="overflow-x-auto max-h-60">
+                    <table className="w-full text-left text-sm">
+                        <thead className="text-xs text-gray-400 uppercase bg-gray-700/50 sticky top-0">
+                            <tr>
+                                <th className="p-2">Country</th>
+                                <th className="p-2 text-right">Views</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sortedLocations.map(([code, count]) => (
+                                <tr key={code} className="border-b border-gray-800">
+                                    <td className="p-2 font-medium text-white">{countryNameMap[code] || code} ({code})</td>
+                                    <td className="p-2 text-right">{formatNumber(count)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div className="mt-4 text-right">
+                <button onClick={handleShare} disabled={isGenerating} className="submit-btn bg-purple-600 hover:bg-purple-700">
+                    {isGenerating ? 'Generating...' : 'Share Snapshot'}
+                </button>
+            </div>
+        </div>
+    );
+};
+
+
 const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const isFestivalView = viewMode === 'festival';
-    const [activeTab, setActiveTab] = useState(isFestivalView ? 'festival' : 'film-analytics');
+    const [activeTab, setActiveTab] = useState(isFestivalView ? 'festival' : 'overview');
     const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
     const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<{ square: string | null, firebase: string | null, critical: string | null }>({ square: null, firebase: null, critical: null });
+    const [selectedGeoMovie, setSelectedGeoMovie] = useState<string>('');
     const [selectedFilmForReport, setSelectedFilmForReport] = useState<FilmPerformanceData | null>(null);
     const [festivalPayoutStatus, setFestivalPayoutStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
     const [festivalPayoutMessage, setFestivalPayoutMessage] = useState('');
-    const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
+    const [expandedPayoutRow, setExpandedPayoutRow] = useState<string | null>(null);
 
     // State for Admin Payout
     const [adminPayoutAmount, setAdminPayoutAmount] = useState('');
     const [adminPayoutReason, setAdminPayoutReason] = useState('');
     const [adminPayoutStatus, setAdminPayoutStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
     const [adminPayoutMessage, setAdminPayoutMessage] = useState('');
-
-    const [sortConfig, setSortConfig] = useState<{ key: keyof FilmPerformanceData; direction: 'ascending' | 'descending' }>({ key: 'views', direction: 'descending' });
     
     const fetchData = async () => {
+        // Keep loading true if it's already loading, but don't flash the spinner for a refresh
         if (isLoading) setIsLoading(true);
         const password = sessionStorage.getItem('adminPassword');
         if (!password) {
@@ -113,6 +215,10 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
             setAnalyticsData(analyticsJson.analyticsData);
             setError(analyticsJson.errors);
             setAllMovies(liveDataRes.data.movies);
+            if (analyticsJson.analyticsData?.viewLocations) {
+                const firstMovieWithGeo = Object.keys(analyticsJson.analyticsData.viewLocations)[0];
+                setSelectedGeoMovie(firstMovieWithGeo || '');
+            }
             
         } catch (err) {
             setError(prev => ({ ...prev, critical: err instanceof Error ? err.message : 'An unknown error occurred during data fetch.' }));
@@ -143,30 +249,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                 filmmakerAdPayout: payoutInfo?.filmmakerAdPayout || 0,
                 totalFilmmakerPayout: payoutInfo?.totalFilmmakerPayout || 0,
             };
-        });
+        }).sort((a, b) => b.views - a.views);
     }, [analyticsData, allMovies]);
-
-    const sortedFilms = useMemo(() => {
-        let sortableItems = [...filmPerformanceData];
-        sortableItems.sort((a, b) => {
-            if (a[sortConfig.key] < b[sortConfig.key]) {
-                return sortConfig.direction === 'ascending' ? -1 : 1;
-            }
-            if (a[sortConfig.key] > b[sortConfig.key]) {
-                return sortConfig.direction === 'ascending' ? 1 : -1;
-            }
-            return 0;
-        });
-        return sortableItems;
-    }, [filmPerformanceData, sortConfig]);
-
-    const requestSort = (key: keyof FilmPerformanceData) => {
-        let direction: 'ascending' | 'descending' = 'ascending';
-        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-            direction = 'descending';
-        }
-        setSortConfig({ key, direction });
-    };
     
     const handleFestivalPayout = async () => { /* ... */ };
     const handleAdminPayout = async (e: React.FormEvent) => { /* ... */ };
@@ -185,20 +269,11 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
         </button>
     );
 
-    const SortableHeader: React.FC<{ sortKey: keyof FilmPerformanceData; children: React.ReactNode }> = ({ sortKey, children }) => {
-        const isActive = sortConfig.key === sortKey;
-        const icon = isActive ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : '';
-        return (
-            <th className="p-3 cursor-pointer" onClick={() => requestSort(sortKey)}>
-                {children} <span className="text-xs">{icon}</span>
-            </th>
-        );
-    };
-
     const crateTvBalance = analyticsData ? analyticsData.totalCrateTvRevenue - analyticsData.totalAdminPayouts : 0;
+
     const renderFestivalAnalytics = () => (
         analyticsData && (
-             <div>
+            <div>
                 <div className="flex justify-between items-center mb-4"><h2 className="text-2xl font-bold text-white">Festival Analytics</h2>
                     <div className="no-print flex gap-4">
                         <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Print</button>
@@ -245,7 +320,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
         <div style={{ padding: '1rem', backgroundColor: '#1F2937', borderRadius: '8px' }}>
             {!isFestivalView && (
                 <div className="no-print flex flex-wrap items-center gap-2 mb-6 border-b border-gray-600 pb-4">
-                    <TabButton tabId="film-analytics" label="Film Analytics" />
+                    <TabButton tabId="overview" label="Overview" />
                     <TabButton tabId="audience" label="Audience" />
                     <TabButton tabId="financials" label="Financials" />
                     <TabButton tabId="festival" label="Festival" />
@@ -260,80 +335,48 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
 
             {analyticsData && (
                 <div className="printable-area">
-                    {(activeTab === 'film-analytics' && !isFestivalView) && (
-                        <div>
-                            <h2 className="text-2xl font-bold mb-4 text-white">Film Analytics</h2>
-                            <p className="text-sm text-gray-400 mb-6">A comprehensive list of all films and their performance. Click a row to expand for details, or a column header to sort.</p>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
-                                        <tr>
-                                            <SortableHeader sortKey="title">Film</SortableHeader>
-                                            <SortableHeader sortKey="views">Views</SortableHeader>
-                                            <SortableHeader sortKey="likes">Likes</SortableHeader>
-                                            <SortableHeader sortKey="watchlistAdds">My List Adds</SortableHeader>
-                                            <SortableHeader sortKey="donations">Donations</SortableHeader>
-                                            <SortableHeader sortKey="adRevenue">Ad Revenue</SortableHeader>
-                                            <SortableHeader sortKey="totalFilmmakerPayout">Total Payout</SortableHeader>
-                                            <th className="p-3 no-print">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {sortedFilms.map((film, index) => (
-                                            <React.Fragment key={film.key}>
-                                            <tr className="border-b border-gray-700 hover:bg-gray-800/40 cursor-pointer" onClick={() => setExpandedRowKey(expandedRowKey === film.key ? null : film.key)}>
-                                                <td className="p-3 font-medium text-white">{film.title}</td>
-                                                <td className="p-3">{formatNumber(film.views)}</td>
-                                                <td className="p-3 font-semibold text-red-400">{formatNumber(film.likes)}</td>
-                                                <td className="p-3 font-semibold text-blue-400">{formatNumber(film.watchlistAdds)}</td>
-                                                <td className="p-3">{formatCurrency(film.donations)}</td>
-                                                <td className="p-3">{formatCurrency(film.adRevenue)}</td>
-                                                <td className="p-3 font-bold text-green-400">{formatCurrency(film.totalFilmmakerPayout)}</td>
-                                                <td className="p-3 no-print">
-                                                    <button onClick={(e) => { e.stopPropagation(); setSelectedFilmForReport(film); }} className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md">View Report</button>
-                                                </td>
-                                            </tr>
-                                            {expandedRowKey === film.key && (
-                                                <tr className="bg-gray-800/80">
-                                                    <td colSpan={8} className="p-4">
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                            <div>
-                                                                <h5 className="font-semibold text-gray-300 mb-2">Financial Breakdown for "{film.title}"</h5>
-                                                                <ul className="text-sm space-y-1">
-                                                                    <li className="flex justify-between"><span>Total Donations:</span> <span className="text-white">{formatCurrency(film.donations)}</span></li>
-                                                                    <li className="flex justify-between"><span>Crate TV Cut (30%):</span> <span className="text-red-400">-{formatCurrency(film.crateTvCut)}</span></li>
-                                                                    <li className="flex justify-between"><span>Filmmaker Payout (Donations):</span> <span className="text-green-400">{formatCurrency(film.filmmakerDonationPayout)}</span></li>
-                                                                    <hr className="border-gray-600 my-1" />
-                                                                    <li className="flex justify-between"><span>Total Ad Revenue:</span> <span className="text-white">{formatCurrency(film.adRevenue)}</span></li>
-                                                                    <li className="flex justify-between"><span>Filmmaker Payout (Ads):</span> <span className="text-green-400">{formatCurrency(film.filmmakerAdPayout)}</span></li>
-                                                                    <hr className="border-gray-600 my-1" />
-                                                                    <li className="flex justify-between font-bold"><span>Total Payout:</span> <span className="text-green-400">{formatCurrency(film.totalFilmmakerPayout)}</span></li>
-                                                                </ul>
-                                                            </div>
-                                                            <div>
-                                                                <h5 className="font-semibold text-gray-300 mb-2">Viewership by Country</h5>
-                                                                <div className="max-h-32 overflow-y-auto text-sm text-gray-400 pr-2">
-                                                                {(analyticsData.viewLocations && analyticsData.viewLocations[film.key]) ? (
-                                                                    <ul className="space-y-1">
-                                                                        {Object.entries(analyticsData.viewLocations[film.key]).sort(([, a], [, b]) => Number(b) - Number(a)).map(([country, count]) => (
-                                                                            <li key={country} className="flex justify-between"><span>{country}:</span> <span className="text-white">{formatNumber(Number(count))} views</span></li>
-                                                                        ))}
-                                                                    </ul>
-                                                                ) : <p className="text-sm text-gray-500">No location data available for this film.</p>}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                            </React.Fragment>
-                                        ))}
-                                    </tbody>
-                                </table>
+                    {/* OVERVIEW TAB */}
+                    {(activeTab === 'overview' && !isFestivalView) && (
+                        <div className="space-y-12">
+                            <div>
+                                <h2 className="text-2xl font-bold mb-4 text-white">Platform Snapshot</h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                                    <StatCard title="Grand Total Revenue" value={formatCurrency(analyticsData.totalRevenue)} />
+                                    <StatCard title="Total Platform Revenue" value={formatCurrency(analyticsData.totalCrateTvRevenue)} />
+                                    <StatCard title="Total Users" value={formatNumber(analyticsData.totalUsers)} />
+                                    {/* FIX: Explicitly cast the value from `Object.values` to a number inside the `reduce` function to prevent type errors. */}
+                                    <StatCard title="Total Film Views" value={formatNumber((Object.values(analyticsData.viewCounts) as number[]).reduce((s, c) => s + (Number(c) || 0), 0))} />
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h3 className="text-xl font-bold mb-4 text-white">Top Film Performance</h3>
+                                <div className="overflow-x-auto"><table className="w-full text-left">
+                                    <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Film</th><th className="p-3">Views</th><th className="p-3">Likes</th><th className="p-3">Donations</th><th className="p-3 no-print">Actions</th></tr></thead>
+                                    <tbody>{filmPerformanceData.slice(0, 5).map(film => (
+                                        <tr key={film.key} className="border-b border-gray-700"><td className="p-3 font-medium text-white">{film.title}</td><td className="p-3">{formatNumber(film.views)}</td><td className="p-3">{formatNumber(film.likes)}</td><td className="p-3">{formatCurrency(film.donations)}</td><td className="p-3 no-print"><button onClick={() => setSelectedFilmForReport(film)} className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md">View Report</button></td></tr>
+                                    ))}</tbody>
+                                </table></div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-xl font-bold text-white">Viewership by Country</h3>
+                                <p className="text-sm text-gray-400 mb-4">Select a film to see its viewership breakdown by country. This data can be shared with partners like VDO.AI for revenue projections.</p>
+                                <select value={selectedGeoMovie} onChange={e => setSelectedGeoMovie(e.target.value)} className="form-input my-4 max-w-sm">
+                                    <option value="">Select a Film</option>
+                                    {Object.keys(allMovies).map(key => <option key={key} value={key}>{allMovies[key].title}</option>)}
+                                </select>
+                                {selectedGeoMovie && analyticsData.viewLocations[selectedGeoMovie] && allMovies[selectedGeoMovie] && (
+                                    <CountrySnapshot 
+                                        movie={allMovies[selectedGeoMovie]}
+                                        locations={analyticsData.viewLocations[selectedGeoMovie]}
+                                    />
+                                )}
                             </div>
                         </div>
                     )}
                     
+                    {/* AUDIENCE TAB */}
                     {(activeTab === 'audience' && !isFestivalView) && (
                         <div className="space-y-6">
                             <h2 className="text-2xl font-bold text-white">Audience Segments</h2>
@@ -343,6 +386,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                         </div>
                     )}
 
+                    {/* FINANCIALS TAB */}
                     {(activeTab === 'financials' && !isFestivalView) && (
                         <div className="space-y-10">
                              <div>
@@ -362,13 +406,73 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                     <StatCard title="Total Paid to Admin" value={formatCurrency(analyticsData.totalAdminPayouts)} />
                                     <StatCard title="Current Available Balance" value={formatCurrency(crateTvBalance)} className="bg-green-900/30 border-green-700" />
                                 </div>
+                                
                                 <BillSavingsPot
                                     currentBalance={analyticsData.billSavingsPotTotal}
                                     availablePlatformBalance={crateTvBalance}
                                     transactions={analyticsData.billSavingsTransactions}
                                     onRefreshData={fetchData}
                                 />
-                                <BillingReminders />
+
+                                <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 mt-6">
+                                    <h3 className="text-lg font-semibold text-white mb-4">Record Admin Payout</h3>
+                                    <form onSubmit={handleAdminPayout} className="space-y-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            <input type="number" value={adminPayoutAmount} onChange={e => setAdminPayoutAmount(e.target.value)} placeholder="Amount ($)" min="1" step="0.01" className="form-input sm:col-span-1" required />
+                                            <input type="text" value={adminPayoutReason} onChange={e => setAdminPayoutReason(e.target.value)} placeholder="Reason (e.g., Bills, Salary)" className="form-input sm:col-span-2" required />
+                                        </div>
+                                        <button type="submit" disabled={adminPayoutStatus === 'processing'} className="submit-btn bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600">
+                                            {adminPayoutStatus === 'processing' ? 'Recording...' : 'Pay Myself'}
+                                        </button>
+                                        {adminPayoutMessage && <p className={`text-sm ${adminPayoutStatus === 'error' ? 'text-red-400' : 'text-green-400'}`}>{adminPayoutMessage}</p>}
+                                    </form>
+                                    <h4 className="text-md font-semibold text-gray-300 mt-8 mb-4">Payout History</h4>
+                                    <div className="max-h-60 overflow-y-auto">
+                                        {analyticsData.pastAdminPayouts.length > 0 ? (
+                                            <ul className="space-y-2">
+                                                {analyticsData.pastAdminPayouts.map((p: AdminPayout) => (
+                                                    <li key={p.id} className="flex justify-between items-center text-sm p-2 bg-gray-700/50 rounded-md">
+                                                        <div>
+                                                            <span className="font-semibold text-white">{p.reason}</span>
+                                                            <span className="text-xs text-gray-500 ml-2">{new Date(p.payoutDate.seconds * 1000).toLocaleDateString()}</span>
+                                                        </div>
+                                                        <span className="font-bold text-green-400">{formatCurrency(p.amount)}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : <p className="text-sm text-gray-500">No admin payouts recorded yet.</p>}
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold mb-4 text-white">Filmmaker Payouts</h3>
+                                <div className="overflow-x-auto"><table className="w-full text-left">
+                                    <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Film</th><th className="p-3">Donation Payout</th><th className="p-3">Ad Payout</th><th className="p-3">Total Payout</th></tr></thead>
+                                    <tbody>{analyticsData.filmmakerPayouts.map((p: FilmmakerPayout) => (
+                                         <React.Fragment key={p.movieTitle}>
+                                            <tr className="border-b border-gray-700 cursor-pointer hover:bg-gray-700/50" onClick={() => setExpandedPayoutRow(expandedPayoutRow === p.movieTitle ? null : p.movieTitle)}>
+                                                <td className="p-3 font-medium text-white">{p.movieTitle}</td>
+                                                <td className="p-3">{formatCurrency(p.filmmakerDonationPayout)}</td>
+                                                <td className="p-3">{formatCurrency(p.filmmakerAdPayout)}</td>
+                                                <td className="p-3 font-bold text-green-400">{formatCurrency(p.totalFilmmakerPayout)}</td>
+                                            </tr>
+                                            {expandedPayoutRow === p.movieTitle && (
+                                                <tr className="bg-gray-800">
+                                                    <td colSpan={4} className="p-4">
+                                                        <h5 className="font-semibold text-gray-300 mb-2">Viewership by Country for {p.movieTitle}</h5>
+                                                        {(analyticsData.viewLocations && analyticsData.viewLocations[Object.keys(allMovies).find(key => allMovies[key].title === p.movieTitle) || '']) ? (
+                                                            <ul className="text-sm text-gray-400">
+                                                                {Object.entries(analyticsData.viewLocations[Object.keys(allMovies).find(key => allMovies[key].title === p.movieTitle) || '']).map(([country, count]) => (
+                                                                    <li key={country}>{country}: {formatNumber(Number(count))} views</li>
+                                                                ))}
+                                                            </ul>
+                                                        ) : <p className="text-sm text-gray-500">No location data available for this film.</p>}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    ))}</tbody>
+                                </table></div>
                             </div>
                         </div>
                     )}
