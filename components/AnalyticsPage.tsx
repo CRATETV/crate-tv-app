@@ -1,15 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -425,8 +414,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                              <div>
                                 <h2 className="text-2xl font-bold text-white mb-4">Crate TV Earnings & Payouts</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                    <StatCard title="Total Platform Earnings" value={formatCurrency(analyticsData.totalCrateTvRevenue)} />
-                                    <StatCard title="Total Paid to Admin" value={formatCurrency(analyticsData.totalAdminPayouts)} />
+                                    <StatCard title="Total Platform Earnings" value={formatCurrency(Number(analyticsData.totalCrateTvRevenue))} />
+                                    <StatCard title="Total Paid to Admin" value={formatCurrency(Number(analyticsData.totalAdminPayouts))} />
                                     <StatCard title="Current Available Balance" value={formatCurrency(crateTvBalance)} className="bg-green-900/30 border-green-700" />
                                 </div>
                                 

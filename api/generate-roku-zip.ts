@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     const manifestLines = [
         'title=Crate TV',
         'major_version=1',
-        'minor_version=3',
+        'minor_version=4',
         'build_version=0',
         'mm_icon_focus_hd=pkg:/images/logo_hd.png',
         'mm_icon_side_hd=pkg:/images/logo_hd.png',
