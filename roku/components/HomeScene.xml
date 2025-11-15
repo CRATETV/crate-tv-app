@@ -21,7 +21,7 @@
             <!-- Hero Section -->
             <Group id="heroGroup">
                 <Poster id="heroBackground" width="1920" height="1080" />
-                <Rectangle id="heroGradient" color="0x000000AA" width="1280" height="1080" />
+                <Rectangle id="heroGradient" color="0x000000CC" width="1280" height="1080" />
                 <Label 
                     id="heroTitle"
                     width="880"

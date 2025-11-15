@@ -1,13 +1,19 @@
 import fs from 'fs/promises';
 import path from 'path';
-import JSZip from 'jszip';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const JSZip = require('jszip');
 // FIX: The `process` global is not available by default in some strict TypeScript or module contexts. Importing it directly from the 'process' module resolves the error where 'cwd' and 'exit' properties were not found.
 import process from 'process';
 
-// Helper to recursively read a directory
+// Helper to recursively read a directory, ignoring dotfiles
 async function readDirectory(dirPath) {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
     const files = await Promise.all(entries.map((entry) => {
+        // Ignore hidden files and directories (like .DS_Store)
+        if (entry.name.startsWith('.')) {
+            return [];
+        }
         const res = path.resolve(dirPath, entry.name);
         return entry.isDirectory() ? readDirectory(res) : res;
     }));
@@ -53,8 +59,15 @@ fonts=hd,sd
         // Generate and write the zip file
         const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
         await fs.writeFile(outputZipPath, zipBuffer);
+        
+        // Also create a .pkg file for the Roku web uploader
+        const pkgOutputPath = outputZipPath.replace('.zip', '.pkg');
+        await fs.copyFile(outputZipPath, pkgOutputPath);
 
-        console.log(`✅ Roku channel successfully packaged at: ${outputZipPath}`);
+        console.log(`✅ Roku channel successfully packaged.`);
+        console.log(`   - For terminal deployment: ${outputZipPath}`);
+        console.log(`   - For web uploader:      ${pkgOutputPath}`);
+
     } catch (error) {
         console.error('❌ Error packaging Roku channel:', error);
         process.exit(1);

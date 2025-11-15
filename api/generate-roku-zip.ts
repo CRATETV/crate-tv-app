@@ -1,12 +1,17 @@
-
 import { promises as fs } from 'fs';
 import path from 'path';
 import JSZip from 'jszip';
+// FIX: Import Buffer to make it available in this module's scope.
+import { Buffer } from 'buffer';
 
-// Helper to recursively read a directory
+// Helper to recursively read a directory, ignoring dotfiles
 async function readDirectory(dirPath: string): Promise<string[]> {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
     const files = await Promise.all(entries.map((entry) => {
+        // Ignore hidden files and directories (like .DS_Store)
+        if (entry.name.startsWith('.')) {
+            return [];
+        }
         const res = path.resolve(dirPath, entry.name);
         return entry.isDirectory() ? readDirectory(res) : res;
     }));
@@ -60,19 +65,26 @@ export async function POST(request: Request) {
 
     const zip = new JSZip();
 
+    // Dynamically determine the feed URL based on the request's host
+    const protocol = host?.startsWith('localhost') ? 'http' : 'https';
+    const domain = `${protocol}://${host}`;
+    const feedUrl = `${domain}/api/roku-feed`;
+
     // Add all local files (components, scripts, images etc.) from the /roku directory to the zip.
     for (const file of filesToInclude) {
-        const content = await fs.readFile(file);
-        const zipPath = path.relative(rokuDir, file);
-        // Add a check to avoid adding empty placeholder directories or files like .DS_Store
+        let content: string | Buffer = await fs.readFile(file);
+        const zipPath = path.relative(rokuDir, file).replace(/\\/g, '/'); // Ensure forward slashes for zip path
+        
+        // If it's the config file, replace the placeholder URL with the live one.
+        if (zipPath === 'source/Config.brs') {
+            content = content.toString('utf-8').replace('ROKU_FEED_URL_PLACEHOLDER', feedUrl);
+        }
+
         if (content.length > 0) {
             zip.file(zipPath, content);
         }
     }
     
-    // --- The image fetching logic is now removed. ---
-    // The files are expected to be in `roku/images/` and will be picked up by `readDirectory`.
-
     // Create the manifest file dynamically, pointing to the artwork now in the zip
     zip.file('manifest', `
 title=Crate TV
@@ -93,7 +105,7 @@ fonts=hd,sd
         status: 200,
         headers: {
             'Content-Type': 'application/zip',
-            'Content-Disposition': 'attachment; filename="cratetv-roku-channel.zip"',
+            'Content-Disposition': 'attachment; filename="cratetv-roku-channel.pkg"',
         },
     });
 

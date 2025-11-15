@@ -286,7 +286,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                     <StatCard title="Individual Blocks" value={analyticsData.festivalBlockSales.units} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    {/* FIX: Explicitly cast the `reduce` accumulator's current value `c` to a Number to prevent type errors. */}
                     <StatCard title="Crate TV's Share (30%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.30)} />
+                    {/* FIX: Explicitly cast the value from `Object.values` to a number inside the `reduce` function to prevent type errors. */}
                     <StatCard title="Playhouse West's Share (70%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.70)} />
                 </div>
                  <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg text-center">
@@ -307,6 +309,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                     <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Item</th><th className="p-3">Units Sold</th><th className="p-3">Revenue</th></tr></thead>
                     <tbody>
                         <tr className="border-b border-gray-700 font-semibold"><td className="p-3">All-Access Pass</td><td>{analyticsData.festivalPassSales.units}</td><td>{formatCurrency(analyticsData.festivalPassSales.revenue)}</td></tr>
+                        {/* FIX: Explicitly cast the `sales` object to `any` within the map function to resolve the 'unknown' type error when accessing its properties. */}
                         {Object.entries(analyticsData.salesByBlock).map(([title, sales]) => (
                             <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{(sales as any).units}</td><td>{formatCurrency((sales as any).revenue)}</td></tr>
                         ))}

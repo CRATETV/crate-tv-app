@@ -201,7 +201,6 @@ export async function POST(request: Request) {
         // Calculate Crate TV's total share
         const crateTvDonationShare = totalDonations * DONATION_PLATFORM_CUT;
         const crateTvAdShare = totalAdRevenue * (1 - AD_REVENUE_FILMMAKER_SHARE);
-        // FIX: Removed redeclared block-scoped variable 'crateTvMerchCut'. It is now only declared where it is first used in the 'totalCrateTvRevenue' calculation.
         const crateTvMerchCut = totalMerchRevenue * MERCH_PLATFORM_CUT;
         const crateTvFestivalShare = totalFestivalRevenue * FESTIVAL_PLATFORM_CUT;
         const totalCrateTvRevenue = crateTvDonationShare + crateTvAdShare + crateTvMerchCut + crateTvFestivalShare + totalSales;
