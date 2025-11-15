@@ -35,16 +35,18 @@ async function main() {
         const filesToInclude = await readDirectory(rokuDir);
         const zip = new JSZip();
 
-        const manifestContent = `
-title=Crate TV
-major_version=1
-minor_version=2
-build_version=0
-mm_icon_focus_hd=pkg:/images/logo_hd.png
-mm_icon_side_hd=pkg:/images/logo_hd.png
-splash_screen_hd=pkg:/images/splash_hd.png
-fonts=hd,sd
-`.trim();
+        // Build the manifest string line-by-line to guarantee LF line endings.
+        const manifestLines = [
+            'title=Crate TV',
+            'major_version=1',
+            'minor_version=2',
+            'build_version=0',
+            'mm_icon_focus_hd=pkg:/images/logo_hd.png',
+            'mm_icon_side_hd=pkg:/images/logo_hd.png',
+            'splash_screen_hd=pkg:/images/splash_hd.png',
+            'fonts=hd,sd'
+        ];
+        const manifestContent = manifestLines.join('\n');
         
         // Create the manifest file
         // IMPORTANT: Roku expects the manifest to be the first file and UNCOMPRESSED.

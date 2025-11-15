@@ -194,7 +194,7 @@ export async function POST(request: Request) {
         });
 
         // FIX: Explicitly cast the value from `Object.values` to a number inside the `reduce` function to prevent type errors.
-        const totalAdRevenue = ((Object.values(viewCounts) as number[]).reduce((s, c) => s + (Number(c) || 0), 0) / 1000) * AD_CPM_IN_CENTS;
+        const totalAdRevenue = (Object.values(viewCounts).reduce((s, c) => s + (Number(c) || 0), 0) / 1000) * AD_CPM_IN_CENTS;
         const totalFestivalRevenue = festivalPassSales.revenue + festivalBlockSales.revenue;
         const totalRevenue = totalDonations + totalSales + totalMerchRevenue + totalAdRevenue + totalFestivalRevenue;
 
