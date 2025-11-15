@@ -39,18 +39,17 @@ async function main() {
         const manifestLines = [
             'title=Crate TV',
             'major_version=1',
-            'minor_version=2',
+            'minor_version=3',
             'build_version=0',
             'mm_icon_focus_hd=pkg:/images/logo_hd.png',
             'mm_icon_side_hd=pkg:/images/logo_hd.png',
-            'splash_screen_hd=pkg:/images/splash_hd.png',
-            'fonts=hd,sd'
+            'splash_screen_hd=pkg:/images/splash_hd.png'
         ];
         const manifestContent = manifestLines.join('\n');
         
         // Create the manifest file
         // IMPORTANT: Roku expects the manifest to be the first file and UNCOMPRESSED.
-        zip.file('manifest', manifestContent, { compression: "STORE" });
+        zip.file('manifest', manifestContent, { compression: "STORE", unixPermissions: 0o644 });
 
 
         // Add all files from /roku to the zip
@@ -58,7 +57,8 @@ async function main() {
             const content = await fs.readFile(file);
             const zipPath = path.relative(rokuDir, file);
             if (content.length > 0) {
-                zip.file(zipPath, content);
+                // Explicitly set standard file permissions to avoid "invalid header" errors on Roku.
+                zip.file(zipPath, content, { unixPermissions: 0o644 });
             }
         }
         

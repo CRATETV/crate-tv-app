@@ -221,7 +221,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
         </button>
     );
 
-    const crateTvBalance = analyticsData ? analyticsData.totalCrateTvRevenue - analyticsData.totalAdminPayouts : 0;
+    // FIX: Explicitly cast properties to Number before performing arithmetic operations
+    // to prevent TypeScript errors when properties are inferred as 'unknown' from API responses.
+    const crateTvBalance = analyticsData ? Number(analyticsData.totalCrateTvRevenue) - Number(analyticsData.totalAdminPayouts) : 0;
 
     const renderFestivalAnalytics = () => (
         analyticsData && (
@@ -233,21 +235,26 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                     </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    {/* FIX: Explicitly cast to Number before passing to functions. */}
                     <StatCard title="Total Festival Revenue" value={formatCurrency(Number(analyticsData.totalFestivalRevenue))} className="sm:col-span-1" />
                     <StatCard title="All-Access Passes" value={analyticsData.festivalPassSales.units} />
                     <StatCard title="Individual Blocks" value={analyticsData.festivalBlockSales.units} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    {/* FIX: Explicitly cast to Number before arithmetic and passing to functions. */}
                     <StatCard title="Crate TV's Share (30%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.30)} />
+                    {/* FIX: Explicitly cast to Number before arithmetic and passing to functions. */}
                     <StatCard title="Playhouse West's Share (70%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.70)} />
                 </div>
                  <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg text-center">
                     <h3 className="text-lg font-bold text-white mb-4">Process Payout</h3>
                     <button
                         onClick={handleFestivalPayout}
+                        // FIX: Explicitly cast to Number for comparison.
                         disabled={festivalPayoutStatus === 'processing' || Number(analyticsData.totalFestivalRevenue) === 0}
                         className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg text-lg"
                     >
+                        {/* FIX: Explicitly cast to Number before arithmetic and passing to functions. */}
                         {festivalPayoutStatus === 'processing' ? 'Processing...' : `Pay Playhouse West ${formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.70)}`}
                     </button>
                     {festivalPayoutMessage && (
@@ -259,8 +266,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                     <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Item</th><th className="p-3">Units Sold</th><th className="p-3">Revenue</th></tr></thead>
                     <tbody>
                         <tr className="border-b border-gray-700 font-semibold"><td className="p-3">All-Access Pass</td><td>{analyticsData.festivalPassSales.units}</td><td>{formatCurrency(analyticsData.festivalPassSales.revenue)}</td></tr>
-                        {Object.entries(analyticsData.salesByBlock).map(([title, sales]) => (
-                            <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{(sales as any).units}</td><td>{formatCurrency((sales as any).revenue)}</td></tr>
+                        {/* FIX: Cast `sales` to `any` to access its properties, and cast `revenue` to Number before formatting. */}
+                        {Object.entries(analyticsData.salesByBlock).map(([title, sales]: [string, any]) => (
+                            <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{sales.units}</td><td>{formatCurrency(Number(sales.revenue))}</td></tr>
                         ))}
                     </tbody>
                 </table></div>
@@ -327,10 +335,15 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                              <div>
                                 <h2 className="text-2xl font-bold mb-4 text-white">Revenue Streams</h2>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                                    {/* FIX: Explicitly cast to Number before passing to functions. */}
                                     <StatCard title="Total Donations" value={formatCurrency(Number(analyticsData.totalDonations))} />
+                                    {/* FIX: Explicitly cast properties to Number before addition. */}
                                     <StatCard title="Total Sales" value={formatCurrency(Number(analyticsData.totalSales) + Number(analyticsData.totalFestivalRevenue))} />
+                                    {/* FIX: Explicitly cast to Number before passing to functions. */}
                                     <StatCard title="Merch Revenue" value={formatCurrency(Number(analyticsData.totalMerchRevenue))} />
+                                    {/* FIX: Explicitly cast to Number before passing to functions. */}
                                     <StatCard title="Ad Revenue" value={formatCurrency(Number(analyticsData.totalAdRevenue))} />
+                                    {/* FIX: Explicitly cast to Number before passing to functions. */}
                                     <StatCard title="GRAND TOTAL REVENUE" value={formatCurrency(Number(analyticsData.totalRevenue))} className="lg:col-span-4 bg-purple-900/30 border-purple-700" />
                                 </div>
                             </div>
