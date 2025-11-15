@@ -70,9 +70,7 @@ export async function POST(request: Request) {
     const domain = `${protocol}://${host}`;
     const feedUrl = `${domain}/api/roku-feed`;
 
-    // Create the manifest file dynamically, pointing to the artwork now in the zip
-    // IMPORTANT: Roku expects the manifest to be the first file in the archive.
-    zip.file('manifest', `
+    const manifestContent = `
 title=Crate TV
 major_version=1
 minor_version=2
@@ -81,7 +79,12 @@ mm_icon_focus_hd=pkg:/images/logo_hd.png
 mm_icon_side_hd=pkg:/images/logo_hd.png
 splash_screen_hd=pkg:/images/splash_hd.png
 fonts=hd,sd
-`.trim());
+`.trim();
+
+    // Create the manifest file dynamically, pointing to the artwork now in the zip
+    // IMPORTANT: Roku expects the manifest to be the first file and UNCOMPRESSED.
+    zip.file('manifest', manifestContent, { compression: "STORE" });
+
 
     // Add all local files (components, scripts, images etc.) from the /roku directory to the zip.
     for (const file of filesToInclude) {
