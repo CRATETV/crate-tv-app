@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="ErrorScene" extends="Scene">
+    <script type="text/brightscript" uri="pkg:/components/ErrorScene.brs" />
+    <interface>
+        <field id="message" type="string" onChange="onMessageChange" />
+    </interface>
+    <children>
+        <!-- Background -->
+        <Poster 
+            uri="pkg:/images/splash_hd.png" 
+            width="1920" 
+            height="1080"
+        />
+        <Rectangle color="0x000000B0" width="1920" height="1080" />
+
+        <!-- Centered Content Group -->
+        <Group translation="[960, 540]" horizAlign="center" vertAlign="center">
+            <Label 
+                text="An Error Occurred"
+                width="1200"
+                horizAlign="center"
+                font="font:LargeBoldSystemFont"
+                color="0xFF8080FF" ' A light red color
+            />
+            <Label
+                id="errorMessageLabel"
+                text=""
+                width="1000"
+                wrap="true"
+                horizAlign="center"
+                translation="[0, 100]"
+                font="font:SmallSystemFont"
+            />
+        </Group>
+    </children>
+</component>

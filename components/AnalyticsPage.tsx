@@ -6,6 +6,10 @@
 
 
 
+
+
+
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -355,8 +359,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                             <div>
                                 <h2 className="text-2xl font-bold mb-4 text-white">Platform Snapshot</h2>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                                    <StatCard title="Grand Total Revenue" value={formatCurrency(analyticsData.totalRevenue)} />
-                                    <StatCard title="Total Platform Revenue" value={formatCurrency(analyticsData.totalCrateTvRevenue)} />
+                                    <StatCard title="Grand Total Revenue" value={formatCurrency(Number(analyticsData.totalRevenue))} />
+                                    <StatCard title="Total Platform Revenue" value={formatCurrency(Number(analyticsData.totalCrateTvRevenue))} />
                                     <StatCard title="Total Users" value={formatNumber(analyticsData.totalUsers)} />
                                     {/* FIX: Safely cast values from `viewCounts` to Number inside the reduce function to prevent type errors. */}
                                     <StatCard title="Total Film Views" value={formatNumber((Object.values(analyticsData.viewCounts) as number[]).reduce((s, c) => s + (Number(c) || 0), 0))} />
