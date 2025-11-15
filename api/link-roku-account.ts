@@ -1,3 +1,4 @@
+
 // This is a Vercel Serverless Function
 // Path: /api/link-roku-account
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';

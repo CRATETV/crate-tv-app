@@ -1,3 +1,4 @@
+
 // This is a Vercel Serverless Function that generates a feed for the custom Roku channel.
 // It will be accessible at the path /api/roku-feed
 
@@ -182,10 +183,10 @@ export async function GET(request: Request) {
     
     const accountItem: RokuMovie = {
         id: isDeviceLinked ? "account_linked" : "link_account_action",
-        title: isDeviceLinked ? `Account Linked` : "Link This Device",
+        title: isDeviceLinked ? `Account Linked` : "Link Your Account",
         description: isDeviceLinked 
             ? `Your Crate TV account (${user?.email || '...'}) is linked to this Roku device.`
-            : "Link your Crate TV account to sync content. Select this item to get your unique link code.",
+            : "Link your Crate TV account to sync your watchlist, likes, and more. Select this item to get your unique link code.",
         SDPosterUrl: "pkg:/images/logo_hd.png",
         HDPosterUrl: "pkg:/images/logo_hd.png",
         heroImage: "", streamUrl: "", director: "", actors: [], genres: [], rating: "", duration: "",
