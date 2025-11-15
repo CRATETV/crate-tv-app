@@ -35,16 +35,8 @@ async function main() {
         const filesToInclude = await readDirectory(rokuDir);
         const zip = new JSZip();
 
-        // Add all files from /roku to the zip
-        for (const file of filesToInclude) {
-            const content = await fs.readFile(file);
-            const zipPath = path.relative(rokuDir, file);
-            if (content.length > 0) {
-                zip.file(zipPath, content);
-            }
-        }
-        
         // Create the manifest file
+        // IMPORTANT: Roku expects the manifest to be the first file in the archive.
         zip.file('manifest', `
 title=Crate TV
 major_version=1
@@ -56,8 +48,25 @@ splash_screen_hd=pkg:/images/splash_hd.png
 fonts=hd,sd
 `.trim());
 
+        // Add all files from /roku to the zip
+        for (const file of filesToInclude) {
+            const content = await fs.readFile(file);
+            const zipPath = path.relative(rokuDir, file);
+            if (content.length > 0) {
+                zip.file(zipPath, content);
+            }
+        }
+        
         // Generate and write the zip file
-        const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+        // Specifying the platform and compression is crucial for Roku compatibility.
+        const zipBuffer = await zip.generateAsync({
+            type: 'nodebuffer',
+            platform: 'UNIX',
+            compression: "DEFLATE",
+            compressionOptions: {
+                level: 9
+            }
+        });
         await fs.writeFile(outputZipPath, zipBuffer);
         
         // Also create a .pkg file for the Roku web uploader

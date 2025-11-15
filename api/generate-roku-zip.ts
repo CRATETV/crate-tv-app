@@ -70,6 +70,19 @@ export async function POST(request: Request) {
     const domain = `${protocol}://${host}`;
     const feedUrl = `${domain}/api/roku-feed`;
 
+    // Create the manifest file dynamically, pointing to the artwork now in the zip
+    // IMPORTANT: Roku expects the manifest to be the first file in the archive.
+    zip.file('manifest', `
+title=Crate TV
+major_version=1
+minor_version=2
+build_version=0
+mm_icon_focus_hd=pkg:/images/logo_hd.png
+mm_icon_side_hd=pkg:/images/logo_hd.png
+splash_screen_hd=pkg:/images/splash_hd.png
+fonts=hd,sd
+`.trim());
+
     // Add all local files (components, scripts, images etc.) from the /roku directory to the zip.
     for (const file of filesToInclude) {
         let content: string | Buffer = await fs.readFile(file);
@@ -85,20 +98,15 @@ export async function POST(request: Request) {
         }
     }
     
-    // Create the manifest file dynamically, pointing to the artwork now in the zip
-    zip.file('manifest', `
-title=Crate TV
-major_version=1
-minor_version=2
-build_version=0
-mm_icon_focus_hd=pkg:/images/logo_hd.png
-mm_icon_side_hd=pkg:/images/logo_hd.png
-splash_screen_hd=pkg:/images/splash_hd.png
-fonts=hd,sd
-`.trim());
-
-    // Generate the final zip file as a standard ArrayBuffer
-    const zipBuffer = await zip.generateAsync({ type: 'arraybuffer' });
+    // Generate the final zip file. Specifying the platform and compression is crucial for Roku compatibility.
+    const zipBuffer = await zip.generateAsync({
+        type: 'arraybuffer',
+        platform: 'UNIX',
+        compression: "DEFLATE",
+        compressionOptions: {
+            level: 9
+        }
+    });
 
     // Return the zip file to the client
     return new Response(zipBuffer, {
