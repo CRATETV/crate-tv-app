@@ -75,6 +75,7 @@
                 id="categoryRowList"
                 translation="[80, 750]"
                 itemComponentName="MoviePoster"
+                itemComponentNameField="itemComponentName"
                 itemSize="[240, 360]"
                 rowItemSpacing="[ [30, 0] ]"
                 numRows="1"
