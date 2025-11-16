@@ -88,19 +88,25 @@ export async function POST(request: Request) {
     zip.file('manifest', manifestContent, { compression: "STORE", unixPermissions: 0o644 });
 
 
-    // Add all local files (components, scripts, images etc.) from the /roku directory to the zip.
+    // Add all local files from the /roku directory to the zip.
     for (const file of filesToInclude) {
-        let content: string | Buffer = await fs.readFile(file);
-        const zipPath = path.relative(rokuDir, file).replace(/\\/g, '/'); // Ensure forward slashes for zip path
-        
-        // If it's the config file, replace the placeholder URL with the live one.
-        if (zipPath === 'source/Config.brs') {
-            content = content.toString('utf-8').replace('API_URL_PLACEHOLDER', apiUrl);
+        const contentBuffer = await fs.readFile(file);
+        const zipPath = path.relative(rokuDir, file).replace(/\\/g, '/');
+        let finalContent: string | Buffer = contentBuffer;
+
+        // Normalize line endings for text files and perform replacements
+        if (zipPath.endsWith('.brs') || zipPath.endsWith('.xml')) {
+            let textContent = contentBuffer.toString('utf-8').replace(/\r\n/g, '\n');
+            
+            if (zipPath === 'source/Config.brs') {
+                textContent = textContent.replace('API_URL_PLACEHOLDER', apiUrl);
+            }
+            
+            finalContent = textContent;
         }
 
-        if (content.length > 0) {
-            // Explicitly set standard file permissions to avoid "invalid header" errors on Roku.
-            zip.file(zipPath, content, { unixPermissions: 0o644 });
+        if (finalContent.length > 0) {
+            zip.file(zipPath, finalContent, { unixPermissions: 0o644 });
         }
     }
     

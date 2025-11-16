@@ -231,17 +231,14 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
         fetchData();
     }, []);
 
-    // FIX: Replaced type assertions with explicit Number() conversions for arithmetic operations to resolve TypeScript errors where properties were inferred as 'unknown'.
     const filmPerformanceData = useMemo((): FilmPerformanceData[] => {
         if (!analyticsData || !allMovies) return [];
         return (Object.values(allMovies) as Movie[]).map(movie => {
-            // FIX: Add explicit type to the .find() callback parameter to resolve 'unknown' type errors.
             const payoutInfo = (analyticsData.filmmakerPayouts as FilmmakerPayout[]).find((p: FilmmakerPayout) => p.movieTitle === movie.title);
             return {
                 key: movie.key,
                 title: movie.title,
                 director: movie.director,
-                // FIX: Cast properties to number to allow access.
                 views: (analyticsData.viewCounts as Record<string, number>)[movie.key] || 0,
                 likes: (analyticsData.movieLikes as Record<string, number>)[movie.key] || 0,
                 watchlistAdds: (analyticsData.watchlistCounts as Record<string, number>)[movie.key] || 0,
@@ -272,7 +269,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
         </button>
     );
     
-    // FIX: Replaced type assertions with explicit Number() conversions for arithmetic operations to resolve TypeScript errors where properties were inferred as 'unknown'.
     const crateTvBalance = analyticsData ? Number(analyticsData.totalCrateTvRevenue) - Number(analyticsData.totalAdminPayouts) : 0;
 
     const renderFestivalAnalytics = () => (
@@ -312,7 +308,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                     <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Item</th><th className="p-3">Units Sold</th><th className="p-3">Revenue</th></tr></thead>
                     <tbody>
                         <tr className="border-b border-gray-700 font-semibold"><td className="p-3">All-Access Pass</td><td>{Number(analyticsData.festivalPassSales.units)}</td><td>{formatCurrency(Number(analyticsData.festivalPassSales.revenue))}</td></tr>
-                        {/* FIX: Corrected the type of 'sales' from 'any' to a specific object type to resolve type errors. */}
                         {Object.entries(analyticsData.salesByBlock).map(([title, sales]: [string, { units: number, revenue: number }]) => (
                             <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{sales.units}</td><td>{formatCurrency(sales.revenue)}</td></tr>
                         ))}
@@ -347,7 +342,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                             <div>
                                 <h2 className="text-2xl font-bold mb-4 text-white">Platform Snapshot</h2>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                                    {/* FIX: Add explicit casting to number for formatCurrency/formatNumber arguments. */}
                                     <StatCard title="Grand Total Revenue" value={formatCurrency(Number(analyticsData.totalRevenue))} />
                                     <StatCard title="Total Platform Revenue" value={formatCurrency(Number(analyticsData.totalCrateTvRevenue))} />
                                     <StatCard title="Total Users" value={formatNumber(Number(analyticsData.totalUsers))} />
@@ -458,9 +452,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                          <React.Fragment key={p.movieTitle}>
                                             <tr className="border-b border-gray-700 cursor-pointer hover:bg-gray-700/50" onClick={() => setExpandedPayoutRow(expandedPayoutRow === p.movieTitle ? null : p.movieTitle)}>
                                                 <td className="p-3 font-medium text-white">{p.movieTitle}</td>
-                                                <td className="p-3">{formatCurrency(Number(p.filmmakerDonationPayout))}</td>
-                                                <td className="p-3">{formatCurrency(Number(p.filmmakerAdPayout))}</td>
-                                                <td className="p-3 font-bold text-green-400">{formatCurrency(Number(p.totalFilmmakerPayout))}</td>
+                                                <td className="p-3">{formatCurrency(p.filmmakerDonationPayout)}</td>
+                                                <td className="p-3">{formatCurrency(p.filmmakerAdPayout)}</td>
+                                                <td className="p-3 font-bold text-green-400">{formatCurrency(p.totalFilmmakerPayout)}</td>
                                             </tr>
                                             {expandedPayoutRow === p.movieTitle && (
                                                 <tr className="bg-gray-800">
