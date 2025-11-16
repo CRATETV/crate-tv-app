@@ -1,5 +1,3 @@
-
-
 // This is a Vercel Serverless Function
 // Path: /api/link-roku-account
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -37,7 +35,15 @@ export async function POST(request: Request) {
     }
 
     const codeDoc = codeQuery.docs[0];
-    const { deviceId } = codeDoc.data();
+    const codeData = codeDoc.data();
+
+    // Check for expiration
+    if (codeData.expiresAt && codeData.expiresAt.toDate() < new Date()) {
+        await codeDoc.ref.delete(); // Clean up expired code
+        return new Response(JSON.stringify({ error: 'This link code has expired. Please generate a new one from your Roku device.' }), { status: 410, headers: { 'Content-Type': 'application/json' }});
+    }
+
+    const { deviceId } = codeData;
 
     if (!deviceId) {
          return new Response(JSON.stringify({ error: 'Code found, but is invalid. Please try again.' }), {
@@ -70,7 +76,7 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("Error linking Roku account:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unknown server error occurred.";
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

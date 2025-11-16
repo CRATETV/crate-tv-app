@@ -16,7 +16,32 @@
             width="1920" 
             height="1080"
         />
-        <Rectangle color="0x000000B0" width="1920" height="1080" />
+        
+        <!-- HERO SECTION -->
+        <Group id="heroGroup" visible="false">
+            <Poster id="heroBackground" width="1920" height="700" />
+            <Rectangle id="heroGradient" color="0x000000FF" endColor="0x00000000" gradient="linear" gradientDirection="down" width="1920" height="400" translation="[0, 300]" />
+            <Rectangle id="heroGradientLeft" color="0x000000D0" endColor="0x00000000" gradient="linear" gradientDirection="left-right" width="1000" height="700" />
+            <Group translation="[80, 250]">
+                <Label id="heroTitle" width="800" wrap="true" font="font:LargeBoldSystemFont" />
+                <Label id="heroSynopsis" width="700" wrap="true" maxLines="3" translation="[0, 80]" font="font:SmallSystemFont" />
+                <ButtonGroup 
+                    id="heroButtons" 
+                    translation="[0, 200]" 
+                    layoutDirection="horiz" 
+                    itemSpacing="[20, 0]" 
+                    buttons='["Play", "More Info"]'
+                />
+            </Group>
+        </Group>
+
+        <Poster
+            id="logo"
+            uri="pkg:/images/logo_hd.png"
+            width="200"
+            height="50"
+            translation="[80, 30]"
+        />
         
         <Label 
             id="loadingLabel"
@@ -31,12 +56,12 @@
         
         <RowList
             id="categoryRowList"
-            translation="[80, 150]"
+            translation="[80, 700]"
             itemComponentName="MoviePoster" ' Default component
-            itemSize="[240, 360]"
+            itemSize="[240, 360]" ' Default item size
             rowItemSpacing="[ [30, 0] ]"
             numRows="1"
-            rowHeights="[360]"
+            rowHeights="[360]" ' Default row height
             rowLabelOffset="[ [0, -50] ]"
             rowFocusAnimationStyle="floatingFocus"
             visible="false"

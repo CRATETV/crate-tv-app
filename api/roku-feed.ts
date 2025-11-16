@@ -1,5 +1,3 @@
-
-
 // This is a Vercel Serverless Function that generates a feed for the custom Roku channel.
 // It will be accessible at the path /api/roku-feed
 
@@ -153,15 +151,6 @@ export async function GET(request: Request) {
 
     const topTenCategory = topTenCategoryRaw ? processCategory(topTenCategoryRaw, "RankedMoviePoster") : null;
 
-
-    const nowStreamingKey = categoriesData['nowStreaming']?.movieKeys[0];
-    const nowStreamingMovie = nowStreamingKey ? visibleMovies[nowStreamingKey] : null;
-
-    const nowStreamingCategory: Category | null = nowStreamingMovie ? {
-        title: "Now Streaming",
-        movieKeys: [nowStreamingKey]
-    } : null;
-
     const isFestivalLive = festivalConfig?.startDate && festivalConfig?.endDate && 
                            new Date() >= new Date(festivalConfig.startDate) && 
                            new Date() < new Date(festivalConfig.endDate);
@@ -201,7 +190,7 @@ export async function GET(request: Request) {
         itemComponentName: "ActionItem"
     };
 
-    const finalCategories: RokuCategory[] = [accountCategory];
+    const finalCategories: RokuCategory[] = [];
     
     // Add My List to the top if it exists
     if(myListCategory) {
@@ -223,12 +212,13 @@ export async function GET(request: Request) {
         }
     });
 
-    // Always add public domain classics at the end
+    // Always add public domain classics and the account section at the end
     if(categoriesData.publicDomainIndie) {
         const processed = processCategory(categoriesData.publicDomainIndie, "MoviePoster");
         if(processed) finalCategories.push(processed);
     }
     
+    finalCategories.push(accountCategory);
 
     const content = {
       heroItems: heroItems,

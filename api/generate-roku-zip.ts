@@ -126,12 +126,6 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error generating Roku ZIP:", error);
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-    if (errorMessage.includes('ENOENT') && errorMessage.includes('roku/images')) {
-        return new Response(JSON.stringify({ error: "Could not find branding images. Please make sure you have placed 'logo_hd.png' and 'splash_hd.png' inside the 'roku/images' directory." }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
-    }
     return new Response(JSON.stringify({ error: errorMessage }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },

@@ -3,27 +3,37 @@
     <script type="text/brightscript" uri="pkg:/components/DetailsScene.brs" />
     <interface>
         <field id="content" type="node" onChange="onContentChange" />
+        <field id="command" type="assocarray" />
     </interface>
     <children>
         <Poster id="backgroundPoster" width="1920" height="1080" />
-        <Rectangle id="background" color="0x141414DD" width="1920" height="1080" />
-
-        <Group id="detailsGroup" translation="[80, 150]">
-            <Poster id="itemPoster" width="400" height="600" />
-            <Group id="infoGroup" translation="[500, 0]">
-                <Label id="titleLabel" width="1200" wrap="true" font="font:LargeBoldSystemFont" />
-                <Label id="synopsisLabel" width="1200" wrap="true" maxLines="8" translation="[0, 80]" font="font:SmallSystemFont" />
-                <Label id="directorLabel" width="1200" translation="[0, 300]" font="font:SmallSystemFont" />
-                 <Label id="castLabel" width="1200" wrap="true" maxLines="4" translation="[0, 350]" font="font:SmallSystemFont" />
+        <Rectangle id="gradient" color="0x141414F0" endColor="0x14141400" gradient="linear" gradientDirection="left-right" width="1200" height="1080" />
+        
+        <Group id="detailsGroup" translation="[80, 200]">
+            <Poster id="itemPoster" width="300" height="450" />
+            <Group id="infoGroup" translation="[360, 0]">
+                <Label id="titleLabel" width="1000" wrap="true" font="font:LargeBoldSystemFont" />
+                
+                <Group id="metadataGroup" translation="[0, 80]">
+                    <Label id="ratingLabel" width="200" font="font:SmallSystemFont" />
+                    <Label id="durationLabel" width="200" translation="[150, 0]" font="font:SmallSystemFont" />
+                </Group>
+                
                 <ButtonGroup 
                     id="actionButtons" 
-                    translation="[0, 450]" 
+                    translation="[0, 130]" 
                     layoutDirection="horiz" 
                     itemSpacing="[20, 0]" 
-                    buttons='["Play", "Add to My List", "Like"]'
+                    ' Buttons will be set dynamically
                 />
+                
+                <Label id="synopsisLabel" width="800" wrap="true" maxLines="6" translation="[0, 220]" font="font:SmallSystemFont" />
+                
+                <Label id="directorLabel" width="800" translation="[0, 420]" font="font:SmallSystemFont" />
+                <Label id="castLabel" width="800" wrap="true" maxLines="3" translation="[0, 460]" font="font:SmallSystemFont" />
+                <Label id="genresLabel" width="800" wrap="true" maxLines="2" translation="[0, 530]" font="font:SmallSystemFont" />
             </Group>
         </Group>
-        <Task id="actionTask" />
+        <Task id="actionTask" uri="pkg:/components/ContentTask.xml" />
     </children>
 </component>

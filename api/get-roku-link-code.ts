@@ -1,4 +1,3 @@
-
 // This is a Vercel Serverless Function
 // Path: /api/get-roku-link-code
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -41,8 +40,14 @@ export async function GET(request: Request) {
     // Check if a code already exists for this deviceId to prevent spamming
     const existingCodeQuery = await db.collection('roku_codes').where('deviceId', '==', deviceId).limit(1).get();
     if (!existingCodeQuery.empty) {
-        const existingCode = existingCodeQuery.docs[0].data().code;
-        return new Response(JSON.stringify({ code: existingCode }), { status: 200 });
+        const existingCodeData = existingCodeQuery.docs[0].data();
+        // If the code is still valid, return it. Otherwise, let it generate a new one.
+        if (existingCodeData.expiresAt && existingCodeData.expiresAt.toDate() > new Date()) {
+            return new Response(JSON.stringify({ code: existingCodeData.code }), { status: 200 });
+        } else {
+            // Delete the expired code before creating a new one
+            await existingCodeQuery.docs[0].ref.delete();
+        }
     }
 
     // Generate a unique code

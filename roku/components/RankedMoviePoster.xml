@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="RankedMoviePoster" extends="Group">
+
     <script type="text/brightscript" uri="pkg:/components/RankedMoviePoster.brs" />
+
     <interface>
         <field id="itemContent" type="node" onChange="onContentChange" />
         <field id="focusPercent" type="float" onChange="onFocusChange" />
@@ -9,20 +11,15 @@
     <children>
         <Rectangle 
             id="focusRing"
-            color="0x8B5CF6FF"
+            color="0xFFFFFFFF" 
             width="462" 
             height="265"
             translation="[-6, -6]"
             visible="false"
         />
         <Group id="contentGroup">
-            ' Gradient to match webapp style
-            <Rectangle
-                id="background"
-                color="0x000000FF"
-                width="450"
-                height="253"
-            />
+            <!-- Background and gradient -->
+            <Rectangle id="background" color="0x000000FF" width="450" height="253" />
             <Rectangle
                 id="gradient"
                 color="0x000000FF"
@@ -33,19 +30,19 @@
                 height="253"
             />
 
-            ' Large rank number on the left
+            <!-- Large rank number on the left -->
             <Label
                 id="rankLabel"
-                horizAlign="center"
+                horizAlign="left"
                 vertAlign="center"
                 height="253"
                 width="200"
-                translation="[-15, 0]"
+                translation="[10, 0]"
             >
                 <font role="sans" size="180" weight="bold" />
             </Label>
             
-            ' Poster snippet on the right
+            <!-- Poster snippet on the right -->
             <Poster
                 id="tilePoster"
                 width="250"
@@ -53,16 +50,20 @@
                 translation="[200, 0]"
             />
             
-            ' Film title
-            <Label
-                id="titleLabel"
-                width="180"
-                height="60"
-                wrap="true"
-                vertAlign="bottom"
-                translation="[15, 180]"
-                font="font:SmallBoldSystemFont"
-            />
+            <!-- Film title and "Start Watching" text -->
+            <Group translation="[15, 180]">
+                <Label
+                    text="Start Watching"
+                    color="0xAAAAAAFF"
+                    font="font:ExtraSmallSystemFont"
+                />
+                <Label
+                    id="titleLabel"
+                    width="180"
+                    translation="[0, 20]"
+                    font="font:SmallBoldSystemFont"
+                />
+            </Group>
         </Group>
 
         <Animation 
@@ -72,4 +73,5 @@
         />
 
     </children>
+
 </component>

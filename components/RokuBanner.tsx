@@ -13,7 +13,7 @@ const RokuBanner: React.FC = () => {
                 <div className="flex items-center gap-4">
                     <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/roku+logo+.webp" alt="Roku Logo" className="w-12 h-auto" />
                     <div>
-                        <h3 className="font-bold text-white">Watch this film on your Roku!</h3>
+                        <h3 className="font-bold text-white">Now available on Roku!</h3>
                         <p className="text-sm text-purple-300">Install our channel for the big screen experience.</p>
                     </div>
                 </div>

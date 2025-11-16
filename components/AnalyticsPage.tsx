@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -270,8 +271,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
         </button>
     );
     
-    // FIX: Cast properties to numbers to prevent type errors in arithmetic operations.
-    const crateTvBalance = analyticsData ? (analyticsData.totalCrateTvRevenue as number) - (analyticsData.totalAdminPayouts as number) : 0;
+    // FIX: Replaced type assertions with explicit Number() conversions for arithmetic operations to resolve TypeScript errors where properties were inferred as 'unknown'.
+    const crateTvBalance = analyticsData ? Number(analyticsData.totalCrateTvRevenue) - Number(analyticsData.totalAdminPayouts) : 0;
 
     const renderFestivalAnalytics = () => (
         analyticsData && (
@@ -284,13 +285,13 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                     {/* FIX: Cast properties to number to satisfy component/function prop types. */}
-                    <StatCard title="Total Festival Revenue" value={formatCurrency(analyticsData.totalFestivalRevenue as number)} className="sm:col-span-1" />
-                    <StatCard title="All-Access Passes" value={analyticsData.festivalPassSales.units as number} />
-                    <StatCard title="Individual Blocks" value={analyticsData.festivalBlockSales.units as number} />
+                    <StatCard title="Total Festival Revenue" value={formatCurrency(Number(analyticsData.totalFestivalRevenue))} className="sm:col-span-1" />
+                    <StatCard title="All-Access Passes" value={Number(analyticsData.festivalPassSales.units)} />
+                    <StatCard title="Individual Blocks" value={Number(analyticsData.festivalBlockSales.units)} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <StatCard title="Crate TV's Share (30%)" value={formatCurrency((analyticsData.totalFestivalRevenue as number) * 0.30)} />
-                    <StatCard title="Playhouse West's Share (70%)" value={formatCurrency((analyticsData.totalFestivalRevenue as number) * 0.70)} />
+                    <StatCard title="Crate TV's Share (30%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.30)} />
+                    <StatCard title="Playhouse West's Share (70%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.70)} />
                 </div>
                  <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg text-center">
                     <h3 className="text-lg font-bold text-white mb-4">Process Payout</h3>
@@ -299,7 +300,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                         disabled={festivalPayoutStatus === 'processing' || Number(analyticsData.totalFestivalRevenue) === 0}
                         className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg text-lg"
                     >
-                        {festivalPayoutStatus === 'processing' ? 'Processing...' : `Pay Playhouse West ${formatCurrency((analyticsData.totalFestivalRevenue as number) * 0.70)}`}
+                        {festivalPayoutStatus === 'processing' ? 'Processing...' : `Pay Playhouse West ${formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.70)}`}
                     </button>
                     {festivalPayoutMessage && (
                         <p className={`mt-4 text-sm ${festivalPayoutStatus === 'error' ? 'text-red-400' : 'text-green-400'}`}>{festivalPayoutMessage}</p>
@@ -309,9 +310,10 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                 <div className="overflow-x-auto"><table className="w-full text-left">
                     <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Item</th><th className="p-3">Units Sold</th><th className="p-3">Revenue</th></tr></thead>
                     <tbody>
-                        <tr className="border-b border-gray-700 font-semibold"><td className="p-3">All-Access Pass</td><td>{analyticsData.festivalPassSales.units as number}</td><td>{formatCurrency(analyticsData.festivalPassSales.revenue as number)}</td></tr>
-                        {Object.entries(analyticsData.salesByBlock).map(([title, sales]: [string, any]) => (
-                            <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{sales.units as number}</td><td>{formatCurrency(sales.revenue as number)}</td></tr>
+                        <tr className="border-b border-gray-700 font-semibold"><td className="p-3">All-Access Pass</td><td>{Number(analyticsData.festivalPassSales.units)}</td><td>{formatCurrency(Number(analyticsData.festivalPassSales.revenue))}</td></tr>
+                        {/* FIX: Corrected the type of 'sales' from 'any' to a specific object type to resolve type errors. */}
+                        {Object.entries(analyticsData.salesByBlock).map(([title, sales]: [string, { units: number, revenue: number }]) => (
+                            <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{sales.units}</td><td>{formatCurrency(sales.revenue)}</td></tr>
                         ))}
                     </tbody>
                 </table></div>
@@ -345,9 +347,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                 <h2 className="text-2xl font-bold mb-4 text-white">Platform Snapshot</h2>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                                     {/* FIX: Add explicit casting to number for formatCurrency/formatNumber arguments. */}
-                                    <StatCard title="Grand Total Revenue" value={formatCurrency(analyticsData.totalRevenue as number)} />
-                                    <StatCard title="Total Platform Revenue" value={formatCurrency(analyticsData.totalCrateTvRevenue as number)} />
-                                    <StatCard title="Total Users" value={formatNumber(analyticsData.totalUsers as number)} />
+                                    <StatCard title="Grand Total Revenue" value={formatCurrency(Number(analyticsData.totalRevenue))} />
+                                    <StatCard title="Total Platform Revenue" value={formatCurrency(Number(analyticsData.totalCrateTvRevenue))} />
+                                    <StatCard title="Total Users" value={formatNumber(Number(analyticsData.totalUsers))} />
                                     <StatCard title="Total Film Views" value={formatNumber((Object.values(analyticsData.viewCounts) as number[]).reduce((s, c) => s + (Number(c) || 0), 0))} />
                                 </div>
                             </div>
@@ -395,18 +397,18 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                              <div>
                                 <h2 className="text-2xl font-bold text-white mb-4">Revenue Streams</h2>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                                    <StatCard title="Total Donations" value={formatCurrency(analyticsData.totalDonations as number)} />
-                                    <StatCard title="Total Sales (VOD/Festival)" value={formatCurrency((analyticsData.totalSales as number) + (analyticsData.totalFestivalRevenue as number))} />
-                                    <StatCard title="Merch Revenue" value={formatCurrency(analyticsData.totalMerchRevenue as number)} />
-                                    <StatCard title="Ad Revenue" value={formatCurrency(analyticsData.totalAdRevenue as number)} />
-                                    <StatCard title="GRAND TOTAL REVENUE" value={formatCurrency(analyticsData.totalRevenue as number)} className="lg:col-span-4 bg-purple-900/30 border-purple-700" />
+                                    <StatCard title="Total Donations" value={formatCurrency(Number(analyticsData.totalDonations))} />
+                                    <StatCard title="Total Sales (VOD/Festival)" value={formatCurrency(Number(analyticsData.totalSales) + Number(analyticsData.totalFestivalRevenue))} />
+                                    <StatCard title="Merch Revenue" value={formatCurrency(Number(analyticsData.totalMerchRevenue))} />
+                                    <StatCard title="Ad Revenue" value={formatCurrency(Number(analyticsData.totalAdRevenue))} />
+                                    <StatCard title="GRAND TOTAL REVENUE" value={formatCurrency(Number(analyticsData.totalRevenue))} className="lg:col-span-4 bg-purple-900/30 border-purple-700" />
                                 </div>
                             </div>
                              <div>
                                 <h2 className="text-2xl font-bold text-white mb-4">Crate TV Earnings & Payouts</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                    <StatCard title="Total Platform Earnings" value={formatCurrency(analyticsData.totalCrateTvRevenue as number)} />
-                                    <StatCard title="Total Paid to Admin" value={formatCurrency(analyticsData.totalAdminPayouts as number)} />
+                                    <StatCard title="Total Platform Earnings" value={formatCurrency(Number(analyticsData.totalCrateTvRevenue))} />
+                                    <StatCard title="Total Paid to Admin" value={formatCurrency(Number(analyticsData.totalAdminPayouts))} />
                                     <StatCard title="Current Available Balance" value={formatCurrency(crateTvBalance)} className="bg-green-900/30 border-green-700" />
                                 </div>
                                 
@@ -455,9 +457,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                          <React.Fragment key={p.movieTitle}>
                                             <tr className="border-b border-gray-700 cursor-pointer hover:bg-gray-700/50" onClick={() => setExpandedPayoutRow(expandedPayoutRow === p.movieTitle ? null : p.movieTitle)}>
                                                 <td className="p-3 font-medium text-white">{p.movieTitle}</td>
-                                                <td className="p-3">{formatCurrency(p.filmmakerDonationPayout as number)}</td>
-                                                <td className="p-3">{formatCurrency(p.filmmakerAdPayout as number)}</td>
-                                                <td className="p-3 font-bold text-green-400">{formatCurrency(p.totalFilmmakerPayout as number)}</td>
+                                                <td className="p-3">{formatCurrency(Number(p.filmmakerDonationPayout))}</td>
+                                                <td className="p-3">{formatCurrency(Number(p.filmmakerAdPayout))}</td>
+                                                <td className="p-3 font-bold text-green-400">{formatCurrency(Number(p.totalFilmmakerPayout))}</td>
                                             </tr>
                                             {expandedPayoutRow === p.movieTitle && (
                                                 <tr className="bg-gray-800">
