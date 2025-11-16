@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -24,6 +25,7 @@ type FilmPerformanceData = {
     director: string;
     views: number;
     likes: number;
+    watchlistAdds: number;
     donations: number;
     crateTvCut: number;
     filmmakerDonationPayout: number;
@@ -136,8 +138,8 @@ const CountrySnapshot: React.FC<{
                 <div className="flex justify-between items-start mb-4">
                     <img src={`/api/proxy-image?url=${encodeURIComponent("https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png")}`} alt="Crate TV" className="w-24 h-auto" crossOrigin="anonymous"/>
                     <div className="text-right">
-                        <p className="text-xs text-gray-400">As of {new Date().toLocaleDateString()}</p>
-                        <p className="font-bold text-white text-lg">Total Views: {formatNumber(totalViews)}</p>
+                        <p className="text-xs text-gray-400">As of ${new Date().toLocaleDateString()}</p>
+                        <p className="font-bold text-white text-lg">Total Views: ${formatNumber(totalViews)}</p>
                     </div>
                 </div>
                 <h4 className="text-lg font-bold text-white mb-3">Viewership Snapshot: <span className="text-purple-400">{movie.title}</span></h4>
