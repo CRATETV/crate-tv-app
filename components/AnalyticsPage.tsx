@@ -231,6 +231,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
         fetchData();
     }, []);
 
+    // FIX: Replaced type assertions with explicit Number() conversions for arithmetic operations to resolve TypeScript errors where properties were inferred as 'unknown'.
     const filmPerformanceData = useMemo((): FilmPerformanceData[] => {
         if (!analyticsData || !allMovies) return [];
         return (Object.values(allMovies) as Movie[]).map(movie => {

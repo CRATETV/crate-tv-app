@@ -1,22 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+
+const Step: React.FC<{ number: string; title: string; children: React.ReactNode; }> = ({ number, title, children }) => (
+    <div className="flex items-start gap-4">
+        <div className="flex-shrink-0 w-10 h-10 bg-purple-600/20 text-purple-300 rounded-full flex items-center justify-center border-2 border-purple-500 font-bold text-lg">
+            {number}
+        </div>
+        <div>
+            <h4 className="text-lg font-bold text-white">{title}</h4>
+            <div className="text-gray-300 leading-relaxed text-sm space-y-2">{children}</div>
+        </div>
+    </div>
+);
+
 
 const RokuAdminTab: React.FC = () => {
-    const [pkgStatus, setPkgStatus] = useState<'idle' | 'generating' | 'error'>('idle');
     const [sourceStatus, setSourceStatus] = useState<'idle' | 'generating' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
 
-    const handleDownload = async (type: 'pkg' | 'source') => {
-        const isPkg = type === 'pkg';
-        const setStatus = isPkg ? setPkgStatus : setSourceStatus;
-        const endpoint = isPkg ? '/api/generate-roku-zip' : '/api/generate-roku-source-zip';
-        const filename = isPkg ? 'cratetv-roku-channel.pkg' : 'cratetv-roku-source.zip';
-
-        setStatus('generating');
+    const handleDownloadSource = async () => {
+        setSourceStatus('generating');
         setErrorMessage('');
         const password = sessionStorage.getItem('adminPassword');
 
         try {
-            const response = await fetch(endpoint, {
+            const response = await fetch('/api/generate-roku-source-zip', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password }),
@@ -24,79 +31,77 @@ const RokuAdminTab: React.FC = () => {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || `Failed to generate ${type} file.`);
+                throw new Error(errorData.error || `Failed to generate source file.`);
             }
 
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = filename;
+            a.download = 'cratetv-source.zip';
             document.body.appendChild(a);
             a.click();
             a.remove();
             window.URL.revokeObjectURL(url);
-            setStatus('idle');
+            setSourceStatus('idle');
 
         } catch (err) {
             setErrorMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
-            setStatus('error');
-            setTimeout(() => setStatus('idle'), 5000);
+            setSourceStatus('error');
+            setTimeout(() => setSourceStatus('idle'), 5000);
         }
     };
 
     return (
         <div className="space-y-8">
-            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                <h2 className="text-2xl font-bold text-purple-400 mb-4">Publish Your Custom Roku Channel</h2>
-                 <p className="text-gray-300 mb-6">
-                    This is the official method for publishing and maintaining the Crate TV Roku channel. This process uses Roku's robust SDK (Software Development Kit) to provide a fully custom, branded channel that mirrors the web app's design and supports advanced features like the Live Film Festival and account linking.
-                </p>
-                <div className="bg-yellow-900/30 border border-yellow-800 text-yellow-300 text-sm rounded-lg p-4 mb-6">
-                    <h3 className="font-bold mb-2">Important Notice Regarding Direct Publisher:</h3>
-                    <p>As of January 2024, Roku has discontinued its "Direct Publisher" platform. All no-code methods have been deprecated. The custom SDK channel is now the required method for publishing.</p>
-                </div>
-            </div>
-            
-            {/* CUSTOM SDK METHOD */}
-            <div className="bg-red-900/30 p-6 rounded-lg border-2 border-red-800">
-                <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-600">
-                    <h4 className="font-bold text-lg mb-3 text-white">Step 1: Download Your Channel Package</h4>
-                     <p className="text-gray-400 mb-4 text-sm">
-                         Click the button below to download your production-ready Roku channel package. This single file contains everything needed for publishing.
-                     </p>
+            <h2 className="text-2xl font-bold text-purple-400">Publishing Your Custom Roku Channel</h2>
+            <p className="text-gray-300">
+                The "incorrectly packaged" error from Roku means the upload was not signed by a Roku device. Follow this official process to create a valid, signed package for the Channel Store.
+            </p>
+
+            <div className="space-y-10">
+                <Step number="1" title="Enable Developer Mode on Your Roku">
+                    <p>On your Roku remote, press the following sequence:</p>
+                    <code className="bg-gray-700 p-2 rounded-md text-purple-300 font-mono">Home (3x), Up (2x), Right, Left, Right, Left, Right</code>
+                    <p>Follow the on-screen steps and take note of the IP address shown on your TV.</p>
+                </Step>
+                
+                <Step number="2" title="Download Your Channel's Source Code">
+                     <p>Click the button below to download the latest version of your channel's source code, ready for sideloading.</p>
                      <button 
-                        onClick={() => handleDownload('pkg')}
-                        disabled={pkgStatus === 'generating'}
-                        className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-5 rounded-lg text-sm transition-colors"
-                     >
-                        {pkgStatus === 'generating' ? 'Generating Package...' : 'Download Custom Package (.pkg)'}
-                     </button>
-                     {pkgStatus === 'error' && <p className="text-red-400 text-sm mt-4">{errorMessage}</p>}
-                 </div>
-                 <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-600 mt-6">
-                    <h4 className="font-bold text-lg mb-3 text-white">Step 2: Upload to Roku</h4>
-                     <ol className="list-decimal list-inside space-y-3 text-gray-300 text-sm">
-                        <li>Log into your <a href="https://developer.roku.com/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Roku Developer Dashboard</a>.</li>
-                        <li>Go to "Manage My Channels" and select your Crate TV SDK channel.</li>
-                        <li>Navigate to the "Package Upload" page and upload the `.pkg` file you just downloaded.</li>
-                        <li>Follow Roku's on-screen instructions to install a preview on your device, test it, and submit it for publishing.</li>
-                    </ol>
-                 </div>
-                 <div className="mt-6">
-                    <h4 className="font-bold text-lg mb-3 text-yellow-300">Sideloading for Development (Alternative)</h4>
-                    <p className="text-gray-400 mb-4 text-sm">
-                        For local development or if the automated package fails validation, you can use the manual sideloading process. This involves downloading the source code, zipping it correctly, and using your Roku device's developer uploader.
-                    </p>
-                     <button 
-                        onClick={() => handleDownload('source')}
+                        onClick={handleDownloadSource}
                         disabled={sourceStatus === 'generating'}
-                        className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-800 text-black font-bold py-2 px-5 rounded-lg text-sm transition-colors"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-lg text-sm transition-colors disabled:bg-gray-600 mt-2"
                     >
-                        {sourceStatus === 'generating' ? 'Zipping Source...' : 'Download Source Code (.zip)'}
+                        {sourceStatus === 'generating' ? 'Zipping Source...' : 'Download Channel Source (.zip)'}
                     </button>
-                     {sourceStatus === 'error' && <p className="text-red-300 text-sm mt-2">{errorMessage}</p>}
-                </div>
+                    {sourceStatus === 'error' && <p className="text-red-400 text-sm mt-2">{errorMessage}</p>}
+                </Step>
+
+                <Step number="3" title="Sideload and Package on Your Roku Device">
+                    <p>In a web browser on your computer, navigate to your Roku's IP address (e.g., <code className="bg-gray-700 p-1 rounded-md text-xs">http://192.168.1.100</code>).</p>
+                    <ol className="list-decimal list-inside space-y-2 pl-4 mt-2">
+                        <li>On the "Development Application Installer" page, click **Upload** and select the <code className="bg-gray-700 p-1 rounded-md text-xs">cratetv-source.zip</code> file you just downloaded.</li>
+                        <li>After it installs, click the **Packager** link on the top-right of the page.</li>
+                        <li>
+                            **First-Time Setup:** If 'Packager' isn't clickable, you need to generate a signing key. Telnet into your device (port 8080) and run the `genkey` command. This is a one-time setup per device.
+                        </li>
+                        <li>Enter a password for your key, then click **Package**.</li>
+                        <li>Click the purple link to download the final, signed <strong className="text-white">.pkg</strong> file to your computer.</li>
+                    </ol>
+                </Step>
+                
+                <Step number="4" title="Upload the Final Package to the Channel Store">
+                    <p>
+                        Log in to your <a href="https://developer.roku.com/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Roku Developer Dashboard</a>. Go to "Manage My Channels," select your channel, and navigate to the "Package Upload" page.
+                    </p>
+                    <p>Upload the <strong className="text-white">.pkg file</strong> you downloaded from your Roku device. This package is correctly signed and will be accepted by the store.</p>
+                </Step>
+            </div>
+             <div className="mt-12 bg-gray-800/50 p-6 rounded-lg border border-gray-700">
+                <h3 className="font-bold text-lg mb-2 text-white">What About Updates?</h3>
+                <p className="text-gray-300 text-sm"><strong className="text-green-400">Content Updates:</strong> Adding new movies or changing categories in your admin panel will appear on your Roku channel <strong className="text-green-400">automatically</strong>. No new package is needed.</p>
+                <p className="text-gray-300 mt-2 text-sm"><strong className="text-yellow-400">App Updates:</strong> You only need to repeat these steps if there is a code change to the Roku channel itself (e.g., a new feature or bug fix).</p>
             </div>
         </div>
     );
