@@ -112,7 +112,8 @@ export async function POST(request: Request) {
         moviesSnapshot?.forEach(doc => { allMovies[doc.id] = doc.data() as Movie; });
 
         const viewCounts: Record<string, number> = {};
-        viewsSnapshot?.forEach(doc => { viewCounts[doc.id] = doc.data().count || 0; });
+        // FIX: Ensure count from Firestore is treated as a number.
+        viewsSnapshot?.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count) || 0; });
         
         const movieLikes: Record<string, number> = {};
         Object.entries(allMovies).forEach(([key, movie]) => { movieLikes[key] = movie.likes || 0; });
@@ -193,8 +194,10 @@ export async function POST(request: Request) {
             }
         });
 
-        const totalAdRevenue = (Object.values(viewCounts).reduce((s, c) => s + (c as number), 0) / 1000) * AD_CPM_IN_CENTS;
-        const totalFestivalRevenue = festivalPassSales.revenue + festivalBlockSales.revenue;
+        // FIX: Ensure view counts are treated as numbers in the reduction to prevent type errors.
+        const totalAdRevenue = (Object.values(viewCounts).reduce((s, c) => s + Number(c || 0), 0) / 1000) * AD_CPM_IN_CENTS;
+        // FIX: Cast revenue properties to Number to avoid potential type mismatches.
+        const totalFestivalRevenue = Number(festivalPassSales.revenue) + Number(festivalBlockSales.revenue);
         const totalRevenue = totalDonations + totalSales + totalMerchRevenue + totalAdRevenue + totalFestivalRevenue;
 
         // Calculate Crate TV's total share

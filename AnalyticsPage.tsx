@@ -116,7 +116,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                 fetchAndCacheLiveData({ force: true })
             ]);
             
-            const analyticsJson = await analyticsRes.json();
+            // FIX: Explicitly type the JSON response to prevent properties from being 'any' or 'unknown'.
+            const analyticsJson: { analyticsData: AnalyticsData, errors: any } = await analyticsRes.json();
             if (analyticsJson.errors?.critical) throw new Error(analyticsJson.errors.critical);
             
             setAnalyticsData(analyticsJson.analyticsData);
@@ -249,7 +250,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                 <StatCard title="Grand Total Revenue" value={formatCurrency(Number(analyticsData.totalRevenue))} />
                                 <StatCard title="Total Platform Revenue" value={formatCurrency(Number(analyticsData.totalCrateTvRevenue))} />
                                 <StatCard title="Total Users" value={formatNumber(Number(analyticsData.totalUsers))} />
-                                <StatCard title="Total Film Views" value={formatNumber((Object.values(analyticsData.viewCounts) as number[]).reduce((s, c) => s + (Number(c) || 0), 0))} />
+                                {/* FIX: Ensure view counts are treated as numbers in the reduction to prevent type errors. */}
+                                <StatCard title="Total Film Views" value={formatNumber(Object.values(analyticsData.viewCounts).reduce((s, c) => s + Number(c || 0), 0))} />
                             </div>
                             
                             <BillingReminders />
@@ -350,7 +352,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                                         <h5 className="font-semibold text-gray-300 mb-2">Viewership by Country for {p.movieTitle}</h5>
                                                         {(analyticsData.viewLocations && analyticsData.viewLocations[Object.keys(allMovies).find(key => allMovies[key].title === p.movieTitle) || '']) ? (
                                                             <ul className="text-sm text-gray-400">
-                                                                {Object.entries(analyticsData.viewLocations[Object.keys(allMovies).find(key => allMovies[key].title === p.movieTitle) || '']).map(([country, count]) => (
+                                                                {Object.entries(analyticsData.viewLocations[Object.keys(allMovies).find(key => allMovies[key].title === p.movieTitle) || ''] as Record<string, number>).map(([country, count]) => (
                                                                     <li key={country}>{country}: {formatNumber(Number(count))} views</li>
                                                                 ))}
                                                             </ul>

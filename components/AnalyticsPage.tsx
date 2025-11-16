@@ -209,7 +209,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                 fetchAndCacheLiveData({ force: true })
             ]);
             
-            const analyticsJson = await analyticsRes.json();
+            // FIX: Explicitly type the JSON response to prevent properties from being 'any' or 'unknown'.
+            const analyticsJson: { analyticsData: AnalyticsData, errors: any } = await analyticsRes.json();
             if (analyticsJson.errors?.critical) throw new Error(analyticsJson.errors.critical);
             
             setAnalyticsData(analyticsJson.analyticsData);
@@ -281,7 +282,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                     </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                    {/* FIX: Cast properties to number to satisfy component/function prop types. */}
                     <StatCard title="Total Festival Revenue" value={formatCurrency(Number(analyticsData.totalFestivalRevenue))} className="sm:col-span-1" />
                     <StatCard title="All-Access Passes" value={Number(analyticsData.festivalPassSales.units)} />
                     <StatCard title="Individual Blocks" value={Number(analyticsData.festivalBlockSales.units)} />
@@ -308,8 +308,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                     <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Item</th><th className="p-3">Units Sold</th><th className="p-3">Revenue</th></tr></thead>
                     <tbody>
                         <tr className="border-b border-gray-700 font-semibold"><td className="p-3">All-Access Pass</td><td>{Number(analyticsData.festivalPassSales.units)}</td><td>{formatCurrency(Number(analyticsData.festivalPassSales.revenue))}</td></tr>
-                        {Object.entries(analyticsData.salesByBlock).map(([title, sales]: [string, { units: number, revenue: number }]) => (
-                            <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{sales.units}</td><td>{formatCurrency(sales.revenue)}</td></tr>
+                        {Object.entries(analyticsData.salesByBlock).map(([title, sales]: [string, any]) => (
+                            <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{Number(sales.units)}</td><td>{formatCurrency(Number(sales.revenue))}</td></tr>
                         ))}
                     </tbody>
                 </table></div>
