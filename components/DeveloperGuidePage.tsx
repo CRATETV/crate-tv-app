@@ -122,7 +122,7 @@ Implement Feature A with new styling and adjustments`}
                         </section>
                         
                         <section>
-                            <h2 className="text-3xl font-bold text-white mb-4">How to Set Up the Roku Channel (Automated SDK Method)</h2>
+                            <h2 className="text-3xl font-bold text-white mb-4">How to Set Up the Roku Channel</h2>
                             <p className="text-gray-300 mb-4">
                                 This project includes a full **SDK (Software Development Kit) channel** that loads its content from a live feed. The Admin Panel automates the packaging process, so you never have to edit code or manually zip files.
                             </p>

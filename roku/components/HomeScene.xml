@@ -3,8 +3,21 @@
 
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
 
+    <interface>
+        <field id="content" type="node" onChange="onContentChange" />
+        ' Command to send back to the router
+        <field id="command" type="assocarray" />
+    </interface>
+
     <children>
-        <!-- Loading indicator -->
+        <Poster 
+            id="background"
+            uri="pkg:/images/splash_hd.png" 
+            width="1920" 
+            height="1080"
+        />
+        <Rectangle color="0x000000B0" width="1920" height="1080" />
+        
         <Label 
             id="loadingLabel"
             text="Loading Crate TV..."
@@ -16,14 +29,16 @@
             <font role="sans" size="30"/>
         </Label>
         
-        <!-- Main content grid, initially hidden -->
-        <PosterGrid
-            id="filmGrid"
-            basePosterSize="[240, 360]"
-            caption1NumLines="1"
-            numColumns="6"
-            itemSpacing="[30, 30]"
+        <RowList
+            id="categoryRowList"
             translation="[80, 150]"
+            itemComponentName="MoviePoster" ' Default component
+            itemSize="[240, 360]"
+            rowItemSpacing="[ [30, 0] ]"
+            numRows="1"
+            rowHeights="[360]"
+            rowLabelOffset="[ [0, -50] ]"
+            rowFocusAnimationStyle="floatingFocus"
             visible="false"
         />
 

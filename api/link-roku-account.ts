@@ -1,4 +1,5 @@
 
+
 // This is a Vercel Serverless Function
 // Path: /api/link-roku-account
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -20,9 +21,14 @@ export async function POST(request: Request) {
     
     const db = getAdminDb();
     if (!db) throw new Error("Database connection failed.");
+    
+    // Sanitize the code to handle inputs with or without the dash
+    const sanitizedCode = rokuLinkCode.trim().toUpperCase().replace(/-/g, '');
+    const formattedCode = `${sanitizedCode.slice(0, 3)}-${sanitizedCode.slice(3)}`;
+
 
     // --- New logic: Find deviceId from the user-friendly code ---
-    const codeQuery = await db.collection('roku_codes').where('code', '==', rokuLinkCode.trim().toUpperCase()).limit(1).get();
+    const codeQuery = await db.collection('roku_codes').where('code', '==', formattedCode).limit(1).get();
     
     if (codeQuery.empty) {
         return new Response(JSON.stringify({ error: 'Invalid or expired link code. Please try generating a new code on your Roku device.' }), {

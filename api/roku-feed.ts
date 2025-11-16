@@ -1,4 +1,5 @@
 
+
 // This is a Vercel Serverless Function that generates a feed for the custom Roku channel.
 // It will be accessible at the path /api/roku-feed
 
@@ -28,6 +29,7 @@ interface RokuMovie {
 interface RokuCategory {
     title: string;
     children: (RokuMovie | null)[];
+    itemComponentName?: string;
 }
 
 
@@ -56,9 +58,9 @@ const formatMovieForRoku = (movie: Movie, movieGenreMap: Map<string, string[]>, 
         id: movie.key || '',
         title: movie.title || 'Untitled Film',
         description: (movie.synopsis || '').replace(/<br\s*\/?>/gi, '\n').trim(),
-        SDPosterUrl: movie.tvPoster || movie.poster || '',
-        HDPosterUrl: movie.tvPoster || movie.poster || '',
-        heroImage: movie.poster || movie.tvPoster || '',
+        SDPosterUrl: movie.poster || movie.tvPoster || '',
+        HDPosterUrl: movie.poster || movie.tvPoster || '',
+        heroImage: movie.tvPoster || movie.poster || '',
         streamUrl: movie.fullMovie || '',
         director: movie.director || '',
         actors: movie.cast ? movie.cast.map(c => c.name || '') : [],
@@ -121,13 +123,13 @@ export async function GET(request: Request) {
         .filter((movie): movie is Movie => !!movie)
         .map((movie: Movie) => formatMovieForRoku(movie, movieGenreMap, user));
         
-    const processCategory = (categoryData: Category): RokuCategory | null => {
+    const processCategory = (categoryData: Category, itemComponentName?: string): RokuCategory | null => {
         if (!categoryData || !Array.isArray(categoryData.movieKeys)) return null;
         const rokuMovies = categoryData.movieKeys
             .map(movieKey => visibleMovies[movieKey])
             .filter((movie): movie is Movie => !!movie)
             .map(movie => formatMovieForRoku(movie, movieGenreMap, user));
-        if (rokuMovies.length > 0) return { title: categoryData.title, children: rokuMovies };
+        if (rokuMovies.length > 0) return { title: categoryData.title, children: rokuMovies, itemComponentName };
         return null;
     };
     
@@ -149,7 +151,7 @@ export async function GET(request: Request) {
         movieKeys: topTenMovies.map((m: Movie) => m.key)
     } : null;
 
-    const topTenCategory = topTenCategoryRaw ? processCategory(topTenCategoryRaw) : null;
+    const topTenCategory = topTenCategoryRaw ? processCategory(topTenCategoryRaw, "RankedMoviePoster") : null;
 
 
     const nowStreamingKey = categoriesData['nowStreaming']?.movieKeys[0];
@@ -191,41 +193,45 @@ export async function GET(request: Request) {
         HDPosterUrl: "pkg:/images/logo_hd.png",
         heroImage: "", streamUrl: "", director: "", actors: [], genres: [], rating: "", duration: "",
         isLiked: false, isOnWatchlist: false, isWatched: false,
-        itemComponentName: "ActionItem"
     };
 
     const accountCategory: RokuCategory = {
         title: "My Account",
-        children: [accountItem]
+        children: [accountItem],
+        itemComponentName: "ActionItem"
     };
 
     const finalCategories: RokuCategory[] = [accountCategory];
-    const orderedCategories: (Category | null)[] = [
-        myListCategory, // Add My List to the top
-        nowStreamingCategory,
-    ];
+    
+    // Add My List to the top if it exists
+    if(myListCategory) {
+        const processed = processCategory(myListCategory, "MoviePoster");
+        if(processed) finalCategories.push(processed);
+    }
 
-    const processedKeys = new Set(['featured', 'pwff12thAnnual', 'nowStreaming', 'topTen']);
-    const remainingCategoryOrder = ["newReleases", "awardWinners", "comedy", "drama", "documentary", "exploreTitles", "publicDomainIndie"];
+    if(topTenCategory) {
+        finalCategories.push(topTenCategory);
+    }
+    
+    const processedKeys = new Set(['featured', 'nowStreaming', 'publicDomainIndie']);
+    const remainingCategoryOrder = ["newReleases", "awardWinners", "comedy", "drama", "documentary", "pwff12thAnnual", "exploreTitles"];
     
     remainingCategoryOrder.forEach((key: string) => {
         if (!processedKeys.has(key) && categoriesData[key]) {
-            orderedCategories.push(categoriesData[key]);
-        }
-    });
-    
-    orderedCategories.forEach((cat: Category | null) => {
-        if (cat) {
-            const processed = processCategory(cat);
-            if (processed) {
-                finalCategories.push(processed);
-            }
+            const processed = processCategory(categoriesData[key], "MoviePoster");
+            if(processed) finalCategories.push(processed);
         }
     });
 
+    // Always add public domain classics at the end
+    if(categoriesData.publicDomainIndie) {
+        const processed = processCategory(categoriesData.publicDomainIndie, "MoviePoster");
+        if(processed) finalCategories.push(processed);
+    }
+    
+
     const content = {
       heroItems: heroItems,
-      topTenCategory: topTenCategory,
       categories: finalCategories,
       isLinked: isDeviceLinked,
       uid: user?.uid, // Pass uid for client-side actions
