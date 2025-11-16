@@ -61,7 +61,8 @@ export async function POST(request: Request) {
 
         // Normalize line endings for text files and perform replacements
         if (zipPath.endsWith('.brs') || zipPath.endsWith('.xml')) {
-            let textContent = contentBuffer.toString('utf-8').replace(/\r\n/g, '\n');
+            // More robust line ending normalization
+            let textContent = contentBuffer.toString('utf-8').replace(/\r\n?/g, '\n');
             
             if (zipPath === 'source/Config.brs') {
                 textContent = textContent.replace('API_URL_PLACEHOLDER', apiUrl);
