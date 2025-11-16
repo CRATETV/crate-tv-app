@@ -22,8 +22,8 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     if (!db) throw new Error("Database connection failed.");
     
-    // Sanitize the code to handle inputs with or without the dash
-    const sanitizedCode = rokuLinkCode.trim().toUpperCase().replace(/-/g, '');
+    // Robustly sanitize the code to handle spaces, dashes, or no separators.
+    const sanitizedCode = rokuLinkCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
     const formattedCode = `${sanitizedCode.slice(0, 3)}-${sanitizedCode.slice(3)}`;
 
 

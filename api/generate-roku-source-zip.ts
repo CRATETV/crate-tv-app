@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     // Dynamically set feed URL
     const protocol = host?.startsWith('localhost') ? 'http' : 'https';
     const domain = `${protocol}://${host}`;
-    const feedUrl = `${domain}/api/roku-feed`;
+    const apiUrl = `${domain}/api`;
 
     // Add all files from /roku to the zip
     for (const file of filesToInclude) {
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
         
         // Replace placeholder in Config.brs
         if (zipPath === 'source/Config.brs') {
-            content = content.toString('utf-8').replace('ROKU_FEED_URL_PLACEHOLDER', feedUrl);
+            content = content.toString('utf-8').replace('API_URL_PLACEHOLDER', apiUrl);
         }
 
         if (content.length > 0) {

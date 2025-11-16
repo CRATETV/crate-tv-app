@@ -65,10 +65,10 @@ export async function POST(request: Request) {
 
     const zip = new JSZip();
 
-    // Dynamically determine the feed URL based on the request's host
+    // Dynamically determine the base API URL based on the request's host
     const protocol = host?.startsWith('localhost') ? 'http' : 'https';
     const domain = `${protocol}://${host}`;
-    const feedUrl = `${domain}/api/roku-feed`;
+    const apiUrl = `${domain}/api`;
 
     // Build the manifest string line-by-line to guarantee LF line endings.
     const manifestLines = [
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
         
         // If it's the config file, replace the placeholder URL with the live one.
         if (zipPath === 'source/Config.brs') {
-            content = content.toString('utf-8').replace('ROKU_FEED_URL_PLACEHOLDER', feedUrl);
+            content = content.toString('utf-8').replace('API_URL_PLACEHOLDER', apiUrl);
         }
 
         if (content.length > 0) {
