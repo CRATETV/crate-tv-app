@@ -1,9 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const RokuAdminTab: React.FC = () => {
     const [pkgStatus, setPkgStatus] = useState<'idle' | 'generating' | 'error'>('idle');
     const [sourceStatus, setSourceStatus] = useState<'idle' | 'generating' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
+    const [feedUrl, setFeedUrl] = useState('');
+    const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
+
+    useEffect(() => {
+        // Construct the feed URL based on the current window location
+        if (typeof window !== 'undefined') {
+            const url = new URL('/api/roku-direct-publisher-feed', window.location.origin);
+            setFeedUrl(url.href);
+        }
+    }, []);
+
+    const handleCopyUrl = () => {
+        navigator.clipboard.writeText(feedUrl).then(() => {
+            setCopyStatus('copied');
+            setTimeout(() => setCopyStatus('idle'), 2000);
+        });
+    };
 
     const handleDownload = async (type: 'pkg' | 'source') => {
         const isPkg = type === 'pkg';
@@ -50,22 +67,60 @@ const RokuAdminTab: React.FC = () => {
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
                 <h2 className="text-2xl font-bold text-purple-400 mb-4">Publish Your Custom Roku Channel</h2>
                 <p className="text-gray-300 mb-6">
-                   This tool provides a complete, production-ready package for your custom SDK channel. This channel is fully branded, mirrors your web app's design, and supports advanced features like personalization ("My List") and the Live Film Festival. The package you download is dynamically configured for this deployment—no coding required.
+                   Choose one of the methods below to publish your content on Roku. The "No-Code Way" is the fastest and easiest method for most users. The "Custom SDK" method provides a more deeply integrated, web-app-like experience.
                 </p>
             </div>
             
-            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                 <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-600">
+            {/* NO-CODE DIRECT PUBLISHER METHOD */}
+            <div className="bg-green-900/20 p-6 rounded-lg border-2 border-green-700">
+                <h3 className="text-2xl font-bold text-green-300 mb-4">Method 1: The No-Code Way (Recommended)</h3>
+                <p className="text-green-200/90 mb-6">
+                    Use Roku's **Direct Publisher** platform for a beautiful, automatically generated channel. No coding or manual packaging is required. Your channel will update automatically whenever you publish new content here.
+                </p>
+                <ol className="list-decimal list-inside space-y-4 text-gray-300">
+                    <li>
+                        <strong className="text-white">Copy your unique Content Feed URL.</strong><br/>
+                        This is the special link that tells Roku what content to display.
+                        <div className="my-3 flex items-center gap-2">
+                            <input type="text" readOnly value={feedUrl} className="form-input !py-1 text-sm bg-gray-700 w-full" />
+                            <button onClick={handleCopyUrl} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md text-xs flex-shrink-0">
+                                {copyStatus === 'copied' ? 'Copied!' : 'Copy'}
+                            </button>
+                        </div>
+                    </li>
+                    <li>
+                        <strong className="text-white">Create a Direct Publisher channel.</strong><br/>
+                        Log into your <a href="https://developer.roku.com/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Roku Developer Dashboard</a>, click "Add Channel", and select "Direct Publisher".
+                    </li>
+                    <li>
+                        <strong className="text-white">Configure your channel.</strong><br/>
+                        Follow Roku's on-screen instructions. In the "Feed URL" section, paste the URL you copied above. Customize your branding with logos and colors.
+                    </li>
+                     <li>
+                        <strong className="text-white">Preview and Publish.</strong><br/>
+                        Test your channel and submit it for review. That's it!
+                    </li>
+                </ol>
+            </div>
+
+
+            {/* CUSTOM SDK METHOD */}
+            <div className="bg-red-900/30 p-6 rounded-lg border-2 border-red-800">
+                <h3 className="text-2xl font-bold text-red-300 mb-4">Method 2: Custom SDK Channel (Advanced)</h3>
+                <p className="text-red-200/90 mb-6">
+                    This method provides a fully custom channel that mirrors your web app's design and supports advanced features like the Live Film Festival and account linking. This requires manually uploading a package file for any code changes.
+                </p>
+                <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-600">
                     <h4 className="font-bold text-lg mb-3">Step 1: Download Your Channel Package</h4>
                      <p className="text-gray-400 mb-4 text-sm">
-                         Click the button below to download your production-ready Roku channel package. This is the recommended method.
+                         Click the button below to download your production-ready Roku channel package.
                      </p>
                      <button 
                         onClick={() => handleDownload('pkg')}
                         disabled={pkgStatus === 'generating'}
-                        className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-3 px-6 rounded-lg text-base transition-colors"
+                        className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-5 rounded-lg text-sm transition-colors"
                      >
-                        {pkgStatus === 'generating' ? 'Generating Package...' : 'Download Custom Roku Package (.pkg)'}
+                        {pkgStatus === 'generating' ? 'Generating Package...' : 'Download Custom Package (.pkg)'}
                      </button>
                      {pkgStatus === 'error' && <p className="text-red-400 text-sm mt-4">{errorMessage}</p>}
                  </div>
@@ -74,51 +129,24 @@ const RokuAdminTab: React.FC = () => {
                      <ol className="list-decimal list-inside space-y-3 text-gray-300 text-sm">
                         <li>Log into your <a href="https://developer.roku.com/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Roku Developer Dashboard</a>.</li>
                         <li>Go to "Manage My Channels" and select your SDK channel.</li>
-                        <li>Navigate to the "Package Upload" page and upload the package file you just downloaded.</li>
-                        <li>Follow Roku's instructions to install a preview on your device, test it, and submit for publishing.</li>
+                        <li>Navigate to the "Package Upload" page and upload the package file.</li>
+                        <li>Follow Roku's instructions to preview and publish.</li>
                     </ol>
                  </div>
-            </div>
-
-            <div className="bg-red-900/30 p-6 rounded-lg border-2 border-red-800">
-                <h3 className="text-2xl font-bold text-red-300 mb-4">Manual Packaging Instructions (Plan B)</h3>
-                <p className="text-red-200/90 mb-6">
-                    If the automated package download fails Roku's validation, use this foolproof manual method. This process uses your Roku device itself to create a perfectly signed package.
-                </p>
-
-                <ol className="list-decimal list-inside space-y-6 text-gray-300">
-                    <li>
-                        <strong className="text-white">Enable Developer Mode on your Roku device.</strong><br/>
-                        On your Roku remote, press: <code className="bg-gray-700 p-1 rounded-md text-sm">Home (3x), Up (2x), Right, Left, Right, Left, Right</code>. Follow the on-screen instructions and note the IP address shown.
-                    </li>
-                    <li>
-                        <strong className="text-white">Download the channel source code.</strong><br/>
-                        This is different from the package above. This is a standard zip file for the Roku uploader.
-                        <div className="my-3">
-                            <button 
-                                onClick={() => handleDownload('source')}
-                                disabled={sourceStatus === 'generating'}
-                                className="bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white font-bold py-2 px-5 rounded-lg text-sm transition-colors"
-                            >
-                                {sourceStatus === 'generating' ? 'Zipping Source...' : 'Download Source Code (.zip)'}
-                            </button>
-                             {sourceStatus === 'error' && <p className="text-red-300 text-sm mt-2">{errorMessage}</p>}
-                        </div>
-                    </li>
-                    <li>
-                        <strong className="text-white">Access the Roku Developer Uploader.</strong><br/>
-                        In your web browser, go to <code className="bg-gray-700 p-1 rounded-md text-sm">http://&lt;your-roku-ip-address&gt;</code>.
-                    </li>
-                     <li>
-                        <strong className="text-white">Upload and Install the Source Code.</strong><br/>
-                        On the "Development Application Installer" page, upload the `.zip` file you just downloaded and click "Install". The channel will appear on your TV for testing.
-                    </li>
-                     <li>
-                        <strong className="text-white">Create the Final Package.</strong><br/>
-                        After testing, return to the web uploader page. While the app is installed, click the **"Package"** button. This will create and download the final, signed `.pkg` file. This is the file you can successfully upload to the main Roku Developer Dashboard.
-                    </li>
-                </ol>
-                 <a href="https://developer.roku.com/docs/developer-program/getting-started/developer-setup.md#step-4-accessing-the-development-application-installer" target="_blank" rel="noopener noreferrer" className="text-sm text-purple-300 hover:underline mt-6 inline-block">View Official Roku Documentation &rarr;</a>
+                 <div className="mt-6">
+                    <h4 className="font-bold text-lg mb-3 text-yellow-300">Sideloading for Development (Plan B)</h4>
+                    <p className="text-gray-400 mb-4 text-sm">
+                        If the automated package fails validation, you can use the manual sideloading process. This involves downloading the source code, zipping it correctly, and using your Roku device's uploader.
+                    </p>
+                     <button 
+                        onClick={() => handleDownload('source')}
+                        disabled={sourceStatus === 'generating'}
+                        className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-800 text-black font-bold py-2 px-5 rounded-lg text-sm transition-colors"
+                    >
+                        {sourceStatus === 'generating' ? 'Zipping Source...' : 'Download Source Code (.zip)'}
+                    </button>
+                     {sourceStatus === 'error' && <p className="text-red-300 text-sm mt-2">{errorMessage}</p>}
+                </div>
             </div>
         </div>
     );

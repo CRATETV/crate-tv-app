@@ -20,7 +20,7 @@
                 width="1200"
                 horizAlign="center"
                 font="font:LargeBoldSystemFont"
-                color="0xFF8080FF" ' A light red color
+                color="0xFF8080FF"
             />
             <Label
                 id="errorMessageLabel"
@@ -31,6 +31,7 @@
                 translation="[0, 100]"
                 font="font:SmallSystemFont"
             />
+            <!-- This is a valid XML comment -->
         </Group>
     </children>
 </component>

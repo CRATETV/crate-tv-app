@@ -16,75 +16,17 @@
             <font role="sans" size="30"/>
         </Label>
         
-        <!-- Main content group, initially hidden -->
-        <Group id="contentGroup" visible="false">
-            <!-- Hero Section -->
-            <Group id="heroGroup">
-                <Poster id="heroBackground" width="1920" height="1080" />
-                <Rectangle id="heroGradient" color="0x000000CC" width="1280" height="1080" />
-                <Label 
-                    id="heroTitle"
-                    width="880"
-                    wrap="true"
-                    translation="[80, 250]"
-                    font="font:LargeBoldSystemFont"
-                />
-                <Label
-                    id="heroDescription"
-                    width="880"
-                    wrap="true"
-                    maxLines="3"
-                    translation="[80, 320]"
-                    font="font:SmallSystemFont"
-                />
-                 <ButtonGroup 
-                    id="heroButtons" 
-                    translation="[80, 450]" 
-                    layoutDirection="horiz" 
-                    itemSpacing="[20, 0]" 
-                    buttons='["Play", "More Info"]'
-                />
-            </Group>
+        <!-- Main content grid, initially hidden -->
+        <PosterGrid
+            id="filmGrid"
+            basePosterSize="[240, 360]"
+            caption1NumLines="1"
+            numColumns="6"
+            itemSpacing="[30, 30]"
+            translation="[80, 150]"
+            visible="false"
+        />
 
-            <!-- Festival Banner -->
-            <Poster
-                id="festivalBanner"
-                uri="pkg:/images/festival_banner.png"
-                width="1760"
-                height="200"
-                translation="[80, 600]"
-                visible="false"
-            />
-
-            <!-- Top Ten Carousel -->
-            <RowList
-                id="topTenRowList"
-                translation="[80, 600]"
-                itemComponentName="RankedMoviePoster"
-                itemSize="[450, 253]"
-                rowItemSpacing="[ [30, 0] ]"
-                numRows="1"
-                rowHeights="[253]"
-                rowLabelOffset="[ [0, -50] ]"
-                rowFocusAnimationStyle="floatingFocus"
-                visible="false"
-            />
-
-            <!-- Regular Movie Carousels -->
-            <RowList 
-                id="categoryRowList"
-                translation="[80, 750]"
-                itemComponentNameField="itemComponentName"
-                itemSize="[240, 360]"
-                rowItemSpacing="[ [30, 0] ]"
-                numRows="1"
-                rowHeights="[360]"
-                rowLabelOffset="[ [0, -50] ]"
-                rowFocusAnimationStyle="floatingFocus"
-            />
-        </Group>
-
-        <Timer id="heroTimer" repeat="true" duration="7" />
     </children>
 
 </component>

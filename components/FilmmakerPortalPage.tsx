@@ -8,15 +8,18 @@ import { useAuth } from '../contexts/AuthContext';
  * preventing a race condition that could cause an infinite loading state.
  */
 const FilmmakerPortalPage: React.FC = () => {
-    const { claimsLoaded } = useAuth();
+    const { claimsLoaded, user } = useAuth();
 
     useEffect(() => {
         // Only redirect once we know the user's roles (claims) are loaded.
-        if (claimsLoaded) {
+        // FIX: Add a more robust guard. The child components (Filmmaker/Actor views)
+        // require the user's name to be present. Waiting for `user.name`
+        // to be present prevents a race condition and the resulting infinite loading screen.
+        if (claimsLoaded && user?.name) {
             window.history.replaceState({}, '', '/portal');
             window.dispatchEvent(new Event('pushstate'));
         }
-    }, [claimsLoaded]);
+    }, [claimsLoaded, user]);
 
     // Show a loading spinner while claims are being verified.
     return <LoadingSpinner />;
