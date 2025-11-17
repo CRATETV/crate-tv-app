@@ -1,7 +1,11 @@
 
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { AnalyticsData, Movie, AdminPayout } from './types';
+
+
+
+
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from './types';
 import { fetchAndCacheLiveData } from './services/dataService';
 import LoadingSpinner from './components/LoadingSpinner';
 import FilmReportModal from './components/FilmReportModal';
@@ -24,6 +28,7 @@ type FilmPerformanceData = {
     director: string;
     views: number;
     likes: number;
+    watchlistAdds: number;
     donations: number;
     crateTvCut: number;
     filmmakerDonationPayout: number;
@@ -68,15 +73,105 @@ const AudienceEmailList: React.FC<{ title: string; users: { email: string }[] }>
     );
 };
 
-// Define the type for a single filmmaker payout record to ensure type safety.
-type FilmmakerPayout = {
-    movieTitle: string;
-    totalDonations: number;
-    crateTvCut: number;
-    filmmakerDonationPayout: number;
-    totalAdRevenue: number;
-    filmmakerAdPayout: number;
-    totalFilmmakerPayout: number;
+const countryNameMap: Record<string, string> = {
+    US: 'United States',
+    CA: 'Canada',
+    GB: 'United Kingdom',
+    AU: 'Australia',
+    DE: 'Germany',
+    FR: 'France',
+    IN: 'India',
+    JP: 'Japan',
+    BR: 'Brazil',
+    MX: 'Mexico',
+    unknown: 'Unknown',
+};
+
+const CountrySnapshot: React.FC<{ 
+    movie: Movie; 
+    locations: Record<string, number>;
+}> = ({ movie, locations }) => {
+    const snapshotRef = useRef<HTMLDivElement>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const handleShare = async () => {
+        if (!snapshotRef.current || isGenerating) return;
+        setIsGenerating(true);
+        try {
+            const { default: html2canvas } = await import('html2canvas');
+            const canvas = await html2canvas(snapshotRef.current, {
+                useCORS: true, 
+                backgroundColor: '#111827', // Tailwind gray-900
+            });
+            
+            const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+            if (!blob) throw new Error('Could not create image from snapshot.');
+    
+            const file = new File([blob], `cratetv_viewership_${movie.key}.png`, { type: 'image/png' });
+            
+            if (navigator.share && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: `Viewership for ${movie.title}`,
+                    text: `Here's the country-wise traffic bifurcation for "${movie.title}" on Crate TV.`,
+                    files: [file]
+                });
+            } else {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `cratetv_viewership_${movie.key}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+            }
+        } catch (error) {
+            console.error('Sharing failed:', error);
+            alert('Could not generate snapshot. Please try again.');
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const sortedLocations = Object.entries(locations).sort(([, a], [, b]) => b - a);
+    const totalViews = sortedLocations.reduce((sum, [, count]) => sum + count, 0);
+
+    return (
+        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 mt-4">
+            <div ref={snapshotRef} className="bg-gray-900 p-6 rounded-md">
+                <div className="flex justify-between items-start mb-4">
+                    <img src={`/api/proxy-image?url=${encodeURIComponent("https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png")}`} alt="Crate TV" className="w-24 h-auto" crossOrigin="anonymous"/>
+                    <div className="text-right">
+                        <p className="text-xs text-gray-400">As of ${new Date().toLocaleDateString()}</p>
+                        <p className="font-bold text-white text-lg">Total Views: ${formatNumber(totalViews)}</p>
+                    </div>
+                </div>
+                <h4 className="text-lg font-bold text-white mb-3">Viewership Snapshot: <span className="text-purple-400">{movie.title}</span></h4>
+                <div className="overflow-x-auto max-h-60">
+                    <table className="w-full text-left text-sm">
+                        <thead className="text-xs text-gray-400 uppercase bg-gray-700/50 sticky top-0">
+                            <tr>
+                                <th className="p-2">Country</th>
+                                <th className="p-2 text-right">Views</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sortedLocations.map(([code, count]) => (
+                                <tr key={code} className="border-b border-gray-800">
+                                    <td className="p-2 font-medium text-white">{countryNameMap[code] || code} ({code})</td>
+                                    <td className="p-2 text-right">{formatNumber(count)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div className="mt-4 text-right">
+                <button onClick={handleShare} disabled={isGenerating} className="submit-btn bg-purple-600 hover:bg-purple-700">
+                    {isGenerating ? 'Generating...' : 'Share Snapshot'}
+                </button>
+            </div>
+        </div>
+    );
 };
 
 
@@ -144,13 +239,14 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const filmPerformanceData = useMemo((): FilmPerformanceData[] => {
         if (!analyticsData || !allMovies) return [];
         return (Object.values(allMovies) as Movie[]).map(movie => {
-            const payoutInfo = analyticsData.filmmakerPayouts.find(p => p.movieTitle === movie.title);
+            const payoutInfo = (analyticsData.filmmakerPayouts as FilmmakerPayout[]).find((p: FilmmakerPayout) => p.movieTitle === movie.title);
             return {
                 key: movie.key,
                 title: movie.title,
                 director: movie.director,
-                views: analyticsData.viewCounts[movie.key] || 0,
-                likes: analyticsData.movieLikes[movie.key] || 0,
+                views: (analyticsData.viewCounts as Record<string, number>)[movie.key] || 0,
+                likes: (analyticsData.movieLikes as Record<string, number>)[movie.key] || 0,
+                watchlistAdds: (analyticsData.watchlistCounts as Record<string, number>)[movie.key] || 0,
                 donations: payoutInfo?.totalDonations || 0,
                 crateTvCut: payoutInfo?.crateTvCut || 0,
                 filmmakerDonationPayout: payoutInfo?.filmmakerDonationPayout || 0,
@@ -178,7 +274,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
         </button>
     );
     
-    const crateTvBalance = analyticsData ? Number(analyticsData.totalCrateTvRevenue) - Number(analyticsData.totalAdminPayouts) : 0;
+    // FIX: Explicitly cast properties to Number and provide a fallback of 0 to avoid TypeScript errors with arithmetic operations.
+    const crateTvBalance = analyticsData ? Number(analyticsData.totalCrateTvRevenue || 0) - Number(analyticsData.totalAdminPayouts || 0) : 0;
 
     const renderFestivalAnalytics = () => (
         analyticsData && (
@@ -190,22 +287,26 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                     </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                    <StatCard title="Total Festival Revenue" value={formatCurrency(Number(analyticsData.totalFestivalRevenue))} className="sm:col-span-1" />
-                    <StatCard title="All-Access Passes" value={Number(analyticsData.festivalPassSales.units)} />
-                    <StatCard title="Individual Blocks" value={Number(analyticsData.festivalBlockSales.units)} />
+                    {/* FIX: Explicitly cast properties to Number to avoid TypeScript errors. */}
+                    <StatCard title="Total Festival Revenue" value={formatCurrency(Number(analyticsData.totalFestivalRevenue || 0))} className="sm:col-span-1" />
+                    <StatCard title="All-Access Passes" value={Number(analyticsData.festivalPassSales.units || 0)} />
+                    <StatCard title="Individual Blocks" value={Number(analyticsData.festivalBlockSales.units || 0)} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <StatCard title="Crate TV's Share (30%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.30)} />
-                    <StatCard title="Playhouse West's Share (70%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.70)} />
+                    {/* FIX: Explicitly cast properties to Number to avoid TypeScript errors. */}
+                    <StatCard title="Crate TV's Share (30%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue || 0) * 0.30)} />
+                    <StatCard title="Playhouse West's Share (70%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue || 0) * 0.70)} />
                 </div>
                  <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg text-center">
                     <h3 className="text-lg font-bold text-white mb-4">Process Payout</h3>
                     <button
                         onClick={handleFestivalPayout}
-                        disabled={festivalPayoutStatus === 'processing' || Number(analyticsData.totalFestivalRevenue) === 0}
+                        // FIX: Explicitly cast properties to Number to avoid TypeScript errors.
+                        disabled={festivalPayoutStatus === 'processing' || Number(analyticsData.totalFestivalRevenue || 0) === 0}
                         className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg text-lg"
                     >
-                        {festivalPayoutStatus === 'processing' ? 'Processing...' : `Pay Playhouse West ${formatCurrency(Number(analyticsData.totalFestivalRevenue) * 0.70)}`}
+                        {/* FIX: Explicitly cast properties to Number to avoid TypeScript errors. */}
+                        {festivalPayoutStatus === 'processing' ? 'Processing...' : `Pay Playhouse West ${formatCurrency(Number(analyticsData.totalFestivalRevenue || 0) * 0.70)}`}
                     </button>
                     {festivalPayoutMessage && (
                         <p className={`mt-4 text-sm ${festivalPayoutStatus === 'error' ? 'text-red-400' : 'text-green-400'}`}>{festivalPayoutMessage}</p>
@@ -215,9 +316,11 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                 <div className="overflow-x-auto"><table className="w-full text-left">
                     <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Item</th><th className="p-3">Units Sold</th><th className="p-3">Revenue</th></tr></thead>
                     <tbody>
-                        <tr className="border-b border-gray-700 font-semibold"><td className="p-3">All-Access Pass</td><td>{Number(analyticsData.festivalPassSales.units)}</td><td>{formatCurrency(Number(analyticsData.festivalPassSales.revenue))}</td></tr>
+                        {/* FIX: Explicitly cast properties to Number to avoid TypeScript errors. */}
+                        <tr className="border-b border-gray-700 font-semibold"><td className="p-3">All-Access Pass</td><td>{Number(analyticsData.festivalPassSales.units || 0)}</td><td>{formatCurrency(Number(analyticsData.festivalPassSales.revenue || 0))}</td></tr>
                         {Object.entries(analyticsData.salesByBlock).map(([title, sales]: [string, any]) => (
-                            <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{Number(sales.units)}</td><td>{formatCurrency(Number(sales.revenue))}</td></tr>
+                            // FIX: Explicitly cast properties to Number to avoid TypeScript errors.
+                            <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{Number(sales.units || 0)}</td><td>{formatCurrency(Number(sales.revenue || 0))}</td></tr>
                         ))}
                     </tbody>
                 </table></div>
@@ -246,25 +349,43 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                 <div className="printable-area">
                     {/* OVERVIEW TAB */}
                     {(activeTab === 'overview' && !isFestivalView) && (
-                        <div>
-                            <h2 className="text-2xl font-bold mb-4 text-white">Platform Overview</h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                                <StatCard title="Grand Total Revenue" value={formatCurrency(Number(analyticsData.totalRevenue))} />
-                                <StatCard title="Total Platform Revenue" value={formatCurrency(Number(analyticsData.totalCrateTvRevenue))} />
-                                <StatCard title="Total Users" value={formatNumber(Number(analyticsData.totalUsers))} />
-                                {/* FIX: Ensure view counts are treated as numbers in the reduction to prevent type errors. */}
-                                <StatCard title="Total Film Views" value={formatNumber(Object.values(analyticsData.viewCounts).reduce((s, c) => s + Number(c || 0), 0))} />
+                        <div className="space-y-12">
+                            <div>
+                                <h2 className="text-2xl font-bold mb-4 text-white">Platform Snapshot</h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                                    {/* FIX: Explicitly cast all numeric properties to Number before passing them to components or formatting functions. */}
+                                    <StatCard title="Grand Total Revenue" value={formatCurrency(Number(analyticsData.totalRevenue || 0))} />
+                                    <StatCard title="Total Platform Revenue" value={formatCurrency(Number(analyticsData.totalCrateTvRevenue || 0))} />
+                                    <StatCard title="Total Users" value={formatNumber(Number(analyticsData.totalUsers || 0))} />
+                                    {/* FIX: Ensure view counts are treated as numbers in the reduction to prevent type errors. */}
+                                    <StatCard title="Total Film Views" value={formatNumber(Object.values(analyticsData.viewCounts).reduce((s, c) => s + Number(c || 0), 0))} />
+                                </div>
                             </div>
                             
-                            <BillingReminders />
+                            <div>
+                                <h3 className="text-xl font-bold mb-4 text-white">Top Film Performance</h3>
+                                <div className="overflow-x-auto"><table className="w-full text-left">
+                                    <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Film</th><th className="p-3">Views</th><th className="p-3">Likes</th><th className="p-3">Donations</th><th className="p-3 no-print">Actions</th></tr></thead>
+                                    <tbody>{filmPerformanceData.slice(0, 5).map(film => (
+                                        <tr key={film.key} className="border-b border-gray-700"><td className="p-3 font-medium text-white">{film.title}</td><td className="p-3">{formatNumber(film.views)}</td><td className="p-3">{formatNumber(film.likes)}</td><td className="p-3">{formatCurrency(film.donations)}</td><td className="p-3 no-print"><button onClick={() => setSelectedFilmForReport(film)} className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md">View Report</button></td></tr>
+                                    ))}</tbody>
+                                </table></div>
+                            </div>
 
-                            <h3 className="text-xl font-bold mb-4 mt-8 text-white">Film Performance</h3>
-                            <div className="overflow-x-auto"><table className="w-full text-left">
-                                <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Film</th><th className="p-3">Views</th><th className="p-3">Likes</th><th className="p-3">Donations</th><th className="p-3 no-print">Actions</th></tr></thead>
-                                <tbody>{filmPerformanceData.map(film => (
-                                    <tr key={film.key} className="border-b border-gray-700"><td className="p-3 font-medium text-white">{film.title}</td><td className="p-3">{formatNumber(film.views)}</td><td className="p-3">{formatNumber(film.likes)}</td><td className="p-3">{formatCurrency(film.donations)}</td><td className="p-3 no-print"><button onClick={() => setSelectedFilmForReport(film)} className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md">View Report</button></td></tr>
-                                ))}</tbody>
-                            </table></div>
+                            <div>
+                                <h3 className="text-xl font-bold text-white">Viewership by Country</h3>
+                                <p className="text-sm text-gray-400 mb-4">Select a film to see its viewership breakdown by country. This data can be shared with partners like VDO.AI for revenue projections.</p>
+                                <select value={selectedGeoMovie} onChange={e => setSelectedGeoMovie(e.target.value)} className="form-input my-4 max-w-sm">
+                                    <option value="">Select a Film</option>
+                                    {Object.keys(allMovies).map(key => <option key={key} value={key}>{allMovies[key].title}</option>)}
+                                </select>
+                                {selectedGeoMovie && analyticsData.viewLocations[selectedGeoMovie] && allMovies[selectedGeoMovie] && (
+                                    <CountrySnapshot 
+                                        movie={allMovies[selectedGeoMovie]}
+                                        locations={analyticsData.viewLocations[selectedGeoMovie] as Record<string, number>}
+                                    />
+                                )}
+                            </div>
                         </div>
                     )}
                     
@@ -284,23 +405,25 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                              <div>
                                 <h2 className="text-2xl font-bold text-white mb-4">Revenue Streams</h2>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                                    <StatCard title="Total Donations" value={formatCurrency(Number(analyticsData.totalDonations))} />
-                                    <StatCard title="Total Sales" value={formatCurrency(Number(analyticsData.totalSales) + Number(analyticsData.totalFestivalRevenue))} />
-                                    <StatCard title="Merch Revenue" value={formatCurrency(Number(analyticsData.totalMerchRevenue))} />
-                                    <StatCard title="Ad Revenue" value={formatCurrency(Number(analyticsData.totalAdRevenue))} />
-                                    <StatCard title="GRAND TOTAL REVENUE" value={formatCurrency(Number(analyticsData.totalRevenue))} className="lg:col-span-4 bg-purple-900/30 border-purple-700" />
+                                    {/* FIX: Explicitly cast all numeric properties to Number before passing them to components or formatting functions. */}
+                                    <StatCard title="Total Donations" value={formatCurrency(Number(analyticsData.totalDonations || 0))} />
+                                    <StatCard title="Total Sales (VOD/Festival)" value={formatCurrency(Number(analyticsData.totalSales || 0) + Number(analyticsData.totalFestivalRevenue || 0))} />
+                                    <StatCard title="Merch Revenue" value={formatCurrency(Number(analyticsData.totalMerchRevenue || 0))} />
+                                    <StatCard title="Ad Revenue" value={formatCurrency(Number(analyticsData.totalAdRevenue || 0))} />
+                                    <StatCard title="GRAND TOTAL REVENUE" value={formatCurrency(Number(analyticsData.totalRevenue || 0))} className="lg:col-span-4 bg-purple-900/30 border-purple-700" />
                                 </div>
                             </div>
                              <div>
                                 <h2 className="text-2xl font-bold text-white mb-4">Crate TV Earnings & Payouts</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                    <StatCard title="Total Platform Earnings" value={formatCurrency(Number(analyticsData.totalCrateTvRevenue))} />
-                                    <StatCard title="Total Paid to Admin" value={formatCurrency(Number(analyticsData.totalAdminPayouts))} />
+                                    {/* FIX: Explicitly cast all numeric properties to Number before passing them to components or formatting functions. */}
+                                    <StatCard title="Total Platform Earnings" value={formatCurrency(Number(analyticsData.totalCrateTvRevenue || 0))} />
+                                    <StatCard title="Total Paid to Admin" value={formatCurrency(Number(analyticsData.totalAdminPayouts || 0))} />
                                     <StatCard title="Current Available Balance" value={formatCurrency(crateTvBalance)} className="bg-green-900/30 border-green-700" />
                                 </div>
                                 
                                 <BillSavingsPot
-                                    currentBalance={Number(analyticsData.billSavingsPotTotal)}
+                                    currentBalance={Number(analyticsData.billSavingsPotTotal || 0)}
                                     availablePlatformBalance={crateTvBalance}
                                     transactions={analyticsData.billSavingsTransactions}
                                     onRefreshData={fetchData}
@@ -322,13 +445,14 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                     <div className="max-h-60 overflow-y-auto">
                                         {analyticsData.pastAdminPayouts.length > 0 ? (
                                             <ul className="space-y-2">
-                                                {analyticsData.pastAdminPayouts.map((p: AdminPayout) => (
+                                                {(analyticsData.pastAdminPayouts as AdminPayout[]).map((p: AdminPayout) => (
                                                     <li key={p.id} className="flex justify-between items-center text-sm p-2 bg-gray-700/50 rounded-md">
                                                         <div>
                                                             <span className="font-semibold text-white">{p.reason}</span>
                                                             <span className="text-xs text-gray-500 ml-2">{new Date(p.payoutDate.seconds * 1000).toLocaleDateString()}</span>
                                                         </div>
-                                                        <span className="font-bold text-green-400">{formatCurrency(Number(p.amount))}</span>
+                                                        {/* FIX: Explicitly cast properties to Number to avoid TypeScript errors. */}
+                                                        <span className="font-bold text-green-400">{formatCurrency(Number(p.amount || 0))}</span>
                                                     </li>
                                                 ))}
                                             </ul>
@@ -340,7 +464,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                 <h3 className="text-xl font-bold mb-4 text-white">Filmmaker Payouts</h3>
                                 <div className="overflow-x-auto"><table className="w-full text-left">
                                     <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Film</th><th className="p-3">Donation Payout</th><th className="p-3">Ad Payout</th><th className="p-3">Total Payout</th></tr></thead>
-                                    <tbody>{analyticsData.filmmakerPayouts.map((p: FilmmakerPayout) => (
+                                    <tbody>{(analyticsData.filmmakerPayouts as FilmmakerPayout[]).map((p: FilmmakerPayout) => (
                                          <React.Fragment key={p.movieTitle}>
                                             <tr className="border-b border-gray-700 cursor-pointer hover:bg-gray-700/50" onClick={() => setExpandedPayoutRow(expandedPayoutRow === p.movieTitle ? null : p.movieTitle)}>
                                                 <td className="p-3 font-medium text-white">{p.movieTitle}</td>
@@ -355,7 +479,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                                         {(analyticsData.viewLocations && analyticsData.viewLocations[Object.keys(allMovies).find(key => allMovies[key].title === p.movieTitle) || '']) ? (
                                                             <ul className="text-sm text-gray-400">
                                                                 {Object.entries(analyticsData.viewLocations[Object.keys(allMovies).find(key => allMovies[key].title === p.movieTitle) || ''] as Record<string, number>).map(([country, count]) => (
-                                                                    <li key={country}>{country}: {formatNumber(Number(count))} views</li>
+                                                                    // FIX: Explicitly cast properties to Number to avoid TypeScript errors.
+                                                                    <li key={country}>{country}: {formatNumber(Number(count || 0))} views</li>
                                                                 ))}
                                                             </ul>
                                                         ) : <p className="text-sm text-gray-500">No location data available for this film.</p>}

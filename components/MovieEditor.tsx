@@ -177,7 +177,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave,
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl sm:text-2xl font-bold text-red-400">Movie Editor</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-red-400">Movie Editor ({Object.keys(allMovies).length} Films)</h2>
                 <select onChange={(e) => handleSelectMovie(e.target.value)} className="form-input max-w-xs" value={selectedMovieKey}>
                     <option value="" disabled>Select a movie to edit...</option>
                     <option value="new">-- Create New Movie --</option>

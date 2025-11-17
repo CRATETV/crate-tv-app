@@ -197,7 +197,7 @@ export async function POST(request: Request) {
         // FIX: Ensure view counts are treated as numbers in the reduction to prevent type errors.
         const totalAdRevenue = (Object.values(viewCounts).reduce((s, c) => s + Number(c || 0), 0) / 1000) * AD_CPM_IN_CENTS;
         // FIX: Cast revenue properties to Number to avoid potential type mismatches.
-        const totalFestivalRevenue = Number(festivalPassSales.revenue) + Number(festivalBlockSales.revenue);
+        const totalFestivalRevenue = Number(festivalPassSales.revenue || 0) + Number(festivalBlockSales.revenue || 0);
         const totalRevenue = totalDonations + totalSales + totalMerchRevenue + totalAdRevenue + totalFestivalRevenue;
 
         // Calculate Crate TV's total share
