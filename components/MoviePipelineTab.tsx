@@ -103,8 +103,8 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
                             <input type="text" name="cast" value={newEntry.cast} onChange={handleInputChange} className={formInputClasses} required />
                         </div>
                         <div>
-                            <label className="form-label">Contact Email</label>
-                            <input type="email" name="submitterEmail" value={newEntry.submitterEmail} onChange={handleInputChange} className={formInputClasses} required />
+                            <label className="form-label">Contact Email (Optional)</label>
+                            <input type="email" name="submitterEmail" value={newEntry.submitterEmail} onChange={handleInputChange} className={formInputClasses} />
                         </div>
                         <div>
                             <label className="form-label">Synopsis</label>
@@ -135,7 +135,7 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
                                 <div className="flex-grow">
                                     <h3 className="text-lg font-bold text-white">{item.title}</h3>
                                     <p className="text-sm text-gray-400">by {item.director}</p>
-                                    <p className="text-xs text-gray-500 mt-1">Submitted by: {item.submitterEmail}</p>
+                                    <p className="text-xs text-gray-500 mt-1">Submitted by: {item.submitterEmail || 'N/A'}</p>
                                     <p className="text-sm text-gray-300 mt-2 line-clamp-2">{item.synopsis}</p>
                                 </div>
                                 <div className="flex flex-col gap-2 flex-shrink-0">

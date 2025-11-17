@@ -58,6 +58,8 @@ const AdminPage: React.FC = () => {
     const [permissions, setPermissions] = useState<Record<string, string[]>>({});
     const [allowedTabs, setAllowedTabs] = useState<string[]>([]);
     const [activeTab, setActiveTab] = useState('analytics');
+    const [pipelineItemToConvert, setPipelineItemToConvert] = useState<MoviePipelineEntry | null>(null);
+
 
     // Save states
     const [isSaving, setIsSaving] = useState(false);
@@ -138,7 +140,7 @@ const AdminPage: React.FC = () => {
         }
     }, []);
 
-    const handleSaveData = async (type: 'movies' | 'categories' | 'about' | 'festival', dataToSave: any) => {
+    const handleSaveData = async (type: 'movies' | 'categories' | 'about' | 'festival', dataToSave: any, pipelineItemIdToDelete?: string) => {
         setIsSaving(true);
         setSaveMessage('');
         setSaveError('');
@@ -147,7 +149,7 @@ const AdminPage: React.FC = () => {
             const response = await fetch('/api/publish-data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password, type, data: dataToSave }),
+                body: JSON.stringify({ password, type, data: dataToSave, pipelineItemIdToDelete }),
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Failed to save.');
@@ -343,8 +345,8 @@ const AdminPage: React.FC = () => {
 
                 <div>
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
-                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data: any) => handleSaveData('movies', data)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} />}
-                    {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => console.log('Create movie from:', item)} onRefresh={() => fetchAllData(password)} />}
+                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data: any, pipelineId?: string) => handleSaveData('movies', data, pipelineId)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} movieToCreate={pipelineItemToConvert} onCreationDone={() => setPipelineItemToConvert(null)} />}
+                    {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => { setPipelineItemToConvert(item); setActiveTab('movies'); }} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={setFestivalData} onConfigChange={setFestivalConfig} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}

@@ -1,13 +1,16 @@
 
+
 import React, { useState, useEffect } from 'react';
-import { Movie, Actor } from '../types';
+import { Movie, Actor, MoviePipelineEntry } from '../types';
 
 interface MovieEditorProps {
     allMovies: Record<string, Movie>;
     onRefresh: () => void;
-    onSave: (movieData: Record<string, Movie>) => Promise<void>;
+    onSave: (movieData: Record<string, Movie>, pipelineId?: string | null) => Promise<void>;
     onDeleteMovie: (movieKey: string) => Promise<void>;
     onSetNowStreaming: (movieKey: string) => Promise<void>;
+    movieToCreate?: MoviePipelineEntry | null;
+    onCreationDone?: () => void;
 }
 
 const emptyMovie: Movie = {
@@ -33,11 +36,35 @@ const emptyMovie: Movie = {
     mainPageExpiry: '',
 };
 
-const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave, onDeleteMovie, onSetNowStreaming }) => {
+const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave, onDeleteMovie, onSetNowStreaming, movieToCreate, onCreationDone }) => {
     const [selectedMovieKey, setSelectedMovieKey] = useState<string>('');
     const [formData, setFormData] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [sourcePipelineId, setSourcePipelineId] = useState<string | null>(null);
+
+
+    useEffect(() => {
+        if (movieToCreate) {
+            const newKey = `newmovie${Date.now()}`;
+            const newFormData: Movie = {
+                ...emptyMovie,
+                key: newKey,
+                title: movieToCreate.title,
+                synopsis: movieToCreate.synopsis,
+                cast: movieToCreate.cast.split(',').map(name => ({ name: name.trim(), photo: '', bio: '', highResPhoto: '' })),
+                director: movieToCreate.director,
+                fullMovie: movieToCreate.movieUrl,
+                poster: movieToCreate.posterUrl,
+                tvPoster: movieToCreate.posterUrl,
+            };
+            setFormData(newFormData);
+            setSelectedMovieKey(newKey);
+            setSourcePipelineId(movieToCreate.id); // Keep track of the source
+            onCreationDone?.(); // Reset parent state
+        }
+    }, [movieToCreate, onCreationDone]);
+
 
     // This effect populates the form when a movie is selected from the dropdown
     // or when the `allMovies` prop is updated after a save.
@@ -47,8 +74,10 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave,
             if (movieData) {
                 setFormData(movieData);
             } else if (selectedMovieKey.startsWith('newmovie')) {
-                // It's a new movie that isn't in allMovies yet
-                setFormData({ ...emptyMovie, key: selectedMovieKey });
+                // It's a new movie that isn't in allMovies yet, or was just created from pipeline
+                if (!formData || formData.key !== selectedMovieKey) {
+                     setFormData({ ...emptyMovie, key: selectedMovieKey });
+                }
             } else {
                 // The selected movie no longer exists (e.g., was deleted)
                 setSelectedMovieKey('');
@@ -57,7 +86,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave,
         } else {
             setFormData(null);
         }
-    }, [selectedMovieKey, allMovies]);
+    }, [selectedMovieKey, allMovies, formData]);
 
 
     const handleSelectMovie = (key: string) => {
@@ -66,6 +95,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave,
         } else {
             setSelectedMovieKey(key);
         }
+         // Clear any lingering pipeline ID if selecting manually
+        setSourcePipelineId(null);
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -105,7 +136,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave,
         if (!formData) return;
         setIsSaving(true);
         try {
-            await onSave({ [formData.key]: formData });
+            await onSave({ [formData.key]: formData }, sourcePipelineId);
+            setSourcePipelineId(null); // Clear after saving
         } catch (err) {
             // Error is handled by the parent component's toast
             console.error("Save failed:", err);

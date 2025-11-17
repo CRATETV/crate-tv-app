@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { AnalyticsData, Movie, AdminPayout } from './types';
 import { fetchAndCacheLiveData } from './services/dataService';
@@ -142,7 +143,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const filmPerformanceData = useMemo((): FilmPerformanceData[] => {
         if (!analyticsData || !allMovies) return [];
         return (Object.values(allMovies) as Movie[]).map(movie => {
-            const payoutInfo = analyticsData.filmmakerPayouts.find((p: FilmmakerPayout) => p.movieTitle === movie.title);
+            const payoutInfo = analyticsData.filmmakerPayouts.find(p => p.movieTitle === movie.title);
             return {
                 key: movie.key,
                 title: movie.title,

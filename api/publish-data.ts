@@ -133,7 +133,7 @@ const publishToS3 = async (liveData: any) => {
 
 export async function POST(request: Request) {
     try {
-        const { password, type, data } = await request.json();
+        const { password, type, data, pipelineItemIdToDelete } = await request.json();
 
         if (!checkAuth(password)) {
             return new Response(JSON.stringify({ error: 'Unauthorized. Invalid or missing password.' }), {
@@ -163,6 +163,11 @@ export async function POST(request: Request) {
         if (!db) throw new Error("Database connection failed. Could not save data.");
 
         const batch = db.batch();
+
+        if (pipelineItemIdToDelete) {
+            const pipelineRef = db.collection('movie_pipeline').doc(pipelineItemIdToDelete);
+            batch.delete(pipelineRef);
+        }
 
         switch (type) {
             case 'delete_movie': {

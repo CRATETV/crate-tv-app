@@ -1243,7 +1243,7 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/NEIGHBORS+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Neighbors.png",
     "trailer": "",
-    "title": " Neighbours"
+    "title": "The Neighbours"
   },
   "thepawnshop": {
     "key": "thepawnshop",

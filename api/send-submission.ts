@@ -18,8 +18,8 @@ export async function POST(request: Request) {
     try {
         const { filmTitle, directorName, cast, email, synopsis, posterUrl, movieUrl } = await request.json();
 
-        if (!filmTitle || !directorName || !cast || !email || !synopsis || !posterUrl || !movieUrl) {
-            return new Response(JSON.stringify({ error: 'All fields, including poster and movie uploads, are required.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        if (!filmTitle || !directorName || !cast || !synopsis || !posterUrl || !movieUrl) {
+            return new Response(JSON.stringify({ error: 'All fields are required.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
 
         const initError = getInitializationError();
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
             cast: cast,
             posterUrl,
             movieUrl,
-            submitterEmail: email,
+            submitterEmail: email || '',
             synopsis,
             submissionDate: FieldValue.serverTimestamp(),
             status: 'pending'
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
             type: 'FILM_SUBMISSION',
             ip,
             timestamp: FieldValue.serverTimestamp(),
-            details: { filmTitle, directorName, email }
+            details: { filmTitle, directorName, email: email || 'N/A' }
         });
 
         // Send an email notification to the admin
@@ -58,19 +58,24 @@ export async function POST(request: Request) {
                 <ul>
                     <li><strong>Film Title:</strong> ${filmTitle}</li>
                     <li><strong>Director:</strong> ${directorName}</li>
-                    <li><strong>Submitter Email:</strong> <a href="mailto:${email}">${email}</a></li>
+                    <li><strong>Submitter Email:</strong> ${email ? `<a href="mailto:${email}">${email}</a>` : 'Not provided (manual entry)'}</li>
                 </ul>
                 <p>You can review, approve, and add this film to a category from the "Submission Pipeline" tab in the admin panel.</p>
             </div>
         `;
-
-        await resend.emails.send({
+        
+        const resendOptions: any = {
             from: `Crate TV Submissions <${fromEmail}>`,
             to: [adminEmail],
-            reply_to: email,
             subject: subject,
             html: emailHtml
-        });
+        };
+        
+        if (email) {
+            resendOptions.reply_to = email;
+        }
+
+        await resend.emails.send(resendOptions);
         
         return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
