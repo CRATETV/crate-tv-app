@@ -140,7 +140,7 @@ const AdminPage: React.FC = () => {
         }
     }, []);
 
-    const handleSaveData = async (type: 'movies' | 'categories' | 'about' | 'festival', dataToSave: any, pipelineItemIdToDelete?: string) => {
+    const handleSaveData = async (type: 'movies' | 'categories' | 'about' | 'festival', dataToSave: any, pipelineItemIdToDelete?: string | null) => {
         setIsSaving(true);
         setSaveMessage('');
         setSaveError('');
@@ -345,7 +345,7 @@ const AdminPage: React.FC = () => {
 
                 <div>
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
-                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data: any, pipelineId?: string) => handleSaveData('movies', data, pipelineId)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} movieToCreate={pipelineItemToConvert} onCreationDone={() => setPipelineItemToConvert(null)} />}
+                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data, pipelineId) => handleSaveData('movies', data, pipelineId)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} movieToCreate={pipelineItemToConvert} onCreationDone={() => setPipelineItemToConvert(null)} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => { setPipelineItemToConvert(item); setActiveTab('movies'); }} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
