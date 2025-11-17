@@ -86,7 +86,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave,
         } else {
             setFormData(null);
         }
-    }, [selectedMovieKey, allMovies, formData]);
+    }, [selectedMovieKey, allMovies]);
 
 
     const handleSelectMovie = (key: string) => {
