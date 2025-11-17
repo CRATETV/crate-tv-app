@@ -366,8 +366,9 @@ const App: React.FC = () => {
 
 
                             {// FIX: Explicitly type `category` as `Category` to resolve properties on the 'unknown' type.
-                            Object.entries(categories).map(([key, category]: [string, Category]) => {
-                                const categoryMovies = category.movieKeys
+                            Object.entries(categories).map(([key, category]) => {
+                                const typedCategory = category as Category;
+                                const categoryMovies = typedCategory.movieKeys
                                     .map(movieKey => movies[movieKey])
                                     .filter((m): m is Movie => !!m);
                                 
@@ -376,7 +377,7 @@ const App: React.FC = () => {
                                 return (
                                     <MovieCarousel
                                         key={key}
-                                        title={category.title}
+                                        title={typedCategory.title}
                                         movies={categoryMovies}
                                         onSelectMovie={handlePlayMovie}
                                         watchedMovies={watchedMovies}

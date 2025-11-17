@@ -4,6 +4,8 @@
 
 
 
+
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from './types';
 import { fetchAndCacheLiveData } from './services/dataService';
@@ -213,8 +215,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                 fetchAndCacheLiveData({ force: true })
             ]);
             
-            // FIX: Explicitly type the JSON response to prevent properties from being 'any' or 'unknown'.
-            const analyticsJson: { analyticsData: AnalyticsData, errors: any } = await analyticsRes.json();
+            const analyticsJson = await analyticsRes.json();
             if (analyticsJson.errors?.critical) throw new Error(analyticsJson.errors.critical);
             
             setAnalyticsData(analyticsJson.analyticsData);
@@ -239,14 +240,14 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const filmPerformanceData = useMemo((): FilmPerformanceData[] => {
         if (!analyticsData || !allMovies) return [];
         return (Object.values(allMovies) as Movie[]).map(movie => {
-            const payoutInfo = (analyticsData.filmmakerPayouts as FilmmakerPayout[]).find((p: FilmmakerPayout) => p.movieTitle === movie.title);
+            const payoutInfo = analyticsData.filmmakerPayouts.find(p => p.movieTitle === movie.title);
             return {
                 key: movie.key,
                 title: movie.title,
                 director: movie.director,
-                views: (analyticsData.viewCounts as Record<string, number>)[movie.key] || 0,
-                likes: (analyticsData.movieLikes as Record<string, number>)[movie.key] || 0,
-                watchlistAdds: (analyticsData.watchlistCounts as Record<string, number>)[movie.key] || 0,
+                views: analyticsData.viewCounts[movie.key] || 0,
+                likes: analyticsData.movieLikes[movie.key] || 0,
+                watchlistAdds: analyticsData.watchlistCounts[movie.key] || 0,
                 donations: payoutInfo?.totalDonations || 0,
                 crateTvCut: payoutInfo?.crateTvCut || 0,
                 filmmakerDonationPayout: payoutInfo?.filmmakerDonationPayout || 0,
@@ -274,7 +275,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
         </button>
     );
     
-    // FIX: Explicitly cast properties to Number and provide a fallback of 0 to avoid TypeScript errors with arithmetic operations.
+    // FIX: Explicitly cast properties to Number and provide a fallback of 0 to avoid TypeScript errors.
     const crateTvBalance = analyticsData ? Number(analyticsData.totalCrateTvRevenue || 0) - Number(analyticsData.totalAdminPayouts || 0) : 0;
 
     const renderFestivalAnalytics = () => (
@@ -353,7 +354,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                             <div>
                                 <h2 className="text-2xl font-bold mb-4 text-white">Platform Snapshot</h2>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                                    {/* FIX: Explicitly cast all numeric properties to Number before passing them to components or formatting functions. */}
                                     <StatCard title="Grand Total Revenue" value={formatCurrency(Number(analyticsData.totalRevenue || 0))} />
                                     <StatCard title="Total Platform Revenue" value={formatCurrency(Number(analyticsData.totalCrateTvRevenue || 0))} />
                                     <StatCard title="Total Users" value={formatNumber(Number(analyticsData.totalUsers || 0))} />
@@ -405,8 +405,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                              <div>
                                 <h2 className="text-2xl font-bold text-white mb-4">Revenue Streams</h2>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                                    {/* FIX: Explicitly cast all numeric properties to Number before passing them to components or formatting functions. */}
                                     <StatCard title="Total Donations" value={formatCurrency(Number(analyticsData.totalDonations || 0))} />
+                                    {/* FIX: Cast revenue properties to Number to avoid potential type mismatches. */}
                                     <StatCard title="Total Sales (VOD/Festival)" value={formatCurrency(Number(analyticsData.totalSales || 0) + Number(analyticsData.totalFestivalRevenue || 0))} />
                                     <StatCard title="Merch Revenue" value={formatCurrency(Number(analyticsData.totalMerchRevenue || 0))} />
                                     <StatCard title="Ad Revenue" value={formatCurrency(Number(analyticsData.totalAdRevenue || 0))} />
@@ -416,7 +416,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                              <div>
                                 <h2 className="text-2xl font-bold text-white mb-4">Crate TV Earnings & Payouts</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                    {/* FIX: Explicitly cast all numeric properties to Number before passing them to components or formatting functions. */}
                                     <StatCard title="Total Platform Earnings" value={formatCurrency(Number(analyticsData.totalCrateTvRevenue || 0))} />
                                     <StatCard title="Total Paid to Admin" value={formatCurrency(Number(analyticsData.totalAdminPayouts || 0))} />
                                     <StatCard title="Current Available Balance" value={formatCurrency(crateTvBalance)} className="bg-green-900/30 border-green-700" />

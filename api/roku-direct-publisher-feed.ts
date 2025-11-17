@@ -21,8 +21,11 @@ export async function GET(request: Request) {
     const movieGenreMap = new Map<string, string[]>();
     // FIX: Cast Object.values to Movie[] to allow accessing properties on `movie`.
     (Object.values(moviesData) as Movie[]).forEach((movie: Movie) => {
-        if (movie && movie.key) movieGenreMap.set(movie.key, []);
+        if (movie && movie.key && isMovieReleased(movie) && movie.fullMovie) {
+            movieGenreMap.set(movie.key, []);
+        }
     });
+    
     // FIX: Cast Object.values to Category[] and add type to `category` parameter to resolve unknown properties.
     (Object.values(categoriesData) as Category[]).forEach((category: Category) => {
         if (category && Array.isArray(category.movieKeys)) {
@@ -33,7 +36,7 @@ export async function GET(request: Request) {
             });
         }
     });
-
+    
     // Transform the application's movie data into the format Roku Direct Publisher requires
     // FIX: Cast Object.values to Movie[] to resolve error on `.filter`
     const rokuMovies = (Object.values(moviesData) as Movie[])

@@ -6,6 +6,8 @@
 
 
 
+
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -276,7 +278,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
         </button>
     );
     
-    // FIX: Explicitly cast properties to Number and provide a fallback of 0 to avoid TypeScript errors with arithmetic operations.
+    // FIX: Explicitly cast all numeric properties to Number before passing them to components or formatting functions.
     const crateTvBalance = analyticsData ? Number(analyticsData.totalCrateTvRevenue || 0) - Number(analyticsData.totalAdminPayouts || 0) : 0;
 
     const renderFestivalAnalytics = () => (

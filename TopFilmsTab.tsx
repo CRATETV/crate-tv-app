@@ -141,6 +141,7 @@ const TopFilmsTab: React.FC = () => {
                                 Object.entries(analyticsData.viewLocations[selectedGeoMovie]).sort(([, a], [, b]) => Number(b) - Number(a)).map(([code, count]) => (
                                     <tr key={code} className="border-b border-gray-700">
                                         <td className="p-3 font-medium text-white">{code}</td>
+                                        {/* FIX: Explicitly cast the 'count' value from Firestore to a number before passing it to the formatting function to prevent type errors. */}
                                         <td className="p-3">{formatNumber(Number(count))}</td>
                                     </tr>
                                 )) : 
