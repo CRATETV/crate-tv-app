@@ -1,71 +1,72 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<component name="HomeScene" extends="Group">
+<component name="HomeScene" extends="Scene">
+
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
-    
+
+    <interface>
+        <field id="content" type="node" onChange="onContentChange" />
+        ' Command to send back to the router
+        <field id="command" type="assocarray" />
+    </interface>
+
     <children>
-        <!-- HERO BACKGROUND -->
-        <Poster id="heroBg" width="1920" height="1080" loadDisplayMode="scaleToZoom" />
-        <Rectangle width="1920" height="1080" color="#141414" opacity="0.5" />
-        <Rectangle width="1920" height="1080" color="#141414" opacity="0.9" translation="[0, 800]" />
-
-        <!-- HERO TEXT INFO -->
-        <Group id="heroGroup" translation="[100, 200]">
-            
-            <Label text="NOW STREAMING" color="#E50914" translation="[0, -40]">
-                 <Font role="font" uri="font:BoldSystemFont" size="24" />
-            </Label>
-            
-            <Label id="heroTitle" width="1000" color="#FFFFFF" wrap="true">
-                <Font role="font" uri="font:BoldSystemFont" size="80" />
-            </Label>
-            
-            <LayoutGroup layoutDirection="horiz" itemSpacings="[20]" translation="[0, 130]">
-                <Label id="heroMeta" text="" color="#CCCCCC">
-                    <Font role="font" uri="font:SystemFont" size="28" />
-                </Label>
-                <Rectangle width="50" height="32" color="#333333" cornerRadius="4">
-                     <Label text="HD" width="50" height="32" horizAlign="center" color="#dddddd">
-                        <Font role="font" uri="font:BoldSystemFont" size="20" />
-                     </Label>
-                </Rectangle>
-            </LayoutGroup>
-            
-            <Label id="heroDesc" width="800" color="#DDDDDD" maxLines="3" wrap="true" translation="[0, 180]" lineSpacing="6">
-                <Font role="font" uri="font:SystemFont" size="26" />
-            </Label>
-            
-            <!-- BUTTONS -->
-            <LayoutGroup layoutDirection="horiz" itemSpacings="[20]" translation="[0, 300]">
-                <Rectangle width="220" height="60" color="#FFFFFF" cornerRadius="4">
-                    <Label text="Play" width="220" height="60" horizAlign="center" vertAlign="center" color="#000000">
-                        <Font role="font" uri="font:BoldSystemFont" size="28" />
-                    </Label>
-                </Rectangle>
-                <Rectangle width="220" height="60" color="#666666" opacity="0.7" cornerRadius="4">
-                    <Label text="More Info" width="220" height="60" horizAlign="center" vertAlign="center" color="#FFFFFF">
-                        <Font role="font" uri="font:BoldSystemFont" size="28" />
-                    </Label>
-                </Rectangle>
-            </LayoutGroup>
-        </Group>
-
-        <!-- MOVIE ROWS -->
-        <RowList 
-            id="rowList" 
-            translation="[0, 650]" 
-            itemComponent="PosterItem" 
-            numRows="2" 
-            rowItemSize="[[320, 450]]" 
-            rowItemSpacing="[[20, 0]]" 
-            itemSize="[1920, 500]" 
-            rowLabelOffset="[[100, 20]]" 
-            rowLabelColor="#E5E5E5"
-            focusXOffset="[100]" 
-            showRowLabel="true" 
-            rowFocusAnimationStyle="floatingFocus" 
+        <Poster 
+            id="background"
+            uri="pkg:/images/splash_hd.png" 
+            width="1920" 
+            height="1080"
         />
         
-        <!-- PLAYER -->
-        <Video id="videoPlayer" visible="false" width="1920" height="1080" />
+        <!-- HERO SECTION -->
+        <Group id="heroGroup" visible="false">
+            <Poster id="heroBackground" width="1920" height="700" />
+            <Rectangle id="heroGradient" color="0x000000FF" endColor="0x00000000" gradient="linear" gradientDirection="down" width="1920" height="400" translation="[0, 300]" />
+            <Rectangle id="heroGradientLeft" color="0x000000D0" endColor="0x00000000" gradient="linear" gradientDirection="left-right" width="1000" height="700" />
+            <Group translation="[80, 250]">
+                <Label id="heroTitle" width="800" wrap="true" font="font:LargeBoldSystemFont" />
+                <Label id="heroSynopsis" width="700" wrap="true" maxLines="3" translation="[0, 80]" font="font:SmallSystemFont" />
+                <ButtonGroup 
+                    id="heroButtons" 
+                    translation="[0, 200]" 
+                    layoutDirection="horiz" 
+                    itemSpacing="[20, 0]" 
+                    buttons='["Play", "More Info"]'
+                />
+            </Group>
+        </Group>
+
+        <Poster
+            id="logo"
+            uri="pkg:/images/logo_hd.png"
+            width="200"
+            height="50"
+            translation="[80, 30]"
+        />
+        
+        <Label 
+            id="loadingLabel"
+            text="Loading Crate TV..."
+            translation="[960, 540]"
+            horizAlign="center"
+            vertAlign="center"
+            color="0xFFFFFFFF"
+        >
+            <font role="sans" size="30"/>
+        </Label>
+        
+        <RowList
+            id="categoryRowList"
+            translation="[80, 700]"
+            itemComponentName="MoviePoster" ' Default component
+            itemSize="[240, 360]" ' Default item size
+            rowItemSpacing="[ [30, 0] ]"
+            numRows="1"
+            rowHeights="[360]" ' Default row height
+            rowLabelOffset="[ [0, -50] ]"
+            rowFocusAnimationStyle="floatingFocus"
+            visible="false"
+        />
+
     </children>
+
 </component>

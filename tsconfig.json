@@ -27,6 +27,9 @@
     "WatchPartyManager.tsx",
     "FilmmakerPortalPage.tsx",
     "AnalyticsPage.tsx",
-    "roku"
+    "FilmmakerSignupPage.tsx",
+    "TopFilmsTab.tsx",
+    "roku",
+    "api/api"
   ]
 }
