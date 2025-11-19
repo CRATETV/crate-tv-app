@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="MainScene" extends="Scene">
+    <script type="text/brightscript" uri="pkg:/components/MainScene.brs" />
+    <children>
+        <Rectangle width="1920" height="1080" color="#141414" />
+        
+        <BusySpinner 
+            id="spinner" 
+            visible="true" 
+            translation="[960, 540]" 
+        />
+
+        <!-- Using StandardGridItem to avoid XML errors -->
+        <RowList 
+            id="contentGrid" 
+            visible="false"
+            translation="[0, 100]" 
+            itemComponent="StandardGridItem" 
+            numRows="3" 
+            rowItemSize="[[320, 480]]" 
+            rowItemSpacing="[[20, 0]]" 
+            itemSize="[1920, 550]" 
+            rowLabelOffset="[[50, 20]]" 
+            focusXOffset="[50]" 
+            showRowLabel="true" 
+            rowFocusAnimationStyle="floatingFocus" 
+        />
+
+        <Video 
+            id="videoPlayer" 
+            visible="false" 
+            translation="[0, 0]" 
+            width="1920" 
+            height="1080" 
+        />
+        
+        <Dialog id="errorDialog" title="Error" visible="false" />
+    </children>
+</component>
