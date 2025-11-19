@@ -26,6 +26,7 @@
     "components/PremiumPage.tsx",
     "WatchPartyManager.tsx",
     "FilmmakerPortalPage.tsx",
-    "AnalyticsPage.tsx"
+    "AnalyticsPage.tsx",
+    "roku"
   ]
 }

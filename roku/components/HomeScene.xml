@@ -1,52 +1,72 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<component name="HomeScene" extends="Group">
-    <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
-    
-    <children>
-        <!-- DYNAMIC HERO BACKGROUND -->
-        <Poster id="heroBg" width="1920" height="1080" loadDisplayMode="scaleToZoom" />
-        <Rectangle width="1920" height="1080" color="#000000" opacity="0.6" /> <!-- Dimmer -->
-        <Rectangle width="1920" height="1080" uri="pkg:/images/vignette.png" /> <!-- Cinematic Edge (Optional) -->
+<component name="HomeScene" extends="Scene">
 
-        <!-- HERO INFO (Title, Meta, Buttons) -->
-        <Group id="heroGroup" translation="[100, 250]">
-            <!-- We use a graphic title if available, otherwise text -->
-            <Label id="heroTitle" width="900" color="#FFFFFF" font="font:BoldSystemFont" size="80" wrap="true" />
-            
-            <LayoutGroup layoutDirection="horiz" itemSpacings="[20]" translation="[0, 120]">
-                <Label id="matchLabel" text="98% Match" color="#46d369" font="font:BoldSystemFont" size="24" />
-                <Label id="yearLabel" text="2024" color="#dddddd" size="24" />
-                <Rectangle width="40" height="26" color="#333333" cornerRadius="4">
-                     <Label text="HD" width="40" height="26" horizAlign="center" size="18" color="#dddddd" />
-                </Rectangle>
-            </LayoutGroup>
-            
-            <Label id="heroDesc" width="800" color="#ffffff" size="24" maxLines="3" wrap="true" translation="[0, 170]" />
-            
-            <!-- Action Buttons -->
-            <LayoutGroup layoutDirection="horiz" itemSpacings="[20]" translation="[0, 280]">
-                <Rectangle id="btnPlay" width="180" height="60" color="#ffffff" cornerRadius="4">
-                    <Label text="▶ Play" width="180" height="60" horizAlign="center" vertAlign="center" color="#000000" font="font:BoldSystemFont" size="28" />
-                </Rectangle>
-                <Rectangle id="btnInfo" width="220" height="60" color="#6d6d6e80" cornerRadius="4">
-                    <Label text="ⓘ More Info" width="220" height="60" horizAlign="center" vertAlign="center" color="#ffffff" font="font:BoldSystemFont" size="28" />
-                </Rectangle>
-            </LayoutGroup>
+    <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
+
+    <interface>
+        <field id="content" type="node" onChange="onContentChange" />
+        ' Command to send back to the router
+        <field id="command" type="assocarray" />
+    </interface>
+
+    <children>
+        <Poster 
+            id="background"
+            uri="pkg:/images/splash_hd.png" 
+            width="1920" 
+            height="1080"
+        />
+        
+        <!-- HERO SECTION -->
+        <Group id="heroGroup" visible="false">
+            <Poster id="heroBackground" width="1920" height="700" />
+            <Rectangle id="heroGradient" color="0x000000FF" endColor="0x00000000" gradient="linear" gradientDirection="down" width="1920" height="400" translation="[0, 300]" />
+            <Rectangle id="heroGradientLeft" color="0x000000D0" endColor="0x00000000" gradient="linear" gradientDirection="left-right" width="1000" height="700" />
+            <Group translation="[80, 250]">
+                <Label id="heroTitle" width="800" wrap="true" font="font:LargeBoldSystemFont" />
+                <Label id="heroSynopsis" width="700" wrap="true" maxLines="3" translation="[0, 80]" font="font:SmallSystemFont" />
+                <ButtonGroup 
+                    id="heroButtons" 
+                    translation="[0, 200]" 
+                    layoutDirection="horiz" 
+                    itemSpacing="[20, 0]" 
+                    buttons='["Play", "More Info"]'
+                />
+            </Group>
         </Group>
 
-        <!-- CONTENT ROWS -->
-        <RowList 
-            id="rowList" 
-            translation="[0, 700]" 
-            itemComponent="PosterItem" 
-            numRows="2" 
-            rowItemSize="[[266, 400]]" 
-            rowItemSpacing="[[20, 0]]" 
-            itemSize="[1920, 450]" 
-            rowLabelOffset="[[100, 20]]" 
-            focusXOffset="[100]" 
-            showRowLabel="true" 
-            rowFocusAnimationStyle="floatingFocus" 
+        <Poster
+            id="logo"
+            uri="pkg:/images/logo_hd.png"
+            width="200"
+            height="50"
+            translation="[80, 30]"
         />
+        
+        <Label 
+            id="loadingLabel"
+            text="Loading Crate TV..."
+            translation="[960, 540]"
+            horizAlign="center"
+            vertAlign="center"
+            color="0xFFFFFFFF"
+        >
+            <font role="sans" size="30"/>
+        </Label>
+        
+        <RowList
+            id="categoryRowList"
+            translation="[80, 700]"
+            itemComponentName="MoviePoster" ' Default component
+            itemSize="[240, 360]" ' Default item size
+            rowItemSpacing="[ [30, 0] ]"
+            numRows="1"
+            rowHeights="[360]" ' Default row height
+            rowLabelOffset="[ [0, -50] ]"
+            rowFocusAnimationStyle="floatingFocus"
+            visible="false"
+        />
+
     </children>
+
 </component>

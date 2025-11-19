@@ -1,13 +1,3 @@
-
-
-
-
-
-
-
-
-
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -136,8 +126,9 @@ const CountrySnapshot: React.FC<{
         }
     };
 
-    const sortedLocations = Object.entries(locations).sort(([, a], [, b]) => b - a);
-    const totalViews = sortedLocations.reduce((sum, [, count]) => sum + count, 0);
+    // Fix arithmetic on unknown types by explicit casting to Number
+    const sortedLocations = Object.entries(locations).sort(([, a], [, b]) => Number(b) - Number(a));
+    const totalViews = sortedLocations.reduce((sum, [, count]) => sum + Number(count), 0);
 
     return (
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 mt-4">
@@ -162,7 +153,7 @@ const CountrySnapshot: React.FC<{
                             {sortedLocations.map(([code, count]) => (
                                 <tr key={code} className="border-b border-gray-800">
                                     <td className="p-2 font-medium text-white">{countryNameMap[code] || code} ({code})</td>
-                                    <td className="p-2 text-right">{formatNumber(count)}</td>
+                                    <td className="p-2 text-right">{formatNumber(Number(count))}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -293,8 +284,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                     {/* FIX: Explicitly cast properties to Number to avoid TypeScript errors. */}
                     <StatCard title="Total Festival Revenue" value={formatCurrency(Number(analyticsData.totalFestivalRevenue || 0))} className="sm:col-span-1" />
-                    <StatCard title="All-Access Passes" value={Number(analyticsData.festivalPassSales.units || 0)} />
-                    <StatCard title="Individual Blocks" value={Number(analyticsData.festivalBlockSales.units || 0)} />
+                    <StatCard title="All-Access Passes" value={formatNumber(Number(analyticsData.festivalPassSales.units || 0))} />
+                    <StatCard title="Individual Blocks" value={formatNumber(Number(analyticsData.festivalBlockSales.units || 0))} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     {/* FIX: Explicitly cast properties to Number to avoid TypeScript errors. */}
@@ -321,10 +312,10 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                     <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Item</th><th className="p-3">Units Sold</th><th className="p-3">Revenue</th></tr></thead>
                     <tbody>
                         {/* FIX: Explicitly cast properties to Number to avoid TypeScript errors. */}
-                        <tr className="border-b border-gray-700 font-semibold"><td className="p-3">All-Access Pass</td><td>{Number(analyticsData.festivalPassSales.units || 0)}</td><td>{formatCurrency(Number(analyticsData.festivalPassSales.revenue || 0))}</td></tr>
+                        <tr className="border-b border-gray-700 font-semibold"><td className="p-3">All-Access Pass</td><td>{formatNumber(Number(analyticsData.festivalPassSales.units || 0))}</td><td>{formatCurrency(Number(analyticsData.festivalPassSales.revenue || 0))}</td></tr>
                         {Object.entries(analyticsData.salesByBlock).map(([title, sales]: [string, any]) => (
                             // FIX: Explicitly cast properties to Number to avoid TypeScript errors.
-                            <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{Number(sales.units || 0)}</td><td>{formatCurrency(Number(sales.revenue || 0))}</td></tr>
+                            <tr key={title} className="border-b border-gray-700"><td className="p-3">{title}</td><td>{formatNumber(Number(sales.units || 0))}</td><td>{formatCurrency(Number(sales.revenue || 0))}</td></tr>
                         ))}
                     </tbody>
                 </table></div>
@@ -362,7 +353,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                     <StatCard title="Total Platform Revenue" value={formatCurrency(Number(analyticsData.totalCrateTvRevenue || 0))} />
                                     <StatCard title="Total Users" value={formatNumber(Number(analyticsData.totalUsers || 0))} />
                                     {/* FIX: Ensure view counts are treated as numbers in the reduction to prevent type errors. */}
-                                    <StatCard title="Total Film Views" value={formatNumber(Object.values(analyticsData.viewCounts).reduce((s, c) => s + Number(c || 0), 0))} />
+                                    <StatCard title="Total Film Views" value={formatNumber((Object.values(analyticsData.viewCounts) as number[]).reduce((s, c) => s + (c || 0), 0))} />
                                 </div>
                             </div>
                             
@@ -411,6 +402,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                                     {/* FIX: Explicitly cast all numeric properties to Number before passing them to components or formatting functions. */}
                                     <StatCard title="Total Donations" value={formatCurrency(Number(analyticsData.totalDonations || 0))} />
+                                    {/* FIX: Explicitly cast properties to Number to avoid potential type mismatches. */}
                                     <StatCard title="Total Sales (VOD/Festival)" value={formatCurrency(Number(analyticsData.totalSales || 0) + Number(analyticsData.totalFestivalRevenue || 0))} />
                                     <StatCard title="Merch Revenue" value={formatCurrency(Number(analyticsData.totalMerchRevenue || 0))} />
                                     <StatCard title="Ad Revenue" value={formatCurrency(Number(analyticsData.totalAdRevenue || 0))} />
@@ -484,7 +476,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                                             <ul className="text-sm text-gray-400">
                                                                 {Object.entries(analyticsData.viewLocations[Object.keys(allMovies).find(key => allMovies[key].title === p.movieTitle) || ''] as Record<string, number>).map(([country, count]) => (
                                                                     // FIX: Explicitly cast properties to Number to avoid TypeScript errors.
-                                                                    <li key={country}>{country}: {formatNumber(Number(count || 0))} views</li>
+                                                                    <li key={country}>{country}: {formatNumber(Number(count))} views</li>
                                                                 ))}
                                                             </ul>
                                                         ) : <p className="text-sm text-gray-500">No location data available for this film.</p>}

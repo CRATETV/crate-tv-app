@@ -59,10 +59,17 @@ export async function POST(request: Request) {
         const zipPath = path.relative(rokuDir, file).replace(/\\/g, '/');
         let finalContent: string | Buffer = contentBuffer;
 
-        // Normalize line endings for text files and perform replacements
-        if (zipPath.endsWith('.brs') || zipPath.endsWith('.xml')) {
-            // More robust line ending normalization
-            let textContent = contentBuffer.toString('utf-8').replace(/\r\n?/g, '\n');
+        // For text files, strip BOM, normalize line endings, and perform replacements
+        if (zipPath.endsWith('.brs') || zipPath.endsWith('.xml') || zipPath === 'manifest') {
+            let textContent = contentBuffer.toString('utf-8');
+            
+            // Strip BOM if present (very important for Roku)
+            if (textContent.startsWith('\uFEFF')) {
+                textContent = textContent.substring(1);
+            }
+            
+            // Normalize all line endings to LF (Unix-style)
+            textContent = textContent.replace(/\r\n?/g, '\n');
             
             if (zipPath === 'source/Config.brs') {
                 textContent = textContent.replace('API_URL_PLACEHOLDER', apiUrl);

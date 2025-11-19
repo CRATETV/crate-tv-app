@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "build:roku": "node scripts/build-roku.mjs",
+    "build:roku:local": "node scripts/build-roku.mjs --local",
     "deploy:roku": "roku-deploy",
     "deploy": "npm run build:roku && npm run deploy:roku"
   },

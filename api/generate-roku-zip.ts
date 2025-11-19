@@ -60,49 +60,44 @@ export async function POST(request: Request) {
     }
 
     const rokuDir = path.join((process as any).cwd(), 'roku');
-    // Read all files, including the 'images' directory.
     const filesToInclude = await readDirectory(rokuDir);
-
     const zip = new JSZip();
 
-    // Dynamically determine the base API URL based on the request's host
-    const protocol = host?.startsWith('localhost') ? 'http' : 'https';
-    const domain = `${protocol}://${host}`;
-    const apiUrl = `${domain}/api`;
-
-    // Build the manifest string line-by-line to guarantee LF line endings.
-    const manifestLines = [
-        'title=Crate TV',
-        'major_version=1',
-        'minor_version=4',
-        'build_version=0',
-        'mm_icon_focus_hd=pkg:/images/logo_hd.png',
-        'mm_icon_side_hd=pkg:/images/logo_hd.png',
-        'splash_screen_hd=pkg:/images/splash_hd.png'
-    ];
-    const manifestContent = manifestLines.join('\n');
-
-
-    // Create the manifest file dynamically, pointing to the artwork now in the zip
-    // IMPORTANT: Roku expects the manifest to be the first file and UNCOMPRESSED.
+    // Read the manifest file from the project, apply encoding fixes, and add it uncompressed.
+    const manifestPath = path.join(rokuDir, 'manifest');
+    const manifestContentBuffer = await fs.readFile(manifestPath);
+    let manifestContent = manifestContentBuffer.toString('utf-8');
+    if (manifestContent.startsWith('\uFEFF')) {
+      manifestContent = manifestContent.substring(1); // Strip BOM
+    }
+    manifestContent = manifestContent.replace(/\r\n?/g, '\n'); // Normalize line endings
     zip.file('manifest', manifestContent, { compression: "STORE", unixPermissions: 0o644 });
 
 
-    // Add all local files from the /roku directory to the zip.
+    // Add all other local files from the /roku directory to the zip.
     for (const file of filesToInclude) {
         const contentBuffer = await fs.readFile(file);
-        const zipPath = path.relative(rokuDir, file).replace(/\\/g, '/');
+        let zipPath = path.relative(rokuDir, file).replace(/\\/g, '/');
         let finalContent: string | Buffer = contentBuffer;
 
-        // Normalize line endings for text files and perform replacements
+        // Skip the manifest file since we've already added it
+        if (zipPath === 'manifest') continue;
+
+        // Rename image files inside the zip to match the user's manifest specification
+        if (zipPath === 'images/logo_hd.png') {
+            zipPath = 'images/roku_icon_540x405.png';
+        }
+        if (zipPath === 'images/splash_hd.jpg') {
+            zipPath = 'images/splash_screen_1920x1080.png';
+        }
+
+        // For text files, strip BOM, normalize line endings, and perform replacements
         if (zipPath.endsWith('.brs') || zipPath.endsWith('.xml')) {
-            // More robust line ending normalization
-            let textContent = contentBuffer.toString('utf-8').replace(/\r\n?/g, '\n');
-            
-            if (zipPath === 'source/Config.brs') {
-                textContent = textContent.replace('API_URL_PLACEHOLDER', apiUrl);
+            let textContent = contentBuffer.toString('utf-8');
+            if (textContent.startsWith('\uFEFF')) {
+                textContent = textContent.substring(1);
             }
-            
+            textContent = textContent.replace(/\r\n?/g, '\n');
             finalContent = textContent;
         }
 
@@ -111,7 +106,7 @@ export async function POST(request: Request) {
         }
     }
     
-    // Generate the final zip file. Specifying the platform and compression is crucial for Roku compatibility.
+    // Generate the final zip file.
     const zipBuffer = await zip.generateAsync({
         type: 'arraybuffer',
         platform: 'UNIX',

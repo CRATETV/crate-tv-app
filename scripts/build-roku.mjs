@@ -1,16 +1,13 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const JSZip = require('jszip');
-// FIX: The `process` global is not available by default in some strict TypeScript or module contexts. Importing it directly from the 'process' module resolves the error where 'cwd' and 'exit' properties were not found.
+import JSZip from 'jszip';
 import process from 'process';
+// FIX: Import Buffer to make it available in this module's scope.
+import { Buffer } from 'buffer';
 
-// Helper to recursively read a directory, ignoring dotfiles
 async function readDirectory(dirPath) {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
     const files = await Promise.all(entries.map((entry) => {
-        // Ignore hidden files and directories (like .DS_Store)
         if (entry.name.startsWith('.')) {
             return [];
         }
@@ -23,64 +20,79 @@ async function readDirectory(dirPath) {
 async function main() {
     console.log('Starting Roku channel packaging...');
 
+    const args = process.argv.slice(2);
+    const isLocalBuild = args.includes('--local');
+    
+    // More robust IP parsing
+    let localIp = null;
+    const ipArg = args.find(arg => arg.startsWith('--ip=') || /--(\d{1,3}\.){3}\d{1,3}/.test(arg));
+    if (ipArg) {
+        if (ipArg.startsWith('--ip=')) {
+            localIp = ipArg.split('=')[1];
+        } else {
+            localIp = ipArg.substring(2); // Remove the '--'
+        }
+    }
+
+    if (isLocalBuild && !localIp) {
+        console.error('❌ Error: Local IP address is required for a local build. Use --ip=<your_ip> or --<your_ip>');
+        process.exit(1);
+    }
+
     const projectRoot = process.cwd();
     const rokuDir = path.join(projectRoot, 'roku');
     const distDir = path.join(projectRoot, 'dist');
     const outputZipPath = path.join(distDir, 'cratetv-roku-channel.zip');
 
     try {
-        // Ensure dist directory exists
         await fs.mkdir(distDir, { recursive: true });
 
         const filesToInclude = await readDirectory(rokuDir);
         const zip = new JSZip();
 
-        // Build the manifest string line-by-line to guarantee LF line endings.
-        const manifestLines = [
-            'title=Crate TV',
-            'major_version=1',
-            'minor_version=4',
-            'build_version=0',
-            'mm_icon_focus_hd=pkg:/images/logo_hd.png',
-            'mm_icon_side_hd=pkg:/images/logo_hd.png',
-            'splash_screen_hd=pkg:/images/splash_hd.png'
-        ];
-        const manifestContent = manifestLines.join('\n');
-        
-        // Create the manifest file
-        // IMPORTANT: Roku expects the manifest to be the first file and UNCOMPRESSED.
-        zip.file('manifest', manifestContent, { compression: "STORE", unixPermissions: 0o644 });
+        // Roku requires the manifest to be the first file and uncompressed.
+        const manifestContent = await fs.readFile(path.join(rokuDir, 'manifest'), 'utf-8');
+        zip.file('manifest', manifestContent.replace(/\r\n/g, '\n'), { compression: "STORE", unixPermissions: 0o644 });
 
-
-        // Add all files from /roku to the zip
         for (const file of filesToInclude) {
-            const content = await fs.readFile(file);
-            const zipPath = path.relative(rokuDir, file);
-            if (content.length > 0) {
-                // Explicitly set standard file permissions to avoid "invalid header" errors on Roku.
-                zip.file(zipPath, content, { unixPermissions: 0o644 });
+            const zipPath = path.relative(rokuDir, file).replace(/\\/g, '/');
+            if (zipPath === 'manifest') continue; // Already handled
+
+            let content = await fs.readFile(file);
+            let finalContent = content;
+
+            if (zipPath.endsWith('.brs') || zipPath.endsWith('.xml')) {
+                let textContent = content.toString('utf-8');
+                
+                if (isLocalBuild && zipPath === 'source/Config.brs') {
+                    textContent = textContent.replace('API_URL_PLACEHOLDER', `http://${localIp}:5373/api`);
+                    console.log(`Injecting local IP ${localIp} into Config.brs`);
+                } else if (zipPath === 'source/Config.brs') {
+                    // For production builds, we will inject the Vercel URL later.
+                    // For now, we leave the placeholder. This script is only for local/direct packaging.
+                }
+                
+                finalContent = Buffer.from(textContent.replace(/\r\n/g, '\n'), 'utf-8');
             }
+
+            zip.file(zipPath, finalContent, { unixPermissions: 0o644 });
         }
-        
-        // Generate and write the zip file
-        // Specifying the platform and compression is crucial for Roku compatibility.
+
         const zipBuffer = await zip.generateAsync({
             type: 'nodebuffer',
             platform: 'UNIX',
             compression: "DEFLATE",
-            compressionOptions: {
-                level: 9
-            }
+            compressionOptions: { level: 9 }
         });
+
         await fs.writeFile(outputZipPath, zipBuffer);
         
-        // Also create a .pkg file for the Roku web uploader
+        // Roku's web uploader expects a .pkg extension for sideloading.
         const pkgOutputPath = outputZipPath.replace('.zip', '.pkg');
         await fs.copyFile(outputZipPath, pkgOutputPath);
 
         console.log(`✅ Roku channel successfully packaged.`);
-        console.log(`   - For terminal deployment: ${outputZipPath}`);
-        console.log(`   - For web uploader:      ${pkgOutputPath}`);
+        console.log(`   - For sideloading: ${pkgOutputPath}`);
 
     } catch (error) {
         console.error('❌ Error packaging Roku channel:', error);

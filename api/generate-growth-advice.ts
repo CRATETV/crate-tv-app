@@ -3,9 +3,9 @@ import { GrowthAnalyticsData, AiGrowthAdvice, Movie } from '../types.js';
 
 export async function POST(request: Request) {
   try {
-    const { password, metrics } = (await request.json()) as { password: string, report: GrowthAnalyticsData, metrics: GrowthAnalyticsData['keyMetrics'] };
+    const { password, metrics } = (await request.json()) as { password: string, metrics: GrowthAnalyticsData['keyMetrics'] };
 
-    // --- Authentication ---
+    // --- Authentication & Validation ---
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
     // FIX: Corrected the logical AND to check against the master password correctly.

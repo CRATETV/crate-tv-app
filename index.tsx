@@ -225,7 +225,7 @@ const SideloadingInstructions: React.FC = () => (
     }}>
       <code>
         <div style={{color: '#6B7280'}}># 1. Install dependencies (if you haven't already)</div>
-        <div>npm install</div>
+        <div style={{fontWeight: 'bold', color: '#FBBF24'}}>npm install</div>
         <br/>
         <div style={{color: '#6B7280'}}># 2. Start the development server</div>
         <div>npm run dev</div>
