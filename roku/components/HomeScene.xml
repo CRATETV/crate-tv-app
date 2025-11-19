@@ -3,38 +3,53 @@
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
     
     <children>
-        <!-- DYNAMIC HERO BACKGROUND -->
+        <!-- HERO BACKGROUND -->
         <Poster id="heroBg" width="1920" height="1080" loadDisplayMode="scaleToZoom" />
-        <Rectangle width="1920" height="1080" color="#141414" opacity="0.5" /> <!-- Dimmer -->
-        <Rectangle width="1920" height="1080" color="#141414" opacity="0.9" translation="[0, 800]" /> <!-- Bottom Fade -->
+        <Rectangle width="1920" height="1080" color="#141414" opacity="0.5" />
+        <Rectangle width="1920" height="1080" color="#141414" opacity="0.9" translation="[0, 800]" />
 
-        <!-- HERO INFO -->
+        <!-- HERO TEXT INFO -->
         <Group id="heroGroup" translation="[100, 200]">
-            <Label text="NOW STREAMING" color="#E50914" font="font:BoldSystemFont" size="24" translation="[0, -40]" />
             
-            <Label id="heroTitle" width="1000" color="#FFFFFF" font="font:BoldSystemFont" size="90" wrap="true" />
+            <Label text="NOW STREAMING" color="#E50914" translation="[0, -40]">
+                 <Font role="font" uri="font:BoldSystemFont" size="24" />
+            </Label>
+            
+            <Label id="heroTitle" width="1000" color="#FFFFFF" wrap="true">
+                <Font role="font" uri="font:BoldSystemFont" size="80" />
+            </Label>
             
             <LayoutGroup layoutDirection="horiz" itemSpacings="[20]" translation="[0, 130]">
-                <Label id="heroMeta" text="" color="#CCCCCC" font="font:SystemFont" size="28" />
-                <Rectangle width="40" height="28" color="#333333" cornerRadius="4">
-                     <Label text="HD" width="40" height="28" horizAlign="center" size="18" color="#dddddd" />
+                <Label id="heroMeta" text="" color="#CCCCCC">
+                    <Font role="font" uri="font:SystemFont" size="28" />
+                </Label>
+                <Rectangle width="50" height="32" color="#333333" cornerRadius="4">
+                     <Label text="HD" width="50" height="32" horizAlign="center" color="#dddddd">
+                        <Font role="font" uri="font:BoldSystemFont" size="20" />
+                     </Label>
                 </Rectangle>
             </LayoutGroup>
             
-            <Label id="heroDesc" width="800" color="#DDDDDD" size="26" maxLines="3" wrap="true" translation="[0, 180]" lineSpacing="6" />
+            <Label id="heroDesc" width="800" color="#DDDDDD" maxLines="3" wrap="true" translation="[0, 180]" lineSpacing="6">
+                <Font role="font" uri="font:SystemFont" size="26" />
+            </Label>
             
+            <!-- BUTTONS -->
             <LayoutGroup layoutDirection="horiz" itemSpacings="[20]" translation="[0, 300]">
                 <Rectangle width="220" height="60" color="#FFFFFF" cornerRadius="4">
-                    <Label text="▶ Play" width="220" height="60" horizAlign="center" vertAlign="center" color="#000000" font="font:BoldSystemFont" size="28" />
+                    <Label text="Play" width="220" height="60" horizAlign="center" vertAlign="center" color="#000000">
+                        <Font role="font" uri="font:BoldSystemFont" size="28" />
+                    </Label>
                 </Rectangle>
                 <Rectangle width="220" height="60" color="#666666" opacity="0.7" cornerRadius="4">
-                    <Label text="ⓘ More Info" width="220" height="60" horizAlign="center" vertAlign="center" color="#FFFFFF" font="font:BoldSystemFont" size="28" />
+                    <Label text="More Info" width="220" height="60" horizAlign="center" vertAlign="center" color="#FFFFFF">
+                        <Font role="font" uri="font:BoldSystemFont" size="28" />
+                    </Label>
                 </Rectangle>
             </LayoutGroup>
         </Group>
 
-        <!-- CONTENT ROWS -->
-        <!-- itemComponent="PosterItem" tells Roku to use our custom card design -->
+        <!-- MOVIE ROWS -->
         <RowList 
             id="rowList" 
             translation="[0, 650]" 
@@ -45,13 +60,12 @@
             itemSize="[1920, 500]" 
             rowLabelOffset="[[100, 20]]" 
             rowLabelColor="#E5E5E5"
-            rowLabelFont="font:BoldSystemFont"
             focusXOffset="[100]" 
             showRowLabel="true" 
             rowFocusAnimationStyle="floatingFocus" 
         />
         
-        <!-- Video Player (Hidden) -->
+        <!-- PLAYER -->
         <Video id="videoPlayer" visible="false" width="1920" height="1080" />
     </children>
 </component>

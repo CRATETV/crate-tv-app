@@ -5,6 +5,10 @@
         <field id="requestType" type="string" />
         <field id="linkCode" type="string" />
         <field id="authResult" type="assocarray" />
+        
+        <!-- New Login Fields -->
+        <field id="email" type="string" />
+        <field id="password" type="string" />
     </interface>
     <script type="text/brightscript" uri="pkg:/source/Config.brs" />
     <script type="text/brightscript" uri="pkg:/components/APITask.brs" />
