@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="APITask" extends="Task">
+    <interface>
+        <!-- Inputs -->
+        <field id="requestType" type="string" />
+        <field id="email" type="string" />
+        <field id="password" type="string" />
+        
+        <!-- Outputs -->
+        <field id="linkCode" type="string" />
+        <field id="authResult" type="assocarray" />
+        
+        <!-- NEW: Holds both Hero Items array AND RowList ContentNode -->
+        <field id="feedData" type="assocarray" />
+    </interface>
+
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/components/APITask.brs" />
+</component>

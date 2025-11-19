@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="AccountLinkScene" extends="Group">
+    <script type="text/brightscript" uri="pkg:/components/AccountLinkScene.brs" />
+    <interface> <field id="loginSuccess" type="boolean" /> </interface>
+    <children>
+        <Poster uri="pkg:/images/splash_hd.jpg" width="1920" height="1080" opacity="0.4" loadDisplayMode="scaleToZoom" />
+        <Rectangle width="1920" height="1080" color="#000000" opacity="0.85" />
+        
+        <!-- CODE LINK VIEW -->
+        <Group id="linkGroup" translation="[0, 0]">
+            <Label text="Sign In to Crate TV" width="1920" horizAlign="center" color="#FFFFFF" translation="[0, 300]"><Font role="font" uri="pkg:/fonts/Bold.ttf" size="60" /></Label>
+            <Label text="WEB: cratetv.net/link" width="1920" horizAlign="center" color="#AAAAAA" translation="[0, 400]"><Font role="font" uri="pkg:/fonts/Regular.ttf" size="30" /></Label>
+            <Label id="codeLabel" text="..." width="1920" horizAlign="center" color="#E50914" translation="[0, 500]"><Font role="font" uri="pkg:/fonts/Bold.ttf" size="120" /></Label>
+            
+            <Button id="emailBtn" text="Sign In with Password" translation="[810, 700]" minWidth="300" />
+        </Group>
+
+        <!-- PASSWORD LOGIN VIEW -->
+        <Group id="loginGroup" visible="false">
+            <Rectangle width="1920" height="1080" color="#141414" />
+            <Label text="Enter Email" width="1920" horizAlign="center" translation="[0, 150]"><Font role="font" uri="pkg:/fonts/Bold.ttf" size="40" /></Label>
+            <Rectangle width="800" height="60" color="#333333" translation="[560, 220]"><Label id="inputText" text="" color="#FFF" translation="[10, 10]" /></Rectangle>
+            <Keyboard id="keyboard" translation="[560, 300]" />
+            <Label id="statusLabel" width="1920" horizAlign="center" color="#E50914" translation="[0, 800]" />
+            <Button id="backBtn" text="Back" translation="[100, 100]" />
+        </Group>
+
+        <Timer id="pollTimer" repeat="true" duration="5" />
+    </children>
+</component>

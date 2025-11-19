@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="HomeScene" extends="Group">
+    <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
+    <children>
+        <!-- Hero BG -->
+        <Poster id="heroBg" width="1920" height="1080" loadDisplayMode="scaleToZoom" />
+        <Rectangle width="1920" height="1080" color="#000000" opacity="0.4" />
+        <Rectangle width="1920" height="1080" color="#141414" opacity="1" translation="[0, 700]" /> <!-- Bottom Fade -->
+
+        <!-- Hero Content -->
+        <Group id="heroGroup" translation="[100, 200]">
+            <Label id="heroTitle" width="1000" color="#FFFFFF" wrap="true"><Font role="font" uri="pkg:/fonts/Bold.ttf" size="90" /></Label>
+            <Label id="heroMeta" translation="[0, 130]" color="#CCC"><Font role="font" uri="pkg:/fonts/Regular.ttf" size="28" /></Label>
+            <Label id="heroDesc" translation="[0, 180]" width="800" maxLines="3" wrap="true" color="#DDD"><Font role="font" uri="pkg:/fonts/Regular.ttf" size="26" /></Label>
+            
+            <LayoutGroup layoutDirection="horiz" itemSpacings="[20]" translation="[0, 320]">
+                <Rectangle id="btnPlay" width="200" height="60" color="#FFFFFF" cornerRadius="5"><Label text="▶ Play" width="200" height="60" horizAlign="center" vertAlign="center" color="#000"><Font role="font" uri="pkg:/fonts/Bold.ttf" size="26" /></Label></Rectangle>
+                <Rectangle id="btnLike" width="200" height="60" color="#333333" cornerRadius="5"><Label id="likeLabel" text="♡ Like" width="200" height="60" horizAlign="center" vertAlign="center" color="#FFF"><Font role="font" uri="pkg:/fonts/Bold.ttf" size="26" /></Label></Rectangle>
+            </LayoutGroup>
+        </Group>
+
+        <!-- Movie List -->
+        <RowList 
+            id="rowList" 
+            translation="[0, 600]" 
+            itemComponent="PosterItem" 
+            numRows="2" 
+            rowItemSize="[[250, 375]]" 
+            rowItemSpacing="[[20, 0]]" 
+            itemSize="[1920, 500]" 
+            rowLabelOffset="[[100, 20]]" 
+            showRowLabel="true" 
+            focusXOffset="[100]" 
+            rowFocusAnimationStyle="floatingFocus" 
+        />
+        
+        <!-- Timer for Auto-Rotate Hero -->
+        <Timer id="heroTimer" repeat="true" duration="8" />
+    </children>
+</component>
