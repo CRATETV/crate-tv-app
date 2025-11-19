@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="VideoScene" extends="Scene">
+    <script type="text/brightscript" uri="pkg:/components/VideoScene.brs" />
+    <interface>
+        <field id="content" type="node" onChange="onContentChange" />
+    </interface>
+    <children>
+        <Video
+            id="videoPlayer"
+            width="1920"
+            height="1080"
+            translation="[0,0]"
+            visible="true"
+        />
+    </children>
+</component>
