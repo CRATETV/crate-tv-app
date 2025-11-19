@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="APITask" extends="Task">
+    <interface>
+        <field id="content" type="node" />
+        <field id="requestType" type="string" />
+        <field id="linkCode" type="string" />
+        <field id="authResult" type="assocarray" />
+    </interface>
+    <script type="text/brightscript" uri="pkg:/source/Config.brs" />
+    <script type="text/brightscript" uri="pkg:/components/APITask.brs" />
+</component>

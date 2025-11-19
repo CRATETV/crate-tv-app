@@ -1,80 +1,29 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<component name="AccountLinkScene" extends="Scene">
+<component name="AccountLinkScene" extends="Group">
     <script type="text/brightscript" uri="pkg:/components/AccountLinkScene.brs" />
+    <interface>
+        <field id="loginSuccess" type="boolean" />
+    </interface>
     <children>
-        <!-- Background -->
-        <Poster 
-            uri="pkg:/images/splash_hd.png" 
-            width="1920" 
-            height="1080"
-        />
-        <Rectangle color="0x000000D0" width="1920" height="1080" />
-
-        <!-- Centered Content Group -->
-        <Group translation="[960, 540]" horizAlign="center" vertAlign="center">
-            <Poster 
-                uri="pkg:/images/logo_hd.png"
-                width="400"
-                translation="[0, -250]"
-                horizAlign="center"
-            />
-            <Label 
-                text="Link Your Crate TV Account"
-                width="1200"
-                horizAlign="center"
-                font="font:LargeBoldSystemFont"
-                translation="[0, -100]"
-            />
-            <Label
-                id="instructionsLabel"
-                text="1. On a phone or computer, go to: cratetv.net/link-roku
-2. Enter the code below:"
-                width="800"
-                wrap="true"
-                horizAlign="center"
-                translation="[0, 20]"
-                font="font:SmallSystemFont"
-            />
-            <Rectangle
-                width="400"
-                height="120"
-                color="0x181818FF"
-                translation="[0, 180]"
-                horizAlign="center"
-            >
-                 <Label 
-                    id="codeLabel"
-                    text="LOADING"
-                    width="400"
-                    height="120"
-                    horizAlign="center"
-                    vertAlign="center"
-                >
-                    <font role="sans" size="80" />
-                </Label>
-            </Rectangle>
-            <Label 
-                id="statusLabel"
-                text="Waiting for you to enter the code on the website..."
-                width="800"
-                horizAlign="center"
-                translation="[0, 300]"
-                font="font:SmallSystemFont"
-                color="0xCCCCCCFF"
-            />
-        </Group>
-
-        <!-- Node for getting the link code -->
-        <Task id="getCodeTask" uri="pkg:/components/ContentTask.xml" />
-
-        <!-- Node for checking link status -->
-        <Task id="statusCheckTask" uri="pkg:/components/ContentTask.xml" />
+        <Poster uri="pkg:/images/splash_hd.jpg" width="1920" height="1080" opacity="0.3" loadDisplayMode="scaleToZoom" />
+        <Rectangle width="1920" height="1080" color="#000000" opacity="0.7" />
         
-        <!-- Timer for polling the status -->
-        <Timer 
-            id="statusCheckTimer"
-            duration="5"
-            repeat="true"
-        />
+        <LayoutGroup translation="[960, 400]" horizAlignment="center" vertAlignment="center" itemSpacings="[20]">
+            <Label text="Sign In to Crate TV" color="#FFFFFF" font="font:BoldSystemFont" size="60" />
+            <Label text="1. Go to cratetv.net/link on your computer or phone" color="#AAAAAA" size="30" />
+            <Label text="2. Enter this code:" color="#AAAAAA" size="30" />
+            
+            <!-- Code Display -->
+            <Label 
+                id="codeLabel" 
+                text="LOADING..." 
+                color="#E50914" 
+                font="font:BoldSystemFont" 
+                size="120" />
+                
+            <Label text="This screen will refresh automatically once linked." color="#666666" size="24" />
+        </LayoutGroup>
+        
+        <Timer id="pollTimer" repeat="true" duration="5" />
     </children>
 </component>
