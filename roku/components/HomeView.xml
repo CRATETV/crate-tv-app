@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="HomeView" extends="Group">
+    <interface>
+        <field id="content" type="node" onChange="onContentSet" />
+    </interface>
+    <script type="text/brightscript" uri="pkg:/components/HomeView.brs" />
+    <children>
+        <!-- Hero Background -->
+        <Poster id="heroPoster" width="1920" height="1080" loadDisplayMode="scaleToFill" />
+        <Rectangle width="1920" height="1080" color="#000000" opacity="0.7" />
+        
+        <!-- Hero Text -->
+        <Label id="heroTitle" translation="[100, 200]" font="font:HugeSystemFont" color="#FFFFFF" text="Loading..." />
+        <Label id="heroDesc" translation="[100, 300]" width="1000" wrap="true" color="#AAAAAA" />
+
+        <!-- Movie List -->
+        <RowList 
+            id="rowList" 
+            translation="[0, 550]" 
+            itemComponentName="CinematicPosterItem" 
+            rowItemSize="[[320, 180]]" 
+            rowItemSpacing="[[20, 0]]"
+            itemSize="[1920, 300]" 
+            numRows="3" 
+            rowFocusAnimationStyle="floatingFocus" 
+        />
+    </children>
+</component>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="LinkTask" extends="Task">
+    <interface>
+        <field id="code" type="string" />
+    </interface>
+    <script type="text/brightscript">
+        <![CDATA[
+        sub init()
+            m.top.functionName = "fetchCode"
+        end sub
+
+        sub fetchCode()
+            ' 1. Get the Modern Roku ID (UUID)
+            di = CreateObject("roDeviceInfo")
+            ' GetChannelClientId is the modern, supported way to identify a device
+            uuid = di.GetChannelClientId()
+            
+            ' 2. Add it to URL with corrected parameter name 'deviceId'
+            url = "https://cratetv.net/api/get-roku-link-code?deviceId=" + uuid
+            print "Requesting Code from: " + url
+            
+            request = CreateObject("roUrlTransfer")
+            request.SetCertificatesFile("common:/certs/ca-bundle.crt")
+            request.InitClientCertificates()
+            request.SetUrl(url)
+            request.AddHeader("User-Agent", "Roku/CrateTV")
+            request.RetainBodyOnError(true)
+
+            ' 3. Fetch
+            response = request.GetToString()
+            print "Server Response: " + response
+
+            if response <> ""
+                json = ParseJson(response)
+                if json <> invalid
+                    if json.code <> invalid
+                        m.top.code = json.code
+                    else if json.error <> invalid
+                        print "API returned Error: " + json.error
+                        m.top.code = "API-ERR"
+                    else
+                        m.top.code = "JSON-ERR"
+                    end if
+                else
+                    m.top.code = "PARSE-ERR"
+                end if
+            else
+                m.top.code = "NET-ERR"
+            end if
+        end sub
+        ]]>
+    </script>
+</component>

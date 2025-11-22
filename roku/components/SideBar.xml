@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="SideBar" extends="Group">
+    <script type="text/brightscript" uri="pkg:/components/SideBar.brs" />
+    <interface>
+        <field id="isExpanded" type="boolean" value="false" onChange="onStateChange" />
+    </interface>
+    <children>
+        <Rectangle id="bg" width="80" height="1080" color="#000000" opacity="0.95" />
+        <Rectangle id="divider" width="2" height="1080" translation="[80, 0]" color="#333333" />
+        <Group id="menuGroup" translation="[10, 200]" opacity="0.0">
+            <LayoutGroup itemSpacings="[30]">
+                <Button id="navSearch" text=" Search" minWidth="50" height="60" showFocusFootprint="true" />
+                <Button id="navHome" text=" Home" minWidth="50" height="60" showFocusFootprint="true" />
+                <Button id="navClassics" text=" Classics" minWidth="50" height="60" showFocusFootprint="true" />
+                <Button id="navAccount" text=" Account" minWidth="50" height="60" showFocusFootprint="true" />
+            </LayoutGroup>
+        </Group>
+        <Animation id="expandAnim" duration="0.2" easeFunction="outCubic">
+            <FloatFieldInterpolator key="[0.0, 1.0]" keyValue="[ 80.0, 350.0 ]" fieldToInterp="bg.width" />
+            <Vector2DFieldInterpolator key="[0.0, 1.0]" keyValue="[ [80.0, 0.0], [350.0, 0.0] ]" fieldToInterp="divider.translation" />
+            <FloatFieldInterpolator key="[0.0, 1.0]" keyValue="[ 0.0, 1.0 ]" fieldToInterp="menuGroup.opacity" />
+        </Animation>
+        <Animation id="collapseAnim" duration="0.2" easeFunction="outCubic">
+            <FloatFieldInterpolator key="[0.0, 1.0]" keyValue="[ 350.0, 80.0 ]" fieldToInterp="bg.width" />
+            <Vector2DFieldInterpolator key="[0.0, 1.0]" keyValue="[ [350.0, 0.0], [80.0, 0.0] ]" fieldToInterp="divider.translation" />
+            <FloatFieldInterpolator key="[0.0, 1.0]" keyValue="[ 1.0, 0.0 ]" fieldToInterp="menuGroup.opacity" />
+        </Animation>
+    </children>
+</component>

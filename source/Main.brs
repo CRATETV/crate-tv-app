@@ -1,5 +1,4 @@
 sub Main()
-    print "Booting from Boot.brs"
     screen = CreateObject("roSGScreen")
     m.port = CreateObject("roMessagePort")
     screen.setMessagePort(m.port)

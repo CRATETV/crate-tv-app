@@ -1,80 +1,64 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<component name="AccountLinkScene" extends="Scene">
+<component name="AccountLinkScene" extends="Group">
     <script type="text/brightscript" uri="pkg:/components/AccountLinkScene.brs" />
+    <interface>
+        <field id="loginSuccess" type="boolean" value="false" />
+    </interface>
     <children>
-        <!-- Background -->
-        <Poster 
-            uri="pkg:/images/splash_hd.png" 
-            width="1920" 
-            height="1080"
-        />
-        <Rectangle color="0x000000D0" width="1920" height="1080" />
+        <Rectangle width="1920" height="1080" color="#141414" />
+        
+        <!-- ========================== -->
+        <!-- VIEW 1: LINK CODE -->
+        <!-- ========================== -->
+        <Group id="linkCodeGroup" visible="true">
+            
+            <!-- 1. Instructions -->
+            <Label text="Link Your Device" font="font:LargeBoldSystemFont" color="#FFFFFF" translation="[0, 150]" width="1920" horizAlign="center" />
+            <Label text="Go to: cratetv.net/activate" font="font:MediumBoldSystemFont" color="#F4D03F" translation="[0, 220]" width="1920" horizAlign="center" />
+            
+            <!-- 2. THE BOX -->
+            <!-- X=660, Width=600 -->
+            <Rectangle width="600" height="250" translation="[660, 320]" color="#333333" />
+            
+            <!-- 3. THE CODE -->
+            <!-- X=660, Width=600 (Matches Box) -->
+            <Label id="codeLabel" 
+                   text="LOADING..." 
+                   translation="[660, 320]" 
+                   width="600" 
+                   height="250" 
+                   horizAlign="center" 
+                   vertAlign="center" 
+                   font="font:LargeBoldSystemFont" 
+                   color="#FFFFFF" />
 
-        <!-- Centered Content Group -->
-        <Group translation="[960, 540]" horizAlign="center" vertAlign="center">
-            <Poster 
-                uri="pkg:/images/logo_hd.png"
-                width="400"
-                translation="[0, -250]"
-                horizAlign="center"
-            />
-            <Label 
-                text="Link Your Crate TV Account"
-                width="1200"
-                horizAlign="center"
-                font="font:LargeBoldSystemFont"
-                translation="[0, -100]"
-            />
-            <Label
-                id="instructionsLabel"
-                text="1. On a phone or computer, go to: cratetv.net/link-roku
-2. Enter the code below:"
-                width="800"
-                wrap="true"
-                horizAlign="center"
-                translation="[0, 20]"
-                font="font:SmallSystemFont"
-            />
-            <Rectangle
-                width="400"
-                height="120"
-                color="0x181818FF"
-                translation="[0, 180]"
-                horizAlign="center"
-            >
-                 <Label 
-                    id="codeLabel"
-                    text="LOADING"
-                    width="400"
-                    height="120"
-                    horizAlign="center"
-                    vertAlign="center"
-                >
-                    <font role="sans" size="80" />
-                </Label>
-            </Rectangle>
-            <Label 
-                id="statusLabel"
-                text="Waiting for you to enter the code on the website..."
-                width="800"
-                horizAlign="center"
-                translation="[0, 300]"
-                font="font:SmallSystemFont"
-                color="0xCCCCCCFF"
-            />
+            <!-- 4. THE BUTTON (Fixing Alignment) -->
+            <!-- Changed X to 660 (Matches Box) -->
+            <!-- Changed minWidth to 600 (Matches Box) -->
+            <Button id="btnGoToEmail" text="Log in with Email &amp; Password" translation="[660, 620]" minWidth="600" showFocusFootprint="true" />
         </Group>
 
-        <!-- Node for getting the link code -->
-        <Task id="getCodeTask" uri="pkg:/components/ContentTask.xml" />
+        <!-- ========================== -->
+        <!-- VIEW 2: ENTER EMAIL -->
+        <!-- ========================== -->
+        <Group id="emailGroup" visible="false" translation="[200, 100]">
+            <Label text="Step 1: Enter Email Address" font="font:LargeBoldSystemFont" color="#FFFFFF" translation="[0, -50]" />
+            <Keyboard id="emailKeyboard" />
+            <Button id="btnNextToPass" text="Next" translation="[0, 650]" minWidth="300" showFocusFootprint="true" />
+            <Button id="btnBackToLink" text="Cancel" translation="[350, 650]" minWidth="300" showFocusFootprint="true" />
+        </Group>
 
-        <!-- Node for checking link status -->
-        <Task id="statusCheckTask" uri="pkg:/components/ContentTask.xml" />
-        
-        <!-- Timer for polling the status -->
-        <Timer 
-            id="statusCheckTimer"
-            duration="5"
-            repeat="true"
-        />
+        <!-- ========================== -->
+        <!-- VIEW 3: ENTER PASSWORD -->
+        <!-- ========================== -->
+        <Group id="passwordGroup" visible="false" translation="[200, 100]">
+            <Label text="Step 2: Enter Password" font="font:LargeBoldSystemFont" color="#FFFFFF" translation="[0, -50]" />
+            <Label id="userEmailDisplay" text="" color="#AAAAAA" translation="[500, -50]" />
+            <Keyboard id="passKeyboard" /> <!-- Secure mode set in BRS -->
+            <Button id="btnLogin" text="Sign In" translation="[0, 650]" minWidth="300" showFocusFootprint="true" />
+            <Button id="btnBackToEmail" text="Back" translation="[350, 650]" minWidth="300" showFocusFootprint="true" />
+        </Group>
+
+        <Timer id="pollTimer" repeat="true" duration="5" />
     </children>
 </component>

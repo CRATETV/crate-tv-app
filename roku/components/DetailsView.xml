@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="DetailsView" extends="Group">
+    <interface>
+        <field id="content" type="node" onChange="onContentSet" />
+    </interface>
+    <script type="text/brightscript" uri="pkg:/components/DetailsView.brs" />
+    <children>
+        <Video id="videoPlayer" width="1920" height="1080" visible="false" />
+        
+        <Group id="infoGroup">
+            <Rectangle width="1920" height="1080" color="#000000" opacity="0.9" />
+            <Label id="titleLabel" translation="[100, 100]" font="font:HugeSystemFont" />
+            <Label id="descLabel" translation="[100, 200]" width="800" wrap="true" />
+            <Button id="playBtn" text="Play Movie" translation="[100, 500]" />
+        </Group>
+    </children>
+</component>
