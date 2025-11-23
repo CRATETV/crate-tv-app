@@ -1,26 +1,50 @@
 sub init()
-    m.statusLabel = m.top.findNode("statusLabel")
-    m.rowList = m.top.findNode("rowList")
+    m.viewContainer = m.top.findNode("viewContainer")
+    m.spinner = m.top.findNode("spinner")
+    m.sideBar = m.top.findNode("sideBar")
     
+    ' Start API
     m.apiTask = m.top.findNode("apiTask")
     m.apiTask.observeField("content", "onContentReady")
     m.apiTask.control = "RUN"
+    
+    ' Initial Focus: Sidebar
+    m.sideBar.setFocus(true)
 end sub
 
 sub onContentReady(event)
+    m.spinner.visible = false
     content = event.getData()
     
-    ' Count the rows to show the user
-    rowCount = content.mainContent.getChildCount()
+    ' Create Home View
+    m.homeView = CreateObject("roSGNode", "HomeView")
+    m.homeView.content = content
+    m.viewContainer.appendChild(m.homeView)
     
-    if rowCount > 0
-        m.statusLabel.text = "SUCCESS: Loaded " + rowCount.toStr() + " categories from CrateTV.net"
-        m.statusLabel.color = "#00FF00" ' Green
+    ' Logic: If content exists, focus it. If not, stay on Sidebar.
+    if content.mainContent.getChildCount() > 0
+        m.homeView.setFocus(true)
     else
-        m.statusLabel.text = "WARNING: Connected, but found 0 Categories. Check API."
-        m.statusLabel.color = "#FF0000" ' Red
+        ' If 0 rows, keep focus on sidebar so user is not trapped
+        m.sideBar.setFocus(true)
     end if
-    
-    m.rowList.content = content.mainContent
-    m.rowList.setFocus(true)
 end sub
+
+function onKeyEvent(key as String, press as Boolean) as Boolean
+    if press
+        if key = "left"
+            ' Always allow going back to Sidebar
+            if not m.sideBar.hasFocus()
+                m.sideBar.setFocus(true)
+                return true
+            end if
+        else if key = "right"
+            ' Only allow going to content if Sidebar has focus
+            if m.sideBar.hasFocus() and m.homeView <> invalid
+                m.homeView.setFocus(true)
+                return true
+            end if
+        end if
+    end if
+    return false
+end function

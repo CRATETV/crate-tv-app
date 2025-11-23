@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="APITask" extends="Task">
     <interface>
-        <field id="content" type="assocarray" />
+        <!-- This field will hold the ContentNode tree we build from your JSON -->
+        <field id="content" type="node" />
     </interface>
-    <!-- Link ONLY to the APITask script, not Config.brs -->
+
     <script type="text/brightscript" uri="pkg:/components/APITask.brs" />
 </component>

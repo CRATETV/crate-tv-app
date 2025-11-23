@@ -6,26 +6,9 @@
         <field id="height" type="float" value="180" />
     </interface>
     <script type="text/brightscript" uri="pkg:/components/CinematicPosterItem.brs" />
+    
     <children>
-        <!-- GRAY BACKGROUND (Visible if image fails) -->
-        <Rectangle width="320" height="180" color="#444444" />
-        
-        <!-- TITLE TEXT (Visible if image fails) -->
-        <Label id="fallbackTitle" 
-               width="300" 
-               height="160" 
-               translation="[10,10]" 
-               wrap="true" 
-               horizAlign="center" 
-               vertAlign="center" 
-               color="#FFFFFF" 
-               font="font:SmallSystemFont" 
-               text="Loading..." />
-
-        <!-- IMAGE -->
         <Poster id="poster" width="320" height="180" loadDisplayMode="scaleToFill" />
-        
-        <!-- ANIMATION -->
         <Animation id="focusAnim" duration="0.2" easeFunction="outCubic">
              <Vector2DFieldInterpolator fieldToInterp="poster.scale" key="[0.0, 1.0]" keyValue="[[1.0, 1.0], [1.15, 1.15]]" />
         </Animation>

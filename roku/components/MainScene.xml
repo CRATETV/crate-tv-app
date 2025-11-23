@@ -1,32 +1,25 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="UTF-8"?>
 <component name="MainScene" extends="Scene">
-    <script type="text/brightscript" uri="pkg:/components/MainScene.brs" />
     <children>
-        <Rectangle width="1920" height="1080" color="#000033" />
-        
-        <!-- REPORT CARD (Shows API Status) -->
-        <Rectangle width="1920" height="200" color="#000000" opacity="0.8" />
-        <Label id="statusLabel" 
-               text="Connecting to Crate TV..." 
-               width="1800" 
-               translation="[50, 50]" 
-               font="font:MediumBoldSystemFont" 
-               color="#FFFF00" />
+        <!-- Container where we’ll put HomeView -->
+        <Group id="viewContainer" />
 
-        <!-- THE LIST -->
-        <RowList 
-            id="rowList" 
-            translation="[0, 250]" 
-            itemComponentName="CinematicPosterItem" 
-            rowItemSize="[[320, 180]]" 
-            rowItemSpacing="[[20, 0]]"
-            itemSize="[1920, 300]" 
-            numRows="3" 
-            rowFocusAnimationStyle="floatingFocus" 
-            showRowLabel="true"
-            rowLabelColor="#FFFFFF"
+        <!-- Simple loading spinner (you can replace with an image) -->
+        <Label
+            id="spinner"
+            text="Loading..."
+            translation="[800, 500]"
+            color="#FFFFFF"
         />
 
+        <!-- Placeholder sidebar (you may already have a more complex one) -->
+        <Group id="sideBar" translation="[50, 200]">
+            <Label text="HOME" color="#FFFFFF" />
+        </Group>
+
+        <!-- Our Task that fetches content from cratetv.net -->
         <APITask id="apiTask" />
     </children>
+
+    <script type="text/brightscript" uri="pkg:/components/MainScene.brs" />
 </component>

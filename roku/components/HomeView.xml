@@ -1,28 +1,60 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="UTF-8"?>
 <component name="HomeView" extends="Group">
     <interface>
+        <!-- The ContentNode tree from APITask -->
         <field id="content" type="node" onChange="onContentSet" />
     </interface>
-    <script type="text/brightscript" uri="pkg:/components/HomeView.brs" />
-    <children>
-        <!-- Hero Background -->
-        <Poster id="heroPoster" width="1920" height="1080" loadDisplayMode="scaleToFill" />
-        <Rectangle width="1920" height="1080" color="#000000" opacity="0.7" />
-        
-        <!-- Hero Text -->
-        <Label id="heroTitle" translation="[100, 200]" font="font:HugeSystemFont" color="#FFFFFF" text="Loading..." />
-        <Label id="heroDesc" translation="[100, 300]" width="1000" wrap="true" color="#AAAAAA" />
 
-        <!-- Movie List -->
-        <RowList 
-            id="rowList" 
-            translation="[0, 550]" 
-            itemComponentName="CinematicPosterItem" 
-            rowItemSize="[[320, 180]]" 
-            rowItemSpacing="[[20, 0]]"
-            itemSize="[1920, 300]" 
-            numRows="3" 
-            rowFocusAnimationStyle="floatingFocus" 
+    <children>
+        <!-- Hero area (big feature at the top) -->
+        <Poster
+            id="heroPoster"
+            width="1920"
+            height="600"
+            translation="[0,0]"
+        />
+
+        <Label
+            id="heroTitle"
+            translation="[80, 100]"
+            color="#FFFFFF"
+            font="font:MediumBoldSystemFont"
+        />
+
+        <Label
+            id="heroDesc"
+            translation="[80, 180]"
+            width="1000"
+            color="#FFFFFF"
+            font="font:SmallSystemFont"
+        />
+
+        <!-- Play / More Info buttons (simple text for now, can be replaced with images) -->
+        <Label
+            id="heroPlay"
+            text="► Play"
+            translation="[80, 320]"
+            color="#000000"
+            backgroundColor="#FFFFFF"
+        />
+
+        <Label
+            id="heroMoreInfo"
+            text="More Info"
+            translation="[220, 320]"
+            color="#FFFFFF"
+            backgroundColor="#444444"
+        />
+
+        <!-- Single row for now: Top 10 etc. (you can add more later) -->
+        <RowList
+            id="rowList"
+            translation="[80, 650]"
+            itemSize="[300, 450]"
+            numRows="1"
+            showRowLabel="true"
         />
     </children>
+
+    <script type="text/brightscript" uri="pkg:/components/HomeView.brs" />
 </component>
