@@ -31,20 +31,18 @@
 
         <!-- Play / More Info buttons (simple text for now, can be replaced with images) -->
         <Label
-            id="heroPlay"
-            text="► Play"
-            translation="[80, 320]"
-            color="#000000"
-            backgroundColor="#FFFFFF"
-        />
+    id="heroPlay"
+    text="► Play"
+    translation="[80, 320]"
+    color="#FFFFFF" />
 
-        <Label
-            id="heroMoreInfo"
-            text="More Info"
-            translation="[220, 320]"
-            color="#FFFFFF"
-            backgroundColor="#444444"
-        />
+       <Label
+    id="heroMoreInfo"
+    text="More Info"
+    translation="[220, 320]"
+    color="#FFFFFF" />
+
+
 
         <!-- Single row for now: Top 10 etc. (you can add more later) -->
         <RowList

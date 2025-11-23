@@ -21,13 +21,12 @@ sub onContentReady(event)
     m.homeView.content = content
     m.viewContainer.appendChild(m.homeView)
     
-    ' Logic: If content exists, focus it. If not, stay on Sidebar.
-    if content.mainContent.getChildCount() > 0
-        m.homeView.setFocus(true)
-    else
-        ' If 0 rows, keep focus on sidebar so user is not trapped
-        m.sideBar.setFocus(true)
-    end if
+if content.GetChildCount() > 0
+    m.homeView.setFocus(true)
+else
+    m.sideBar.setFocus(true)
+end if
+    
 end sub
 
 function onKeyEvent(key as String, press as Boolean) as Boolean

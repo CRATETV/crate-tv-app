@@ -1,60 +1,81 @@
 sub init()
-    m.heroPoster  = m.top.findNode("heroPoster")
-    m.heroTitle   = m.top.findNode("heroTitle")
-    m.heroDesc    = m.top.findNode("heroDesc")
-    m.heroPlay    = m.top.findNode("heroPlay")
-    m.heroMore    = m.top.findNode("heroMoreInfo")
-    m.rowList     = m.top.findNode("rowList")
-
-    m.rowList.observeField("itemFocused", "onItemFocused")
+    ' Grab references to UI nodes
+    m.heroPoster = m.top.findNode("heroPoster")
+    m.heroTitle  = m.top.findNode("heroTitle")
+    m.heroDesc   = m.top.findNode("heroDesc")
+    m.rowList    = m.top.findNode("rowList")
 end sub
 
 sub onContentSet()
     content = m.top.content
-    if content = invalid then return
+    if content = invalid then
+        print "DEBUG HomeView: content is invalid"
+        return
+    end if
 
-    ' Find hero and first row
-    heroNode = invalid
-    rowNodes = []
+    print "DEBUG HomeView content children:"; content.GetChildCount()
 
-    child = content.GetChild(0)
-    while child <> invalid
-        if child.contentType = "hero"
-            heroNode = child
-        else if child.contentType = "row"
-            rowNodes.push(child)
-        end if
-        child = child.GetNext()
-    end while
+    ' Expect:
+    ' child 0 = hero node
+    ' child 1 = first row node
+    heroNode = content.GetChild(0)
+    firstRow = content.GetChild(1)
 
     if heroNode <> invalid then
-        m.heroPoster.uri = heroNode.posterUrl
-        m.heroTitle.text = heroNode.title
-        m.heroDesc.text  = heroNode.description
+        print "DEBUG hero title:"; heroNode.title
+    else
+        print "DEBUG heroNode is invalid"
     end if
 
-    if rowNodes.count() > 0 then
-        ' For now, just use the first row (e.g. Top 10 on Crate TV Today)
-        firstRow = rowNodes[0]
-        m.rowList.rowLabel = firstRow.title
+    if firstRow <> invalid then
+        print "DEBUG firstRow title:"; firstRow.title
+        print "DEBUG firstRow child count:"; firstRow.GetChildCount()
+    else
+        print "DEBUG firstRow is invalid"
+    end if
 
+    ' ---------- HERO ----------
+    if heroNode <> invalid and m.heroPoster <> invalid then
+        if heroNode.posterUrl <> invalid then
+            m.heroPoster.uri = heroNode.posterUrl
+        else
+            print "DEBUG heroNode.posterUrl is invalid"
+        end if
+
+        if m.heroTitle <> invalid then
+            m.heroTitle.text = heroNode.title
+        end if
+
+        if m.heroDesc <> invalid then
+            m.heroDesc.text  = heroNode.description
+        end if
+    else
+        print "DEBUG: heroNode or heroPoster is invalid"
+    end if
+
+    ' ---------- ROW: Top 10 on Crate TV Today ----------
+    if firstRow <> invalid and m.rowList <> invalid then
         rowContent = CreateObject("roSGNode", "ContentNode")
-        item = firstRow.GetChild(0)
 
-        while item <> invalid
-            itemNode = rowContent.CreateChild("ContentNode")
-            itemNode.title     = item.title
-            itemNode.hdPosterUrl = item.posterUrl
-            itemNode.description = item.description
-            ' You can add rank, badge, etc. later
-            item = item.GetNext()
-        end while
+        ' Row node (RowList expects rows as children, items as grandchildren)
+        rowNode = rowContent.CreateChild("ContentNode")
+        rowNode.title = firstRow.title
+
+        childCount = firstRow.GetChildCount()
+        for i = 0 to childCount - 1
+            item = firstRow.GetChild(i)
+            if item <> invalid then
+                print "DEBUG HomeView adding item:"; item.title
+
+                itemNode = rowNode.CreateChild("ContentNode")
+                itemNode.title                 = item.title
+                itemNode.HDPosterUrl           = item.posterUrl  ' <-- IMPORTANT: HDPosterUrl
+                itemNode.shortDescriptionLine1 = item.description
+            end if
+        end for
 
         m.rowList.content = rowContent
+    else
+        print "DEBUG: firstRow or rowList is invalid"
     end if
-end sub
-
-sub onItemFocused()
-    ' Here you can later trigger trailers when a row item gets focus
-    ' For now, we just leave it empty.
 end sub

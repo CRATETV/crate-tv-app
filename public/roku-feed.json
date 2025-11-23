@@ -2,7 +2,7 @@
   "hero": {
     "title": "Lifeless",
     "description": "A CrateTV original thriller.",
-    "poster": "https://cratetv.net/images/lifeless-hero.jpg",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless+poster+remake+.jpg",
     "trailerUrl": "https://cratetv.net/videos/lifeless-trailer.mp4",
     "movieUrl": "https://cratetv.net/videos/lifeless-full.mp4"
   },
@@ -13,7 +13,7 @@
         {
           "id": "movie1",
           "title": "Drive",
-          "poster": "https://cratetv.net/images/movies/drive.jpg",
+          "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Drive+Poster.jpeg",
           "description": "A stylish action thriller.",
           "badge": "NOW STREAMING",
           "rank": 1,
