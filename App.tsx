@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -240,32 +239,72 @@ const App: React.FC = () => {
         fetchRecommendations();
     }, [likedMovies, movies]);
 
-    // --- INJECT AD SCRIPT ---
+    // --- INJECT AD SCRIPT (BOTTOM PLACEMENT) ---
     useEffect(() => {
         const adScript = localStorage.getItem('productionAdScript');
         if (adScript) {
             try {
-                const scriptId = 'cratetv-socialbar-ads';
-                if (!document.getElementById(scriptId)) {
-                    // Create a container for the script to run in if needed, 
-                    // but for social bars, usually appending to body is enough.
-                    // However, innerHTML won't execute scripts. We must create the element.
+                const containerId = 'cratetv-ad-container';
+                let container = document.getElementById(containerId);
+
+                if (!container) {
+                    container = document.createElement('div');
+                    container.id = containerId;
+                    // Force ads to the bottom. 
+                    // On mobile, we lift it up slightly to avoid covering the navigation bar.
+                    container.style.cssText = `
+                        position: fixed;
+                        left: 0;
+                        right: 0;
+                        bottom: 0; 
+                        width: 100%;
+                        z-index: 9999;
+                        pointer-events: none; 
+                        display: flex;
+                        justify-content: center;
+                        align-items: flex-end;
+                    `;
                     
-                    // Improved regex to be more permissive with spaces
-                    const srcMatch = adScript.match(/src\s*=\s*['"](.*?)['"]/);
+                    // Allow clicks inside the container (on the ad itself)
+                    container.style.pointerEvents = 'none'; 
                     
-                    if (srcMatch && srcMatch[1]) {
-                        const script = document.createElement('script');
-                        script.id = scriptId;
-                        script.src = srcMatch[1];
-                        script.type = 'text/javascript';
-                        script.async = true;
-                        document.body.appendChild(script);
-                    } else {
-                        // Fallback: If it's inline code (less common for social bar but possible)
-                        console.log("Ad script detected but format not automatically supported for injection via React. Please ensure it uses a src attribute.");
-                    }
+                    // Responsive positioning logic handled via CSS media query equivalent in JS
+                    // We check window width to determine if we are on mobile
+                    const updatePosition = () => {
+                        if (window.innerWidth < 768) {
+                            container!.style.bottom = '80px'; // Above mobile nav
+                        } else {
+                            container!.style.bottom = '0px'; // Bottom of screen on desktop
+                        }
+                    };
+                    
+                    window.addEventListener('resize', updatePosition);
+                    updatePosition(); // Initial call
+
+                    document.body.appendChild(container);
+                } else {
+                    // If container exists, clear it to prevent duplicates if re-renders happen strangely
+                    container.innerHTML = '';
                 }
+
+                // Improved regex to be more permissive with spaces
+                const srcMatch = adScript.match(/src\s*=\s*['"](.*?)['"]/);
+                
+                if (srcMatch && srcMatch[1]) {
+                    const script = document.createElement('script');
+                    script.src = srcMatch[1];
+                    script.type = 'text/javascript';
+                    script.async = true;
+                    
+                    // Append script to our custom bottom container
+                    container.appendChild(script);
+                    
+                    // The ad itself needs pointer events to be clickable
+                    // We rely on the script to generate elements that accept clicks.
+                    // The container wrapper has pointer-events: none to let clicks pass through empty space.
+                    // However, usually ad scripts inject *their own* div. 
+                    // This wrapper method attempts to "trap" it or provide a specific mounting point context.
+                } 
             } catch (e) {
                 console.error("Failed to inject ad script", e);
             }
