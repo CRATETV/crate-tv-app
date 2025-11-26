@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -239,72 +240,76 @@ const App: React.FC = () => {
         fetchRecommendations();
     }, [likedMovies, movies]);
 
-    // --- INJECT AD SCRIPT (BOTTOM PLACEMENT) ---
+    // --- INJECT AD SCRIPT (TOP PLACEMENT WITH OFFSET) ---
     useEffect(() => {
         const adScript = localStorage.getItem('productionAdScript');
         if (adScript) {
             try {
                 const containerId = 'cratetv-ad-container';
-                let container = document.getElementById(containerId);
-
-                if (!container) {
-                    container = document.createElement('div');
-                    container.id = containerId;
-                    // Force ads to the bottom. 
-                    // On mobile, we lift it up slightly to avoid covering the navigation bar.
-                    container.style.cssText = `
-                        position: fixed;
-                        left: 0;
-                        right: 0;
-                        bottom: 0; 
-                        width: 100%;
-                        z-index: 9999;
-                        pointer-events: none; 
-                        display: flex;
-                        justify-content: center;
-                        align-items: flex-end;
-                    `;
-                    
-                    // Allow clicks inside the container (on the ad itself)
-                    container.style.pointerEvents = 'none'; 
-                    
-                    // Responsive positioning logic handled via CSS media query equivalent in JS
-                    // We check window width to determine if we are on mobile
-                    const updatePosition = () => {
-                        if (window.innerWidth < 768) {
-                            container!.style.bottom = '80px'; // Above mobile nav
-                        } else {
-                            container!.style.bottom = '0px'; // Bottom of screen on desktop
-                        }
-                    };
-                    
-                    window.addEventListener('resize', updatePosition);
-                    updatePosition(); // Initial call
-
-                    document.body.appendChild(container);
-                } else {
-                    // If container exists, clear it to prevent duplicates if re-renders happen strangely
-                    container.innerHTML = '';
+                
+                // Remove existing if present to prevent duplicates
+                if (document.getElementById(containerId)) {
+                    document.getElementById(containerId)?.remove();
                 }
 
-                // Improved regex to be more permissive with spaces
-                const srcMatch = adScript.match(/src\s*=\s*['"](.*?)['"]/);
+                const container = document.createElement('div');
+                container.id = containerId;
                 
-                if (srcMatch && srcMatch[1]) {
+                // DEBUG MODE: If in staging, add a border so we can see where the ad SHOULD be
+                const isStaging = sessionStorage.getItem('crateTvStaging') === 'true';
+                const borderStyle = isStaging ? 'border: 2px solid red; background: rgba(255,0,0,0.2);' : '';
+
+                // Max Z-Index to ensure it's on top of everything
+                // Positioned at TOP: 100px to clear the header/search bar
+                container.style.cssText = `
+                    position: fixed;
+                    left: 0;
+                    right: 0;
+                    top: 100px; 
+                    width: 100%;
+                    z-index: 2147483647;
+                    pointer-events: none; 
+                    display: flex;
+                    justify-content: center;
+                    align-items: flex-start;
+                    min-height: 1px; /* Ensure it exists */
+                    ${borderStyle}
+                `;
+                
+                let src = '';
+                // 1. Check if it's a direct URL (starts with // or http)
+                if (adScript.trim().startsWith('//') || adScript.trim().startsWith('http')) {
+                    src = adScript.trim();
+                } 
+                // 2. Check if it's a script tag
+                else {
+                    const srcMatch = adScript.match(/src\s*=\s*['"](.*?)['"]/);
+                    if (srcMatch && srcMatch[1]) {
+                        src = srcMatch[1];
+                    }
+                }
+
+                if (src) {
                     const script = document.createElement('script');
-                    script.src = srcMatch[1];
+                    script.src = src;
                     script.type = 'text/javascript';
                     script.async = true;
+                    // Allow clicks on the ad itself
+                    script.style.pointerEvents = 'auto'; 
                     
-                    // Append script to our custom bottom container
                     container.appendChild(script);
-                    
-                    // The ad itself needs pointer events to be clickable
-                    // We rely on the script to generate elements that accept clicks.
-                    // The container wrapper has pointer-events: none to let clicks pass through empty space.
-                    // However, usually ad scripts inject *their own* div. 
-                    // This wrapper method attempts to "trap" it or provide a specific mounting point context.
-                } 
+                    document.body.appendChild(container);
+                    console.log("Crate TV: Adsterra script injected:", src);
+                } else {
+                    console.warn("Crate TV: Could not extract src from ad script:", adScript);
+                }
+
+                return () => {
+                    // Clean up on unmount
+                    if (document.getElementById(containerId)) {
+                        document.getElementById(containerId)?.remove();
+                    }
+                };
             } catch (e) {
                 console.error("Failed to inject ad script", e);
             }
