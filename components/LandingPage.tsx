@@ -93,22 +93,25 @@ const LandingPage: React.FC = () => {
                                 <p className="text-xl md:text-2xl text-gray-300 italic leading-relaxed max-w-4xl mx-auto mb-10">
                                     "{aboutData.missionStatement}"
                                 </p>
-                                <button 
-                                    onClick={() => openAuthModal('signup')} 
-                                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-transform hover:scale-105 shadow-lg shadow-red-900/50"
-                                >
-                                    Get Started
-                                </button>
+                                <div className="flex flex-col items-center">
+                                    <button 
+                                        onClick={() => openAuthModal('signup')}
+                                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-transform hover:scale-105"
+                                    >
+                                        Start Watching for Free
+                                    </button>
+                                    <p className="text-sm text-gray-500 mt-4">No credit card required.</p>
+                                </div>
                             </section>
                         )}
                     </div>
                 </main>
-                 <CollapsibleFooter showActorLinks={true} />
+                <CollapsibleFooter />
             </div>
             {isAuthModalOpen && (
-                <AuthModal
-                    initialView={initialAuthView}
-                    onClose={() => setIsAuthModalOpen(false)}
+                <AuthModal 
+                    initialView={initialAuthView} 
+                    onClose={() => setIsAuthModalOpen(false)} 
                 />
             )}
         </>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -238,6 +239,38 @@ const App: React.FC = () => {
 
         fetchRecommendations();
     }, [likedMovies, movies]);
+
+    // --- INJECT AD SCRIPT ---
+    useEffect(() => {
+        const adScript = localStorage.getItem('productionAdScript');
+        if (adScript) {
+            try {
+                const scriptId = 'cratetv-socialbar-ads';
+                if (!document.getElementById(scriptId)) {
+                    // Create a container for the script to run in if needed, 
+                    // but for social bars, usually appending to body is enough.
+                    // However, innerHTML won't execute scripts. We must create the element.
+                    
+                    // Improved regex to be more permissive with spaces
+                    const srcMatch = adScript.match(/src\s*=\s*['"](.*?)['"]/);
+                    
+                    if (srcMatch && srcMatch[1]) {
+                        const script = document.createElement('script');
+                        script.id = scriptId;
+                        script.src = srcMatch[1];
+                        script.type = 'text/javascript';
+                        script.async = true;
+                        document.body.appendChild(script);
+                    } else {
+                        // Fallback: If it's inline code (less common for social bar but possible)
+                        console.log("Ad script detected but format not automatically supported for injection via React. Please ensure it uses a src attribute.");
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to inject ad script", e);
+            }
+        }
+    }, []);
 
 
      if (isLoading) {

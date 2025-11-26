@@ -1,62 +1,107 @@
+
 import React, { useState, useEffect } from 'react';
 
 const MonetizationTab: React.FC = () => {
     const [adTagUrl, setAdTagUrl] = useState('');
+    const [adScript, setAdScript] = useState('');
     const [status, setStatus] = useState<'idle' | 'saved'>('idle');
 
     useEffect(() => {
         const savedUrl = localStorage.getItem('productionAdTagUrl') || '';
+        const savedScript = localStorage.getItem('productionAdScript') || '';
         setAdTagUrl(savedUrl);
+        setAdScript(savedScript);
     }, []);
 
     const handleSave = () => {
         localStorage.setItem('productionAdTagUrl', adTagUrl.trim());
-        setStatus('saved');
-        setTimeout(() => setStatus('idle'), 3000);
+        localStorage.setItem('productionAdScript', adScript.trim());
+        
+        // Force reload to apply script changes
+        if (confirm('Settings saved! The page needs to refresh to apply the new ad scripts. Refresh now?')) {
+            window.location.reload();
+        } else {
+            setStatus('saved');
+            setTimeout(() => setStatus('idle'), 3000);
+        }
     };
 
     return (
         <div className="space-y-8">
-            <h2 className="text-2xl font-bold text-white">AI-Powered Monetization for Video</h2>
-            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                <h3 className="text-xl font-semibold text-white mb-2">Step 1: Partner with a Video Ad Platform</h3>
-                <p className="text-gray-400 mb-4">
-                    Since AdSense approval can be challenging, a great alternative for video-heavy sites like Crate TV is <strong className="text-purple-400">VDO.AI</strong>. They are an AI-powered platform specifically designed to maximize revenue from video ads and are known for a straightforward, self-service approval process.
-                </p>
-                <a 
-                    href="https://vdo.ai/publisher-signup/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-transform hover:scale-105"
-                >
-                    Sign Up for VDO.AI
-                </a>
-            </div>
-
-            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                <h3 className="text-xl font-semibold text-white mb-2">Step 2: Activate Your Ads</h3>
-                <p className="text-gray-400 mb-4">
-                    Once your account is approved, VDO.AI will provide you with a VAST Ad Tag URL. This is the link that serves video ads to your platform. Paste it below and click "Save" to activate monetization. If left blank, a sample ad will run for testing purposes.
-                </p>
-                <div>
-                    <label htmlFor="adTagUrl" className="block text-sm font-medium text-gray-300 mb-1">Production VAST Ad Tag URL</label>
-                    <input
-                        type="url"
-                        id="adTagUrl"
-                        value={adTagUrl}
-                        onChange={(e) => setAdTagUrl(e.target.value)}
-                        className="form-input"
-                        placeholder="https://pub.vdo.ai/..."
-                    />
+            <h2 className="text-2xl font-bold text-white">Revenue & Monetization</h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Strategy 1: Direct Support */}
+                <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                    <h3 className="text-xl font-semibold text-white mb-2">Strategy 1: Community Support (Active)</h3>
+                    <p className="text-gray-400 mb-4">
+                        Since AdSense often rejects new streaming platforms, your best revenue source right now is direct viewer support.
+                    </p>
+                    <p className="text-gray-400 mb-4">
+                        The <strong className="text-purple-400">"Support Filmmaker"</strong> button is live on every movie page. This processes payments via Square, bypassing ad networks entirely.
+                    </p>
+                    <div className="p-4 bg-purple-900/20 rounded-md border border-purple-800/50">
+                        <p className="text-sm text-purple-200">
+                            <strong>Tip:</strong> Share your "Top 10" lists on social media. Viewers are 3x more likely to donate after watching a highly-ranked film.
+                        </p>
+                    </div>
                 </div>
-                <div className="mt-4 flex items-center gap-4">
-                    <button
-                        onClick={handleSave}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md"
-                    >
-                        Save & Activate Ads
-                    </button>
-                    {status === 'saved' && <p className="text-green-400 text-sm">Ad settings saved!</p>}
+
+                {/* Strategy 2: Ad Networks */}
+                <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                    <h3 className="text-xl font-semibold text-white mb-2">Strategy 2: Ad Networks</h3>
+                    <p className="text-gray-400 mb-4">
+                        We recommend <strong>Adsterra</strong> or <strong>PropellerAds</strong> for streaming sites.
+                    </p>
+                    
+                    <div className="mb-6 space-y-6">
+                        {/* Option A: Social Bar */}
+                        <div className="bg-gray-900/50 p-4 rounded-md border border-gray-600">
+                            <h4 className="font-bold text-white mb-2 flex items-center gap-2">
+                                <span className="bg-green-500 text-black text-xs px-2 py-0.5 rounded">RECOMMENDED</span>
+                                Option A: Social Bar (High Earnings)
+                            </h4>
+                            <p className="text-xs text-gray-400 mb-2">
+                                1. On your Adsterra Dashboard, find the <strong>Social Bar</strong> row (Active).<br/>
+                                2. Click the <strong>Get Code</strong> button next to it.<br/>
+                                3. Copy the entire script code it gives you (starts with <code>&lt;script...</code>) and paste it below.
+                            </p>
+                            <textarea
+                                value={adScript}
+                                onChange={(e) => setAdScript(e.target.value)}
+                                className="form-input w-full font-mono text-xs"
+                                rows={4}
+                                placeholder="Paste the full code here: <script type='text/javascript' src='//...'></script>"
+                            />
+                        </div>
+
+                        {/* Option B: Video VAST */}
+                        <div className="bg-gray-900/50 p-4 rounded-md border border-gray-600">
+                            <h4 className="font-bold text-white mb-2">Option B: Video Player Ads (VAST)</h4>
+                            <p className="text-xs text-gray-400 mb-2">
+                                Requires <strong>"Video VAST"</strong> approval from support. Paste the VAST URL here to play ads before movies.
+                            </p>
+                            <input
+                                type="url"
+                                value={adTagUrl}
+                                onChange={(e) => setAdTagUrl(e.target.value)}
+                                className="form-input w-full"
+                                placeholder="https://pub.propellerads.com/..."
+                            />
+                        </div>
+                    </div>
+
+                    <div className="border-t border-gray-700 pt-4">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={handleSave}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors w-full"
+                            >
+                                Save Ad Settings
+                            </button>
+                            {status === 'saved' && <p className="text-green-400 text-sm animate-pulse">Saved!</p>}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

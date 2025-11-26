@@ -81,11 +81,8 @@ const Header: React.FC<HeaderProps> = ({
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center">
-                        <a href="/" onClick={(e) => handleNavigate(e, '/')} className="flex-shrink-0" aria-label="Crate TV Home">
-                           <img className="hidden md:block h-10 w-auto" src={`/api/proxy-image?url=${encodeURIComponent(logoUrl)}`} alt="Crate TV" crossOrigin="anonymous" />
-                        </a>
                         {showNavLinks && user && (
-                            <nav className="hidden md:block ml-10">
+                            <nav className="hidden md:block">
                                 <div className="flex items-baseline space-x-4">
                                     {navLinks.map(link => (
                                         <a key={link.path} href={link.path} onClick={(e) => handleNavigate(e, link.path)} className="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">

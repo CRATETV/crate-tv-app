@@ -91,7 +91,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
                 </button>
                 
                 <div className="p-8">
-                    <h1 className="text-3xl font-bold mb-6 text-white">{isLoginView ? 'Sign In' : 'Create Account'}</h1>
+                    <h1 className="text-3xl font-bold mb-2 text-white">{isLoginView ? 'Sign In' : 'Join for Free'}</h1>
+                    {!isLoginView && <p className="text-gray-400 mb-6 text-sm">Create a free account to start watching. No credit card required.</p>}
+                    {isLoginView && <p className="text-gray-400 mb-6 text-sm">Welcome back!</p>}
+
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <input
                             type="email"
@@ -126,13 +129,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
                         {error && <p className="text-red-500 text-sm pt-1">{error}</p>}
                         {successMessage && <p className="text-green-500 text-sm pt-1">{successMessage}</p>}
                         <button type="submit" disabled={isLoading} className="submit-btn w-full !mt-6">
-                            {isLoading ? 'Processing...' : (isLoginView ? 'Sign In' : 'Sign Up')}
+                            {isLoading ? 'Processing...' : (isLoginView ? 'Sign In' : 'Create Free Account')}
                         </button>
                     </form>
                     <div className="mt-4 text-center text-gray-400">
                         {isLoginView ? (
                             <>
-                                <p>New to Crate TV? <button onClick={() => { setIsLoginView(false); setError(''); }} className="text-white font-bold hover:underline">Sign up now.</button></p>
+                                <p>New to Crate TV? <button onClick={() => { setIsLoginView(false); setError(''); }} className="text-white font-bold hover:underline">Join for Free.</button></p>
                                 <button onClick={handlePasswordReset} className="text-sm mt-2 hover:underline">Forgot password?</button>
                             </>
                         ) : (

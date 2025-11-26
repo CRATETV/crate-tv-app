@@ -1,1 +1,2 @@
-google.com, pub-5748304047766155, DIRECT, f08c47fec0942fa0
+# ads.txt
+# Place your ad network authorization lines here once approved.

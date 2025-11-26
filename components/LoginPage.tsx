@@ -74,7 +74,9 @@ const LoginPage: React.FC = () => {
             </header>
             <main className="flex-grow flex items-center justify-center">
                 <div className="w-full max-w-md bg-black/70 backdrop-blur-sm p-8 rounded-lg">
-                    <h1 className="text-3xl font-bold mb-6">{isLoginView ? 'Sign In' : 'Sign Up'}</h1>
+                    <h1 className="text-3xl font-bold mb-2">{isLoginView ? 'Sign In' : 'Join Crate TV'}</h1>
+                    {!isLoginView && <p className="text-gray-400 mb-6">Create a free account to start watching.</p>}
+                    
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <input
                             type="email"
@@ -106,22 +108,20 @@ const LoginPage: React.FC = () => {
                                     </svg>
                                 ) : (
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074L3.707 2.293zM10 12a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                                        <path d="M2 10s.955-2.263 2.828-4.136A10.046 10.046 0 0110 3c4.478 0 8.268 2.943 9.542 7-.153.483-.32.95-.5 1.401l-1.473-1.473A8.014 8.014 0 0010 8c-2.04 0-3.87.768-5.172 2.035l-1.473-1.473A8.013 8.013 0 002 10z" />
-                                    </svg>
+                                        <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074L3.707 2.293zM10 12a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /><path d="M2 10s.955-2.263 2.828-4.136A10.046 10.046 0 0110 3c4.478 0 8.268 2.943 9.542 7-.153.483-.32.95-.5 1.401l-1.473-1.473A8.014 8.014 0 0010 8c-2.04 0-3.87.768-5.172 2.035l-1.473-1.473A8.013 8.013 0 002 10z" /></svg>
                                 )}
                             </button>
                         </div>
                         {error && <p className="text-red-500 text-sm">{error}</p>}
                         {successMessage && <p className="text-green-500 text-sm">{successMessage}</p>}
                         <button type="submit" disabled={isLoading} className="submit-btn w-full">
-                            {isLoading ? 'Processing...' : (isLoginView ? 'Sign In' : 'Sign Up')}
+                            {isLoading ? 'Processing...' : (isLoginView ? 'Sign In' : 'Create Free Account')}
                         </button>
                     </form>
                     <div className="mt-4 text-center text-gray-400">
                         {isLoginView ? (
                             <>
-                                <p>New to Crate TV? <button onClick={() => { setIsLoginView(false); setError(''); }} className="text-white font-bold hover:underline">Sign up now.</button></p>
+                                <p>New to Crate TV? <button onClick={() => { setIsLoginView(false); setError(''); }} className="text-white font-bold hover:underline">Join for Free.</button></p>
                                 <button onClick={handlePasswordReset} className="text-sm mt-2 hover:underline">Forgot password?</button>
                             </>
                         ) : (

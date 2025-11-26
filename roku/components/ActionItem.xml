@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="ActionItem" extends="Group">
+
+    <script type="text/brightscript" uri="pkg:/components/ActionItem.brs" />
+
+    <interface>
+        <field id="itemContent" type="node" onChange="onContentChange" />
+        <field id="focusPercent" type="float" onChange="onFocusChange" />
+    </interface>
+
+    <children>
+        <Rectangle 
+            id="focusRing"
+            color="0xFFFFFFFF"
+            width="252"
+            height="372"
+            translation="[-6, -6]"
+            visible="false"
+        />
+        
+        <Poster 
+            id="tilePoster"
+            width="240"
+            height="360"
+            loadDisplayMode="scaleToFit"
+        />
+        
+        <Rectangle
+            id="textBackground"
+            color="0x000000AA"
+            width="240"
+            height="120"
+            translation="[0, 240]"
+        />
+        
+        <Label
+            id="titleLabel"
+            width="220"
+            horizAlign="center"
+            wrap="true"
+            translation="[10, 250]"
+            font="font:SmallBoldSystemFont"
+        />
+        
+        <Label
+            id="descriptionLabel"
+            width="220"
+            horizAlign="center"
+            wrap="true"
+            maxLines="3"
+            translation="[10, 280]"
+            font="font:ExtraSmallSystemFont"
+        />
+    </children>
+
+</component>
