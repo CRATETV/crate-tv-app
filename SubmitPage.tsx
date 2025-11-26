@@ -18,16 +18,25 @@ const SubmitPage: React.FC = () => {
             return;
         }
 
+        // Get the form data including the checkbox
+        const formData = new FormData(e.target as HTMLFormElement);
+        const musicRights = formData.get('musicRights');
+
+        if (!musicRights) {
+            setError('You must confirm that you possess the rights to the music in your film.');
+            return;
+        }
+
         setIsSubmitting(true);
         setError(null);
 
-        const formData = new FormData(e.target as HTMLFormElement);
         const data = Object.fromEntries(formData.entries());
         
         const submissionData = {
             ...data,
             posterUrl,
             movieUrl,
+            musicRightsConfirmation: true
         };
 
         try {
@@ -106,7 +115,21 @@ const SubmitPage: React.FC = () => {
                             />
                         </div>
 
-                        <button type="submit" className="submit-btn w-full mt-8" disabled={isSubmitting}>
+                        <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+                            <label className="flex items-start gap-3 cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    name="musicRights" 
+                                    required 
+                                    className="mt-1 w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500"
+                                />
+                                <span className="text-sm text-gray-300">
+                                    <strong>Music Rights Certification:</strong> I certify that I own the rights to all music used in this film, or I have secured the necessary licenses for its distribution on a streaming platform. I understand that Crate TV is not liable for copyright infringement regarding the music in my submission.
+                                </span>
+                            </label>
+                        </div>
+
+                        <button type="submit" className="submit-btn w-full mt-2" disabled={isSubmitting}>
                             {isSubmitting ? 'Submitting...' : 'Submit Film'}
                         </button>
                         

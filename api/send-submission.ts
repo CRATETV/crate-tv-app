@@ -16,10 +16,14 @@ const getIp = (req: Request) => {
 export async function POST(request: Request) {
     const ip = getIp(request);
     try {
-        const { filmTitle, directorName, cast, email, synopsis, posterUrl, movieUrl } = await request.json();
+        const { filmTitle, directorName, cast, email, synopsis, posterUrl, movieUrl, musicRightsConfirmation } = await request.json();
 
         if (!filmTitle || !directorName || !cast || !synopsis || !posterUrl || !movieUrl) {
             return new Response(JSON.stringify({ error: 'All fields are required.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        if (!musicRightsConfirmation) {
+             return new Response(JSON.stringify({ error: 'You must confirm music rights ownership to submit.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
 
         const initError = getInitializationError();
@@ -37,7 +41,8 @@ export async function POST(request: Request) {
             submitterEmail: email || '',
             synopsis,
             submissionDate: FieldValue.serverTimestamp(),
-            status: 'pending'
+            status: 'pending',
+            musicRightsConfirmation: true
         };
         await db.collection('movie_pipeline').add(pipelineEntry);
         
@@ -59,6 +64,7 @@ export async function POST(request: Request) {
                     <li><strong>Film Title:</strong> ${filmTitle}</li>
                     <li><strong>Director:</strong> ${directorName}</li>
                     <li><strong>Submitter Email:</strong> ${email ? `<a href="mailto:${email}">${email}</a>` : 'Not provided (manual entry)'}</li>
+                    <li><strong>Music Rights:</strong> Confirmed</li>
                 </ul>
                 <p>You can review, approve, and add this film to a category from the "Submission Pipeline" tab in the admin panel.</p>
             </div>

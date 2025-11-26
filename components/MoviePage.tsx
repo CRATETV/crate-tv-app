@@ -1,18 +1,23 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
+import { fetchAndCacheLiveData } from '../services/dataService';
 import ActorBioModal from './ActorBioModal';
+import Header from './Header';
+import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
+import BackToTopButton from './BackToTopButton';
+import SearchOverlay from './SearchOverlay';
 import StagingBanner from './StagingBanner';
+import DirectorCreditsModal from './DirectorCreditsModal';
+import Countdown from './Countdown';
+import CastButton from './CastButton';
+import RokuBanner from './RokuBanner';
+import SquarePaymentModal from './SquarePaymentModal';
 import { isMovieReleased } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import PauseOverlay from './PauseOverlay';
 import MovieDetailsModal from './MovieDetailsModal';
-import SquarePaymentModal from './SquarePaymentModal';
-import CastButton from './CastButton';
-// FIX: Add missing import for the Countdown component
-import Countdown from './Countdown';
-
 
 declare const google: any; // Declare Google IMA SDK global
 
@@ -20,11 +25,7 @@ interface MoviePageProps {
   movieKey: string;
 }
 
-const formatTime = (timeInSeconds: number) => {
-    const minutes = Math.floor(timeInSeconds / 60);
-    const seconds = Math.floor(timeInSeconds % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-};
+type PlayerMode = 'poster' | 'full';
 
 // Helper function to create/update meta tags
 const setMetaTag = (attr: 'name' | 'property', value: string, content: string) => {
@@ -37,122 +38,154 @@ const setMetaTag = (attr: 'name' | 'property', value: string, content: string) =
   element.setAttribute('content', content);
 };
 
-// A local, simplified spinner for the video preloader to avoid layout conflicts.
-const VideoPreloaderSpinner: React.FC = () => (
-    <div className="relative w-16 h-16">
-        <div className="absolute inset-0 border-4 border-dashed rounded-full animate-spin border-red-500"></div>
-        <div className="absolute inset-3 border-4 border-dashed rounded-full animate-spin border-blue-500" style={{ animationDirection: 'reverse' }}></div>
-    </div>
-);
+// A self-contained component for displaying a recommended movie.
+const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
+    const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+        e.preventDefault();
+        window.history.pushState({}, '', path);
+        window.dispatchEvent(new Event('pushstate'));
+        window.scrollTo(0, 0); // Scroll to top for a new page feel
+    };
 
-export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
+    return (
+        <a
+            href={`/movie/${movie.key}`}
+            onClick={(e) => handleNavigate(e, `/movie/${movie.key}`)}
+            className="group relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 bg-gray-900"
+        >
+              <img 
+                  src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
+                  alt={movie.title} 
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onContextMenu={(e) => e.preventDefault()}
+                  crossOrigin="anonymous"
+              />
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        </a>
+    );
+}
+
+const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const { user, markAsWatched, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist } = useAuth();
   const { isLoading: isDataLoading, movies: allMovies, categories: allCategories, dataSource } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
   
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
+  const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const playerContainerRef = useRef<HTMLDivElement>(null);
-  const mainRef = useRef<HTMLElement>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
   const hasTrackedViewRef = useRef(false);
 
   // Player state
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [showControls, setShowControls] = useState(true);
-  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [seekAnim, setSeekAnim] = useState<'rewind' | 'forward' | null>(null);
-  const clickTimeout = useRef<number | null>(null);
-  const [isVideoReady, setIsVideoReady] = useState(false);
+  const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
+  const [released, setReleased] = useState(() => isMovieReleased(movie));
   
-  // Modal & Search State
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   
-  // Staging State
+  // Staging and feature toggles
   const [isStaging, setIsStaging] = useState(false);
   
+  // Payment Modal State
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [showSupportSuccess, setShowSupportSuccess] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
   // Ad State
   const adContainerRef = useRef<HTMLDivElement>(null);
-  const adsLoaderRef = useRef<any>(null);
   const adsManagerRef = useRef<any>(null);
   const [isAdPlaying, setIsAdPlaying] = useState(false);
+  const [adError, setAdError] = useState<string | null>(null);
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
   const isOnWatchlist = useMemo(() => watchlist.includes(movieKey), [watchlist, movieKey]);
-  const [released, setReleased] = useState(() => isMovieReleased(movie));
 
   const playContent = useCallback(async () => {
     setIsAdPlaying(false);
     if (videoRef.current) {
         if (!hasTrackedViewRef.current && movie?.key) {
             hasTrackedViewRef.current = true;
+            // FIX: Get the user token to authenticate the view tracking request
             const token = await getUserIdToken();
             if (token) {
                 fetch('/api/track-view', {
                     method: 'POST',
-                    headers: {
+                    headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${token}` // Add the token here
                     },
                     body: JSON.stringify({ movieKey: movie.key }),
                 }).catch(err => console.error("Failed to track view:", err));
             } else {
-                 console.warn("Could not track view: user token not available.");
+                console.warn("View not tracked: User not authenticated or token unavailable.");
             }
         }
         videoRef.current.play().catch(e => console.error("Content play failed", e));
-        setIsPlaying(true);
     }
   }, [movie?.key, getUserIdToken]);
   
   const initializeAds = useCallback(() => {
-    if (!videoRef.current || !adContainerRef.current || !released || adsManagerRef.current || typeof google === 'undefined') {
-        playContent();
+    if (!videoRef.current || !adContainerRef.current || playerMode !== 'full' || !released || adsManagerRef.current || typeof google === 'undefined') {
+        if (playerMode === 'full') playContent(); // Play content directly if ads can't be initialized
         return;
     }
     
     const videoElement = videoRef.current;
     const adContainer = adContainerRef.current;
     setIsAdPlaying(true);
+    setAdError(null);
 
     const adDisplayContainer = new google.ima.AdDisplayContainer(adContainer, videoElement);
     const adsLoader = new google.ima.AdsLoader(adDisplayContainer);
-    adsLoaderRef.current = adsLoader;
 
-    adsLoader.addEventListener(google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED, (e: any) => {
-        const adsManager = e.getAdsManager(videoElement);
-        adsManagerRef.current = adsManager;
-        adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED, () => { videoElement.pause(); setIsPlaying(false); });
-        adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED, playContent);
-        adsManager.addEventListener(google.ima.AdEvent.Type.ALL_ADS_COMPLETED, playContent);
-        adsManager.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, () => playContent());
-        try {
-            adsManager.init(videoElement.clientWidth, videoElement.clientHeight, google.ima.ViewMode.NORMAL);
-            adsManager.start();
-        } catch (adError) {
+    adsLoader.addEventListener(
+        google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
+        (adsManagerLoadedEvent: any) => {
+            const adsManager = adsManagerLoadedEvent.getAdsManager(videoElement);
+            adsManagerRef.current = adsManager;
+
+            adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED, () => videoElement.pause());
+            adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED, playContent);
+            adsManager.addEventListener(google.ima.AdEvent.Type.ALL_ADS_COMPLETED, playContent);
+            adsManager.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, (adErrorEvent: any) => {
+                console.error('Ad Error:', adErrorEvent.getError());
+                setAdError('An ad could not be loaded. Starting film...');
+                playContent();
+            });
+            
+            try {
+                adsManager.init(videoElement.clientWidth, videoElement.clientHeight, google.ima.ViewMode.NORMAL);
+                adsManager.start();
+            } catch (adError) {
+                console.error("AdsManager could not be started", adError);
+                playContent();
+            }
+        },
+        false
+    );
+    
+    adsLoader.addEventListener(
+        google.ima.AdErrorEvent.Type.AD_ERROR,
+        (adErrorEvent: any) => {
+            console.error('Ad Loader Error:', adErrorEvent.getError());
+            setAdError('An ad could not be loaded. Starting film...');
             playContent();
-        }
-    }, false);
-    
-    adsLoader.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, () => playContent(), false);
-    
-    const adsRequest = new google.ima.AdsRequest();
-    
-    // Dynamically load the VAST tag from localStorage or use a fallback
-    const customAdTag = localStorage.getItem('productionAdTagUrl');
-    const sampleAdTag = 'https://storage.googleapis.com/interactive-media-ads/ad-tags/unknown/vast_skippable.xml';
-    
-    adsRequest.adTagUrl = customAdTag || sampleAdTag;
-    console.log(`Using VAST Ad Tag: ${adsRequest.adTagUrl}`);
-    
-    adsLoader.requestAds(adsRequest);
-  }, [released, playContent]);
+        },
+        false
+    );
 
+    const adsRequest = new google.ima.AdsRequest();
+    // Using a sample skippable pre-roll tag.
+    adsRequest.adTagUrl = 'https://storage.googleapis.com/interactive-media-ads/ad-tags/unknown/vast_skippable.xml';
+    adsRequest.linearAdSlotWidth = videoElement.clientWidth;
+    adsRequest.linearAdSlotHeight = videoElement.clientHeight;
+
+    adsLoader.requestAds(adsRequest);
+  }, [playerMode, released, playContent]);
+  
   useEffect(() => {
     return () => {
         if (adsManagerRef.current) {
@@ -163,352 +196,364 @@ export const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   }, []);
 
   useEffect(() => {
-    const isStagingActive = sessionStorage.getItem('crateTvStaging') === 'true';
-    if (isStagingActive) setIsStaging(true);
-    hasTrackedViewRef.current = false; // Reset view tracking on movie key change
-  }, [movieKey]);
+    const params = new URLSearchParams(window.location.search);
+    const env = params.get('env');
+    const stagingSession = sessionStorage.getItem('crateTvStaging');
+    const stagingActive = env === 'staging' || stagingSession === 'true';
+    if (stagingActive) setIsStaging(true);
+    
+    if (movie) {
+        setReleased(isMovieReleased(movie));
+        if (params.get('play') === 'true' && movie.fullMovie && isMovieReleased(movie)) {
+            setPlayerMode('full');
+        } else {
+            setPlayerMode('poster');
+        }
+    } else if (!isDataLoading) {
+         // Movie not found handling could go here
+    }
+    
+    hasTrackedViewRef.current = false;
+  }, [movieKey, movie, isDataLoading]);
+
+  useEffect(() => {
+    if (released || !movie) return;
+
+    const interval = setInterval(() => {
+        if (isMovieReleased(movie)) {
+            setReleased(true);
+            clearInterval(interval);
+        }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [movie, released]);
   
   useEffect(() => {
-      if (!isDataLoading && !movie) {
-          window.history.replaceState({}, '', '/');
-          window.dispatchEvent(new Event('pushstate'));
-      }
-  }, [isDataLoading, movie]);
-
-  useEffect(() => {
-    if (movie && movie.fullMovie && released) {
+    if (playerMode === 'full' && released) {
         const timer = setTimeout(() => initializeAds(), 100);
         return () => clearTimeout(timer);
+    } else {
+        if (adsManagerRef.current) {
+            adsManagerRef.current.destroy();
+            adsManagerRef.current = null;
+        }
+        setIsAdPlaying(false);
     }
-  }, [movie, released, initializeAds]);
+  }, [playerMode, released, initializeAds]);
 
+  // SEO
   useEffect(() => {
     if (movie) {
         document.title = `${movie.title || 'Untitled Film'} | Crate TV`;
         const synopsisText = (movie.synopsis || '').replace(/<br\s*\/?>/gi, ' ').trim();
         const pageUrl = window.location.href;
-
         setMetaTag('property', 'og:title', movie.title || 'Crate TV Film');
         setMetaTag('name', 'description', synopsisText);
         setMetaTag('property', 'og:description', synopsisText);
         setMetaTag('property', 'og:image', movie.poster || '');
         setMetaTag('property', 'og:url', pageUrl);
         setMetaTag('property', 'og:type', 'video.movie');
-
-        const schema = {
-          "@context": "https://schema.org",
-          "@type": "Movie",
-          "name": movie.title,
-          "description": synopsisText,
-          "image": movie.poster,
-          "url": pageUrl,
-          "director": movie.director.split(',').map(name => ({ "@type": "Person", "name": name.trim() })),
-          "actor": movie.cast.map(actor => ({ "@type": "Person", "name": actor.name })),
-          ...(movie.rating && {
-            "aggregateRating": {
-              "@type": "AggregateRating",
-              "ratingValue": movie.rating.toString(),
-              "bestRating": "10",
-              "ratingCount": "1" // Placeholder
-            }
-          })
-        };
-        
-        let scriptTag = document.getElementById('movie-schema') as HTMLScriptElement | null;
-        if (!scriptTag) {
-            scriptTag = document.createElement('script');
-            scriptTag.id = 'movie-schema';
-            document.head.appendChild(scriptTag);
-        }
-        scriptTag.type = 'application/ld+json';
-        scriptTag.textContent = JSON.stringify(schema);
-
-        return () => {
-            const script = document.getElementById('movie-schema');
-            if (script) document.head.removeChild(script);
-        };
     }
  }, [movie]);
 
-    const handlePlayerInteraction = useCallback(() => {
-        setShowControls(true);
-        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-        if (isPlaying) {
-            controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000);
-        }
-    }, [isPlaying]);
-
-    const handleGoHome = useCallback(() => {
-        window.history.pushState({}, '', '/');
-        window.dispatchEvent(new Event('pushstate'));
-    }, []);
-
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
-        
-        const handlePlay = () => { 
-            setIsPlaying(true); 
-            setIsPaused(false); 
-            handlePlayerInteraction();
-        };
-        const handlePause = () => { setIsPlaying(false); if (!video.ended) setIsPaused(true); };
-        const handleTimeUpdate = () => {
-            setCurrentTime(video.currentTime);
-            if (video.duration > 0 && (video.currentTime / video.duration) > 0.9) {
-                markAsWatched(movieKey);
-            }
-        };
-        const handleLoadedMetadata = () => {
-            setDuration(video.duration);
-            const savedTime = localStorage.getItem(`cratetv-progress-${movieKey}`);
-            if (savedTime) video.currentTime = parseFloat(savedTime);
-        };
-        const handleEnded = () => {
-            setIsPlaying(false);
-            setIsPaused(false);
-            markAsWatched(movieKey);
-            localStorage.removeItem(`cratetv-progress-${movieKey}`);
-            handleGoHome();
-        };
-        const handleCanPlay = () => {
-            setIsVideoReady(true);
-        };
-
-        video.addEventListener('play', handlePlay);
-        video.addEventListener('pause', handlePause);
-        video.addEventListener('timeupdate', handleTimeUpdate);
-        video.addEventListener('loadedmetadata', handleLoadedMetadata);
-        video.addEventListener('ended', handleEnded);
-        video.addEventListener('canplay', handleCanPlay);
-
-        const progressInterval = setInterval(() => {
-            if (video.currentTime > 1 && !video.paused) {
-                localStorage.setItem(`cratetv-progress-${movieKey}`, video.currentTime.toString());
-            }
-        }, 5000);
-
-        return () => {
-            video.removeEventListener('play', handlePlay);
-            video.removeEventListener('pause', handlePause);
-            video.removeEventListener('timeupdate', handleTimeUpdate);
-            video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-            video.removeEventListener('ended', handleEnded);
-            video.removeEventListener('canplay', handleCanPlay);
-            clearInterval(progressInterval);
-            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-            if (clickTimeout.current) clearTimeout(clickTimeout.current);
-        };
-    }, [movieKey, handlePlayerInteraction, markAsWatched, handleGoHome]);
-
-    // Autoplay fallback effect
-    useEffect(() => {
-        const video = videoRef.current;
-        if (video && movie?.fullMovie && released && !isAdPlaying) {
-            const playPromise = video.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.warn("Autoplay was prevented. User interaction required.", error);
-                    setIsPaused(true);
-                });
-            }
-        }
-    }, [movie?.fullMovie, released, isAdPlaying]);
+ useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+        if (event.key === 'Escape' && playerMode === 'full') handleExitPlayer();
+    };
+    document.addEventListener('keydown', handleEscKey);
+    return () => document.removeEventListener('keydown', handleEscKey);
+}, [playerMode]);
 
 
-    const handlePlayPause = useCallback(() => {
-        const video = videoRef.current;
-        if (video) {
-            if (video.muted) {
-                video.muted = false;
-            }
-            if (video.paused) {
-                video.play().catch(e => console.error("Error attempting to play video:", e));
-            } else {
-                video.pause();
-            }
-        }
-    }, []);
+    const recommendedMovies = useMemo(() => {
+        if (!movie) return [];
+        const recommendedKeys = new Set<string>();
+        const currentMovieCategories = Object.values(allCategories).filter((cat: Category) => cat.movieKeys.includes(movie.key));
+        currentMovieCategories.forEach((cat: Category) => {
+          cat.movieKeys.forEach((key: string) => {
+            if (key !== movie.key) recommendedKeys.add(key);
+          });
+        });
+        return Array.from(recommendedKeys).map(key => allMovies[key]).filter(Boolean).slice(0, 7);
+      }, [movie, allMovies, allCategories]);
+      
+    const exitStaging = () => {
+        sessionStorage.removeItem('crateTvStaging');
+        const params = new URLSearchParams(window.location.search);
+        params.delete('env');
+        window.location.search = params.toString();
+    };
 
-    const handleSeek = (time: number) => {
-        if (videoRef.current) videoRef.current.currentTime = time;
+    const handleSearchSubmit = (query: string) => {
+        if (query) window.location.href = `/?search=${encodeURIComponent(query)}`;
     };
     
-    const handleRewind = useCallback(() => {
-        if (!videoRef.current) return;
-        handleSeek(Math.max(0, videoRef.current.currentTime - 10));
-        setSeekAnim('rewind');
-        setTimeout(() => setSeekAnim(null), 500);
-    }, []);
+    const handleMovieEnd = () => {
+      window.history.pushState({}, '', '/');
+      window.dispatchEvent(new Event('pushstate'));
+    };
 
-    const handleForward = useCallback(() => {
-        if (!videoRef.current) return;
-        handleSeek(Math.min(videoRef.current.duration || Infinity, videoRef.current.currentTime + 10));
-        setSeekAnim('forward');
-        setTimeout(() => setSeekAnim(null), 500);
-    }, []);
+    const handleExitPlayer = () => {
+        setPlayerMode('poster');
+    };
     
-    const handleFullscreen = useCallback(async () => {
-        const player = playerContainerRef.current as any; // Use 'any' to access prefixed methods
-        if (!player) return;
+    const handlePaymentSuccess = () => {
+        setShowSupportSuccess(true);
+        setTimeout(() => setShowSupportSuccess(false), 3000);
+    };
 
-        const isInFullscreen = document.fullscreenElement || (document as any).webkitFullscreenElement;
+    const handleRewind = () => {
+        if(videoRef.current) videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+    }
 
-        try {
-            if (isInFullscreen) {
-                if (document.exitFullscreen) {
-                    await document.exitFullscreen();
-                } else if ((document as any).webkitExitFullscreen) {
-                    (document as any).webkitExitFullscreen();
-                }
-            } else {
-                if (player.requestFullscreen) {
-                    await player.requestFullscreen();
-                } else if (player.webkitRequestFullscreen) {
-                    // This is the key for iOS Safari
-                    player.webkitRequestFullscreen();
-                }
-                
-                // Screen orientation lock is experimental and can fail gracefully.
-                try {
-                    if (screen.orientation && (screen.orientation as any).lock) {
-                        await (screen.orientation as any).lock('landscape');
-                    }
-                } catch (orientationError) {
-                    console.warn("Screen orientation lock failed:", orientationError);
-                }
-            }
-        } catch (error) {
-            console.error("Fullscreen request failed:", error);
+    const handleForward = () => {
+        if(videoRef.current) videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 10);
+    }
+
+    const handlePlayPause = () => {
+        if(videoRef.current) {
+            if(videoRef.current.paused) videoRef.current.play();
+            else videoRef.current.pause();
         }
-    }, []);
+    }
 
     const handleShowDetails = () => {
-        videoRef.current?.pause();
         setIsDetailsModalOpen(true);
-    };
-    
-    const handleContainerClick = useCallback((e: React.MouseEvent) => {
-        handlePlayerInteraction();
+        if(videoRef.current) videoRef.current.pause();
+    }
 
-        if (clickTimeout.current) { // DOUBLE CLICK
-            clearTimeout(clickTimeout.current);
-            clickTimeout.current = null;
-            
-            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const thirdOfWidth = rect.width / 3;
-
-            if (clickX < thirdOfWidth) {
-                handleRewind();
-            } else if (clickX > (rect.width - thirdOfWidth)) {
-                handleForward();
-            } else {
-                handleFullscreen(); // Double-click center for fullscreen
-            }
-        } else { // SINGLE CLICK
-            clickTimeout.current = window.setTimeout(() => {
-                clickTimeout.current = null;
-                handlePlayPause(); // Single click toggles play/pause
-            }, 300); // 300ms window to detect double click
-        }
-    }, [handlePlayerInteraction, handleRewind, handleForward, handlePlayPause, handleFullscreen]);
-
-    if (isDataLoading) {
+    if (isDataLoading || !movie) {
         return <LoadingSpinner />;
-    }
-    
-    if (!movie) {
-         return (
-             <div className="flex flex-col min-h-screen bg-black text-white items-center justify-center text-center p-4">
-                <h1 className="text-4xl font-bold mb-4">Film Not Found</h1>
-                <p className="text-gray-400 mb-6">The film you're looking for doesn't exist or may have been removed.</p>
-                <button onClick={handleGoHome} className="submit-btn">Return to Home</button>
-            </div>
-        );
-    }
-    
-    if (!released) {
-        return (
-            <div className="flex flex-col min-h-screen bg-black text-white items-center justify-center text-center p-4">
-                <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 blur-md" />
-                <div className="relative z-10">
-                    <h1 className="text-4xl font-bold mb-4">Coming Soon</h1>
-                    <p className="text-gray-300 mb-6">"{movie.title}" is not yet released.</p>
-                    {movie.releaseDateTime && <Countdown targetDate={movie.releaseDateTime} onEnd={() => setReleased(true)} className="text-2xl" />}
-                </div>
-            </div>
-        );
     }
 
     return (
-        <main ref={mainRef} className="flex flex-col min-h-screen bg-black text-white">
-            {isStaging && <StagingBanner onExit={() => { sessionStorage.removeItem('crateTvStaging'); window.location.reload(); }} isOffline={dataSource === 'fallback'} />}
+        <div className="flex flex-col min-h-screen bg-black text-white">
+            {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
             
-            <div
-                ref={playerContainerRef}
-                className="relative w-full h-screen bg-black secure-video-container"
-                onMouseMove={handlePlayerInteraction}
-                onMouseLeave={() => { if (isPlaying) setShowControls(false); }}
-                onClick={handleContainerClick}
-            >
-                <button onClick={handleGoHome} className="absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 z-30 opacity-50 hover:opacity-100 transition-opacity" aria-label="Back to Home">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                </button>
-
-                <div ref={adContainerRef} className="absolute inset-0 z-20" />
-
-                {!isVideoReady && !isAdPlaying && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
-                        <img 
-                            src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} 
-                            alt="" 
-                            className="w-full h-full object-cover blur-sm opacity-50" 
-                            crossOrigin="anonymous"
-                        />
-                        <div className="absolute">
-                            <VideoPreloaderSpinner />
-                        </div>
-                    </div>
-                )}
-                
-                <video
-                    ref={videoRef}
-                    src={movie.fullMovie}
-                    className={`w-full h-full object-contain transition-opacity duration-500 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}
-                    playsInline
-                    onContextMenu={(e) => e.preventDefault()}
-                    controlsList="nodownload"
+            {playerMode !== 'full' && (
+                <Header
+                    searchQuery={searchQuery}
+                    onSearch={setSearchQuery}
+                    isScrolled={true}
+                    onMobileSearchClick={() => setIsMobileSearchOpen(true)}
+                    onSearchSubmit={handleSearchSubmit}
+                    isStaging={isStaging}
                 />
+            )}
 
-                {isPaused && !isAdPlaying && (
-                    <PauseOverlay
-                        movie={movie}
-                        onMoreDetails={handleShowDetails}
-                        onSelectActor={setSelectedActor}
-                        onResume={handlePlayPause}
-                        onRewind={handleRewind}
-                        onForward={handleForward}
-                        isLiked={isLiked}
-                        onToggleLike={() => toggleLikeMovie(movieKey)}
-                        onSupport={() => setIsSupportModalOpen(true)}
-                        isOnWatchlist={isOnWatchlist}
-                        onToggleWatchlist={() => toggleWatchlist(movieKey)}
-                    />
-                )}
-                
-                <CastButton videoElement={videoRef.current} />
+            <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
+                <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container">
+                    <div ref={adContainerRef} className="absolute inset-0 z-20 pointer-events-none" />
+                    
+                    {playerMode === 'full' && (
+                        <video 
+                            ref={videoRef} 
+                            src={movie.fullMovie} 
+                            className="w-full h-full"
+                            controls={!isAdPlaying}
+                            playsInline
+                            onContextMenu={(e) => e.preventDefault()} 
+                            controlsList="nodownload"
+                            onEnded={handleMovieEnd}
+                        />
+                    )}
 
-                {/* Seek Animation Overlay */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
-                    {seekAnim === 'rewind' && <div className="animate-seek text-white text-5xl">« 10s</div>}
-                    {seekAnim === 'forward' && <div className="animate-seek text-white text-5xl">10s »</div>}
+                    {playerMode !== 'full' && (
+                        <>
+                            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" onContextMenu={(e) => e.preventDefault()} crossOrigin="anonymous" />
+                            
+                            {released ? (
+                                <div className="relative w-full h-full flex items-center justify-center">
+                                    <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} crossOrigin="anonymous" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                                    <button 
+                                        onClick={() => setPlayerMode('full')}
+                                        className="absolute text-white bg-black/50 rounded-full p-4 hover:bg-black/70 transition-colors"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="relative w-full h-full flex flex-col items-center justify-center text-center p-4">
+                                    <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Coming Soon</h2>
+                                    {movie.releaseDateTime && (
+                                        <div className="bg-black/50 rounded-lg p-4">
+                                            <Countdown 
+                                                targetDate={movie.releaseDateTime} 
+                                                onEnd={() => setReleased(true)} 
+                                                className="text-xl md:text-3xl text-white" 
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </>
+                    )}
+                    
+                    {playerMode === 'full' && <CastButton videoElement={videoRef.current} />}
+                    {playerMode === 'full' && (
+                        <button
+                            onClick={handleExitPlayer}
+                            className="absolute top-4 right-16 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white z-30"
+                            aria-label="Exit video player"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    )}
+                    
+                    {/* Pause Overlay logic for when video is paused in full mode */}
+                    {playerMode === 'full' && !isAdPlaying && videoRef.current?.paused && (
+                        <PauseOverlay 
+                            movie={movie} 
+                            onMoreDetails={handleShowDetails}
+                            onSelectActor={setSelectedActor}
+                            onResume={handlePlayPause}
+                            onRewind={handleRewind}
+                            onForward={handleForward}
+                            isLiked={isLiked}
+                            onToggleLike={() => toggleLikeMovie(movieKey)}
+                            onSupport={() => setIsSupportModalOpen(true)}
+                            isOnWatchlist={isOnWatchlist}
+                            onToggleWatchlist={() => toggleWatchlist(movieKey)}
+                        />
+                    )}
                 </div>
-            </div>
 
-            {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
-            {isDetailsModalOpen && <MovieDetailsModal movie={movie} isLiked={isLiked} onToggleLike={() => toggleLikeMovie(movieKey)} onClose={() => { setIsDetailsModalOpen(false); videoRef.current?.play(); }} onSelectActor={setSelectedActor} allMovies={allMovies} allCategories={allCategories} onSelectRecommendedMovie={() => {}} onSupportMovie={() => setIsSupportModalOpen(true)} />}
-            {isSupportModalOpen && <SquarePaymentModal movie={movie} paymentType="donation" onClose={() => setIsSupportModalOpen(false)} onPaymentSuccess={() => { setIsSupportModalOpen(false); }} />}
-        </main>
+                {playerMode !== 'full' && (
+                  <div className="max-w-6xl mx-auto p-4 md:p-8">
+                      <h1 className="text-3xl md:text-5xl font-bold text-white">{movie.title || 'Untitled Film'}</h1>
+                      <div className="mt-4 flex flex-wrap items-center gap-4">
+                          {!movie.hasCopyrightMusic && (
+                              <button onClick={() => setIsSupportModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors">
+                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" />
+                                 </svg>
+                                 Support Filmmaker
+                              </button>
+                          )}
+                          {showSupportSuccess && (
+                            <div className="bg-green-500/80 text-white font-bold py-2 px-4 rounded-md inline-block animate-[fadeIn_0.5s_ease-out]">
+                                Thank you for your support!
+                            </div>
+                          )}
+                      </div>
+                      <div className="mt-4 text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: movie.synopsis || '' }}></div>
+                       
+                      <RokuBanner />
+
+                      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+                          <div className="md:col-span-2">
+                               <div className="mt-6 bg-gradient-to-r from-red-500/10 to-blue-500/10 p-3 rounded-lg text-center border border-gray-700">
+                                  <p className="text-sm text-white">✨ Click an actor's name for their bio & an AI-generated fun fact!</p>
+                              </div>
+                          </div>
+                          <div>
+                               {movie.durationInMinutes && movie.durationInMinutes > 0 && (
+                                <div className="mb-4">
+                                    <h3 className="text-lg font-semibold text-gray-400 mb-1">Duration</h3>
+                                    <p className="text-white">{movie.durationInMinutes} minutes</p>
+                                </div>
+                              )}
+                               <h3 className="text-lg font-semibold text-gray-400 mb-2">Cast</h3>
+                              <div className="space-y-2 text-white">
+                                  {movie.cast.map((actor: Actor) => (
+                                  <p key={actor.name} className="group cursor-pointer" onClick={() => setSelectedActor(actor)}>
+                                      <span className="group-hover:text-red-400 transition">{actor.name}</span>
+                                  </p>
+                                  ))}
+                              </div>
+                              <h3 className="text-lg font-semibold text-gray-400 mt-4 mb-2">Director</h3>
+                              <div className="space-y-2 text-white">
+                                  {movie.director.split(',').map((directorName: string) => directorName.trim()).filter(Boolean).map(directorName => (
+                                      <p key={directorName} className="group cursor-pointer" onClick={() => setSelectedDirector(directorName)}>
+                                          <span className="group-hover:text-red-400 transition">{directorName}</span>
+                                      </p>
+                                  ))}
+                              </div>
+                          </div>
+                      </div>
+
+                      {recommendedMovies.length > 0 && (
+                          <div className="mt-12 pt-8 border-t border-gray-700">
+                              <h2 className="text-2xl font-bold text-white mb-4">More Like This</h2>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-4">
+                                  {recommendedMovies.map(recMovie => (
+                                      <RecommendedMovieLink key={recMovie.key} movie={recMovie} />
+                                  ))}
+                              </div>
+                          </div>
+                      )}
+                  </div>
+                )}
+            </main>
+            
+            {playerMode !== 'full' && (
+              <>
+                <Footer />
+                <BackToTopButton />
+              </>
+            )}
+
+            {selectedActor && (
+                <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />
+            )}
+             {selectedDirector && (
+                <DirectorCreditsModal
+                    directorName={selectedDirector}
+                    onClose={() => setSelectedDirector(null)}
+                    allMovies={allMovies}
+                    onSelectMovie={(m: Movie) => {
+                         const path = `/movie/${m.key}`;
+                         window.history.pushState({}, '', path);
+                         window.dispatchEvent(new Event('pushstate'));
+                         window.scrollTo(0, 0);
+                    }}
+                />
+            )}
+            {isDetailsModalOpen && (
+                <MovieDetailsModal 
+                    movie={movie} 
+                    isLiked={isLiked} 
+                    onToggleLike={() => toggleLikeMovie(movieKey)}
+                    onClose={() => setIsDetailsModalOpen(false)} 
+                    onSelectActor={setSelectedActor}
+                    allMovies={allMovies}
+                    allCategories={allCategories}
+                    onSelectRecommendedMovie={(m) => {
+                        setIsDetailsModalOpen(false);
+                        const path = `/movie/${m.key}`;
+                        window.history.pushState({}, '', path);
+                        window.dispatchEvent(new Event('pushstate'));
+                        window.scrollTo(0, 0);
+                    }}
+                    onSupportMovie={() => setIsSupportModalOpen(true)}
+                />
+            )}
+            {isMobileSearchOpen && (
+                <SearchOverlay
+                    searchQuery={searchQuery}
+                    onSearch={setSearchQuery}
+                    onClose={() => setIsMobileSearchOpen(false)}
+                    onSubmit={handleSearchSubmit}
+                    results={[]}
+                    onSelectMovie={() => {}}
+                />
+            )}
+            {isSupportModalOpen && movie && (
+                <SquarePaymentModal
+                    movie={movie}
+                    paymentType="donation"
+                    onClose={() => setIsSupportModalOpen(false)}
+                    onPaymentSuccess={handlePaymentSuccess}
+                />
+            )}
+        </div>
     );
 };
+
+export default MoviePage;

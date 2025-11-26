@@ -15,7 +15,7 @@ import AdminPage from './AdminPage';
 import LandingPage from './components/LandingPage';
 import ClassicsPage from './components/ClassicsPage';
 import SubmitPage from './SubmitPage';
-import { MoviePage } from './components/MoviePage';
+import MoviePage from './components/MoviePage';
 import MerchPage from './components/MerchPage';
 import ContactPage from './components/ContactPage';
 import AboutPage from './components/AboutPage';

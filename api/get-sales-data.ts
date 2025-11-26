@@ -80,12 +80,31 @@ export async function POST(request: Request) {
         const firebaseError = getInitializationError();
         if (firebaseError) errors.firebase = firebaseError;
         const db = getAdminDb();
+        const auth = getAdminAuth();
 
         // --- Square Init ---
         const isProduction = process.env.VERCEL_ENV === 'production';
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
         const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
         if (!accessToken) errors.square = 'Square Access Token is not configured.';
+
+        // --- Helper to safely list auth users ---
+        const safeListAllAuthUsers = async () => {
+            if (!auth) return [];
+            try {
+                const allUsers = [];
+                let pageToken;
+                do {
+                    const listUsersResult = await auth.listUsers(1000, pageToken);
+                    allUsers.push(...listUsersResult.users);
+                    pageToken = listUsersResult.pageToken;
+                } while (pageToken);
+                return allUsers;
+            } catch (e) {
+                console.warn("Failed to list all auth users:", e);
+                return []; // Fallback to empty array, we will use Firestore count later
+            }
+        };
 
         // --- Parallel Data Fetching ---
         const squarePromise = accessToken ? fetchAllSquarePayments(accessToken, locationId) : Promise.resolve([]);
@@ -95,7 +114,7 @@ export async function POST(request: Request) {
         const usersPromise = db ? db.collection('users').get() : Promise.resolve(null);
         const adminPayoutsPromise = db ? db.collection('admin_payouts').orderBy('payoutDate', 'desc').get() : Promise.resolve(null);
         const billSavingsPromise = db ? db.collection('bill_savings_transactions').orderBy('transactionDate', 'desc').get() : Promise.resolve(null);
-
+        const authUsersPromise = safeListAllAuthUsers();
 
         const [
             allPayments,
@@ -104,8 +123,9 @@ export async function POST(request: Request) {
             locationsSnapshot,
             usersSnapshot,
             adminPayoutsSnapshot,
-            billSavingsSnapshot
-        ] = await Promise.all([squarePromise.catch(e => { errors.square = e.message; return []; }), moviesPromise, viewsPromise, locationsPromise, usersPromise, adminPayoutsPromise, billSavingsPromise]);
+            billSavingsSnapshot,
+            allAuthUsers
+        ] = await Promise.all([squarePromise.catch(e => { errors.square = e.message; return []; }), moviesPromise, viewsPromise, locationsPromise, usersPromise, adminPayoutsPromise, billSavingsPromise, authUsersPromise]);
 
         // --- Process Data ---
         const allMovies: Record<string, Movie> = {};
@@ -121,14 +141,14 @@ export async function POST(request: Request) {
         const viewLocations: Record<string, Record<string, number>> = {};
         locationsSnapshot?.forEach(doc => { viewLocations[doc.id] = doc.data(); });
         
-        const allUsers: { email: string }[] = [];
+        const allUsersList: { email: string }[] = [];
         const actorUsers: { email: string }[] = [];
         const filmmakerUsers: { email: string }[] = [];
         const watchlistCounts: Record<string, number> = {};
         usersSnapshot?.forEach(doc => {
             const userData = doc.data() as User;
             if (userData.email) {
-                allUsers.push({ email: userData.email });
+                allUsersList.push({ email: userData.email });
                 if (userData.isActor) {
                     actorUsers.push({ email: userData.email });
                 }
@@ -142,6 +162,11 @@ export async function POST(request: Request) {
                 });
             }
         });
+
+        // Calculate Total Users: Use Auth list if available (more accurate), otherwise fallback to Firestore docs
+        // The filtered list of auth users (those with emails)
+        const validAuthUsers = allAuthUsers.filter(u => u.email);
+        const totalUsers = validAuthUsers.length > 0 ? validAuthUsers.length : allUsersList.length;
 
         const pastAdminPayouts: AdminPayout[] = [];
         adminPayoutsSnapshot?.forEach(doc => {
@@ -225,7 +250,7 @@ export async function POST(request: Request) {
         });
 
         const analyticsData: AnalyticsData = {
-            totalRevenue, totalCrateTvRevenue, totalAdminPayouts, pastAdminPayouts, billSavingsPotTotal, billSavingsTransactions, totalUsers: allUsers.length, viewCounts, movieLikes, watchlistCounts, filmmakerPayouts, viewLocations, allUsers, actorUsers, filmmakerUsers,
+            totalRevenue, totalCrateTvRevenue, totalAdminPayouts, pastAdminPayouts, billSavingsPotTotal, billSavingsTransactions, totalUsers, viewCounts, movieLikes, watchlistCounts, filmmakerPayouts, viewLocations, allUsers: allUsersList, actorUsers, filmmakerUsers,
             totalDonations, totalSales, totalMerchRevenue, totalAdRevenue, crateTvMerchCut, merchSales,
             totalFestivalRevenue, festivalPassSales, festivalBlockSales, salesByBlock,
         };

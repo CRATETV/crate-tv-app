@@ -99,6 +99,7 @@ export interface MoviePipelineEntry {
   synopsis: string;
   submissionDate: any; // Firestore Timestamp
   status: 'pending' | 'approved' | 'rejected';
+  musicRightsConfirmation: boolean; // New field for legal protection
 }
 
 export interface ActorSubmission {
