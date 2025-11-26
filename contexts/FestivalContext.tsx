@@ -1,6 +1,7 @@
+
 import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo } from 'react';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
-import { Movie, Category, FestivalConfig, FestivalDay, AboutData } from '../types';
+import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig } from '../types';
 import { moviesData, categoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
 
 interface FestivalContextType {
@@ -12,6 +13,7 @@ interface FestivalContextType {
     aboutData: AboutData | null;
     isFestivalLive: boolean;
     dataSource: 'live' | 'fallback' | null;
+    adConfig: AdConfig | null;
 }
 
 const FestivalContext = createContext<FestivalContextType | undefined>(undefined);
@@ -31,6 +33,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(initialFestivalConfig);
     const [festivalData, setFestivalData] = useState<FestivalDay[]>(initialFestivalData);
     const [aboutData, setAboutData] = useState<AboutData | null>(initialAboutData);
+    const [adConfig, setAdConfig] = useState<AdConfig | null>(null);
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
 
     const isFestivalLive = useMemo(() => {
@@ -112,6 +115,11 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                     if (doc.exists) setAboutData(doc.data() as AboutData);
                 });
                 unsubscribes.push(aboutUnsub);
+                
+                const adsUnsub = db.collection('content').doc('ads').onSnapshot(doc => {
+                    if (doc.exists) setAdConfig(doc.data() as AdConfig);
+                });
+                unsubscribes.push(adsUnsub);
 
                 const festivalConfigUnsub = db.collection('festival').doc('config').onSnapshot(doc => {
                     if (doc.exists) setFestivalConfig(doc.data() as FestivalConfig);
@@ -149,6 +157,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         aboutData,
         isFestivalLive,
         dataSource,
+        adConfig
     };
 
     return (

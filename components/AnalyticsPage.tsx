@@ -391,6 +391,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                              <AudienceEmailList title="All Registered Users" users={analyticsData.allUsers} />
                              <AudienceEmailList title="Actors" users={analyticsData.actorUsers} />
                              <AudienceEmailList title="Filmmakers" users={analyticsData.filmmakerUsers} />
+                             <AudienceEmailList title="Festival Attendees" users={(analyticsData.festivalUsers || []).map(email => ({ email }))} />
                         </div>
                     )}
 

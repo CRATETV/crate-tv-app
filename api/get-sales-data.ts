@@ -144,6 +144,7 @@ export async function POST(request: Request) {
         const allUsersList: { email: string }[] = [];
         const actorUsers: { email: string }[] = [];
         const filmmakerUsers: { email: string }[] = [];
+        const festivalUsers: string[] = [];
         const watchlistCounts: Record<string, number> = {};
         usersSnapshot?.forEach(doc => {
             const userData = doc.data() as User;
@@ -154,6 +155,9 @@ export async function POST(request: Request) {
                 }
                 if (userData.isFilmmaker) {
                     filmmakerUsers.push({ email: userData.email });
+                }
+                if (userData.hasFestivalAllAccess || (userData.unlockedBlockIds && userData.unlockedBlockIds.length > 0)) {
+                    festivalUsers.push(userData.email);
                 }
             }
             if (userData.watchlist && Array.isArray(userData.watchlist)) {
@@ -252,7 +256,7 @@ export async function POST(request: Request) {
         const analyticsData: AnalyticsData = {
             totalRevenue, totalCrateTvRevenue, totalAdminPayouts, pastAdminPayouts, billSavingsPotTotal, billSavingsTransactions, totalUsers, viewCounts, movieLikes, watchlistCounts, filmmakerPayouts, viewLocations, allUsers: allUsersList, actorUsers, filmmakerUsers,
             totalDonations, totalSales, totalMerchRevenue, totalAdRevenue, crateTvMerchCut, merchSales,
-            totalFestivalRevenue, festivalPassSales, festivalBlockSales, salesByBlock,
+            totalFestivalRevenue, festivalPassSales, festivalBlockSales, salesByBlock, festivalUsers,
         };
 
         return new Response(JSON.stringify({ analyticsData, errors }), { status: 200, headers: { 'Content-Type': 'application/json' } });

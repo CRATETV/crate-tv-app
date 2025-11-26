@@ -1,3 +1,4 @@
+
 // This file contains type definitions for the Crate TV application.
 
 export interface Actor {
@@ -68,6 +69,11 @@ export interface AboutData {
   founderTitle: string;
   founderBio: string;
   founderPhoto: string;
+}
+
+export interface AdConfig {
+    socialBarScript?: string;
+    vastTagUrl?: string;
 }
 
 export interface User {
@@ -275,6 +281,7 @@ export interface AnalyticsData {
     festivalPassSales: { units: number, revenue: number };
     festivalBlockSales: { units: number, revenue: number };
     salesByBlock: Record<string, { units: number, revenue: number }>;
+    festivalUsers: string[]; // Emails of users who have festival access
 }
 
 export interface FilmmakerPayout {

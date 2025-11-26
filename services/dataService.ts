@@ -1,4 +1,5 @@
-import { Movie, Category, FestivalDay, FestivalConfig, AboutData } from '../types';
+
+import { Movie, Category, FestivalDay, FestivalConfig, AboutData, AdConfig } from '../types';
 
 interface LiveData {
     movies: Record<string, Movie>;
@@ -6,6 +7,7 @@ interface LiveData {
     festivalData: FestivalDay[];
     festivalConfig: FestivalConfig;
     aboutData: AboutData;
+    adConfig?: AdConfig;
 }
 
 interface FetchResult {
@@ -47,7 +49,8 @@ export const fetchAndCacheLiveData = async (options: { force?: boolean } = {}): 
             categories: categoriesData,
             festivalData: festivalData,
             festivalConfig: festivalConfigData,
-            aboutData: aboutData
+            aboutData: aboutData,
+            adConfig: {}
         };
         return { data: fallbackData, source: 'fallback' };
     }

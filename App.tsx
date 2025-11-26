@@ -26,7 +26,7 @@ import NewFilmAnnouncementModal from './components/NewFilmAnnouncementModal';
 const App: React.FC = () => {
     // Hooks
     const { user, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
-    const { isLoading, movies, categories, isFestivalLive, festivalConfig, dataSource } = useFestival();
+    const { isLoading, movies, categories, isFestivalLive, festivalConfig, dataSource, adConfig } = useFestival();
     
     // State
     const [heroIndex, setHeroIndex] = useState(0);
@@ -240,14 +240,17 @@ const App: React.FC = () => {
         fetchRecommendations();
     }, [likedMovies, movies]);
 
-    // --- INJECT AD SCRIPT (TOP PLACEMENT WITH OFFSET) ---
+    // --- ROBUST AD SCRIPT INJECTION ---
+    // This uses the adConfig from the server rather than local storage
     useEffect(() => {
-        const adScript = localStorage.getItem('productionAdScript');
+        // Try server config first, fall back to local for dev testing
+        const adScript = adConfig?.socialBarScript || localStorage.getItem('productionAdScript');
+        
         if (adScript) {
             try {
                 const containerId = 'cratetv-ad-container';
                 
-                // Remove existing if present to prevent duplicates
+                // Remove existing to avoid duplicates
                 if (document.getElementById(containerId)) {
                     document.getElementById(containerId)?.remove();
                 }
@@ -255,57 +258,50 @@ const App: React.FC = () => {
                 const container = document.createElement('div');
                 container.id = containerId;
                 
-                // DEBUG MODE: If in staging, add a border so we can see where the ad SHOULD be
                 const isStaging = sessionStorage.getItem('crateTvStaging') === 'true';
-                const borderStyle = isStaging ? 'border: 2px solid red; background: rgba(255,0,0,0.2);' : '';
+                const borderStyle = isStaging ? 'border: 4px solid red; background: rgba(255,0,0,0.1); min-height: 50px;' : '';
 
-                // Max Z-Index to ensure it's on top of everything
-                // Positioned at TOP: 100px to clear the header/search bar
+                // CSS to try and force the ad into position
                 container.style.cssText = `
                     position: fixed;
                     left: 0;
                     right: 0;
                     top: 100px; 
                     width: 100%;
-                    z-index: 2147483647;
-                    pointer-events: none; 
+                    z-index: 2147483647; /* Max z-index */
                     display: flex;
                     justify-content: center;
                     align-items: flex-start;
-                    min-height: 1px; /* Ensure it exists */
+                    pointer-events: none; /* Let clicks pass through empty areas */
                     ${borderStyle}
                 `;
-                
-                let src = '';
-                // 1. Check if it's a direct URL (starts with // or http)
-                if (adScript.trim().startsWith('//') || adScript.trim().startsWith('http')) {
-                    src = adScript.trim();
-                } 
-                // 2. Check if it's a script tag
-                else {
-                    const srcMatch = adScript.match(/src\s*=\s*['"](.*?)['"]/);
-                    if (srcMatch && srcMatch[1]) {
-                        src = srcMatch[1];
-                    }
-                }
 
-                if (src) {
-                    const script = document.createElement('script');
-                    script.src = src;
-                    script.type = 'text/javascript';
-                    script.async = true;
-                    // Allow clicks on the ad itself
-                    script.style.pointerEvents = 'auto'; 
-                    
-                    container.appendChild(script);
-                    document.body.appendChild(container);
-                    console.log("Crate TV: Adsterra script injected:", src);
-                } else {
-                    console.warn("Crate TV: Could not extract src from ad script:", adScript);
-                }
+                // Create a temporary div to parse the HTML string
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = adScript;
+
+                // Iterate through nodes. If script, recreate it to ensure execution.
+                Array.from(tempDiv.childNodes).forEach(child => {
+                    if (child.nodeName === 'SCRIPT') {
+                        const oldScript = child as HTMLScriptElement;
+                        const newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                        // Ensure pointer events are enabled for the ad content itself
+                        newScript.style.pointerEvents = 'auto'; 
+                        container.appendChild(newScript);
+                    } else {
+                        // Clone other elements (divs, tracking pixels)
+                        const clone = child.cloneNode(true) as HTMLElement;
+                        if (clone.style) clone.style.pointerEvents = 'auto';
+                        container.appendChild(clone);
+                    }
+                });
+
+                document.body.appendChild(container);
+                console.log("Crate TV: Ad script injected via robust method.");
 
                 return () => {
-                    // Clean up on unmount
                     if (document.getElementById(containerId)) {
                         document.getElementById(containerId)?.remove();
                     }
@@ -314,7 +310,7 @@ const App: React.FC = () => {
                 console.error("Failed to inject ad script", e);
             }
         }
-    }, []);
+    }, [adConfig]);
 
 
      if (isLoading) {

@@ -1,3 +1,4 @@
+
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/publish-data
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -46,12 +47,13 @@ const normalizeTitle = (title: string): string => {
 
 // Function to fetch all data from Firestore and assemble it for publishing
 const assembleLiveData = async (db: Firestore) => {
-    const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap] = await Promise.all([
+    const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap, adsSnap] = await Promise.all([
         db.collection('movies').get(),
         db.collection('categories').get(),
         db.collection('content').doc('about').get(),
         db.collection('festival').doc('config').get(),
-        db.collection('festival').doc('schedule').collection('days').get()
+        db.collection('festival').doc('schedule').collection('days').get(),
+        db.collection('content').doc('ads').get()
     ]);
 
     // Deduplication logic for movies
@@ -85,6 +87,7 @@ const assembleLiveData = async (db: Firestore) => {
 
     const aboutData = aboutSnap.exists ? aboutSnap.data() : null;
     const festivalConfig = festivalConfigSnap.exists ? festivalConfigSnap.data() : null;
+    const adConfig = adsSnap.exists ? adsSnap.data() : null;
 
     const festivalData: any[] = [];
     festivalDaysSnap.forEach(doc => festivalData.push(doc.data()));
@@ -95,7 +98,8 @@ const assembleLiveData = async (db: Firestore) => {
         categories: categoriesData,
         aboutData,
         festivalConfig,
-        festivalData
+        festivalData,
+        adConfig
     };
 };
 
@@ -149,7 +153,7 @@ export async function POST(request: Request) {
             });
         }
 
-        const validTypes = ['movies', 'categories', 'festival', 'about', 'delete_movie', 'set_now_streaming'];
+        const validTypes = ['movies', 'categories', 'festival', 'about', 'delete_movie', 'set_now_streaming', 'ads'];
         if (!validTypes.includes(type)) {
             return new Response(JSON.stringify({ error: `Invalid data type provided: ${type}` }), {
                 status: 400,
@@ -236,6 +240,10 @@ export async function POST(request: Request) {
             case 'about':
                 const aboutRef = db.collection('content').doc('about');
                 batch.set(aboutRef, data, { merge: true });
+                break;
+            case 'ads':
+                const adsRef = db.collection('content').doc('ads');
+                batch.set(adsRef, data, { merge: true });
                 break;
             case 'festival':
                 const festivalPayload = data as { config?: any, schedule?: any[] };

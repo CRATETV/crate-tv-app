@@ -1,28 +1,50 @@
 
 import React, { useState, useEffect } from 'react';
+import { useFestival } from '../contexts/FestivalContext';
 
 const MonetizationTab: React.FC = () => {
+    const { adConfig } = useFestival();
     const [adTagUrl, setAdTagUrl] = useState('');
     const [adScript, setAdScript] = useState('');
-    const [status, setStatus] = useState<'idle' | 'saved'>('idle');
+    const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
-        const savedUrl = localStorage.getItem('productionAdTagUrl') || '';
-        const savedScript = localStorage.getItem('productionAdScript') || '';
-        setAdTagUrl(savedUrl);
-        setAdScript(savedScript);
-    }, []);
+        if (adConfig) {
+            setAdTagUrl(adConfig.vastTagUrl || '');
+            setAdScript(adConfig.socialBarScript || '');
+        }
+    }, [adConfig]);
 
-    const handleSave = () => {
-        localStorage.setItem('productionAdTagUrl', adTagUrl.trim());
-        localStorage.setItem('productionAdScript', adScript.trim());
+    const handleSave = async () => {
+        setStatus('saving');
+        setErrorMessage('');
+        const password = sessionStorage.getItem('adminPassword');
         
-        // Force reload to apply script changes
-        if (confirm('Settings saved! The page needs to refresh to apply the new ad scripts. Refresh now?')) {
-            window.location.reload();
-        } else {
+        try {
+            const response = await fetch('/api/publish-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    password,
+                    type: 'ads',
+                    data: {
+                        socialBarScript: adScript.trim(),
+                        vastTagUrl: adTagUrl.trim()
+                    }
+                }),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to save ad settings.');
+            }
+
             setStatus('saved');
             setTimeout(() => setStatus('idle'), 3000);
+        } catch (err) {
+            setErrorMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
+            setStatus('error');
         }
     };
 
@@ -95,11 +117,13 @@ const MonetizationTab: React.FC = () => {
                         <div className="flex items-center gap-4">
                             <button
                                 onClick={handleSave}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors w-full"
+                                disabled={status === 'saving'}
+                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white font-bold py-2 px-4 rounded-md transition-colors w-full"
                             >
-                                Save Ad Settings
+                                {status === 'saving' ? 'Publishing Global Ads...' : 'Save Ad Settings'}
                             </button>
-                            {status === 'saved' && <p className="text-green-400 text-sm animate-pulse">Saved!</p>}
+                            {status === 'saved' && <p className="text-green-400 text-sm animate-pulse">Saved & Published!</p>}
+                            {status === 'error' && <p className="text-red-400 text-sm">{errorMessage}</p>}
                         </div>
                     </div>
                 </div>
