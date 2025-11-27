@@ -61,7 +61,8 @@ export const categoriesData: Record<string, Category> = {
       "itsinyou",
       "tedandnatalie",
       "unhinged",
-      "consumed"
+      "consumed",
+      "trudy"
     ],
     "title": "Dramas"
   },
@@ -84,6 +85,7 @@ export const categoriesData: Record<string, Category> = {
   "newReleases": {
     "title": "New Releases",
     "movieKeys": [
+      "trudy",
       "newmovie1762818971534",
       "newmovie1762802600691",
       "newmovie1756741314485",
@@ -123,6 +125,62 @@ export const categoriesData: Record<string, Category> = {
 };
 
 export const moviesData: Record<string, Movie> = {
+  "trudy": {
+    "key": "trudy",
+    "title": "Trudy",
+    "synopsis": "After a haunting breakup, a tightly-wound woman obsessed with control uses written contracts to manage her relationships. As she struggles to re-enter the world, Trudy must decide if living on her own terms is really living at all.",
+    "cast": [
+      {
+        "name": "Julia De Palma",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Haley Cassidy",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Gina Hendricks",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Michael Dwayne Paylor",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/MichaelPaylor+design.png",
+        "bio": "Michael Dwayne Paylor is a fantastic comedic writer with a knack for crafting hilarious and engaging stories. He seamlessly transitions between film and stage, showcasing his adaptability and creative range.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/MichaelPaylor+design.png"
+      },
+      {
+        "name": "Joe Hough",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Christopher Castagna",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Nicole D'Arecca",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Michael Dwayne Paylor",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Trudy+(1).mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Trudy+movie+poster.png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Trudy+movie+poster.png",
+    "likes": 0,
+    "releaseDateTime": "2024-01-01T12:00:00Z"
+  },
   "almasvows": {
     "key": "almasvows",
     "title": "Alma's Vows",

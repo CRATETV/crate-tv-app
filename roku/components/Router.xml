@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="Router" extends="Group">
     <interface>
-        ' Command to send to the main event loop (e.g., "exit")
+        <!-- Command to send to the main event loop (e.g., "exit") -->
         <field id="command" type="string" />
     </interface>
     
     <script type="text/brightscript" uri="pkg:/components/Router.brs" />
     
     <children>
-        ' Task to fetch the main content feed
         <Task id="contentTask" uri="pkg:/components/ContentTask.xml" />
     </children>
 </component>

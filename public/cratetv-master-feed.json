@@ -1,0 +1,22 @@
+{
+  "rows": [
+    {
+      "id": "featured",
+      "title": "Featured",
+      "items": [
+        {
+          "id": "movie-1",
+          "title": "Sample Movie 1",
+          "poster": "https://cratetv.net/posters/sample1.jpg",
+          "stream_url": "https://cratetv.net/videos/sample1.m3u8"
+        },
+        {
+          "id": "movie-2",
+          "title": "Sample Movie 2",
+          "poster": "https://cratetv.net/posters/sample2.jpg",
+          "stream_url": "https://cratetv.net/videos/sample2.m3u8"
+        }
+      ]
+    }
+  ]
+}

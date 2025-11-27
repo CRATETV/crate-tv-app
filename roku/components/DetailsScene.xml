@@ -24,7 +24,6 @@
                     translation="[0, 130]" 
                     layoutDirection="horiz" 
                     itemSpacing="[20, 0]" 
-                    ' Buttons will be set dynamically
                 />
                 
                 <Label id="synopsisLabel" width="800" wrap="true" maxLines="6" translation="[0, 220]" font="font:SmallSystemFont" />
