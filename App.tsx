@@ -94,15 +94,18 @@ const App: React.FC = () => {
 
     // Handlers
     const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
+    
+    // UPDATE: Append ?play=true to start immediately
     const handlePlayMovie = (movie: Movie) => {
-        window.history.pushState({}, '', `/movie/${movie.key}`);
+        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
         window.dispatchEvent(new Event('pushstate'));
     };
 
     const handleSelectFromSearch = (movie: Movie) => {
         setIsMobileSearchOpen(false);
         setSearchQuery('');
-        handleSelectMovie(movie);
+        // Also auto-play from search
+        handlePlayMovie(movie);
     };
 
     const handleSupportMovie = (movie: Movie) => {
@@ -248,7 +251,7 @@ const App: React.FC = () => {
         
         if (adScript) {
             try {
-                const containerId = 'cratetv-ad-container';
+                const containerId = 'cratetv-ad-wrapper'; // Renamed to force refresh
                 
                 // Remove existing to avoid duplicates
                 if (document.getElementById(containerId)) {
@@ -261,18 +264,23 @@ const App: React.FC = () => {
                 const isStaging = sessionStorage.getItem('crateTvStaging') === 'true';
                 const borderStyle = isStaging ? 'border: 4px solid red; background: rgba(255,0,0,0.1); min-height: 50px;' : '';
 
-                // CSS to try and force the ad into position
+                // CSS to try and force the ad into position.
+                // Note: We use top: 70px to sit just below the header.
+                // height: 0 and overflow: visible ensures the container doesn't block clicks on the page,
+                // but the ad content (which usually overflows) remains interactive.
                 container.style.cssText = `
                     position: fixed;
                     left: 0;
                     right: 0;
-                    top: 100px; 
+                    top: 70px; 
                     width: 100%;
+                    height: 0;
+                    overflow: visible;
                     z-index: 2147483647; /* Max z-index */
                     display: flex;
                     justify-content: center;
                     align-items: flex-start;
-                    pointer-events: none; /* Let clicks pass through empty areas */
+                    pointer-events: none; /* Let clicks pass through the container itself */
                     ${borderStyle}
                 `;
 
@@ -299,7 +307,7 @@ const App: React.FC = () => {
                 });
 
                 document.body.appendChild(container);
-                console.log("Crate TV: Ad script injected via robust method.");
+                console.log("Crate TV: Ad script injected via robust method.", adScript.substring(0, 50) + "...");
 
                 return () => {
                     if (document.getElementById(containerId)) {

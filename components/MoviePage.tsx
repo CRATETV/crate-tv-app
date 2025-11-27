@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -49,8 +50,8 @@ const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
 
     return (
         <a
-            href={`/movie/${movie.key}`}
-            onClick={(e) => handleNavigate(e, `/movie/${movie.key}`)}
+            href={`/movie/${movie.key}?play=true`} // Auto-play recommendations
+            onClick={(e) => handleNavigate(e, `/movie/${movie.key}?play=true`)}
             className="group relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 bg-gray-900"
         >
               <img 
@@ -81,6 +82,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
   const [released, setReleased] = useState(() => isMovieReleased(movie));
+  const [isPaused, setIsPaused] = useState(false); // FIX: Track paused state in React state
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,6 +104,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
   const isOnWatchlist = useMemo(() => watchlist.includes(movieKey), [watchlist, movieKey]);
+
+  // --- FIX: Hide Global Ad Overlay During Playback ---
+  useEffect(() => {
+      const adWrapper = document.getElementById('cratetv-ad-wrapper');
+      if (adWrapper) {
+          // Hide the global ad banner when in full video mode to prevent blocking
+          adWrapper.style.display = playerMode === 'full' ? 'none' : 'flex';
+      }
+      return () => {
+          // Restore the ad banner when leaving the page or component
+          if (adWrapper) adWrapper.style.display = 'flex';
+      };
+  }, [playerMode]);
 
   const playContent = useCallback(async () => {
     setIsAdPlaying(false);
@@ -204,14 +219,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     
     if (movie) {
         setReleased(isMovieReleased(movie));
-        if (params.get('play') === 'true' && movie.fullMovie && isMovieReleased(movie)) {
+        // FIX: Check for play=true OR if playerMode is already full (prevents reset on re-render)
+        if ((params.get('play') === 'true') && movie.fullMovie && isMovieReleased(movie)) {
             setPlayerMode('full');
         } else {
             setPlayerMode('poster');
         }
-    } else if (!isDataLoading) {
-         // Movie not found handling could go here
-    }
+    } 
     
     hasTrackedViewRef.current = false;
   }, [movieKey, movie, isDataLoading]);
@@ -296,6 +310,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
     const handleExitPlayer = () => {
         setPlayerMode('poster');
+        // Clean url
+        window.history.pushState({}, '', `/movie/${movieKey}`);
     };
     
     const handlePaymentSuccess = () => {
@@ -356,6 +372,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             onContextMenu={(e) => e.preventDefault()} 
                             controlsList="nodownload"
                             onEnded={handleMovieEnd}
+                            onPlay={() => setIsPaused(false)}
+                            onPause={() => setIsPaused(true)}
                         />
                     )}
 
@@ -364,12 +382,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" onContextMenu={(e) => e.preventDefault()} crossOrigin="anonymous" />
                             
                             {released ? (
-                                <div className="relative w-full h-full flex items-center justify-center">
+                                <div 
+                                    className="relative w-full h-full flex items-center justify-center cursor-pointer group"
+                                    onClick={() => setPlayerMode('full')} // Make entire area clickable
+                                >
                                     <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} crossOrigin="anonymous" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent transition-opacity duration-300 group-hover:opacity-80"></div>
                                     <button 
-                                        onClick={() => setPlayerMode('full')}
-                                        className="absolute text-white bg-black/50 rounded-full p-4 hover:bg-black/70 transition-colors"
+                                        className="absolute text-white bg-black/50 rounded-full p-4 hover:bg-black/70 transition-all transform group-hover:scale-110"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" viewBox="0 0 20 20" fill="currentColor">
                                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
@@ -406,8 +426,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         </button>
                     )}
                     
-                    {/* Pause Overlay logic for when video is paused in full mode */}
-                    {playerMode === 'full' && !isAdPlaying && videoRef.current?.paused && (
+                    {/* FIX: Pause Overlay logic - only show when video is explicitly paused and NOT playing an ad */}
+                    {playerMode === 'full' && !isAdPlaying && isPaused && (
                         <PauseOverlay 
                             movie={movie} 
                             onMoreDetails={handleShowDetails}
@@ -508,7 +528,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     onClose={() => setSelectedDirector(null)}
                     allMovies={allMovies}
                     onSelectMovie={(m: Movie) => {
-                         const path = `/movie/${m.key}`;
+                         const path = `/movie/${m.key}?play=true`;
                          window.history.pushState({}, '', path);
                          window.dispatchEvent(new Event('pushstate'));
                          window.scrollTo(0, 0);
@@ -526,7 +546,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     allCategories={allCategories}
                     onSelectRecommendedMovie={(m) => {
                         setIsDetailsModalOpen(false);
-                        const path = `/movie/${m.key}`;
+                        const path = `/movie/${m.key}?play=true`;
                         window.history.pushState({}, '', path);
                         window.dispatchEvent(new Event('pushstate'));
                         window.scrollTo(0, 0);

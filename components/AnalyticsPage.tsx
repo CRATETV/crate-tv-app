@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -281,6 +282,16 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                         {'share' in navigator && <button onClick={handleShare} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Share</button>}
                     </div>
                 </div>
+                
+                {/* Attendees List - Moved here for convenience */}
+                <div className="mb-8">
+                    <h3 className="text-xl font-bold text-white mb-4">Attendee List</h3>
+                    <AudienceEmailList 
+                        title="Festival Pass Holders & Ticket Buyers" 
+                        users={(analyticsData.festivalUsers || []).map(email => ({ email }))} 
+                    />
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                     {/* FIX: Explicitly cast properties to Number to avoid TypeScript errors. */}
                     <StatCard title="Total Festival Revenue" value={formatCurrency(Number(analyticsData.totalFestivalRevenue || 0))} className="sm:col-span-1" />
