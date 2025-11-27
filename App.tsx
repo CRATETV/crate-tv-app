@@ -40,6 +40,7 @@ const App: React.FC = () => {
     const [liveWatchParty, setLiveWatchParty] = useState<Movie | null>(null);
     const [announcementMovieModal, setAnnouncementMovieModal] = useState<Movie | null>(null);
     const [newFilmAnnouncement, setNewFilmAnnouncement] = useState<Movie | null>(null);
+    const [shouldAutoFocusSearch, setShouldAutoFocusSearch] = useState(false);
     
     // Memos for performance
     const heroMovies = useMemo(() => {
@@ -139,6 +140,30 @@ const App: React.FC = () => {
             return () => clearInterval(interval);
         }
     }, [heroMovies.length]);
+
+    // Check for search params on mount
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        
+        // Handle global search redirect
+        const searchParam = params.get('search');
+        if (searchParam) {
+            setSearchQuery(searchParam);
+            setShouldAutoFocusSearch(true);
+        }
+        
+        // Handle mobile search action
+        const actionParam = params.get('action');
+        if (actionParam === 'search') {
+            setIsMobileSearchOpen(true);
+        }
+
+        // Clean up URL
+        if (searchParam || actionParam) {
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+        }
+    }, []);
 
     // Effect for localStorage events from other tabs (e.g., admin panel)
     useEffect(() => {
@@ -335,6 +360,7 @@ const App: React.FC = () => {
                 onSearch={setSearchQuery} 
                 onMobileSearchClick={() => setIsMobileSearchOpen(true)}
                 topOffset={bannerHeight}
+                autoFocus={shouldAutoFocusSearch}
             />
             <main className="flex-grow pb-24 md:pb-0">
                 {isFestivalLive ? (

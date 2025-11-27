@@ -1,16 +1,14 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
-import SearchOverlay from './SearchOverlay';
 import { useFestival } from '../contexts/FestivalContext';
 // FIX: Corrected import path for Movie type
 import { Movie } from '../types';
 
 const CreatorPortalPage: React.FC = () => {
     const [activeView, setActiveView] = useState<'filmmaker' | 'actor'>('filmmaker');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const { movies } = useFestival();
     
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
@@ -19,21 +17,13 @@ const CreatorPortalPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
-    const searchResults = useMemo(() => {
-        if (!searchQuery) return [];
-        // FIX: Cast movie to Movie type to resolve properties.
-        return (Object.values(movies) as Movie[]).filter(movie =>
-            movie && (
-                (movie.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (movie.director || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (movie.cast || []).some(actor => (actor.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
-            )
-        );
-    }, [searchQuery, movies]);
+    const handleSearch = (query: string) => {
+        window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
+        window.dispatchEvent(new Event('pushstate'));
+    };
 
-    const handleSelectFromSearch = (movie: Movie) => {
-        setIsMobileSearchOpen(false);
-        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+    const handleMobileSearch = () => {
+        window.history.pushState({}, '', '/?action=search');
         window.dispatchEvent(new Event('pushstate'));
     };
 
@@ -41,9 +31,9 @@ const CreatorPortalPage: React.FC = () => {
         <div className="flex flex-col min-h-screen text-white">
             <Header 
                 searchQuery="" 
-                onSearch={() => {}} 
+                onSearch={handleSearch} 
                 isScrolled={true}
-                onMobileSearchClick={() => setIsMobileSearchOpen(true)}
+                onMobileSearchClick={handleMobileSearch}
                 showSearch={false}
             />
             <main className="flex-grow pb-24 md:pb-0">
@@ -139,17 +129,8 @@ const CreatorPortalPage: React.FC = () => {
             </main>
             <CollapsibleFooter showActorLinks={true} />
             <BottomNavBar 
-                onSearchClick={() => setIsMobileSearchOpen(true)}
+                onSearchClick={handleMobileSearch}
             />
-            {isMobileSearchOpen && (
-                <SearchOverlay
-                    searchQuery={searchQuery}
-                    onSearch={setSearchQuery}
-                    onClose={() => setIsMobileSearchOpen(false)}
-                    results={searchResults}
-                    onSelectMovie={handleSelectFromSearch}
-                />
-            )}
         </div>
     );
 };

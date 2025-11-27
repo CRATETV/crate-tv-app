@@ -49,6 +49,16 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    const handleSearch = (query: string) => {
+        window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
+    const handleMobileSearch = () => {
+        window.history.pushState({}, '', '/?action=search');
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
     if (isLoading) {
         return <LoadingSpinner />;
     }
@@ -69,7 +79,7 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
 
     return (
         <div className="flex flex-col min-h-screen text-white bg-black">
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
+            <Header searchQuery="" onSearch={handleSearch} isScrolled={true} onMobileSearchClick={handleMobileSearch} showSearch={false} />
             <main className="flex-grow">
                 {/* Hero Section */}
                 <div className="relative w-full h-[60vh] bg-black">
@@ -130,7 +140,7 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
             </main>
             <Footer />
             <BackToTopButton />
-            <BottomNavBar onSearchClick={() => {}} />
+            <BottomNavBar onSearchClick={handleMobileSearch} />
         </div>
     );
 };

@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import BackToTopButton from './BackToTopButton';
@@ -28,6 +27,16 @@ const ClassicsPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    const handleSearch = (query: string) => {
+        window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
+    const handleMobileSearch = () => {
+        window.history.pushState({}, '', '/?action=search');
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
     if (isFestivalLoading) {
         return <LoadingSpinner />;
     }
@@ -36,9 +45,9 @@ const ClassicsPage: React.FC = () => {
         <div className="flex flex-col min-h-screen text-white">
             <Header 
                 searchQuery="" 
-                onSearch={() => {}} 
+                onSearch={handleSearch} 
                 isScrolled={true}
-                onMobileSearchClick={() => {}}
+                onMobileSearchClick={handleMobileSearch}
                 showSearch={true}
                 showNavLinks={true}
             />
@@ -84,11 +93,7 @@ const ClassicsPage: React.FC = () => {
             <CollapsibleFooter />
             <BackToTopButton />
             <BottomNavBar 
-                onSearchClick={() => {
-                    // Navigate home for search, as this page doesn't have the search overlay
-                    window.history.pushState({}, '', '/');
-                    window.dispatchEvent(new Event('pushstate'));
-                }}
+                onSearchClick={handleMobileSearch}
             />
         </div>
     );

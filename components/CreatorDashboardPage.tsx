@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';
@@ -6,7 +7,6 @@ import ActorPortalView from './ActorPortalView';
 import FilmmakerDashboardView from './FilmmakerDashboardView';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
-import SearchOverlay from './SearchOverlay';
 import { Movie } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
 import { useMemo } from 'react';
@@ -14,8 +14,6 @@ import { useMemo } from 'react';
 const CreatorDashboardPage: React.FC = () => {
     const { user } = useAuth();
     const { movies } = useFestival();
-    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
     
     // Default to the most "active" role (filmmaker > actor), or whichever they have.
     const [activeView, setActiveView] = useState<'filmmaker' | 'actor'>(() => 
@@ -36,20 +34,13 @@ const CreatorDashboardPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
     
-    const searchResults = useMemo(() => {
-        if (!searchQuery) return [];
-        return (Object.values(movies) as Movie[]).filter(movie =>
-            movie && (
-                (movie.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (movie.director || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (movie.cast || []).some(actor => (actor.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
-            )
-        );
-    }, [searchQuery, movies]);
+    const handleSearch = (query: string) => {
+        window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
+        window.dispatchEvent(new Event('pushstate'));
+    };
 
-    const handleSelectFromSearch = (movie: Movie) => {
-        setIsMobileSearchOpen(false);
-        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+    const handleMobileSearch = () => {
+        window.history.pushState({}, '', '/?action=search');
         window.dispatchEvent(new Event('pushstate'));
     };
     
@@ -65,10 +56,10 @@ const CreatorDashboardPage: React.FC = () => {
     return (
         <div className="flex flex-col min-h-screen text-white">
             <Header 
-                searchQuery={searchQuery}
-                onSearch={setSearchQuery} 
+                searchQuery=""
+                onSearch={handleSearch} 
                 isScrolled={true} 
-                onMobileSearchClick={() => setIsMobileSearchOpen(true)}
+                onMobileSearchClick={handleMobileSearch}
                 showSearch={false} 
                 showNavLinks={false} 
             />
@@ -134,16 +125,7 @@ const CreatorDashboardPage: React.FC = () => {
                 </div>
             </main>
             <CollapsibleFooter showActorLinks={true} />
-            <BottomNavBar onSearchClick={() => setIsMobileSearchOpen(true)} />
-             {isMobileSearchOpen && (
-                <SearchOverlay
-                    searchQuery={searchQuery}
-                    onSearch={setSearchQuery}
-                    onClose={() => setIsMobileSearchOpen(false)}
-                    results={searchResults}
-                    onSelectMovie={handleSelectFromSearch}
-                />
-            )}
+            <BottomNavBar onSearchClick={handleMobileSearch} />
         </div>
     );
 };

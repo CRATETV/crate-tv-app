@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { avatars } from './avatars';
@@ -13,6 +14,7 @@ interface HeaderProps {
     showNavLinks?: boolean;
     topOffset?: string;
     isStaging?: boolean;
+    autoFocus?: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -26,12 +28,14 @@ const Header: React.FC<HeaderProps> = ({
     showNavLinks = true,
     topOffset = '0px',
     isStaging,
+    autoFocus,
 }) => {
     const { user, logout } = useAuth();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -50,6 +54,12 @@ const Header: React.FC<HeaderProps> = ({
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        if (autoFocus && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [autoFocus]);
 
 
     const handleNavigate = (e: React.MouseEvent, path: string) => {
@@ -99,6 +109,7 @@ const Header: React.FC<HeaderProps> = ({
                             <div className="hidden md:block">
                                 <form onSubmit={(e) => { e.preventDefault(); onSearchSubmit?.(searchQuery); }}>
                                     <input
+                                        ref={inputRef}
                                         type="search"
                                         value={searchQuery}
                                         onChange={(e) => onSearch(e.target.value)}

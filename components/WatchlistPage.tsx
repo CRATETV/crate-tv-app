@@ -1,5 +1,4 @@
 
-
 import React, { useMemo } from 'react';
 import Header from './Header';
 import BackToTopButton from './BackToTopButton';
@@ -26,6 +25,16 @@ const WatchlistPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    const handleSearch = (query: string) => {
+        window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
+    const handleMobileSearch = () => {
+        window.history.pushState({}, '', '/?action=search');
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
     if (isLoading) {
         return <LoadingSpinner />;
     }
@@ -34,9 +43,9 @@ const WatchlistPage: React.FC = () => {
         <div className="flex flex-col min-h-screen text-white">
             <Header 
                 searchQuery="" 
-                onSearch={() => {}} 
+                onSearch={handleSearch} 
                 isScrolled={true}
-                onMobileSearchClick={() => {}}
+                onMobileSearchClick={handleMobileSearch}
                 showNavLinks={true}
             />
             <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
@@ -68,11 +77,7 @@ const WatchlistPage: React.FC = () => {
             <CollapsibleFooter />
             <BackToTopButton />
             <BottomNavBar 
-                onSearchClick={() => {
-                    // Navigate home for search, as this page doesn't have the search overlay
-                    window.history.pushState({}, '', '/');
-                    window.dispatchEvent(new Event('pushstate'));
-                }}
+                onSearchClick={handleMobileSearch}
             />
         </div>
     );

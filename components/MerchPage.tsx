@@ -1,9 +1,11 @@
+
 import React, { useState, useMemo } from 'react';
 import Header from './Header';
 // FIX: Corrected import path
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
-import SearchOverlay from './SearchOverlay';
+import CollapsibleFooter from './CollapsibleFooter';
+import BottomNavBar from './BottomNavBar';
 import { useFestival } from '../contexts/FestivalContext';
 // FIX: Corrected import path
 import { Movie } from '../types';
@@ -19,35 +21,30 @@ const merchItems = [
 ];
 
 const MerchPage: React.FC = () => {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const { movies } = useFestival();
 
-    const searchResults = useMemo(() => {
-        if (!searchQuery) return [];
-        // FIX: Cast movie to Movie type to resolve properties.
-        return (Object.values(movies) as Movie[]).filter(movie =>
-            movie && (
-                (movie.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (movie.director || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (movie.cast || []).some(actor => (actor.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
-            )
-        );
-    }, [searchQuery, movies]);
-
     const handleSelectFromSearch = (movie: Movie) => {
-        setIsMobileSearchOpen(false);
         window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
+    const handleSearch = (query: string) => {
+        window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
+    const handleMobileSearch = () => {
+        window.history.pushState({}, '', '/?action=search');
         window.dispatchEvent(new Event('pushstate'));
     };
 
     return (
         <div className="flex flex-col min-h-screen text-white">
             <Header 
-                searchQuery={searchQuery} 
-                onSearch={setSearchQuery} 
+                searchQuery="" 
+                onSearch={handleSearch} 
                 isScrolled={true}
-                onMobileSearchClick={() => setIsMobileSearchOpen(true)}
+                onMobileSearchClick={handleMobileSearch}
             />
 
             <main className="flex-grow">
@@ -98,15 +95,7 @@ const MerchPage: React.FC = () => {
             <Footer />
             <BackToTopButton />
 
-            {isMobileSearchOpen && (
-                <SearchOverlay 
-                  searchQuery={searchQuery}
-                  onSearch={setSearchQuery}
-                  onClose={() => setIsMobileSearchOpen(false)}
-                  results={searchResults}
-                  onSelectMovie={handleSelectFromSearch}
-                />
-            )}
+            <BottomNavBar onSearchClick={handleMobileSearch} />
         </div>
     );
 };
