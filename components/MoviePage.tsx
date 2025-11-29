@@ -141,6 +141,36 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         videoRef.current.play().catch(e => console.error("Content play failed", e));
     }
   }, [movie?.key, getUserIdToken]);
+
+  // --- NEW: Handle Start Playback with Landscape Lock ---
+  const handleStartPlayback = async () => {
+      setPlayerMode('full');
+      
+      // Attempt to lock orientation to landscape on mobile
+      if (videoContainerRef.current) {
+          try {
+              // 1. Request Fullscreen (Standard)
+              if (videoContainerRef.current.requestFullscreen) {
+                  await videoContainerRef.current.requestFullscreen();
+              } 
+              // 2. Request Fullscreen (iOS/Safari/Old Webkit)
+              else if ((videoContainerRef.current as any).webkitRequestFullscreen) {
+                  await (videoContainerRef.current as any).webkitRequestFullscreen();
+              }
+              
+              // 3. Lock Orientation (Android/Chrome)
+              // Note: iOS Safari does not support screen.orientation.lock, but natively handles video rotation in fullscreen
+              if (screen.orientation && (screen.orientation as any).lock) {
+                  await (screen.orientation as any).lock('landscape').catch((e: any) => {
+                      // Orientation lock might fail on desktop or incompatible devices, which is fine.
+                      console.debug("Orientation lock failed or not supported:", e);
+                  });
+              }
+          } catch (err) {
+              console.warn("Fullscreen request failed:", err);
+          }
+      }
+  };
   
   const initializeAds = useCallback(() => {
     if (!videoRef.current || !adContainerRef.current || playerMode !== 'full' || !released || adsManagerRef.current || typeof google === 'undefined') {
@@ -308,6 +338,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       window.dispatchEvent(new Event('pushstate'));
     };
 
+    const handleGoHome = () => {
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
     const handleExitPlayer = () => {
         setPlayerMode('poster');
         // Clean url
@@ -384,7 +419,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             {released ? (
                                 <div 
                                     className="relative w-full h-full flex items-center justify-center cursor-pointer group"
-                                    onClick={() => setPlayerMode('full')} // Make entire area clickable
+                                    onClick={handleStartPlayback} // Updated to trigger fullscreen/landscape
                                 >
                                     <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} crossOrigin="anonymous" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent transition-opacity duration-300 group-hover:opacity-80"></div>
@@ -440,6 +475,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             onSupport={() => setIsSupportModalOpen(true)}
                             isOnWatchlist={isOnWatchlist}
                             onToggleWatchlist={() => toggleWatchlist(movieKey)}
+                            onHome={handleGoHome}
                         />
                     )}
                 </div>

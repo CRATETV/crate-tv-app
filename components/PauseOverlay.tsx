@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { Movie, Actor } from '../types';
 
@@ -39,6 +40,7 @@ interface PauseOverlayProps {
     onSupport: () => void;
     isOnWatchlist: boolean;
     onToggleWatchlist: () => void;
+    onHome: () => void;
 }
 
 const PauseOverlay: React.FC<PauseOverlayProps> = ({ 
@@ -52,7 +54,8 @@ const PauseOverlay: React.FC<PauseOverlayProps> = ({
     onToggleLike,
     onSupport,
     isOnWatchlist,
-    onToggleWatchlist
+    onToggleWatchlist,
+    onHome
 }) => {
     const isMobile = useMemo(() => typeof window !== 'undefined' && window.matchMedia("(max-width: 768px)").matches, []);
     const stopPropagation = (e: React.MouseEvent) => e.stopPropagation();
@@ -64,8 +67,15 @@ const PauseOverlay: React.FC<PauseOverlayProps> = ({
                 className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col justify-between items-center z-40 p-4 animate-controls-fade-in"
                 onClick={onResume}
             >
-                {/* Top Spacer */}
-                <div />
+                {/* Top Bar with Home Button */}
+                <div className="w-full flex justify-between items-start" onClick={stopPropagation}>
+                     <button onClick={onHome} className="flex items-center gap-2 text-white/90 hover:text-white bg-black/40 px-4 py-2 rounded-full backdrop-blur-md transition-colors border border-white/10">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                        </svg>
+                        <span className="text-sm font-bold">Home</span>
+                    </button>
+                </div>
 
                 {/* Main Playback Controls (Vertically Centered) */}
                 <div className="flex items-center justify-center gap-8" onClick={stopPropagation}>
@@ -119,6 +129,18 @@ const PauseOverlay: React.FC<PauseOverlayProps> = ({
             className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-40 animate-controls-fade-in"
             onClick={onResume}
         >
+            {/* Back to Home Button */}
+            <div className="absolute top-8 left-8" onClick={stopPropagation}>
+                 <button onClick={onHome} className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors group">
+                    <div className="p-2 bg-white/10 rounded-full group-hover:bg-white/20 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                             <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                        </svg>
+                    </div>
+                    <span className="text-lg font-medium">Back to Home</span>
+                </button>
+            </div>
+
             <div className="text-center text-white" onClick={stopPropagation}>
                 <h1 className="text-5xl font-bold mb-2">{movie.title}</h1>
                 <p className="text-lg text-gray-300 mb-1">by {movie.director}</p>
