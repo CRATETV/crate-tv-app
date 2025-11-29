@@ -82,7 +82,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
   const [released, setReleased] = useState(() => isMovieReleased(movie));
-  const [isPaused, setIsPaused] = useState(false); // FIX: Track paused state in React state
+  const [isPaused, setIsPaused] = useState(false); // Track paused state in React state
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -123,7 +123,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     if (videoRef.current) {
         if (!hasTrackedViewRef.current && movie?.key) {
             hasTrackedViewRef.current = true;
-            // FIX: Get the user token to authenticate the view tracking request
+            // Get the user token to authenticate the view tracking request
             const token = await getUserIdToken();
             if (token) {
                 fetch('/api/track-view', {
@@ -142,36 +142,51 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
   }, [movie?.key, getUserIdToken]);
 
-  // --- NEW: Handle Start Playback with Landscape Lock ---
+  // --- Attempt Landscape/Fullscreen Helper ---
+  const attemptLandscapeFullscreen = async () => {
+    if (videoContainerRef.current) {
+        try {
+            // 1. Request Fullscreen (Standard)
+            if (videoContainerRef.current.requestFullscreen) {
+                await videoContainerRef.current.requestFullscreen();
+            } 
+            // 2. Request Fullscreen (iOS/Safari/Old Webkit)
+            else if ((videoContainerRef.current as any).webkitRequestFullscreen) {
+                await (videoContainerRef.current as any).webkitRequestFullscreen();
+            }
+            
+            // 3. Lock Orientation (Android/Chrome)
+            // Note: iOS Safari does not support screen.orientation.lock, but natively handles video rotation in fullscreen
+            if (screen.orientation && (screen.orientation as any).lock) {
+                await (screen.orientation as any).lock('landscape').catch((e: any) => {
+                    // Orientation lock might fail on desktop or incompatible devices, which is fine.
+                    console.debug("Orientation lock failed or not supported:", e);
+                });
+            }
+        } catch (err) {
+            console.warn("Fullscreen/Landscape request failed (likely due to browser user-gesture requirements):", err);
+        }
+    }
+  };
+
+  // --- Handle Start Playback from Poster Click ---
   const handleStartPlayback = async () => {
       setPlayerMode('full');
-      
-      // Attempt to lock orientation to landscape on mobile
-      if (videoContainerRef.current) {
-          try {
-              // 1. Request Fullscreen (Standard)
-              if (videoContainerRef.current.requestFullscreen) {
-                  await videoContainerRef.current.requestFullscreen();
-              } 
-              // 2. Request Fullscreen (iOS/Safari/Old Webkit)
-              else if ((videoContainerRef.current as any).webkitRequestFullscreen) {
-                  await (videoContainerRef.current as any).webkitRequestFullscreen();
-              }
-              
-              // 3. Lock Orientation (Android/Chrome)
-              // Note: iOS Safari does not support screen.orientation.lock, but natively handles video rotation in fullscreen
-              if (screen.orientation && (screen.orientation as any).lock) {
-                  await (screen.orientation as any).lock('landscape').catch((e: any) => {
-                      // Orientation lock might fail on desktop or incompatible devices, which is fine.
-                      console.debug("Orientation lock failed or not supported:", e);
-                  });
-              }
-          } catch (err) {
-              console.warn("Fullscreen request failed:", err);
-          }
-      }
+      // Try to trigger fullscreen immediately on click
+      attemptLandscapeFullscreen();
   };
   
+  // --- Auto-trigger landscape when entering full mode (e.g. from URL) ---
+  useEffect(() => {
+      if (playerMode === 'full') {
+          // Small timeout to allow render to complete
+          const timer = setTimeout(() => {
+              attemptLandscapeFullscreen();
+          }, 100);
+          return () => clearTimeout(timer);
+      }
+  }, [playerMode]);
+
   const initializeAds = useCallback(() => {
     if (!videoRef.current || !adContainerRef.current || playerMode !== 'full' || !released || adsManagerRef.current || typeof google === 'undefined') {
         if (playerMode === 'full') playContent(); // Play content directly if ads can't be initialized
@@ -249,7 +264,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     
     if (movie) {
         setReleased(isMovieReleased(movie));
-        // FIX: Check for play=true OR if playerMode is already full (prevents reset on re-render)
+        // Check for play=true OR if playerMode is already full
         if ((params.get('play') === 'true') && movie.fullMovie && isMovieReleased(movie)) {
             setPlayerMode('full');
         } else {
@@ -419,7 +434,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             {released ? (
                                 <div 
                                     className="relative w-full h-full flex items-center justify-center cursor-pointer group"
-                                    onClick={handleStartPlayback} // Updated to trigger fullscreen/landscape
+                                    onClick={handleStartPlayback} // Trigger play and landscape attempt
                                 >
                                     <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} crossOrigin="anonymous" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent transition-opacity duration-300 group-hover:opacity-80"></div>
@@ -461,7 +476,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         </button>
                     )}
                     
-                    {/* FIX: Pause Overlay logic - only show when video is explicitly paused and NOT playing an ad */}
+                    {/* Pause Overlay - only show when video is explicitly paused and NOT playing an ad */}
                     {playerMode === 'full' && !isAdPlaying && isPaused && (
                         <PauseOverlay 
                             movie={movie} 
