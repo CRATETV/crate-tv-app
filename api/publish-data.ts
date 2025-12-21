@@ -153,7 +153,7 @@ export async function POST(request: Request) {
             });
         }
 
-        const validTypes = ['movies', 'categories', 'festival', 'about', 'delete_movie', 'set_now_streaming', 'ads'];
+        const validTypes = ['movies', 'categories', 'festival', 'about', 'delete_movie', 'delete_category', 'set_now_streaming', 'ads'];
         if (!validTypes.includes(type)) {
             return new Response(JSON.stringify({ error: `Invalid data type provided: ${type}` }), {
                 status: 400,
@@ -191,6 +191,13 @@ export async function POST(request: Request) {
                         });
                     }
                 });
+                break;
+            }
+            case 'delete_category': {
+                const { key } = data;
+                if (!key) throw new Error('Category key is required for deletion.');
+                const catRef = db.collection('categories').doc(key);
+                batch.delete(catRef);
                 break;
             }
             case 'set_now_streaming': {

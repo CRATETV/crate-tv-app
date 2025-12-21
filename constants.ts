@@ -14,7 +14,9 @@ export const isMovieReleased = (movie: Movie | undefined | null): boolean => {
 export const categoriesData: Record<string, Category> = {
   "animation": {
     "title": "Animation",
-    "movieKeys": []
+    "movieKeys": [
+      "newmovie1762818971534"
+    ]
   },
   "awardWinners": {
     "title": "Award-Winning Films",
@@ -98,7 +100,6 @@ export const categoriesData: Record<string, Category> = {
       "newmovie1763986220979",
       "newmovie1763381218900",
       "newmovie1762818971534",
-      "newmovie1762802600691",
       "newmovie1756741314485",
       "newmovie1756501125076",
       "newmovie1756487626529",
@@ -251,7 +252,6 @@ export const moviesData: Record<string, Movie> = {
     "title": "Consumed",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/consumed+.mp4",
     "trailer": "",
-    "price": 0,
     "cast": [
       {
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
@@ -384,7 +384,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Michelle Reale-Opalesky",
         "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg",
-        "bio": "Michelle Reale-Opalesky is a captivating actor with a remarkable range. She effortlessly inhabits diverse roles and seamlessly transitions between drama and comedy.",
+        "bio": "Michelle Reale-Opalesky is a captivating actor with a remarkabe range. She effortlessly inhabits diverse roles and seamlessly transitions between drama and comedy.",
         "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg"
       },
       {
@@ -537,9 +537,9 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Isabelle Dessalines",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
         "bio": "Isabelle Dessalines, an aspiring actor, brings a captivating blend of mystery and innocence to her characters through her quiet and thoughtful performances on stage and screen.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
     "director": "Anh Nguyen",
@@ -918,8 +918,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "trailer": "",
     "director": "Jalina Wayser ",
-    "hasCopyrightMusic": true,
-    "price": 0
+    "hasCopyrightMusic": true
   },
   "newmovie1761000817040": {
     "key": "newmovie1761000817040",
@@ -1196,8 +1195,7 @@ export const moviesData: Record<string, Movie> = {
     "synopsis": "Confined to a sterile medical waiting room, three women await life-altering results—but only one of them seems to have a handle on everything. A short film created for the Playhouse West-Philadelphia 3-3-3 film festival.",
     "title": "Results",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results+.mp4",
-    "price": 0
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results+.mp4"
   },
   "silentlove": {
     "key": "silentlove",
@@ -1222,8 +1220,7 @@ export const moviesData: Record<string, Movie> = {
     "director": "Salome Denoon",
     "likes": 0,
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/SilentLove.png",
-    "title": "Silent Love",
-    "price": 0
+    "title": "Silent Love"
   },
   "slap": {
     "key": "slap",
@@ -1393,7 +1390,6 @@ export const moviesData: Record<string, Movie> = {
   "theimmigrant": {
     "key": "theimmigrant",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The_Immigrant_1917.JPG",
-    "price": 0,
     "releaseDateTime": "1917-06-17T12:00:00Z",
     "cast": [
       {
@@ -1448,7 +1444,6 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Neighbors.png",
     "trailer": "",
     "title": " Neighbours",
-    "price": 0,
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/NEIGHBORS+-+Shaunpaul+Costello++compressed++youtube).mp4"
   },
   "thepawnshop": {
@@ -1588,15 +1583,15 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Darrah Lashley",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+head+shot.png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Darrah+head+shot.png",
         "bio": "Darrah Lashley is a talented and versatile actress known for her captivating performances. Darrah has received several accolades due to her exceptional talent and dedication to work in independent films and theater productions, showcasing her range and depth.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
       }
     ],
     "director": "Joshua Daniel",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/youVs+Them.mp4",
-    "poster": "https://cratetelevision.s3.amazonaws.com/you+vs+them+poster+.png",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/you+vs+them+poster+.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/YouVsThem.png",
     "likes": 1
   }

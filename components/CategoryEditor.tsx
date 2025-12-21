@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { Category, Movie } from '../types';
 
 interface MovieSelectorModalProps {
@@ -78,10 +79,19 @@ interface CategoryEditorProps {
 const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allMovies, onSave, isSaving }) => {
   const [categories, setCategories] = useState<Record<string, Category>>(initialCategories);
   const [editingCategoryKey, setEditingCategoryKey] = useState<string | null>(null);
+  const [localError, setLocalError] = useState('');
+  const prevIsSaving = useRef(isSaving);
 
+  // Robustly sync local state with incoming server data only when not actively saving
+  // or after a successful save completes.
   useEffect(() => {
-    setCategories(initialCategories);
-  }, [initialCategories]);
+    if (prevIsSaving.current === true && isSaving === false) {
+       setCategories(initialCategories);
+    } else if (!isSaving && Object.keys(categories).length === 0) {
+       setCategories(initialCategories);
+    }
+    prevIsSaving.current = isSaving;
+  }, [initialCategories, isSaving]);
 
   const handleCategoryChange = (key: string, field: 'title', value: string) => {
     setCategories(prev => ({
@@ -99,21 +109,47 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
   };
 
   const addNewCategory = () => {
-    const newKey = `category${Date.now()}`;
+    // Generate a unique ID that isn't just numeric to avoid weird object sorting
+    const newKey = `custom_${Date.now()}`;
     const newCategory: Category = {
-      title: 'New Category',
+      title: 'New Category Title',
       movieKeys: [],
     };
-    setCategories(prev => ({ ...prev, [newKey]: newCategory }));
+    // Put new category at the top of the object
+    setCategories(prev => ({ [newKey]: newCategory, ...prev }));
   };
 
-  const deleteCategory = (key: string) => {
-    if (window.confirm(`Are you sure you want to delete the category "${categories[key].title}"?`)) {
-      setCategories(prev => {
-        const newCategories = { ...prev };
-        delete newCategories[key];
-        return newCategories;
-      });
+  const deleteCategory = async (key: string) => {
+    const categoryTitle = categories[key]?.title || 'this category';
+    if (!window.confirm(`Are you sure you want to permanently delete "${categoryTitle}"?`)) {
+      return;
+    }
+
+    // 1. Optimistically remove from local state
+    setCategories(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+    });
+
+    // 2. Perform actual deletion if it's not a brand new local-only category
+    if (!key.startsWith('custom_')) {
+        const password = sessionStorage.getItem('adminPassword');
+        try {
+            const response = await fetch('/api/publish-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password, type: 'delete_category', data: { key } }),
+            });
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to delete from database.');
+            }
+        } catch (err) {
+            setLocalError(err instanceof Error ? err.message : 'Deletion failed.');
+            // Revert local state on error
+            setCategories(initialCategories);
+        }
     }
   };
 
@@ -121,31 +157,48 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl sm:text-2xl font-bold text-red-400">Manage Categories</h2>
-        <button onClick={addNewCategory} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm">
-          + Add Category
+        <button 
+            onClick={addNewCategory} 
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-transform hover:scale-105"
+        >
+          + Add New Category
         </button>
       </div>
 
+      {localError && <div className="p-3 mb-4 bg-red-900/50 border border-red-700 text-red-200 rounded-md text-sm">{localError}</div>}
+
       <div className="space-y-4">
-        {/* FIX: Add an explicit type to the destructured map parameters to resolve TypeScript errors. */}
         {Object.entries(categories).map(([key, category]: [string, Category]) => (
-          <div key={key} className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+          <div key={key} className={`bg-gray-800 p-4 rounded-lg border transition-all duration-300 ${key.startsWith('custom_') ? 'border-purple-500 shadow-lg shadow-purple-900/20' : 'border-gray-700'}`}>
             <div className="flex justify-between items-center mb-3">
-              <input
-                type="text"
-                value={category.title}
-                onChange={e => handleCategoryChange(key, 'title', e.target.value)}
-                className="text-lg font-semibold bg-transparent text-white focus:outline-none focus:bg-gray-700 rounded-md px-2 w-full"
-              />
-              <button onClick={() => deleteCategory(key)} className="text-xs text-red-500 hover:text-red-400 ml-4">Delete</button>
+              <div className="flex-grow">
+                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Category Title</label>
+                  <input
+                    type="text"
+                    value={category.title}
+                    onChange={e => handleCategoryChange(key, 'title', e.target.value)}
+                    placeholder="Enter category name..."
+                    className="text-lg font-semibold bg-transparent text-white focus:outline-none focus:bg-gray-700 rounded-md px-2 w-full border border-transparent focus:border-gray-600"
+                  />
+              </div>
+              <button 
+                onClick={() => deleteCategory(key)} 
+                className="text-xs text-red-500 hover:text-red-400 ml-4 font-bold uppercase tracking-wider"
+              >
+                Delete
+              </button>
             </div>
-            <p className="text-xs text-gray-400 mb-3">{category.movieKeys.length} film(s) in this category.</p>
-            <button
-              onClick={() => setEditingCategoryKey(key)}
-              className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md text-sm"
-            >
-              Edit Films
-            </button>
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-700/50">
+                <p className="text-xs text-gray-400">
+                    <strong className="text-gray-300">{category.movieKeys.length}</strong> film(s) currently assigned
+                </p>
+                <button
+                    onClick={() => setEditingCategoryKey(key)}
+                    className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1.5 px-4 rounded-md text-xs transition-colors"
+                >
+                    Manage Assigned Films
+                </button>
+            </div>
           </div>
         ))}
       </div>
@@ -154,10 +207,11 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
         <button
           onClick={() => onSave(categories)}
           disabled={isSaving}
-          className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-5 rounded-md transition-colors"
+          className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-3 px-8 rounded-lg transition-all shadow-lg hover:shadow-purple-500/20"
         >
-          {isSaving ? 'Publishing...' : 'Save & Publish Categories'}
+          {isSaving ? 'Publishing Changes...' : 'Save & Publish Categories'}
         </button>
+        <p className="text-xs text-gray-500 mt-2">Publishing will update the live site and your Roku channel immediately.</p>
       </div>
 
       {editingCategoryKey && (
