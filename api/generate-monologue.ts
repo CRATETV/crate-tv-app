@@ -38,8 +38,9 @@ export async function POST(request: Request) {
         4.  **Content:** The monologue should be compelling, emotionally resonant, and give an actor something interesting to work with. It should feel like a real scene from a play or film. Do not include any introductory or concluding text like "Here is your monologue:".
     `;
 
+    // FIX: Updated model to gemini-3-flash-preview for basic text tasks as per GenAI guidelines.
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: prompt,
     });
     

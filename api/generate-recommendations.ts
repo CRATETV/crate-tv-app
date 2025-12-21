@@ -41,8 +41,9 @@ export async function POST(request: Request) {
       Respond with a JSON object that matches this schema: { "recommendedKeys": ["key1", "key2"] }.
     `;
 
+    // FIX: Updated model to gemini-3-flash-preview for basic text tasks as per GenAI guidelines.
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: prompt,
         config: {
             responseMimeType: "application/json",

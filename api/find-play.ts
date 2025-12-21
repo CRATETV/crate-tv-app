@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from '@google/genai';
 
 // This is a Vercel Serverless Function
@@ -42,8 +41,9 @@ export async function POST(request: Request) {
         Do not include any introductory or concluding text like "Here is a recommendation:".
     `;
 
+    // FIX: Updated model to gemini-3-flash-preview for basic text tasks as per GenAI guidelines.
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: prompt,
     });
     

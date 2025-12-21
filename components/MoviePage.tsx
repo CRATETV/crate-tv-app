@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -73,6 +72,26 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
   
+  // FIX: Added missing recommendedMovies memoization to resolve "Cannot find name 'recommendedMovies'" errors on lines 505 and 509.
+  const recommendedMovies = useMemo(() => {
+    if (!movie || !movie.key) return [];
+    const recommendedKeys = new Set<string>();
+    const currentMovieCategories = Object.values(allCategories).filter((cat: Category) => cat && Array.isArray(cat.movieKeys) && cat.movieKeys.includes(movie.key));
+    
+    currentMovieCategories.forEach((cat: Category) => {
+      cat.movieKeys.forEach((key: string) => {
+        if (key !== movie.key) {
+          recommendedKeys.add(key);
+        }
+      });
+    });
+
+    return Array.from(recommendedKeys)
+      .map(key => allMovies[key])
+      .filter((m): m is Movie => !!m)
+      .slice(0, 7);
+  }, [movie, allMovies, allCategories]);
+
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -105,15 +124,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
   const isOnWatchlist = useMemo(() => watchlist.includes(movieKey), [watchlist, movieKey]);
 
-  // --- FIX: Hide Global Ad Overlay During Playback ---
   useEffect(() => {
       const adWrapper = document.getElementById('cratetv-ad-wrapper');
       if (adWrapper) {
-          // Hide the global ad banner when in full video mode to prevent blocking
           adWrapper.style.display = playerMode === 'full' ? 'none' : 'flex';
       }
       return () => {
-          // Restore the ad banner when leaving the page or component
           if (adWrapper) adWrapper.style.display = 'flex';
       };
   }, [playerMode]);
@@ -123,63 +139,49 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     if (videoRef.current) {
         if (!hasTrackedViewRef.current && movie?.key) {
             hasTrackedViewRef.current = true;
-            // Get the user token to authenticate the view tracking request
             const token = await getUserIdToken();
             if (token) {
                 fetch('/api/track-view', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}` // Add the token here
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({ movieKey: movie.key }),
                 }).catch(err => console.error("Failed to track view:", err));
-            } else {
-                console.warn("View not tracked: User not authenticated or token unavailable.");
             }
         }
         videoRef.current.play().catch(e => console.error("Content play failed", e));
     }
   }, [movie?.key, getUserIdToken]);
 
-  // --- Attempt Landscape/Fullscreen Helper ---
   const attemptLandscapeFullscreen = async () => {
     if (videoContainerRef.current) {
         try {
-            // 1. Request Fullscreen (Standard)
             if (videoContainerRef.current.requestFullscreen) {
                 await videoContainerRef.current.requestFullscreen();
-            } 
-            // 2. Request Fullscreen (iOS/Safari/Old Webkit)
-            else if ((videoContainerRef.current as any).webkitRequestFullscreen) {
+            } else if ((videoContainerRef.current as any).webkitRequestFullscreen) {
                 await (videoContainerRef.current as any).webkitRequestFullscreen();
             }
             
-            // 3. Lock Orientation (Android/Chrome)
-            // Note: iOS Safari does not support screen.orientation.lock, but natively handles video rotation in fullscreen
             if (screen.orientation && (screen.orientation as any).lock) {
                 await (screen.orientation as any).lock('landscape').catch((e: any) => {
-                    // Orientation lock might fail on desktop or incompatible devices, which is fine.
                     console.debug("Orientation lock failed or not supported:", e);
                 });
             }
         } catch (err) {
-            console.warn("Fullscreen/Landscape request failed (likely due to browser user-gesture requirements):", err);
+            console.warn("Fullscreen/Landscape request failed:", err);
         }
     }
   };
 
-  // --- Handle Start Playback from Poster Click ---
   const handleStartPlayback = async () => {
       setPlayerMode('full');
-      // Try to trigger fullscreen immediately on click
       attemptLandscapeFullscreen();
   };
   
-  // --- Auto-trigger landscape when entering full mode (e.g. from URL) ---
   useEffect(() => {
       if (playerMode === 'full') {
-          // Small timeout to allow render to complete
           const timer = setTimeout(() => {
               attemptLandscapeFullscreen();
           }, 100);
@@ -189,7 +191,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   const initializeAds = useCallback(() => {
     if (!videoRef.current || !adContainerRef.current || playerMode !== 'full' || !released || adsManagerRef.current || typeof google === 'undefined') {
-        if (playerMode === 'full') playContent(); // Play content directly if ads can't be initialized
+        if (playerMode === 'full') playContent();
         return;
     }
     
@@ -238,7 +240,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     );
 
     const adsRequest = new google.ima.AdsRequest();
-    // Using a sample skippable pre-roll tag.
     adsRequest.adTagUrl = 'https://storage.googleapis.com/interactive-media-ads/ad-tags/unknown/vast_skippable.xml';
     adsRequest.linearAdSlotWidth = videoElement.clientWidth;
     adsRequest.linearAdSlotHeight = videoElement.clientHeight;
@@ -264,7 +265,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     
     if (movie) {
         setReleased(isMovieReleased(movie));
-        // Check for play=true OR if playerMode is already full
         if ((params.get('play') === 'true') && movie.fullMovie && isMovieReleased(movie)) {
             setPlayerMode('full');
         } else {
@@ -324,26 +324,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     return () => document.removeEventListener('keydown', handleEscKey);
 }, [playerMode]);
 
-
-    const recommendedMovies = useMemo(() => {
-        if (!movie) return [];
-        const recommendedKeys = new Set<string>();
-        const currentMovieCategories = Object.values(allCategories).filter((cat: Category) => cat.movieKeys.includes(movie.key));
-        currentMovieCategories.forEach((cat: Category) => {
-          cat.movieKeys.forEach((key: string) => {
-            if (key !== movie.key) recommendedKeys.add(key);
-          });
-        });
-        return Array.from(recommendedKeys).map(key => allMovies[key]).filter(Boolean).slice(0, 7);
-      }, [movie, allMovies, allCategories]);
-      
-    const exitStaging = () => {
-        sessionStorage.removeItem('crateTvStaging');
-        const params = new URLSearchParams(window.location.search);
-        params.delete('env');
-        window.location.search = params.toString();
-    };
-
     const handleSearchSubmit = (query: string) => {
         if (query) window.location.href = `/?search=${encodeURIComponent(query)}`;
     };
@@ -362,13 +342,30 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         setTimeout(() => setShowSupportSuccess(false), 3000);
     };
 
+    // Video Player Callbacks
+    const handlePause = () => setIsPaused(true);
+    const handlePlay = () => setIsPaused(false);
+    
+    const handleRewind = () => {
+        if (videoRef.current) videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+    };
+
+    const handleForward = () => {
+        if (videoRef.current) videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 10);
+    };
+
+    const handleHome = () => {
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
     if (isDataLoading || !movie) {
         return <LoadingSpinner />;
     }
 
     return (
         <div className="flex flex-col min-h-screen bg-black text-white">
-            {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
+            {isStaging && <StagingBanner onExit={() => {}} isOffline={dataSource === 'fallback'} />}
             
             {playerMode !== 'full' && (
                 <Header
@@ -386,16 +383,38 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     <div ref={adContainerRef} className="absolute inset-0 z-20 pointer-events-none" />
                     
                     {playerMode === 'full' && (
-                        <video 
-                            ref={videoRef} 
-                            src={movie.fullMovie} 
-                            className="w-full h-full"
-                            controls={!isAdPlaying}
-                            playsInline
-                            onContextMenu={(e) => e.preventDefault()} 
-                            controlsList="nodownload"
-                            onEnded={handleMovieEnd}
-                        />
+                        <>
+                            <video 
+                                ref={videoRef} 
+                                src={movie.fullMovie} 
+                                className="w-full h-full"
+                                controls={!isAdPlaying && !isPaused} // Hide native controls when paused to show our overlay
+                                playsInline
+                                onContextMenu={(e) => e.preventDefault()} 
+                                controlsList="nodownload"
+                                onEnded={handleMovieEnd}
+                                onPause={handlePause}
+                                onPlay={handlePlay}
+                            />
+
+                            {/* PAUSE OVERLAY (Cast/X-Ray) */}
+                            {isPaused && !isAdPlaying && (
+                                <PauseOverlay 
+                                    movie={movie}
+                                    isLiked={isLiked}
+                                    isOnWatchlist={isOnWatchlist}
+                                    onMoreDetails={() => setIsDetailsModalOpen(true)}
+                                    onSelectActor={setSelectedActor}
+                                    onResume={() => videoRef.current?.play()}
+                                    onRewind={handleRewind}
+                                    onForward={handleForward}
+                                    onToggleLike={() => toggleLikeMovie(movieKey)}
+                                    onToggleWatchlist={() => toggleWatchlist(movieKey)}
+                                    onSupport={() => setIsSupportModalOpen(true)}
+                                    onHome={handleHome}
+                                />
+                            )}
+                        </>
                     )}
 
                     {playerMode !== 'full' && (
@@ -436,7 +455,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     {playerMode === 'full' && (
                         <button
                             onClick={handleExitPlayer}
-                            className="absolute top-4 right-16 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white z-30"
+                            className="absolute top-4 right-16 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white z-30 shadow-xl"
                             aria-label="Exit video player"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -450,13 +469,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                   <div className="max-w-6xl mx-auto p-4 md:p-8">
                       <h1 className="text-3xl md:text-5xl font-bold text-white">{movie.title || 'Untitled Film'}</h1>
                       <div className="mt-4 flex flex-wrap items-center gap-4">
-                          <button onClick={() => setIsSupportModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors">
+                          <button onClick={() => setIsSupportModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors shadow-lg">
                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" />
                              </svg>
                              Support Filmmaker
                           </button>
-                          <button onClick={() => setIsDetailsModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-gray-500/70 backdrop-blur-sm text-white font-bold rounded-md hover:bg-gray-500/90 transition-colors">
+                          <button onClick={() => setIsDetailsModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-gray-500/70 backdrop-blur-sm text-white font-bold rounded-md hover:bg-gray-500/90 transition-colors shadow-lg">
                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                              More Info
                           </button>

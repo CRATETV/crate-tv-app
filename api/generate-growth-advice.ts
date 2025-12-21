@@ -8,7 +8,6 @@ export async function POST(request: Request) {
     // --- Authentication & Validation ---
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
-    // FIX: Corrected the logical AND to check against the master password correctly.
     if (password !== primaryAdminPassword && password !== masterPassword) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
@@ -30,8 +29,9 @@ export async function POST(request: Request) {
       Your response must be a JSON object.
     `;
 
+    // FIX: Updated model to gemini-3-pro-preview for complex text tasks as per GenAI guidelines.
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-pro-preview',
         contents: prompt,
         config: {
             responseMimeType: "application/json",

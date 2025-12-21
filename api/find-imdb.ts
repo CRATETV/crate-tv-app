@@ -21,8 +21,9 @@ export async function POST(request: Request) {
     
     const prompt = `Find the official IMDb page URL for the actor named "${name}". Respond with ONLY the URL and no other text or explanation.`;
 
+    // FIX: Updated model to gemini-3-flash-preview for tasks using the googleSearch tool as per GenAI guidelines.
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: prompt,
         config: {
           tools: [{googleSearch: {}}],

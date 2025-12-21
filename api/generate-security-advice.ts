@@ -34,8 +34,9 @@ export async function POST(request: Request) {
       Your response must be a JSON object.
     `;
 
+    // FIX: Updated model to gemini-3-pro-preview for complex text tasks as per GenAI guidelines.
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-pro-preview',
         contents: prompt,
         config: {
             responseMimeType: "application/json",
