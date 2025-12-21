@@ -7,6 +7,7 @@ import CategoryEditor from './components/CategoryEditor';
 import AboutEditor from './components/AboutEditor';
 import FestivalEditor from './components/FestivalEditor';
 import AnalyticsPage from './components/AnalyticsPage';
+import GrowthAnalyticsTab from './components/GrowthAnalyticsTab';
 import WatchPartyManager from './components/WatchPartyManager';
 import SecurityTab from './components/SecurityTab';
 import FallbackGenerator from './components/FallbackGenerator';
@@ -19,20 +20,21 @@ import MonetizationTab from './components/MonetizationTab';
 import HeroManager from './components/HeroManager';
 
 const ALL_TABS: Record<string, string> = {
-    analytics: 'Analytics',
-    hero: 'Hero Spotlight',
-    movies: 'Movies',
-    pipeline: 'Pipeline',
-    payouts: 'Payouts',
-    categories: 'Categories',
-    festival: 'Festival',
-    watchParty: 'Watch Party',
-    about: 'About Page',
-    email: 'Email',
-    monetization: 'AI Monetization',
-    security: 'Security',
-    fallback: 'Fallback Data',
-    permissions: 'Permissions'
+    analytics: '📊 Platform Analytics',
+    growth: '✨ Growth Intelligence',
+    hero: '🎬 Hero Spotlight',
+    movies: '🎞️ Movies',
+    pipeline: '📥 Pipeline',
+    payouts: '💸 Payouts',
+    categories: '📂 Categories',
+    festival: '🎪 Festival',
+    watchParty: '🍿 Watch Party',
+    about: '📄 About Page',
+    email: '✉️ Email',
+    monetization: '💰 AI Monetization',
+    security: '🛡️ Security',
+    fallback: '💾 Fallback Data',
+    permissions: '🔑 Permissions'
 };
 
 
@@ -341,7 +343,8 @@ const AdminPage: React.FC = () => {
                 {error && <div className="p-4 mb-4 text-red-300 bg-red-900/50 border border-red-700 rounded-md">{error}</div>}
 
                 <div>
-                    {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
+                    {activeTab === 'analytics' && <AnalyticsPage viewMode="full" onNavigateToGrowth={() => setActiveTab('growth')} />}
+                    {activeTab === 'growth' && <GrowthAnalyticsTab />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data, pipelineId) => handleSaveData('movies', data, pipelineId)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} movieToCreate={pipelineItemToConvert} onCreationDone={() => setPipelineItemToConvert(null)} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => { setPipelineItemToConvert(item); setActiveTab('movies'); }} onRefresh={() => fetchAllData(password)} />}

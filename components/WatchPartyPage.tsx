@@ -55,26 +55,51 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
     };
 
     return (
-        <div className="w-full h-full flex flex-col bg-gray-900 border-t-2 md:border-t-0 md:border-l-2 border-gray-700">
-            <div className="p-4 text-lg font-bold border-b border-gray-700 flex-shrink-0">
-                <h2 className="text-base">Live Chat</h2>
+        <div className="w-full h-full flex flex-col bg-[#0a0a0a] md:bg-gray-900 border-t md:border-t-0 md:border-l border-gray-800">
+            <div className="hidden md:flex p-4 text-lg font-bold border-b border-gray-700 flex-shrink-0">
+                <h2 className="text-sm uppercase tracking-widest text-gray-400">Live Chat</h2>
             </div>
-            <div className="flex-grow p-4 overflow-y-auto space-y-4">
-                {messages.map(msg => (
-                    <div key={msg.id} className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 p-1" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
-                        <div>
-                            <p className="font-bold text-sm text-white">{msg.userName}</p>
-                            <p className="text-sm text-gray-300 break-words">{msg.text}</p>
-                        </div>
+            
+            {/* Message Area */}
+            <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide">
+                {messages.length === 0 ? (
+                    <div className="h-full flex items-center justify-center text-center px-8">
+                        <p className="text-gray-600 text-sm italic">The party is quiet... say something to start the conversation!</p>
                     </div>
-                ))}
+                ) : (
+                    messages.map(msg => (
+                        <div key={msg.id} className="flex items-start gap-3 animate-[fadeIn_0.2s_ease-out]">
+                            <div className="w-8 h-8 rounded-full bg-gray-800 flex-shrink-0 p-1 border border-white/5" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
+                            <div className="min-w-0">
+                                <p className="font-black text-[11px] text-red-500 uppercase tracking-tighter">{msg.userName}</p>
+                                <p className="text-sm text-gray-200 break-words leading-snug">{msg.text}</p>
+                            </div>
+                        </div>
+                    ))
+                )}
                 <div ref={messagesEndRef} />
             </div>
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-700 flex-shrink-0">
-                <div className="flex items-center gap-2">
-                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Say something..." className="form-input flex-grow" disabled={!user || isSending} />
-                    <button type="submit" className="submit-btn !px-4" disabled={!user || isSending || !newMessage.trim()}>Send</button>
+
+            {/* Input Box - Brought "up" and styled for mobile thumb reach */}
+            <form onSubmit={handleSendMessage} className="p-3 bg-black/40 backdrop-blur-md border-t border-white/5 flex-shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <div className="flex items-center gap-2 bg-gray-800/80 rounded-full px-4 py-1.5 border border-white/10 focus-within:border-red-600/50 transition-colors">
+                    <input 
+                        type="text" 
+                        value={newMessage} 
+                        onChange={e => setNewMessage(e.target.value)} 
+                        placeholder="Type a message..." 
+                        className="bg-transparent border-none text-white text-sm w-full focus:ring-0 placeholder-gray-500 py-2" 
+                        disabled={!user || isSending} 
+                    />
+                    <button 
+                        type="submit" 
+                        className="text-red-500 hover:text-red-400 disabled:text-gray-600 p-1 transition-colors" 
+                        disabled={!user || isSending || !newMessage.trim()}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                        </svg>
+                    </button>
                 </div>
             </form>
         </div>
@@ -153,7 +178,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     if (partyState?.status === 'ended') {
         return (
-             <div className="flex flex-col min-h-screen bg-black text-white items-center justify-center text-center p-4">
+             <div className="flex flex-col min-h-[100dvh] bg-black text-white items-center justify-center text-center p-4">
                 <h1 className="text-4xl font-bold mb-4">This Watch Party has ended.</h1>
                 <p className="text-gray-400 mb-6">Thanks for joining! You can now watch the film on your own time.</p>
                 <button onClick={handleGoHome} className="submit-btn">Return to Home</button>
@@ -163,7 +188,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     if (!hasAccess) {
         return (
-            <div className="flex flex-col min-h-screen bg-black text-white relative">
+            <div className="flex flex-col min-h-[100dvh] bg-black text-white relative">
                  <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 blur-xl" />
                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent"></div>
                  
@@ -210,19 +235,37 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     if (partyState?.status === 'waiting') {
         return (
-             <div className="flex flex-col min-h-screen bg-black text-white items-center justify-center text-center p-4">
-                <h1 className="text-4xl font-bold mb-4 animate-pulse">Waiting for the host to start the party...</h1>
+             <div className="flex flex-col min-h-[100dvh] bg-black text-white items-center justify-center text-center p-4">
+                <h1 className="text-4xl font-bold mb-4 animate-pulse">Waiting for the host...</h1>
                 <p className="text-gray-400">The screening for "{movie.title}" will begin shortly.</p>
+                <div className="mt-12 flex items-center gap-3 bg-white/5 px-6 py-3 rounded-full border border-white/10">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                    <span className="text-sm font-bold uppercase tracking-widest">You are in the lobby</span>
+                </div>
             </div>
         );
     }
     
     return (
-        <div className="flex flex-col md:flex-row h-screen bg-black text-white">
-            <div className="flex-grow flex flex-col relative">
-                <button onClick={handleGoHome} className="absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 z-20" aria-label="Back to Home">
+        <div className="flex flex-col md:flex-row h-[100dvh] bg-black text-white overflow-hidden">
+            <div className="flex-grow flex flex-col relative overflow-hidden">
+                
+                {/* Header Bar - Brings player "down" and adds context */}
+                <div className="flex-shrink-0 bg-black/80 backdrop-blur-md p-3 flex items-center justify-between border-b border-white/5 md:hidden pt-[max(0.75rem,env(safe-area-inset-top))]">
+                     <button onClick={handleGoHome} className="text-gray-400 hover:text-white transition-colors" aria-label="Back to Home">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                    </button>
+                    <div className="text-center min-w-0 px-4">
+                        <p className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none mb-1">Live Watch Party</p>
+                        <h2 className="text-xs font-bold truncate text-gray-200">{movie.title}</h2>
+                    </div>
+                    <div className="w-6"></div> {/* Spacer for alignment */}
+                </div>
+
+                <button onClick={handleGoHome} className="hidden md:flex absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 z-20" aria-label="Back to Home">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                 </button>
+
                 <div className="w-full aspect-video bg-black flex-shrink-0 relative">
                     {!isVideoReady && (
                         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
@@ -242,11 +285,19 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         src={movie.fullMovie}
                         className={`w-full h-full transition-opacity duration-500 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}
                         playsInline
-                        controls={false} // Controls are handled by the host
+                        autoPlay
+                        controls={false} // Canonical state is host-controlled
                     />
                 </div>
+                
+                {/* Chat Container - flex-grow ensures it fills remaining space and handles keyboard resizing correctly */}
+                <div className="flex-grow flex flex-col md:hidden">
+                    <EmbeddedChat movieKey={movieKey} user={user} />
+                </div>
             </div>
-            <div className="w-full md:w-80 lg:w-96 flex-shrink-0 h-1/2 md:h-full">
+
+            {/* Desktop Sidebar Chat */}
+            <div className="hidden md:block w-80 lg:w-96 flex-shrink-0 h-full">
                 <EmbeddedChat movieKey={movieKey} user={user} />
             </div>
         </div>
