@@ -60,7 +60,7 @@ const ClassicsPage: React.FC = () => {
                 >
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
                     <div className="relative z-10 max-w-4xl mx-auto text-center px-4 animate-fadeInHeroContent">
-                        <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.7)' }}>The Dawn of Cinema</h1>
+                        <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.7)' }}>Vintage Visions</h1>
                         <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
                            Journey back to the beginning of film with our curated collection of silent masterpieces and avant-garde classics from the public domain.
                         </p>
@@ -85,7 +85,7 @@ const ClassicsPage: React.FC = () => {
                             ))}
                         </div>
                     ) : (
-                        <p className="text-center text-gray-500 py-16">No classic films are available at this time.</p>
+                        <p className="text-center text-gray-500 py-16">No vintage visions are available at this time.</p>
                     )}
                 </div>
             </main>

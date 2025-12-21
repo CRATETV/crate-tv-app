@@ -77,7 +77,7 @@ export const categoriesData: Record<string, Category> = {
     ]
   },
   "exploreTitles": {
-    "title": "Explore These Titles",
+    "title": "Project: Indie",
     "movieKeys": [
       "smirk",
       "intrusivethoughts"
@@ -117,12 +117,12 @@ export const categoriesData: Record<string, Category> = {
     ]
   },
   "publicDomainIndie": {
-    "title": "Public Domain Classics",
+    "title": "Vintage Visions",
     "movieKeys": [
       "atriptothemoon",
       "suspense",
       "thepawnshop",
-      "theimmigrant",
+      "the immigrant",
       "thefallofthehouseofusher",
       "unchienandalou",
       "meshesofafternoon",
@@ -643,7 +643,7 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Ajinkya Dhage",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/AJ+Photo.png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/AJ+Photo.png",
         "bio": "With a strong foundation in the Meisner technique, Ajinkya has honed his craft through years of dedicated study and practice, becoming a prominent figure in the local theater scene.",
         "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Aj+bio+photo.png"
       },
@@ -893,19 +893,19 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Joshua Daniel",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png",
         "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation."
       },
       {
-        "bio": "Bubacarr Sarge is an award winning actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
+        "bio": "Bubacarr Sarge is an actor and filmmaker. A true artist, seamlessly navigating the worlds of film and theatre. They possess a complete vision, not only acting but also writing, directing, and designing the lighting for their own self-produced works.",
         "name": "Bubacarr Sarge",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Bubacarr+Sarge.JPG"
       },
       {
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg",
         "bio": "Michelle Reale-Opalesky is a captivating actor with a remarkable range. She effortlessly inhabits diverse roles and seamlessly transitions between drama and comedy.",
         "name": "Michelle Reale-Opalesky"
       },
@@ -1265,7 +1265,7 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Ajinkya Dhage",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/AJ+Photo.png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/AJ+Photo.png",
         "bio": "With a strong foundation in the Meisner technique, Ajinkya has honed his craft through years of dedicated study and practice, becoming a prominent figure in the local theater scene.",
         "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Aj+bio+photo.png"
       }

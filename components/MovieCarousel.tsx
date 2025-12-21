@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 import { Movie, Category } from '../types';
 import { MovieCard } from './MovieCard';
@@ -33,16 +34,16 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
     return null;
   }
   
-  const carouselClasses = `flex overflow-x-auto space-x-4 pb-4 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8`;
+  const carouselClasses = `flex overflow-x-auto space-x-4 pb-8 pt-4 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8 group/carousel-list`;
 
   return (
     <div className="mb-8 md:mb-12">
       {typeof title === 'string' ? (
-        <h2 className="text-lg md:text-2xl font-bold mb-4 text-white">{title}</h2>
+        <h2 className="text-lg md:text-2xl font-bold mb-4 text-white px-2 border-l-4 border-red-600 pl-4">{title}</h2>
       ) : (
         title
       )}
-      <div className="relative group/carousel">
+      <div className="relative group/carousel-container">
         <div ref={scrollRef} className={carouselClasses}>
           {movies.map((movie, index) => {
              if (showRankings) {
@@ -64,7 +65,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
               return (
                   <div 
                       key={movie.key} 
-                      className="flex-shrink-0 w-[80vw] sm:w-[60vw] md:w-[45vw] lg:w-[35vw] cursor-pointer group ranked-card-border rounded-lg"
+                      className="flex-shrink-0 w-[80vw] sm:w-[60vw] md:w-[45vw] lg:w-[35vw] cursor-pointer group/ranked ranked-card-border rounded-lg transition-all duration-300 group-hover/carousel-list:opacity-50 hover:group-hover/carousel-list:!opacity-100 hover:group-hover/carousel-list:scale-[1.02]"
                       onClick={() => onSelectMovie(movie)}
                       style={{ '--rank-color': color } as React.CSSProperties}
                   >
@@ -72,7 +73,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                           <img 
                               src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
                               alt={movie.title}
-                              className="absolute top-0 right-0 h-full w-[55%] object-contain object-center group-hover:scale-105 transition-transform duration-300"
+                              className="absolute top-0 right-0 h-full w-[55%] object-contain object-center group-hover/ranked:scale-105 transition-transform duration-300"
                               onContextMenu={(e) => e.preventDefault()}
                               crossOrigin="anonymous"
                           />
@@ -94,7 +95,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                   </div>
               );
             } else {
-              const containerClasses = 'flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw]';
+              const containerClasses = 'flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw] transition-all duration-300 group-hover/carousel-list:opacity-50 hover:group-hover/carousel-list:!opacity-100';
               return (
                 <div key={movie.key} className={containerClasses}>
                   <MovieCard
@@ -117,20 +118,20 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
         {/* Scroll Buttons */}
         <button
           onClick={() => scroll('left')}
-          className="absolute left-0 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-3 rounded-full opacity-0 group-hover/carousel:opacity-100 transition-opacity z-20 hidden md:block"
+          className="absolute left-0 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/90 text-white p-4 rounded-full opacity-0 group-hover/carousel-container:opacity-100 transition-opacity z-20 hidden md:block backdrop-blur-md border border-white/10 ml-2"
           aria-label="Scroll left"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
         <button
           onClick={() => scroll('right')}
-          className="absolute right-0 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-3 rounded-full opacity-0 group-hover/carousel:opacity-100 transition-opacity z-20 hidden md:block"
+          className="absolute right-0 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/90 text-white p-4 rounded-full opacity-0 group-hover/carousel-container:opacity-100 transition-opacity z-20 hidden md:block backdrop-blur-md border border-white/10 mr-2"
           aria-label="Scroll right"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
           </svg>
         </button>
       </div>

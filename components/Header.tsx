@@ -32,14 +32,13 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
     const { user, logout } = useAuth();
     const [isScrolled, setIsScrolled] = useState(false);
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const handleScroll = () => {
-            setIsScrolled(window.scrollY > 10);
+            setIsScrolled(window.scrollY > 50);
         };
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
@@ -66,78 +65,86 @@ const Header: React.FC<HeaderProps> = ({
         e.preventDefault();
         window.history.pushState({}, '', path);
         window.dispatchEvent(new Event('pushstate'));
-        setIsMenuOpen(false);
         setIsProfileMenuOpen(false);
     };
 
     const handleLogout = async () => {
         await logout();
         setIsProfileMenuOpen(false);
-        // The router will handle redirecting to the landing page
     };
 
-    const headerClasses = `fixed top-0 left-0 right-0 z-40 transition-colors duration-300 ${isScrolled || isScrolledProp ? 'bg-black/80 backdrop-blur-sm' : 'bg-transparent'}`;
+    const headerClasses = `fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${isScrolled || isScrolledProp ? 'bg-black/85 backdrop-blur-xl border-b border-white/5 py-3' : 'bg-transparent py-5'}`;
     
     const navLinks = [
         { path: '/', label: 'Home' },
-        { path: '/classics', label: 'Classics' },
+        { path: '/classics', label: 'Vintage' },
         { path: '/watchlist', label: 'My List' },
     ];
     
-    const logoUrl = "https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png";
-
     return (
         <header className={headerClasses} style={{ top: topOffset }}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16">
-                    <div className="flex items-center">
-                        {showNavLinks && user && (
-                            <nav className="hidden md:block">
-                                <div className="flex items-baseline space-x-4">
-                                    {navLinks.map(link => (
-                                        <a key={link.path} href={link.path} onClick={(e) => handleNavigate(e, link.path)} className="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                                            {link.label}
-                                        </a>
-                                    ))}
-                                </div>
-                            </nav>
-                        )}
-                    </div>
+            <div className="max-w-[1800px] mx-auto px-4 md:px-12 flex items-center justify-between">
+                <div className="flex items-center gap-10">
+                    <a href="/" onClick={(e) => handleNavigate(e, '/')} className="transition-transform hover:scale-105 active:scale-95">
+                        <img 
+                          src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" 
+                          alt="Crate TV" 
+                          className="h-7 md:h-9 w-auto object-contain"
+                        />
+                    </a>
+                    {showNavLinks && user && (
+                        <nav className="hidden md:flex items-center gap-6">
+                            {navLinks.map(link => (
+                                <a key={link.path} href={link.path} onClick={(e) => handleNavigate(e, link.path)} className="text-gray-300 hover:text-white transition-colors text-sm font-medium tracking-wide">
+                                    {link.label}
+                                </a>
+                            ))}
+                        </nav>
+                    )}
+                </div>
 
-                    <div className="flex items-center gap-4">
-                        {showSearch && user && (
-                            <div className="hidden md:block">
-                                <form onSubmit={(e) => { e.preventDefault(); onSearchSubmit?.(searchQuery); }}>
-                                    <input
-                                        ref={inputRef}
-                                        type="search"
-                                        value={searchQuery}
-                                        onChange={(e) => onSearch(e.target.value)}
-                                        placeholder="Search..."
-                                        className="bg-gray-700/50 text-white placeholder-gray-400 px-3 py-1.5 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                                    />
-                                </form>
-                            </div>
-                        )}
-                        
-                        {user ? (
-                            <div className="relative" ref={profileMenuRef}>
-                                <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} className="flex items-center gap-2 rounded-full p-1 transition-colors hover:bg-gray-700/50">
-                                    <div className="w-8 h-8 rounded-full bg-gray-700 overflow-hidden" dangerouslySetInnerHTML={{ __html: avatars[user.avatar || 'fox'] }} />
-                                    <span className="text-white text-sm font-medium hidden sm:block pr-2">{user.name || user.email}</span>
-                                </button>
-                                {isProfileMenuOpen && (
-                                    <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 z-50">
-                                        <a href="/account" onClick={(e) => handleNavigate(e, '/account')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Account</a>
-                                        {(user.isActor || user.isFilmmaker) && <a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Creator Dashboard</a>}
-                                        <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign out</button>
+                <div className="flex items-center gap-6">
+                    {showSearch && user && (
+                        <div className="hidden md:block relative group">
+                            <form onSubmit={(e) => { e.preventDefault(); onSearchSubmit?.(searchQuery); }}>
+                                <input
+                                    ref={inputRef}
+                                    type="search"
+                                    value={searchQuery}
+                                    onChange={(e) => onSearch(e.target.value)}
+                                    placeholder="Titles, people, genres"
+                                    className="bg-black/40 border border-white/20 text-white placeholder-gray-400 px-4 py-1.5 pl-10 rounded-full text-xs w-48 focus:w-64 focus:border-red-500/50 focus:bg-black/60 focus:outline-none transition-all duration-300"
+                                />
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </form>
+                        </div>
+                    )}
+                    
+                    {user ? (
+                        <div className="relative" ref={profileMenuRef}>
+                            <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} className="flex items-center gap-3 transition-opacity hover:opacity-80">
+                                <div className="w-8 h-8 rounded-md bg-gradient-to-br from-red-600 to-purple-700 overflow-hidden border border-white/10" dangerouslySetInnerHTML={{ __html: avatars[user.avatar || 'fox'] }} />
+                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-gray-400 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            {isProfileMenuOpen && (
+                                <div className="origin-top-right absolute right-0 mt-3 w-52 rounded-md shadow-2xl py-2 bg-black border border-white/10 ring-1 ring-black ring-opacity-5 z-50 animate-[fadeIn_0.2s_ease-out]">
+                                    <div className="px-4 py-2 border-b border-white/10 mb-2">
+                                        <p className="text-xs text-gray-500">Logged in as</p>
+                                        <p className="text-sm font-bold text-white truncate">{user.name || user.email}</p>
                                     </div>
-                                )}
-                            </div>
-                        ) : onSignInClick && (
-                            <button onClick={onSignInClick} className="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-4 rounded-md text-sm">Sign In</button>
-                        )}
-                    </div>
+                                    <a href="/account" onClick={(e) => handleNavigate(e, '/account')} className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors">Account</a>
+                                    {(user.isActor || user.isFilmmaker) && <a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors">Creator Dashboard</a>}
+                                    <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors">Sign out</button>
+                                </div>
+                            )}
+                        </div>
+                    ) : onSignInClick && (
+                        <button onClick={onSignInClick} className="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-5 rounded text-sm transition-transform active:scale-95">Sign In</button>
+                    )}
                 </div>
             </div>
         </header>

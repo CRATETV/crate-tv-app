@@ -283,7 +283,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                     <button onClick={onSubscribe} className="flex items-center justify-center px-4 py-2 bg-yellow-500 text-black font-bold rounded-md hover:bg-yellow-400 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                         Join Premium to Watch
-                    </button>
+                  </button>
                   ) : movie.fullMovie ? (
                     <button onClick={handlePlayButtonClick} className="flex items-center justify-center px-4 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
