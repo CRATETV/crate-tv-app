@@ -26,6 +26,8 @@ export interface Movie {
   hasCopyrightMusic?: boolean;
   isWatchPartyEnabled?: boolean;
   watchPartyStartTime?: string;
+  isWatchPartyPaid?: boolean; // New: Toggle for paid parties
+  watchPartyPrice?: number;   // New: Ticket price in USD
   isForSale?: boolean;
   salePrice?: number;
   mainPageExpiry?: string;
@@ -91,6 +93,7 @@ export interface User {
   hasFestivalAllAccess?: boolean;
   unlockedBlockIds?: string[];
   purchasedMovieKeys?: string[];
+  unlockedWatchPartyKeys?: string[]; // New: Track paid tickets
   rokuDeviceId?: string;
   actorProfileSlug?: string;
 }
@@ -130,7 +133,6 @@ export interface ActorProfile {
     imdbUrl: string;
 }
 
-// FIX: Added missing ActorPost interface.
 export interface ActorPost {
     id: string;
     actorName: string;

@@ -22,6 +22,15 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // A film is "New" if it was released in the last 14 days
+  const isNew = React.useMemo(() => {
+    if (!movie.releaseDateTime) return false;
+    const release = new Date(movie.releaseDateTime);
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    return release > fourteenDaysAgo && release <= new Date();
+  }, [movie.releaseDateTime]);
+
   const handleToggleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsAnimatingLike(true);
@@ -47,16 +56,21 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
   };
 
   const handleMouseLeave = () => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     setShowPreview(false);
   };
 
+  const handleMetadataLoaded = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const video = e.currentTarget;
+    // Jumps to 1 minute in to skip silent logos, or 30% of the film if it's very short.
+    // This ensures the user sees actual content rather than production titles.
+    if (video.duration > 0) {
+        video.currentTime = Math.min(60, video.duration * 0.3);
+    }
+  };
+
   useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-    };
+    return () => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); };
   }, []);
 
   const videoSrc = movie.trailer || movie.fullMovie;
@@ -88,7 +102,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
         className={`w-full h-full object-cover transition-opacity duration-500 ${isImageLoaded ? 'opacity-100' : 'opacity-0'} ${showPreview ? 'opacity-0' : 'opacity-100'}`}
         loading="lazy"
         onLoad={() => setIsImageLoaded(true)}
-        onContextMenu={(e) => e.preventDefault()}
         crossOrigin="anonymous"
       />
       
@@ -101,25 +114,27 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
                 muted
                 loop
                 playsInline
+                onLoadedMetadata={handleMetadataLoaded}
                 className="w-full h-full object-cover"
-                onContextMenu={(e) => e.preventDefault()}
             />
-            <div className="absolute bottom-2 right-2 bg-black/60 p-1 rounded-full pointer-events-none backdrop-blur-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white/80" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-            </div>
         </div>
       )}
       
-      {isComingSoon && (
-        <div className="absolute top-2 left-2 bg-purple-600/90 text-white text-[10px] font-black tracking-tighter px-1.5 py-0.5 rounded shadow-lg z-10 uppercase">
-          Coming Soon
-        </div>
-      )}
+      <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+          {isNew && (
+            <div className="bg-red-600 text-white text-[10px] font-black tracking-tighter px-1.5 py-0.5 rounded shadow-lg uppercase">
+              New
+            </div>
+          )}
+          {isComingSoon && (
+            <div className="bg-purple-600/90 text-white text-[10px] font-black tracking-tighter px-1.5 py-0.5 rounded shadow-lg uppercase">
+              Coming Soon
+            </div>
+          )}
+      </div>
 
       {isWatched && (
-        <div className="absolute top-2 right-2 bg-red-600/90 text-white text-[10px] font-black tracking-tighter px-1.5 py-0.5 rounded shadow-lg z-10 uppercase">
+        <div className="absolute top-2 right-2 bg-white/20 backdrop-blur-md text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10">
           Watched
         </div>
       )}
@@ -151,13 +166,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
                     </button>
                 )}
             </div>
-            {!isComingSoon && onSupportMovie && !movie.hasCopyrightMusic && (
-                <button onClick={handleSupport} className="p-1.5 rounded-full bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/30 text-purple-200 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" />
-                    </svg>
-                </button>
-            )}
          </div>
       </div>
     </div>

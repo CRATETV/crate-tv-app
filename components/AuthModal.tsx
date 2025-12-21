@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,6 +9,7 @@ interface AuthModalProps {
 
 const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
     const [isLoginView, setIsLoginView] = useState(initialView === 'login');
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -40,9 +42,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
             if (isLoginView) {
                 await signIn(email, password);
             } else {
-                await signUp(email, password);
-                // After signup, onAuthStateChanged handles the login automatically.
-                // We no longer need to show a message and switch the view.
+                if (!name.trim()) throw new Error("Full name is required.");
+                await signUp(email, password, name.trim());
             }
             // On successful login or signup, the AuthProvider handles the state change. We just close the modal.
             onClose();
@@ -68,12 +69,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
         try {
             await sendPasswordReset(email);
             setSuccessMessage("Password reset email sent! Check your inbox.");
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to send reset email.');
+        } catch (err: any) {
+            setError(err.message || 'Failed to send reset email.');
         } finally {
             setIsLoading(false);
         }
     };
+
+    const inputClasses = "w-full p-4 bg-black/60 backdrop-blur-xl border border-white/20 rounded-md text-white focus:outline-none focus:border-red-600 transition-all";
 
     return (
         <div 
@@ -81,10 +84,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
             onClick={onClose}
         >
             <div 
-                className="bg-black/80 border border-gray-700 rounded-lg shadow-xl w-full max-w-md relative" 
+                className="bg-[#181818] border border-gray-700 rounded-lg shadow-xl w-full max-w-md relative overflow-hidden" 
                 onClick={(e) => e.stopPropagation()}
             >
-                <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-white z-10">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white z-10 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -92,17 +95,27 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
                 
                 <div className="p-8">
                     <h1 className="text-3xl font-bold mb-2 text-white">{isLoginView ? 'Sign In' : 'Join for Free'}</h1>
-                    {!isLoginView && <p className="text-gray-400 mb-6 text-sm">Create a free account to start watching. No credit card required.</p>}
-                    {isLoginView && <p className="text-gray-400 mb-6 text-sm">Welcome back!</p>}
+                    {!isLoginView && <p className="text-gray-400 mb-6 text-sm">Create a free account to start watching. Supported by the community.</p>}
+                    {isLoginView && <p className="text-gray-400 mb-6 text-sm">Welcome back to Crate TV!</p>}
 
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {!isLoginView && (
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Full Name"
+                                required
+                                className={inputClasses}
+                            />
+                        )}
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="Email"
+                            placeholder="Email address"
                             required
-                            className="form-input"
+                            className={inputClasses}
                         />
                         <div className="relative">
                             <input
@@ -111,7 +124,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="Password"
                                 required
-                                className="form-input pr-10"
+                                className={`${inputClasses} pr-12`}
                             />
                              <button
                                 type="button"
@@ -128,15 +141,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
                         </div>
                         {error && <p className="text-red-500 text-sm pt-1">{error}</p>}
                         {successMessage && <p className="text-green-500 text-sm pt-1">{successMessage}</p>}
-                        <button type="submit" disabled={isLoading} className="submit-btn w-full !mt-6">
-                            {isLoading ? 'Processing...' : (isLoginView ? 'Sign In' : 'Create Free Account')}
+                        <button type="submit" disabled={isLoading} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-md transition-all transform hover:scale-[1.02] active:scale-95 disabled:bg-gray-600 !mt-6 shadow-lg">
+                            {isLoading ? 'Processing...' : (isLoginView ? 'Sign In' : 'Join for Free')}
                         </button>
                     </form>
-                    <div className="mt-4 text-center text-gray-400">
+                    <div className="mt-6 text-center text-gray-400">
                         {isLoginView ? (
                             <>
                                 <p>New to Crate TV? <button onClick={() => { setIsLoginView(false); setError(''); }} className="text-white font-bold hover:underline">Join for Free.</button></p>
-                                <button onClick={handlePasswordReset} className="text-sm mt-2 hover:underline">Forgot password?</button>
+                                <button onClick={handlePasswordReset} className="text-sm mt-3 hover:underline">Forgot password?</button>
                             </>
                         ) : (
                             <p>Already have an account? <button onClick={() => { setIsLoginView(true); setError(''); }} className="text-white font-bold hover:underline">Sign in.</button></p>

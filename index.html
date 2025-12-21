@@ -4,36 +4,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Crate TV | Stream Independent & Short Films</title>
+    <title>Crate TV | The Home of Independent Cinema</title>
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Discover your next favorite indie film on Crate TV. A streaming service dedicated to short films, emerging filmmakers, and the vibrant Philadelphia film scene. An alternative to mainstream platforms for unique, curated cinema." />
-    <meta name="keywords" content="independent films, short films, indie film streaming, Philadelphia film scene, emerging filmmakers, film festival, alternative to netflix, indie movies, arthouse films, Crate TV, watch indie films online" />
+    <meta name="description" content="Stream the best independent short films, features, and documentaries. Crate TV is the premier platform for emerging filmmakers and authentic storytelling." />
+    <meta name="keywords" content="independent films, short films, indie film streaming, Philadelphia film scene, emerging filmmakers, watch indie movies" />
     <link rel="canonical" href="https://cratetv.net" />
-    <meta name="theme-color" content="#141414">
+    <meta name="theme-color" content="#e50914">
 
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph / Facebook (Crucial for Social Traffic) -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://cratetv.net" />
-    <meta property="og:title" content="Crate TV | Stream Independent & Short Films" />
-    <meta property="og:description" content="A streaming service dedicated to short films, emerging filmmakers, and the vibrant Philadelphia film scene. An alternative to mainstream platforms for unique, curated cinema." />
+    <meta property="og:title" content="Crate TV | Stream Independent Cinema" />
+    <meta property="og:description" content="Discover hidden gems from the world's most talented independent filmmakers. High-quality indie films, available anywhere." />
     <meta property="og:image" content="https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless%20poster%20remake.jpg" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://cratetv.net" />
-    <meta name="twitter:title" content="Crate TV | Stream Independent & Short Films" />
-    <meta name="twitter:description" content="A streaming service dedicated to short films, emerging filmmakers, and the vibrant Philadelphia film scene. An alternative to mainstream platforms for unique, curated cinema." />
+    <meta name="twitter:title" content="Crate TV | Independent Film Streaming" />
+    <meta name="twitter:description" content="Authentic stories. Emerging voices. Stream the best of indie cinema on Crate TV." />
     <meta name="twitter:image" content="https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless%20poster%20remake.jpg" />
 
     <!-- Favicon and Manifest -->
     <link rel="apple-touch-icon" sizes="180x180" href="https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon-16x16.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon-96x96.png">
-    <link rel="icon" type="image/svg+xml" href="https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon.svg">
     <link rel="manifest" href="/manifest.json">
-    <link rel="shortcut icon" href="https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon.ico">
 
     <!-- Fonts and Styles -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,138 +37,72 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      html {
-        scroll-behavior: smooth;
-      }
+      html { scroll-behavior: smooth; }
       body {
         font-family: 'Inter', sans-serif;
         background-color: #080808;
-        /* Cinematic Vignette Background */
         background-image: radial-gradient(circle at 50% -20%, #1a1a1a 0%, #080808 80%);
         background-attachment: fixed;
         min-height: 100vh;
         color: #e5e5e5;
       }
       
-      /* Ken Burns Effect */
       @keyframes ken-burns {
         0% { transform: scale(1); }
         100% { transform: scale(1.15); }
       }
-      .animate-ken-burns {
-        animation: ken-burns 25s ease-out forwards;
-      }
+      .animate-ken-burns { animation: ken-burns 25s ease-out forwards; }
 
-      /* Heading Polish */
-      h1, h2, h3 {
-        letter-spacing: -0.02em;
-      }
-
-      /* Card Hover Glow */
       .movie-card-glow:hover {
-        box-shadow: 0 0 20px 2px rgba(229, 9, 20, 0.2);
+        box-shadow: 0 0 25px 3px rgba(229, 9, 20, 0.2);
       }
 
-      .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-      }
-      .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
+      .scrollbar-hide::-webkit-scrollbar { display: none; }
+      .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
       
-      @keyframes shimmer {
-        100% {
-          transform: translateX(100%);
-        }
-      }
-      .shimmer-bg {
-        position: relative;
-        overflow: hidden;
-        background-color: #1a1a1a;
-      }
       .shimmer-bg::after {
         content: '';
         position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
+        top: 0; right: 0; bottom: 0; left: 0;
         transform: translateX(-100%);
         background-image: linear-gradient(90deg, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, 0.03) 20%, rgba(255, 255, 255, 0.08) 60%, rgba(255, 255, 255, 0));
         animation: shimmer 2s infinite;
       }
+      @keyframes shimmer { 100% { transform: translateX(100%); } }
 
       .hero-gradient-overlay {
         background: linear-gradient(to top, #080808 0%, rgba(8, 8, 8, 0.8) 15%, transparent 50%, rgba(0, 0, 0, 0.4) 100%);
       }
     </style>
-
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "Crate TV",
-      "url": "https://cratetv.net",
-      "description": "Welcome to Crate TV, your home for fresh independent content. Explore the vibrant Philadelphia film scene, discover original movies from Playhouse West, and stream unique voices in indie film.",
-      "publisher": {
-        "@type": "Organization",
-        "name": "Crate TV",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon-32x32.png"
-        }
-      }
-    }
-    </script>
-    <script>
-      (function() {
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
-        var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        script.src = isLocal 
-          ? 'https://sandbox.web.squarecdn.com/v1/square.js' 
-          : 'https://web.squarecdn.com/v1/square.js';
-        document.head.appendChild(script);
-      })();
-    </script>
-    <script src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"></script>
-    <script type="importmap">
+  <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@18.3.1",
-    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
-    "@google/genai": "https://esm.sh/@google/genai@0.15.0",
-    "resend": "https://esm.sh/resend@3.5.0",
-    "jszip": "https://esm.sh/jszip@3.10.1",
-    "@aws-sdk/client-s3": "https://esm.sh/@aws-sdk/client-s3@3.886.0",
-    "@aws-sdk/s3-request-presigner": "https://esm.sh/s3-request-presigner@3.886.0",
-    "firebase/app": "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js",
-    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js",
-    "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js",
-    "crypto": "https://esm.sh/crypto-browserify@3.12.0",
-    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
-    "@vercel/analytics": "https://esm.sh/@vercel/analytics@1.3.1",
+    "react": "https://esm.sh/react@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "vite": "https://esm.sh/vite@^7.3.0",
     "react/": "https://esm.sh/react@^19.2.3/",
-    "firebase/": "https://esm.sh/firebase@^12.7.0/",
-    "process": "https://esm.sh/process@^0.11.10",
-    "buffer": "https://esm.sh/buffer@^6.0.3",
-    "path": "https://esm.sh/path@^0.12.7",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
     "firebase-admin/": "https://esm.sh/firebase-admin@^13.6.0/",
+    "fs": "https://esm.sh/fs@^0.0.1-security",
+    "path": "https://esm.sh/path@^0.12.7",
+    "buffer": "https://esm.sh/buffer@^6.0.3",
+    "firebase/": "https://esm.sh/firebase@^12.7.0/",
     "fs/": "https://esm.sh/fs@^0.0.1-security/",
-    "fs": "https://esm.sh/fs@^0.0.1-security"
+    "process": "https://esm.sh/process@^0.11.10",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "crypto": "https://esm.sh/crypto@^1.0.1",
+    "jszip": "https://esm.sh/jszip@^3.10.1",
+    "@vercel/analytics": "https://esm.sh/@vercel/analytics@^1.6.1",
+    "resend": "https://esm.sh/resend@^6.6.0",
+    "html2canvas": "https://esm.sh/html2canvas@^1.4.1",
+    "@aws-sdk/client-s3": "https://esm.sh/@aws-sdk/client-s3@^3.956.0",
+    "@aws-sdk/s3-request-presigner": "https://esm.sh/@aws-sdk/s3-request-presigner@^3.956.0"
   }
 }
 </script>
-  <link rel="stylesheet" href="/index.css">
+<link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>

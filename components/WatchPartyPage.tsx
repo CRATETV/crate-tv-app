@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,6 +7,7 @@ import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
+import SquarePaymentModal from './SquarePaymentModal';
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -81,13 +83,16 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
 
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user } = useAuth();
+    const { user, unlockedWatchPartyKeys, unlockWatchParty } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading } = useFestival();
     const movie = allMovies[movieKey];
     
     const videoRef = useRef<HTMLVideoElement>(null);
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [isVideoReady, setIsVideoReady] = useState(false);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+
+    const hasAccess = !movie?.isWatchPartyPaid || unlockedWatchPartyKeys.has(movieKey);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -102,6 +107,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [movieKey]);
     
     useEffect(() => {
+        if (!hasAccess) return;
         const video = videoRef.current;
         if (!video) return;
 
@@ -113,9 +119,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 video.removeEventListener('canplay', handleCanPlay);
             }
         };
-    }, []);
+    }, [hasAccess]);
 
     useEffect(() => {
+        if (!hasAccess) return;
         const video = videoRef.current;
         if (!video || !partyState) return;
 
@@ -128,11 +135,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (Math.abs(video.currentTime - partyState.currentTime) > 5) {
             video.currentTime = partyState.currentTime;
         }
-    }, [partyState]);
+    }, [partyState, hasAccess]);
 
     const handleGoHome = () => {
         window.history.pushState({}, '', '/');
         window.dispatchEvent(new Event('pushstate'));
+    };
+
+    const handlePaymentSuccess = async () => {
+        setIsPaymentModalOpen(false);
+        await unlockWatchParty(movieKey);
     };
 
     if (isFestivalLoading || !movie) {
@@ -145,6 +157,53 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 <h1 className="text-4xl font-bold mb-4">This Watch Party has ended.</h1>
                 <p className="text-gray-400 mb-6">Thanks for joining! You can now watch the film on your own time.</p>
                 <button onClick={handleGoHome} className="submit-btn">Return to Home</button>
+            </div>
+        );
+    }
+
+    if (!hasAccess) {
+        return (
+            <div className="flex flex-col min-h-screen bg-black text-white relative">
+                 <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 blur-xl" />
+                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent"></div>
+                 
+                 <button onClick={handleGoHome} className="absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 z-20" aria-label="Back to Home">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                </button>
+
+                 <main className="relative z-10 flex-grow flex items-center justify-center p-4">
+                    <div className="max-w-md w-full bg-gray-900/50 backdrop-blur-md border border-white/10 rounded-2xl p-8 text-center shadow-2xl">
+                        <div className="flex justify-center mb-6">
+                            <div className="w-20 h-20 bg-purple-600/20 rounded-full flex items-center justify-center border-2 border-purple-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <h2 className="text-2xl font-bold mb-2">Watch Party Ticket Required</h2>
+                        <p className="text-gray-400 mb-6">This is an exclusive community event for "{movie.title}". Purchase your ticket to join the live screening and chat.</p>
+                        
+                        <div className="bg-white/5 rounded-lg p-4 mb-8">
+                            <p className="text-sm text-gray-400 uppercase tracking-widest font-bold mb-1">Ticket Price</p>
+                            <p className="text-4xl font-black text-white">${movie.watchPartyPrice?.toFixed(2) || '0.00'}</p>
+                        </div>
+
+                        <button 
+                            onClick={() => setIsPaymentModalOpen(true)}
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-xl text-lg transition-transform active:scale-95 shadow-lg"
+                        >
+                            Buy Ticket
+                        </button>
+                    </div>
+                 </main>
+                 {isPaymentModalOpen && (
+                    <SquarePaymentModal
+                        paymentType="watchPartyTicket"
+                        movie={movie}
+                        onClose={() => setIsPaymentModalOpen(false)}
+                        onPaymentSuccess={handlePaymentSuccess}
+                    />
+                 )}
             </div>
         );
     }

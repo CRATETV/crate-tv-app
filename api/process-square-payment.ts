@@ -1,3 +1,4 @@
+
 import { randomUUID } from 'crypto';
 import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -6,7 +7,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
 
-// Server-side price map in cents for security.
+// Server-side base price map (can be overridden by client for specific types like tickets)
 const priceMap: Record<string, number> = {
   subscription: 499,
   pass: 5000,
@@ -49,10 +50,18 @@ export async function POST(request: Request) {
     let amountInCents: number;
     let note: string;
 
-    if (paymentType === 'donation' || paymentType === 'billSavingsDeposit') {
+    // Use dynamic amount if provided (for tickets/donations/deposits)
+    if (['donation', 'billSavingsDeposit', 'watchPartyTicket'].includes(paymentType)) {
         amountInCents = Math.round(Number(amount) * 100);
         if (amountInCents < 100) throw new Error("Amount must be at least $1.00.");
-        note = paymentType === 'donation' ? `Support for film: "${movieTitle}" by ${directorName}` : 'Deposit to Crate TV Bill Savings Pot';
+        
+        if (paymentType === 'donation') {
+            note = `Support for film: "${movieTitle}" by ${directorName}`;
+        } else if (paymentType === 'watchPartyTicket') {
+            note = `Watch Party Ticket: "${movieTitle}"`;
+        } else {
+            note = 'Deposit to Crate TV Bill Savings Pot';
+        }
     } else if (priceMap[paymentType]) {
         amountInCents = priceMap[paymentType];
         switch(paymentType) {
@@ -111,10 +120,6 @@ export async function POST(request: Request) {
             }
         }
         throw new Error(errorMessage);
-    }
-    
-    if (response.ok && paymentType === 'donation' && email) {
-        // (email sending logic)
     }
 
     return new Response(JSON.stringify({ success: true, payment: data.payment }), {

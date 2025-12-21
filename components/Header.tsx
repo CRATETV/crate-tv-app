@@ -85,13 +85,7 @@ const Header: React.FC<HeaderProps> = ({
         <header className={headerClasses} style={{ top: topOffset }}>
             <div className="max-w-[1800px] mx-auto px-4 md:px-12 flex items-center justify-between">
                 <div className="flex items-center gap-10">
-                    <a href="/" onClick={(e) => handleNavigate(e, '/')} className="transition-transform hover:scale-105 active:scale-95">
-                        <img 
-                          src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" 
-                          alt="Crate TV" 
-                          className="h-7 md:h-9 w-auto object-contain"
-                        />
-                    </a>
+                    {/* Logo intentionally removed for cinematic focus */}
                     {showNavLinks && user && (
                         <nav className="hidden md:flex items-center gap-6">
                             {navLinks.map(link => (
@@ -143,7 +137,7 @@ const Header: React.FC<HeaderProps> = ({
                             )}
                         </div>
                     ) : onSignInClick && (
-                        <button onClick={onSignInClick} className="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-5 rounded text-sm transition-transform active:scale-95">Sign In</button>
+                        <button onClick={onSignInClick} className="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-5 rounded text-sm transition-transform active:scale-95 shadow-lg">Sign In</button>
                     )}
                 </div>
             </div>

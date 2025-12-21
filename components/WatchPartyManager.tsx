@@ -1,11 +1,9 @@
 
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import { useAuth } from '../contexts/AuthContext';
-// FIX: Corrected import path for avatars
 import { avatars } from './avatars';
 
 // --- HELPER FUNCTIONS ---
@@ -213,6 +211,14 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
         onChange({ isWatchPartyEnabled: e.target.checked });
     };
 
+    const handlePaidToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onChange({ isWatchPartyPaid: e.target.checked });
+    };
+
+    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onChange({ watchPartyPrice: parseFloat(e.target.value) || 0 });
+    };
+
     const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         // Convert the local datetime-local string to a UTC ISO string before saving
         if (e.target.value) {
@@ -238,6 +244,27 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
                     <input type="checkbox" checked={movie.isWatchPartyEnabled || false} onChange={handleToggle} className="sr-only peer" />
                     <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-pink-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
                 </label>
+            </td>
+            <td className="p-3">
+                <div className="flex items-center gap-3">
+                    <label className="relative inline-flex items-center cursor-pointer" title="Make this a paid event">
+                        <input type="checkbox" checked={movie.isWatchPartyPaid || false} onChange={handlePaidToggle} className="sr-only peer" />
+                        <div className="w-9 h-5 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-green-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
+                    </label>
+                    {movie.isWatchPartyPaid && (
+                        <div className="relative">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                            <input
+                                type="number"
+                                value={movie.watchPartyPrice || 0}
+                                onChange={handlePriceChange}
+                                className="form-input !py-1 !pl-5 text-xs w-20"
+                                step="0.01"
+                                min="0"
+                            />
+                        </div>
+                    )}
+                </div>
             </td>
             <td className="p-3">
                 <input
@@ -408,6 +435,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                                 <th className="p-3">Film Title</th>
                                 <th className="p-3">Status</th>
                                 <th className="p-3">Enabled</th>
+                                <th className="p-3">Paid Event</th>
                                 <th className="p-3">Start Time</th>
                             </tr>
                         </thead>

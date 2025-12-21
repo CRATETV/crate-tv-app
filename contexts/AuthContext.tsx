@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { 
     initializeFirebaseAuth, 
@@ -14,7 +15,7 @@ interface AuthContextType {
     authInitialized: boolean;
     claimsLoaded: boolean;
     signIn: (email: string, password: string) => Promise<void>;
-    signUp: (email: string, password: string) => Promise<void>;
+    signUp: (email: string, password: string, name: string) => Promise<void>;
     logout: () => Promise<void>;
     sendPasswordReset: (email: string) => Promise<void>;
     setAvatar: (avatarId: string) => Promise<void>;
@@ -30,9 +31,11 @@ interface AuthContextType {
     hasFestivalAllAccess: boolean;
     unlockedFestivalBlockIds: Set<string>;
     purchasedMovieKeys: Set<string>;
+    unlockedWatchPartyKeys: Set<string>;
     unlockFestivalBlock: (blockId: string) => Promise<void>;
     grantFestivalAllAccess: () => Promise<void>;
     purchaseMovie: (movieKey: string) => Promise<void>;
+    unlockWatchParty: (movieKey: string) => Promise<void>;
     subscribe: () => Promise<void>; // For premium
 }
 
@@ -118,11 +121,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await auth.signInWithEmailAndPassword(email, password);
     };
 
-    const signUp = async (email: string, password: string) => {
+    const signUp = async (email: string, password: string, name: string) => {
         const auth = getAuthInstance();
         if (!auth) throw new Error("Authentication service is not available.");
-        await auth.createUserWithEmailAndPassword(email, password);
-        // onAuthStateChanged will handle profile creation.
+        const result = await auth.createUserWithEmailAndPassword(email, password);
+        if (result.user) {
+            // Immediately create the profile with the provided name
+            await createUserProfile(result.user.uid, email, name);
+        }
     };
     
     const logout = async () => {
@@ -219,6 +225,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const hasFestivalAllAccess = user?.hasFestivalAllAccess || false;
     const unlockedFestivalBlockIds = useMemo(() => new Set(user?.unlockedBlockIds || []), [user]);
     const purchasedMovieKeys = useMemo(() => new Set(user?.purchasedMovieKeys || []), [user]);
+    const unlockedWatchPartyKeys = useMemo(() => new Set(user?.unlockedWatchPartyKeys || []), [user]);
 
     const unlockFestivalBlock = async (blockId: string) => {
         if (!user || unlockedFestivalBlockIds.has(blockId)) return;
@@ -238,6 +245,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newPurchased = [...(user.purchasedMovieKeys || []), movieKey];
         await updateUserProfile(user.uid, { purchasedMovieKeys: newPurchased });
         setUser(currentUser => currentUser ? ({ ...currentUser, purchasedMovieKeys: newPurchased }) : null);
+    };
+
+    const unlockWatchParty = async (movieKey: string) => {
+        if (!user || unlockedWatchPartyKeys.has(movieKey)) return;
+        const newUnlocked = [...(user.unlockedWatchPartyKeys || []), movieKey];
+        await updateUserProfile(user.uid, { unlockedWatchPartyKeys: newUnlocked });
+        setUser(currentUser => currentUser ? ({ ...currentUser, unlockedWatchPartyKeys: newUnlocked }) : null);
     };
 
     const subscribe = async () => {
@@ -274,9 +288,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         hasFestivalAllAccess,
         unlockedFestivalBlockIds,
         purchasedMovieKeys,
+        unlockedWatchPartyKeys,
         unlockFestivalBlock,
         grantFestivalAllAccess,
         purchaseMovie,
+        unlockWatchParty,
         subscribe
     };
 

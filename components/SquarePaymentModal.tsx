@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie, FilmBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,7 +8,7 @@ declare const Square: any; // Allow use of Square global from the SDK script
 interface SquarePaymentModalProps {
     movie?: Movie;
     block?: FilmBlock;
-    paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'movie' | 'billSavingsDeposit';
+    paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'movie' | 'billSavingsDeposit' | 'watchPartyTicket';
     onClose: () => void;
     onPaymentSuccess: (details: { paymentType: SquarePaymentModalProps['paymentType'], itemId?: string, amount: number, email?: string }) => void;
 }
@@ -31,6 +32,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                 return { amount: 10.00, title: `Block: ${block?.title}`, description: `Access all films in the "${block?.title}" block.` };
             case 'movie':
                  return { amount: movie?.salePrice || 5.00, title: `Film: ${movie?.title}`, description: 'Permanently own this film to watch anytime.' };
+            case 'watchPartyTicket':
+                 return { amount: movie?.watchPartyPrice || 5.00, title: `Watch Party Ticket`, description: `Live Screening: "${movie?.title}"` };
             case 'subscription':
                 return { amount: 4.99, title: 'Crate TV Premium', description: 'Unlock exclusive films and features.' };
             case 'donation':
@@ -149,7 +152,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                 sourceId: result.token,
                 paymentType: paymentType,
                 amount: paymentDetails.amount,
-                itemId: paymentType === 'block' ? block?.id : (paymentType === 'movie' || paymentType === 'donation' ? movie?.key : undefined),
+                itemId: paymentType === 'block' ? block?.id : (paymentType === 'movie' || paymentType === 'donation' || paymentType === 'watchPartyTicket' ? movie?.key : undefined),
                 blockTitle: block?.title,
                 movieTitle: movie?.title,
                 directorName: movie?.director,
@@ -227,7 +230,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                         <button
                             onClick={handlePayment}
                             disabled={status === 'loading' || status === 'processing'}
-                            className="w-full submit-btn bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed"
+                            className="w-full submit-btn bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white"
                         >
                             {status === 'loading' ? 'Loading...' : status === 'processing' ? 'Processing...' : `Pay ${paymentDetails.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`}
                         </button>
