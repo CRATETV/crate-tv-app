@@ -10,8 +10,8 @@ import SearchOverlay from './components/SearchOverlay';
 // FIX: Corrected import path
 import { Movie, Actor, Category } from './types';
 import { isMovieReleased } from './constants';
-import { useAuth } from '../contexts/AuthContext';
-import { useFestival } from '../contexts/FestivalContext';
+import { useAuth } from './contexts/AuthContext';
+import { useFestival } from './contexts/FestivalContext';
 import FestivalHero from './components/FestivalHero';
 import NowStreamingBanner from './components/NowPlayingBanner';
 import BackToTopButton from './components/BackToTopButton';
@@ -50,7 +50,7 @@ const App: React.FC = () => {
         
         if (featuredCategory?.movieKeys && featuredCategory.movieKeys.length > 0) {
             spotlightMovies = featuredCategory.movieKeys
-                .map(key => movies[key])
+                .map((key: string) => movies[key])
                 .filter((m): m is Movie => !!m && isMovieReleased(m));
         }
         
@@ -99,13 +99,13 @@ const App: React.FC = () => {
     }, [searchQuery, movies]);
     
     // Watched/Liked/Watchlist sets for quick lookups
-    const likedMovies = useMemo(() => new Set(likedMoviesArray), [likedMoviesArray]);
-    const watchlist = useMemo(() => new Set(watchlistArray), [watchlistArray]);
-    const watchedMovies = useMemo(() => new Set(watchedMoviesArray), [watchedMoviesArray]);
+    const likedMovies = useMemo<Set<string>>(() => new Set(likedMoviesArray), [likedMoviesArray]);
+    const watchlist = useMemo<Set<string>>(() => new Set(watchlistArray), [watchlistArray]);
+    const watchedMovies = useMemo<Set<string>>(() => new Set(watchedMoviesArray), [watchedMoviesArray]);
 
     const watchlistMovies = useMemo(() => {
         return (watchlistArray || [])
-            .map(key => movies[key])
+            .map((key: string) => movies[key])
             .filter((m): m is Movie => !!m)
             .reverse(); // Show most recently added first
     }, [movies, watchlistArray]);

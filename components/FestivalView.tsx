@@ -41,7 +41,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
     setIsPaymentModalOpen(true);
   };
   
-  const handlePaymentSuccess = async (details: { paymentType: 'pass' | 'block' | 'subscription' | 'donation' | 'movie' | 'billSavingsDeposit', itemId?: string, amount: number, email?: string }) => {
+  const handlePaymentSuccess = async (details: { paymentType: "subscription" | "pass" | "block" | "movie" | "donation" | "billSavingsDeposit" | "watchPartyTicket"; itemId?: string; amount: number; email?: string; }) => {
     try {
         if (details.paymentType === 'pass') {
             await grantFestivalAllAccess();
@@ -52,7 +52,6 @@ const FestivalView: React.FC<FestivalViewProps> = ({
         }
     } catch (error) {
         console.error("Failed to save purchase to user profile:", error);
-        // Optionally show an error message to the user here
         alert("There was a problem saving your purchase. Please try refreshing the page. If the problem persists, contact support.");
     }
   };
@@ -161,7 +160,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
             block={paymentItem.block}
             movie={paymentItem.movie}
             onClose={() => setIsPaymentModalOpen(false)}
-            onPaymentSuccess={handlePaymentSuccess}
+            onPaymentSuccess={handlePaymentSuccess as any}
         />
        )}
     </div>
