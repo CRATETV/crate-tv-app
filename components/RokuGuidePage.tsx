@@ -35,7 +35,7 @@ const RokuGuidePage: React.FC = () => {
                      <div className="text-center mb-16 animate-[fadeIn_0.8s_ease-out]">
                         <div className="flex justify-center mb-6">
                             <div className="bg-purple-600/10 p-6 rounded-3xl border border-purple-500/30">
-                                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/roku+logo+.webp" alt="Roku Logo" className="w-40 h-auto" />
+                                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/ruko+logo+.webp" alt="Roku Logo" className="w-40 h-auto" />
                             </div>
                         </div>
                         <h1 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-tight">Watch Crate TV on the Big Screen</h1>

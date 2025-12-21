@@ -78,7 +78,7 @@ const Header: React.FC<HeaderProps> = ({
     const navLinks = [
         { path: '/', label: 'Home' },
         { path: '/classics', label: 'Vintage' },
-        { path: '/watchlist', label: 'My List' },
+        // "My List" removed from header as it is featured on the home page carousel
     ];
     
     return (

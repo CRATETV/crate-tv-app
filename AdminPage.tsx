@@ -9,16 +9,13 @@ import FestivalEditor from './components/FestivalEditor';
 import AnalyticsPage from './components/AnalyticsPage';
 import WatchPartyManager from './components/WatchPartyManager';
 import SecurityTab from './components/SecurityTab';
-import RokuAdminTab from './components/RokuAdminTab';
 import FallbackGenerator from './components/FallbackGenerator';
 import EmailSender from './components/EmailSender';
-import ContractsTab from './components/ContractsTab';
 import AdminPayoutsTab from './components/AdminPayoutsTab';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
 import PermissionsManager from './components/PermissionsManager';
 import SaveStatusToast from './components/SaveStatusToast';
 import MonetizationTab from './components/MonetizationTab';
-import AdminGuide from './components/AdminGuide';
 import HeroManager from './components/HeroManager';
 
 const ALL_TABS: Record<string, string> = {
@@ -32,11 +29,8 @@ const ALL_TABS: Record<string, string> = {
     watchParty: 'Watch Party',
     about: 'About Page',
     email: 'Email',
-    contracts: 'File Cabinet',
     monetization: 'AI Monetization',
     security: 'Security',
-    roku: 'Roku',
-    guide: 'Developer Guide',
     fallback: 'Fallback Data',
     permissions: 'Permissions'
 };
@@ -252,7 +246,7 @@ const AdminPage: React.FC = () => {
         } else {
             // Default permissions for built-in roles if not defined in DB
             const defaultPermissions: Record<string, string[]> = {
-                collaborator: ['movies', 'categories', 'pipeline', 'fallback', 'guide'],
+                collaborator: ['movies', 'categories', 'pipeline', 'fallback'],
                 festival_admin: ['festival'],
             };
             tabs = permissions[role] || defaultPermissions[role] || [];
@@ -357,11 +351,8 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (movie) => handleSaveData('movies', { [movie.key]: movie })} />}
                     {activeTab === 'about' && aboutData && <AboutEditor initialData={aboutData} onSave={(newData) => handleSaveData('about', newData)} isSaving={isSaving} />}
                     {activeTab === 'email' && <EmailSender />}
-                    {activeTab === 'contracts' && <ContractsTab />}
                     {activeTab === 'monetization' && <MonetizationTab />}
                     {activeTab === 'security' && <SecurityTab />}
-                    {activeTab === 'roku' && <RokuAdminTab />}
-                    {activeTab === 'guide' && <AdminGuide />}
                     {activeTab === 'fallback' && <FallbackGenerator movies={movies} categories={categories} festivalData={festivalData} festivalConfig={festivalConfig} aboutData={aboutData} />}
                     {activeTab === 'permissions' && (role === 'super_admin' || role === 'master') && 
                         <PermissionsManager 

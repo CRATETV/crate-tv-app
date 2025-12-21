@@ -1,6 +1,6 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
-import { fetchAndCacheLiveData } from '../services/dataService';
 import ActorBioModal from './ActorBioModal';
 import Header from './Header';
 import Footer from './Footer';
@@ -67,12 +67,11 @@ const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
 }
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { user, markAsWatched, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist } = useAuth();
+  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist } = useAuth();
   const { isLoading: isDataLoading, movies: allMovies, categories: allCategories, dataSource } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
   
-  // FIX: Added missing recommendedMovies memoization to resolve "Cannot find name 'recommendedMovies'" errors on lines 505 and 509.
   const recommendedMovies = useMemo(() => {
     if (!movie || !movie.key) return [];
     const recommendedKeys = new Set<string>();
@@ -414,6 +413,52 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     onHome={handleHome}
                                 />
                             )}
+
+                            {/* CRITICAL FOR DESKTOP: Render modals inside the video container so they appear in fullscreen */}
+                            {selectedActor && (
+                                <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />
+                            )}
+                             {selectedDirector && (
+                                <DirectorCreditsModal
+                                    directorName={selectedDirector}
+                                    onClose={() => setSelectedDirector(null)}
+                                    allMovies={allMovies}
+                                    onSelectMovie={(m: Movie) => {
+                                         const path = `/movie/${m.key}`;
+                                         window.history.pushState({}, '', path);
+                                         window.dispatchEvent(new Event('pushstate'));
+                                         window.scrollTo(0, 0);
+                                    }}
+                                />
+                            )}
+                            {isSupportModalOpen && movie && (
+                                <SquarePaymentModal
+                                    movie={movie}
+                                    paymentType="donation"
+                                    onClose={() => setIsSupportModalOpen(false)}
+                                    onPaymentSuccess={handlePaymentSuccess}
+                                />
+                            )}
+                            {isDetailsModalOpen && movie && (
+                                <MovieDetailsModal
+                                    movie={movie}
+                                    isLiked={isLiked}
+                                    onToggleLike={toggleLikeMovie}
+                                    onClose={() => setIsDetailsModalOpen(false)}
+                                    onSelectActor={setSelectedActor}
+                                    allMovies={allMovies}
+                                    allCategories={allCategories}
+                                    onSelectRecommendedMovie={(m) => {
+                                        setIsDetailsModalOpen(false);
+                                        window.history.pushState({}, '', `/movie/${m.key}`);
+                                        window.dispatchEvent(new Event('pushstate'));
+                                    }}
+                                    onSupportMovie={() => {
+                                        setIsDetailsModalOpen(false);
+                                        setIsSupportModalOpen(true);
+                                    }}
+                                />
+                            )}
                         </>
                     )}
 
@@ -451,70 +496,74 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         </>
                     )}
                     
-                    {playerMode === 'full' && <CastButton videoElement={videoRef.current} />}
                     {playerMode === 'full' && (
-                        <button
-                            onClick={handleExitPlayer}
-                            className="absolute top-4 right-16 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors text-white z-30 shadow-xl"
-                            aria-label="Exit video player"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        <div className="absolute top-4 left-4 z-50 flex items-center gap-4">
+                             <button
+                                onClick={handleExitPlayer}
+                                className="flex items-center gap-2 bg-black/50 hover:bg-black/70 px-4 py-2 rounded-full text-white backdrop-blur-md transition-colors border border-white/20 shadow-xl"
+                                aria-label="Exit video player"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                <span className="text-sm font-bold">Back to Browse</span>
+                            </button>
+                        </div>
                     )}
+                    
+                    {playerMode === 'full' && <CastButton videoElement={videoRef.current} />}
                 </div>
 
                 {playerMode !== 'full' && (
                   <div className="max-w-6xl mx-auto p-4 md:p-8">
                       <h1 className="text-3xl md:text-5xl font-bold text-white">{movie.title || 'Untitled Film'}</h1>
-                      <div className="mt-4 flex flex-wrap items-center gap-4">
-                          <button onClick={() => setIsSupportModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors shadow-lg">
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                      <div className="mt-4 flex flex-wrap items-center gap-3 md:gap-4">
+                          <button onClick={() => setIsSupportModalOpen(true)} className="flex-grow sm:flex-grow-0 flex items-center justify-center px-4 py-2.5 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors shadow-lg text-sm md:text-base">
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" />
                              </svg>
                              Support Filmmaker
                           </button>
-                          <button onClick={() => setIsDetailsModalOpen(true)} className="flex items-center justify-center px-4 py-2 bg-gray-500/70 backdrop-blur-sm text-white font-bold rounded-md hover:bg-gray-500/90 transition-colors shadow-lg">
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          <button onClick={() => setIsDetailsModalOpen(true)} className="flex-grow sm:flex-grow-0 flex items-center justify-center px-4 py-2.5 bg-gray-500/70 backdrop-blur-sm text-white font-bold rounded-md hover:bg-gray-500/90 transition-colors shadow-lg text-sm md:text-base">
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                              More Info
                           </button>
                           {showSupportSuccess && (
-                            <div className="bg-green-500/80 text-white font-bold py-2 px-4 rounded-md inline-block animate-[fadeIn_0.5s_ease-out]">
+                            <div className="w-full sm:w-auto bg-green-500/80 text-white font-bold py-2 px-4 rounded-md inline-block animate-[fadeIn_0.5s_ease-out] text-center">
                                 Thank you for your support!
                             </div>
                           )}
                       </div>
-                      <div className="mt-4 text-gray-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: movie.synopsis || '' }}></div>
+                      <div className="mt-6 text-gray-300 leading-relaxed text-sm md:text-base" dangerouslySetInnerHTML={{ __html: movie.synopsis || '' }}></div>
                        
                       <RokuBanner />
 
                       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
                           <div className="md:col-span-2">
-                               <div className="mt-6 bg-gradient-to-r from-red-500/10 to-blue-500/10 p-3 rounded-lg text-center border border-gray-700">
+                               <div className="mt-6 bg-gradient-to-r from-red-500/10 to-blue-500/10 p-4 rounded-lg text-center border border-gray-700">
                                   <p className="text-sm text-white">✨ Click an actor's name for their bio & an AI-generated fun fact!</p>
                               </div>
                           </div>
                           <div>
                                {movie.durationInMinutes && movie.durationInMinutes > 0 && (
                                 <div className="mb-4">
-                                    <h3 className="text-lg font-semibold text-gray-400 mb-1">Duration</h3>
-                                    <p className="text-white">{movie.durationInMinutes} minutes</p>
+                                    <h3 className="text-lg font-semibold text-gray-400 mb-1 text-sm md:text-base uppercase tracking-wider">Duration</h3>
+                                    <p className="text-white font-bold">{movie.durationInMinutes} minutes</p>
                                 </div>
                               )}
-                               <h3 className="text-lg font-semibold text-gray-400 mb-2">Cast</h3>
+                               <h3 className="text-lg font-semibold text-gray-400 mb-2 text-sm md:text-base uppercase tracking-wider">Cast</h3>
                               <div className="space-y-2 text-white">
                                   {movie.cast.map((actor: Actor) => (
-                                  <p key={actor.name} className="group cursor-pointer" onClick={() => setSelectedActor(actor)}>
-                                      <span className="group-hover:text-red-400 transition">{actor.name}</span>
+                                  <p key={actor.name} className="group cursor-pointer py-1" onClick={() => setSelectedActor(actor)}>
+                                      <span className="group-hover:text-red-400 transition font-medium">{actor.name}</span>
                                   </p>
                                   ))}
                               </div>
-                              <h3 className="text-lg font-semibold text-gray-400 mt-4 mb-2">Director</h3>
+                              <h3 className="text-lg font-semibold text-gray-400 mt-6 mb-2 text-sm md:text-base uppercase tracking-wider">Director</h3>
                               <div className="space-y-2 text-white">
                                   {movie.director.split(',').map((directorName: string) => directorName.trim()).filter(Boolean).map(directorName => (
-                                      <p key={directorName} className="group cursor-pointer" onClick={() => setSelectedDirector(directorName)}>
-                                          <span className="group-hover:text-red-400 transition">{directorName}</span>
+                                      <p key={directorName} className="group cursor-pointer py-1" onClick={() => setSelectedDirector(directorName)}>
+                                          <span className="group-hover:text-red-400 transition font-medium">{directorName}</span>
                                       </p>
                                   ))}
                               </div>
@@ -523,7 +572,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
                       {recommendedMovies.length > 0 && (
                           <div className="mt-12 pt-8 border-t border-gray-700">
-                              <h2 className="text-2xl font-bold text-white mb-4">More Like This</h2>
+                              <h2 className="text-2xl font-bold text-white mb-6">More Like This</h2>
                               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-4">
                                   {recommendedMovies.map(recMovie => (
                                       <RecommendedMovieLink key={recMovie.key} movie={recMovie} />
@@ -542,10 +591,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
               </>
             )}
 
-            {selectedActor && (
+            {/* Render modals here as well for the non-player view */}
+            {playerMode !== 'full' && selectedActor && (
                 <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />
             )}
-             {selectedDirector && (
+             {playerMode !== 'full' && selectedDirector && (
                 <DirectorCreditsModal
                     directorName={selectedDirector}
                     onClose={() => setSelectedDirector(null)}
@@ -568,7 +618,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     onSelectMovie={() => {}}
                 />
             )}
-            {isSupportModalOpen && movie && (
+            {playerMode !== 'full' && isSupportModalOpen && movie && (
                 <SquarePaymentModal
                     movie={movie}
                     paymentType="donation"
@@ -576,7 +626,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     onPaymentSuccess={handlePaymentSuccess}
                 />
             )}
-            {isDetailsModalOpen && movie && (
+            {playerMode !== 'full' && isDetailsModalOpen && movie && (
                 <MovieDetailsModal
                     movie={movie}
                     isLiked={isLiked}

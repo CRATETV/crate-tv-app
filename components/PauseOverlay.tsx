@@ -10,6 +10,7 @@ interface ActionButtonProps {
 
 const ActionButton: React.FC<ActionButtonProps> = ({ onClick, title, children }) => (
     <button
+        type="button"
         onClick={onClick}
         title={title}
         className="flex flex-col items-center text-gray-300 hover:text-white transition-colors group"
@@ -22,7 +23,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({ onClick, title, children })
 );
 
 const MobileActionButton: React.FC<{ onClick: (e: React.MouseEvent) => void; title: string; children: React.ReactNode; }> = ({ onClick, title, children }) => (
-    <button onClick={onClick} title={title} className="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors">
+    <button type="button" onClick={onClick} title={title} className="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors">
         {children}
     </button>
 );
@@ -34,17 +35,21 @@ interface CastCardProps {
 
 const CastCard: React.FC<CastCardProps> = ({ actor, onClick }) => (
     <button 
-        onClick={(e) => { e.stopPropagation(); onClick(actor); }}
-        className="flex flex-col items-center min-w-[100px] group transition-transform active:scale-95"
+        type="button"
+        onClick={(e) => { 
+            e.stopPropagation(); 
+            onClick(actor); 
+        }}
+        className="flex flex-col items-center min-w-[100px] group transition-all transform hover:scale-110 active:scale-95 cursor-pointer relative z-50"
     >
-        <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-transparent group-hover:border-red-500 transition-colors mb-2 shadow-lg">
+        <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-transparent group-hover:border-red-500 transition-colors mb-2 shadow-lg ring-offset-2 ring-offset-black group-hover:ring-2 ring-red-500/50">
             <img 
                 src={actor.photo || 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png'} 
                 alt={actor.name} 
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover pointer-events-none"
             />
         </div>
-        <span className="text-[10px] md:text-xs font-bold text-white text-center line-clamp-1 group-hover:text-red-400">
+        <span className="text-[10px] md:text-xs font-bold text-white text-center line-clamp-1 group-hover:text-red-400 drop-shadow-md">
             {actor.name}
         </span>
     </button>
@@ -130,7 +135,7 @@ const PauseOverlay: React.FC<PauseOverlayProps> = ({
                 
                 {/* Cast Bar (X-Ray Feature) */}
                 {movie.cast && movie.cast.length > 0 && (
-                    <div className="w-full max-w-4xl animate-[fadeIn_0.6s_ease-out]">
+                    <div className="w-full max-w-4xl animate-[fadeIn_0.6s_ease-out]" onClick={stopPropagation}>
                         <p className="text-[10px] uppercase tracking-widest font-black text-gray-500 mb-3 ml-4">Featured Cast</p>
                         <div className="flex items-start gap-6 overflow-x-auto scrollbar-hide px-4 pb-2">
                             {movie.cast.map((actor, idx) => (
