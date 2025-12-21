@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from '@google/genai';
 import { GrowthAnalyticsData, AiGrowthAdvice, Movie } from '../types.js';
 
@@ -21,15 +22,25 @@ export async function POST(request: Request) {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const prompt = `
-      You are a growth strategy consultant for 'Crate TV', a niche streaming service for independent films. 
-      The platform currently has approximately ${metrics.totalUsers} users and has generated a total of $${(metrics.totalRevenue / 100).toFixed(2)} in revenue.
-      The platform's key features include a Roku channel, live watch parties with chat, direct filmmaker donations, and filmmaker/actor portals.
+      You are a world-class growth strategy consultant for 'Crate TV', a niche, professional streaming service for independent films. 
+      Current Stats:
+      - Users: ${metrics.totalUsers}
+      - Total Revenue: $${(metrics.totalRevenue / 100).toFixed(2)}
+      - Catalog Size: ${metrics.totalFilms} films
+      - Top Market: ${metrics.topCountries[0]?.country || 'N/A'}
+      - Top Performing Film: ${metrics.mostViewedFilm.title}
 
-      Provide a concise list of actionable, creative, and specific strategies to grow the user base, increase revenue, and improve community engagement.
-      Your response must be a JSON object.
+      Strategic Narrative: Crate TV grows by leveraging the "Creator-Loop." Filmmakers have existing social circles; Crate TV provides the stage. Your advice should focus on how to make filmmakers the ultimate marketing agents for the platform.
+
+      Task: Provide a concise list of actionable strategies to:
+      1. Scale Users (focus on viral creator-led sharing).
+      2. Optimize Revenue (focus on high-intent sponsorship and tips).
+      3. Retain Community (focus on Watch Party dynamics).
+      4. Advertising: Suggest 3 specific, low-cost advertising experiments (e.g. niche subreddits, geo-targeted ads).
+
+      Your response must be a JSON object matching the provided schema.
     `;
 
-    // FIX: Updated model to gemini-3-pro-preview for complex text tasks as per GenAI guidelines.
     const response = await ai.models.generateContent({
         model: 'gemini-3-pro-preview',
         contents: prompt,
@@ -40,17 +51,22 @@ export async function POST(request: Request) {
                 properties: {
                     userGrowth: {
                         type: Type.ARRAY,
-                        description: "Actionable strategies to attract new users.",
+                        description: "Strategies to turn creators into marketers.",
                         items: { type: Type.STRING }
                     },
                     revenueGrowth: {
                         type: Type.ARRAY,
-                        description: "Creative ways to increase platform revenue.",
+                        description: "Creative monetization beyond just donations.",
                         items: { type: Type.STRING }
                     },
                     communityEngagement: {
                         type: Type.ARRAY,
-                        description: "Ideas to make the community more active and engaged.",
+                        description: "Building a cult-following around indie cinema.",
+                        items: { type: Type.STRING }
+                    },
+                    advertisingSuggestions: {
+                        type: Type.ARRAY,
+                        description: "Specific advertising experiments.",
                         items: { type: Type.STRING }
                     }
                 }

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -12,7 +11,7 @@
     <link rel="canonical" href="https://cratetv.net" />
     <meta name="theme-color" content="#e50914">
 
-    <!-- Open Graph / Facebook (Crucial for Social Traffic) -->
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://cratetv.net" />
     <meta property="og:title" content="Crate TV | Stream Independent Cinema" />
@@ -24,6 +23,22 @@
     <meta name="twitter:title" content="Crate TV | Independent Film Streaming" />
     <meta name="twitter:description" content="Authentic stories. Emerging voices. Stream the best of indie cinema on Crate TV." />
     <meta name="twitter:image" content="https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless%20poster%20remake.jpg" />
+
+    <!-- Structured Data: Streaming Service -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "StreamingService",
+      "name": "Crate TV",
+      "url": "https://cratetv.net",
+      "logo": "https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png",
+      "description": "Premium streaming platform for independent cinema and emerging filmmakers.",
+      "potentialAction": {
+        "@type": "WatchAction",
+        "target": "https://cratetv.net/movie/{movie_id}"
+      }
+    }
+    </script>
 
     <!-- Favicon and Manifest -->
     <link rel="apple-touch-icon" sizes="180x180" href="https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/apple-touch-icon.png">
@@ -57,7 +72,6 @@
         box-shadow: 0 0 25px 3px rgba(229, 9, 20, 0.2);
       }
 
-      /* Top 10 Ranked Card Glow */
       .ranked-card-border {
         position: relative;
         transition: all 0.4s ease;
@@ -89,14 +103,13 @@
         background: linear-gradient(to top, #080808 0%, rgba(8, 8, 8, 0.8) 15%, transparent 50%, rgba(0, 0, 0, 0.4) 100%);
       }
 
-      /* FIX: Global Form Styles for High Visibility */
       .form-input {
         width: 100%;
         padding: 0.75rem 1rem;
-        background-color: #1a1a1a !important; /* Force dark background */
+        background-color: #1a1a1a !important;
         border: 1px solid #333 !important;
         border-radius: 0.375rem;
-        color: #ffffff !important; /* Force white text */
+        color: #ffffff !important;
         font-size: 1rem;
         transition: all 0.2s ease;
       }
@@ -108,7 +121,6 @@
         background-color: #222 !important;
       }
 
-      /* Fix for browser autofill turning inputs white/yellow */
       input:-webkit-autofill,
       input:-webkit-autofill:hover, 
       input:-webkit-autofill:focus,

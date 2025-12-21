@@ -300,7 +300,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
   }, [playerMode, released, initializeAds]);
 
-  // SEO
+  // SEO & Structured Data
   useEffect(() => {
     if (movie) {
         document.title = `${movie.title || 'Untitled Film'} | Crate TV`;
@@ -312,6 +312,42 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         setMetaTag('property', 'og:image', movie.poster || '');
         setMetaTag('property', 'og:url', pageUrl);
         setMetaTag('property', 'og:type', 'video.movie');
+
+        // Add Movie Structured Data
+        const existingScript = document.getElementById('movie-structured-data');
+        if (existingScript) existingScript.remove();
+
+        const script = document.createElement('script');
+        script.id = 'movie-structured-data';
+        script.type = 'application/ld+json';
+        const structuredData = {
+          "@context": "https://schema.org",
+          "@type": "Movie",
+          "name": movie.title,
+          "description": synopsisText,
+          "image": movie.poster,
+          "director": {
+            "@type": "Person",
+            "name": movie.director
+          },
+          "actor": movie.cast.map(a => ({ "@type": "Person", "name": a.name })),
+          "duration": movie.durationInMinutes ? `PT${movie.durationInMinutes}M` : undefined,
+          "potentialAction": {
+            "@type": "WatchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": pageUrl,
+              "actionPlatform": [
+                "http://schema.org/DesktopWebPlatform",
+                "http://schema.org/MobileWebPlatform",
+                "http://schema.org/AndroidPlatform",
+                "http://schema.org/IOSPlatform"
+              ]
+            }
+          }
+        };
+        script.textContent = JSON.stringify(structuredData);
+        document.head.appendChild(script);
     }
  }, [movie]);
 

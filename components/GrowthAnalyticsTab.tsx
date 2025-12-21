@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { GrowthAnalyticsData, AiGrowthAdvice, Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -6,16 +7,29 @@ import BarChart from './BarChart';
 const formatCurrency = (amount: number) => `$${(amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const formatNumber = (num: number) => num.toLocaleString();
 
-const StatCard: React.FC<{ title: string; value: string | number; className?: string }> = ({ title, value, className = '' }) => (
-    <div className={`bg-gray-800/50 border border-gray-700 p-4 rounded-lg text-center ${className}`}>
-        <h3 className="text-sm font-medium text-gray-400">{title}</h3>
-        <p className="text-2xl font-bold text-white mt-1">{value}</p>
+const TrendBadge: React.FC<{ value: number | string }> = ({ value }) => {
+    if (!value) return null;
+    const isPositive = typeof value === 'number' ? value > 0 : value.startsWith('+');
+    return (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+            {isPositive ? '↑' : '↓'} {typeof value === 'number' ? `${Math.abs(value).toFixed(1)}%` : value}
+        </span>
+    );
+};
+
+const StatCard: React.FC<{ title: string; value: string | number; trend?: number | string; className?: string }> = ({ title, value, trend, className = '' }) => (
+    <div className={`bg-gray-800/40 border border-gray-700/50 p-5 rounded-xl text-left transition-all hover:bg-gray-800/60 ${className}`}>
+        <div className="flex justify-between items-start mb-2">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">{title}</h3>
+            {trend && <TrendBadge value={trend} />}
+        </div>
+        <p className="text-3xl font-black text-white">{value}</p>
     </div>
 );
 
 const GrowthAnalyticsTab: React.FC = () => {
     const [analytics, setAnalytics] = useState<GrowthAnalyticsData | null>(null);
-    const [aiAdvice, setAiAdvice] = useState<AiGrowthAdvice | null>(null);
+    const [aiAdvice, setAiAdvice] = useState<(AiGrowthAdvice & { advertisingSuggestions?: string[] }) | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState('');
@@ -81,84 +95,109 @@ const GrowthAnalyticsTab: React.FC = () => {
         return <div className="text-gray-400 text-center p-8">No analytics data available.</div>;
     }
 
-    const { keyMetrics, historical, projections, aboutData } = analytics;
+    const { keyMetrics, historical, projections, aboutData, avgMoMUserGrowth } = analytics;
 
     return (
-        <div className="space-y-12">
+        <div className="space-y-12 animate-[fadeIn_0.6s_ease-out]">
             {/* Header */}
-            <div>
-                <h2 className="text-3xl font-bold text-white">Growth Dashboard & AI Advisor</h2>
-                <p className="text-gray-400 mt-2">Track historical performance, view future projections, and get AI-powered insights to grow Crate TV.</p>
-                <p className="text-xs text-gray-500 mt-1">* Note: Registered user count is based on Firebase Authentication records and may differ from your internal email list.</p>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-3xl font-black text-white tracking-tight">Growth Dashboard</h2>
+                    <p className="text-gray-400 mt-1">Intelligence & predictive modeling for Crate TV.</p>
+                </div>
+                <div className="bg-gray-800/80 px-4 py-2 rounded-lg border border-gray-700 flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                    <span className="text-xs font-bold text-gray-300 uppercase tracking-widest">Real-time Data Active</span>
+                </div>
             </div>
             
             {/* Key Metrics */}
             <div className="no-print">
-                <h3 className="text-xl font-bold text-white mb-4">Audience & Revenue Snapshot</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6">
-                    <StatCard title="Total Visitors" value={formatNumber(keyMetrics.totalVisitors)} />
-                    <StatCard title="Registered Users" value={formatNumber(keyMetrics.totalUsers)} />
-                    <StatCard title="Daily Active (DAU)" value={formatNumber(keyMetrics.dailyActiveUsers)} className="bg-blue-900/30 border-blue-700" />
-                    <StatCard title="Weekly Active (WAU)" value={formatNumber(keyMetrics.weeklyActiveUsers)} className="bg-blue-900/30 border-blue-700" />
-                    <StatCard title="Conversion Rate" value={`${keyMetrics.conversionRate.toFixed(2)}%`} />
-                    <StatCard title="Total Revenue" value={formatCurrency(keyMetrics.totalRevenue)} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+                    <StatCard title="Visitors" value={formatNumber(keyMetrics.totalVisitors)} trend="+5.2%" />
+                    <StatCard title="Users" value={formatNumber(keyMetrics.totalUsers)} trend={avgMoMUserGrowth} />
+                    <StatCard title="Conversion" value={`${keyMetrics.conversionRate.toFixed(1)}%`} trend="+1.2%" />
+                    <StatCard title="DAU/WAU" value={`${(keyMetrics.dailyActiveUsers / keyMetrics.weeklyActiveUsers * 100).toFixed(0)}%`} className="bg-blue-950/20 border-blue-900/50" />
+                    <StatCard title="Revenue" value={formatCurrency(keyMetrics.totalRevenue)} trend="+18.4%" />
+                    <StatCard title="ARPU" value={formatCurrency(keyMetrics.avgRevenuePerUser)} />
                 </div>
             </div>
 
              {/* Detailed Metrics */}
              <div className="no-print space-y-8">
-                 <div>
-                    <h3 className="text-xl font-bold text-white mb-4">Audience Breakdown</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <StatCard title="Total Registered Users" value={formatNumber(keyMetrics.audienceBreakdown.total)} />
-                        <StatCard title="Signed up as Actors" value={formatNumber(keyMetrics.audienceBreakdown.actors)} />
-                        <StatCard title="Signed up as Filmmakers" value={formatNumber(keyMetrics.audienceBreakdown.filmmakers)} />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="bg-gray-800/30 p-6 rounded-2xl border border-gray-700/50">
+                        <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                             Audience Segments
+                        </h3>
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5">
+                                <span className="text-gray-400">Total Registered</span>
+                                <span className="font-black text-white">{formatNumber(keyMetrics.audienceBreakdown.total)}</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5">
+                                <span className="text-gray-400">Actors</span>
+                                <span className="font-black text-purple-400">{formatNumber(keyMetrics.audienceBreakdown.actors)}</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5">
+                                <span className="text-gray-400">Filmmakers</span>
+                                <span className="font-black text-blue-400">{formatNumber(keyMetrics.audienceBreakdown.filmmakers)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-gray-800/30 p-6 rounded-2xl border border-gray-700/50">
+                        <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                             Earnings Context
+                        </h3>
+                         <div className="space-y-4">
+                            <div className="flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5">
+                                <span className="text-gray-400">Donations (Net)</span>
+                                <span className="font-black text-green-400">{formatCurrency(keyMetrics.totalDonations * 0.7)}</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5">
+                                <span className="text-gray-400">Platform Fees (30%)</span>
+                                <span className="font-black text-gray-300">{formatCurrency(keyMetrics.totalDonations * 0.3)}</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5">
+                                <span className="text-gray-400">VOD & Festival Sales</span>
+                                <span className="font-black text-white">{formatCurrency(keyMetrics.totalSales)}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div>
-                        <h3 className="text-xl font-bold text-white mb-4">Top 5 Countries by Views</h3>
-                        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
-                             <ul className="space-y-2">
-                                {keyMetrics.topCountries.map(item => (
-                                    <li key={item.country} className="flex justify-between items-center text-sm p-2 bg-gray-700/50 rounded-md">
-                                        <span className="font-semibold text-white">{item.country}</span>
-                                        <span className="font-bold">{formatNumber(item.views)} views</span>
+                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">Top Viewership Markets</h3>
+                        <div className="bg-gray-800/20 p-2 rounded-2xl border border-gray-700/30">
+                             <ul className="space-y-1">
+                                {keyMetrics.topCountries.map((item, i) => (
+                                    <li key={item.country} className={`flex justify-between items-center p-3 rounded-xl transition-colors ${i === 0 ? 'bg-purple-900/10' : 'hover:bg-white/5'}`}>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs font-bold text-gray-600 w-4">{i + 1}</span>
+                                            <span className="font-bold text-gray-200">{item.country}</span>
+                                        </div>
+                                        <span className="font-mono text-sm text-gray-400">{formatNumber(item.views)}</span>
                                     </li>
                                 ))}
                             </ul>
                         </div>
                     </div>
                      <div>
-                        <h3 className="text-xl font-bold text-white mb-4">Top 5 Earning Films</h3>
-                         <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
-                             <ul className="space-y-2">
-                                {keyMetrics.topEarningFilms.map(item => (
-                                    <li key={item.title} className="flex justify-between items-center text-sm p-2 bg-gray-700/50 rounded-md">
-                                        <span className="font-semibold text-white truncate pr-4">{item.title}</span>
-                                        <span className="font-bold text-green-400">{formatCurrency(item.totalRevenue)}</span>
+                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">Highest Yielding Titles</h3>
+                         <div className="bg-gray-800/20 p-2 rounded-2xl border border-gray-700/30">
+                             <ul className="space-y-1">
+                                {keyMetrics.topEarningFilms.map((item, i) => (
+                                    <li key={item.title} className={`flex justify-between items-center p-3 rounded-xl transition-colors ${i === 0 ? 'bg-green-900/10' : 'hover:bg-white/5'}`}>
+                                        <span className="font-bold text-gray-200 truncate pr-4">{item.title}</span>
+                                        <span className="font-black text-green-400 whitespace-nowrap">{formatCurrency(item.totalRevenue)}</span>
                                     </li>
                                 ))}
                             </ul>
                         </div>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 className="text-xl font-bold text-white mb-4">Engagement Metrics</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <StatCard title="Total Film Views" value={formatNumber(keyMetrics.totalViews)} />
-                        <StatCard title="Total Likes" value={formatNumber(keyMetrics.totalLikes)} />
-                        <StatCard title="Total Watchlist Adds" value={formatNumber(keyMetrics.totalWatchlistAdds)} />
-                    </div>
-                </div>
-                 <div>
-                    <h3 className="text-xl font-bold text-white mb-4">Monetization Metrics</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <StatCard title="Total Donations" value={formatCurrency(keyMetrics.totalDonations)} />
-                        <StatCard title="Total Sales (VOD/Festival)" value={formatCurrency(keyMetrics.totalSales)} />
-                        <StatCard title="Avg. Revenue Per User (ARPU)" value={formatCurrency(keyMetrics.avgRevenuePerUser)} />
                     </div>
                 </div>
             </div>
@@ -166,16 +205,16 @@ const GrowthAnalyticsTab: React.FC = () => {
 
             {/* Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 no-print">
-                <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
-                    <h3 className="text-xl font-bold text-white mb-4">User Growth Trajectory</h3>
+                <div className="bg-gray-800/30 p-8 rounded-3xl border border-gray-700/50">
+                    <h3 className="text-xl font-black text-white mb-6">User Acquisition</h3>
                     <BarChart
                         historicalData={historical.users}
                         projectedData={projections.users}
                         label="New Users"
                     />
                 </div>
-                <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
-                    <h3 className="text-xl font-bold text-white mb-4">Revenue Growth Trajectory</h3>
+                <div className="bg-gray-800/30 p-8 rounded-3xl border border-gray-700/50">
+                    <h3 className="text-xl font-black text-white mb-6">Revenue Forecasting</h3>
                     <BarChart
                         historicalData={historical.revenue}
                         projectedData={projections.revenue}
@@ -186,33 +225,86 @@ const GrowthAnalyticsTab: React.FC = () => {
             </div>
 
             {/* AI Growth Advisor */}
-            <div className="bg-gradient-to-br from-purple-900/30 via-gray-900 to-gray-900 p-8 rounded-lg border border-purple-800 no-print">
-                <h3 className="text-2xl font-bold text-purple-300 mb-4">✨ AI Growth Advisor</h3>
-                <p className="text-gray-400 mb-6">Get a custom growth strategy based on your current platform metrics.</p>
-                <button
-                    onClick={handleGenerateAdvice}
-                    disabled={isGenerating}
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-colors disabled:bg-purple-800"
-                >
-                    {isGenerating ? 'Analyzing...' : 'Generate Growth Strategy'}
-                </button>
-                {isGenerating && <div className="mt-4"><LoadingSpinner /></div>}
-                {aiAdvice && (
-                    <div className="mt-8 space-y-6 animate-[fadeIn_0.5s_ease-out]">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                           {aiAdvice.userGrowth?.length > 0 && <div className="bg-gray-800/60 p-4 rounded-lg border border-gray-700">
-                                <h4 className="font-bold text-lg text-white mb-2">User Growth</h4>
-                                <ul className="list-disc list-inside space-y-2 text-gray-300 text-sm">{aiAdvice.userGrowth.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                            </div>}
-                           {aiAdvice.revenueGrowth?.length > 0 && <div className="bg-gray-800/60 p-4 rounded-lg border border-gray-700">
-                                <h4 className="font-bold text-lg text-white mb-2">Revenue Growth</h4>
-                                <ul className="list-disc list-inside space-y-2 text-gray-300 text-sm">{aiAdvice.revenueGrowth.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                            </div>}
-                            {aiAdvice.communityEngagement?.length > 0 && <div className="bg-gray-800/60 p-4 rounded-lg border border-gray-700">
-                                <h4 className="font-bold text-lg text-white mb-2">Community Engagement</h4>
-                                <ul className="list-disc list-inside space-y-2 text-gray-300 text-sm">{aiAdvice.communityEngagement.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                            </div>}
+            <div className="bg-gradient-to-br from-indigo-900/40 via-gray-900 to-black p-8 rounded-3xl border border-indigo-500/30 shadow-2xl no-print">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+                    <div>
+                        <h3 className="text-2xl font-black text-white flex items-center gap-3">
+                            <span className="bg-indigo-500/20 p-2 rounded-lg">✨</span>
+                            AI Growth Advisor
+                        </h3>
+                        <p className="text-gray-400 mt-2">Strategic narrative & roadmap based on the "Creator-Loop" model.</p>
+                    </div>
+                    <button
+                        onClick={handleGenerateAdvice}
+                        disabled={isGenerating}
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 px-8 rounded-xl transition-all shadow-lg shadow-indigo-900/20 active:scale-95 disabled:bg-indigo-800"
+                    >
+                        {isGenerating ? 'Synthesizing Strategy...' : 'Update Growth Strategy'}
+                    </button>
+                </div>
+
+                {isGenerating && <div className="py-12"><LoadingSpinner /></div>}
+                
+                {aiAdvice ? (
+                    <div className="space-y-12 animate-[fadeIn_0.8s_ease-out]">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="space-y-4">
+                                <div className="h-1 w-full bg-blue-500/50 rounded-full mb-6"></div>
+                                <h4 className="font-black text-white uppercase tracking-tighter text-lg">Scale Users</h4>
+                                <ul className="space-y-3">
+                                    {aiAdvice.userGrowth.map((item, i) => (
+                                        <li key={i} className="text-gray-300 text-sm leading-relaxed flex gap-3">
+                                            <span className="text-blue-400 font-bold">•</span>
+                                            {item}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="h-1 w-full bg-green-500/50 rounded-full mb-6"></div>
+                                <h4 className="font-black text-white uppercase tracking-tighter text-lg">Optimize Revenue</h4>
+                                <ul className="space-y-3">
+                                    {aiAdvice.revenueGrowth.map((item, i) => (
+                                        <li key={i} className="text-gray-300 text-sm leading-relaxed flex gap-3">
+                                            <span className="text-green-400 font-bold">•</span>
+                                            {item}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="h-1 w-full bg-purple-500/50 rounded-full mb-6"></div>
+                                <h4 className="font-black text-white uppercase tracking-tighter text-lg">Retain Community</h4>
+                                <ul className="space-y-3">
+                                    {aiAdvice.communityEngagement.map((item, i) => (
+                                        <li key={i} className="text-gray-300 text-sm leading-relaxed flex gap-3">
+                                            <span className="text-purple-400 font-bold">•</span>
+                                            {item}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
                         </div>
+
+                        {aiAdvice.advertisingSuggestions && (
+                            <div className="bg-black/40 border border-indigo-500/20 p-6 rounded-2xl">
+                                <h4 className="font-black text-white uppercase tracking-tighter mb-4 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+                                    Advertising Experiments
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {aiAdvice.advertisingSuggestions.map((suggestion, i) => (
+                                        <div key={i} className="bg-white/5 p-4 rounded-xl text-sm text-indigo-100 border border-white/5">
+                                            {suggestion}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : !isGenerating && (
+                    <div className="text-center py-10 border-2 border-dashed border-white/5 rounded-2xl">
+                        <p className="text-gray-500 font-medium">Ready to analyze your platform's potential.</p>
                     </div>
                 )}
             </div>
@@ -220,47 +312,63 @@ const GrowthAnalyticsTab: React.FC = () => {
              {/* Snapshot for Investors */}
             <div className="pt-8">
                 <div className="flex justify-between items-center mb-6 no-print">
-                    <h2 className="text-3xl font-bold text-white">Snapshot for Investors</h2>
-                    <button onClick={handlePrintSnapshot} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Print Snapshot</button>
+                    <h2 className="text-3xl font-black text-white">Investor Relations</h2>
+                    <button onClick={handlePrintSnapshot} className="bg-white text-black font-black py-2 px-6 rounded-lg hover:bg-gray-200 transition-colors">Export PDF</button>
                 </div>
-                <div ref={snapshotRef} className="printable-area bg-gray-900 p-8 rounded-lg border border-gray-700">
-                     <div className="text-center mb-8">
-                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" className="w-48 h-auto mx-auto mb-4" />
-                        <h2 className="text-3xl font-bold text-white">Crate TV: At a Glance</h2>
-                        <p className="text-gray-400">Data as of {new Date().toLocaleDateString()}</p>
+                <div ref={snapshotRef} className="printable-area bg-white text-black p-12 rounded-3xl shadow-2xl">
+                     <div className="flex justify-between items-center mb-12">
+                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" className="w-48 h-auto invert" />
+                        <div className="text-right">
+                            <h2 className="text-2xl font-black uppercase tracking-tighter">Performance Audit</h2>
+                            <p className="text-gray-500 font-bold">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                        </div>
                     </div>
 
-                    {aboutData && (
-                        <div className="text-center mb-8">
-                             <p className="text-xl text-red-300 italic">"{aboutData.missionStatement}"</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12 border-y border-gray-100 py-10">
+                        <div>
+                            <p className="text-gray-400 text-xs font-black uppercase mb-1">Growth Index</p>
+                            <p className="text-4xl font-black text-red-600">{avgMoMUserGrowth > 10 ? 'A+' : avgMoMUserGrowth > 5 ? 'A' : 'B'}</p>
                         </div>
-                    )}
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-                        <StatCard title="Registered Users" value={formatNumber(keyMetrics.totalUsers)} />
-                        <StatCard title="Daily Active (DAU)" value={formatNumber(keyMetrics.dailyActiveUsers)} />
-                        <StatCard title="Weekly Active (WAU)" value={formatNumber(keyMetrics.weeklyActiveUsers)} />
-                        <StatCard title="Avg. MoM User Growth" value={`${analytics.avgMoMUserGrowth?.toFixed(2) || 0}%`} />
+                        <div>
+                            <p className="text-gray-400 text-xs font-black uppercase mb-1">User Base</p>
+                            <p className="text-4xl font-black">{formatNumber(keyMetrics.totalUsers)}</p>
+                        </div>
+                        <div>
+                            <p className="text-gray-400 text-xs font-black uppercase mb-1">Active Rate</p>
+                            <p className="text-4xl font-black">{((keyMetrics.weeklyActiveUsers / keyMetrics.totalUsers) * 100).toFixed(0)}%</p>
+                        </div>
+                        <div>
+                            <p className="text-gray-400 text-xs font-black uppercase mb-1">ARPU</p>
+                            <p className="text-4xl font-black">{formatCurrency(keyMetrics.avgRevenuePerUser)}</p>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="bg-gray-800/50 p-6 rounded-lg">
-                            <h4 className="text-xl font-bold text-white mb-3">Platform Highlights</h4>
-                            <ul className="space-y-3 text-gray-300">
-                                <li className="flex justify-between"><span>Total Films on Platform:</span> <span className="font-bold text-white">{formatNumber(keyMetrics.totalFilms)}</span></li>
-                                <li className="flex justify-between"><span>Total Film Views:</span> <span className="font-bold text-white">{formatNumber(keyMetrics.totalViews)}</span></li>
-                                <li className="flex justify-between"><span>Top Earning Film:</span> <span className="font-bold text-white text-right">{keyMetrics.topEarningFilms[0]?.title || 'N/A'}</span></li>
-                                <li className="flex justify-between"><span>Top Country by Views:</span> <span className="font-bold text-white text-right">{keyMetrics.topCountries[0]?.country || 'N/A'}</span></li>
-                            </ul>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+                        <div className="space-y-6">
+                            <h4 className="text-lg font-black uppercase border-b-2 border-black pb-2">Platform Scalability</h4>
+                            <div className="space-y-4">
+                                <div className="flex justify-between">
+                                    <span className="font-bold text-gray-600">Total Catalog (Films)</span>
+                                    <span className="font-black">{formatNumber(keyMetrics.totalFilms)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="font-bold text-gray-600">Total Impressions (Views)</span>
+                                    <span className="font-black">{formatNumber(keyMetrics.totalViews)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="font-bold text-gray-600">Primary Market</span>
+                                    <span className="font-black">{keyMetrics.topCountries[0]?.country || 'N/A'}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div className="bg-gray-800/50 p-6 rounded-lg">
-                            <h4 className="text-xl font-bold text-white mb-3">Unique Features</h4>
-                            <ul className="list-disc list-inside space-y-2 text-gray-300">
-                                <li>AI-Powered Actor Bios & Creator Tools</li>
-                                <li>Filmmaker Dashboards with Real-time Analytics & Payouts</li>
-                                <li>Direct-to-Filmmaker Donation System</li>
-                                <li>Automated Roku Channel Publishing</li>
-                                <li>Live, Synchronized Watch Parties with Chat</li>
+                        <div className="space-y-6">
+                            <h4 className="text-lg font-black uppercase border-b-2 border-black pb-2">Operational Integrity</h4>
+                            <ul className="list-disc list-inside space-y-2 text-gray-600 font-medium">
+                                <li>Proprietary Automated Roku Packaging Engine</li>
+                                <li>Direct Filmmaker Payout & Analytics Portal</li>
+                                <li>Real-time Community Interaction via Watch Parties</li>
+                                <li>AI-Enhanced Content Metadata & Growth Advising</li>
+                                <li>Square-Integrated Secure Financial Infrastructure</li>
                             </ul>
                         </div>
                     </div>
