@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -26,7 +25,7 @@ import NewFilmAnnouncementModal from './components/NewFilmAnnouncementModal';
 const App: React.FC = () => {
     // Hooks
     const { user, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
-    const { isLoading, movies, categories, isFestivalLive, festivalConfig, dataSource, adConfig } = useFestival();
+    const { isLoading, movies, categories, isFestivalLive, festivalConfig, dataSource } = useFestival();
     
     // State
     const [heroIndex, setHeroIndex] = useState(0);
@@ -267,84 +266,6 @@ const App: React.FC = () => {
 
         fetchRecommendations();
     }, [likedMovies, movies]);
-
-    // --- ROBUST AD SCRIPT INJECTION ---
-    // This uses the adConfig from the server rather than local storage
-    useEffect(() => {
-        // Try server config first, fall back to local for dev testing
-        const adScript = adConfig?.socialBarScript || localStorage.getItem('productionAdScript');
-        
-        if (adScript) {
-            try {
-                const containerId = 'cratetv-ad-wrapper'; // Renamed to force refresh
-                
-                // Remove existing to avoid duplicates
-                if (document.getElementById(containerId)) {
-                    document.getElementById(containerId)?.remove();
-                }
-
-                const container = document.createElement('div');
-                container.id = containerId;
-                
-                const isStaging = sessionStorage.getItem('crateTvStaging') === 'true';
-                const borderStyle = isStaging ? 'border: 4px solid red; background: rgba(255,0,0,0.1); min-height: 50px;' : '';
-
-                // CSS to try and force the ad into position.
-                // Note: We use top: 70px to sit just below the header.
-                // height: 0 and overflow: visible ensures the container doesn't block clicks on the page,
-                // but the ad content (which usually overflows) remains interactive.
-                container.style.cssText = `
-                    position: fixed;
-                    left: 0;
-                    right: 0;
-                    top: 70px; 
-                    width: 100%;
-                    height: 0;
-                    overflow: visible;
-                    z-index: 2147483647; /* Max z-index */
-                    display: flex;
-                    justify-content: center;
-                    align-items: flex-start;
-                    pointer-events: none; /* Let clicks pass through the container itself */
-                    ${borderStyle}
-                `;
-
-                // Create a temporary div to parse the HTML string
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = adScript;
-
-                // Iterate through nodes. If script, recreate it to ensure execution.
-                Array.from(tempDiv.childNodes).forEach(child => {
-                    if (child.nodeName === 'SCRIPT') {
-                        const oldScript = child as HTMLScriptElement;
-                        const newScript = document.createElement('script');
-                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-                        // Ensure pointer events are enabled for the ad content itself
-                        newScript.style.pointerEvents = 'auto'; 
-                        container.appendChild(newScript);
-                    } else {
-                        // Clone other elements (divs, tracking pixels)
-                        const clone = child.cloneNode(true) as HTMLElement;
-                        if (clone.style) clone.style.pointerEvents = 'auto';
-                        container.appendChild(clone);
-                    }
-                });
-
-                document.body.appendChild(container);
-                console.log("Crate TV: Ad script injected via robust method.", adScript.substring(0, 50) + "...");
-
-                return () => {
-                    if (document.getElementById(containerId)) {
-                        document.getElementById(containerId)?.remove();
-                    }
-                };
-            } catch (e) {
-                console.error("Failed to inject ad script", e);
-            }
-        }
-    }, [adConfig]);
-
 
      if (isLoading) {
         return <LoadingSpinner />;

@@ -54,6 +54,7 @@ export interface FestivalConfig {
   description: string;
   startDate: string;
   endDate: string;
+  isFestivalLive?: boolean;
 }
 
 export interface AboutData {

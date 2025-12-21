@@ -1,3 +1,4 @@
+
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
 
 
@@ -11,6 +12,10 @@ export const isMovieReleased = (movie: Movie | undefined | null): boolean => {
 };
 
 export const categoriesData: Record<string, Category> = {
+  "animation": {
+    "title": "Animation",
+    "movieKeys": []
+  },
   "awardWinners": {
     "title": "Award-Winning Films",
     "movieKeys": [
@@ -32,7 +37,10 @@ export const categoriesData: Record<string, Category> = {
       "newmovie1756485973547",
       "newmovie1756487390550",
       "newmovie1756501125076",
-      "newmovie1756741314485"
+      "newmovie1756741314485",
+      "slap",
+      "twopeasinapod",
+      "newmovie1763381218900"
     ]
   },
   "documentary": {
@@ -42,6 +50,7 @@ export const categoriesData: Record<string, Category> = {
     ]
   },
   "drama": {
+    "title": "Dramas",
     "movieKeys": [
       "lifeless",
       "almasvows",
@@ -62,9 +71,8 @@ export const categoriesData: Record<string, Category> = {
       "tedandnatalie",
       "unhinged",
       "consumed",
-      "trudy"
-    ],
-    "title": "Dramas"
+      "results"
+    ]
   },
   "exploreTitles": {
     "title": "Explore These Titles",
@@ -85,7 +93,10 @@ export const categoriesData: Record<string, Category> = {
   "newReleases": {
     "title": "New Releases",
     "movieKeys": [
-      "trudy",
+      "newmovie1765384164206",
+      "newmovie1764602379299",
+      "newmovie1763986220979",
+      "newmovie1763381218900",
       "newmovie1762818971534",
       "newmovie1762802600691",
       "newmovie1756741314485",
@@ -96,6 +107,12 @@ export const categoriesData: Record<string, Category> = {
       "newmovie1756486933392",
       "newmovie1756485973547",
       "newmovie1761000817040"
+    ]
+  },
+  "nowStreaming": {
+    "title": "Now Streaming",
+    "movieKeys": [
+      "newmovie1765384164206"
     ]
   },
   "publicDomainIndie": {
@@ -125,62 +142,6 @@ export const categoriesData: Record<string, Category> = {
 };
 
 export const moviesData: Record<string, Movie> = {
-  "trudy": {
-    "key": "trudy",
-    "title": "Trudy",
-    "synopsis": "After a haunting breakup, a tightly-wound woman obsessed with control uses written contracts to manage her relationships. As she struggles to re-enter the world, Trudy must decide if living on her own terms is really living at all.",
-    "cast": [
-      {
-        "name": "Julia De Palma",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Information regarding this actor is currently unavailable.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-      },
-      {
-        "name": "Haley Cassidy",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Information regarding this actor is currently unavailable.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-      },
-      {
-        "name": "Gina Hendricks",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Information regarding this actor is currently unavailable.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-      },
-      {
-        "name": "Michael Dwayne Paylor",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/MichaelPaylor+design.png",
-        "bio": "Michael Dwayne Paylor is a fantastic comedic writer with a knack for crafting hilarious and engaging stories. He seamlessly transitions between film and stage, showcasing his adaptability and creative range.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/MichaelPaylor+design.png"
-      },
-      {
-        "name": "Joe Hough",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Information regarding this actor is currently unavailable.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-      },
-      {
-        "name": "Christopher Castagna",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Information regarding this actor is currently unavailable.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-      },
-      {
-        "name": "Nicole D'Arecca",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Information regarding this actor is currently unavailable.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-      }
-    ],
-    "director": "Michael Dwayne Paylor",
-    "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Trudy+(1).mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Trudy+movie+poster.png",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Trudy+movie+poster.png",
-    "likes": 0,
-    "releaseDateTime": "2024-01-01T12:00:00Z"
-  },
   "almasvows": {
     "key": "almasvows",
     "title": "Alma's Vows",
@@ -290,6 +251,7 @@ export const moviesData: Record<string, Movie> = {
     "title": "Consumed",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/consumed+.mp4",
     "trailer": "",
+    "price": 0,
     "cast": [
       {
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
@@ -523,7 +485,7 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Foodie+Call+Lasley+cut.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/Foodie+Call.png",
-    "likes": 0
+    "likes": 1
   },
   "hair": {
     "key": "hair",
@@ -762,7 +724,7 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/BURST+Sarah+Morrison-Cleary.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/Burst.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/Burst.png",
-    "likes": 0
+    "likes": 1
   },
   "newmovie1756486933392": {
     "key": "newmovie1756486933392",
@@ -956,7 +918,8 @@ export const moviesData: Record<string, Movie> = {
     ],
     "trailer": "",
     "director": "Jalina Wayser ",
-    "hasCopyrightMusic": true
+    "hasCopyrightMusic": true,
+    "price": 0
   },
   "newmovie1761000817040": {
     "key": "newmovie1761000817040",
@@ -983,21 +946,24 @@ export const moviesData: Record<string, Movie> = {
     ],
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/That+Loud.png",
     "director": "Oskar Pierre Castro ",
+    "mainPageExpiry": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/That+Loud+.mp4",
     "synopsis": "A Stoner comedy ",
     "title": "That Loud ",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/That+Loud.png",
-    "likes": 0,
-    "releaseDateTime": "2025-10-20T18:53"
+    "releaseDateTime": "2025-10-20T18:53",
+    "likes": 1
   },
   "newmovie1762818971534": {
     "key": "newmovie1762818971534",
     "director": " Cyan Zhong",
+    "durationInMinutes": 0,
+    "rating": 0,
     "hasCopyrightMusic": false,
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini+Time+Service+-+xiani+zhong+(1080p%2C+h264%2C+youtube).mp4",
-    "synopsis": "In a world where everyone knows their expiration date, Fern is anxious about her broken time device, and seeks help in an unexpected place.",
     "title": "Gemini Time Service",
     "isWatchPartyEnabled": false,
+    "producers": "",
     "releaseDateTime": "",
     "trailer": "",
     "cast": [
@@ -1023,6 +989,182 @@ export const moviesData: Record<string, Movie> = {
     "tvPoster": "",
     "watchPartyStartTime": "",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemeni+Time+Service.JPG",
+    "synopsis": "In a world where everyone knows their expiration date Fern is anxious about her broken time device and seeks help in an unexpected place.",
+    "likes": 2
+  },
+  "newmovie1763381218900": {
+    "key": "newmovie1763381218900",
+    "isForSale": false,
+    "salePrice": 0,
+    "director": "Michael Dwayne Paylor ",
+    "durationInMinutes": 0,
+    "mainPageExpiry": "",
+    "rating": 0,
+    "hasCopyrightMusic": true,
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Trudy+(1).mp4",
+    "synopsis": "After a haunting breakup, a tightly-wound woman obsessed with control uses written contracts to manage her relationships. As she struggles to re-enter the world, Trudy must decide if living on her own terms is really living at all.",
+    "title": "Trudy ",
+    "isWatchPartyEnabled": false,
+    "producers": "",
+    "releaseDateTime": "",
+    "trailer": "",
+    "cast": [
+      {
+        "name": "Julia De Palma",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      },
+      {
+        "name": "Haley Cassidy ",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      },
+      {
+        "name": "Gina Hendricks",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      },
+      {
+        "name": "Michael Dwayne Paylor",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      },
+      {
+        "name": "Joe Hough",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      },
+      {
+        "name": "Christopher Castagna",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      },
+      {
+        "name": "Nicole D'Arecca",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      }
+    ],
+    "tvPoster": "",
+    "watchPartyStartTime": "",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Trudy+movie+poster.png",
+    "likes": 1
+  },
+  "newmovie1763986220979": {
+    "key": "newmovie1763986220979",
+    "isForSale": false,
+    "salePrice": 0,
+    "director": "",
+    "durationInMinutes": 0,
+    "mainPageExpiry": "",
+    "rating": 0,
+    "hasCopyrightMusic": false,
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Just+Cuz+New+Richard+Frohman.mp4",
+    "synopsis": "",
+    "title": "Just Cuz ",
+    "isWatchPartyEnabled": false,
+    "producers": "",
+    "releaseDateTime": "",
+    "trailer": "",
+    "cast": [],
+    "tvPoster": "",
+    "watchPartyStartTime": "",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/just+cuz.png",
+    "likes": 0
+  },
+  "newmovie1764602379299": {
+    "key": "newmovie1764602379299",
+    "isForSale": false,
+    "salePrice": 0,
+    "director": "Michael James Mina",
+    "durationInMinutes": 0,
+    "mainPageExpiry": "",
+    "rating": 0,
+    "hasCopyrightMusic": false,
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/When+Good+Americans+Die+Michael+Mina.mp4",
+    "synopsis": "As Charlie’s family falls apart, and Sadie’s father falls ill, they dream of a new life in Paris.",
+    "title": "When Good Americans Die ",
+    "isWatchPartyEnabled": false,
+    "producers": "",
+    "releaseDateTime": "",
+    "trailer": "",
+    "cast": [
+      {
+        "name": "Annaliese Schreiber",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      },
+      {
+        "name": "Michael James Mina",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      },
+      {
+        "name": "Rochelle Longwill",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      },
+      {
+        "name": " Richard Dubin",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      }
+    ],
+    "tvPoster": "",
+    "watchPartyStartTime": "",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/When+Good+Americans+Die+png.png",
+    "likes": 0
+  },
+  "newmovie1765384164206": {
+    "key": "newmovie1765384164206",
+    "isForSale": false,
+    "salePrice": 0,
+    "director": "",
+    "durationInMinutes": 0,
+    "mainPageExpiry": "",
+    "rating": 0,
+    "hasCopyrightMusic": false,
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Bereavement+.mov",
+    "synopsis": "The sudden, brutal loss of their teenage son shatters the world of a loving couple, forcing them onto two completely separate paths of agonizing grief.",
+    "title": "Bereavement",
+    "isWatchPartyEnabled": false,
+    "producers": "",
+    "releaseDateTime": "",
+    "trailer": "",
+    "cast": [
+      {
+        "name": "Charles Adams",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      },
+      {
+        "name": "Abbie Allen",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      },
+      {
+        "name": "Tyler Andrews ",
+        "photo": "",
+        "bio": "",
+        "highResPhoto": ""
+      }
+    ],
+    "tvPoster": "",
+    "watchPartyStartTime": "",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Bereavement.png",
     "likes": 0
   },
   "results": {
@@ -1054,7 +1196,8 @@ export const moviesData: Record<string, Movie> = {
     "synopsis": "Confined to a sterile medical waiting room, three women await life-altering results—but only one of them seems to have a handle on everything. A short film created for the Playhouse West-Philadelphia 3-3-3 film festival.",
     "title": "Results",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results+.mp4"
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results+.mp4",
+    "price": 0
   },
   "silentlove": {
     "key": "silentlove",
@@ -1079,7 +1222,8 @@ export const moviesData: Record<string, Movie> = {
     "director": "Salome Denoon",
     "likes": 0,
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/SilentLove.png",
-    "title": "Silent Love"
+    "title": "Silent Love",
+    "price": 0
   },
   "slap": {
     "key": "slap",
@@ -1131,10 +1275,10 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Shaunpaul Costello, Seth Sharpe",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/SLAP+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
-    "likes": 0
+    "likes": 0,
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/SLAP+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4"
   },
   "smirk": {
     "key": "smirk",
@@ -1209,7 +1353,6 @@ export const moviesData: Record<string, Movie> = {
   "tedandnatalie": {
     "key": "tedandnatalie",
     "title": "Ted and Natalie",
-    "synopsis": "A chance encounter between two strangers, Ted and Natalie, sparks an immediate and intense connection, but their time together is fleeting.",
     "cast": [
       {
         "name": "Dana Godfrey",
@@ -1224,12 +1367,13 @@ export const moviesData: Record<string, Movie> = {
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
-    "director": "David Auspitz",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Natalie.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
-    "likes": 0
+    "likes": 0,
+    "director": "Michelle M. Charles ",
+    "synopsis": "A loving boyfriend confronts his avoidant girlfriend after multiple failed attempts to be seen together in public.",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/TED+AND+NATALIE+compressed+-+Lotus+Blossom+Productions+(1080p%2C+h264%2C+youtube).mp4"
   },
   "thefallofthehouseofusher": {
     "key": "thefallofthehouseofusher",
@@ -1242,11 +1386,14 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Fall+of+House+Of+Usher+.jpeg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Fall+of+House+Of+Usher+.jpeg",
     "likes": 0,
-    "releaseDateTime": "1928-10-28T12:00:00Z"
+    "releaseDateTime": "1928-10-28T12:00:00Z",
+    "watchPartyStartTime": "2025-11-14T22:37:00.000Z",
+    "isWatchPartyEnabled": false
   },
   "theimmigrant": {
     "key": "theimmigrant",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The_Immigrant_1917.JPG",
+    "price": 0,
     "releaseDateTime": "1917-06-17T12:00:00Z",
     "cast": [
       {
@@ -1298,10 +1445,11 @@ export const moviesData: Record<string, Movie> = {
     "likes": 0,
     "director": "Seth Sharpe",
     "synopsis": "A comedic drama with a dark twist.",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/NEIGHBORS+-+Shaunpaul+Costello+(1080p%2C+h264%2C+youtube).mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Neighbors.png",
     "trailer": "",
-    "title": "The Neighbours"
+    "title": " Neighbours",
+    "price": 0,
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/NEIGHBORS+-+Shaunpaul+Costello++compressed++youtube).mp4"
   },
   "thepawnshop": {
     "key": "thepawnshop",
@@ -1357,10 +1505,10 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Shaunpaul Costello",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+in+a+Pod.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+pod+.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Two+Peas+In+A+pod+.png",
-    "likes": 1
+    "likes": 1,
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/TWO+PEAS+IN+A+POD++compressed.mp4"
   },
   "unchienandalou": {
     "key": "unchienandalou",
@@ -1425,7 +1573,7 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Wrap+it+up+.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Wrap+it+up.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Wrap+it+up.png",
-    "likes": 12
+    "likes": 13
   },
   "youvsthem": {
     "key": "youvsthem",
@@ -1450,7 +1598,7 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/youVs+Them.mp4",
     "poster": "https://cratetelevision.s3.amazonaws.com/you+vs+them+poster+.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/YouVsThem.png",
-    "likes": 0
+    "likes": 1
   }
 };
 
@@ -1470,10 +1618,11 @@ export const aboutData: AboutData = {
 };
 
 export const festivalConfigData: FestivalConfig = {
-  "title": "Playhouse West-Philadelphia 13th Annual Film Festival ",
+  "isFestivalLive": true,
   "description": "We're just testing. Come back in August 2026 for the real film festival.",
-  "startDate": "2025-11-11T21:46:20.071Z",
-  "endDate": "2025-11-11T21:47:00.000Z"
+  "title": "Playhouse West-Philadelphia 13th Annual Film Festival ",
+  "startDate": "2025-11-27T01:28:12.797Z",
+  "endDate": "2025-11-27T01:28:00.000Z"
 };
 
 export const festivalData: FestivalDay[] = [

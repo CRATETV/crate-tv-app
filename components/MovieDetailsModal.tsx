@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category } from '../types';
 import DirectorCreditsModal from './DirectorCreditsModal';
@@ -246,7 +247,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
   return (
     <>
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
       <div 
         className="bg-[#181818] rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative scrollbar-hide border border-gray-800"
         onClick={(e) => e.stopPropagation()}

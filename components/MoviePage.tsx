@@ -385,8 +385,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
 
     const handleShowDetails = () => {
+        // Crucial Fix: Exit fullscreen if active so the modal is visible
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(err => console.log(err));
+        }
+        
+        if (videoRef.current) {
+            videoRef.current.pause();
+        }
         setIsDetailsModalOpen(true);
-        if(videoRef.current) videoRef.current.pause();
     }
 
     if (isDataLoading || !movie) {
@@ -579,7 +586,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     onClose={() => setSelectedDirector(null)}
                     allMovies={allMovies}
                     onSelectMovie={(m: Movie) => {
-                         const path = `/movie/${m.key}?play=true`;
+                         const path = `/movie/${m.key}`;
                          window.history.pushState({}, '', path);
                          window.dispatchEvent(new Event('pushstate'));
                          window.scrollTo(0, 0);
