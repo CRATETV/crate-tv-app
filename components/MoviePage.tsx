@@ -19,7 +19,7 @@ import { useFestival } from '../contexts/FestivalContext';
 import PauseOverlay from './PauseOverlay';
 import MovieDetailsModal from './MovieDetailsModal';
 
-declare const google: any; // Declare Google IMA SDK global
+declare const google: any;
 
 interface MoviePageProps {
   movieKey: string;
@@ -27,7 +27,6 @@ interface MoviePageProps {
 
 type PlayerMode = 'poster' | 'full';
 
-// Helper function to create/update meta tags
 const setMetaTag = (attr: 'name' | 'property', value: string, content: string) => {
   let element = document.querySelector(`meta[${attr}="${value}"]`);
   if (!element) {
@@ -38,18 +37,17 @@ const setMetaTag = (attr: 'name' | 'property', value: string, content: string) =
   element.setAttribute('content', content);
 };
 
-// A self-contained component for displaying a recommended movie.
 const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
         e.preventDefault();
         window.history.pushState({}, '', path);
         window.dispatchEvent(new Event('pushstate'));
-        window.scrollTo(0, 0); // Scroll to top for a new page feel
+        window.scrollTo(0, 0);
     };
 
     return (
         <a
-            href={`/movie/${movie.key}?play=true`} // Auto-play recommendations
+            href={`/movie/${movie.key}?play=true`}
             onClick={(e) => handleNavigate(e, `/movie/${movie.key}?play=true`)}
             className="group relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 bg-gray-900"
         >
@@ -76,45 +74,27 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     if (!movie || !movie.key) return [];
     const recommendedKeys = new Set<string>();
     const currentMovieCategories = Object.values(allCategories).filter((cat: Category) => cat && Array.isArray(cat.movieKeys) && cat.movieKeys.includes(movie.key));
-    
-    currentMovieCategories.forEach((cat: Category) => {
-      cat.movieKeys.forEach((key: string) => {
-        if (key !== movie.key) {
-          recommendedKeys.add(key);
-        }
-      });
-    });
-
-    return Array.from(recommendedKeys)
-      .map(key => allMovies[key])
-      .filter((m): m is Movie => !!m)
-      .slice(0, 7);
+    currentMovieCategories.forEach((cat: Category) => { cat.movieKeys.forEach((key: string) => { if (key !== movie.key) recommendedKeys.add(key); }); });
+    return Array.from(recommendedKeys).map(key => allMovies[key]).filter((m): m is Movie => !!m).slice(0, 7);
   }, [movie, allMovies, allCategories]);
 
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
+  const [isSynopsisExpanded, setIsSynopsisExpanded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const hasTrackedViewRef = useRef(false);
 
-  // Player state
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
   const [released, setReleased] = useState(() => isMovieReleased(movie));
-  const [isPaused, setIsPaused] = useState(false); // Track paused state in React state
-  
-  // Search state
+  const [isPaused, setIsPaused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  
-  // Staging and feature toggles
   const [isStaging, setIsStaging] = useState(false);
-  
-  // Payment Modal State
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [showSupportSuccess, setShowSupportSuccess] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  // Ad State
   const adContainerRef = useRef<HTMLDivElement>(null);
   const adsManagerRef = useRef<any>(null);
   const [isAdPlaying, setIsAdPlaying] = useState(false);
@@ -123,15 +103,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
   const isOnWatchlist = useMemo(() => watchlist.includes(movieKey), [watchlist, movieKey]);
 
-  useEffect(() => {
-      const adWrapper = document.getElementById('cratetv-ad-wrapper');
-      if (adWrapper) {
-          adWrapper.style.display = playerMode === 'full' ? 'none' : 'flex';
-      }
-      return () => {
-          if (adWrapper) adWrapper.style.display = 'flex';
-      };
-  }, [playerMode]);
+  const synopsisText = movie?.synopsis || '';
+  const synopsisIsLong = synopsisText.replace(/<[^>]+>/g, '').length > 200;
+
+  const handleGoHome = () => {
+    window.history.pushState({}, '', '/');
+    window.dispatchEvent(new Event('pushstate'));
+  };
+
+  // FIX: Added missing handlePaymentSuccess function to manage post-donation UI state.
+  const handlePaymentSuccess = () => {
+    setShowSupportSuccess(true);
+    setTimeout(() => setShowSupportSuccess(false), 3000);
+  };
 
   const playContent = useCallback(async () => {
     setIsAdPlaying(false);
@@ -142,10 +126,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             if (token) {
                 fetch('/api/track-view', {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ movieKey: movie.key }),
                 }).catch(err => console.error("Failed to track view:", err));
             }
@@ -154,114 +135,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
   }, [movie?.key, getUserIdToken]);
 
-  const attemptLandscapeFullscreen = async () => {
-    if (videoContainerRef.current) {
-        try {
-            if (videoContainerRef.current.requestFullscreen) {
-                await videoContainerRef.current.requestFullscreen();
-            } else if ((videoContainerRef.current as any).webkitRequestFullscreen) {
-                await (videoContainerRef.current as any).webkitRequestFullscreen();
-            }
-            
-            if (screen.orientation && (screen.orientation as any).lock) {
-                await (screen.orientation as any).lock('landscape').catch((e: any) => {
-                    console.debug("Orientation lock failed or not supported:", e);
-                });
-            }
-        } catch (err) {
-            console.warn("Fullscreen/Landscape request failed:", err);
-        }
-    }
-  };
-
-  const handleStartPlayback = async () => {
-      setPlayerMode('full');
-      attemptLandscapeFullscreen();
-  };
-  
-  useEffect(() => {
-      if (playerMode === 'full') {
-          const timer = setTimeout(() => {
-              attemptLandscapeFullscreen();
-          }, 100);
-          return () => clearTimeout(timer);
-      }
-  }, [playerMode]);
-
-  const initializeAds = useCallback(() => {
-    if (!videoRef.current || !adContainerRef.current || playerMode !== 'full' || !released || adsManagerRef.current || typeof google === 'undefined') {
-        if (playerMode === 'full') playContent();
-        return;
-    }
-    
-    const videoElement = videoRef.current;
-    const adContainer = adContainerRef.current;
-    setIsAdPlaying(true);
-    setAdError(null);
-
-    const adDisplayContainer = new google.ima.AdDisplayContainer(adContainer, videoElement);
-    const adsLoader = new google.ima.AdsLoader(adDisplayContainer);
-
-    adsLoader.addEventListener(
-        google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
-        (adsManagerLoadedEvent: any) => {
-            const adsManager = adsManagerLoadedEvent.getAdsManager(videoElement);
-            adsManagerRef.current = adsManager;
-
-            adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED, () => videoElement.pause());
-            adsManager.addEventListener(google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED, playContent);
-            adsManager.addEventListener(google.ima.AdEvent.Type.ALL_ADS_COMPLETED, playContent);
-            adsManager.addEventListener(google.ima.AdErrorEvent.Type.AD_ERROR, (adErrorEvent: any) => {
-                console.error('Ad Error:', adErrorEvent.getError());
-                setAdError('An ad could not be loaded. Starting film...');
-                playContent();
-            });
-            
-            try {
-                adsManager.init(videoElement.clientWidth, videoElement.clientHeight, google.ima.ViewMode.NORMAL);
-                adsManager.start();
-            } catch (adError) {
-                console.error("AdsManager could not be started", adError);
-                playContent();
-            }
-        },
-        false
-    );
-    
-    adsLoader.addEventListener(
-        google.ima.AdErrorEvent.Type.AD_ERROR,
-        (adErrorEvent: any) => {
-            console.error('Ad Loader Error:', adErrorEvent.getError());
-            setAdError('An ad could not be loaded. Starting film...');
-            playContent();
-        },
-        false
-    );
-
-    const adsRequest = new google.ima.AdsRequest();
-    adsRequest.adTagUrl = 'https://storage.googleapis.com/interactive-media-ads/ad-tags/unknown/vast_skippable.xml';
-    adsRequest.linearAdSlotWidth = videoElement.clientWidth;
-    adsRequest.linearAdSlotHeight = videoElement.clientHeight;
-
-    adsLoader.requestAds(adsRequest);
-  }, [playerMode, released, playContent]);
-  
-  useEffect(() => {
-    return () => {
-        if (adsManagerRef.current) {
-            adsManagerRef.current.destroy();
-            adsManagerRef.current = null;
-        }
-    };
-  }, []);
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const env = params.get('env');
-    const stagingSession = sessionStorage.getItem('crateTvStaging');
-    const stagingActive = env === 'staging' || stagingSession === 'true';
-    if (stagingActive) setIsStaging(true);
-    
     if (movie) {
         setReleased(isMovieReleased(movie));
         if ((params.get('play') === 'true') && movie.fullMovie && isMovieReleased(movie)) {
@@ -270,136 +145,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             setPlayerMode('poster');
         }
     } 
-    
-    hasTrackedViewRef.current = false;
   }, [movieKey, movie, isDataLoading]);
 
-  useEffect(() => {
-    if (released || !movie) return;
+  if (isDataLoading || !movie) return <LoadingSpinner />;
 
-    const interval = setInterval(() => {
-        if (isMovieReleased(movie)) {
-            setReleased(true);
-            clearInterval(interval);
-        }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [movie, released]);
-  
-  useEffect(() => {
-    if (playerMode === 'full' && released) {
-        const timer = setTimeout(() => initializeAds(), 100);
-        return () => clearTimeout(timer);
-    } else {
-        if (adsManagerRef.current) {
-            adsManagerRef.current.destroy();
-            adsManagerRef.current = null;
-        }
-        setIsAdPlaying(false);
-    }
-  }, [playerMode, released, initializeAds]);
-
-  // SEO & Structured Data
-  useEffect(() => {
-    if (movie) {
-        document.title = `${movie.title || 'Untitled Film'} | Crate TV`;
-        const synopsisText = (movie.synopsis || '').replace(/<br\s*\/?>/gi, ' ').trim();
-        const pageUrl = window.location.href;
-        setMetaTag('property', 'og:title', movie.title || 'Crate TV Film');
-        setMetaTag('name', 'description', synopsisText);
-        setMetaTag('property', 'og:description', synopsisText);
-        setMetaTag('property', 'og:image', movie.poster || '');
-        setMetaTag('property', 'og:url', pageUrl);
-        setMetaTag('property', 'og:type', 'video.movie');
-
-        // Add Movie Structured Data
-        const existingScript = document.getElementById('movie-structured-data');
-        if (existingScript) existingScript.remove();
-
-        const script = document.createElement('script');
-        script.id = 'movie-structured-data';
-        script.type = 'application/ld+json';
-        const structuredData = {
-          "@context": "https://schema.org",
-          "@type": "Movie",
-          "name": movie.title,
-          "description": synopsisText,
-          "image": movie.poster,
-          "director": {
-            "@type": "Person",
-            "name": movie.director
-          },
-          "actor": movie.cast.map(a => ({ "@type": "Person", "name": a.name })),
-          "duration": movie.durationInMinutes ? `PT${movie.durationInMinutes}M` : undefined,
-          "potentialAction": {
-            "@type": "WatchAction",
-            "target": {
-              "@type": "EntryPoint",
-              "urlTemplate": pageUrl,
-              "actionPlatform": [
-                "http://schema.org/DesktopWebPlatform",
-                "http://schema.org/MobileWebPlatform",
-                "http://schema.org/AndroidPlatform",
-                "http://schema.org/IOSPlatform"
-              ]
-            }
-          }
-        };
-        script.textContent = JSON.stringify(structuredData);
-        document.head.appendChild(script);
-    }
- }, [movie]);
-
- useEffect(() => {
-    const handleEscKey = (event: KeyboardEvent) => {
-        if (event.key === 'Escape' && playerMode === 'full') handleExitPlayer();
-    };
-    document.addEventListener('keydown', handleEscKey);
-    return () => document.removeEventListener('keydown', handleEscKey);
-}, [playerMode]);
-
-    const handleSearchSubmit = (query: string) => {
-        if (query) window.location.href = `/?search=${encodeURIComponent(query)}`;
-    };
-    
-    const handleMovieEnd = () => {
-      window.history.pushState({}, '', '/');
-      window.dispatchEvent(new Event('pushstate'));
-    };
-
-    const handleExitPlayer = () => {
-        setPlayerMode('poster');
-    };
-    
-    const handlePaymentSuccess = () => {
-        setShowSupportSuccess(true);
-        setTimeout(() => setShowSupportSuccess(false), 3000);
-    };
-
-    // Video Player Callbacks
-    const handlePause = () => setIsPaused(true);
-    const handlePlay = () => setIsPaused(false);
-    
-    const handleRewind = () => {
-        if (videoRef.current) videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
-    };
-
-    const handleForward = () => {
-        if (videoRef.current) videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 10);
-    };
-
-    const handleHome = () => {
-        window.history.pushState({}, '', '/');
-        window.dispatchEvent(new Event('pushstate'));
-    };
-
-    if (isDataLoading || !movie) {
-        return <LoadingSpinner />;
-    }
-
-    return (
-        <div className="flex flex-col min-h-screen bg-black text-white">
+  return (
+        <div className="flex flex-col min-h-screen bg-[#050505] text-white">
             {isStaging && <StagingBanner onExit={() => {}} isOffline={dataSource === 'fallback'} />}
             
             {playerMode !== 'full' && (
@@ -408,13 +159,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     onSearch={setSearchQuery}
                     isScrolled={true}
                     onMobileSearchClick={() => setIsMobileSearchOpen(true)}
-                    onSearchSubmit={handleSearchSubmit}
-                    isStaging={isStaging}
+                    onSearchSubmit={(q) => { if(q) window.location.href = `/?search=${encodeURIComponent(q)}`; }}
                 />
             )}
 
             <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
-                <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container">
+                <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container group/player">
                     <div ref={adContainerRef} className="absolute inset-0 z-20 pointer-events-none" />
                     
                     {playerMode === 'full' && (
@@ -423,16 +173,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 ref={videoRef} 
                                 src={movie.fullMovie} 
                                 className="w-full h-full"
-                                controls={!isAdPlaying && !isPaused} // Hide native controls when paused to show our overlay
+                                controls={!isAdPlaying && !isPaused}
                                 playsInline
                                 onContextMenu={(e) => e.preventDefault()} 
                                 controlsList="nodownload"
-                                onEnded={handleMovieEnd}
-                                onPause={handlePause}
-                                onPlay={handlePlay}
+                                onEnded={() => handleGoHome()}
+                                onPause={() => setIsPaused(true)}
+                                onPlay={() => setIsPaused(false)}
                             />
-
-                            {/* PAUSE OVERLAY (Cast/X-Ray) */}
                             {isPaused && !isAdPlaying && (
                                 <PauseOverlay 
                                     movie={movie}
@@ -441,58 +189,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     onMoreDetails={() => setIsDetailsModalOpen(true)}
                                     onSelectActor={setSelectedActor}
                                     onResume={() => videoRef.current?.play()}
-                                    onRewind={handleRewind}
-                                    onForward={handleForward}
+                                    onRewind={() => { if(videoRef.current) videoRef.current.currentTime -= 10; }}
+                                    onForward={() => { if(videoRef.current) videoRef.current.currentTime += 10; }}
                                     onToggleLike={() => toggleLikeMovie(movieKey)}
                                     onToggleWatchlist={() => toggleWatchlist(movieKey)}
                                     onSupport={() => setIsSupportModalOpen(true)}
-                                    onHome={handleHome}
-                                />
-                            )}
-
-                            {/* CRITICAL FOR DESKTOP: Render modals inside the video container so they appear in fullscreen */}
-                            {selectedActor && (
-                                <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />
-                            )}
-                             {selectedDirector && (
-                                <DirectorCreditsModal
-                                    directorName={selectedDirector}
-                                    onClose={() => setSelectedDirector(null)}
-                                    allMovies={allMovies}
-                                    onSelectMovie={(m: Movie) => {
-                                         const path = `/movie/${m.key}`;
-                                         window.history.pushState({}, '', path);
-                                         window.dispatchEvent(new Event('pushstate'));
-                                         window.scrollTo(0, 0);
-                                    }}
-                                />
-                            )}
-                            {isSupportModalOpen && movie && (
-                                <SquarePaymentModal
-                                    movie={movie}
-                                    paymentType="donation"
-                                    onClose={() => setIsSupportModalOpen(false)}
-                                    onPaymentSuccess={handlePaymentSuccess}
-                                />
-                            )}
-                            {isDetailsModalOpen && movie && (
-                                <MovieDetailsModal
-                                    movie={movie}
-                                    isLiked={isLiked}
-                                    onToggleLike={toggleLikeMovie}
-                                    onClose={() => setIsDetailsModalOpen(false)}
-                                    onSelectActor={setSelectedActor}
-                                    allMovies={allMovies}
-                                    allCategories={allCategories}
-                                    onSelectRecommendedMovie={(m) => {
-                                        setIsDetailsModalOpen(false);
-                                        window.history.pushState({}, '', `/movie/${m.key}`);
-                                        window.dispatchEvent(new Event('pushstate'));
-                                    }}
-                                    onSupportMovie={() => {
-                                        setIsDetailsModalOpen(false);
-                                        setIsSupportModalOpen(true);
-                                    }}
+                                    onHome={handleGoHome}
                                 />
                             )}
                         </>
@@ -500,116 +202,108 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
                     {playerMode !== 'full' && (
                         <>
-                            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover blur-lg opacity-30" onContextMenu={(e) => e.preventDefault()} crossOrigin="anonymous" />
+                            {/* Mobile Floating Back Button */}
+                            <button 
+                                onClick={handleGoHome} 
+                                className="absolute top-6 left-6 z-50 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full p-2.5 hover:bg-white/10 transition-all shadow-2xl active:scale-95"
+                                aria-label="Back to browse"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                            </button>
+
+                            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover blur-xl opacity-20" onContextMenu={(e) => e.preventDefault()} crossOrigin="anonymous" />
                             
-                            {released ? (
-                                <div className="relative w-full h-full flex items-center justify-center">
-                                    <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt={movie.title} className="w-full h-full object-contain" onContextMenu={(e) => e.preventDefault()} crossOrigin="anonymous" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                            <div className="relative w-full h-full flex items-center justify-center p-8 md:p-0">
+                                <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt={movie.title} className="w-full h-full object-contain md:max-w-2xl rounded-lg shadow-2xl" onContextMenu={(e) => e.preventDefault()} crossOrigin="anonymous" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent"></div>
+                                {released && (
                                     <button 
-                                        onClick={handleStartPlayback}
-                                        className="absolute text-white bg-black/50 rounded-full p-4 hover:bg-black/70 transition-colors"
+                                        onClick={() => setPlayerMode('full')}
+                                        className="absolute group/playbtn text-white bg-black/40 backdrop-blur-md rounded-full p-6 hover:bg-white transition-all transform hover:scale-110 active:scale-95 shadow-2xl border-4 border-white/30"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" viewBox="0 0 20 20" fill="currentColor">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 group-hover/playbtn:text-black transition-colors" viewBox="0 0 20 20" fill="currentColor">
                                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                                         </svg>
                                     </button>
-                                </div>
-                            ) : (
-                                <div className="relative w-full h-full flex flex-col items-center justify-center text-center p-4">
-                                    <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Coming Soon</h2>
-                                    {movie.releaseDateTime && (
-                                        <div className="bg-black/50 rounded-lg p-4">
-                                            <Countdown 
-                                                targetDate={movie.releaseDateTime} 
-                                                onEnd={() => setReleased(true)} 
-                                                className="text-xl md:text-3xl text-white" 
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </>
                     )}
-                    
-                    {playerMode === 'full' && (
-                        <div className="absolute top-4 left-4 z-50 flex items-center gap-4">
-                             <button
-                                onClick={handleExitPlayer}
-                                className="flex items-center gap-2 bg-black/50 hover:bg-black/70 px-4 py-2 rounded-full text-white backdrop-blur-md transition-colors border border-white/20 shadow-xl"
-                                aria-label="Exit video player"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                </svg>
-                                <span className="text-sm font-bold">Back to Browse</span>
-                            </button>
-                        </div>
-                    )}
-                    
-                    {playerMode === 'full' && <CastButton videoElement={videoRef.current} />}
                 </div>
 
                 {playerMode !== 'full' && (
-                  <div className="max-w-6xl mx-auto p-4 md:p-8">
-                      <h1 className="text-3xl md:text-5xl font-bold text-white">{movie.title || 'Untitled Film'}</h1>
-                      <div className="mt-4 flex flex-wrap items-center gap-3 md:gap-4">
-                          <button onClick={() => setIsSupportModalOpen(true)} className="flex-grow sm:flex-grow-0 flex items-center justify-center px-4 py-2.5 bg-purple-600/80 text-white font-bold rounded-md hover:bg-purple-700/80 transition-colors shadow-lg text-sm md:text-base">
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <div className="max-w-4xl mx-auto p-6 md:p-12 -mt-8 relative z-30">
+                      <h1 className="text-4xl md:text-7xl font-black text-white mb-8 tracking-tighter">{movie.title || 'Untitled Film'}</h1>
+                      
+                      <div className="flex flex-wrap items-center gap-4 mb-10">
+                          <button 
+                            onClick={() => setIsSupportModalOpen(true)} 
+                            className="flex-1 sm:flex-none flex items-center justify-center px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl"
+                          >
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" />
                              </svg>
                              Support Filmmaker
                           </button>
-                          <button onClick={() => setIsDetailsModalOpen(true)} className="flex-grow sm:flex-grow-0 flex items-center justify-center px-4 py-2.5 bg-gray-500/70 backdrop-blur-sm text-white font-bold rounded-md hover:bg-gray-500/90 transition-colors shadow-lg text-sm md:text-base">
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          <button 
+                            onClick={() => setIsDetailsModalOpen(true)} 
+                            className="flex-1 sm:flex-none flex items-center justify-center px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl border border-white/10"
+                          >
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                              More Info
                           </button>
                           {showSupportSuccess && (
-                            <div className="w-full sm:w-auto bg-green-500/80 text-white font-bold py-2 px-4 rounded-md inline-block animate-[fadeIn_0.5s_ease-out] text-center">
+                            <div className="bg-green-500/80 text-white font-bold py-2 px-4 rounded-md inline-block animate-[fadeIn_0.5s_ease-out]">
                                 Thank you for your support!
                             </div>
                           )}
                       </div>
-                      <div className="mt-6 text-gray-300 leading-relaxed text-sm md:text-base" dangerouslySetInnerHTML={{ __html: movie.synopsis || '' }}></div>
+
+                      <div className="relative mb-12">
+                          <div className={`text-gray-300 text-lg md:text-xl leading-relaxed ${!isSynopsisExpanded && synopsisIsLong ? 'line-clamp-4' : ''}`} dangerouslySetInnerHTML={{ __html: synopsisText }}></div>
+                          {synopsisIsLong && !isSynopsisExpanded && (
+                              <button onClick={() => setIsSynopsisExpanded(true)} className="text-white font-bold mt-4 hover:underline">Read more</button>
+                          )}
+                      </div>
                        
                       <RokuBanner />
 
-                      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-                          <div className="md:col-span-2">
-                               <div className="mt-6 bg-gradient-to-r from-red-500/10 to-blue-500/10 p-4 rounded-lg text-center border border-gray-700">
-                                  <p className="text-sm text-white">✨ Click an actor's name for their bio & an AI-generated fun fact!</p>
+                      <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-12 pt-12 border-t border-white/5">
+                          <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
+                               <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-6">Starring</h3>
+                               <div className="grid grid-cols-2 gap-4">
+                                  {movie.cast.map((actor: Actor) => (
+                                  <button key={actor.name} className="text-left py-2 px-3 rounded-lg hover:bg-white/5 text-white font-bold transition-all" onClick={() => setSelectedActor(actor)}>
+                                      {actor.name}
+                                  </button>
+                                  ))}
                               </div>
                           </div>
                           <div>
-                               {movie.durationInMinutes && movie.durationInMinutes > 0 && (
-                                <div className="mb-4">
-                                    <h3 className="text-lg font-semibold text-gray-400 mb-1 text-sm md:text-base uppercase tracking-wider">Duration</h3>
-                                    <p className="text-white font-bold">{movie.durationInMinutes} minutes</p>
-                                </div>
-                              )}
-                               <h3 className="text-lg font-semibold text-gray-400 mb-2 text-sm md:text-base uppercase tracking-wider">Cast</h3>
-                              <div className="space-y-2 text-white">
-                                  {movie.cast.map((actor: Actor) => (
-                                  <p key={actor.name} className="group cursor-pointer py-1" onClick={() => setSelectedActor(actor)}>
-                                      <span className="group-hover:text-red-400 transition font-medium">{actor.name}</span>
-                                  </p>
-                                  ))}
-                              </div>
-                              <h3 className="text-lg font-semibold text-gray-400 mt-6 mb-2 text-sm md:text-base uppercase tracking-wider">Director</h3>
-                              <div className="space-y-2 text-white">
-                                  {movie.director.split(',').map((directorName: string) => directorName.trim()).filter(Boolean).map(directorName => (
-                                      <p key={directorName} className="group cursor-pointer py-1" onClick={() => setSelectedDirector(directorName)}>
-                                          <span className="group-hover:text-red-400 transition font-medium">{directorName}</span>
-                                      </p>
-                                  ))}
+                              <h3 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-6">Behind the lens</h3>
+                              <div className="space-y-4">
+                                  <div>
+                                      <p className="text-xs font-bold text-gray-400 mb-1">Director</p>
+                                      {movie.director.split(',').map((d: string) => (
+                                          <button key={d} className="block text-white font-bold hover:text-red-500 transition-colors mb-1" onClick={() => setSelectedDirector(d.trim())}>{d.trim()}</button>
+                                      ))}
+                                  </div>
+                                  {movie.durationInMinutes ? (
+                                    <div>
+                                        <p className="text-xs font-bold text-gray-400 mb-1">Runtime</p>
+                                        <p className="text-white font-bold">{movie.durationInMinutes}m</p>
+                                    </div>
+                                  ) : null}
                               </div>
                           </div>
                       </div>
 
                       {recommendedMovies.length > 0 && (
-                          <div className="mt-12 pt-8 border-t border-gray-700">
-                              <h2 className="text-2xl font-bold text-white mb-6">More Like This</h2>
-                              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-4">
+                          <div className="mt-20 pt-12 border-t border-white/5">
+                              <h2 className="text-2xl font-black text-white mb-8">You might also like</h2>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
                                   {recommendedMovies.map(recMovie => (
                                       <RecommendedMovieLink key={recMovie.key} movie={recMovie} />
                                   ))}
@@ -627,34 +321,16 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
               </>
             )}
 
-            {/* Render modals here as well for the non-player view */}
-            {playerMode !== 'full' && selectedActor && (
-                <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />
-            )}
-             {playerMode !== 'full' && selectedDirector && (
+            {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
+             {selectedDirector && (
                 <DirectorCreditsModal
                     directorName={selectedDirector}
                     onClose={() => setSelectedDirector(null)}
                     allMovies={allMovies}
-                    onSelectMovie={(m: Movie) => {
-                         const path = `/movie/${m.key}`;
-                         window.history.pushState({}, '', path);
-                         window.dispatchEvent(new Event('pushstate'));
-                         window.scrollTo(0, 0);
-                    }}
+                    onSelectMovie={(m) => { window.history.pushState({}, '', `/movie/${m.key}`); window.dispatchEvent(new Event('pushstate')); window.scrollTo(0, 0); }}
                 />
             )}
-            {isMobileSearchOpen && (
-                <SearchOverlay
-                    searchQuery={searchQuery}
-                    onSearch={setSearchQuery}
-                    onClose={() => setIsMobileSearchOpen(false)}
-                    onSubmit={handleSearchSubmit}
-                    results={[]}
-                    onSelectMovie={() => {}}
-                />
-            )}
-            {playerMode !== 'full' && isSupportModalOpen && movie && (
+            {isSupportModalOpen && movie && (
                 <SquarePaymentModal
                     movie={movie}
                     paymentType="donation"
@@ -662,7 +338,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     onPaymentSuccess={handlePaymentSuccess}
                 />
             )}
-            {playerMode !== 'full' && isDetailsModalOpen && movie && (
+            {isDetailsModalOpen && movie && (
                 <MovieDetailsModal
                     movie={movie}
                     isLiked={isLiked}
@@ -671,15 +347,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     onSelectActor={setSelectedActor}
                     allMovies={allMovies}
                     allCategories={allCategories}
-                    onSelectRecommendedMovie={(m) => {
-                        setIsDetailsModalOpen(false);
-                        window.history.pushState({}, '', `/movie/${m.key}`);
-                        window.dispatchEvent(new Event('pushstate'));
-                    }}
-                    onSupportMovie={() => {
-                        setIsDetailsModalOpen(false);
-                        setIsSupportModalOpen(true);
-                    }}
+                    onSelectRecommendedMovie={(m) => { setIsDetailsModalOpen(false); window.history.pushState({}, '', `/movie/${m.key}`); window.dispatchEvent(new Event('pushstate')); }}
+                    onSupportMovie={() => { setIsDetailsModalOpen(false); setIsSupportModalOpen(true); }}
                 />
             )}
         </div>

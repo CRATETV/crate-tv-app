@@ -55,12 +55,12 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
     };
 
     return (
-        <div className="w-full h-full flex flex-col bg-[#0a0a0a] md:bg-gray-900 border-t md:border-t-0 md:border-l border-gray-800">
+        <div className="w-full h-full flex flex-col bg-[#0a0a0a] md:bg-gray-900 border-t md:border-t-0 md:border-l border-gray-800 overflow-hidden">
             <div className="hidden md:flex p-4 text-lg font-bold border-b border-gray-700 flex-shrink-0">
                 <h2 className="text-sm uppercase tracking-widest text-gray-400">Live Chat</h2>
             </div>
             
-            {/* Message Area */}
+            {/* Message Area - This area shrinks when the keyboard opens */}
             <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide">
                 {messages.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-center px-8">
@@ -80,15 +80,15 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Box - Brought "up" and styled for mobile thumb reach */}
-            <form onSubmit={handleSendMessage} className="p-3 bg-black/40 backdrop-blur-md border-t border-white/5 flex-shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                <div className="flex items-center gap-2 bg-gray-800/80 rounded-full px-4 py-1.5 border border-white/10 focus-within:border-red-600/50 transition-colors">
+            {/* Input Box - Styled for mobile with extra bottom clearance */}
+            <form onSubmit={handleSendMessage} className="p-3 bg-black/60 backdrop-blur-xl border-t border-white/5 flex-shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <div className="flex items-center gap-2 bg-gray-800/80 rounded-full px-4 py-1 border border-white/10 focus-within:border-red-600/50 transition-colors">
                     <input 
                         type="text" 
                         value={newMessage} 
                         onChange={e => setNewMessage(e.target.value)} 
                         placeholder="Type a message..." 
-                        className="bg-transparent border-none text-white text-sm w-full focus:ring-0 placeholder-gray-500 py-2" 
+                        className="bg-transparent border-none text-white text-sm w-full focus:ring-0 placeholder-gray-500 py-2.5" 
                         disabled={!user || isSending} 
                     />
                     <button 
@@ -178,7 +178,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     if (partyState?.status === 'ended') {
         return (
-             <div className="flex flex-col min-h-[100dvh] bg-black text-white items-center justify-center text-center p-4">
+             <div className="flex flex-col h-[100dvh] bg-black text-white items-center justify-center text-center p-4">
                 <h1 className="text-4xl font-bold mb-4">This Watch Party has ended.</h1>
                 <p className="text-gray-400 mb-6">Thanks for joining! You can now watch the film on your own time.</p>
                 <button onClick={handleGoHome} className="submit-btn">Return to Home</button>
@@ -188,7 +188,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     if (!hasAccess) {
         return (
-            <div className="flex flex-col min-h-[100dvh] bg-black text-white relative">
+            <div className="flex flex-col h-[100dvh] bg-black text-white relative overflow-hidden">
                  <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 blur-xl" />
                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent"></div>
                  
@@ -235,7 +235,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     if (partyState?.status === 'waiting') {
         return (
-             <div className="flex flex-col min-h-[100dvh] bg-black text-white items-center justify-center text-center p-4">
+             <div className="flex flex-col h-[100dvh] bg-black text-white items-center justify-center text-center p-4">
                 <h1 className="text-4xl font-bold mb-4 animate-pulse">Waiting for the host...</h1>
                 <p className="text-gray-400">The screening for "{movie.title}" will begin shortly.</p>
                 <div className="mt-12 flex items-center gap-3 bg-white/5 px-6 py-3 rounded-full border border-white/10">
@@ -248,10 +248,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     
     return (
         <div className="flex flex-col md:flex-row h-[100dvh] bg-black text-white overflow-hidden">
-            <div className="flex-grow flex flex-col relative overflow-hidden">
+            {/* Player + Mobile Chat Container */}
+            <div className="flex-grow flex flex-col relative overflow-hidden h-full">
                 
-                {/* Header Bar - Brings player "down" and adds context */}
-                <div className="flex-shrink-0 bg-black/80 backdrop-blur-md p-3 flex items-center justify-between border-b border-white/5 md:hidden pt-[max(0.75rem,env(safe-area-inset-top))]">
+                {/* Mobile Header Bar - Fixed height, won't move */}
+                <div className="flex-none bg-black/90 backdrop-blur-md p-3 flex items-center justify-between border-b border-white/5 md:hidden pt-[max(0.75rem,env(safe-area-inset-top))]">
                      <button onClick={handleGoHome} className="text-gray-400 hover:text-white transition-colors" aria-label="Back to Home">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                     </button>
@@ -259,14 +260,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         <p className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none mb-1">Live Watch Party</p>
                         <h2 className="text-xs font-bold truncate text-gray-200">{movie.title}</h2>
                     </div>
-                    <div className="w-6"></div> {/* Spacer for alignment */}
+                    <div className="w-6"></div> {/* Spacer */}
                 </div>
 
+                {/* Desktop Back Button */}
                 <button onClick={handleGoHome} className="hidden md:flex absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 z-20" aria-label="Back to Home">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                 </button>
 
-                <div className="w-full aspect-video bg-black flex-shrink-0 relative">
+                {/* The Player - Flex-none ensures it stays at the top regardless of keyboard */}
+                <div className="flex-none w-full aspect-video bg-black relative shadow-2xl z-10">
                     {!isVideoReady && (
                         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
                             <img 
@@ -286,12 +289,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         className={`w-full h-full transition-opacity duration-500 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`}
                         playsInline
                         autoPlay
-                        controls={false} // Canonical state is host-controlled
+                        controls={false}
                     />
                 </div>
                 
-                {/* Chat Container - flex-grow ensures it fills remaining space and handles keyboard resizing correctly */}
-                <div className="flex-grow flex flex-col md:hidden">
+                {/* Chat Area (Mobile) - flex-grow handles the keyboard resize */}
+                <div className="flex-grow flex flex-col md:hidden relative overflow-hidden bg-[#0a0a0a]">
                     <EmbeddedChat movieKey={movieKey} user={user} />
                 </div>
             </div>

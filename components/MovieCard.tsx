@@ -19,6 +19,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Sound starts muted for policy compliance
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -43,27 +44,22 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
     onToggleWatchlist?.(movie.key);
   };
 
-  const handleSupport = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSupportMovie?.(movie);
-  };
-
   const handleMouseEnter = () => {
     if (isComingSoon || (!movie.trailer && !movie.fullMovie)) return;
     hoverTimeoutRef.current = setTimeout(() => {
       setShowPreview(true);
+      setIsMuted(false); // Unmute on hover
     }, 700);
   };
 
   const handleMouseLeave = () => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     setShowPreview(false);
+    setIsMuted(true); // Mute when leaving
   };
 
   const handleMetadataLoaded = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const video = e.currentTarget;
-    // Jumps to 1 minute in to skip silent logos, or 30% of the film if it's very short.
-    // This ensures the user sees actual content rather than production titles.
     if (video.duration > 0) {
         video.currentTime = Math.min(60, video.duration * 0.3);
     }
@@ -111,7 +107,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
                 ref={videoRef}
                 src={videoSrc}
                 autoPlay
-                muted
+                muted={isMuted}
                 loop
                 playsInline
                 onLoadedMetadata={handleMetadataLoaded}
