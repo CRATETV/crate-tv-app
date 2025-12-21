@@ -57,6 +57,19 @@
         box-shadow: 0 0 25px 3px rgba(229, 9, 20, 0.2);
       }
 
+      /* Top 10 Ranked Card Glow */
+      .ranked-card-border {
+        position: relative;
+        transition: all 0.4s ease;
+        box-shadow: 0 0 15px -5px var(--rank-color);
+        border: 1px solid rgba(255,255,255,0.05);
+      }
+      .ranked-card-border:hover {
+        box-shadow: 0 0 35px -5px var(--rank-color);
+        border: 1px solid var(--rank-color);
+        z-index: 30;
+      }
+
       .scrollbar-hide::-webkit-scrollbar { display: none; }
       .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 

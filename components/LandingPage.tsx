@@ -7,6 +7,7 @@ import { Movie, AboutData, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import AuthModal from './AuthModal';
 import CollapsibleFooter from './CollapsibleFooter';
+import { isMovieReleased } from '../constants';
 
 const LandingPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -39,8 +40,29 @@ const LandingPage: React.FC = () => {
     }, []);
 
     const heroMovies = useMemo(() => {
-        if (!categories.featured?.movieKeys) return [];
-        return categories.featured.movieKeys.map(key => movies[key]).filter(Boolean);
+        // Priority 1: Specifically featured films
+        const featuredCategory = categories.featured;
+        let spotlightMovies: Movie[] = [];
+        
+        if (featuredCategory?.movieKeys && featuredCategory.movieKeys.length > 0) {
+            spotlightMovies = featuredCategory.movieKeys
+                .map(key => movies[key])
+                .filter((m): m is Movie => !!m && isMovieReleased(m));
+        }
+        
+        // Priority 2: Fallback to most recent releases if featured is empty
+        if (spotlightMovies.length === 0) {
+            spotlightMovies = (Object.values(movies) as Movie[])
+                .filter(m => m && isMovieReleased(m) && !!m.title)
+                .sort((a, b) => {
+                    const dateA = a.releaseDateTime ? new Date(a.releaseDateTime).getTime() : 0;
+                    const dateB = b.releaseDateTime ? new Date(b.releaseDateTime).getTime() : 0;
+                    return dateB - dateA;
+                })
+                .slice(0, 4);
+        }
+        
+        return spotlightMovies;
     }, [movies, categories.featured]);
 
     useEffect(() => {
@@ -114,7 +136,7 @@ const LandingPage: React.FC = () => {
                                     Unlimited stories from<br className="hidden md:block"/> independent voices.
                                 </h2>
                                 <p className="text-xl md:text-2xl font-medium mb-12 drop-shadow-[0_2px_8px_rgba(0,0,0,1)] animate-[fadeInHeroContent_1s_ease-out] text-gray-100">
-                                    Watch for free. Supported by the community.
+                                    Watch for free. Support the community.
                                 </p>
                                 
                                 <div className="w-full max-w-3xl mx-auto animate-[fadeInHeroContent_1.2s_ease-out]">

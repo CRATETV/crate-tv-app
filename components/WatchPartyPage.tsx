@@ -23,9 +23,9 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
         const db = getDbInstance();
         if (!db) return;
         const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages').orderBy('timestamp', 'asc').limitToLast(100);
-        const unsubscribe = messagesRef.onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
+        const unsubscribe = messagesRef.onSnapshot(snapshot => {
             const fetchedMessages: ChatMessage[] = [];
-            snapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => { fetchedMessages.push({ id: doc.id, ...doc.data() } as ChatMessage); });
+            snapshot.forEach(doc => { fetchedMessages.push({ id: doc.id, ...doc.data() } as ChatMessage); });
             setMessages(fetchedMessages);
         });
         return () => unsubscribe();

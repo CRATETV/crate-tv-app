@@ -39,9 +39,9 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
         const db = getDbInstance();
         if (!db) return;
         const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages').orderBy('timestamp', 'asc').limitToLast(100);
-        const unsubscribe = messagesRef.onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
+        const unsubscribe = messagesRef.onSnapshot(snapshot => {
             const fetchedMessages: ChatMessage[] = [];
-            snapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => { fetchedMessages.push({ id: doc.id, ...doc.data() } as ChatMessage); });
+            snapshot.forEach(doc => { fetchedMessages.push({ id: doc.id, ...doc.data() } as ChatMessage); });
             setMessages(fetchedMessages);
         });
         return () => unsubscribe();
@@ -190,17 +190,12 @@ const formatISOForInput = (isoString?: string): string => {
         const date = new Date(isoString);
         if (isNaN(date.getTime())) return '';
         
-        // getFullYear, getMonth, etc. all return values in the user's local timezone.
-        // This is exactly what we need to format for the datetime-local input.
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
+        // Create a new date that is offset by the timezone, so the final ISO string's YYYY-MM-DDTHH:MM part matches the local time.
+        const tzoffset = date.getTimezoneOffset() * 60000; //offset in milliseconds
+        const localISOTime = new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
+        
+        return localISOTime;
     } catch (e) {
-        console.error("Error formatting date for input:", e);
         return '';
     }
 };
@@ -245,7 +240,7 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
                     <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-pink-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
                 </label>
             </td>
-            <td className="p-3">
+             <td className="p-3">
                 <div className="flex items-center gap-3">
                     <label className="relative inline-flex items-center cursor-pointer" title="Make this a paid event">
                         <input type="checkbox" checked={movie.isWatchPartyPaid || false} onChange={handlePaidToggle} className="sr-only peer" />
@@ -294,9 +289,9 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
-        const unsub = db.collection('watch_parties').onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
+        const unsub = db.collection('watch_parties').onSnapshot(snapshot => {
             const states: Record<string, WatchPartyState> = {};
-            snapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
+            snapshot.forEach(doc => {
                 states[doc.id] = doc.data() as WatchPartyState;
             });
             setPartyStates(states);
@@ -378,12 +373,6 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
             if (!response.ok) {
                 throw new Error((await response.json()).error || 'Failed to start party.');
             }
-            // Success! Now notify other tabs.
-            localStorage.setItem('crate-tv-event', JSON.stringify({
-                type: 'WATCH_PARTY_LIVE',
-                movieKey: currentPartyMovie.key,
-                timestamp: Date.now()
-            }));
         } catch (error) {
             alert(`Error: Could not start the party. ${(error as Error).message}`);
         }
@@ -435,7 +424,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                                 <th className="p-3">Film Title</th>
                                 <th className="p-3">Status</th>
                                 <th className="p-3">Enabled</th>
-                                <th className="p-3">Paid Event</th>
+                                <th className="p-3">Paid</th>
                                 <th className="p-3">Start Time</th>
                             </tr>
                         </thead>

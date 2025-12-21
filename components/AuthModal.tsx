@@ -95,7 +95,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
                 
                 <div className="p-8">
                     <h1 className="text-3xl font-bold mb-2 text-white">{isLoginView ? 'Sign In' : 'Join for Free'}</h1>
-                    {!isLoginView && <p className="text-gray-400 mb-6 text-sm">Create a free account to start watching. Supported by the community.</p>}
+                    {!isLoginView && <p className="text-gray-400 mb-6 text-sm">Create a free account to start watching. Support the community.</p>}
                     {isLoginView && <p className="text-gray-400 mb-6 text-sm">Welcome back to Crate TV!</p>}
 
                     <form onSubmit={handleSubmit} className="space-y-4">

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -9,8 +10,8 @@ import SearchOverlay from './components/SearchOverlay';
 // FIX: Corrected import path
 import { Movie, Actor, Category } from './types';
 import { isMovieReleased } from './constants';
-import { useAuth } from './contexts/AuthContext';
-import { useFestival } from './contexts/FestivalContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useFestival } from '../contexts/FestivalContext';
 import FestivalHero from './components/FestivalHero';
 import NowStreamingBanner from './components/NowPlayingBanner';
 import BackToTopButton from './components/BackToTopButton';
@@ -43,11 +44,29 @@ const App: React.FC = () => {
     
     // Memos for performance
     const heroMovies = useMemo(() => {
+        // Priority 1: Specifically featured films
         const featuredCategory = categories.featured;
-        if (!featuredCategory?.movieKeys) return [];
-        return featuredCategory.movieKeys
-            .map(key => movies[key])
-            .filter((m): m is Movie => !!m && isMovieReleased(m));
+        let spotlightMovies: Movie[] = [];
+        
+        if (featuredCategory?.movieKeys && featuredCategory.movieKeys.length > 0) {
+            spotlightMovies = featuredCategory.movieKeys
+                .map(key => movies[key])
+                .filter((m): m is Movie => !!m && isMovieReleased(m));
+        }
+        
+        // Priority 2: Fallback to most recent releases if featured is empty
+        if (spotlightMovies.length === 0) {
+            spotlightMovies = (Object.values(movies) as Movie[])
+                .filter(m => m && isMovieReleased(m) && !!m.title)
+                .sort((a, b) => {
+                    const dateA = a.releaseDateTime ? new Date(a.releaseDateTime).getTime() : 0;
+                    const dateB = b.releaseDateTime ? new Date(b.releaseDateTime).getTime() : 0;
+                    return dateB - dateA;
+                })
+                .slice(0, 4);
+        }
+        
+        return spotlightMovies;
     }, [movies, categories.featured]);
 
     const topTenMovies = useMemo(() => {
@@ -135,7 +154,7 @@ const App: React.FC = () => {
         if (heroMovies.length > 1) {
             const interval = setInterval(() => {
                 setHeroIndex(prevIndex => (prevIndex + 1) % heroMovies.length);
-            }, 7000);
+            }, 8000);
             return () => clearInterval(interval);
         }
     }, [heroMovies.length]);

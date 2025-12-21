@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, PayoutRequest } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -18,9 +19,11 @@ import PermissionsManager from './components/PermissionsManager';
 import SaveStatusToast from './components/SaveStatusToast';
 import MonetizationTab from './components/MonetizationTab';
 import AdminGuide from './components/AdminGuide';
+import HeroManager from './components/HeroManager';
 
 const ALL_TABS: Record<string, string> = {
     analytics: 'Analytics',
+    hero: 'Hero Spotlight',
     movies: 'Movies',
     pipeline: 'Pipeline',
     payouts: 'Payouts',
@@ -345,6 +348,7 @@ const AdminPage: React.FC = () => {
 
                 <div>
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
+                    {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data, pipelineId) => handleSaveData('movies', data, pipelineId)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} movieToCreate={pipelineItemToConvert} onCreationDone={() => setPipelineItemToConvert(null)} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => { setPipelineItemToConvert(item); setActiveTab('movies'); }} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
