@@ -66,7 +66,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
       setIsMuted(true);
       
       // Stop preview after exactly 60 seconds to save bandwidth and return to static poster
-      // Use a ref so it persists across state changes but cleans up on unmount/leave
       previewLimitTimeoutRef.current = setTimeout(() => {
         stopPreview();
       }, 60000);

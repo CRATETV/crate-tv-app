@@ -138,12 +138,6 @@ const App: React.FC = () => {
             .sort((a, b) => (b.likes || 0) - (a.likes || 0))
             .slice(0, 10);
     }, [movies]);
-    
-    const comingSoonMovies = useMemo(() => {
-        return (Object.values(movies) as Movie[])
-            .filter((m): m is Movie => !!m && !!m.releaseDateTime && !isMovieReleased(m))
-            .sort((a, b) => new Date(a.releaseDateTime!).getTime() - new Date(b.releaseDateTime!).getTime());
-    }, [movies]);
 
     const nowStreamingKey = useMemo(() => categories.nowStreaming?.movieKeys[0], [categories.nowStreaming]);
     const nowStreamingMovie = useMemo(() => nowStreamingKey ? movies[nowStreamingKey] : null, [movies, nowStreamingKey]);
@@ -342,22 +336,6 @@ const App: React.FC = () => {
                                     title={<CratemasTitle />}
                                     movies={cratemasCategory.movieKeys.map(k => movies[k]).filter((m): m is Movie => !!m)}
                                     onSelectMovie={handlePlayMovie}
-                                    watchedMovies={watchedMovies}
-                                    watchlist={watchlist}
-                                    likedMovies={likedMovies}
-                                    onToggleLike={toggleLikeMovie}
-                                    onToggleWatchlist={toggleWatchlist}
-                                    onSupportMovie={handleSupportMovie}
-                                />
-                            )}
-
-                            {comingSoonMovies.length > 0 && (
-                                <MovieCarousel
-                                    key="coming-soon"
-                                    title="Coming Soon"
-                                    movies={comingSoonMovies}
-                                    onSelectMovie={handleSelectMovie}
-                                    isComingSoonCarousel={true}
                                     watchedMovies={watchedMovies}
                                     watchlist={watchlist}
                                     likedMovies={likedMovies}
