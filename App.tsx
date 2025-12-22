@@ -9,7 +9,7 @@ import ActorBioModal from './components/ActorBioModal';
 import SearchOverlay from './components/SearchOverlay';
 import { Movie, Actor, Category } from './types';
 import { isMovieReleased } from './constants';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import { useFestival } from './contexts/FestivalContext';
 import FestivalHero from './components/FestivalHero';
 import NowStreamingBanner from './components/NowPlayingBanner';
@@ -335,7 +335,7 @@ const App: React.FC = () => {
                                 <MovieCarousel
                                     key="cratemas"
                                     title={<CratemasTitle />}
-                                    movies={categories.cratemas.movieKeys.map(k => movies[k]).filter((m): m is Movie => !!m)}
+                                    movies={categories.cratemas.movieKeys.map(k => movies[k]).filter((m: Movie | undefined): m is Movie => !!m)}
                                     onSelectMovie={handlePlayMovie}
                                     watchedMovies={watchedMovies}
                                     watchlist={watchlist}
@@ -413,7 +413,7 @@ const App: React.FC = () => {
                                 const typedCategory = category as Category;
                                 const categoryMovies = typedCategory.movieKeys
                                     .map(movieKey => movies[movieKey])
-                                    .filter((m): m is Movie => !!m);
+                                    .filter((m: Movie | undefined): m is Movie => !!m);
                                 
                                 if (categoryMovies.length === 0 || key === 'featured' || key === 'publicDomainIndie' || key === 'nowStreaming' || key === 'cratemas') return null;
 
