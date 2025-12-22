@@ -12,6 +12,16 @@ export const isMovieReleased = (movie: Movie | undefined | null): boolean => {
 };
 
 export const categoriesData: Record<string, Category> = {
+  "cratemas": {
+    "title": "Cratemas",
+    "movieKeys": [
+      "foodiecalldirectorscut",
+      "newmovie1756487215116",
+      "newmovie1765384164206",
+      "silentlove",
+      "newmovie1756741314485"
+    ]
+  },
   "animation": {
     "title": "Animation",
     "movieKeys": [
@@ -389,9 +399,9 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Cathrine Tillotson",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Defaultpic.png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
         "bio": "Cathrine Tillotson is a driven actor with a passion for performing. They possess a strong stage presence and a natural connection with audiences. Eager to learn and grow, they strive to bring compelling characters to life.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Defaultpic.png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
     "director": "Sarah Morrison-Cleary",
@@ -500,7 +510,7 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Joshua Daniel",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png",
         "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation.",
         "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png"
       }
