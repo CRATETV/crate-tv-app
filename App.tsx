@@ -12,7 +12,6 @@ import { isMovieReleased, categoriesData } from './constants';
 import { useAuth } from './contexts/AuthContext';
 import { useFestival } from './contexts/FestivalContext';
 import FestivalHero from './components/FestivalHero';
-import NowStreamingBanner from './components/NowPlayingBanner';
 import BackToTopButton from './components/BackToTopButton';
 import CollapsibleFooter from './components/CollapsibleFooter';
 import BottomNavBar from './components/BottomNavBar';
@@ -22,7 +21,7 @@ import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import WatchPartyAnnouncementModal from './components/WatchPartyAnnouncementModal';
 import NewFilmAnnouncementModal from './components/NewFilmAnnouncementModal';
 
-// High-Aesthetic Minimal Cratemas Header
+// High-Aesthetic Minimal Cratemas Header - Updated with Brighter Red
 const CratemasTitle: React.FC = () => {
     const handleNavigate = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -42,11 +41,11 @@ const CratemasTitle: React.FC = () => {
                     <div className="absolute top-2 left-4 w-1 h-1 bg-white rounded-full animate-[holiday-twinkle_3s_infinite] opacity-0 shadow-[0_0_8px_#fff]"></div>
                     <div className="absolute top-10 right-2 w-1 h-1 bg-white rounded-full animate-[holiday-twinkle_4s_infinite_1s] opacity-0 shadow-[0_0_8px_#fff]"></div>
                     <div className="absolute -bottom-2 left-1/2 w-1 h-1 bg-white rounded-full animate-[holiday-twinkle_5s_infinite_0.5s] opacity-0 shadow-[0_0_8px_#fff]"></div>
-                    <div className="absolute top-6 left-1/3 w-0.5 h-0.5 bg-red-400 rounded-full animate-[holiday-twinkle_2.5s_infinite_1.2s] opacity-0 shadow-[0_0_6px_#fca5a5]"></div>
+                    <div className="absolute top-6 left-1/3 w-0.5 h-0.5 bg-[#ff4d4d] rounded-full animate-[holiday-twinkle_2.5s_infinite_1.2s] opacity-0 shadow-[0_0_6px_#ff4d4d]"></div>
                 </div>
 
                 <div className="flex items-baseline gap-6">
-                    <h2 className="text-5xl md:text-7xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-red-500 via-white to-green-500 relative z-10 py-2 transition-all duration-700 group-hover/title:drop-shadow-[0_0_25px_rgba(255,255,255,0.4)] group-hover/title:scale-[1.02]">
+                    <h2 className="text-5xl md:text-7xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-[#ff1a1a] via-white to-green-500 relative z-10 py-2 transition-all duration-700 group-hover/title:drop-shadow-[0_0_35px_rgba(255,26,26,0.6)] group-hover/title:scale-[1.02]">
                         Cratemas
                     </h2>
                     
@@ -57,7 +56,7 @@ const CratemasTitle: React.FC = () => {
                 </div>
 
                 {/* Elegant subtle underline */}
-                <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-gradient-to-r from-red-600 via-white to-green-600 group-hover/title:w-full transition-all duration-700 ease-in-out opacity-60"></div>
+                <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-gradient-to-r from-[#ff1a1a] via-white to-green-600 group-hover/title:w-full transition-all duration-700 ease-in-out opacity-60"></div>
             </div>
         </div>
     );
@@ -110,9 +109,6 @@ const App: React.FC = () => {
             .sort((a, b) => (b.likes || 0) - (a.likes || 0))
             .slice(0, 10);
     }, [movies]);
-
-    const nowStreamingKey = useMemo(() => categories.nowStreaming?.movieKeys[0], [categories.nowStreaming]);
-    const nowStreamingMovie = useMemo(() => nowStreamingKey ? movies[nowStreamingKey] : null, [movies, nowStreamingKey]);
 
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
@@ -206,12 +202,13 @@ const App: React.FC = () => {
         } else {
             setLiveWatchParty(null);
         }
-        const newFilmKey = nowStreamingKey;
-        const newFilm = newFilmKey ? movies[newFilmKey] : null;
+        
+        const nowStreamingKey = categories.nowStreaming?.movieKeys[0];
+        const newFilm = nowStreamingKey ? movies[nowStreamingKey] : null;
         if (newFilm && isMovieReleased(newFilm) && !sessionStorage.getItem('newFilmModalSeen')) {
             setNewFilmAnnouncement(newFilm);
         }
-    }, [isLoading, isFestivalLive, dataSource, movies, nowStreamingKey]);
+    }, [isLoading, isFestivalLive, dataSource, movies, categories.nowStreaming]);
     
     useEffect(() => {
         if (likedMovies.size === 0 || Object.keys(movies).length === 0) {
@@ -272,13 +269,6 @@ const App: React.FC = () => {
                 
                 <div className="px-4 md:px-12 relative z-10">
                     <div className={`${isFestivalLive ? 'mt-4 md:-mt-16' : 'mt-4 md:-mt-16'} space-y-8 md:space-y-12`}>
-                        {nowStreamingMovie && isMovieReleased(nowStreamingMovie) && (
-                            <NowStreamingBanner 
-                                movie={nowStreamingMovie} 
-                                onSelectMovie={handleSelectMovie} 
-                                onPlayMovie={handlePlayMovie} 
-                            />
-                        )}
                         
                         {searchQuery ? (
                             searchResults.length > 0 ? (
