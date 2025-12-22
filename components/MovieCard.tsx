@@ -21,6 +21,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
   const [showPreview, setShowPreview] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewLimitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const isNew = React.useMemo(() => {
@@ -43,31 +44,57 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
     onToggleWatchlist?.(movie.key);
   };
 
+  const stopPreview = () => {
+    setShowPreview(false);
+    setIsMuted(true);
+    if (previewLimitTimeoutRef.current) {
+        clearTimeout(previewLimitTimeoutRef.current);
+        previewLimitTimeoutRef.current = null;
+    }
+  };
+
   const handleMouseEnter = () => {
     if (isComingSoon || (!movie.trailer && !movie.fullMovie)) return;
-    // Netflix-style 500ms delay
+    
+    // Clear any previous state
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    if (previewLimitTimeoutRef.current) clearTimeout(previewLimitTimeoutRef.current);
+
+    // Netflix-style 500ms delay before starting video
     hoverTimeoutRef.current = setTimeout(() => {
       setShowPreview(true);
-      // Attempt to unmute if possible, otherwise start muted
       setIsMuted(true);
+      
+      // Stop preview after exactly 60 seconds to save bandwidth and return to static poster
+      // Use a ref so it persists across state changes but cleans up on unmount/leave
+      previewLimitTimeoutRef.current = setTimeout(() => {
+        stopPreview();
+      }, 60000);
+
     }, 500);
   };
 
   const handleMouseLeave = () => {
-    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-    setShowPreview(false);
-    setIsMuted(true);
+    if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+    }
+    stopPreview();
   };
 
   const handleMetadataLoaded = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const video = e.currentTarget;
     if (video.duration > 0) {
+        // Start from 30% into the video for a more engaging preview
         video.currentTime = Math.min(60, video.duration * 0.3);
     }
   };
 
   useEffect(() => {
-    return () => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); };
+    return () => { 
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); 
+        if (previewLimitTimeoutRef.current) clearTimeout(previewLimitTimeoutRef.current);
+    };
   }, []);
 
   const videoSrc = movie.trailer || movie.fullMovie;
@@ -102,7 +129,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
                 onLoadedMetadata={handleMetadataLoaded}
                 className="w-full h-full object-cover"
             />
-            {/* Unmute Indicator/Toggle for "Hear the movie" */}
+            {/* Unmute Indicator/Toggle */}
             <button 
                 onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
                 className="absolute bottom-16 right-3 p-1.5 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white z-20"
@@ -137,7 +164,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
                     )}
                 </button>
                 <button onClick={handleToggleLike} className={`p-1.5 rounded-full bg-white/10 hover:bg-red-500/20 border border-white/10 transition-all ${isAnimatingLike ? 'animate-heartbeat' : ''}`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-3.5 w-3.5 transition-colors ${isLiked ? 'text-red-500' : 'text-white'}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-3.5 w-3.5 transition-colors ${isLiked ? 'text-red-500' : 'text-white'}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                     </svg>
                 </button>

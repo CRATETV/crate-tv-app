@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -14,6 +15,7 @@ import App from './App';
 import AdminPage from './AdminPage';
 import LandingPage from './components/LandingPage';
 import ClassicsPage from './components/ClassicsPage';
+import CratemasPage from './components/CratemasPage';
 import SubmitPage from './SubmitPage';
 import MoviePage from './components/MoviePage';
 import MerchPage from './components/MerchPage';
@@ -118,6 +120,8 @@ const AppRouter: React.FC = () => {
       return user ? <WatchlistPage /> : <RedirectToLogin />;
     case '/classics':
       return user ? <ClassicsPage /> : <RedirectToLogin />;
+    case '/cratemas':
+      return user ? <CratemasPage /> : <RedirectToLogin />;
     case '/top-ten': // Made public per user request
       return <TopTenPage />;
     
