@@ -21,7 +21,7 @@ import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import WatchPartyAnnouncementModal from './components/WatchPartyAnnouncementModal';
 import NewFilmAnnouncementModal from './components/NewFilmAnnouncementModal';
 
-// High-Aesthetic Minimal Cratemas Header - Updated with Brighter Red
+// High-Aesthetic Minimal Cratemas Header - Updated with High-Intensity Racing Red
 const CratemasTitle: React.FC = () => {
     const handleNavigate = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -32,31 +32,31 @@ const CratemasTitle: React.FC = () => {
 
     return (
         <div 
-            className="flex flex-col mb-6 px-2 select-none cursor-pointer group/title transition-all duration-500"
+            className="flex flex-col mb-10 px-2 select-none cursor-pointer group/title transition-all duration-500"
             onClick={handleNavigate}
         >
             <div className="relative inline-block self-start">
-                {/* Minimal twinkles - Ice Crystals */}
-                <div className="absolute -inset-4 pointer-events-none z-20">
-                    <div className="absolute top-2 left-4 w-1 h-1 bg-white rounded-full animate-[holiday-twinkle_3s_infinite] opacity-0 shadow-[0_0_8px_#fff]"></div>
-                    <div className="absolute top-10 right-2 w-1 h-1 bg-white rounded-full animate-[holiday-twinkle_4s_infinite_1s] opacity-0 shadow-[0_0_8px_#fff]"></div>
-                    <div className="absolute -bottom-2 left-1/2 w-1 h-1 bg-white rounded-full animate-[holiday-twinkle_5s_infinite_0.5s] opacity-0 shadow-[0_0_8px_#fff]"></div>
-                    <div className="absolute top-6 left-1/3 w-0.5 h-0.5 bg-[#ff4d4d] rounded-full animate-[holiday-twinkle_2.5s_infinite_1.2s] opacity-0 shadow-[0_0_6px_#ff4d4d]"></div>
+                {/* Minimal twinkles - Ice Crystals - Brightened */}
+                <div className="absolute -inset-6 pointer-events-none z-20">
+                    <div className="absolute top-2 left-4 w-1.5 h-1.5 bg-white rounded-full animate-[holiday-twinkle_3s_infinite] opacity-0 shadow-[0_0_12px_#fff]"></div>
+                    <div className="absolute top-10 right-2 w-1 h-1 bg-white rounded-full animate-[holiday-twinkle_4s_infinite_1s] opacity-0 shadow-[0_0_12px_#fff]"></div>
+                    <div className="absolute -bottom-4 left-1/2 w-1 h-1 bg-white rounded-full animate-[holiday-twinkle_5s_infinite_0.5s] opacity-0 shadow-[0_0_12px_#fff]"></div>
+                    <div className="absolute top-6 left-1/3 w-1 h-1 bg-[#ff3333] rounded-full animate-[holiday-twinkle_2.5s_infinite_1.2s] opacity-0 shadow-[0_0_10px_#ff0000]"></div>
                 </div>
 
                 <div className="flex items-baseline gap-6">
-                    <h2 className="text-5xl md:text-7xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-[#ff1a1a] via-white to-green-500 relative z-10 py-2 transition-all duration-700 group-hover/title:drop-shadow-[0_0_35px_rgba(255,26,26,0.6)] group-hover/title:scale-[1.02]">
+                    <h2 className="text-5xl md:text-7xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-[#ff0000] via-white to-[#22c55e] relative z-10 py-2 transition-all duration-700 group-hover/title:drop-shadow-[0_0_45px_rgba(255,0,0,0.8)] group-hover/title:scale-[1.03]">
                         Cratemas
                     </h2>
                     
                     <div className="flex items-center gap-2 opacity-0 -translate-x-4 group-hover/title:opacity-100 group-hover/title:translate-x-0 transition-all duration-500 ease-out">
-                        <span className="h-[1px] w-8 bg-gradient-to-r from-transparent to-white/40"></span>
-                        <span className="text-[10px] text-white/50 font-black uppercase tracking-[0.3em]">The Collection</span>
+                        <span className="h-[1px] w-12 bg-gradient-to-r from-transparent to-white/60"></span>
+                        <span className="text-[11px] text-white font-black uppercase tracking-[0.4em] drop-shadow-md">The Collection</span>
                     </div>
                 </div>
 
-                {/* Elegant subtle underline */}
-                <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-gradient-to-r from-[#ff1a1a] via-white to-green-600 group-hover/title:w-full transition-all duration-700 ease-in-out opacity-60"></div>
+                {/* Elegant high-intensity underline */}
+                <div className="absolute bottom-0 left-0 w-0 h-[3px] bg-gradient-to-r from-[#ff0000] via-white to-[#22c55e] group-hover/title:w-full transition-all duration-700 ease-in-out opacity-80 shadow-[0_0_15px_rgba(255,0,0,0.5)]"></div>
             </div>
         </div>
     );
@@ -268,7 +268,8 @@ const App: React.FC = () => {
                 )}
                 
                 <div className="px-4 md:px-12 relative z-10">
-                    <div className={`${isFestivalLive ? 'mt-4 md:-mt-16' : 'mt-4 md:-mt-16'} space-y-8 md:space-y-12`}>
+                    {/* Fixed Spacing: Removed negative margin to prevent RowList from overlapping Hero too high */}
+                    <div className={`${isFestivalLive ? 'mt-8 md:mt-12' : 'mt-8 md:mt-12'} space-y-8 md:space-y-12`}>
                         
                         {searchQuery ? (
                             searchResults.length > 0 ? (
