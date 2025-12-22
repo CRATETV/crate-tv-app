@@ -22,7 +22,7 @@ import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import WatchPartyAnnouncementModal from './components/WatchPartyAnnouncementModal';
 import NewFilmAnnouncementModal from './components/NewFilmAnnouncementModal';
 
-// Specialized Festive Component for Cratemas with Holiday Lights
+// High-Aesthetic Minimal Cratemas Header
 const CratemasTitle: React.FC = () => {
     const handleNavigate = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -33,59 +33,31 @@ const CratemasTitle: React.FC = () => {
 
     return (
         <div 
-            className="flex flex-col mb-10 px-2 select-none cursor-pointer group/title"
+            className="flex flex-col mb-6 px-2 select-none cursor-pointer group/title transition-all duration-500"
             onClick={handleNavigate}
         >
             <div className="relative inline-block self-start">
-                {/* Weaving Holiday Lights SVG */}
-                <svg 
-                    className="absolute -top-8 -left-8 -right-12 h-28 w-[calc(100%+48px)] z-20 overflow-visible pointer-events-none" 
-                    viewBox="0 0 350 100" 
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <path 
-                        d="M 10 30 Q 50 5, 90 30 T 170 30 T 250 30 T 330 30 Q 345 50, 330 70 Q 250 95, 170 70 T 10 70" 
-                        fill="none" 
-                        stroke="#065f46" 
-                        strokeWidth="2" 
-                        strokeLinecap="round"
-                        className="opacity-90"
-                    />
-                    <circle cx="20" cy="22" r="4.5" fill="#ff4444" className="animate-[holiday-twinkle_1.2s_infinite_0.1s] drop-shadow-[0_0_12px_rgba(255,68,68,1)]" />
-                    <circle cx="180" cy="30" r="4.5" fill="#ff4444" className="animate-[holiday-twinkle_1.2s_infinite_0.5s] drop-shadow-[0_0_12px_rgba(255,68,68,1)]" />
-                    <circle cx="330" cy="50" r="4.5" fill="#ff4444" className="animate-[holiday-twinkle_1.2s_infinite_0.9s] drop-shadow-[0_0_12px_rgba(255,68,68,1)]" />
-                    <circle cx="100" cy="85" r="4.5" fill="#ff4444" className="animate-[holiday-twinkle_1.2s_infinite_0.3s] drop-shadow-[0_0_12px_rgba(255,68,68,1)]" />
-                    <circle cx="60" cy="12" r="4.5" fill="#22c55e" className="animate-[holiday-twinkle_1.5s_infinite_0.2s] drop-shadow-[0_0_12px_rgba(34,197,94,1)]" />
-                    <circle cx="220" cy="22" r="4.5" fill="#22c55e" className="animate-[holiday-twinkle_1.5s_infinite_0.6s] drop-shadow-[0_0_12px_rgba(34,197,94,1)]" />
-                    <circle cx="260" cy="82" r="4.5" fill="#22c55e" className="animate-[holiday-twinkle_1.5s_infinite_1s] drop-shadow-[0_0_12px_rgba(34,197,94,1)]" />
-                    <circle cx="40" cy="78" r="4.5" fill="#22c55e" className="animate-[holiday-twinkle_1.5s_infinite_0.4s] drop-shadow-[0_0_12px_rgba(34,197,94,1)]" />
-                    <circle cx="100" cy="25" r="4.5" fill="#3b82f6" className="animate-[holiday-twinkle_1.8s_infinite_0.3s] drop-shadow-[0_0_12px_rgba(59,130,246,1)]" />
-                    <circle cx="280" cy="28" r="4.5" fill="#3b82f6" className="animate-[holiday-twinkle_1.8s_infinite_0.7s] drop-shadow-[0_0_12px_rgba(59,130,246,1)]" />
-                    <circle cx="190" cy="88" r="4.5" fill="#3b82f6" className="animate-[holiday-twinkle_1.8s_infinite_1.1s] drop-shadow-[0_0_12px_rgba(59,130,246,1)]" />
-                    <circle cx="140" cy="30" r="4.5" fill="#facc15" className="animate-[holiday-twinkle_2s_infinite_0s] drop-shadow-[0_0_12px_rgba(250,204,21,1)]" />
-                    <circle cx="330" cy="75" r="4.5" fill="#facc15" className="animate-[holiday-twinkle_2s_infinite_0.4s] drop-shadow-[0_0_12px_rgba(250,204,21,1)]" />
-                    <circle cx="50" cy="85" r="4.5" fill="#facc15" className="animate-[holiday-twinkle_2s_infinite_0.8s] drop-shadow-[0_0_12px_rgba(250,204,21,1)]" />
-                </svg>
+                {/* Minimal twinkles - Ice Crystals */}
+                <div className="absolute -inset-4 pointer-events-none z-20">
+                    <div className="absolute top-2 left-4 w-1 h-1 bg-white rounded-full animate-[holiday-twinkle_3s_infinite] opacity-0 shadow-[0_0_8px_#fff]"></div>
+                    <div className="absolute top-10 right-2 w-1 h-1 bg-white rounded-full animate-[holiday-twinkle_4s_infinite_1s] opacity-0 shadow-[0_0_8px_#fff]"></div>
+                    <div className="absolute -bottom-2 left-1/2 w-1 h-1 bg-white rounded-full animate-[holiday-twinkle_5s_infinite_0.5s] opacity-0 shadow-[0_0_8px_#fff]"></div>
+                    <div className="absolute top-6 left-1/3 w-0.5 h-0.5 bg-red-400 rounded-full animate-[holiday-twinkle_2.5s_infinite_1.2s] opacity-0 shadow-[0_0_6px_#fca5a5]"></div>
+                </div>
 
-                <div className="flex items-center gap-4">
-                    <h2 className="text-5xl md:text-7xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-red-600 via-white to-green-600 relative z-10 py-4 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] group-hover/title:scale-105 transition-transform duration-300">
+                <div className="flex items-baseline gap-6">
+                    <h2 className="text-5xl md:text-7xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-red-500 via-white to-green-500 relative z-10 py-2 transition-all duration-700 group-hover/title:drop-shadow-[0_0_25px_rgba(255,255,255,0.4)] group-hover/title:scale-[1.02]">
                         Cratemas
                     </h2>
-                    <span className="text-white/40 text-sm font-black uppercase tracking-widest translate-y-4 opacity-0 group-hover/title:opacity-100 transition-opacity">View All &rarr;</span>
+                    
+                    <div className="flex items-center gap-2 opacity-0 -translate-x-4 group-hover/title:opacity-100 group-hover/title:translate-x-0 transition-all duration-500 ease-out">
+                        <span className="h-[1px] w-8 bg-gradient-to-r from-transparent to-white/40"></span>
+                        <span className="text-[10px] text-white/50 font-black uppercase tracking-[0.3em]">The Collection</span>
+                    </div>
                 </div>
-                
-                {/* Festive Bow */}
-                <svg 
-                    className="absolute -top-6 -right-12 w-20 h-20 z-30 drop-shadow-[0_6px_12px_rgba(0,0,0,0.7)] rotate-12 transition-transform group-hover/title:scale-110 group-hover/title:rotate-0 active:rotate-0" 
-                    viewBox="0 0 100 100" 
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <path d="M50 50 Q30 20 10 40 Q0 50 10 60 Q30 80 50 50" fill="#dc2626" stroke="#7f1d1d" strokeWidth="2" />
-                    <path d="M50 50 Q70 20 90 40 Q100 50 90 60 Q70 80 50 50" fill="#dc2626" stroke="#7f1d1d" strokeWidth="2" />
-                    <circle cx="50" cy="50" r="8" fill="#ef4444" stroke="#7f1d1d" strokeWidth="2" />
-                    <path d="M45 55 L35 90" stroke="#dc2626" strokeWidth="8" strokeLinecap="round" />
-                    <path d="M55 55 L65 90" stroke="#dc2626" strokeWidth="8" strokeLinecap="round" />
-                </svg>
+
+                {/* Elegant subtle underline */}
+                <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-gradient-to-r from-red-600 via-white to-green-600 group-hover/title:w-full transition-all duration-700 ease-in-out opacity-60"></div>
             </div>
         </div>
     );
@@ -93,7 +65,7 @@ const CratemasTitle: React.FC = () => {
 
 const App: React.FC = () => {
     // Hooks
-    const { likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
+    const { user, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
     const { isLoading, movies, categories, isFestivalLive, festivalConfig, dataSource } = useFestival();
     
     // State
@@ -446,7 +418,6 @@ const App: React.FC = () => {
                   searchQuery={searchQuery}
                   onSearch={setSearchQuery}
                   onClose={() => setIsMobileSearchOpen(false)}
-                  onSubmit={() => {}}
                   results={searchResults}
                   onSelectMovie={handleSelectFromSearch}
                 />
