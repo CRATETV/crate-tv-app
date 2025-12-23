@@ -13,6 +13,21 @@ interface WatchPartyPageProps {
   movieKey: string;
 }
 
+const getVimeoEmbedUrl = (url: string): string | null => {
+    if (!url) return null;
+    const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
+    const match = url.match(vimeoRegex);
+    if (match && match[1]) {
+        return `https://player.vimeo.com/video/${match[1]}?autoplay=1&color=ff0000&title=0&byline=0&portrait=0`;
+    }
+    const eventRegex = /vimeo\.com\/event\/(\d+)/;
+    const eventMatch = url.match(eventRegex);
+    if (eventMatch && eventMatch[1]) {
+        return `https://player.vimeo.com/event/${eventMatch[1]}/embed?autoplay=1&color=ff0000&title=0&byline=0&portrait=0`;
+    }
+    return null;
+};
+
 const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: string | null; avatar?: string; } | null }> = ({ movieKey, user }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -63,7 +78,7 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
             <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide">
                 {messages.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-center px-8">
-                        <p className="text-gray-600 text-sm italic">The party is quiet... say something!</p>
+                        <p className="text-gray-600 text-sm italic">The fresh screening chat is ready!</p>
                     </div>
                 ) : (
                     messages.map(msg => (
@@ -116,7 +131,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     const hasAccess = !movie?.isWatchPartyPaid || unlockedWatchPartyKeys.has(movieKey);
     
-    // Check if the source is a live stream (HLS)
+    // Check for Vimeo Live/Event link
+    const vimeoEmbedUrl = useMemo(() => movie ? getVimeoEmbedUrl(movie.fullMovie) : null, [movie]);
+
+    // Check if the source is a custom live stream (HLS)
     const isLiveStream = useMemo(() => {
         return movie?.fullMovie?.toLowerCase().endsWith('.m3u8') || movie?.fullMovie?.includes('.m3u8?');
     }, [movie?.fullMovie]);
@@ -134,20 +152,19 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [movieKey]);
     
     useEffect(() => {
-        if (!hasAccess) return;
+        if (!hasAccess || vimeoEmbedUrl) return; 
         const video = videoRef.current;
         if (!video) return;
         const handleCanPlay = () => setIsVideoReady(true);
         video.addEventListener('canplay', handleCanPlay);
         return () => { if (video) video.removeEventListener('canplay', handleCanPlay); };
-    }, [hasAccess]);
+    }, [hasAccess, vimeoEmbedUrl]);
 
     useEffect(() => {
-        if (!hasAccess) return;
+        if (!hasAccess || vimeoEmbedUrl) return; 
         const video = videoRef.current;
         if (!video || !partyState) return;
 
-        // If it's a live stream, we don't sync timestamps because the stream is the master clock
         if (isLiveStream) {
             if (partyState.status === 'live' && video.paused) {
                 video.play().catch(e => console.warn("Live stream play prevented", e));
@@ -157,7 +174,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             return;
         }
 
-        // Standard Sync logic for pre-recorded files
         if (partyState.isPlaying && video.paused) {
             video.play().catch(e => console.warn("Autoplay prevented", e));
         } else if (!partyState.isPlaying && !video.paused) {
@@ -167,7 +183,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (Math.abs(video.currentTime - partyState.currentTime) > 5) {
             video.currentTime = partyState.currentTime;
         }
-    }, [partyState, hasAccess, isLiveStream]);
+    }, [partyState, hasAccess, isLiveStream, vimeoEmbedUrl]);
 
     const handleGoHome = () => {
         window.history.pushState({}, '', '/');
@@ -224,9 +240,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     
     return (
         <div className="flex flex-col md:flex-row h-[100dvh] bg-black text-white overflow-hidden">
+            {/* 
+               On Mobile: Video is sticky at the top, chat fills the rest of the layout. 
+               This ensures when the keyboard opens, the player stays visible.
+            */}
             <div className="flex-grow flex flex-col relative overflow-hidden h-full">
                 
-                {/* Mobile Header */}
+                {/* Mobile Header (Hidden when keyboard is up to save space) */}
                 <div className="flex-none bg-black/90 backdrop-blur-md p-3 flex items-center justify-between border-b border-white/5 md:hidden pt-[max(0.75rem,env(safe-area-inset-top))]">
                      <button onClick={handleGoHome} className="text-gray-400 hover:text-white transition-colors" aria-label="Back to Home"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
                     <div className="text-center min-w-0 px-4 flex flex-col items-center">
@@ -235,32 +255,46 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
                             </span>
-                            <p className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none">LIVE {isLiveStream ? 'STREAM' : 'WATCH PARTY'}</p>
+                            <p className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none">LIVE {isLiveStream ? 'STREAM' : vimeoEmbedUrl ? 'BROADCAST' : 'WATCH PARTY'}</p>
                         </div>
                         <h2 className="text-xs font-bold truncate text-gray-200">{movie.title}</h2>
                     </div>
                     <div className="w-6"></div>
                 </div>
 
-                <button onClick={handleGoHome} className="hidden md:flex absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 z-20"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
+                <button onClick={handleGoHome} className="hidden md:flex absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 z-20 shadow-xl"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
 
-                {/* Video Player */}
-                <div className="flex-none w-full aspect-video bg-black relative shadow-2xl z-10">
-                    {!isVideoReady && (
-                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
-                            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="w-full h-full object-cover blur-sm opacity-50" crossOrigin="anonymous" />
-                            <div className="absolute"><LoadingSpinner /></div>
-                        </div>
+                {/* Video Player Area - Sticky for Mobile */}
+                <div className="md:relative sticky top-0 flex-none w-full aspect-video bg-black shadow-2xl z-30">
+                    {vimeoEmbedUrl ? (
+                         <iframe
+                            src={vimeoEmbedUrl}
+                            className="w-full h-full"
+                            frameBorder="0"
+                            allow="autoplay; fullscreen; picture-in-picture"
+                            allowFullScreen
+                            title={movie.title}
+                        ></iframe>
+                    ) : (
+                        <>
+                            {!isVideoReady && (
+                                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
+                                    <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="w-full h-full object-cover blur-sm opacity-50" crossOrigin="anonymous" />
+                                    <div className="absolute"><LoadingSpinner /></div>
+                                </div>
+                            )}
+                            <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full transition-opacity duration-500 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`} playsInline autoPlay controls={isLiveStream ? true : false} />
+                        </>
                     )}
-                    <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full transition-opacity duration-500 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`} playsInline autoPlay controls={isLiveStream ? true : false} />
                 </div>
                 
-                {/* Chat Container */}
+                {/* Mobile Chat - Fills the viewport below the player */}
                 <div className="flex-grow flex flex-col md:hidden relative overflow-hidden bg-[#0a0a0a]">
                     <EmbeddedChat movieKey={movieKey} user={user} />
                 </div>
             </div>
 
+            {/* Desktop Sidebar Chat */}
             <div className="hidden md:block w-80 lg:w-96 flex-shrink-0 h-full">
                 <EmbeddedChat movieKey={movieKey} user={user} />
             </div>

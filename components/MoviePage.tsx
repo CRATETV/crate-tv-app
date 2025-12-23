@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import ActorBioModal from './ActorBioModal';
@@ -6,11 +5,6 @@ import Header from './Header';
 import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';
-import SearchOverlay from './SearchOverlay';
-import StagingBanner from './StagingBanner';
-import DirectorCreditsModal from './DirectorCreditsModal';
-import Countdown from './Countdown';
-import CastButton from './CastButton';
 import RokuBanner from './RokuBanner';
 import SquarePaymentModal from './SquarePaymentModal';
 import { isMovieReleased } from '../constants';
@@ -18,8 +12,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import PauseOverlay from './PauseOverlay';
 import MovieDetailsModal from './MovieDetailsModal';
-
-declare const google: any;
+// FIX: Added import for DirectorCreditsModal to fix line 424 error
+import DirectorCreditsModal from './DirectorCreditsModal';
 
 interface MoviePageProps {
   movieKey: string;
@@ -27,25 +21,79 @@ interface MoviePageProps {
 
 type PlayerMode = 'poster' | 'full';
 
-const setMetaTag = (attr: 'name' | 'property', value: string, content: string) => {
-  let element = document.querySelector(`meta[${attr}="${value}"]`);
-  if (!element) {
-    element = document.createElement('meta');
-    element.setAttribute(attr, value);
-    document.head.appendChild(element);
-  }
-  element.setAttribute('content', content);
-};
-
-// Helper to extract Vimeo ID and return embed URL
+// Helper to extract Vimeo ID and return embed URL (Supports Live Events and API)
 const getVimeoEmbedUrl = (url: string): string | null => {
     if (!url) return null;
+    
+    // Append api=1 to enable postMessage communication
     const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
     const match = url.match(vimeoRegex);
     if (match && match[1]) {
-        return `https://player.vimeo.com/video/${match[1]}?autoplay=1&color=ff0000&title=0&byline=0&portrait=0`;
+        return `https://player.vimeo.com/video/${match[1]}?autoplay=1&api=1&color=ff0000&title=0&byline=0&portrait=0`;
     }
+
+    const eventRegex = /vimeo\.com\/event\/(\d+)/;
+    const eventMatch = url.match(eventRegex);
+    if (eventMatch && eventMatch[1]) {
+        return `https://player.vimeo.com/event/${eventMatch[1]}/embed?autoplay=1&api=1&color=ff0000&title=0&byline=0&portrait=0`;
+    }
+    
     return null;
+};
+
+const PostPlayOverlay: React.FC<{ 
+    movies: Movie[]; 
+    onSelect: (movie: Movie) => void; 
+    onHome: () => void;
+}> = ({ movies, onSelect, onHome }) => {
+    const [countdown, setCountdown] = useState(15);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCountdown(prev => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    onHome();
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [onHome]);
+
+    return (
+        <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 animate-[fadeIn_0.5s_ease-out]">
+            <div className="max-w-5xl w-full text-center">
+                <p className="text-red-500 font-black uppercase tracking-[0.3em] mb-2 text-sm">Thanks for watching</p>
+                <h2 className="text-3xl md:text-5xl font-black text-white mb-10">What's Next?</h2>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4 mb-12">
+                    {movies.slice(0, 6).map(m => (
+                        <button 
+                            key={m.key} 
+                            onClick={() => onSelect(m)}
+                            className="group relative aspect-[3/4] rounded-lg overflow-hidden border border-white/10 hover:border-red-500 transition-all hover:scale-105 active:scale-95 shadow-2xl"
+                        >
+                            <img src={m.poster} alt={m.title} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity p-2">
+                                <span className="text-[10px] font-black uppercase text-white leading-tight">{m.title}</span>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex flex-col items-center gap-4">
+                    <button 
+                        onClick={onHome}
+                        className="px-8 py-3 bg-white text-black font-black rounded-full hover:bg-red-600 hover:text-white transition-all transform active:scale-95 shadow-xl"
+                    >
+                        Back to Feed ({countdown}s)
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
@@ -60,23 +108,24 @@ const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
         <a
             href={`/movie/${movie.key}?play=true`}
             onClick={(e) => handleNavigate(e, `/movie/${movie.key}?play=true`)}
-            className="group relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 bg-gray-900"
+            className="group relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 bg-gray-900 shadow-lg"
         >
               <img 
                   src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
                   alt={movie.title} 
                   className="w-full h-full object-cover"
                   loading="lazy"
-                  onContextMenu={(e) => e.preventDefault()}
                   crossOrigin="anonymous"
               />
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2 text-center">
+                <span className="text-[10px] font-bold uppercase">{movie.title}</span>
+            </div>
         </a>
     );
 }
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist } = useAuth();
+  const { likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist } = useAuth();
   const { isLoading: isDataLoading, movies: allMovies, categories: allCategories, dataSource } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
@@ -99,36 +148,60 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [playerMode, setPlayerMode] = useState<PlayerMode>('poster');
   const [released, setReleased] = useState(() => isMovieReleased(movie));
   const [isPaused, setIsPaused] = useState(false);
+  const [showPostPlay, setShowPostPlay] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const [isStaging, setIsStaging] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [showSupportSuccess, setShowSupportSuccess] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-
-  const adContainerRef = useRef<HTMLDivElement>(null);
-  const [isAdPlaying, setIsAdPlaying] = useState(false);
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
   const isOnWatchlist = useMemo(() => watchlist.includes(movieKey), [watchlist, movieKey]);
 
   const vimeoEmbedUrl = useMemo(() => movie ? getVimeoEmbedUrl(movie.fullMovie) : null, [movie]);
 
-  const synopsisText = movie?.synopsis || '';
-  const synopsisIsLong = synopsisText.replace(/<[^>]+>/g, '').length > 200;
-
-  const handleGoHome = () => {
+  const handleGoHome = useCallback(() => {
     window.history.pushState({}, '', '/');
+    window.dispatchEvent(new Event('pushstate'));
+  }, []);
+
+  const handleMovieEnd = useCallback(() => {
+      setShowPostPlay(true);
+  }, []);
+
+  const handlePostPlaySelect = (m: Movie) => {
+    setShowPostPlay(false);
+    setPlayerMode('full');
+    window.history.pushState({}, '', `/movie/${m.key}?play=true`);
     window.dispatchEvent(new Event('pushstate'));
   };
 
+  // VIMEO EVENT LISTENER
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+        if (!vimeoEmbedUrl) return;
+        try {
+            const data = JSON.parse(event.data);
+            // Vimeo player.js emits a 'finish' event when the video ends
+            if (data.event === 'finish' || data.method === 'finish') {
+                handleMovieEnd();
+            }
+        } catch (e) {
+            // Ignore non-JSON messages
+        }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [vimeoEmbedUrl, handleMovieEnd]);
+
+  // FIX: Added handlePaymentSuccess to resolve "Cannot find name 'handlePaymentSuccess'" error on line 436
   const handlePaymentSuccess = () => {
     setShowSupportSuccess(true);
     setTimeout(() => setShowSupportSuccess(false), 3000);
   };
 
   const playContent = useCallback(async () => {
-    setIsAdPlaying(false);
     if (videoRef.current) {
         if (!hasTrackedViewRef.current && movie?.key) {
             hasTrackedViewRef.current = true;
@@ -151,22 +224,21 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         setReleased(isMovieReleased(movie));
         if ((params.get('play') === 'true') && movie.fullMovie && isMovieReleased(movie)) {
             setPlayerMode('full');
-            // If it's not a vimeo link, we track view here
-            if (!getVimeoEmbedUrl(movie.fullMovie)) {
+            setShowPostPlay(false);
+            if (!vimeoEmbedUrl) {
                 playContent();
             }
         } else {
             setPlayerMode('poster');
+            setShowPostPlay(false);
         }
     } 
-  }, [movieKey, movie, isDataLoading, playContent]);
+  }, [movieKey, movie, isDataLoading, playContent, vimeoEmbedUrl]);
 
   if (isDataLoading || !movie) return <LoadingSpinner />;
 
   return (
         <div className="flex flex-col min-h-screen bg-[#050505] text-white">
-            {isStaging && <StagingBanner onExit={() => {}} isOffline={dataSource === 'fallback'} />}
-            
             {playerMode !== 'full' && (
                 <Header
                     searchQuery={searchQuery}
@@ -179,8 +251,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
             <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
                 <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container group/player">
-                    <div ref={adContainerRef} className="absolute inset-0 z-20 pointer-events-none" />
                     
+                    {showPostPlay && (
+                        <PostPlayOverlay 
+                            movies={recommendedMovies} 
+                            onSelect={handlePostPlaySelect} 
+                            onHome={handleGoHome} 
+                        />
+                    )}
+
                     {playerMode === 'full' && (
                         <>
                             {vimeoEmbedUrl ? (
@@ -198,15 +277,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                         ref={videoRef} 
                                         src={movie.fullMovie} 
                                         className="w-full h-full"
-                                        controls={!isAdPlaying && !isPaused}
+                                        controls={!isPaused}
                                         playsInline
                                         onContextMenu={(e) => e.preventDefault()} 
                                         controlsList="nodownload"
-                                        onEnded={() => handleGoHome()}
+                                        onEnded={handleMovieEnd}
                                         onPause={() => setIsPaused(true)}
                                         onPlay={() => setIsPaused(false)}
                                     />
-                                    {isPaused && !isAdPlaying && (
+                                    {isPaused && (
                                         <PauseOverlay 
                                             movie={movie}
                                             isLiked={isLiked}
@@ -229,7 +308,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
                     {playerMode !== 'full' && (
                         <>
-                            {/* Mobile Floating Back Button */}
                             <button 
                                 onClick={handleGoHome} 
                                 className="absolute top-6 left-6 z-50 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full p-2.5 hover:bg-white/10 transition-all shadow-2xl active:scale-95"
@@ -240,10 +318,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 </svg>
                             </button>
 
-                            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover blur-xl opacity-20" onContextMenu={(e) => e.preventDefault()} crossOrigin="anonymous" />
+                            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover blur-xl opacity-20" crossOrigin="anonymous" />
                             
                             <div className="relative w-full h-full flex items-center justify-center p-8 md:p-0">
-                                <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt={movie.title} className="w-full h-full object-contain md:max-w-2xl rounded-lg shadow-2xl" onContextMenu={(e) => e.preventDefault()} crossOrigin="anonymous" />
+                                <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt={movie.title} className="w-full h-full object-contain md:max-w-2xl rounded-lg shadow-2xl" crossOrigin="anonymous" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent"></div>
                                 {released && (
                                     <button 
@@ -289,8 +367,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                       </div>
 
                       <div className="relative mb-12">
-                          <div className={`text-gray-300 text-lg md:text-xl leading-relaxed ${!isSynopsisExpanded && synopsisIsLong ? 'line-clamp-4' : ''}`} dangerouslySetInnerHTML={{ __html: synopsisText }}></div>
-                          {synopsisIsLong && !isSynopsisExpanded && (
+                          <div className={`text-gray-300 text-lg md:text-xl leading-relaxed ${!isSynopsisExpanded && (movie.synopsis || '').length > 200 ? 'line-clamp-4' : ''}`} dangerouslySetInnerHTML={{ __html: movie.synopsis || '' }}></div>
+                          {(movie.synopsis || '').length > 200 && !isSynopsisExpanded && (
                               <button onClick={() => setIsSynopsisExpanded(true)} className="text-white font-bold mt-4 hover:underline">Read more</button>
                           )}
                       </div>
