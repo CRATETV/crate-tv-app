@@ -10,7 +10,7 @@ import SearchOverlay from './components/SearchOverlay';
 import { Movie, Actor, Category } from './types';
 import { isMovieReleased, categoriesData } from './constants';
 import { useAuth } from './contexts/AuthContext';
-import { useFestival } from './contexts/FestivalContext';
+import { useFestival } from '../contexts/FestivalContext';
 import FestivalHero from './components/FestivalHero';
 import BackToTopButton from './components/BackToTopButton';
 import CollapsibleFooter from './components/CollapsibleFooter';
@@ -21,7 +21,7 @@ import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import WatchPartyAnnouncementModal from './components/WatchPartyAnnouncementModal';
 import NewFilmAnnouncementModal from './components/NewFilmAnnouncementModal';
 
-// High-Aesthetic Minimal Cratemas Header - Pumped up Red Luminosity
+// High-Aesthetic Minimal Cratemas Header
 const CratemasTitle: React.FC = () => {
     const handleNavigate = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -36,11 +36,10 @@ const CratemasTitle: React.FC = () => {
             onClick={handleNavigate}
         >
             <div className="relative inline-block self-start">
-                {/* Minimal twinkles - Ice Crystals - Brighter */}
+                {/* Minimal holiday twinkles */}
                 <div className="absolute -inset-8 pointer-events-none z-20">
                     <div className="absolute top-0 left-4 w-2 h-2 bg-white rounded-full animate-[holiday-twinkle_3s_infinite] opacity-0 shadow-[0_0_15px_#fff]"></div>
                     <div className="absolute top-12 right-0 w-1.5 h-1.5 bg-white rounded-full animate-[holiday-twinkle_4s_infinite_1s] opacity-0 shadow-[0_0_15px_#fff]"></div>
-                    <div className="absolute -bottom-6 left-1/2 w-1.5 h-1.5 bg-white rounded-full animate-[holiday-twinkle_5s_infinite_0.5s] opacity-0 shadow-[0_0_15px_#fff]"></div>
                     <div className="absolute top-6 left-1/4 w-1.5 h-1.5 bg-[#ff0000] rounded-full animate-[holiday-twinkle_2.5s_infinite_1.2s] opacity-0 shadow-[0_0_15px_#ff0000]"></div>
                 </div>
 
@@ -55,7 +54,6 @@ const CratemasTitle: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Elegant high-intensity neon underline */}
                 <div className="absolute bottom-0 left-0 w-0 h-[4px] bg-gradient-to-r from-[#ff0000] via-white to-[#22c55e] group-hover/title:w-full transition-all duration-700 ease-in-out opacity-90 shadow-[0_0_25px_rgba(255,0,0,0.8)]"></div>
             </div>
         </div>
@@ -63,11 +61,9 @@ const CratemasTitle: React.FC = () => {
 };
 
 const App: React.FC = () => {
-    // Hooks
-    const { user, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
+    const { likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
     const { isLoading, movies, categories, isFestivalLive, festivalConfig, dataSource, settings } = useFestival();
     
-    // State
     const [heroIndex, setHeroIndex] = useState(0);
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
     const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
@@ -77,11 +73,9 @@ const App: React.FC = () => {
     const [supportMovieModal, setSupportMovieModal] = useState<Movie | null>(null);
     const [showFestivalModal, setShowFestivalModal] = useState(false);
     const [liveWatchParty, setLiveWatchParty] = useState<Movie | null>(null);
-    const [announcementMovieModal, setAnnouncementMovieModal] = useState<Movie | null>(null);
     const [newFilmAnnouncement, setNewFilmAnnouncement] = useState<Movie | null>(null);
     const [shouldAutoFocusSearch, setShouldAutoFocusSearch] = useState(false);
     
-    // Memos for performance
     const heroMovies = useMemo(() => {
         const featuredCategory = categories.featured;
         let spotlightMovies: Movie[] = [];
@@ -133,8 +127,12 @@ const App: React.FC = () => {
             .reverse();
     }, [movies, watchlistArray]);
 
+    const cratemasCategory = useMemo(() => {
+        if (categories.cratemas) return categories.cratemas;
+        const found = (Object.values(categories) as Category[]).find(c => c.title && c.title.toLowerCase() === 'cratemas');
+        return found || categoriesData.cratemas;
+    }, [categories]);
 
-    // Handlers
     const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
     const handlePlayMovie = (movie: Movie) => {
         window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
@@ -172,20 +170,6 @@ const App: React.FC = () => {
     }, [heroMovies.length]);
 
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const searchParam = params.get('search');
-        if (searchParam) {
-            setSearchQuery(searchParam);
-            setShouldAutoFocusSearch(true);
-        }
-        const actionParam = params.get('action');
-        if (actionParam === 'search') setIsMobileSearchOpen(true);
-        if (searchParam || actionParam) {
-            window.history.replaceState({}, '', window.location.pathname);
-        }
-    }, []);
-
-    useEffect(() => {
         if (isLoading || !dataSource) return;
         if (isFestivalLive && !sessionStorage.getItem('festivalModalSeen')) {
             setShowFestivalModal(true);
@@ -199,54 +183,12 @@ const App: React.FC = () => {
         });
         if (activeParty && sessionStorage.getItem('livePartyBannerDismissed') !== activeParty.key) {
             setLiveWatchParty(activeParty);
-        } else {
-            setLiveWatchParty(null);
         }
-        
-        const nowStreamingKey = categories.nowStreaming?.movieKeys[0];
-        const newFilm = nowStreamingKey ? movies[nowStreamingKey] : null;
-        if (newFilm && isMovieReleased(newFilm) && !sessionStorage.getItem('newFilmModalSeen')) {
-            setNewFilmAnnouncement(newFilm);
-        }
-    }, [isLoading, isFestivalLive, dataSource, movies, categories.nowStreaming]);
-    
-    useEffect(() => {
-        if (likedMovies.size === 0 || Object.keys(movies).length === 0) {
-            setRecommendedMovies([]);
-            return;
-        }
-        const fetchRecommendations = async () => {
-            try {
-                const likedTitles = Array.from(likedMovies).map(key => movies[key]?.title).filter(Boolean);
-                const response = await fetch('/api/generate-recommendations', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ likedTitles, allMovies: movies }),
-                });
-                if (!response.ok) return;
-                const data = await response.json();
-                const recommendedKeys: string[] = data.recommendedKeys || [];
-                const recMovies = recommendedKeys
-                    .map(key => movies[key])
-                    .filter((m): m is Movie => !!m && !likedMovies.has(m.key) && isMovieReleased(m));
-                setRecommendedMovies(recMovies);
-            } catch (error) {
-                console.error("Failed to fetch AI recommendations:", error);
-            }
-        };
-        fetchRecommendations();
-    }, [likedMovies, movies]);
+    }, [isLoading, isFestivalLive, dataSource, movies]);
 
     if (isLoading) return <LoadingSpinner />;
 
     const bannerHeight = liveWatchParty ? '3rem' : '0px';
-
-    // Advanced flexibility: Find Cratemas by key OR by title (case-insensitive)
-    const cratemasCategory = useMemo(() => {
-        if (categories.cratemas) return categories.cratemas;
-        const found = (Object.values(categories) as Category[]).find(c => c.title && c.title.toLowerCase() === 'cratemas');
-        return found || categoriesData.cratemas;
-    }, [categories]);
 
     return (
         <div className="flex flex-col min-h-screen text-white">
@@ -274,9 +216,7 @@ const App: React.FC = () => {
                 )}
                 
                 <div className="px-4 md:px-12 relative z-10">
-                    {/* Fixed Spacing: Substantial margin to clear Hero visual and text */}
                     <div className="mt-16 md:mt-24 lg:mt-32 space-y-12 md:space-y-16">
-                        
                         {searchQuery ? (
                             searchResults.length > 0 ? (
                                 <MovieCarousel
@@ -298,7 +238,7 @@ const App: React.FC = () => {
                             )
                         ) : (
                           <>
-                            {/* EVERGREEN CRATEMAS ROW - Auto-hides if empty or disabled by master switch */}
+                            {/* CRATEMAS ROW - Restore Visibility */}
                             {settings.isHolidayModeActive && cratemasCategory && cratemasCategory.movieKeys && cratemasCategory.movieKeys.length > 0 && (
                                 <MovieCarousel
                                     key="cratemas"
@@ -327,7 +267,6 @@ const App: React.FC = () => {
                                     onToggleLike={toggleLikeMovie}
                                     onToggleWatchlist={toggleWatchlist}
                                     onSupportMovie={handleSupportMovie}
-                                    allCategories={categories}
                                 />
                             )}
 
@@ -367,8 +306,7 @@ const App: React.FC = () => {
                                     .map(movieKey => movies[movieKey])
                                     .filter((m: Movie | undefined): m is Movie => !!m);
                                 
-                                // Skip categories already handled or system categories
-                                if (categoryMovies.length === 0 || key === 'featured' || key === 'publicDomainIndie' || key === 'nowStreaming' || key === 'cratemas' || (typedCategory?.title && typedCategory.title.toLowerCase() === 'cratemas')) return null;
+                                if (categoryMovies.length === 0 || key === 'featured' || key === 'nowStreaming' || key === 'cratemas' || (typedCategory?.title && typedCategory.title.toLowerCase() === 'cratemas')) return null;
 
                                 return (
                                     <MovieCarousel
@@ -395,7 +333,6 @@ const App: React.FC = () => {
             <BackToTopButton />
             <BottomNavBar onSearchClick={() => setIsMobileSearchOpen(true)} />
 
-            {/* Modals */}
             {detailsMovie && (
                 <MovieDetailsModal 
                     movie={detailsMovie} 
@@ -429,34 +366,6 @@ const App: React.FC = () => {
                 />
             )}
             {showFestivalModal && <FestivalLiveModal onClose={handleCloseFestivalModal} onNavigate={handleNavigateToFestival} />}
-            {announcementMovieModal && (
-                <WatchPartyAnnouncementModal 
-                    movie={announcementMovieModal}
-                    onClose={() => {
-                        sessionStorage.setItem('livePartyAnnouncementDismissed', announcementMovieModal.key);
-                        setAnnouncementMovieModal(null);
-                    }}
-                    onJoin={() => {
-                        setAnnouncementMovieModal(null);
-                        window.history.pushState({}, '', `/watchparty/${announcementMovieModal.key}`);
-                        window.dispatchEvent(new Event('pushstate'));
-                    }}
-                />
-            )}
-            {newFilmAnnouncement && (
-                <NewFilmAnnouncementModal
-                    movie={newFilmAnnouncement}
-                    onClose={() => {
-                        sessionStorage.setItem('newFilmModalSeen', 'true');
-                        setNewFilmAnnouncement(null);
-                    }}
-                    onWatchNow={() => {
-                        sessionStorage.setItem('newFilmModalSeen', 'true');
-                        setNewFilmAnnouncement(null);
-                        handlePlayMovie(newFilmAnnouncement);
-                    }}
-                />
-            )}
         </div>
     );
 };
