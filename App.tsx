@@ -187,7 +187,7 @@ const App: React.FC = () => {
     const bannerHeight = liveWatchParty ? '3rem' : '0px';
 
     return (
-        <div className="flex flex-col min-h-screen text-white">
+        <div className="flex flex-col min-h-screen text-white overflow-x-hidden w-full relative">
             {liveWatchParty && <LiveWatchPartyBanner movie={liveWatchParty} onClose={handleDismissPartyBanner} />}
             <Header 
                 searchQuery={searchQuery} 
@@ -195,7 +195,7 @@ const App: React.FC = () => {
                 onMobileSearchClick={() => setIsMobileSearchOpen(true)}
                 topOffset={bannerHeight}
             />
-            <main className="flex-grow pb-24 md:pb-0">
+            <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden">
                 {isFestivalLive ? (
                     <FestivalHero festivalConfig={festivalConfig} />
                 ) : (
@@ -210,27 +210,21 @@ const App: React.FC = () => {
                     )
                 )}
                 
-                <div className="px-4 md:px-12 relative z-10">
+                <div className="px-4 md:px-12 relative z-10 w-full overflow-x-hidden">
                     <div className="mt-16 md:mt-24 lg:mt-32 space-y-12 md:space-y-16">
                         {searchQuery ? (
-                            searchResults.length > 0 ? (
-                                <MovieCarousel
-                                    key="search-results"
-                                    title={`Search Results for "${searchQuery}"`}
-                                    movies={searchResults}
-                                    onSelectMovie={handlePlayMovie}
-                                    watchedMovies={watchedMovies}
-                                    watchlist={watchlist}
-                                    likedMovies={likedMovies}
-                                    onToggleLike={toggleLikeMovie}
-                                    onToggleWatchlist={toggleWatchlist}
-                                    onSupportMovie={handleSupportMovie}
-                                />
-                            ) : (
-                                <div className="text-center text-gray-400 py-8">
-                                    <p>No results found for "{searchQuery}"</p>
-                                </div>
-                            )
+                            <MovieCarousel
+                                key="search-results"
+                                title={searchResults.length > 0 ? `Search Results for "${searchQuery}"` : `No results found for "${searchQuery}"`}
+                                movies={searchResults}
+                                onSelectMovie={handlePlayMovie}
+                                watchedMovies={watchedMovies}
+                                watchlist={watchlist}
+                                likedMovies={likedMovies}
+                                onToggleLike={toggleLikeMovie}
+                                onToggleWatchlist={toggleWatchlist}
+                                onSupportMovie={handleSupportMovie}
+                            />
                         ) : (
                           <>
                             {/* RESTORED CRATEMAS ROW */}

@@ -34,7 +34,8 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
     return null;
   }
   
-  const carouselClasses = `flex overflow-x-auto space-x-4 pb-8 pt-4 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8 group/carousel-list`;
+  // scroll-snap-x and snap-proximity provide that native-app "clicky" feel when browsing
+  const carouselClasses = `flex overflow-x-auto space-x-4 pb-8 pt-4 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8 group/carousel-list snap-x snap-proximity overscroll-x-contain`;
 
   return (
     <div className="mb-8 md:mb-12">
@@ -65,7 +66,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
               return (
                   <div 
                       key={movie.key} 
-                      className="flex-shrink-0 w-[80vw] sm:w-[60vw] md:w-[45vw] lg:w-[35vw] cursor-pointer group/ranked ranked-card-border rounded-lg transition-all duration-300 group-hover/carousel-list:opacity-50 hover:group-hover/carousel-list:!opacity-100 hover:group-hover/carousel-list:scale-[1.02]"
+                      className="flex-shrink-0 w-[80vw] sm:w-[60vw] md:w-[45vw] lg:w-[35vw] cursor-pointer group/ranked ranked-card-border rounded-lg transition-all duration-300 group-hover/carousel-list:opacity-50 hover:group-hover/carousel-list:!opacity-100 hover:group-hover/carousel-list:scale-[1.02] snap-start"
                       onClick={() => onSelectMovie(movie)}
                       style={{ '--rank-color': color } as React.CSSProperties}
                   >
@@ -95,7 +96,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                   </div>
               );
             } else {
-              const containerClasses = 'flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw] transition-all duration-300 group-hover/carousel-list:opacity-50 hover:group-hover/carousel-list:!opacity-100';
+              const containerClasses = 'flex-shrink-0 w-[40vw] sm:w-[28vw] md:w-[20vw] lg:w-[15vw] transition-all duration-300 group-hover/carousel-list:opacity-50 hover:group-hover/carousel-list:!opacity-100 snap-start';
               return (
                 <div key={movie.key} className={containerClasses}>
                   <MovieCard
