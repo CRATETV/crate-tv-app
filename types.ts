@@ -39,6 +39,11 @@ export interface Category {
   movieKeys: string[];
 }
 
+export interface SiteSettings {
+  isHolidayModeActive?: boolean;
+  maintenanceMode?: boolean;
+}
+
 export interface FilmBlock {
   id: string;
   title: string;

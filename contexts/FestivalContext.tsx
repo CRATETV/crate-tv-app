@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo } from 'react';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
-import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig } from '../types';
+import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings } from '../types';
 import { moviesData, categoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
 
 interface FestivalContextType {
@@ -14,6 +14,7 @@ interface FestivalContextType {
     isFestivalLive: boolean;
     dataSource: 'live' | 'fallback' | null;
     adConfig: AdConfig | null;
+    settings: SiteSettings;
 }
 
 const FestivalContext = createContext<FestivalContextType | undefined>(undefined);
@@ -34,6 +35,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [festivalData, setFestivalData] = useState<FestivalDay[]>(initialFestivalData);
     const [aboutData, setAboutData] = useState<AboutData | null>(initialAboutData);
     const [adConfig, setAdConfig] = useState<AdConfig | null>(null);
+    const [settings, setSettings] = useState<SiteSettings>({ isHolidayModeActive: false });
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
 
     const isFestivalLive = useMemo(() => {
@@ -104,7 +106,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                         (!liveNowStreaming || !liveNowStreaming.movieKeys || liveNowStreaming.movieKeys.length === 0) &&
                         categoriesData.nowStreaming
                     ) {
-                        liveCategories.nowStreaming = categoriesData.nowStreaming;
+                        liveNowStreaming ? liveNowStreaming.movieKeys = categoriesData.nowStreaming.movieKeys : liveCategories.nowStreaming = categoriesData.nowStreaming;
                     }
 
                     setCategories(liveCategories);
@@ -120,6 +122,11 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                     if (doc.exists) setAdConfig(doc.data() as AdConfig);
                 });
                 unsubscribes.push(adsUnsub);
+
+                const settingsUnsub = db.collection('content').doc('settings').onSnapshot(doc => {
+                    if (doc.exists) setSettings(doc.data() as SiteSettings);
+                });
+                unsubscribes.push(settingsUnsub);
 
                 const festivalConfigUnsub = db.collection('festival').doc('config').onSnapshot(doc => {
                     if (doc.exists) setFestivalConfig(doc.data() as FestivalConfig);
@@ -157,7 +164,8 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         aboutData,
         isFestivalLive,
         dataSource,
-        adConfig
+        adConfig,
+        settings
     };
 
     return (

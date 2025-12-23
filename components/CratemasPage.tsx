@@ -13,7 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { categoriesData } from '../constants';
 
 const CratemasPage: React.FC = () => {
-    const { isLoading: isFestivalLoading, movies, categories } = useFestival();
+    const { isLoading: isFestivalLoading, movies, categories, settings } = useFestival();
     const { watchlist, toggleWatchlist, likedMovies, toggleLikeMovie, watchedMovies } = useAuth();
 
     // Advanced flexibility: Find Cratemas by key OR by title (case-insensitive)
@@ -50,6 +50,8 @@ const CratemasPage: React.FC = () => {
         return <LoadingSpinner />;
     }
 
+    const isSeasonActive = settings.isHolidayModeActive && cratemasMovies.length > 0;
+
     return (
         <div className="flex flex-col min-h-screen text-white bg-[#042116]">
             {/* Snowfall simulated background */}
@@ -80,7 +82,7 @@ const CratemasPage: React.FC = () => {
 
                 {/* Movie Grid */}
                 <div className="max-w-7xl mx-auto px-4 md:px-12 py-16">
-                    {cratemasMovies.length > 0 ? (
+                    {isSeasonActive ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-8">
                             {cratemasMovies.map(movie => (
                                 <div key={movie.key} className="hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] rounded-lg transition-all duration-300 transform hover:scale-105">
@@ -99,7 +101,7 @@ const CratemasPage: React.FC = () => {
                     ) : (
                         <div className="text-center py-32">
                             <div className="text-6xl mb-6 animate-bounce">🎄</div>
-                            <p className="text-center text-gray-400 text-xl font-bold">The Cratemas collection is being prepared. Check back soon!</p>
+                            <p className="text-center text-gray-400 text-xl font-bold">The Cratemas collection is resting. Check back during the holidays!</p>
                         </div>
                     )}
                 </div>

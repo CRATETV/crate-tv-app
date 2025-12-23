@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -64,7 +65,7 @@ const CratemasTitle: React.FC = () => {
 const App: React.FC = () => {
     // Hooks
     const { user, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
-    const { isLoading, movies, categories, isFestivalLive, festivalConfig, dataSource } = useFestival();
+    const { isLoading, movies, categories, isFestivalLive, festivalConfig, dataSource, settings } = useFestival();
     
     // State
     const [heroIndex, setHeroIndex] = useState(0);
@@ -243,7 +244,6 @@ const App: React.FC = () => {
     // Advanced flexibility: Find Cratemas by key OR by title (case-insensitive)
     const cratemasCategory = useMemo(() => {
         if (categories.cratemas) return categories.cratemas;
-        // FIX: Added type cast to 'Category[]' for Object.values(categories) to safely access 'title' and resolve "Property 'title' does not exist on type 'unknown'" error.
         const found = (Object.values(categories) as Category[]).find(c => c.title && c.title.toLowerCase() === 'cratemas');
         return found || categoriesData.cratemas;
     }, [categories]);
@@ -298,8 +298,8 @@ const App: React.FC = () => {
                             )
                         ) : (
                           <>
-                            {/* EXPLICIT CRATEMAS ROW - TOP PRIORITY */}
-                            {cratemasCategory && (
+                            {/* EVERGREEN CRATEMAS ROW - Auto-hides if empty or disabled by master switch */}
+                            {settings.isHolidayModeActive && cratemasCategory && cratemasCategory.movieKeys && cratemasCategory.movieKeys.length > 0 && (
                                 <MovieCarousel
                                     key="cratemas"
                                     title={<CratemasTitle />}
@@ -368,7 +368,6 @@ const App: React.FC = () => {
                                     .filter((m: Movie | undefined): m is Movie => !!m);
                                 
                                 // Skip categories already handled or system categories
-                                // FIX: Added null check for typedCategory and ensured title exists on typedCategory to resolve property access on 'unknown' error.
                                 if (categoryMovies.length === 0 || key === 'featured' || key === 'publicDomainIndie' || key === 'nowStreaming' || key === 'cratemas' || (typedCategory?.title && typedCategory.title.toLowerCase() === 'cratemas')) return null;
 
                                 return (

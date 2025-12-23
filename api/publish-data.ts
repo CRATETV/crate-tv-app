@@ -47,13 +47,14 @@ const normalizeTitle = (title: string): string => {
 
 // Function to fetch all data from Firestore and assemble it for publishing
 const assembleLiveData = async (db: Firestore) => {
-    const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap, adsSnap] = await Promise.all([
+    const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap, adsSnap, settingsSnap] = await Promise.all([
         db.collection('movies').get(),
         db.collection('categories').get(),
         db.collection('content').doc('about').get(),
         db.collection('festival').doc('config').get(),
         db.collection('festival').doc('schedule').collection('days').get(),
-        db.collection('content').doc('ads').get()
+        db.collection('content').doc('ads').get(),
+        db.collection('content').doc('settings').get()
     ]);
 
     // Deduplication logic for movies
@@ -88,6 +89,7 @@ const assembleLiveData = async (db: Firestore) => {
     const aboutData = aboutSnap.exists ? aboutSnap.data() : null;
     const festivalConfig = festivalConfigSnap.exists ? festivalConfigSnap.data() : null;
     const adConfig = adsSnap.exists ? adsSnap.data() : null;
+    const settings = settingsSnap.exists ? settingsSnap.data() : { isHolidayModeActive: false };
 
     const festivalData: any[] = [];
     festivalDaysSnap.forEach(doc => festivalData.push(doc.data()));
@@ -99,7 +101,8 @@ const assembleLiveData = async (db: Firestore) => {
         aboutData,
         festivalConfig,
         festivalData,
-        adConfig
+        adConfig,
+        settings
     };
 };
 
@@ -153,7 +156,7 @@ export async function POST(request: Request) {
             });
         }
 
-        const validTypes = ['movies', 'categories', 'festival', 'about', 'delete_movie', 'delete_category', 'set_now_streaming', 'ads'];
+        const validTypes = ['movies', 'categories', 'festival', 'about', 'delete_movie', 'delete_category', 'set_now_streaming', 'ads', 'settings'];
         if (!validTypes.includes(type)) {
             return new Response(JSON.stringify({ error: `Invalid data type provided: ${type}` }), {
                 status: 400,
@@ -266,6 +269,10 @@ export async function POST(request: Request) {
             case 'ads':
                 const adsRef = db.collection('content').doc('ads');
                 batch.set(adsRef, data, { merge: true });
+                break;
+            case 'settings':
+                const settingsRef = db.collection('content').doc('settings');
+                batch.set(settingsRef, data, { merge: true });
                 break;
             case 'festival':
                 const festivalPayload = data as { config?: any, schedule?: any[] };

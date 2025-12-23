@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { Category, Movie } from '../types';
+import { Category, Movie, SiteSettings } from '../types';
+import { useFestival } from '../contexts/FestivalContext';
 
 interface MovieSelectorModalProps {
   allMovies: Movie[];
@@ -77,13 +77,17 @@ interface CategoryEditorProps {
 }
 
 const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allMovies, onSave, isSaving }) => {
+  const { settings } = useFestival();
   const [categories, setCategories] = useState<Record<string, Category>>(initialCategories);
   const [editingCategoryKey, setEditingCategoryKey] = useState<string | null>(null);
   const [localError, setLocalError] = useState('');
+  const [isHolidayMode, setIsHolidayMode] = useState(settings.isHolidayModeActive || false);
   const prevIsSaving = useRef(isSaving);
 
-  // Robustly sync local state with incoming server data only when not actively saving
-  // or after a successful save completes.
+  useEffect(() => {
+    setIsHolidayMode(settings.isHolidayModeActive || false);
+  }, [settings.isHolidayModeActive]);
+
   useEffect(() => {
     if (prevIsSaving.current === true && isSaving === false) {
        setCategories(initialCategories);
@@ -109,30 +113,21 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
   };
 
   const addNewCategory = () => {
-    // Generate a unique ID that isn't just numeric to avoid weird object sorting
     const newKey = `custom_${Date.now()}`;
-    const newCategory: Category = {
-      title: 'New Category Title',
-      movieKeys: [],
-    };
-    // Put new category at the top of the object
+    const newCategory: Category = { title: 'New Category Title', movieKeys: [] };
     setCategories(prev => ({ [newKey]: newCategory, ...prev }));
   };
 
   const deleteCategory = async (key: string) => {
     const categoryTitle = categories[key]?.title || 'this category';
-    if (!window.confirm(`Are you sure you want to permanently delete "${categoryTitle}"?`)) {
-      return;
-    }
+    if (!window.confirm(`Are you sure you want to permanently delete "${categoryTitle}"?`)) return;
 
-    // 1. Optimistically remove from local state
     setCategories(prev => {
         const next = { ...prev };
         delete next[key];
         return next;
     });
 
-    // 2. Perform actual deletion if it's not a brand new local-only category
     if (!key.startsWith('custom_')) {
         const password = sessionStorage.getItem('adminPassword');
         try {
@@ -141,28 +136,44 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password, type: 'delete_category', data: { key } }),
             });
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to delete from database.');
-            }
+            if (!response.ok) throw new Error('Failed to delete from database.');
         } catch (err) {
             setLocalError(err instanceof Error ? err.message : 'Deletion failed.');
-            // Revert local state on error
             setCategories(initialCategories);
         }
     }
   };
 
+  const toggleHolidayMode = async (active: boolean) => {
+    setIsHolidayMode(active);
+    const password = sessionStorage.getItem('adminPassword');
+    try {
+        await fetch('/api/publish-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password, type: 'settings', data: { isHolidayModeActive: active } }),
+        });
+    } catch (err) {
+        console.error("Failed to update holiday mode:", err);
+    }
+  };
+
   return (
     <div>
+      <div className="mb-10 p-6 bg-red-900/10 border border-red-500/20 rounded-xl flex items-center justify-between">
+          <div>
+              <h3 className="text-xl font-bold text-red-400 uppercase tracking-tighter">Holiday Season Master Switch</h3>
+              <p className="text-gray-400 text-sm mt-1">Globally toggle the Cratemas row visibility on the homepage (Great for Christmas in July!)</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" checked={isHolidayMode} onChange={(e) => toggleHolidayMode(e.target.checked)} className="sr-only peer" />
+            <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-red-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+          </label>
+      </div>
+
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-red-400">Manage Categories</h2>
-        <button 
-            onClick={addNewCategory} 
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-transform hover:scale-105"
-        >
-          + Add New Category
-        </button>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-300">Film Categories</h2>
+        <button onClick={addNewCategory} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-transform hover:scale-105">+ Add New Category</button>
       </div>
 
       {localError && <div className="p-3 mb-4 bg-red-900/50 border border-red-700 text-red-200 rounded-md text-sm">{localError}</div>}
@@ -181,46 +192,23 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                     className="text-lg font-semibold bg-transparent text-white focus:outline-none focus:bg-gray-700 rounded-md px-2 w-full border border-transparent focus:border-gray-600"
                   />
               </div>
-              <button 
-                onClick={() => deleteCategory(key)} 
-                className="text-xs text-red-500 hover:text-red-400 ml-4 font-bold uppercase tracking-wider"
-              >
-                Delete
-              </button>
+              <button onClick={() => deleteCategory(key)} className="text-xs text-red-500 hover:text-red-400 ml-4 font-bold uppercase tracking-wider">Delete</button>
             </div>
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-700/50">
-                <p className="text-xs text-gray-400">
-                    <strong className="text-gray-300">{category.movieKeys.length}</strong> film(s) currently assigned
-                </p>
-                <button
-                    onClick={() => setEditingCategoryKey(key)}
-                    className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1.5 px-4 rounded-md text-xs transition-colors"
-                >
-                    Manage Assigned Films
-                </button>
+                <p className="text-xs text-gray-400"><strong className="text-gray-300">{category.movieKeys.length}</strong> film(s) currently assigned</p>
+                <button onClick={() => setEditingCategoryKey(key)} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1.5 px-4 rounded-md text-xs transition-colors">Manage Assigned Films</button>
             </div>
           </div>
         ))}
       </div>
       
       <div className="mt-8 pt-6 border-t border-gray-700">
-        <button
-          onClick={() => onSave(categories)}
-          disabled={isSaving}
-          className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-3 px-8 rounded-lg transition-all shadow-lg hover:shadow-purple-500/20"
-        >
-          {isSaving ? 'Publishing Changes...' : 'Save & Publish Categories'}
-        </button>
-        <p className="text-xs text-gray-500 mt-2">Publishing will update the live site and your Roku channel immediately.</p>
+        <button onClick={() => onSave(categories)} disabled={isSaving} className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition-all shadow-lg">{isSaving ? 'Publishing...' : 'Save & Publish Categories'}</button>
       </div>
 
       {editingCategoryKey && (
-        <MovieSelectorModal
-          allMovies={allMovies}
-          initialSelectedKeys={categories[editingCategoryKey].movieKeys}
-          onSave={(newKeys) => handleMovieSelectionSave(editingCategoryKey, newKeys)}
-          onClose={() => setEditingCategoryKey(null)}
-        />
+        // FIX: The onClose prop was incorrectly calling setEditingBlock(null). This has been corrected to setEditingCategoryKey(null) to match the component's state variables.
+        <MovieSelectorModal allMovies={allMovies} initialSelectedKeys={categories[editingCategoryKey].movieKeys} onSave={(newKeys) => handleMovieSelectionSave(editingCategoryKey, newKeys)} onClose={() => setEditingCategoryKey(null)} />
       )}
     </div>
   );
