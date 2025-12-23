@@ -37,6 +37,17 @@ const setMetaTag = (attr: 'name' | 'property', value: string, content: string) =
   element.setAttribute('content', content);
 };
 
+// Helper to extract Vimeo ID and return embed URL
+const getVimeoEmbedUrl = (url: string): string | null => {
+    if (!url) return null;
+    const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
+    const match = url.match(vimeoRegex);
+    if (match && match[1]) {
+        return `https://player.vimeo.com/video/${match[1]}?autoplay=1&color=ff0000&title=0&byline=0&portrait=0`;
+    }
+    return null;
+};
+
 const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
     const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
         e.preventDefault();
@@ -96,12 +107,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const adContainerRef = useRef<HTMLDivElement>(null);
-  const adsManagerRef = useRef<any>(null);
   const [isAdPlaying, setIsAdPlaying] = useState(false);
-  const [adError, setAdError] = useState<string | null>(null);
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
   const isOnWatchlist = useMemo(() => watchlist.includes(movieKey), [watchlist, movieKey]);
+
+  const vimeoEmbedUrl = useMemo(() => movie ? getVimeoEmbedUrl(movie.fullMovie) : null, [movie]);
 
   const synopsisText = movie?.synopsis || '';
   const synopsisIsLong = synopsisText.replace(/<[^>]+>/g, '').length > 200;
@@ -111,7 +122,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     window.dispatchEvent(new Event('pushstate'));
   };
 
-  // FIX: Added missing handlePaymentSuccess function to manage post-donation UI state.
   const handlePaymentSuccess = () => {
     setShowSupportSuccess(true);
     setTimeout(() => setShowSupportSuccess(false), 3000);
@@ -141,11 +151,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         setReleased(isMovieReleased(movie));
         if ((params.get('play') === 'true') && movie.fullMovie && isMovieReleased(movie)) {
             setPlayerMode('full');
+            // If it's not a vimeo link, we track view here
+            if (!getVimeoEmbedUrl(movie.fullMovie)) {
+                playContent();
+            }
         } else {
             setPlayerMode('poster');
         }
     } 
-  }, [movieKey, movie, isDataLoading]);
+  }, [movieKey, movie, isDataLoading, playContent]);
 
   if (isDataLoading || !movie) return <LoadingSpinner />;
 
@@ -169,33 +183,46 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     
                     {playerMode === 'full' && (
                         <>
-                            <video 
-                                ref={videoRef} 
-                                src={movie.fullMovie} 
-                                className="w-full h-full"
-                                controls={!isAdPlaying && !isPaused}
-                                playsInline
-                                onContextMenu={(e) => e.preventDefault()} 
-                                controlsList="nodownload"
-                                onEnded={() => handleGoHome()}
-                                onPause={() => setIsPaused(true)}
-                                onPlay={() => setIsPaused(false)}
-                            />
-                            {isPaused && !isAdPlaying && (
-                                <PauseOverlay 
-                                    movie={movie}
-                                    isLiked={isLiked}
-                                    isOnWatchlist={isOnWatchlist}
-                                    onMoreDetails={() => setIsDetailsModalOpen(true)}
-                                    onSelectActor={setSelectedActor}
-                                    onResume={() => videoRef.current?.play()}
-                                    onRewind={() => { if(videoRef.current) videoRef.current.currentTime -= 10; }}
-                                    onForward={() => { if(videoRef.current) videoRef.current.currentTime += 10; }}
-                                    onToggleLike={() => toggleLikeMovie(movieKey)}
-                                    onToggleWatchlist={() => toggleWatchlist(movieKey)}
-                                    onSupport={() => setIsSupportModalOpen(true)}
-                                    onHome={handleGoHome}
-                                />
+                            {vimeoEmbedUrl ? (
+                                <iframe
+                                    src={vimeoEmbedUrl}
+                                    className="w-full h-full"
+                                    frameBorder="0"
+                                    allow="autoplay; fullscreen; picture-in-picture"
+                                    allowFullScreen
+                                    title={movie.title}
+                                ></iframe>
+                            ) : (
+                                <>
+                                    <video 
+                                        ref={videoRef} 
+                                        src={movie.fullMovie} 
+                                        className="w-full h-full"
+                                        controls={!isAdPlaying && !isPaused}
+                                        playsInline
+                                        onContextMenu={(e) => e.preventDefault()} 
+                                        controlsList="nodownload"
+                                        onEnded={() => handleGoHome()}
+                                        onPause={() => setIsPaused(true)}
+                                        onPlay={() => setIsPaused(false)}
+                                    />
+                                    {isPaused && !isAdPlaying && (
+                                        <PauseOverlay 
+                                            movie={movie}
+                                            isLiked={isLiked}
+                                            isOnWatchlist={isOnWatchlist}
+                                            onMoreDetails={() => setIsDetailsModalOpen(true)}
+                                            onSelectActor={setSelectedActor}
+                                            onResume={() => videoRef.current?.play()}
+                                            onRewind={() => { if(videoRef.current) videoRef.current.currentTime -= 10; }}
+                                            onForward={() => { if(videoRef.current) videoRef.current.currentTime += 10; }}
+                                            onToggleLike={() => toggleLikeMovie(movieKey)}
+                                            onToggleWatchlist={() => toggleWatchlist(movieKey)}
+                                            onSupport={() => setIsSupportModalOpen(true)}
+                                            onHome={handleGoHome}
+                                        />
+                                    )}
+                                </>
                             )}
                         </>
                     )}
