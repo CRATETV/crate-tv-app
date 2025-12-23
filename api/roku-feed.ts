@@ -3,7 +3,7 @@
 // It will be accessible at the path /api/roku-feed
 
 import { getApiData } from './_lib/data.js';
-import { Movie, Category, FestivalConfig, FestivalDay, FilmBlock, User } from '../types.js';
+import { Movie, Category, User } from '../types.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 
 interface RokuMovie {
@@ -113,12 +113,12 @@ export async function GET(request: Request) {
     // 1. HOLIDAY MODE: CRATEMAS (Highest Priority if active)
     if (settings.isHolidayModeActive) {
         const cratemasMovies = (Object.values(visibleMovies) as Movie[])
-            .filter(m => m.isCratemas)
-            .map(m => formatMovieForRoku(m, movieGenreMap, user));
+            .filter((m: Movie) => m.isCratemas)
+            .map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user));
         
         if (cratemasMovies.length > 0) {
             finalCategories.push({
-                title: "Cratemas Collection",
+                title: settings.holidayName || "Holiday Collection",
                 children: cratemasMovies,
                 itemComponentName: "MoviePoster"
             });
@@ -133,7 +133,7 @@ export async function GET(request: Request) {
     if (topTenMovies.length > 0) {
         finalCategories.push({
             title: "Top 10 on Crate TV Today",
-            children: topTenMovies.map(m => formatMovieForRoku(m, movieGenreMap, user)),
+            children: topTenMovies.map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user)),
             itemComponentName: "RankedMoviePoster"
         });
     }
@@ -143,7 +143,7 @@ export async function GET(request: Request) {
         const myList = user.watchlist
             .map(key => visibleMovies[key])
             .filter((m): m is Movie => !!m)
-            .map(m => formatMovieForRoku(m, movieGenreMap, user))
+            .map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user))
             .reverse();
         
         finalCategories.push({
@@ -161,7 +161,7 @@ export async function GET(request: Request) {
             const children = cat.movieKeys
                 .map((k: string) => visibleMovies[k])
                 .filter((m: Movie | undefined): m is Movie => !!m)
-                .map(m => formatMovieForRoku(m, movieGenreMap, user));
+                .map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user));
             
             if (children.length > 0) {
                 finalCategories.push({

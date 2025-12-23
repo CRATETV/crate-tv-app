@@ -1,10 +1,9 @@
 
 import React, { useState, useMemo } from 'react';
 import Header from './Header';
-import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import LoadingSpinner from './LoadingSpinner';
-import { Movie, Category, SiteSettings } from '../types';
+import { Movie, Category } from '../types';
 import { MovieCard } from './MovieCard';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';

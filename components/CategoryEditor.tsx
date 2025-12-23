@@ -83,6 +83,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
   const [editingCategoryKey, setEditingCategoryKey] = useState<string | null>(null);
   const [localError, setLocalError] = useState('');
   
+  // Holiday Settings State
   const [holidaySettings, setHolidaySettings] = useState<SiteSettings>({
       isHolidayModeActive: settings.isHolidayModeActive || false,
       holidayName: settings.holidayName || 'Cratemas',
@@ -178,6 +179,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
 
   return (
     <div className="space-y-10">
+      {/* Dynamic Holiday Brand Manager */}
       <div className="bg-gradient-to-br from-indigo-900/20 via-gray-900 to-black border border-indigo-500/20 p-8 rounded-2xl shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
               <div>
