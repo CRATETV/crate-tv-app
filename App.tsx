@@ -7,7 +7,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import MovieDetailsModal from './components/MovieDetailsModal';
 import ActorBioModal from './components/ActorBioModal';
 import SearchOverlay from './components/SearchOverlay';
-import { Movie, Actor, Category } from './types';
+import { Movie, Actor, Category, SiteSettings } from './types';
 import { isMovieReleased, categoriesData } from './constants';
 import { useAuth } from './contexts/AuthContext';
 import { useFestival } from './contexts/FestivalContext';
@@ -19,8 +19,8 @@ import SquarePaymentModal from './components/SquarePaymentModal';
 import FestivalLiveModal from './components/FestivalLiveModal';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 
-// High-Aesthetic Minimal Cratemas Header
-const CratemasTitle: React.FC = () => {
+// Dynamic Thematic Header Row
+const HolidaySpecialTitle: React.FC<{ settings: SiteSettings }> = ({ settings }) => {
     const handleNavigate = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -28,22 +28,53 @@ const CratemasTitle: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    const name = settings.holidayName || 'Cratemas';
+    const theme = settings.holidayTheme || 'christmas';
+
+    const themes = {
+        christmas: {
+            gradient: 'from-[#ff0000] via-white to-[#22c55e]',
+            glow: 'rgba(255,0,0,0.4)',
+            hoverGlow: 'rgba(255,0,0,0.9)',
+            particleColor: '#ff0000'
+        },
+        valentines: {
+            gradient: 'from-[#f43f5e] via-white to-[#be123c]',
+            glow: 'rgba(244,63,94,0.4)',
+            hoverGlow: 'rgba(190,18,60,0.9)',
+            particleColor: '#f43f5e'
+        },
+        gold: {
+            gradient: 'from-[#fbbf24] via-[#fef3c7] to-[#d97706]',
+            glow: 'rgba(251,191,36,0.4)',
+            hoverGlow: 'rgba(217,119,6,0.9)',
+            particleColor: '#fbbf24'
+        },
+        generic: {
+            gradient: 'from-white via-gray-300 to-gray-500',
+            glow: 'rgba(255,255,255,0.2)',
+            hoverGlow: 'rgba(255,255,255,0.4)',
+            particleColor: '#ffffff'
+        }
+    };
+
+    const currentTheme = themes[theme] || themes.christmas;
+
     return (
         <div 
             className="flex flex-col mb-10 px-2 select-none cursor-pointer group/title transition-all duration-500"
             onClick={handleNavigate}
         >
             <div className="relative inline-block self-start">
-                {/* Minimal holiday twinkles */}
                 <div className="absolute -inset-8 pointer-events-none z-20">
                     <div className="absolute top-0 left-4 w-2 h-2 bg-white rounded-full animate-[holiday-twinkle_3s_infinite] opacity-0 shadow-[0_0_15px_#fff]"></div>
                     <div className="absolute top-12 right-0 w-1.5 h-1.5 bg-white rounded-full animate-[holiday-twinkle_4s_infinite_1s] opacity-0 shadow-[0_0_15px_#fff]"></div>
-                    <div className="absolute top-6 left-1/4 w-1.5 h-1.5 bg-[#ff0000] rounded-full animate-[holiday-twinkle_2.5s_infinite_1.2s] opacity-0 shadow-[0_0_15px_#ff0000]"></div>
+                    <div style={{ backgroundColor: currentTheme.particleColor }} className="absolute top-6 left-1/4 w-1.5 h-1.5 rounded-full animate-[holiday-twinkle_2.5s_infinite_1.2s] opacity-0 shadow-[0_0_15px_currentColor]"></div>
                 </div>
 
                 <div className="flex items-baseline gap-6">
-                    <h2 className="text-6xl md:text-8xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-[#ff0000] via-white to-[#22c55e] relative z-10 py-2 transition-all duration-700 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)] group-hover/title:drop-shadow-[0_0_55px_rgba(255,0,0,0.9)] group-hover/title:scale-[1.05]">
-                        Cratemas
+                    <h2 className={`text-6xl md:text-8xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-br ${currentTheme.gradient} relative z-10 py-2 transition-all duration-700 drop-shadow-[0_0_20px_${currentTheme.glow}] group-hover/title:drop-shadow-[0_0_55px_${currentTheme.hoverGlow}] group-hover/title:scale-[1.05]`}>
+                        {name}
                     </h2>
                     
                     <div className="flex items-center gap-2 opacity-0 -translate-x-4 group-hover/title:opacity-100 group-hover/title:translate-x-0 transition-all duration-500 ease-out">
@@ -52,7 +83,7 @@ const CratemasTitle: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="absolute bottom-0 left-0 w-0 h-[4px] bg-gradient-to-r from-[#ff0000] via-white to-[#22c55e] group-hover/title:w-full transition-all duration-700 ease-in-out opacity-90 shadow-[0_0_25px_rgba(255,0,0,0.8)]"></div>
+                <div className={`absolute bottom-0 left-0 w-0 h-[4px] bg-gradient-to-r ${currentTheme.gradient} group-hover/title:w-full transition-all duration-700 ease-in-out opacity-90 shadow-[0_0_25px_rgba(255,255,255,0.4)]`}></div>
             </div>
         </div>
     );
@@ -227,11 +258,10 @@ const App: React.FC = () => {
                             />
                         ) : (
                           <>
-                            {/* RESTORED CRATEMAS ROW */}
                             {settings.isHolidayModeActive && cratemasCategory && cratemasCategory.movieKeys && cratemasCategory.movieKeys.length > 0 && (
                                 <MovieCarousel
                                     key="cratemas"
-                                    title={<CratemasTitle />}
+                                    title={<HolidaySpecialTitle settings={settings} />}
                                     movies={cratemasCategory.movieKeys.map((k: string) => movies[k]).filter((m: Movie | undefined): m is Movie => !!m)}
                                     onSelectMovie={handlePlayMovie}
                                     watchedMovies={watchedMovies}
@@ -295,7 +325,6 @@ const App: React.FC = () => {
                                     .map(movieKey => movies[movieKey])
                                     .filter((m: Movie | undefined): m is Movie => !!m);
                                 
-                                // EXCLUDE: featured (hero), nowStreaming (banner), Cratemas (already rendered), and Public Domain (Vintage Visions) from the main home feed.
                                 if (categoryMovies.length === 0 || key === 'featured' || key === 'nowStreaming' || key === 'cratemas' || key === 'publicDomainIndie' || (typedCategory?.title && typedCategory.title.toLowerCase() === 'cratemas')) return null;
 
                                 return (

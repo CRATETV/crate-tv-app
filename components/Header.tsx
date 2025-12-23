@@ -78,7 +78,6 @@ const Header: React.FC<HeaderProps> = ({
     const navLinks = [
         { path: '/', label: 'Home' },
         { path: '/classics', label: 'Vintage' },
-        // "My List" removed from header as it is featured on the home page carousel
     ];
     
     return (
@@ -137,7 +136,7 @@ const Header: React.FC<HeaderProps> = ({
                             )}
                         </div>
                     ) : onSignInClick && (
-                        <button onClick={onSignInClick} className="hidden md:block bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-5 rounded text-sm transition-transform active:scale-95 shadow-lg">Sign In</button>
+                        <button onClick={onSignInClick} className="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-5 rounded text-sm transition-transform active:scale-95 shadow-lg">Sign In</button>
                     )}
                 </div>
             </div>

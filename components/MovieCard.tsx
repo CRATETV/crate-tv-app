@@ -132,7 +132,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
                 className="w-full h-full object-cover"
             />
             
-            {/* PINNED: Top-right mute button - Minimal footprint to avoid obstruction */}
             <button 
                 onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
                 className="absolute top-2 right-2 p-1 bg-black/60 backdrop-blur-md rounded-full border border-white/20 text-white z-[60] hover:bg-red-600 transition-colors shadow-2xl"
@@ -147,7 +146,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
         </div>
       )}
       
-      {/* Overlay Content - Fixed at bottom with high contrast gradient */}
       <div className={`absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent p-4 flex flex-col justify-end transition-all duration-500 ease-out ${showPreview ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
          <div className="backdrop-blur-sm bg-black/40 rounded-lg -mx-1 px-2 py-1.5 border border-white/5">
             <h4 className="text-white font-black text-[10px] mb-1 uppercase tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
@@ -173,19 +171,4 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
                     </svg>
                 </button>
             </div>
-            {/* FIXED: Using strict boolean ternary to prevent JS "0" from rendering in HTML when duration is 0 */}
-            {movie.durationInMinutes && movie.durationInMinutes > 0 ? (
-                <span className="text-[7px] font-black text-white/60 uppercase tracking-widest bg-white/5 border border-white/5 px-1.5 py-0.5 rounded shadow-sm">
-                    {movie.durationInMinutes}m
-                </span>
-            ) : null}
-         </div>
-      </div>
-
-      <div className={`absolute top-2 left-2 flex flex-col gap-1 z-10 transition-opacity duration-300 ${showPreview ? 'opacity-0' : 'opacity-100'}`}>
-          {isNew && <div className="bg-red-600 text-white text-[9px] font-black tracking-tighter px-1.5 py-0.5 rounded uppercase shadow-xl">New</div>}
-          {isComingSoon && <div className="bg-purple-600/90 text-white text-[9px] font-black tracking-tighter px-1.5 py-0.5 rounded uppercase shadow-xl">Soon</div>}
-      </div>
-    </div>
-  );
-};
+            {/* FIXED: Using strict numeric comparison to prevent React

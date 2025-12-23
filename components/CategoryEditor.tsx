@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Category, Movie, SiteSettings } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
@@ -81,12 +82,25 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
   const [categories, setCategories] = useState<Record<string, Category>>(initialCategories);
   const [editingCategoryKey, setEditingCategoryKey] = useState<string | null>(null);
   const [localError, setLocalError] = useState('');
-  const [isHolidayMode, setIsHolidayMode] = useState(settings.isHolidayModeActive || false);
+  
+  // Holiday Settings State
+  const [holidaySettings, setHolidaySettings] = useState<SiteSettings>({
+      isHolidayModeActive: settings.isHolidayModeActive || false,
+      holidayName: settings.holidayName || 'Cratemas',
+      holidayTagline: settings.holidayTagline || 'Our curated collection of holiday stories, independent spirit, and cinematic cheer.',
+      holidayTheme: settings.holidayTheme || 'christmas'
+  });
+
   const prevIsSaving = useRef(isSaving);
 
   useEffect(() => {
-    setIsHolidayMode(settings.isHolidayModeActive || false);
-  }, [settings.isHolidayModeActive]);
+    setHolidaySettings({
+        isHolidayModeActive: settings.isHolidayModeActive || false,
+        holidayName: settings.holidayName || 'Cratemas',
+        holidayTagline: settings.holidayTagline || 'Our curated collection of holiday stories, independent spirit, and cinematic cheer.',
+        holidayTheme: settings.holidayTheme || 'christmas'
+    });
+  }, [settings]);
 
   useEffect(() => {
     if (prevIsSaving.current === true && isSaving === false) {
@@ -144,70 +158,144 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
     }
   };
 
-  const toggleHolidayMode = async (active: boolean) => {
-    setIsHolidayMode(active);
+  const handleHolidaySettingChange = (field: keyof SiteSettings, value: any) => {
+      setHolidaySettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const saveHolidaySettings = async () => {
     const password = sessionStorage.getItem('adminPassword');
     try {
         await fetch('/api/publish-data', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password, type: 'settings', data: { isHolidayModeActive: active } }),
+            body: JSON.stringify({ password, type: 'settings', data: holidaySettings }),
         });
+        alert("Holiday settings updated successfully!");
     } catch (err) {
-        console.error("Failed to update holiday mode:", err);
+        console.error("Failed to update holiday settings:", err);
+        alert("Failed to save holiday settings.");
     }
   };
 
   return (
-    <div>
-      <div className="mb-10 p-6 bg-red-900/10 border border-red-500/20 rounded-xl flex items-center justify-between">
-          <div>
-              <h3 className="text-xl font-bold text-red-400 uppercase tracking-tighter">Holiday Season Master Switch</h3>
-              <p className="text-gray-400 text-sm mt-1">Globally toggle the Cratemas row visibility on the homepage (Great for Christmas in July!)</p>
+    <div className="space-y-10">
+      {/* Dynamic Holiday Brand Manager */}
+      <div className="bg-gradient-to-br from-indigo-900/20 via-gray-900 to-black border border-indigo-500/20 p-8 rounded-2xl shadow-xl">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+              <div>
+                  <h3 className="text-2xl font-black text-indigo-400 uppercase tracking-tighter">Holiday Brand Manager</h3>
+                  <p className="text-gray-400 text-sm mt-1">Customize your platform's special seasonal collection branding.</p>
+              </div>
+              <div className="flex items-center gap-4 bg-black/40 p-3 rounded-xl border border-white/5">
+                <span className="text-sm font-bold text-gray-400">Active?</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                        type="checkbox" 
+                        checked={holidaySettings.isHolidayModeActive} 
+                        onChange={(e) => handleHolidaySettingChange('isHolidayModeActive', e.target.checked)} 
+                        className="sr-only peer" 
+                    />
+                    <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+              </div>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" checked={isHolidayMode} onChange={(e) => toggleHolidayMode(e.target.checked)} className="sr-only peer" />
-            <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-red-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-          </label>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                  <div>
+                      <label className="form-label">Special Event Name</label>
+                      <input 
+                        type="text" 
+                        value={holidaySettings.holidayName}
+                        onChange={(e) => handleHolidaySettingChange('holidayName', e.target.value)}
+                        placeholder="e.g. Cratemas, Love Stories, Scares"
+                        className="form-input"
+                      />
+                  </div>
+                  <div>
+                      <label className="form-label">Tagline / Description</label>
+                      <textarea 
+                        value={holidaySettings.holidayTagline}
+                        onChange={(e) => handleHolidaySettingChange('holidayTagline', e.target.value)}
+                        rows={3}
+                        className="form-input"
+                        placeholder="Explain the collection to your viewers..."
+                      />
+                  </div>
+              </div>
+
+              <div className="space-y-6">
+                   <div>
+                      <label className="form-label">Visual Theme</label>
+                      <select 
+                        value={holidaySettings.holidayTheme}
+                        onChange={(e) => handleHolidaySettingChange('holidayTheme', e.target.value)}
+                        className="form-input"
+                      >
+                          <option value="christmas">Christmas (Green/Red/Snow)</option>
+                          <option value="valentines">Valentine's (Pink/Rose/Hearts)</option>
+                          <option value="gold">Gold & Black (Awards/Anniversary)</option>
+                          <option value="generic">Generic Brand (Clean Dark)</option>
+                      </select>
+                  </div>
+                  
+                  <div className="p-4 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
+                      <p className="text-xs text-indigo-300 leading-relaxed italic">
+                        <strong>Pro-Tip:</strong> Changing the theme updates animations and color accents across the home feed row and the collection page instantly.
+                      </p>
+                  </div>
+
+                  <button 
+                    onClick={saveHolidaySettings}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-indigo-900/40 active:scale-95"
+                  >
+                      Publish Holiday Brand Update
+                  </button>
+              </div>
+          </div>
       </div>
 
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-300">Film Categories</h2>
+      <div className="flex justify-between items-center mb-6 pt-4 border-t border-gray-800">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-300">Other Film Categories</h2>
         <button onClick={addNewCategory} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-transform hover:scale-105">+ Add New Category</button>
       </div>
 
       {localError && <div className="p-3 mb-4 bg-red-900/50 border border-red-700 text-red-200 rounded-md text-sm">{localError}</div>}
 
       <div className="space-y-4">
-        {Object.entries(categories).map(([key, category]: [string, Category]) => (
-          <div key={key} className={`bg-gray-800 p-4 rounded-lg border transition-all duration-300 ${key.startsWith('custom_') ? 'border-purple-500 shadow-lg shadow-purple-900/20' : 'border-gray-700'}`}>
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex-grow">
-                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Category Title</label>
-                  <input
-                    type="text"
-                    value={category.title}
-                    onChange={e => handleCategoryChange(key, 'title', e.target.value)}
-                    placeholder="Enter category name..."
-                    className="text-lg font-semibold bg-transparent text-white focus:outline-none focus:bg-gray-700 rounded-md px-2 w-full border border-transparent focus:border-gray-600"
-                  />
+        {/* FIX: Use braces for the .map() arrow function to allow conditional logic and correct scoping. */}
+        {Object.entries(categories).map(([key, category]: [string, Category]) => {
+          if (key === 'cratemas' || (category.title && category.title.toLowerCase() === 'cratemas')) return null;
+          
+          return (
+            <div key={key} className={`bg-gray-800 p-4 rounded-lg border transition-all duration-300 ${key.startsWith('custom_') ? 'border-purple-500 shadow-lg shadow-purple-900/20' : 'border-gray-700'}`}>
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex-grow">
+                    <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Category Title</label>
+                    <input
+                        type="text"
+                        value={category.title}
+                        onChange={e => handleCategoryChange(key, 'title', e.target.value)}
+                        placeholder="Enter category name..."
+                        className="text-lg font-semibold bg-transparent text-white focus:outline-none focus:bg-gray-700 rounded-md px-2 w-full border border-transparent focus:border-gray-600"
+                    />
+                </div>
+                <button onClick={() => deleteCategory(key)} className="text-xs text-red-500 hover:text-red-400 ml-4 font-bold uppercase tracking-wider">Delete</button>
               </div>
-              <button onClick={() => deleteCategory(key)} className="text-xs text-red-500 hover:text-red-400 ml-4 font-bold uppercase tracking-wider">Delete</button>
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-700/50">
+                  <p className="text-xs text-gray-400"><strong className="text-gray-300">{category.movieKeys.length}</strong> film(s) currently assigned</p>
+                  <button onClick={() => setEditingCategoryKey(key)} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1.5 px-4 rounded-md text-xs transition-colors">Manage Assigned Films</button>
+              </div>
             </div>
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-700/50">
-                <p className="text-xs text-gray-400"><strong className="text-gray-300">{category.movieKeys.length}</strong> film(s) currently assigned</p>
-                <button onClick={() => setEditingCategoryKey(key)} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1.5 px-4 rounded-md text-xs transition-colors">Manage Assigned Films</button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       
       <div className="mt-8 pt-6 border-t border-gray-700">
-        <button onClick={() => onSave(categories)} disabled={isSaving} className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition-all shadow-lg">{isSaving ? 'Publishing...' : 'Save & Publish Categories'}</button>
+        <button onClick={() => onSave(categories)} disabled={isSaving} className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition-all shadow-lg">{isSaving ? 'Publishing...' : 'Save & Publish All Categories'}</button>
       </div>
 
       {editingCategoryKey && (
-        // FIX: The onClose prop was incorrectly calling setEditingBlock(null). This has been corrected to setEditingCategoryKey(null) to match the component's state variables.
         <MovieSelectorModal allMovies={allMovies} initialSelectedKeys={categories[editingCategoryKey].movieKeys} onSave={(newKeys) => handleMovieSelectionSave(editingCategoryKey, newKeys)} onClose={() => setEditingCategoryKey(null)} />
       )}
     </div>

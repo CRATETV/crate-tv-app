@@ -1,3 +1,4 @@
+
 // This is a Vercel Serverless Function that generates a feed for the custom Roku channel.
 // It will be accessible at the path /api/roku-feed
 
@@ -21,6 +22,7 @@ interface RokuMovie {
     isLiked: boolean;
     isOnWatchlist: boolean;
     isWatched: boolean;
+    isCratemas?: boolean;
     itemComponentName?: string;
 }
 
@@ -30,7 +32,6 @@ interface RokuCategory {
     itemComponentName?: string;
 }
 
-
 const getVisibleMovies = (moviesData: Record<string, any>): Record<string, Movie> => {
     const visibleMovies: Record<string, Movie> = {};
     const now = new Date();
@@ -39,12 +40,8 @@ const getVisibleMovies = (moviesData: Record<string, any>): Record<string, Movie
       const movie = data as Movie;
       if (!movie) return; 
       const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
-      const expiryDate = movie.mainPageExpiry ? new Date(movie.mainPageExpiry) : null;
-      
       const isReleased = !releaseDate || releaseDate <= now;
-      const isNotExpired = !expiryDate || expiryDate > now;
-
-      if (isReleased && isNotExpired) {
+      if (isReleased) {
         visibleMovies[movie.key] = movie;
       }
     });
@@ -56,7 +53,7 @@ const formatMovieForRoku = (movie: Movie, movieGenreMap: Map<string, string[]>, 
     return {
         id: movie.key || '',
         title: movie.title || 'Untitled Film',
-        description: (movie.synopsis || '').replace(/<br\s*\/?>/gi, '\n').trim(),
+        description: (movie.synopsis || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim(),
         SDPosterUrl: movie.poster || movie.tvPoster || '',
         HDPosterUrl: movie.poster || movie.tvPoster || '',
         heroImage: movie.tvPoster || movie.poster || '',
@@ -69,6 +66,7 @@ const formatMovieForRoku = (movie: Movie, movieGenreMap: Map<string, string[]>, 
         isLiked: user?.likedMovies?.includes(movie.key) ?? false,
         isOnWatchlist: user?.watchlist?.includes(movie.key) ?? false,
         isWatched: user?.watchedMovies?.includes(movie.key) ?? false,
+        isCratemas: movie.isCratemas || false
     };
 };
 
@@ -78,21 +76,16 @@ export async function GET(request: Request) {
     const deviceId = searchParams.get('deviceId');
 
     let user: User | null = null;
-    let isDeviceLinked = false;
-
     if (deviceId) {
         const initError = getInitializationError();
         const db = getAdminDb();
         if (!initError && db) {
             const linkDoc = await db.collection('roku_links').doc(deviceId).get();
             if (linkDoc.exists) {
-                isDeviceLinked = true;
                 const uid = linkDoc.data()?.userId;
                 if (uid) {
                     const userDoc = await db.collection('users').doc(uid).get();
-                    if (userDoc.exists) {
-                        user = { uid, ...userDoc.data() } as User;
-                    }
+                    if (userDoc.exists) user = { uid, ...userDoc.data() } as User;
                 }
             }
         }
@@ -101,152 +94,115 @@ export async function GET(request: Request) {
     const apiData = await getApiData();
     const moviesData = apiData.movies || {};
     const categoriesData = apiData.categories || {};
-    const festivalConfig = apiData.festivalConfig;
-    const festivalData = apiData.festivalData;
+    const settings = apiData.settings || { isHolidayModeActive: false };
 
     const visibleMovies = getVisibleMovies(moviesData);
-    
     const movieGenreMap = new Map<string, string[]>();
-    Object.keys(visibleMovies).forEach((key: string) => {
-        movieGenreMap.set(key, []);
-    });
+    Object.keys(visibleMovies).forEach(key => movieGenreMap.set(key, []));
 
     (Object.values(categoriesData) as Category[]).forEach((category: Category) => {
         if (category && Array.isArray(category.movieKeys)) {
-            category.movieKeys.forEach((movieKey: string) => {
-                if (movieGenreMap.has(movieKey)) {
-                    movieGenreMap.get(movieKey)?.push(category.title);
-                }
+            category.movieKeys.forEach(movieKey => {
+                if (movieGenreMap.has(movieKey)) movieGenreMap.get(movieKey)?.push(category.title);
             });
         }
     });
     
-    const heroMovieKeys: string[] = categoriesData['featured']?.movieKeys || [];
-    const heroItems = heroMovieKeys
-        .map((key: string) => visibleMovies[key])
-        .filter((movie: Movie | undefined): movie is Movie => !!movie)
-        .map((movie: Movie) => formatMovieForRoku(movie, movieGenreMap, user));
+    const finalCategories: RokuCategory[] = [];
+
+    // 1. HOLIDAY MODE: CRATEMAS (Highest Priority if active)
+    if (settings.isHolidayModeActive) {
+        const cratemasMovies = (Object.values(visibleMovies) as Movie[])
+            .filter(m => m.isCratemas)
+            .map(m => formatMovieForRoku(m, movieGenreMap, user));
         
-    const processCategory = (categoryData: Category, itemComponentName?: string): RokuCategory | null => {
-        if (!categoryData || !Array.isArray(categoryData.movieKeys)) return null;
-        const rokuMovies = categoryData.movieKeys
-            .map((movieKey: string) => visibleMovies[movieKey])
-            .filter((movie: Movie | undefined): movie is Movie => !!movie)
-            .map((movie: Movie) => formatMovieForRoku(movie, movieGenreMap, user));
-        if (rokuMovies.length > 0) return { title: categoryData.title, children: rokuMovies, itemComponentName };
-        return null;
-    };
-    
-    // Create My List category if user is linked and has items
-    let myListCategory: Category | null = null;
-    if (user && user.watchlist && user.watchlist.length > 0) {
-        myListCategory = {
-            title: "My List",
-            movieKeys: [...user.watchlist].reverse() // Show most recently added first
-        };
+        if (cratemasMovies.length > 0) {
+            finalCategories.push({
+                title: "Cratemas Collection",
+                children: cratemasMovies,
+                itemComponentName: "MoviePoster"
+            });
+        }
     }
-    
+
+    // 2. TOP 10 RANKINGS (Ranked Component)
     const topTenMovies = (Object.values(visibleMovies) as Movie[])
-        .sort((a: Movie, b: Movie) => (b.likes || 0) - (a.likes || 0))
+        .sort((a, b) => (b.likes || 0) - (a.likes || 0))
         .slice(0, 10);
 
-    const topTenCategoryRaw: Category | null = topTenMovies.length > 0 ? {
-        title: "Top 10 on Crate TV Today",
-        movieKeys: topTenMovies.map((m: Movie) => m.key)
-    } : null;
-
-    const topTenCategory = topTenCategoryRaw ? processCategory(topTenCategoryRaw, "RankedMoviePoster") : null;
-
-    const isFestivalLive = festivalConfig?.startDate && festivalConfig?.endDate && 
-                           new Date() >= new Date(festivalConfig.startDate) && 
-                           new Date() < new Date(festivalConfig.endDate);
-                           
-    let festivalContent = null;
-    if (isFestivalLive && festivalData) {
-        festivalContent = {
-            config: festivalConfig,
-            days: festivalData.map((day: FestivalDay) => ({
-                ...day,
-                blocks: day.blocks.map((block: FilmBlock) => ({
-                    ...block,
-                    children: block.movieKeys
-                        .map((key: string) => visibleMovies[key])
-                        .filter((m: Movie | undefined): m is Movie => !!m)
-                        .map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user))
-                }))
-            }))
-        };
-    }
-    
-    const accountItem: RokuMovie = {
-        id: isDeviceLinked ? "account_linked" : "link_account_action",
-        title: isDeviceLinked ? `Account Linked` : "Link Your Account",
-        description: isDeviceLinked 
-            ? `Your Crate TV account (${user?.email || '...'}) is linked to this Roku device.`
-            : "Link your Crate TV account to sync your watchlist, likes, and more. Select this item to get your unique link code.",
-        SDPosterUrl: "pkg:/images/logo_hd.png",
-        HDPosterUrl: "pkg:/images/logo_hd.png",
-        heroImage: "", streamUrl: "", director: "", actors: [], genres: [], rating: "", duration: "",
-        isLiked: false, isOnWatchlist: false, isWatched: false,
-    };
-
-    const accountCategory: RokuCategory = {
-        title: "My Account",
-        children: [accountItem],
-        itemComponentName: "ActionItem"
-    };
-
-    const finalCategories: RokuCategory[] = [];
-    
-    // Add My List to the top if it exists
-    if(myListCategory) {
-        const processed = processCategory(myListCategory, "MoviePoster");
-        if(processed) finalCategories.push(processed);
+    if (topTenMovies.length > 0) {
+        finalCategories.push({
+            title: "Top 10 on Crate TV Today",
+            children: topTenMovies.map(m => formatMovieForRoku(m, movieGenreMap, user)),
+            itemComponentName: "RankedMoviePoster"
+        });
     }
 
-    if(topTenCategory) {
-        finalCategories.push(topTenCategory);
+    // 3. MY LIST (User Specific)
+    if (user && user.watchlist && user.watchlist.length > 0) {
+        const myList = user.watchlist
+            .map(key => visibleMovies[key])
+            .filter((m): m is Movie => !!m)
+            .map(m => formatMovieForRoku(m, movieGenreMap, user))
+            .reverse();
+        
+        finalCategories.push({
+            title: "My List",
+            children: myList,
+            itemComponentName: "MoviePoster"
+        });
     }
-    
-    const processedKeys = new Set(['featured', 'nowStreaming', 'publicDomainIndie']);
-    const remainingCategoryOrder = ["newReleases", "awardWinners", "comedy", "drama", "documentary", "pwff12thAnnual", "exploreTitles"];
-    
-    remainingCategoryOrder.forEach((key: string) => {
-        if (!processedKeys.has(key) && categoriesData[key]) {
-            const processed = processCategory(categoriesData[key], "MoviePoster");
-            if(processed) finalCategories.push(processed);
+
+    // 4. GENERAL CATEGORIES
+    const categoryOrder = ["newReleases", "awardWinners", "comedy", "drama", "documentary"];
+    categoryOrder.forEach(key => {
+        const cat = categoriesData[key];
+        if (cat && Array.isArray(cat.movieKeys)) {
+            const children = cat.movieKeys
+                .map((k: string) => visibleMovies[k])
+                .filter((m: Movie | undefined): m is Movie => !!m)
+                .map(m => formatMovieForRoku(m, movieGenreMap, user));
+            
+            if (children.length > 0) {
+                finalCategories.push({
+                    title: cat.title,
+                    children,
+                    itemComponentName: "MoviePoster"
+                });
+            }
         }
     });
 
-    // Always add public domain classics and the account section at the end
-    if(categoriesData.publicDomainIndie) {
-        const processed = processCategory(categoriesData.publicDomainIndie, "MoviePoster");
-        if(processed) finalCategories.push(processed);
-    }
-    
-    finalCategories.push(accountCategory);
+    // 5. ACCOUNT SECTION
+    finalCategories.push({
+        title: "My Account",
+        children: [{
+            id: user ? "account_linked" : "link_account_action",
+            title: user ? "Account Connected" : "Connect Account",
+            description: user ? `Linked to ${user.email}` : "Sync your Watchlist and Likes from your phone to your TV.",
+            SDPosterUrl: "pkg:/images/logo_hd.png",
+            HDPosterUrl: "pkg:/images/logo_hd.png",
+            heroImage: "", streamUrl: "", director: "", actors: [], genres: [], rating: "", duration: "",
+            isLiked: false, isOnWatchlist: false, isWatched: false
+        }],
+        itemComponentName: "ActionItem"
+    });
 
-    const content = {
-      heroItems: heroItems,
-      categories: finalCategories,
-      isLinked: isDeviceLinked,
-      uid: user?.uid, // Pass uid for client-side actions
-      isFestivalLive: isFestivalLive,
-      festivalContent: festivalContent,
-    };
-
-    return new Response(JSON.stringify(content, null, 2), {
+    return new Response(JSON.stringify({
+        heroItems: (categoriesData['featured']?.movieKeys || [])
+            .map((k: string) => visibleMovies[k])
+            .filter((m: Movie | undefined): m is Movie => !!m)
+            .map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user)),
+        categories: finalCategories,
+        isFestivalLive: apiData.isFestivalLive || false
+    }, null, 2), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 's-maxage=60, stale-while-revalidate',
+        'Cache-Control': 's-maxage=60, stale-while-revalidate'
       },
     });
   } catch (error) {
-    console.error('Error generating Roku feed:', error);
-    return new Response(JSON.stringify({ error: 'Failed to generate feed.' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ error: 'Failed to generate feed.' }), { status: 500 });
   }
 }

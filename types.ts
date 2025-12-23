@@ -26,12 +26,12 @@ export interface Movie {
   hasCopyrightMusic?: boolean;
   isWatchPartyEnabled?: boolean;
   watchPartyStartTime?: string;
-  isWatchPartyPaid?: boolean; // New: Toggle for paid parties
-  watchPartyPrice?: number;   // New: Ticket price in USD
+  isWatchPartyPaid?: boolean;
+  watchPartyPrice?: number;
   isForSale?: boolean;
   salePrice?: number;
   mainPageExpiry?: string;
-  isCratemas?: boolean; // New: Flag for automatic Cratemas categorization
+  isCratemas?: boolean;
 }
 
 export interface Category {
@@ -41,6 +41,9 @@ export interface Category {
 
 export interface SiteSettings {
   isHolidayModeActive?: boolean;
+  holidayName?: string;
+  holidayTagline?: string;
+  holidayTheme?: 'christmas' | 'valentines' | 'gold' | 'generic';
   maintenanceMode?: boolean;
 }
 
@@ -99,7 +102,7 @@ export interface User {
   hasFestivalAllAccess?: boolean;
   unlockedBlockIds?: string[];
   purchasedMovieKeys?: string[];
-  unlockedWatchPartyKeys?: string[]; // New: Track paid tickets
+  unlockedWatchPartyKeys?: string[];
   rokuDeviceId?: string;
   actorProfileSlug?: string;
 }
@@ -113,9 +116,9 @@ export interface MoviePipelineEntry {
   movieUrl: string;
   submitterEmail: string;
   synopsis: string;
-  submissionDate: any; // Firestore Timestamp
+  submissionDate: any;
   status: 'pending' | 'approved' | 'rejected';
-  musicRightsConfirmation: boolean; // New field for legal protection
+  musicRightsConfirmation: boolean;
 }
 
 export interface ActorSubmission {
@@ -126,7 +129,7 @@ export interface ActorSubmission {
     photoUrl: string;
     highResPhotoUrl: string;
     imdbUrl?: string;
-    submissionDate: any; // Firestore Timestamp
+    submissionDate: any;
     status: 'pending' | 'approved' | 'rejected';
 }
 
@@ -145,41 +148,41 @@ export interface ActorPost {
     actorPhoto: string;
     content: string;
     imageUrl?: string;
-    timestamp: any; // Firestore Timestamp
+    timestamp: any;
     likes: string[];
 }
 
 export interface PayoutRequest {
   id: string;
   directorName: string;
-  amount: number; // in cents
+  amount: number;
   payoutMethod: 'PayPal' | 'Venmo' | 'Other';
   payoutDetails: string;
   status: 'pending' | 'completed';
-  requestDate: any; // Firestore Timestamp
-  completionDate?: any; // Firestore Timestamp
+  requestDate: any;
+  completionDate?: any;
 }
 
 export interface AdminPayout {
     id: string;
-    amount: number; // in cents
+    amount: number;
     reason: string;
-    payoutDate: any; // Firestore Timestamp
+    payoutDate: any;
 }
 
 export interface BillSavingsTransaction {
     id: string;
     type: 'deposit' | 'withdrawal';
-    amount: number; // in cents
+    amount: number;
     reason: string;
-    transactionDate: any; // Firestore Timestamp
+    transactionDate: any;
 }
 
 export interface SecurityEvent {
     id: string;
     type: string;
     ip: string | null;
-    timestamp: any; // Firestore Timestamp
+    timestamp: any;
     details: Record<string, any>;
 }
 
@@ -249,18 +252,18 @@ export interface FilmmakerFilmPerformance {
     views: number;
     likes: number;
     watchlistAdds: number;
-    grossDonations: number; // in cents
-    grossAdRevenue: number; // in cents
-    netDonationEarnings: number; // in cents
-    netAdEarnings: number; // in cents
-    totalEarnings: number; // in cents
+    grossDonations: number;
+    grossAdRevenue: number;
+    netDonationEarnings: number;
+    netAdEarnings: number;
+    totalEarnings: number;
 }
 
 export interface FilmmakerAnalytics {
-    totalDonations: number; // NET total donation earnings for filmmaker, in cents
-    totalAdRevenue: number; // NET total ad revenue earnings for filmmaker, in cents
-    totalPaidOut: number; // in cents
-    balance: number; // in cents
+    totalDonations: number;
+    totalAdRevenue: number;
+    totalPaidOut: number;
+    balance: number;
     films: FilmmakerFilmPerformance[];
 }
 
@@ -290,7 +293,7 @@ export interface AnalyticsData {
     festivalPassSales: { units: number, revenue: number };
     festivalBlockSales: { units: number, revenue: number };
     salesByBlock: Record<string, { units: number, revenue: number }>;
-    festivalUsers: string[]; // Emails of users who have festival access
+    festivalUsers: string[];
 }
 
 export interface FilmmakerPayout {
@@ -308,7 +311,7 @@ export interface ChatMessage {
     userName: string;
     userAvatar: string;
     text: string;
-    timestamp: any; // Firestore Timestamp
+    timestamp: any;
 }
 
 export interface WatchPartyState {
@@ -316,5 +319,5 @@ export interface WatchPartyState {
     currentTime: number;
     status: 'waiting' | 'live' | 'ended';
     lastUpdatedBy: string;
-    lastUpdated?: any; // Firestore Timestamp
+    lastUpdated?: any;
 }

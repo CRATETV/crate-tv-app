@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
@@ -60,7 +60,6 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
                 <h2 className="text-sm uppercase tracking-widest text-gray-400">Live Chat</h2>
             </div>
             
-            {/* Message Area - Flexible height to accommodate keyboard */}
             <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide">
                 {messages.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-center px-8">
@@ -80,7 +79,6 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Box - Responsive to keyboard reach */}
             <form onSubmit={handleSendMessage} className="p-3 bg-black/60 backdrop-blur-xl border-t border-white/5 flex-shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <div className="flex items-center gap-2 bg-gray-800/80 rounded-full px-4 py-1 border border-white/10 focus-within:border-red-600/50 transition-colors">
                     <input 
@@ -117,6 +115,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     const hasAccess = !movie?.isWatchPartyPaid || unlockedWatchPartyKeys.has(movieKey);
+    
+    // Check if the source is a live stream (HLS)
+    const isLiveStream = useMemo(() => {
+        return movie?.fullMovie?.toLowerCase().endsWith('.m3u8') || movie?.fullMovie?.includes('.m3u8?');
+    }, [movie?.fullMovie]);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -144,6 +147,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const video = videoRef.current;
         if (!video || !partyState) return;
 
+        // If it's a live stream, we don't sync timestamps because the stream is the master clock
+        if (isLiveStream) {
+            if (partyState.status === 'live' && video.paused) {
+                video.play().catch(e => console.warn("Live stream play prevented", e));
+            } else if (partyState.status === 'ended') {
+                video.pause();
+            }
+            return;
+        }
+
+        // Standard Sync logic for pre-recorded files
         if (partyState.isPlaying && video.paused) {
             video.play().catch(e => console.warn("Autoplay prevented", e));
         } else if (!partyState.isPlaying && !video.paused) {
@@ -153,7 +167,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (Math.abs(video.currentTime - partyState.currentTime) > 5) {
             video.currentTime = partyState.currentTime;
         }
-    }, [partyState, hasAccess]);
+    }, [partyState, hasAccess, isLiveStream]);
 
     const handleGoHome = () => {
         window.history.pushState({}, '', '/');
@@ -212,11 +226,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         <div className="flex flex-col md:flex-row h-[100dvh] bg-black text-white overflow-hidden">
             <div className="flex-grow flex flex-col relative overflow-hidden h-full">
                 
-                {/* Mobile Header - Pushes player down slightly */}
+                {/* Mobile Header */}
                 <div className="flex-none bg-black/90 backdrop-blur-md p-3 flex items-center justify-between border-b border-white/5 md:hidden pt-[max(0.75rem,env(safe-area-inset-top))]">
                      <button onClick={handleGoHome} className="text-gray-400 hover:text-white transition-colors" aria-label="Back to Home"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-                    <div className="text-center min-w-0 px-4">
-                        <p className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none mb-1">Live Watch Party</p>
+                    <div className="text-center min-w-0 px-4 flex flex-col items-center">
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                            </span>
+                            <p className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none">LIVE {isLiveStream ? 'STREAM' : 'WATCH PARTY'}</p>
+                        </div>
                         <h2 className="text-xs font-bold truncate text-gray-200">{movie.title}</h2>
                     </div>
                     <div className="w-6"></div>
@@ -224,7 +244,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
                 <button onClick={handleGoHome} className="hidden md:flex absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 z-20"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
 
-                {/* Video Player - flex-none ensures it stays visible even with keyboard */}
+                {/* Video Player */}
                 <div className="flex-none w-full aspect-video bg-black relative shadow-2xl z-10">
                     {!isVideoReady && (
                         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
@@ -232,10 +252,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             <div className="absolute"><LoadingSpinner /></div>
                         </div>
                     )}
-                    <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full transition-opacity duration-500 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`} playsInline autoPlay controls={false} />
+                    <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full transition-opacity duration-500 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`} playsInline autoPlay controls={isLiveStream ? true : false} />
                 </div>
                 
-                {/* Chat Container - handles viewport resizing automatically */}
+                {/* Chat Container */}
                 <div className="flex-grow flex flex-col md:hidden relative overflow-hidden bg-[#0a0a0a]">
                     <EmbeddedChat movieKey={movieKey} user={user} />
                 </div>
