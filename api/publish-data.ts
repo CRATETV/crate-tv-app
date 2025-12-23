@@ -234,8 +234,23 @@ export async function POST(request: Request) {
                 }
 
                 for (const [id, docData] of Object.entries(data)) {
+                    const typedData = docData as Movie;
                     const docRef = db.collection('movies').doc(id);
                     batch.set(docRef, docData as object, { merge: true });
+
+                    // AUTOMATIC CRATEMAS CATEGORIZATION
+                    const cratemasRef = db.collection('categories').doc('cratemas');
+                    if (typedData.isCratemas) {
+                         batch.set(cratemasRef, {
+                             title: 'Cratemas',
+                             movieKeys: FieldValue.arrayUnion(id)
+                         }, { merge: true });
+                    } else if (typedData.isCratemas === false) {
+                        // explicitly unchecked
+                         batch.set(cratemasRef, {
+                             movieKeys: FieldValue.arrayRemove(id)
+                         }, { merge: true });
+                    }
                 }
                 break;
             case 'categories':

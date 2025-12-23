@@ -31,6 +31,7 @@ export interface Movie {
   isForSale?: boolean;
   salePrice?: number;
   mainPageExpiry?: string;
+  isCratemas?: boolean; // New: Flag for automatic Cratemas categorization
 }
 
 export interface Category {
