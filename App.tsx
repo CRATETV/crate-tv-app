@@ -10,7 +10,7 @@ import SearchOverlay from './components/SearchOverlay';
 import { Movie, Actor, Category } from './types';
 import { isMovieReleased, categoriesData } from './constants';
 import { useAuth } from './contexts/AuthContext';
-import { useFestival } from '../contexts/FestivalContext';
+import { useFestival } from './contexts/FestivalContext';
 import FestivalHero from './components/FestivalHero';
 import BackToTopButton from './components/BackToTopButton';
 import CollapsibleFooter from './components/CollapsibleFooter';
@@ -18,8 +18,6 @@ import BottomNavBar from './components/BottomNavBar';
 import SquarePaymentModal from './components/SquarePaymentModal';
 import FestivalLiveModal from './components/FestivalLiveModal';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
-import WatchPartyAnnouncementModal from './components/WatchPartyAnnouncementModal';
-import NewFilmAnnouncementModal from './components/NewFilmAnnouncementModal';
 
 // High-Aesthetic Minimal Cratemas Header
 const CratemasTitle: React.FC = () => {
@@ -73,8 +71,6 @@ const App: React.FC = () => {
     const [supportMovieModal, setSupportMovieModal] = useState<Movie | null>(null);
     const [showFestivalModal, setShowFestivalModal] = useState(false);
     const [liveWatchParty, setLiveWatchParty] = useState<Movie | null>(null);
-    const [newFilmAnnouncement, setNewFilmAnnouncement] = useState<Movie | null>(null);
-    const [shouldAutoFocusSearch, setShouldAutoFocusSearch] = useState(false);
     
     const heroMovies = useMemo(() => {
         const featuredCategory = categories.featured;
@@ -82,11 +78,11 @@ const App: React.FC = () => {
         if (featuredCategory?.movieKeys && featuredCategory.movieKeys.length > 0) {
             spotlightMovies = featuredCategory.movieKeys
                 .map((key: string) => movies[key])
-                .filter((m): m is Movie => !!m && isMovieReleased(m));
+                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m));
         }
         if (spotlightMovies.length === 0) {
             spotlightMovies = (Object.values(movies) as Movie[])
-                .filter(m => m && isMovieReleased(m) && !!m.title)
+                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !!m.title)
                 .sort((a, b) => {
                     const dateA = a.releaseDateTime ? new Date(a.releaseDateTime).getTime() : 0;
                     const dateB = b.releaseDateTime ? new Date(b.releaseDateTime).getTime() : 0;
@@ -99,7 +95,7 @@ const App: React.FC = () => {
 
     const topTenMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
-            .filter((movie): movie is Movie => !!movie && !!movie.title)
+            .filter((movie: Movie | undefined): movie is Movie => !!movie && !!movie.title)
             .sort((a, b) => (b.likes || 0) - (a.likes || 0))
             .slice(0, 10);
     }, [movies]);
@@ -107,7 +103,7 @@ const App: React.FC = () => {
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
         const query = searchQuery.toLowerCase();
-        return (Object.values(movies) as Movie[]).filter(movie =>
+        return (Object.values(movies) as Movie[]).filter((movie: Movie | undefined) =>
             movie && (
                 (movie.title || '').toLowerCase().includes(query) ||
                 (movie.director || '').toLowerCase().includes(query) ||
@@ -123,7 +119,7 @@ const App: React.FC = () => {
     const watchlistMovies = useMemo(() => {
         return (watchlistArray || [])
             .map((key: string) => movies[key])
-            .filter((m): m is Movie => !!m)
+            .filter((m: Movie | undefined): m is Movie => !!m)
             .reverse();
     }, [movies, watchlistArray]);
 
@@ -198,7 +194,6 @@ const App: React.FC = () => {
                 onSearch={setSearchQuery} 
                 onMobileSearchClick={() => setIsMobileSearchOpen(true)}
                 topOffset={bannerHeight}
-                autoFocus={shouldAutoFocusSearch}
             />
             <main className="flex-grow pb-24 md:pb-0">
                 {isFestivalLive ? (
@@ -238,12 +233,12 @@ const App: React.FC = () => {
                             )
                         ) : (
                           <>
-                            {/* CRATEMAS ROW - Restore Visibility */}
+                            {/* RESTORED CRATEMAS ROW */}
                             {settings.isHolidayModeActive && cratemasCategory && cratemasCategory.movieKeys && cratemasCategory.movieKeys.length > 0 && (
                                 <MovieCarousel
                                     key="cratemas"
                                     title={<CratemasTitle />}
-                                    movies={cratemasCategory.movieKeys.map(k => movies[k]).filter((m): m is Movie => !!m)}
+                                    movies={cratemasCategory.movieKeys.map((k: string) => movies[k]).filter((m: Movie | undefined): m is Movie => !!m)}
                                     onSelectMovie={handlePlayMovie}
                                     watchedMovies={watchedMovies}
                                     watchlist={watchlist}

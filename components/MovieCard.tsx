@@ -132,10 +132,10 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
                 className="w-full h-full object-cover"
             />
             
-            {/* Top-right mute button - Ensures synopsis is never hidden */}
+            {/* PINNED: Top-right mute button - Minimal footprint to avoid obstruction */}
             <button 
                 onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
-                className="absolute top-2.5 right-2.5 p-1.5 bg-black/60 backdrop-blur-md rounded-full border border-white/20 text-white z-20 hover:bg-red-600 transition-colors shadow-xl"
+                className="absolute top-2 right-2 p-1 bg-black/60 backdrop-blur-md rounded-full border border-white/20 text-white z-[60] hover:bg-red-600 transition-colors shadow-2xl"
                 aria-label={isMuted ? "Unmute" : "Mute"}
             >
                 {isMuted ? (
@@ -147,10 +147,10 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
         </div>
       )}
       
-      {/* Overlay Content */}
-      <div className={`absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent p-4 flex flex-col justify-end transition-all duration-500 ease-out ${showPreview ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-         <div className="backdrop-blur-sm bg-black/20 rounded-lg -mx-1 px-1.5 py-1">
-            <h4 className="text-white font-black text-[10px] mb-1 truncate uppercase tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+      {/* Overlay Content - Fixed at bottom with high contrast gradient */}
+      <div className={`absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent p-4 flex flex-col justify-end transition-all duration-500 ease-out ${showPreview ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+         <div className="backdrop-blur-sm bg-black/40 rounded-lg -mx-1 px-2 py-1.5 border border-white/5">
+            <h4 className="text-white font-black text-[10px] mb-1 uppercase tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                 {movie.title}
             </h4>
             <p className="text-gray-200 text-[8px] line-clamp-3 mb-2 leading-snug font-medium drop-shadow-md">
@@ -158,7 +158,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
             </p>
          </div>
          
-         <div className="flex items-center justify-between mt-1">
+         <div className="flex items-center justify-between mt-1.5">
             <div className="flex items-center gap-2">
                 <button onClick={handleToggleWatchlist} className="p-1.5 rounded-full bg-white/10 hover:bg-white/30 border border-white/10 transition-all shadow-lg">
                     {isOnWatchlist ? (
@@ -174,7 +174,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
                 </button>
             </div>
             {movie.durationInMinutes && (
-                <span className="text-[7px] font-black text-white/60 uppercase tracking-widest bg-white/5 border border-white/5 px-1.5 py-0.5 rounded">
+                <span className="text-[7px] font-black text-white/60 uppercase tracking-widest bg-white/5 border border-white/5 px-1.5 py-0.5 rounded shadow-sm">
                     {movie.durationInMinutes}m
                 </span>
             )}
