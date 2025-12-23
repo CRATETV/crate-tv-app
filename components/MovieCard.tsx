@@ -59,16 +59,12 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     if (previewLimitTimeoutRef.current) clearTimeout(previewLimitTimeoutRef.current);
 
-    // Intent delay
     hoverTimeoutRef.current = setTimeout(() => {
       setShowPreview(true);
       setIsMuted(true);
-      
-      // Safety stop
       previewLimitTimeoutRef.current = setTimeout(() => {
         stopPreview();
       }, 45000);
-
     }, 600);
   };
 
@@ -171,4 +167,14 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
                     </svg>
                 </button>
             </div>
-            {/* FIXED: Using strict numeric comparison to prevent React
+            {isNew && (
+                <span className="text-[7px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded tracking-tighter shadow-lg">NEW</span>
+            )}
+            {isWatched && (
+                <span className="text-[7px] font-black bg-white/20 text-white px-1.5 py-0.5 rounded tracking-tighter">WATCHED</span>
+            )}
+         </div>
+      </div>
+    </div>
+  );
+};

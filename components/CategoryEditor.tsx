@@ -83,7 +83,6 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
   const [editingCategoryKey, setEditingCategoryKey] = useState<string | null>(null);
   const [localError, setLocalError] = useState('');
   
-  // Holiday Settings State
   const [holidaySettings, setHolidaySettings] = useState<SiteSettings>({
       isHolidayModeActive: settings.isHolidayModeActive || false,
       holidayName: settings.holidayName || 'Cratemas',
@@ -179,7 +178,6 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
 
   return (
     <div className="space-y-10">
-      {/* Dynamic Holiday Brand Manager */}
       <div className="bg-gradient-to-br from-indigo-900/20 via-gray-900 to-black border border-indigo-500/20 p-8 rounded-2xl shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
               <div>
@@ -263,7 +261,6 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
       {localError && <div className="p-3 mb-4 bg-red-900/50 border border-red-700 text-red-200 rounded-md text-sm">{localError}</div>}
 
       <div className="space-y-4">
-        {/* FIX: Use braces for the .map() arrow function to allow conditional logic and correct scoping. */}
         {Object.entries(categories).map(([key, category]: [string, Category]) => {
           if (key === 'cratemas' || (category.title && category.title.toLowerCase() === 'cratemas')) return null;
           
