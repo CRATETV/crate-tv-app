@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { Movie, Actor, MoviePipelineEntry } from '../types';
 
@@ -218,6 +217,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({ allMovies, onRefresh, onSave,
                         <div>
                             <label className="form-label">Full Movie URL</label>
                             <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="form-input" placeholder="https://cratetelevision.s3..." />
+                            <p className="text-[10px] text-blue-400 mt-1 uppercase font-black tracking-widest">
+                                Tip: You can paste a Vimeo link here (e.g. vimeo.com/123) and the app will embed it automatically.
+                            </p>
                         </div>
                         <div>
                             <label className="form-label">Web Poster URL (2:3)</label>
