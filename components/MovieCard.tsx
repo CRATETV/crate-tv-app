@@ -173,11 +173,12 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
                     </svg>
                 </button>
             </div>
-            {movie.durationInMinutes && (
+            {/* FIXED: Using strict boolean ternary to prevent JS "0" from rendering in HTML when duration is 0 */}
+            {movie.durationInMinutes && movie.durationInMinutes > 0 ? (
                 <span className="text-[7px] font-black text-white/60 uppercase tracking-widest bg-white/5 border border-white/5 px-1.5 py-0.5 rounded shadow-sm">
                     {movie.durationInMinutes}m
                 </span>
-            )}
+            ) : null}
          </div>
       </div>
 

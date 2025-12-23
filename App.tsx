@@ -295,7 +295,8 @@ const App: React.FC = () => {
                                     .map(movieKey => movies[movieKey])
                                     .filter((m: Movie | undefined): m is Movie => !!m);
                                 
-                                if (categoryMovies.length === 0 || key === 'featured' || key === 'nowStreaming' || key === 'cratemas' || (typedCategory?.title && typedCategory.title.toLowerCase() === 'cratemas')) return null;
+                                // EXCLUDE: featured (hero), nowStreaming (banner), Cratemas (already rendered), and Public Domain (Vintage Visions) from the main home feed.
+                                if (categoryMovies.length === 0 || key === 'featured' || key === 'nowStreaming' || key === 'cratemas' || key === 'publicDomainIndie' || (typedCategory?.title && typedCategory.title.toLowerCase() === 'cratemas')) return null;
 
                                 return (
                                     <MovieCarousel
