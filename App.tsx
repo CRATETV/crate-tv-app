@@ -103,18 +103,27 @@ const App: React.FC = () => {
     const [showFestivalModal, setShowFestivalModal] = useState(false);
     const [liveWatchParty, setLiveWatchParty] = useState<Movie | null>(null);
     
+    // INTELLIGENT HERO FALLBACK
     const heroMovies = useMemo(() => {
         const featuredCategory = categories.featured;
         let spotlightMovies: Movie[] = [];
+        
+        // Priority 1: Hand-picked featured list
         if (featuredCategory?.movieKeys && featuredCategory.movieKeys.length > 0) {
             spotlightMovies = featuredCategory.movieKeys
                 .map((key: string) => movies[key])
                 .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m));
         }
+        
+        // Priority 2: High rated/Recent releases fallback
         if (spotlightMovies.length === 0) {
             spotlightMovies = (Object.values(movies) as Movie[])
-                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !!m.title)
+                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !!m.title && !!m.poster)
                 .sort((a, b) => {
+                    const ratingA = a.rating || 0;
+                    const ratingB = b.rating || 0;
+                    if (ratingB !== ratingA) return ratingB - ratingA;
+                    
                     const dateA = a.releaseDateTime ? new Date(a.releaseDateTime).getTime() : 0;
                     const dateB = b.releaseDateTime ? new Date(b.releaseDateTime).getTime() : 0;
                     return dateB - dateA;
