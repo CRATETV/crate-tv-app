@@ -34,6 +34,7 @@ export interface Movie {
   isCratemas?: boolean;
   awardName?: string;
   awardYear?: string;
+  customLaurelUrl?: string;
 }
 
 export interface Category {

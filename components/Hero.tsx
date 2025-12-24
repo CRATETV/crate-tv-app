@@ -50,14 +50,18 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
           crossOrigin="anonymous"
         />
 
-        {/* Laurel Award Overlay for Hero */}
-        {currentMovie.awardName && currentMovie.awardYear && !showVideo && (
+        {/* Award Overlay Priority Logic for Hero */}
+        {!showVideo && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm pointer-events-none transition-opacity duration-1000">
-                <LaurelPreview 
-                    awardName={currentMovie.awardName} 
-                    year={currentMovie.awardYear} 
-                    color="#FFFFFF" 
-                />
+                {currentMovie.customLaurelUrl ? (
+                    <img src={currentMovie.customLaurelUrl} alt="Award" className="w-full h-auto drop-shadow-2xl" />
+                ) : (currentMovie.awardName && currentMovie.awardYear) ? (
+                    <LaurelPreview 
+                        awardName={currentMovie.awardName} 
+                        year={currentMovie.awardYear} 
+                        color="#FFFFFF" 
+                    />
+                ) : null}
             </div>
         )}
 
@@ -113,7 +117,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
                         aria-label={isMuted ? "Unmute" : "Mute"}
                     >
                         {isMuted ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
                         ) : (
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M12 5l-4 4H5v6h3l4 4V5z" /></svg>
                         )}

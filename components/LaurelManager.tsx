@@ -3,6 +3,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import { Movie } from '../types';
 import LaurelPreview from './LaurelPreview';
 import html2canvas from 'html2canvas';
+import S3Uploader from './S3Uploader';
 
 interface LaurelManagerProps {
     allMovies: Movie[];
@@ -27,7 +28,8 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
     const [selectedMovieKey, setSelectedMovieKey] = useState('');
     const [award, setAward] = useState('Official Selection');
     const [year, setYear] = useState(new Date().getFullYear().toString());
-    const [color, setColor] = useState('#FFFFFF'); // White default
+    const [color, setColor] = useState('#FFFFFF');
+    const [customUrl, setCustomUrl] = useState('');
     const [isDownloading, setIsDownloading] = useState(false);
     const [isApplying, setIsApplying] = useState(false);
     
@@ -42,33 +44,39 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
         
         setIsDownloading(true);
         try {
-            // We must wait for styles to calculate
-            const canvas = await html2canvas(laurelRef.current, {
+            // Fix: SVG elements inside html2canvas often require explicit width/height
+            const element = laurelRef.current;
+            const canvas = await html2canvas(element, {
                 backgroundColor: null,
-                scale: 4, // Ultra-high-res
-                logging: false,
+                scale: 5, // Even higher res for printing
+                logging: true,
                 useCORS: true,
-                allowTaint: true,
+                allowTaint: false,
+                imageTimeout: 15000,
                 onclone: (clonedDoc) => {
-                    // Ensure the SVG is fully opaque for capture
                     const svg = clonedDoc.querySelector('svg');
                     if (svg) {
-                        svg.style.width = '2400px';
-                        svg.style.height = '1800px';
+                        svg.setAttribute('width', '1200');
+                        svg.setAttribute('height', '900');
+                        svg.style.width = '1200px';
+                        svg.style.height = '900px';
                     }
                 }
             });
             
+            const dataUrl = canvas.toDataURL('image/png', 1.0);
             const link = document.createElement('a');
             const safeName = (selectedMovie?.title || 'laurel').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            const safeAward = award.replace(/[^a-z0-9]/gi, '_').toLowerCase();
             
-            link.download = `cratetv_${safeAward}_${safeName}.png`;
-            link.href = canvas.toDataURL('image/png', 1.0);
+            link.download = `cratetv_laurel_${safeName}.png`;
+            link.href = dataUrl;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
+            
         } catch (err) {
-            console.error("Failed to generate laurel image:", err);
-            alert("Could not generate image. Please ensure you are not using an adblocker that blocks canvas operations.");
+            console.error("Download failed:", err);
+            alert("Download failed. Please try opening this page in a different browser (Chrome works best) or check for ad-blockers.");
         } finally {
             setIsDownloading(false);
         }
@@ -76,15 +84,15 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
 
     const handleApplyToPoster = async () => {
         if (!selectedMovie || isApplying) return;
-        if (!window.confirm(`This will automatically display this laurel on the poster for "${selectedMovie.title}" across the entire live site. Proceed?`)) return;
-
+        
         setIsApplying(true);
         try {
             const password = sessionStorage.getItem('adminPassword');
             const updatedMovie = {
                 ...selectedMovie,
                 awardName: award,
-                awardYear: year
+                awardYear: year,
+                customLaurelUrl: customUrl || selectedMovie.customLaurelUrl || ''
             };
             
             const response = await fetch('/api/publish-data', {
@@ -97,10 +105,10 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
                 }),
             });
 
-            if (!response.ok) throw new Error('Failed to update movie data.');
-            alert(`Award successfully applied to "${selectedMovie.title}"!`);
+            if (!response.ok) throw new Error('Failed to update live site.');
+            alert(`Success! Award applied to "${selectedMovie.title}".`);
         } catch (err) {
-            alert(`Failed to apply award: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            alert(`Error: ${err instanceof Error ? err.message : 'Unknown'}`);
         } finally {
             setIsApplying(false);
         }
@@ -109,115 +117,108 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
     return (
         <div className="space-y-8 animate-[fadeIn_0.5s_ease-out]">
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                <h2 className="text-2xl font-bold text-white mb-2">Award System</h2>
-                <p className="text-gray-400">Manage high-resolution transparent laurels and automatic poster overlays.</p>
+                <h2 className="text-2xl font-bold text-white mb-2">Award & Laurel System</h2>
+                <p className="text-gray-400">Generate professional festival laurels or upload your own custom design.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 {/* Controls */}
                 <div className="bg-gray-800/40 p-8 rounded-2xl border border-white/5 space-y-6">
                     <div>
-                        <label className="form-label">1. Select Film</label>
+                        <label className="form-label text-red-400 font-bold">1. Target Film</label>
                         <select 
                             value={selectedMovieKey} 
-                            onChange={(e) => setSelectedMovieKey(e.target.value)}
+                            onChange={(e) => {
+                                setSelectedMovieKey(e.target.value);
+                                const m = allMovies.find(mv => mv.key === e.target.value);
+                                if (m?.customLaurelUrl) setCustomUrl(m.customLaurelUrl);
+                                else setCustomUrl('');
+                            }}
                             className="form-input"
                         >
-                            <option value="">-- Choose a Film --</option>
+                            <option value="">-- Select a Film --</option>
                             {allMovies.sort((a,b) => a.title.localeCompare(b.title)).map(m => (
                                 <option key={m.key} value={m.key}>{m.title}</option>
                             ))}
                         </select>
                     </div>
 
-                    <div>
-                        <label className="form-label">2. Award Category</label>
-                        <select 
-                            value={award} 
-                            onChange={(e) => setAward(e.target.value)}
-                            className="form-input"
-                        >
-                            {AWARD_CATEGORIES.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="form-label">3. Year</label>
-                            <input 
-                                type="text" 
-                                value={year} 
-                                onChange={(e) => setYear(e.target.value)}
-                                className="form-input"
-                            />
-                        </div>
-                        <div>
-                            <label className="form-label">4. Style</label>
-                            <div className="flex items-center gap-3 mt-2">
-                                {[
-                                    { name: 'Gold', val: '#FFD700' },
-                                    { name: 'Silver', val: '#C0C0C0' },
-                                    { name: 'White', val: '#FFFFFF' }
-                                ].map(c => (
-                                    <button
-                                        key={c.name}
-                                        onClick={() => setColor(c.val)}
-                                        className={`w-8 h-8 rounded-full border-2 transition-all ${color === c.val ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-50'}`}
-                                        style={{ backgroundColor: c.val }}
-                                        title={c.name}
-                                    />
-                                ))}
+                    <div className="pt-4 border-t border-white/5">
+                        <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-4">Option A: Generate Laurel</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="form-label text-xs">Category</label>
+                                <select value={award} onChange={(e) => setAward(e.target.value)} className="form-input">
+                                    {AWARD_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                </select>
                             </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="form-label text-xs">Year</label>
+                                    <input type="text" value={year} onChange={(e) => setYear(e.target.value)} className="form-input" />
+                                </div>
+                                <div>
+                                    <label className="form-label text-xs">Color</label>
+                                    <div className="flex gap-2 mt-1">
+                                        {['#FFFFFF', '#FFD700', '#C0C0C0'].map(c => (
+                                            <button key={c} onClick={() => setColor(c)} className={`w-8 h-8 rounded-full border-2 ${color === c ? 'border-white' : 'border-transparent'}`} style={{ backgroundColor: c }} />
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleDownload}
+                                disabled={!selectedMovieKey || isDownloading}
+                                className="w-full bg-white/10 hover:bg-white/20 text-white font-black py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+                            >
+                                {isDownloading ? "Capturing..." : "Download High-Res Generator PNG"}
+                            </button>
                         </div>
                     </div>
 
-                    <div className="pt-6 border-t border-white/5 space-y-3">
+                    <div className="pt-4 border-t border-white/5">
+                        <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-4">Option B: Use My Own Style</h3>
+                        <p className="text-xs text-gray-500 mb-4 italic">If you have a laurel image from Canva/Photoshop, upload it here. It will override the generator.</p>
+                        <S3Uploader 
+                            label="Upload Transparent PNG Laurel" 
+                            onUploadSuccess={(url) => setCustomUrl(url)} 
+                        />
+                        {customUrl && (
+                            <div className="mt-2 flex items-center gap-2 text-green-400 text-xs">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
+                                Custom style ready to apply.
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="pt-6">
                         <button
                             onClick={handleApplyToPoster}
                             disabled={!selectedMovieKey || isApplying}
-                            className="w-full bg-green-600 hover:bg-green-500 disabled:bg-gray-700 text-white font-black py-4 rounded-xl transition-all transform active:scale-95 shadow-xl flex items-center justify-center gap-3"
+                            className="w-full bg-green-600 hover:bg-green-500 text-white font-black py-4 rounded-xl shadow-xl transition-all transform active:scale-95 flex items-center justify-center gap-2"
                         >
-                            {isApplying ? (
-                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            ) : (
-                                "Apply Laurel to Live Site"
-                            )}
-                        </button>
-
-                        <button
-                            onClick={handleDownload}
-                            disabled={!selectedMovieKey || isDownloading}
-                            className="w-full bg-white/10 hover:bg-white/20 disabled:bg-gray-700 text-white font-black py-4 rounded-xl transition-all transform active:scale-95 shadow-xl flex items-center justify-center gap-3"
-                        >
-                            {isDownloading ? (
-                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            ) : (
-                                <>
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M7 10l5 5m0 0l5-5m-5 5V3"/></svg>
-                                    Download High-Res PNG
-                                </>
-                            )}
+                            {isApplying ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : "Sync Award to Live Site"}
                         </button>
                     </div>
                 </div>
 
                 {/* Preview */}
-                <div className="flex flex-col items-center justify-center">
-                    <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-6">Live Master Preview</h3>
+                <div className="flex flex-col items-center">
+                    <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-6">Current Selection Preview</h3>
                     <div 
-                        ref={laurelRef}
-                        className="bg-transparent border-2 border-dashed border-white/10 flex items-center justify-center min-h-[400px] w-full max-w-[600px]"
-                        style={{ overflow: 'visible' }}
+                        className="bg-[#111] border-2 border-dashed border-white/10 rounded-2xl flex items-center justify-center w-full aspect-[4/3] relative overflow-hidden"
                     >
-                        <LaurelPreview 
-                            awardName={award} 
-                            year={year} 
-                            color={color}
-                        />
+                        {customUrl ? (
+                            <img src={customUrl} alt="Custom Laurel" className="w-3/4 h-auto object-contain animate-fadeIn" />
+                        ) : (
+                            <div ref={laurelRef} className="w-full h-full bg-transparent">
+                                <LaurelPreview awardName={award} year={year} color={color} />
+                            </div>
+                        )}
                     </div>
-                    <p className="text-xs text-gray-500 mt-4 italic text-center">Background remains transparent in the export.</p>
+                    <p className="text-[10px] text-gray-600 mt-4 text-center max-w-sm">
+                        This preview shows exactly how the award will appear overlaid on the film's poster.
+                    </p>
                 </div>
             </div>
         </div>

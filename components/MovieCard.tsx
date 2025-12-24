@@ -116,14 +116,18 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
         crossOrigin="anonymous"
       />
 
-      {/* Automatic Award Laurel Overlay */}
-      {movie.awardName && movie.awardYear && !showPreview && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[90%] pointer-events-none group-hover:opacity-0 transition-all duration-300">
-              <LaurelPreview 
-                  awardName={movie.awardName} 
-                  year={movie.awardYear} 
-                  color="#FFFFFF" 
-              />
+      {/* Award Overlay Priority Logic */}
+      {!showPreview && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[85%] pointer-events-none group-hover:opacity-0 transition-all duration-300">
+              {movie.customLaurelUrl ? (
+                  <img src={movie.customLaurelUrl} alt="Award" className="w-full h-auto drop-shadow-2xl" />
+              ) : (movie.awardName && movie.awardYear) ? (
+                  <LaurelPreview 
+                      awardName={movie.awardName} 
+                      year={movie.awardYear} 
+                      color="#FFFFFF" 
+                  />
+              ) : null}
           </div>
       )}
       

@@ -9,62 +9,58 @@ interface LaurelPreviewProps {
 }
 
 const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color }) => {
-    // This design mimics the high-density classic festival look:
-    // Row 1: BEST [CATEGORY]
-    // Row 2: CRATE
-    // Row 3: CRATE [YEAR]
+    // This refined design uses pointed leaf paths to mimic classic hand-drawn festival laurels.
+    const renderLeaf = (transform: string, key: string) => (
+        <path 
+            key={key}
+            d="M0,0 C-5,-10 -15,-25 -15,-40 C-15,-25 -5,-10 0,0 C5,-10 15,-25 15,-40 C15,-25 5,-10 0,0" 
+            transform={transform}
+            className="opacity-95"
+        />
+    );
+
     return (
-        <div className="flex items-center justify-center w-full h-full p-4">
+        <div className="flex items-center justify-center w-full h-full p-4 pointer-events-none">
             <svg 
                 width="100%" 
                 height="100%" 
                 viewBox="0 0 600 450" 
                 xmlns="http://www.w3.org/2000/svg"
-                className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                className="drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]"
             >
-                {/* Laurel Branches - Classic Dense Style */}
+                {/* Laurel Branches */}
                 <g fill={color}>
-                    {/* Left Branch */}
-                    <g transform="translate(150, 225) rotate(-5)">
+                    {/* Left Branch - 18 overlapping organic leaves */}
+                    <g transform="translate(160, 225) rotate(-5)">
                         {[...Array(18)].map((_, i) => (
-                            <path 
-                                key={`l-${i}`}
-                                d="M0,0 C-10,-5 -22,-18 -22,-35 C-22,-18 -10,-5 0,0" 
-                                transform={`rotate(${i * -10 - 20}) translate(0, -100)`}
-                                className="opacity-95"
-                            />
+                            renderLeaf(`rotate(${i * -10 - 25}) translate(0, -105) scale(0.8, 1.2)`, `l-${i}`)
                         ))}
-                        <path d="M0,105 Q-110,95 -105,-105" fill="none" stroke={color} strokeWidth="3" opacity="0.3" />
+                        <path d="M0,110 Q-120,100 -115,-110" fill="none" stroke={color} strokeWidth="3.5" opacity="0.4" />
                     </g>
 
                     {/* Right Branch */}
-                    <g transform="translate(450, 225) rotate(5)">
+                    <g transform="translate(440, 225) rotate(5)">
                         {[...Array(18)].map((_, i) => (
-                            <path 
-                                key={`r-${i}`}
-                                d="M0,0 C10,-5 22,-18 22,-35 C22,-18 10,-5 0,0" 
-                                transform={`rotate(${i * 10 + 20}) translate(0, -100)`}
-                                className="opacity-95"
-                            />
+                            renderLeaf(`rotate(${i * 10 + 25}) translate(0, -105) scale(0.8, 1.2)`, `r-${i}`)
                         ))}
-                        <path d="M0,105 Q 110,95 105,-105" fill="none" stroke={color} strokeWidth="3" opacity="0.3" />
+                        <path d="M0,110 Q 120,100 115,-110" fill="none" stroke={color} strokeWidth="3.5" opacity="0.4" />
                     </g>
                 </g>
 
-                {/* Text Content */}
+                {/* Typography - Exactly tuned to the user's reference photo layout */}
                 <g fontFamily="'Inter', sans-serif" textAnchor="middle" fill={color}>
-                    {/* BEST [CATEGORY] */}
-                    <text x="300" y="195" fontSize="24" fontWeight="700" className="uppercase tracking-[0.2em]">
+                    {/* TOP ROW: BEST [CATEGORY] */}
+                    <text x="300" y="195" fontSize="22" fontWeight="700" className="uppercase tracking-[0.25em]">
                         {awardName}
                     </text>
                     
-                    {/* CRATE (The main brand) */}
-                    <text x="300" y="260" fontSize="88" fontWeight="900" className="uppercase" style={{ letterSpacing: '-2px' }}>
+                    {/* CENTER ROW: CRATE (Branding) */}
+                    <text x="300" y="265" fontSize="94" fontWeight="900" className="uppercase" style={{ letterSpacing: '-3px' }}>
                         CRATE
                     </text>
                     
-                    {/* CRATE [YEAR] */}
-                    <text x="300" y="305" fontSize="20" fontWeight="600" className="uppercase tracking-[0.35em]" opacity="0.8">
+                    {/* BOTTOM ROW: CRATE [YEAR] */}
+                    <text x="300" y="315" fontSize="22" fontWeight="600" className="uppercase tracking-[0.4em]" opacity="0.9">
                         CRATE {year}
                     </text>
                 </g>
