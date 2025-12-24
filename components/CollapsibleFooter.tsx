@@ -16,7 +16,6 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
     };
 
     const handleScroll = () => {
-      // Show the button when the user is within 150px of the bottom of the page
       const isCloseToBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 150;
       setIsNearBottom(isCloseToBottom);
     };
@@ -32,10 +31,17 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
     };
   }, []);
 
-  const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+  const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>, path: string) => {
     e.preventDefault();
     window.history.pushState({}, '', path);
     window.dispatchEvent(new Event('pushstate'));
+    window.scrollTo(0, 0);
+  };
+
+  const handleEmailSubmit = () => {
+    const subject = encodeURIComponent("Film Submission for Consideration");
+    const body = encodeURIComponent("Hello Crate TV,\n\nI would like to submit my film for consideration in your year-round catalog.\n\nFilm Title:\nDirector:\nLink to Screener:");
+    window.location.href = `mailto:cratetiv@gmail.com?subject=${subject}&body=${body}`;
   };
 
   return (
@@ -53,8 +59,35 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
             </button>
         </div>
         {/* Footer Content */}
-        <footer className="bg-black text-gray-400 py-12 px-4 md:px-12 border-t border-gray-800">
+        <footer className="bg-black text-gray-400 py-12 px-4 md:px-12 border-t border-gray-800 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
             <div className="max-w-7xl mx-auto">
+                
+                {/* Filmmaker Hub Integrated Section */}
+                <div className="mb-16 pb-16 border-b border-white/5 flex flex-col md:flex-row items-center gap-10">
+                    <div className="flex-1 text-center md:text-left space-y-4">
+                        <h3 className="text-3xl md:text-5xl font-black text-white leading-tight tracking-tighter">
+                            Ready to start your <span className="text-red-600">next chapter?</span>
+                        </h3>
+                        <p className="text-lg text-gray-300 max-w-2xl font-medium leading-relaxed">
+                            Crate TV is looking for the bold, the unique, and the visionary. Submit via <strong className="text-white">FilmFreeway</strong> for the festival, or <strong className="text-white">Email us</strong> to join our year-round catalog.
+                        </p>
+                    </div>
+                    <div className="flex-shrink-0 flex flex-col sm:flex-row gap-4">
+                        <button 
+                            onClick={(e) => handleNavigate(e, '/submit')}
+                            className="inline-flex items-center justify-center bg-white text-black font-black px-10 py-4 rounded-xl hover:bg-gray-200 transition-all transform hover:scale-105 active:scale-95 shadow-xl text-base"
+                        >
+                            Visit Filmmaker Hub
+                        </button>
+                        <button 
+                            onClick={handleEmailSubmit}
+                            className="inline-flex items-center justify-center bg-gray-800 text-white font-black px-10 py-4 rounded-xl hover:bg-gray-700 transition-all border border-white/10 text-base"
+                        >
+                            Email us Directly
+                        </button>
+                    </div>
+                </div>
+
                 <div className={`grid grid-cols-2 md:grid-cols-4 gap-8 mb-8`}>
                 <div>
                     <h3 className="font-bold text-white mb-4">Company</h3>

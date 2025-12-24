@@ -195,11 +195,6 @@ const App: React.FC = () => {
         }
         setLiveWatchParty(null);
     }
-    const handleNavigateToSubmissions = () => {
-        window.history.pushState({}, '', '/submit');
-        window.dispatchEvent(new Event('pushstate'));
-        window.scrollTo(0, 0);
-    }
     
     useEffect(() => {
         if (heroMovies.length > 1) {
@@ -360,37 +355,6 @@ const App: React.FC = () => {
                         )}
                     </div>
                 </div>
-
-                {/* Call for Entries Section */}
-                <section className="mt-20 py-20 px-4 md:px-12 bg-gradient-to-t from-gray-900 via-black to-black border-t border-white/5 overflow-hidden">
-                    <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12">
-                        <div className="flex-1 space-y-6 text-center md:text-left">
-                            <h3 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight">
-                                Ready to start your <br/>
-                                <span className="text-red-600">next chapter?</span>
-                            </h3>
-                            <p className="text-lg md:text-xl text-gray-400 leading-relaxed max-w-xl">
-                                Crate TV is looking for the bold, the unique, and the visionary. Submit via **FilmFreeway** for the festival, or **Email us** to join our year-round catalog.
-                            </p>
-                            <div className="pt-4 flex justify-center md:justify-start">
-                                <button 
-                                    onClick={handleNavigateToSubmissions}
-                                    className="inline-flex items-center gap-2 bg-white text-black font-black px-10 py-4 rounded-lg hover:bg-gray-200 transition-all transform hover:scale-105 active:scale-95 shadow-2xl"
-                                >
-                                    Visit Filmmaker Hub
-                                </button>
-                            </div>
-                        </div>
-                        <div className="flex-1 relative hidden lg:block">
-                            <div className="absolute -inset-10 bg-red-600/20 rounded-full blur-3xl opacity-30 animate-pulse"></div>
-                            <img 
-                                src="https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg" 
-                                alt="Filmmaker Hub" 
-                                className="relative z-10 rounded-2xl shadow-2xl border border-white/10 grayscale hover:grayscale-0 transition-all duration-700"
-                            />
-                        </div>
-                    </div>
-                </section>
             </main>
 
             <CollapsibleFooter />
