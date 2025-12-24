@@ -43,6 +43,7 @@ import CreatorDashboardPage from './components/CreatorDashboardPage';
 import { WatchPartyPage } from './components/WatchPartyPage';
 import TalentPage from './components/TalentPage';
 import LinkRokuPage from './components/LinkRokuPage';
+import SubmissionTermsPage from './components/SubmissionTermsPage';
 
 
 const rootElement = document.getElementById('root');
@@ -124,6 +125,8 @@ const AppRouter: React.FC = () => {
       return user ? <CratemasPage /> : <RedirectToLogin />;
     case '/top-ten': // Made public per user request
       return <TopTenPage />;
+    case '/submission-terms':
+      return <SubmissionTermsPage />;
     
     // Unified Portal Route
     case '/portal': {

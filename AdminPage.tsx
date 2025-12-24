@@ -18,6 +18,7 @@ import PermissionsManager from './components/PermissionsManager';
 import SaveStatusToast from './components/SaveStatusToast';
 import MonetizationTab from './components/MonetizationTab';
 import HeroManager from './components/HeroManager';
+import LaurelManager from './components/LaurelManager';
 
 const ALL_TABS: Record<string, string> = {
     analytics: '📊 Platform Analytics',
@@ -25,6 +26,7 @@ const ALL_TABS: Record<string, string> = {
     hero: '🎬 Hero Spotlight',
     movies: '🎞️ Movies',
     pipeline: '📥 Pipeline',
+    laurels: '🏆 Laurel Awards',
     payouts: '💸 Payouts',
     categories: '📂 Categories',
     festival: '🎪 Festival',
@@ -348,6 +350,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data, pipelineId) => handleSaveData('movies', data, pipelineId)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} movieToCreate={pipelineItemToConvert} onCreationDone={() => setPipelineItemToConvert(null)} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => { setPipelineItemToConvert(item); setActiveTab('movies'); }} onRefresh={() => fetchAllData(password)} />}
+                    {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={setFestivalData} onConfigChange={setFestivalConfig} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}

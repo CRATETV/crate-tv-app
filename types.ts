@@ -32,6 +32,8 @@ export interface Movie {
   salePrice?: number;
   mainPageExpiry?: string;
   isCratemas?: boolean;
+  awardName?: string;
+  awardYear?: string;
 }
 
 export interface Category {

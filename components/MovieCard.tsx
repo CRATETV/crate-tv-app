@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Movie } from '../types';
+import LaurelPreview from './LaurelPreview';
 
 interface MovieCardProps {
   movie: Movie;
@@ -114,6 +115,17 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
         onLoad={() => setIsImageLoaded(true)}
         crossOrigin="anonymous"
       />
+
+      {/* Award Laurel Overlay */}
+      {movie.awardName && movie.awardYear && !showPreview && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[85%] pointer-events-none group-hover:opacity-0 transition-opacity duration-300">
+              <LaurelPreview 
+                  awardName={movie.awardName} 
+                  year={movie.awardYear} 
+                  color="#FFFFFF" 
+              />
+          </div>
+      )}
       
       {showPreview && videoSrc && (
         <div className="absolute inset-0 bg-black animate-[fadeIn_0.4s_ease-out]">

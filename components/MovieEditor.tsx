@@ -35,6 +35,8 @@ const emptyMovie: Movie = {
     salePrice: 0,
     mainPageExpiry: '',
     isCratemas: false,
+    awardName: '',
+    awardYear: '',
 };
 
 const MovieEditor: React.FC<MovieEditorProps> = ({ 
@@ -175,7 +177,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         await onSetNowStreaming(formData.key);
     };
 
-    // FIX: Added type cast to 'Movie[]' for Object.values(allMovies) to safely access 'title' and resolve "Property 'title' does not exist on type 'unknown'" error.
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(m => m.title.toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => a.title.localeCompare(b.title));
@@ -225,6 +226,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                 <img src={movie.poster} alt="" className="w-8 h-12 object-cover rounded bg-gray-900" />
                                                 <span className="font-bold text-white">{movie.title}</span>
                                                 {movie.isCratemas && <span className="text-[10px] bg-red-600/30 text-red-400 px-1.5 py-0.5 rounded border border-red-500/30 font-bold uppercase tracking-tighter">Cratemas</span>}
+                                                {movie.awardName && <span className="text-[10px] bg-yellow-600/30 text-yellow-400 px-1.5 py-0.5 rounded border border-yellow-500/30 font-bold uppercase tracking-tighter">Award</span>}
                                             </div>
                                         </td>
                                         <td className="p-4 text-sm text-gray-400">{movie.director}</td>
@@ -313,6 +315,22 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 <S3Uploader label="Or Upload New Poster" onUploadSuccess={(url) => setFormData({...formData, poster: url, tvPoster: url})} />
                             </div>
                         </div>
+                    </div>
+
+                    {/* Laurel Award Section */}
+                    <div className="p-4 bg-yellow-900/10 border border-yellow-500/20 rounded-lg">
+                        <h3 className="text-lg font-bold text-yellow-500 mb-4 uppercase tracking-tighter">Festival Laurel Award (Auto-Overlay)</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="form-label text-xs">Award Name (e.g., Best Director)</label>
+                                <input type="text" name="awardName" value={formData.awardName || ''} onChange={handleChange} className="form-input" placeholder="Best Director" />
+                            </div>
+                            <div>
+                                <label className="form-label text-xs">Award Year</label>
+                                <input type="text" name="awardYear" value={formData.awardYear || ''} onChange={handleChange} className="form-input" placeholder="2026" />
+                            </div>
+                        </div>
+                        <p className="text-[10px] text-gray-500 mt-2 italic">If set, a professional laurel will automatically appear on the film's poster across the entire platform.</p>
                     </div>
 
                     <div>

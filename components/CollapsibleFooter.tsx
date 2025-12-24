@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 
 interface CollapsibleFooterProps {
@@ -65,7 +66,8 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                 <div>
                     <h3 className="font-bold text-white mb-4">Creators</h3>
                     <ul className="space-y-2">
-                        <li><a href="/submit" onClick={(e) => handleNavigate(e, '/submit')} className="hover:text-white transition">Submit a Film</a></li>
+                        <li><a href="/submit" onClick={(e) => handleNavigate(e, '/submit')} className="hover:text-white transition">For Filmmakers</a></li>
+                        <li><a href="/submission-terms" onClick={(e) => handleNavigate(e, '/submission-terms')} className="hover:text-white transition">Submission Terms</a></li>
                         <li><a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="hover:text-white transition">Creator Portals</a></li>
                     </ul>
                 </div>
