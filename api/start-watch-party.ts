@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     if (!db) throw new Error("Database connection failed.");
 
-    // CLEANUP: Purge old messages before starting new party
+    // CLEANUP: Purge old messages before starting new party to ensure a clean slate
     const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages');
     const oldMessages = await messagesRef.limit(500).get();
     
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
             batch.delete(doc.ref);
         });
         await batch.commit();
-        console.log(`[Watch Party] Purged ${oldMessages.size} messages for a clean start.`);
+        console.log(`[Watch Party] Purged ${oldMessages.size} messages for a fresh start on ${movieKey}.`);
     }
 
     const partyRef = db.collection('watch_parties').doc(movieKey);

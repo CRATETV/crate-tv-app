@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import ActorBioModal from './ActorBioModal';
@@ -12,7 +13,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import PauseOverlay from './PauseOverlay';
 import MovieDetailsModal from './MovieDetailsModal';
-// FIX: Added import for DirectorCreditsModal to fix line 424 error
 import DirectorCreditsModal from './DirectorCreditsModal';
 
 interface MoviePageProps {
@@ -126,7 +126,7 @@ const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const { likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist } = useAuth();
-  const { isLoading: isDataLoading, movies: allMovies, categories: allCategories, dataSource } = useFestival();
+  const { isLoading: isDataLoading, movies: allMovies, categories: allCategories } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
   
@@ -176,26 +176,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     window.dispatchEvent(new Event('pushstate'));
   };
 
-  // VIMEO EVENT LISTENER
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-        if (!vimeoEmbedUrl) return;
-        try {
-            const data = JSON.parse(event.data);
-            // Vimeo player.js emits a 'finish' event when the video ends
-            if (data.event === 'finish' || data.method === 'finish') {
-                handleMovieEnd();
-            }
-        } catch (e) {
-            // Ignore non-JSON messages
-        }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [vimeoEmbedUrl, handleMovieEnd]);
-
-  // FIX: Added handlePaymentSuccess to resolve "Cannot find name 'handlePaymentSuccess'" error on line 436
   const handlePaymentSuccess = () => {
     setShowSupportSuccess(true);
     setTimeout(() => setShowSupportSuccess(false), 3000);
@@ -218,6 +198,22 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     }
   }, [movie?.key, getUserIdToken]);
 
+  // VIMEO EVENT LISTENER
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+        if (!vimeoEmbedUrl) return;
+        try {
+            const data = JSON.parse(event.data);
+            if (data.event === 'finish' || data.method === 'finish') {
+                handleMovieEnd();
+            }
+        } catch (e) {}
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [vimeoEmbedUrl, handleMovieEnd]);
+
+  // AUTO-PLAY HANDLER
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (movie) {
@@ -225,15 +221,19 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         if ((params.get('play') === 'true') && movie.fullMovie && isMovieReleased(movie)) {
             setPlayerMode('full');
             setShowPostPlay(false);
-            if (!vimeoEmbedUrl) {
-                playContent();
-            }
         } else {
             setPlayerMode('poster');
             setShowPostPlay(false);
         }
     } 
-  }, [movieKey, movie, isDataLoading, playContent, vimeoEmbedUrl]);
+  }, [movieKey, movie]);
+
+  // Ensure play starts when video element becomes available
+  useEffect(() => {
+      if (playerMode === 'full' && videoRef.current && !vimeoEmbedUrl) {
+          playContent();
+      }
+  }, [playerMode, vimeoEmbedUrl, playContent]);
 
   if (isDataLoading || !movie) return <LoadingSpinner />;
 
@@ -279,6 +279,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                         className="w-full h-full"
                                         controls={!isPaused}
                                         playsInline
+                                        autoPlay
                                         onContextMenu={(e) => e.preventDefault()} 
                                         controlsList="nodownload"
                                         onEnded={handleMovieEnd}

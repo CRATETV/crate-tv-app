@@ -23,7 +23,7 @@ const getVimeoEmbedUrl = (url: string): string | null => {
     const eventRegex = /vimeo\.com\/event\/(\d+)/;
     const eventMatch = url.match(eventRegex);
     if (eventMatch && eventMatch[1]) {
-        return `https://player.vimeo.com/event/${eventMatch[1]}/embed?autoplay=1&color=ff0000&title=0&byline=0&portrait=0`;
+        return `https://player.vimeo.com/event/${eventMatch[1]}/embed?autoplay=1&api=1&color=ff0000&title=0&byline=0&portrait=0`;
     }
     return null;
 };
@@ -78,7 +78,7 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
             <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide">
                 {messages.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-center px-8">
-                        <p className="text-gray-600 text-sm italic">The fresh screening chat is ready!</p>
+                        <p className="text-gray-600 text-sm italic">The screening has started. Be the first to say hello!</p>
                     </div>
                 ) : (
                     messages.map(msg => (
@@ -239,14 +239,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }
     
     return (
-        <div className="flex flex-col md:flex-row h-[100dvh] bg-black text-white overflow-hidden">
+        <div className="flex flex-col md:flex-row h-[100svh] bg-black text-white overflow-hidden">
             {/* 
-               On Mobile: Video is sticky at the top, chat fills the rest of the layout. 
-               This ensures when the keyboard opens, the player stays visible.
+               On Mobile: Use h-[100svh] (Small Viewport Height) to respect the address bar.
+               Video is flex-none to ensure it doesn't shrink when keyboard appears.
             */}
             <div className="flex-grow flex flex-col relative overflow-hidden h-full">
                 
-                {/* Mobile Header (Hidden when keyboard is up to save space) */}
+                {/* Mobile Header */}
                 <div className="flex-none bg-black/90 backdrop-blur-md p-3 flex items-center justify-between border-b border-white/5 md:hidden pt-[max(0.75rem,env(safe-area-inset-top))]">
                      <button onClick={handleGoHome} className="text-gray-400 hover:text-white transition-colors" aria-label="Back to Home"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
                     <div className="text-center min-w-0 px-4 flex flex-col items-center">
@@ -264,8 +264,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
                 <button onClick={handleGoHome} className="hidden md:flex absolute top-4 left-4 bg-black/50 rounded-full p-2 hover:bg-black/70 z-20 shadow-xl"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
 
-                {/* Video Player Area - Sticky for Mobile */}
-                <div className="md:relative sticky top-0 flex-none w-full aspect-video bg-black shadow-2xl z-30">
+                {/* Video Player Area - Sticky for Mobile to remain above keyboard */}
+                <div className="flex-none sticky top-0 w-full aspect-video bg-black relative shadow-2xl z-30 overflow-hidden">
                     {vimeoEmbedUrl ? (
                          <iframe
                             src={vimeoEmbedUrl}
@@ -283,19 +283,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     <div className="absolute"><LoadingSpinner /></div>
                                 </div>
                             )}
-                            <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full transition-opacity duration-500 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`} playsInline autoPlay controls={isLiveStream ? true : false} />
+                            <video 
+                                ref={videoRef} 
+                                src={movie.fullMovie} 
+                                className={`w-full h-full transition-opacity duration-500 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`} 
+                                playsInline 
+                                autoPlay 
+                                controls={isLiveStream ? true : false} 
+                            />
                         </>
                     )}
                 </div>
                 
-                {/* Mobile Chat - Fills the viewport below the player */}
+                {/* Mobile Chat - Fills the rest of the layout and resizes when keyboard shows */}
                 <div className="flex-grow flex flex-col md:hidden relative overflow-hidden bg-[#0a0a0a]">
                     <EmbeddedChat movieKey={movieKey} user={user} />
                 </div>
             </div>
 
             {/* Desktop Sidebar Chat */}
-            <div className="hidden md:block w-80 lg:w-96 flex-shrink-0 h-full">
+            <div className="hidden md:block w-80 lg:w-96 flex-shrink-0 h-full border-l border-gray-800">
                 <EmbeddedChat movieKey={movieKey} user={user} />
             </div>
         </div>
