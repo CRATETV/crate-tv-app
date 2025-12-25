@@ -9,85 +9,120 @@ interface LaurelPreviewProps {
 }
 
 const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color }) => {
-    // Generate a unique ID for the gradient to avoid collisions
-    const gradId = `leafGrad-${color.replace('#', '')}`;
+    // Utility to adjust color brightness for the beveled effect
+    const adjustColor = (hex: string, amt: number) => {
+        let usePound = false;
+        if (hex[0] === "#") {
+            hex = hex.slice(1);
+            usePound = true;
+        }
+        const num = parseInt(hex, 16);
+        let r = (num >> 16) + amt;
+        if (r > 255) r = 255;
+        else if (r < 0) r = 0;
+        let b = ((num >> 8) & 0x00FF) + amt;
+        if (b > 255) b = 255;
+        else if (b < 0) b = 0;
+        let g = (num & 0x0000FF) + amt;
+        if (g > 255) g = 255;
+        else if (g < 0) g = 0;
+        return (usePound ? "#" : "") + (g | (b << 8) | (r << 16)).toString(16).padStart(6, '0');
+    };
 
-    // Pointed, symmetrical almond-shaped leaf with a center spine for 3D effect
-    const render3DLeaf = (transform: string, key: string) => (
+    const highlightColor = adjustColor(color, 45);
+    const midColor = color;
+    const shadowColor = adjustColor(color, -55);
+    const deepShadowColor = adjustColor(color, -110);
+
+    const gradId = `laurelGrad-${color.replace('#', '')}`;
+
+    // Single Beveled Leaf: Two paths meeting at a center spine
+    const renderBeveledLeaf = (transform: string, key: string) => (
         <g key={key} transform={transform}>
-            {/* Left half of leaf (slightly darker) */}
+            {/* Shadow Side (Left half) */}
             <path 
-                d="M0,0 C-4,-12 -12,-28 -12,-45 C-12,-28 -4,-12 0,0" 
-                fill={`url(#${gradId}-dark)`}
+                d="M0,0 C-3,-10 -14,-25 -14,-42 C-14,-25 -3,-10 0,0" 
+                fill={`url(#${gradId}-shadow)`}
             />
-            {/* Right half of leaf (slightly lighter) */}
+            {/* Highlight Side (Right half) */}
             <path 
-                d="M0,0 C4,-12 12,-28 12,-45 C12,-28 4,-12 0,0" 
-                fill={`url(#${gradId}-light)`}
+                d="M0,0 C3,-10 14,-25 14,-42 C14,-25 3,-10 0,0" 
+                fill={`url(#${gradId}-highlight)`}
             />
+            {/* Center Spine Crease */}
+            <path d="M0,0 L0,-42" stroke="rgba(255,255,255,0.18)" strokeWidth="0.5" fill="none" />
         </g>
     );
 
     return (
-        <div className="flex items-center justify-center w-full h-full p-4 pointer-events-none">
+        <div className="flex items-center justify-center w-full h-full p-4 pointer-events-none select-none">
             <svg 
                 width="100%" 
                 height="100%" 
                 viewBox="0 0 600 450" 
                 xmlns="http://www.w3.org/2000/svg"
-                className="filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)]"
+                className="filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.9)]"
             >
                 <defs>
-                    <linearGradient id={`${gradId}-light`} x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" style={{ stopColor: color, stopOpacity: 1 }} />
-                        <stop offset="100%" style={{ stopColor: color, stopOpacity: 0.8 }} />
+                    <linearGradient id={`${gradId}-highlight`} x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style={{ stopColor: highlightColor, stopOpacity: 1 }} />
+                        <stop offset="50%" style={{ stopColor: midColor, stopOpacity: 1 }} />
+                        <stop offset="100%" style={{ stopColor: shadowColor, stopOpacity: 1 }} />
                     </linearGradient>
-                    <linearGradient id={`${gradId}-dark`} x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" style={{ stopColor: color, stopOpacity: 0.7 }} />
-                        <stop offset="100%" style={{ stopColor: color, stopOpacity: 0.9 }} />
+                    
+                    <linearGradient id={`${gradId}-shadow`} x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style={{ stopColor: shadowColor, stopOpacity: 1 }} />
+                        <stop offset="60%" style={{ stopColor: deepShadowColor, stopOpacity: 1 }} />
+                        <stop offset="100%" style={{ stopColor: '#000000', stopOpacity: 1 }} />
+                    </linearGradient>
+
+                    <linearGradient id={`${gradId}-text`} x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style={{ stopColor: highlightColor, stopOpacity: 1 }} />
+                        <stop offset="100%" style={{ stopColor: shadowColor, stopOpacity: 1 }} />
                     </linearGradient>
                 </defs>
 
                 {/* Laurel Branches */}
                 <g>
-                    {/* Left Branch - 22 layered leaves for high-density metallic look */}
-                    <g transform="translate(155, 230) rotate(-6)">
-                        {[...Array(22)].map((_, i) => (
-                            render3DLeaf(`rotate(${i * -8.5 - 20}) translate(0, -100) scale(${1 - i * 0.015})`, `l-${i}`)
+                    {/* Left Branch */}
+                    <g transform="translate(190, 240) rotate(-12)">
+                        {[...Array(10)].map((_, i) => (
+                            renderBeveledLeaf(
+                                `rotate(${i * -13 - 22}) translate(0, -125) scale(${1.1 - i * 0.06})`, 
+                                `l-${i}`
+                            )
                         ))}
-                        {/* Stem */}
-                        <path d="M0,105 Q-115,95 -110,-115" fill="none" stroke={color} strokeWidth="4" opacity="0.4" />
+                        <path d="M0,110 Q-120,90 -110,-130" fill="none" stroke={color} strokeWidth="2.5" opacity="0.15" />
                     </g>
 
                     {/* Right Branch */}
-                    <g transform="translate(445, 230) rotate(6)">
-                        {[...Array(22)].map((_, i) => (
-                            render3DLeaf(`rotate(${i * 8.5 + 20}) translate(0, -100) scale(${1 - i * 0.015})`, `r-${i}`)
+                    <g transform="translate(410, 240) rotate(12)">
+                        {[...Array(10)].map((_, i) => (
+                            renderBeveledLeaf(
+                                `rotate(${i * 13 + 22}) translate(0, -125) scale(${1.1 - i * 0.06})`, 
+                                `r-${i}`
+                            )
                         ))}
-                        {/* Stem */}
-                        <path d="M0,105 Q 115,95 110,-115" fill="none" stroke={color} strokeWidth="4" opacity="0.4" />
+                        <path d="M0,110 Q 120,90 110,-130" fill="none" stroke={color} strokeWidth="2.5" opacity="0.15" />
                     </g>
                     
-                    {/* Crossed Stems (The 'X' at the bottom) */}
-                    <path d="M285,340 L315,310" stroke={color} strokeWidth="6" strokeLinecap="round" opacity="0.9" />
-                    <path d="M315,340 L285,310" stroke={color} strokeWidth="6" strokeLinecap="round" opacity="0.9" />
+                    {/* The 'X' Cross at Bottom Center */}
+                    <g stroke={color} strokeWidth="6" strokeLinecap="round" opacity="0.8">
+                        <path d="M275,365 L325,325" />
+                        <path d="M325,365 L275,325" />
+                    </g>
                 </g>
 
-                {/* Text Content - Professional hierarchy */}
-                <g fontFamily="'Inter', sans-serif" textAnchor="middle" fill={color}>
-                    {/* Category Label */}
-                    <text x="300" y="195" fontSize="22" fontWeight="700" className="uppercase tracking-[0.2em]">
+                {/* Typography Hierarchy */}
+                <g fontFamily="'Inter', sans-serif" textAnchor="middle" fill={`url(#${gradId}-text)`}>
+                    <text x="300" y="190" fontSize="18" fontWeight="800" className="uppercase tracking-[0.45em]">
                         {awardName}
                     </text>
-                    
-                    {/* Brand Branding (Centerpiece) */}
-                    <text x="300" y="265" fontSize="104" fontWeight="900" className="uppercase" style={{ letterSpacing: '-5px' }}>
+                    <text x="300" y="278" fontSize="118" fontWeight="900" className="uppercase" style={{ letterSpacing: '-7px' }}>
                         CRATE
                     </text>
-                    
-                    {/* Year / Bottom Label */}
-                    <text x="300" y="315" fontSize="22" fontWeight="600" className="uppercase tracking-[0.5em]" opacity="0.95">
-                        CRATE {year}
+                    <text x="300" y="335" fontSize="28" fontWeight="700" className="uppercase tracking-[0.65em]" opacity="0.8">
+                        {year}
                     </text>
                 </g>
             </svg>
