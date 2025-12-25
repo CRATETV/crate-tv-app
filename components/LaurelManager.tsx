@@ -51,14 +51,15 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
             const sourceSvg = laurelRef.current.querySelector('svg');
             if (!sourceSvg) throw new Error("SVG not found");
 
-            // Clone SVG to modify it for export without affecting the UI
+            // Clone SVG to modify it for export
             const svgElement = sourceSvg.cloneNode(true) as SVGSVGElement;
+            // Use high-res square dimensions
             svgElement.setAttribute('width', '2400');
-            svgElement.setAttribute('height', '2000');
+            svgElement.setAttribute('height', '2400');
 
             const canvas = document.createElement('canvas');
             canvas.width = 2400;
-            canvas.height = 2000;
+            canvas.height = 2400;
             const ctx = canvas.getContext('2d');
             if (!ctx) throw new Error("Could not get canvas context");
 
@@ -69,7 +70,7 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
             const img = new Image();
             img.onload = () => {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, 2400, 2000);
+                ctx.drawImage(img, 0, 0, 2400, 2400);
                 
                 const pngUrl = canvas.toDataURL('image/png', 1.0);
                 const downloadLink = document.createElement('a');
@@ -135,8 +136,8 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
     return (
         <div className="space-y-8 animate-[fadeIn_0.5s_ease-out]">
             <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                <h2 className="text-2xl font-bold text-white mb-2">Modern Award Studio</h2>
-                <p className="text-gray-400">Design sharpened, minimalist laurels. Sync directly to the film poster or export as a transparent high-res PNG for marketing.</p>
+                <h2 className="text-2xl font-bold text-white mb-2">Award Design Studio</h2>
+                <p className="text-gray-400">Design full, elegant laurels. Sync directly to the film poster or export as a transparent high-res PNG for marketing.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -210,7 +211,7 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
                 <div className="flex flex-col items-center">
                     <h3 className="text-xs font-black text-gray-600 uppercase tracking-[0.3em] mb-8">Award Geometry Preview</h3>
                     <div 
-                        className={`border border-white/5 rounded-[2.5rem] flex items-center justify-center w-full aspect-[4/3] relative overflow-hidden transition-colors duration-500 shadow-[inset_0_0_80px_rgba(0,0,0,1)] ${color === '#000000' ? 'bg-white' : 'bg-[#020202]'}`}
+                        className={`border border-white/5 rounded-[2.5rem] flex items-center justify-center w-full aspect-square relative overflow-hidden transition-colors duration-500 shadow-[inset_0_0_80px_rgba(0,0,0,1)] ${color === '#000000' ? 'bg-white' : 'bg-[#020202]'}`}
                     >
                         <div ref={laurelRef} className="w-full h-full bg-transparent">
                             <LaurelPreview awardName={award} year={year} color={color} />
