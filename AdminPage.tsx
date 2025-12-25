@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, PayoutRequest } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -19,10 +18,12 @@ import SaveStatusToast from './components/SaveStatusToast';
 import MonetizationTab from './components/MonetizationTab';
 import HeroManager from './components/HeroManager';
 import LaurelManager from './components/LaurelManager';
+import JuryPortal from './components/JuryPortal';
 
 const ALL_TABS: Record<string, string> = {
     analytics: '📊 Platform Analytics',
     growth: '✨ Growth Intelligence',
+    jury: '⚖️ Grand Jury',
     hero: '🎬 Hero Spotlight',
     movies: '🎞️ Movies',
     pipeline: '📥 Pipeline',
@@ -181,6 +182,7 @@ const AdminPage: React.FC = () => {
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : 'An error occurred during deletion.');
         } finally {
+            // FIX: Corrected typo where setIsDeleting was used instead of setIsSaving.
             setIsSaving(false);
         }
     };
@@ -252,6 +254,7 @@ const AdminPage: React.FC = () => {
             const defaultPermissions: Record<string, string[]> = {
                 collaborator: ['movies', 'categories', 'pipeline', 'fallback'],
                 festival_admin: ['festival'],
+                jury: ['jury', 'pipeline']
             };
             tabs = permissions[role] || defaultPermissions[role] || [];
         }
@@ -347,6 +350,7 @@ const AdminPage: React.FC = () => {
                 <div>
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" onNavigateToGrowth={() => setActiveTab('growth')} />}
                     {activeTab === 'growth' && <GrowthAnalyticsTab />}
+                    {activeTab === 'jury' && <JuryPortal pipeline={pipeline} />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data, pipelineId) => handleSaveData('movies', data, pipelineId)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} movieToCreate={pipelineItemToConvert} onCreationDone={() => setPipelineItemToConvert(null)} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => { setPipelineItemToConvert(item); setActiveTab('movies'); }} onRefresh={() => fetchAllData(password)} />}
