@@ -9,14 +9,23 @@ interface LaurelPreviewProps {
 }
 
 const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color }) => {
-    // This refined design uses pointed leaf paths to mimic classic hand-drawn festival laurels.
-    const renderLeaf = (transform: string, key: string) => (
-        <path 
-            key={key}
-            d="M0,0 C-5,-10 -15,-25 -15,-40 C-15,-25 -5,-10 0,0 C5,-10 15,-25 15,-40 C15,-25 5,-10 0,0" 
-            transform={transform}
-            className="opacity-95"
-        />
+    // Generate a unique ID for the gradient to avoid collisions
+    const gradId = `leafGrad-${color.replace('#', '')}`;
+
+    // Pointed, symmetrical almond-shaped leaf with a center spine for 3D effect
+    const render3DLeaf = (transform: string, key: string) => (
+        <g key={key} transform={transform}>
+            {/* Left half of leaf (slightly darker) */}
+            <path 
+                d="M0,0 C-4,-12 -12,-28 -12,-45 C-12,-28 -4,-12 0,0" 
+                fill={`url(#${gradId}-dark)`}
+            />
+            {/* Right half of leaf (slightly lighter) */}
+            <path 
+                d="M0,0 C4,-12 12,-28 12,-45 C12,-28 4,-12 0,0" 
+                fill={`url(#${gradId}-light)`}
+            />
+        </g>
     );
 
     return (
@@ -26,41 +35,58 @@ const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color })
                 height="100%" 
                 viewBox="0 0 600 450" 
                 xmlns="http://www.w3.org/2000/svg"
-                className="drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]"
+                className="filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)]"
             >
+                <defs>
+                    <linearGradient id={`${gradId}-light`} x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style={{ stopColor: color, stopOpacity: 1 }} />
+                        <stop offset="100%" style={{ stopColor: color, stopOpacity: 0.8 }} />
+                    </linearGradient>
+                    <linearGradient id={`${gradId}-dark`} x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style={{ stopColor: color, stopOpacity: 0.7 }} />
+                        <stop offset="100%" style={{ stopColor: color, stopOpacity: 0.9 }} />
+                    </linearGradient>
+                </defs>
+
                 {/* Laurel Branches */}
-                <g fill={color}>
-                    {/* Left Branch - 18 overlapping organic leaves */}
-                    <g transform="translate(160, 225) rotate(-5)">
-                        {[...Array(18)].map((_, i) => (
-                            renderLeaf(`rotate(${i * -10 - 25}) translate(0, -105) scale(0.8, 1.2)`, `l-${i}`)
+                <g>
+                    {/* Left Branch - 22 layered leaves for high-density metallic look */}
+                    <g transform="translate(155, 230) rotate(-6)">
+                        {[...Array(22)].map((_, i) => (
+                            render3DLeaf(`rotate(${i * -8.5 - 20}) translate(0, -100) scale(${1 - i * 0.015})`, `l-${i}`)
                         ))}
-                        <path d="M0,110 Q-120,100 -115,-110" fill="none" stroke={color} strokeWidth="3.5" opacity="0.4" />
+                        {/* Stem */}
+                        <path d="M0,105 Q-115,95 -110,-115" fill="none" stroke={color} strokeWidth="4" opacity="0.4" />
                     </g>
 
                     {/* Right Branch */}
-                    <g transform="translate(440, 225) rotate(5)">
-                        {[...Array(18)].map((_, i) => (
-                            renderLeaf(`rotate(${i * 10 + 25}) translate(0, -105) scale(0.8, 1.2)`, `r-${i}`)
+                    <g transform="translate(445, 230) rotate(6)">
+                        {[...Array(22)].map((_, i) => (
+                            render3DLeaf(`rotate(${i * 8.5 + 20}) translate(0, -100) scale(${1 - i * 0.015})`, `r-${i}`)
                         ))}
-                        <path d="M0,110 Q 120,100 115,-110" fill="none" stroke={color} strokeWidth="3.5" opacity="0.4" />
+                        {/* Stem */}
+                        <path d="M0,105 Q 115,95 110,-115" fill="none" stroke={color} strokeWidth="4" opacity="0.4" />
                     </g>
+                    
+                    {/* Crossed Stems (The 'X' at the bottom) */}
+                    <path d="M285,340 L315,310" stroke={color} strokeWidth="6" strokeLinecap="round" opacity="0.9" />
+                    <path d="M315,340 L285,310" stroke={color} strokeWidth="6" strokeLinecap="round" opacity="0.9" />
                 </g>
 
-                {/* Typography - Exactly tuned to the user's reference photo layout */}
+                {/* Text Content - Professional hierarchy */}
                 <g fontFamily="'Inter', sans-serif" textAnchor="middle" fill={color}>
-                    {/* TOP ROW: BEST [CATEGORY] */}
-                    <text x="300" y="195" fontSize="22" fontWeight="700" className="uppercase tracking-[0.25em]">
+                    {/* Category Label */}
+                    <text x="300" y="195" fontSize="22" fontWeight="700" className="uppercase tracking-[0.2em]">
                         {awardName}
                     </text>
                     
-                    {/* CENTER ROW: CRATE (Branding) */}
-                    <text x="300" y="265" fontSize="94" fontWeight="900" className="uppercase" style={{ letterSpacing: '-3px' }}>
+                    {/* Brand Branding (Centerpiece) */}
+                    <text x="300" y="265" fontSize="104" fontWeight="900" className="uppercase" style={{ letterSpacing: '-5px' }}>
                         CRATE
                     </text>
                     
-                    {/* BOTTOM ROW: CRATE [YEAR] */}
-                    <text x="300" y="315" fontSize="22" fontWeight="600" className="uppercase tracking-[0.4em]" opacity="0.9">
+                    {/* Year / Bottom Label */}
+                    <text x="300" y="315" fontSize="22" fontWeight="600" className="uppercase tracking-[0.5em]" opacity="0.95">
                         CRATE {year}
                     </text>
                 </g>
