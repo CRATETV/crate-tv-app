@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Movie, Actor, MoviePipelineEntry } from '../types';
 import S3Uploader from './S3Uploader';
@@ -240,22 +239,20 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                         <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={5} className="form-input" />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-purple-900/10 border border-purple-500/20 rounded-xl">
+                    <div className="p-6 bg-purple-900/10 border border-purple-500/20 rounded-xl">
                         <div className="space-y-4">
                             <h3 className="text-lg font-bold text-purple-400 uppercase tracking-tighter">Laurel Metadata</h3>
-                            <div>
-                                <label className="form-label text-xs">Award Category (e.g., Official Selection)</label>
-                                <input type="text" name="awardName" value={formData.awardName || ''} onChange={handleChange} className="form-input" placeholder="Official Selection" />
+                            <p className="text-xs text-gray-400">Values entered here generate a dynamic laurel overlay on the film's poster across the app.</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="form-label text-xs">Award Category (e.g., Official Selection)</label>
+                                    <input type="text" name="awardName" value={formData.awardName || ''} onChange={handleChange} className="form-input" placeholder="Official Selection" />
+                                </div>
+                                <div>
+                                    <label className="form-label text-xs">Award Year</label>
+                                    <input type="text" name="awardYear" value={formData.awardYear || ''} onChange={handleChange} className="form-input" placeholder="2026" />
+                                </div>
                             </div>
-                            <div>
-                                <label className="form-label text-xs">Award Year</label>
-                                <input type="text" name="awardYear" value={formData.awardYear || ''} onChange={handleChange} className="form-input" placeholder="2026" />
-                            </div>
-                        </div>
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-bold text-purple-400 uppercase tracking-tighter">Direct Image Link</h3>
-                            <p className="text-xs text-gray-400">If you have a professional laurel file hosted on S3, paste the URL below to bypass the SVG generator.</p>
-                            <input type="text" name="customLaurelUrl" value={formData.customLaurelUrl || ''} onChange={handleChange} className="form-input" placeholder="https://...laurel.png" />
                         </div>
                     </div>
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { avatars } from './avatars';
@@ -84,11 +83,15 @@ const Header: React.FC<HeaderProps> = ({
         <header className={headerClasses} style={{ top: topOffset }}>
             <div className="max-w-[1800px] mx-auto px-4 md:px-12 flex items-center justify-between">
                 <div className="flex items-center gap-10">
-                    {/* Logo intentionally removed for cinematic focus */}
                     {showNavLinks && user && (
-                        <nav className="hidden md:flex items-center gap-6">
+                        <nav className="hidden md:flex items-center gap-8">
                             {navLinks.map(link => (
-                                <a key={link.path} href={link.path} onClick={(e) => handleNavigate(e, link.path)} className="text-gray-300 hover:text-white transition-colors text-sm font-medium tracking-wide">
+                                <a 
+                                    key={link.path} 
+                                    href={link.path} 
+                                    onClick={(e) => handleNavigate(e, link.path)} 
+                                    className="transition-colors text-sm font-black uppercase tracking-[0.2em] text-gray-300 hover:text-white"
+                                >
                                     {link.label}
                                 </a>
                             ))}
@@ -130,7 +133,7 @@ const Header: React.FC<HeaderProps> = ({
                                         <p className="text-sm font-bold text-white truncate">{user.name || user.email}</p>
                                     </div>
                                     <a href="/account" onClick={(e) => handleNavigate(e, '/account')} className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors">Account</a>
-                                    {(user.isActor || user.isFilmmaker) && <a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors">Creator Dashboard</a>}
+                                    {(user.isActor || user.isFilmmaker) && <a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors font-bold text-red-500">Creator Hub</a>}
                                     <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors">Sign out</button>
                                 </div>
                             )}

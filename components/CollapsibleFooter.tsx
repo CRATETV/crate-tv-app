@@ -38,11 +38,7 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
     window.scrollTo(0, 0);
   };
 
-  const handleEmailSubmit = () => {
-    const subject = encodeURIComponent("Film Submission for Consideration");
-    const body = encodeURIComponent("Hello Crate TV,\n\nI would like to submit my film for consideration in your year-round catalog.\n\nFilm Title:\nDirector:\nLink to Screener:");
-    window.location.href = `mailto:cratetiv@gmail.com?subject=${subject}&body=${body}`;
-  };
+  const emailHref = "mailto:cratetiv@gmail.com?subject=Film%20Submission%20Consideration&body=Hello%20Crate%20TV,%0D%0A%0D%0AI%20would%20like%20to%20submit%20my%20film%20for%20consideration.%0D%0A%0D%0AFilm%20Title:%20%0D%0ADirector:%20%0D%0ALink%20to%20Screener:%20";
 
   return (
     <div className={`fixed bottom-0 left-0 right-0 z-30 transition-all duration-500 ease-in-out hidden md:block ${isOpen ? 'translate-y-0' : 'translate-y-[calc(100%-2.5rem)]'}`}>
@@ -62,7 +58,7 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
         <footer className="bg-black text-gray-400 py-12 px-4 md:px-12 border-t border-gray-800 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
             <div className="max-w-7xl mx-auto">
                 
-                {/* Filmmaker CTA Section (User Requested Text & Bold Spans) */}
+                {/* Filmmaker CTA Section */}
                 <div className="mb-16 pb-16 border-b border-white/5 flex flex-col md:flex-row items-center gap-10">
                     <div className="flex-1 text-center md:text-left space-y-4">
                         <h3 className="text-4xl md:text-6xl font-black text-white leading-tight tracking-tighter uppercase">
@@ -79,12 +75,12 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                         >
                             Visit Filmmaker Hub
                         </button>
-                        <button 
-                            onClick={handleEmailSubmit}
+                        <a 
+                            href={emailHref}
                             className="inline-flex items-center justify-center bg-gray-800 text-white font-black px-10 py-4 rounded-xl hover:bg-gray-700 transition-all border border-white/10 text-base uppercase tracking-widest"
                         >
                             Email us Directly
-                        </button>
+                        </a>
                     </div>
                 </div>
 

@@ -1,10 +1,8 @@
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState } from 'react';
 import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
 import { useFestival } from '../contexts/FestivalContext';
-// FIX: Corrected import path for Movie type
 import { Movie } from '../types';
 
 const CreatorPortalPage: React.FC = () => {
@@ -28,7 +26,7 @@ const CreatorPortalPage: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col min-h-screen text-white">
+        <div className="flex flex-col min-h-screen text-white bg-black">
             <Header 
                 searchQuery="" 
                 onSearch={handleSearch} 
@@ -37,100 +35,77 @@ const CreatorPortalPage: React.FC = () => {
                 showSearch={false}
             />
             <main className="flex-grow pb-24 md:pb-0">
-                {/* Static Hero Section - Fast Loading */}
-                <div 
-                    className="relative w-full h-[56.25vw] max-h-[70vh] bg-black bg-cover bg-center"
-                    style={{ backgroundImage: `url('https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg')`}}
-                >
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-black/80"></div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div>
-                    <div className="relative z-10 flex flex-col justify-center h-full px-4 md:px-12 text-white">
-                        <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold mb-4 max-w-xl drop-shadow-lg">
-                            Creator Portals
-                        </h1>
-                        <p className="text-sm md:text-base lg:text-lg max-w-xl mb-6">
-                            Access your dashboard, manage your profile, and connect with the Crate TV community.
-                        </p>
-                    </div>
+                <div className="relative py-24 md:py-32 text-center px-4">
+                    <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-4">Creator Portals</h1>
+                    <p className="text-gray-400 max-w-2xl mx-auto text-lg">Manage your professional presence on Crate TV.</p>
                 </div>
                 
-                <div className="relative z-10 mt-12 px-4 pb-16">
-                    <div className="max-w-xl w-full mx-auto text-center">
-                        <div className="bg-black/70 border border-gray-700 rounded-xl shadow-2xl backdrop-blur-md overflow-hidden">
-                            {/* Toggle Switch */}
-                            <div className="flex p-2 bg-gray-800/50">
-                                <button 
-                                    onClick={() => setActiveView('filmmaker')}
-                                    className={`flex-1 py-3 text-lg font-bold transition-colors duration-300 rounded-lg ${activeView === 'filmmaker' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-700/50'}`}
-                                >
-                                    Filmmaker
-                                </button>
-                                <button 
-                                    onClick={() => setActiveView('actor')}
-                                    className={`flex-1 py-3 text-lg font-bold transition-colors duration-300 rounded-lg ${activeView === 'actor' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-700/50'}`}
-                                >
-                                    Actor
-                                </button>
-                            </div>
+                <div className="max-w-4xl mx-auto px-4 pb-16">
+                    <div className="flex justify-center mb-12">
+                        <div className="inline-flex p-1 bg-gray-900 border border-gray-800 rounded-xl">
+                            <button 
+                                onClick={() => setActiveView('filmmaker')}
+                                className={`px-8 py-3 rounded-lg font-bold transition-all ${activeView === 'filmmaker' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                            >
+                                Filmmakers
+                            </button>
+                            <button 
+                                onClick={() => setActiveView('actor')}
+                                className={`px-8 py-3 rounded-lg font-bold transition-all ${activeView === 'actor' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                            >
+                                Actors
+                            </button>
+                        </div>
+                    </div>
 
-                            {/* Content */}
-                            <div className="p-8">
-                                {activeView === 'filmmaker' ? (
-                                    <div className="animate-[fadeIn_0.5s_ease-out]">
-                                        <h2 className="text-4xl font-bold text-white mb-4">Filmmaker Dashboard</h2>
-                                        <p className="text-gray-300 mb-8">
-                                            Access performance analytics, track revenue, and manage payouts.
-                                        </p>
-                                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                            <a 
-                                                href="/filmmaker-signup" 
-                                                onClick={(e) => handleNavigate(e, '/filmmaker-signup')}
-                                                className="flex-1 text-center bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-transform hover:scale-105"
-                                            >
-                                                Request Access
-                                            </a>
-                                            <a 
-                                                href="/login?redirect=/filmmaker-dashboard" 
-                                                onClick={(e) => handleNavigate(e, '/login?redirect=/filmmaker-dashboard')}
-                                                className="flex-1 text-center bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg transition-transform hover:scale-105"
-                                            >
-                                                Login
-                                            </a>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="animate-[fadeIn_0.5s_ease-out]">
-                                        <h2 className="text-4xl font-bold text-white mb-4">Actor Portal</h2>
-                                        <p className="text-gray-300 mb-8">
-                                            Update your public profile, and connect with other actors in the Green Room.
-                                        </p>
-                                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                            <a 
-                                                href="/actor-signup" 
-                                                onClick={(e) => handleNavigate(e, '/actor-signup')}
-                                                className="flex-1 text-center bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-transform hover:scale-105"
-                                            >
-                                                Request Access
-                                            </a>
-                                            <a 
-                                                href="/login?redirect=/actor-portal" 
-                                                onClick={(e) => handleNavigate(e, '/login?redirect=/actor-portal')}
-                                                className="flex-1 text-center bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg transition-transform hover:scale-105"
-                                            >
-                                                Login
-                                            </a>
-                                        </div>
-                                    </div>
-                                )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="bg-gray-900/50 border border-gray-800 p-8 rounded-2xl">
+                            <h2 className="text-2xl font-bold mb-4">{activeView === 'filmmaker' ? 'Filmmaker Hub' : 'Actor Hub'}</h2>
+                            <p className="text-gray-400 mb-8 leading-relaxed">
+                                {activeView === 'filmmaker' 
+                                    ? 'Access your personalized dashboard to track film views, manage donations, and request earnings payouts.' 
+                                    : 'Update your public headshots, manage your professional bio, and connect with the community in the Green Room.'}
+                            </p>
+                            <div className="space-y-4">
+                                <a 
+                                    href={activeView === 'filmmaker' ? '/filmmaker-signup' : '/actor-signup'}
+                                    onClick={(e) => handleNavigate(e, activeView === 'filmmaker' ? '/filmmaker-signup' : '/actor-signup')}
+                                    className="block w-full text-center bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl transition-transform hover:scale-[1.02]"
+                                >
+                                    Register Account
+                                </a>
+                                <a 
+                                    href="/login?redirect=/portal"
+                                    onClick={(e) => handleNavigate(e, '/login?redirect=/portal')}
+                                    className="block w-full text-center bg-gray-800 hover:bg-gray-700 text-white font-bold py-4 rounded-xl"
+                                >
+                                    Existing User Login
+                                </a>
                             </div>
+                        </div>
+
+                        <div className="bg-white/5 border border-white/5 p-8 rounded-2xl flex flex-col justify-center">
+                            <h3 className="font-bold text-lg mb-4">Why create a profile?</h3>
+                            <ul className="space-y-4 text-gray-400 text-sm">
+                                <li className="flex gap-3">
+                                    <span className="text-red-500 font-bold">✓</span>
+                                    <span>Professional visibility in our searchable directory.</span>
+                                </li>
+                                <li className="flex gap-3">
+                                    <span className="text-red-500 font-bold">✓</span>
+                                    <span>Direct connection with independent cinema audiences.</span>
+                                </li>
+                                <li className="flex gap-3">
+                                    <span className="text-red-500 font-bold">✓</span>
+                                    <span>Real-time tracking of engagement and earnings.</span>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </div>
             </main>
             <CollapsibleFooter showActorLinks={true} />
-            <BottomNavBar 
-                onSearchClick={handleMobileSearch}
-            />
+            <BottomNavBar onSearchClick={handleMobileSearch} />
         </div>
     );
 };

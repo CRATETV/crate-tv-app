@@ -37,7 +37,7 @@ const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color, c
                 xmlns="http://www.w3.org/2000/svg"
             >
                 <g transform="translate(500, 600)">
-                    {/* Left Branch (20 Petals) - Pushed out further to 145 */}
+                    {/* Left Branch (20 Petals) */}
                     <g transform="translate(-145, 0)">
                         {[...Array(20)].map((_, i) => {
                             const scale = 1.1 - (i * 0.042);
@@ -54,7 +54,7 @@ const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color, c
                         })}
                     </g>
 
-                    {/* Right Branch (20 Petals) - Pushed out further to 145 */}
+                    {/* Right Branch (20 Petals) */}
                     <g transform="translate(145, 0)">
                         {[...Array(20)].map((_, i) => {
                             const scale = 1.1 - (i * 0.042);
@@ -79,16 +79,16 @@ const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color, c
                     </g>
                 </g>
 
-                {/* SIGNATURE STUDIO V4 TYPOGRAPHY - Adjusted Y coords for clearance */}
+                {/* SIGNATURE STUDIO V4 TYPOGRAPHY */}
                 <g fontFamily="'Inter', sans-serif" textAnchor="middle" fill={color}>
+                    {/* AWARD CATEGORY - ENHANCED FOR POSTER VISIBILITY */}
                     <text 
                         x="500" 
                         y="450" 
-                        fontSize="20" 
+                        fontSize="24" 
                         fontWeight="900" 
                         className="uppercase" 
-                        style={{ letterSpacing: '1.4em', textTransform: 'uppercase' }} 
-                        opacity="0.8"
+                        style={{ letterSpacing: '1.2em', textTransform: 'uppercase' }} 
                     >
                         {awardName}
                     </text>
@@ -109,10 +109,9 @@ const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color, c
                         x="500" 
                         y="700" 
                         fontSize="42" 
-                        fontWeight="500" 
+                        fontWeight="700" 
                         className="uppercase" 
                         style={{ letterSpacing: '0.85em', textTransform: 'uppercase' }} 
-                        opacity="0.7"
                     >
                         {year}
                     </text>
