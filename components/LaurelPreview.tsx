@@ -6,100 +6,118 @@ interface LaurelPreviewProps {
     awardName: string;
     year: string;
     color: string;
+    customUrl?: string;
 }
 
-const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color }) => {
-    // Elegant Tapered Teardrop Leaf - "Cute" but Prestigious
-    const renderLeaf = (transform: string, key: string) => (
-        <path 
-            key={key}
-            d="M0,0 C-1.5,-12 -5,-28 0,-42 C5,-28 1.5,-12 0,0 Z" 
-            fill={color}
-            transform={transform}
-        />
-    );
+const LaurelPreview: React.FC<LaurelPreviewProps> = ({ awardName, year, color, customUrl }) => {
+    // If a custom URL is provided, display that instead of generating the SVG.
+    if (customUrl) {
+        return (
+            <div className="flex items-center justify-center w-full h-full pointer-events-none select-none p-4">
+                <img 
+                    src={customUrl} 
+                    alt={`${awardName} ${year}`} 
+                    className="w-full max-w-[95%] h-auto object-contain drop-shadow-[0_8px_25px_rgba(0,0,0,0.9)]" 
+                />
+            </div>
+        );
+    }
 
-    // Refined Triple-Tip Crown - The "Signature" of high-end laurels
-    const renderTipCrown = (transform: string) => (
-        <g transform={transform}>
-            {/* Center Leaf */}
-            <path d="M0,0 C-2,-10 -2,-22 0,-30 C2,-22 2,-10 0,0 Z" fill={color} />
-            {/* Left Leaf */}
-            <path d="M-3,-5 C-10,-12 -15,-22 -8,-28 C-3,-22 -1,-12 -3,-5 Z" fill={color} />
-            {/* Right Leaf */}
-            <path d="M3,-5 C10,-12 15,-22 8,-28 C3,-22 1,-12 3,-5 Z" fill={color} />
-        </g>
-    );
+    /**
+     * LEAN PETAL ENGINE V4.0
+     * Features 20 needle-petals per side with precise angular distribution.
+     */
+    const petalPath = "M0,0 C-3,-10 -6,-35 0,-65 C6,-35 3,-10 0,0 Z";
 
     return (
         <div className="flex items-center justify-center w-full h-full p-4 pointer-events-none select-none">
             <svg 
+                id="laurelSvg"
                 width="100%" 
                 height="100%" 
-                viewBox="0 0 600 600" 
+                viewBox="0 0 1000 1000" 
                 xmlns="http://www.w3.org/2000/svg"
             >
-                {/* Laurel Branches - Symmetrical & Full */}
-                <g transform="translate(0, 30)">
-                    {/* Left Branch */}
-                    <g transform="translate(215, 380)">
-                        {[...Array(13)].map((_, i) => (
-                            renderLeaf(
-                                `rotate(${i * -12.5 - 20}) translate(0, -135) scale(${1 - i * 0.015})`, 
-                                `l-${i}`
-                            )
-                        ))}
-                        {renderTipCrown("rotate(-188) translate(0, -140) scale(0.9)")}
+                <g transform="translate(500, 600)">
+                    {/* Left Branch (20 Petals) */}
+                    <g transform="translate(-130, 0)">
+                        {[...Array(20)].map((_, i) => {
+                            const scale = 1.1 - (i * 0.04);
+                            const rotate = -12 - (i * 7.5); 
+                            const dist = -280;
+                            return (
+                                <path 
+                                    key={`l-${i}`}
+                                    d={petalPath}
+                                    fill={color}
+                                    transform={`rotate(${rotate}) translate(0, ${dist}) scale(${scale})`}
+                                />
+                            );
+                        })}
                     </g>
 
-                    {/* Right Branch */}
-                    <g transform="translate(385, 380)">
-                        {[...Array(13)].map((_, i) => (
-                            renderLeaf(
-                                `rotate(${i * 12.5 + 20}) translate(0, -135) scale(${1 - i * 0.015})`, 
-                                `r-${i}`
-                            )
-                        ))}
-                        {renderTipCrown("rotate(188) translate(0, -140) scale(0.9)")}
+                    {/* Right Branch (20 Petals) */}
+                    <g transform="translate(130, 0)">
+                        {[...Array(20)].map((_, i) => {
+                            const scale = 1.1 - (i * 0.04);
+                            const rotate = 12 + (i * 7.5); 
+                            const dist = -280;
+                            return (
+                                <path 
+                                    key={`r-${i}`}
+                                    d={petalPath}
+                                    fill={color}
+                                    transform={`rotate(${rotate}) translate(0, ${dist}) scale(${scale})`}
+                                />
+                            );
+                        })}
+                    </g>
+
+                    {/* Elite Crown (V4 Flourish) */}
+                    <g transform="translate(0, -385) scale(0.65)">
+                         <path d={petalPath} fill={color} />
+                         <path d={petalPath} fill={color} transform="rotate(-30) translate(0, 8) scale(0.9)" />
+                         <path d={petalPath} fill={color} transform="rotate(30) translate(0, 8) scale(0.9)" />
                     </g>
                 </g>
 
-                {/* Typography - Absolute Mathematical Centering */}
+                {/* SIGNATURE STUDIO V4 TYPOGRAPHY */}
                 <g fontFamily="'Inter', sans-serif" textAnchor="middle" fill={color}>
-                    {/* AWARD CATEGORY - Centered vertically in the crescent gap */}
+                    {/* AWARD CATEGORY */}
                     <text 
-                        x="300" 
-                        y="230" 
-                        fontSize="14" 
-                        fontWeight="800" 
+                        x="500" 
+                        y="460" 
+                        fontSize="20" 
+                        fontWeight="900" 
                         className="uppercase" 
-                        style={{ letterSpacing: '0.5em' }} 
-                        opacity="0.95"
+                        style={{ letterSpacing: '1.4em', textTransform: 'uppercase' }} 
+                        opacity="0.8"
                     >
                         {awardName}
                     </text>
                     
-                    {/* BRANDING - Main Focus */}
+                    {/* CORE BRANDING */}
                     <text 
-                        x="300" 
-                        y="305" 
-                        fontSize="84" 
-                        fontWeight="500" 
-                        className="capitalize" 
-                        style={{ letterSpacing: '-0.02em' }}
+                        x="500" 
+                        y="575" 
+                        fontSize="130" 
+                        fontWeight="900" 
+                        dominantBaseline="middle"
+                        className="uppercase"
+                        style={{ letterSpacing: '-0.03em', textTransform: 'uppercase' }}
                     >
-                        Crate
+                        CRATE
                     </text>
                     
-                    {/* YEAR - Balanced Footer */}
+                    {/* YEAR STAMP */}
                     <text 
-                        x="300" 
-                        y="355" 
-                        fontSize="26" 
-                        fontWeight="700" 
+                        x="500" 
+                        y="685" 
+                        fontSize="40" 
+                        fontWeight="500" 
                         className="uppercase" 
-                        style={{ letterSpacing: '0.6em' }} 
-                        opacity="0.75"
+                        style={{ letterSpacing: '0.8em', textTransform: 'uppercase' }} 
+                        opacity="0.7"
                     >
                         {year}
                     </text>
