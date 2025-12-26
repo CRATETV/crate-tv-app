@@ -1,324 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elite Lean Laurel Studio | CRATE TV</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Crate TV | The Home of Independent Cinema</title>
+    <meta name="description" content="Stream the best independent short films, features, and documentaries." />
+    <meta name="theme-color" content="#141414">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { 
-            background: #050505; 
-            font-family: 'Inter', sans-serif; 
-            color: white; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            padding: 40px; 
-            min-height: 100vh;
-        }
-        
-        .studio-card {
-            background: rgba(15, 15, 15, 0.95);
-            backdrop-blur: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 40px;
-            padding: 48px;
-            width: 100%;
-            max-width: 1200px;
-            box-shadow: 0 60px 150px rgba(0,0,0,1);
-        }
-
-        .preview-stage {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 1/1;
-            background: #000000;
-            border-radius: 60px;
-            border: 1px solid rgba(255,255,255,0.02);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            box-shadow: inset 0 0 200px rgba(0,0,0,1);
-        }
-
-        .category-btn {
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.04);
-            color: #666;
-            padding: 10px 12px;
-            border-radius: 12px;
-            font-size: 8px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            text-align: center;
-        }
-        .category-btn.active {
-            background: #fff;
-            color: #000;
-            border-color: #fff;
-            transform: scale(1.05);
-        }
-
-        .swatch {
-            width: 54px;
-            height: 54px;
-            border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.1);
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-        }
-        .swatch.active { border-color: #ef4444; transform: scale(1.15); }
-
-        input {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: white;
-            padding: 14px;
-            border-radius: 16px;
-            font-weight: 900;
-            text-align: center;
-            font-size: 1rem;
-            letter-spacing: 0.1em;
-            width: 100%;
-            transition: all 0.3s;
-        }
-        input:focus {
-            outline: none;
-            border-color: #ef4444;
-            background: rgba(255,255,255,0.05);
-        }
-
-        .form-label {
-            font-size: 10px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.4em;
-            color: #6b7280;
-            margin-bottom: 1.5rem;
-            display: block;
-        }
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #050505;
+        margin: 0;
+        color: white;
+      }
+      .form-input {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        background-color: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 12px;
+        color: #ffffff !important;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+      .form-label {
+        display: block;
+        font-size: 10px;
+        font-weight: 900;
+        color: #6b7280;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.35em;
+      }
+      .submit-btn {
+        background-color: #ef4444;
+        color: white;
+        font-weight: 900;
+        padding: 1rem 1.75rem;
+        border-radius: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        text-align: center;
+      }
     </style>
-<script type="importmap">
+    <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
+    "react": "https://esm.sh/react@^18.3.1",
+    "react-dom": "https://esm.sh/react-dom@^18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@^18.3.1/client",
+    "firebase/compat/app": "https://esm.sh/firebase@^10.12.3/compat/app",
+    "firebase/compat/auth": "https://esm.sh/firebase@^10.12.3/compat/auth",
+    "firebase/compat/firestore": "https://esm.sh/firebase@^10.12.3/compat/firestore",
+    "@google/genai": "https://esm.sh/@google/genai@^0.15.0",
+    "@vercel/analytics": "https://esm.sh/@vercel/analytics@^1.3.1",
+    "html2canvas": "https://esm.sh/html2canvas@^1.4.1",
+    "jszip": "https://esm.sh/jszip@^3.10.1",
+    "resend": "https://esm.sh/resend@^3.5.0",
+    "@aws-sdk/client-s3": "https://esm.sh/@aws-sdk/client-s3@^3.886.0",
+    "@aws-sdk/s3-request-presigner": "https://esm.sh/@aws-sdk/s3-request-presigner@^3.886.0",
+    "buffer": "https://esm.sh/buffer@^6.0.3",
+    "process": "https://esm.sh/process@^0.11.10",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/",
     "vite": "https://esm.sh/vite@^7.3.0",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "@aws-sdk/client-s3": "https://esm.sh/@aws-sdk/client-s3@^3.958.0",
     "firebase-admin/": "https://esm.sh/firebase-admin@^13.6.0/",
-    "resend": "https://esm.sh/resend@^6.6.0",
     "fs": "https://esm.sh/fs@^0.0.1-security",
     "path": "https://esm.sh/path@^0.12.7",
-    "jszip": "https://esm.sh/jszip@^3.10.1",
-    "buffer": "https://esm.sh/buffer@^6.0.3",
     "crypto": "https://esm.sh/crypto@^1.0.1",
-    "@aws-sdk/s3-request-presigner": "https://esm.sh/@aws-sdk/s3-request-presigner@^3.958.0",
     "firebase/": "https://esm.sh/firebase@^12.7.0/",
-    "fs/": "https://esm.sh/fs@^0.0.1-security/",
-    "process": "https://esm.sh/process@^0.11.10",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "@vercel/analytics": "https://esm.sh/@vercel/analytics@^1.6.1",
-    "html2canvas": "https://esm.sh/html2canvas@^1.4.1"
+    "fs/": "https://esm.sh/fs@^0.0.1-security/"
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
-<body>
-
-    <div class="text-center mb-16">
-        <p class="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-4">Elite Aesthetic Core</p>
-        <h1 class="text-6xl md:text-8xl font-black uppercase tracking-tighter mb-4">Studio V4</h1>
-        <p class="text-gray-500 font-medium max-w-lg mx-auto">High-density lean architecture: 20 needle-petals per side with 130-unit expansive clearance.</p>
-    </div>
-
-    <div class="studio-card">
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-16">
-            
-            <div class="lg:col-span-2 flex flex-col gap-10">
-                <section>
-                    <label class="form-label">01. Premium Finish</label>
-                    <div class="flex gap-8">
-                        <div class="swatch active" style="background: #FFFFFF" onclick="updateColor('#FFFFFF', this)"></div>
-                        <div class="swatch" style="background: #FFD700" onclick="updateColor('#FFD700', this)"></div>
-                        <div class="swatch" style="background: #000000" onclick="updateColor('#000000', this)"></div>
-                    </div>
-                </section>
-
-                <section>
-                    <label class="form-label">02. Accreditation Editor</label>
-                    <div class="space-y-4">
-                        <input type="text" id="accreditationInput" value="Official Selection" placeholder="Type custom award..." oninput="handleManualCategory(this.value)">
-                        <div id="categoryGrid" class="grid grid-cols-2 gap-2"></div>
-                    </div>
-                </section>
-
-                <section class="flex flex-col gap-6 pt-6 border-t border-white/5">
-                    <div class="flex flex-col gap-2">
-                        <label class="form-label !mb-4">03. Production Year</label>
-                        <input type="text" id="yearInput" value="2025" maxlength="4" oninput="draw()">
-                    </div>
-                    <button id="downloadBtn" onclick="downloadPng()" class="bg-red-600 hover:bg-red-500 text-white font-black py-5 rounded-2xl uppercase tracking-widest text-sm shadow-2xl transition-all active:scale-95">
-                        Export Assets
-                    </button>
-                </section>
-            </div>
-
-            <div class="lg:col-span-3 flex flex-col items-center">
-                <div class="mb-6 flex items-center gap-3">
-                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                    <p class="text-[10px] font-black text-gray-600 uppercase tracking-[0.5em]">Lean Geometry v4.0</p>
-                </div>
-                <div class="preview-stage" id="preview"></div>
-                <p class="mt-8 text-[10px] font-black text-gray-800 uppercase tracking-[1em] mr-[-1em]">CRATE SOPHISTICATION STANDARDS</p>
-            </div>
-
-        </div>
-    </div>
-
-    <script>
-        const presetCategories = [
-            "Official Selection", "Grand Jury Prize", 
-            "Best Performance", "Best Documentary Short", 
-            "Best Animation Selection", "Best Student Film",
-            "Best Director", "Best Screenplay"
-        ];
-
-        let activeCategory = presetCategories[0];
-        let activeColor = "#FFFFFF";
-
-        function updateColor(hex, el) {
-            activeColor = hex;
-            document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
-            el.classList.add('active');
-            draw();
-        }
-
-        function updateCategory(cat, el) {
-            activeCategory = cat;
-            document.getElementById('accreditationInput').value = cat;
-            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
-            if (el) el.classList.add('active');
-            draw();
-        }
-
-        function handleManualCategory(val) {
-            activeCategory = val;
-            // Uncheck grid if text doesn't match exactly
-            document.querySelectorAll('.category-btn').forEach(b => {
-                if (b.innerText.toLowerCase() === val.toLowerCase()) {
-                    b.classList.add('active');
-                } else {
-                    b.classList.remove('active');
-                }
-            });
-            draw();
-        }
-
-        function draw() {
-            const year = document.getElementById('yearInput').value;
-            // LEAN PETAL PATH (Needle shape)
-            const petalPath = "M0,0 C-3,-10 -6,-35 0,-65 C6,-35 3,-10 0,0 Z";
-            
-            let leftBranch = "";
-            let rightBranch = "";
-            
-            // High Density: 20 petals per side
-            for(let i=0; i<20; i++) {
-                const scale = 1.1 - (i * 0.04);
-                const rotate = 12 + (i * 7.5); 
-                const dist = -280; 
-                
-                leftBranch += `<path d="${petalPath}" fill="${activeColor}" transform="rotate(${-rotate}) translate(0, ${dist}) scale(${scale})" />`;
-                rightBranch += `<path d="${petalPath}" fill="${activeColor}" transform="rotate(${rotate}) translate(0, ${dist}) scale(${scale})" />`;
-            }
-
-            const crown = `
-                <g transform="translate(0, -385) scale(0.65)">
-                    <path d="${petalPath}" fill="${activeColor}" />
-                    <path d="${petalPath}" fill="${activeColor}" transform="rotate(-30) translate(0, 8) scale(0.9)" />
-                    <path d="${petalPath}" fill="${activeColor}" transform="rotate(30) translate(0, 8) scale(0.9)" />
-                </g>
-            `;
-
-            const svg = `
-                <svg id="laurelSvg" width="100%" height="100%" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
-                    <g transform="translate(500, 600)">
-                        <g transform="translate(-130, 0)">${leftBranch}</g>
-                        <g transform="translate(130, 0)">${rightBranch}</g>
-                        ${crown}
-                    </g>
-                    
-                    <g font-family="Inter, sans-serif" text-anchor="middle" fill="${activeColor}">
-                        <text x="500" y="460" font-size="20" font-weight="900" style="letter-spacing: 1.4em; text-transform: uppercase;" opacity="0.8">${activeCategory}</text>
-                        <text x="500" y="575" font-size="130" font-weight="900" dominant-baseline="middle" style="letter-spacing: -0.03em; text-transform: uppercase;">CRATE</text>
-                        <text x="500" y="685" font-size="40" font-weight="500" style="letter-spacing: 0.8em; text-transform: uppercase;" opacity="0.7">${year}</text>
-                    </g>
-                </svg>
-            `;
-            
-            document.getElementById('preview').innerHTML = svg;
-        }
-
-        async function downloadPng() {
-            const svgEl = document.getElementById('laurelSvg');
-            const btn = document.getElementById('downloadBtn');
-            const originalText = btn.innerText;
-            btn.innerText = "Processing...";
-            btn.disabled = true;
-
-            try {
-                const svgData = new XMLSerializer().serializeToString(svgEl);
-                const canvas = document.createElement("canvas");
-                const svgSize = 3000; // Ultra high-res
-                canvas.width = svgSize;
-                canvas.height = svgSize;
-                const ctx = canvas.getContext("2d");
-                
-                const img = new Image();
-                const svgBlob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
-                const url = URL.createObjectURL(svgBlob);
-                
-                img.onload = function() {
-                    ctx.drawImage(img, 0, 0, svgSize, svgSize);
-                    const pngUrl = canvas.toDataURL("image/png");
-                    const downloadLink = document.createElement("a");
-                    downloadLink.href = pngUrl;
-                    downloadLink.download = `Crate_Laurel_${activeCategory.replace(/\s+/g, '_')}_${document.getElementById('yearInput').value}.png`;
-                    document.body.appendChild(downloadLink);
-                    downloadLink.click();
-                    document.body.removeChild(downloadLink);
-                    URL.revokeObjectURL(url);
-                    btn.innerText = originalText;
-                    btn.disabled = false;
-                };
-                img.src = url;
-            } catch (e) {
-                console.error(e);
-                btn.innerText = "Error";
-                setTimeout(() => { btn.innerText = originalText; btn.disabled = false; }, 2000);
-            }
-        }
-
-        // Initialize Category Grid
-        const grid = document.getElementById('categoryGrid');
-        presetCategories.forEach((cat, i) => {
-            const btn = document.createElement('button');
-            btn.className = `category-btn ${i === 0 ? 'active' : ''}`;
-            btn.innerText = cat;
-            btn.onclick = () => updateCategory(cat, btn);
-            grid.appendChild(btn);
-        });
-
-        draw();
-    </script>
-<script type="module" src="/index.tsx"></script>
-</body>
+  <body>
+    <div id="root"></div>
+    <script src="https://js.squareupsandbox.com/v2/paymentform"></script>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>

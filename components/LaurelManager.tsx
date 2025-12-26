@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Movie } from '../types';
 import LaurelPreview from './LaurelPreview';
@@ -40,7 +39,6 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
         allMovies.find(m => m.key === selectedMovieKey), 
     [selectedMovieKey, allMovies]);
 
-    // Sync state with selected movie metadata
     useEffect(() => {
         if (selectedMovie) {
             if (selectedMovie.awardName) setAward(selectedMovie.awardName);
@@ -56,7 +54,7 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
             if (!sourceSvg) throw new Error("SVG element not found");
             
             const svgElement = sourceSvg.cloneNode(true) as SVGSVGElement;
-            const size = 3000; // Ultra high-res export
+            const size = 3000;
             svgElement.setAttribute('width', size.toString());
             svgElement.setAttribute('height', size.toString());
             
@@ -118,27 +116,12 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
             <div className="text-center">
                 <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-4">Elite Aesthetic Core</p>
                 <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter mb-4 text-white">Studio V4</h1>
-                <p className="text-gray-500 font-medium max-w-lg mx-auto">High-density lean architecture: 20 needle-petals per side with 130-unit expansive clearance.</p>
+                <p className="text-gray-500 font-medium max-w-lg mx-auto">High-density lean architecture: 20 needle-petals per side with 145-unit expansive clearance.</p>
             </div>
 
             <div className="bg-[#0f0f0f]/95 backdrop-blur-[40px] border border-white/5 rounded-[40px] p-8 md:p-12 shadow-[0_60px_150px_rgba(0,0,0,1)] max-w-7xl mx-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-16">
-                    
-                    {/* Controls Column */}
-                    <div className="lg:col-span-2 flex flex-col gap-12">
-                        {/* Target Selection (Added for Admin Integration) */}
-                        <section className="pb-8 border-b border-white/5">
-                            <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 mb-6 block">00. Sync Target</label>
-                            <select 
-                                value={selectedMovieKey} 
-                                onChange={(e) => setSelectedMovieKey(e.target.value)} 
-                                className="w-full bg-white/5 border border-white/10 text-white p-4 rounded-2xl font-bold focus:outline-none focus:border-red-600 transition-all"
-                            >
-                                <option value="">-- Manual Mode --</option>
-                                {allMovies.map(m => <option key={m.key} value={m.key}>{m.title}</option>)}
-                            </select>
-                        </section>
-
+                    <div className="lg:col-span-2 flex flex-col gap-10">
                         <section>
                             <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 mb-8 block">01. Premium Finish</label>
                             <div className="flex gap-6 flex-wrap">
@@ -200,20 +183,19 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
                                     ) : (
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                                     )}
-                                    Export Assets
+                                    Export 3000px PNG
                                 </button>
                                 <button 
                                     onClick={handleApplyToPoster} 
                                     disabled={!selectedMovieKey || isApplying} 
                                     className="bg-red-600 hover:bg-red-500 text-white font-black py-5 rounded-2xl uppercase tracking-widest text-sm shadow-2xl transition-all disabled:bg-gray-800 disabled:text-gray-600 active:scale-95"
                                 >
-                                    {isApplying ? 'Syncing...' : 'Sync to Movie Page'}
+                                    {isApplying ? 'Syncing...' : 'Sync to Movie Metadata'}
                                 </button>
                             </div>
                         </section>
                     </div>
 
-                    {/* Preview Column */}
                     <div className="lg:col-span-3 flex flex-col items-center">
                         <div className="mb-6 flex items-center gap-3">
                             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
@@ -224,16 +206,12 @@ const LaurelManager: React.FC<LaurelManagerProps> = ({ allMovies }) => {
                             <div ref={laurelRef} className="w-full h-full p-8 md:p-12">
                                 <LaurelPreview awardName={award} year={year} color={color} />
                             </div>
-                            
-                            {/* Overlay Proof Mark */}
                             <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-xl border border-white/10 px-4 py-1.5 rounded-full">
                                 <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.4em]">Live Proof</p>
                             </div>
                         </div>
-                        
                         <p className="mt-8 text-[10px] font-black text-gray-800 uppercase tracking-[1em] mr-[-1em]">CRATE SOPHISTICATION STANDARDS</p>
                     </div>
-
                 </div>
             </div>
         </div>
