@@ -3,7 +3,6 @@ import { Movie, Actor, Category } from '../types';
 import DirectorCreditsModal from './DirectorCreditsModal';
 import Countdown from './Countdown';
 import SquarePaymentModal from './SquarePaymentModal';
-import DonationSuccessModal from './DonationSuccessModal';
 import { isMovieReleased } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -89,14 +88,15 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const synopsisText = movie.synopsis || '';
   const synopsisIsLong = synopsisText.replace(/<[^>]+>/g, '').length > 200;
 
-  // LICENSING RESTRICTIONS:
-  // No donations for Vintage Visions (publicDomainIndie), Copyrighted Music, or when manually disabled.
+  // LICENSING RESTRICTIONS logic fix
   const canCollectDonations = useMemo(() => {
     if (!movie) return false;
     const isVintage = allCategories.publicDomainIndie?.movieKeys?.includes(movie.key);
+    const isCopyrightRestricted = movie.hasCopyrightMusic === true;
     const isManualDisabled = movie.isSupportEnabled === false;
     
-    return !isVintage && !movie.hasCopyrightMusic && !isManualDisabled;
+    // Support is enabled ONLY if it's NOT vintage, NOT copyrighted music, and NOT manually disabled
+    return !isVintage && !isCopyrightRestricted && !isManualDisabled;
   }, [movie, allCategories]);
 
   useEffect(() => {

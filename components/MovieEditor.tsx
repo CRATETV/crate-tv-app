@@ -107,11 +107,11 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         if (!formData) return;
-        const { name, value, type } = e.target;
+        const target = e.target as HTMLInputElement;
+        const { name, value, type } = target;
         
         if (type === 'checkbox') {
-             const { checked } = e.target as HTMLInputElement;
-             setFormData({ ...formData, [name]: checked });
+             setFormData({ ...formData, [name]: target.checked });
         } else if (type === 'datetime-local') {
              setFormData({ ...formData, [name]: value ? new Date(value).toISOString() : '' });
         } else {

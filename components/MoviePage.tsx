@@ -136,13 +136,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const isOnWatchlist = useMemo(() => watchlist.includes(movieKey), [watchlist, movieKey]);
   const embedUrl = useMemo(() => movie ? getEmbedUrl(movie.fullMovie) : null, [movie]);
 
-  // LICENSING Logic: Prevent donations for Vintage Visions, Copyrighted Music, or manual override.
+  // LICENSING RESTRICTION logic fix
   const canCollectDonations = useMemo(() => {
     if (!movie) return false;
     const isVintage = allCategories.publicDomainIndie?.movieKeys?.includes(movie.key);
+    const isCopyrightRestricted = movie.hasCopyrightMusic === true;
     const isManualDisabled = movie.isSupportEnabled === false;
     
-    return !isVintage && !movie.hasCopyrightMusic && !isManualDisabled;
+    return !isVintage && !isCopyrightRestricted && !isManualDisabled;
   }, [movie, allCategories]);
 
   const handleGoHome = useCallback(() => {
@@ -185,7 +186,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         if (!embedUrl) return;
         try {
             const data = JSON.parse(event.data);
-            // Support both YouTube and Vimeo end events
             if (data.event === 'finish' || data.method === 'finish' || data.event === 'onStateChange' && data.info === 0) {
                 handleMovieEnd();
             }

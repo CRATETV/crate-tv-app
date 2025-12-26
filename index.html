@@ -27,6 +27,26 @@
         font-size: 0.95rem;
         font-weight: 600;
       }
+      
+      /* Force white/light-themed native calendar picker */
+      input[type="datetime-local"].form-input,
+      input[type="date"].form-input,
+      input[type="time"].form-input {
+        color-scheme: light;
+      }
+
+      /* Invert the calendar icon so it shows as white on the dark input */
+      input::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        cursor: pointer;
+        opacity: 0.6;
+        transition: opacity 0.2s;
+      }
+      
+      input::-webkit-calendar-picker-indicator:hover {
+        opacity: 1;
+      }
+
       .form-label {
         display: block;
         font-size: 10px;
@@ -95,7 +115,6 @@
   }
 }
 </script>
-    <!-- Modern Square Web Payments SDK -->
     <script src="https://web.squarecdn.com/v1/square.js"></script>
   <link rel="stylesheet" href="/index.css">
 </head>
