@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     });
 
     const rawText = textResponse.text;
-    if (!rawText) throw new Error("The AI failed to generate text content (likely a safety filter or timeout).");
+    if (!rawText) throw new Error("The AI failed to generate text content.");
 
     // Robust extraction: find first '{' and last '}' to handle potential markdown wrappers
     const startIdx = rawText.indexOf('{');
@@ -80,10 +80,6 @@ export async function POST(request: Request) {
           break; 
         }
       }
-    }
-
-    if (!base64Image) {
-        console.warn("Image generation returned no image data. Proceeding with text only.");
     }
 
     return new Response(JSON.stringify({ 

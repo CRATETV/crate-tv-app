@@ -75,7 +75,7 @@ export async function POST(request: Request) {
                     <a href="https://cratetv.net/admin" style="background-color: #ef4444; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Open Admin Pipeline</a>
                 </div>
                 
-                <p style="font-size: 12px; color: #999; margin-top: 40px; border-top: 1px solid #eee; pt-10;">
+                <p style="font-size: 12px; color: #999; margin-top: 40px; border-top: 1px solid #eee; padding-top: 10px;">
                     This is an automated notification from the Crate TV Infrastructure.
                 </p>
             </div>
@@ -93,7 +93,6 @@ export async function POST(request: Request) {
         
         if (emailError) {
             console.error('Resend error:', emailError);
-            // We still return 200 because the pipeline entry WAS created in Firestore.
             return new Response(JSON.stringify({ success: true, warning: 'Database updated but email notification failed.' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
         }
         

@@ -59,7 +59,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
 
                 const payments = Square.payments(applicationId, locationId);
                 // FIX: Square SDK 'style' only supports specific keys. backgroundColor is not one of them.
-                // We style the container div instead.
+                // We style the container div instead for the visual background.
                 const card = await payments.card({
                     style: {
                         'input': {

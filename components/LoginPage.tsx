@@ -69,7 +69,6 @@ const LoginPage: React.FC = () => {
 
     return (
         <div className="min-h-screen text-white flex flex-col bg-black">
-            {/* Header now part of flex flow to avoid overlap */}
             <header className="p-8 flex justify-center md:justify-start">
                  <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" alt="Crate TV" className="w-32 h-auto" />
             </header>

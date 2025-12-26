@@ -79,7 +79,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, initialView }) => {
 
     return (
         <div 
-            className="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center z-[70] p-4 animate-[fadeIn_0.3s_ease-out]" 
+            className="fixed inset-0 bg-black/98 backdrop-blur-2xl flex items-center justify-center z-[70] p-4 animate-[fadeIn_0.3s_ease-out]" 
             onClick={onClose}
         >
             <div 

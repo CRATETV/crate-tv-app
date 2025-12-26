@@ -288,7 +288,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         )}
                     </div>
 
-                    {/* Reaction Bar: Dedicated row below video on mobile, fixed height */}
+                    {/* Reaction Bar: Dedicated row below video on mobile */}
                     <div className="flex-none bg-black/40 border-b border-white/5 py-2 px-4 flex justify-around items-center z-40">
                          {REACTION_TYPES.map(emoji => (
                             <button 
