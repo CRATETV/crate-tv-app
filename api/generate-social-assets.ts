@@ -52,9 +52,8 @@ export async function POST(request: Request) {
     });
 
     const rawText = textResponse.text;
-    if (!rawText) throw new Error("The AI failed to generate text content.");
+    if (!rawText) throw new Error("The AI failed to generate text content (likely blocked by safety filters).");
 
-    // Robust extraction: find first '{' and last '}' to handle potential markdown wrappers
     const startIdx = rawText.indexOf('{');
     const endIdx = rawText.lastIndexOf('}');
     if (startIdx === -1 || endIdx === -1) throw new Error("The AI response was not in a valid JSON format.");
@@ -72,19 +71,17 @@ export async function POST(request: Request) {
     });
 
     let base64Image = '';
-    const parts = imageResponse.candidates?.[0]?.content?.parts;
-    if (parts) {
-      for (const part of parts) {
-        if (part.inlineData) { 
-          // FIX: Added nullish coalescing to prevent TS2322 error
-          base64Image = part.inlineData.data ?? ''; 
-          break; 
+    const candidates = imageResponse.candidates;
+    if (candidates && candidates.length > 0) {
+        const parts = candidates[0].content?.parts;
+        if (parts) {
+            for (const part of parts) {
+                if (part.inlineData) { 
+                    base64Image = part.inlineData.data ?? ''; 
+                    break; 
+                }
+            }
         }
-      }
-    }
-
-    if (!base64Image) {
-        console.warn("Image generation returned no image data. Proceeding with text only.");
     }
 
     return new Response(JSON.stringify({ 

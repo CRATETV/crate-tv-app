@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     });
     
     const rawText = response.text;
-    if (!rawText) throw new Error("No response from strategic model.");
+    if (!rawText) throw new Error("No response from strategic model (likely blocked or empty).");
 
     const startIdx = rawText.indexOf('{');
     const endIdx = rawText.lastIndexOf('}');

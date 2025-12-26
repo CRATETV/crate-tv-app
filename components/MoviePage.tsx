@@ -1,18 +1,18 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
-import ActorBioModal from './ActorBioModal';
-import Header from './Header';
-import Footer from './Footer';
-import LoadingSpinner from './LoadingSpinner';
-import BackToTopButton from './BackToTopButton';
-import RokuBanner from './RokuBanner';
-import SquarePaymentModal from './SquarePaymentModal';
+import ActorBioModal from './components/ActorBioModal';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import LoadingSpinner from './components/LoadingSpinner';
+import BackToTopButton from './components/BackToTopButton';
+import RokuBanner from './components/RokuBanner';
+import SquarePaymentModal from './components/SquarePaymentModal';
 import { isMovieReleased } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
-import PauseOverlay from './PauseOverlay';
-import MovieDetailsModal from './MovieDetailsModal';
-import DirectorCreditsModal from './DirectorCreditsModal';
+import PauseOverlay from './components/PauseOverlay';
+import MovieDetailsModal from './components/MovieDetailsModal';
+import DirectorCreditsModal from './components/DirectorCreditsModal';
 
 interface MoviePageProps {
   movieKey: string;
@@ -20,18 +20,28 @@ interface MoviePageProps {
 
 type PlayerMode = 'poster' | 'full';
 
-const getVimeoEmbedUrl = (url: string): string | null => {
+const getEmbedUrl = (url: string): string | null => {
     if (!url) return null;
+    
+    // Vimeo Detection
     const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
-    const match = url.match(vimeoRegex);
-    if (match && match[1]) {
-        return `https://player.vimeo.com/video/${match[1]}?autoplay=1&api=1&color=ff0000&title=0&byline=0&portrait=0`;
+    const vimeoMatch = url.match(vimeoRegex);
+    if (vimeoMatch && vimeoMatch[1]) {
+        return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&color=ff0000&title=0&byline=0&portrait=0`;
     }
-    const eventRegex = /vimeo\.com\/event\/(\d+)/;
-    const eventMatch = url.match(eventRegex);
-    if (eventMatch && eventMatch[1]) {
-        return `https://player.vimeo.com/event/${eventMatch[1]}/embed?autoplay=1&api=1&color=ff0000&title=0&byline=0&portrait=0`;
+    const vimeoEventRegex = /vimeo\.com\/event\/(\d+)/;
+    const vimeoEventMatch = url.match(vimeoEventRegex);
+    if (vimeoEventMatch && vimeoEventMatch[1]) {
+        return `https://player.vimeo.com/event/${vimeoEventMatch[1]}/embed?autoplay=1&api=1&color=ff0000&title=0&byline=0&portrait=0`;
     }
+
+    // YouTube Detection
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const ytMatch = url.match(youtubeRegex);
+    if (ytMatch && ytMatch[1]) {
+        return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1`;
+    }
+
     return null;
 };
 
@@ -124,14 +134,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
   const isOnWatchlist = useMemo(() => watchlist.includes(movieKey), [watchlist, movieKey]);
-  const vimeoEmbedUrl = useMemo(() => movie ? getVimeoEmbedUrl(movie.fullMovie) : null, [movie]);
+  const embedUrl = useMemo(() => movie ? getEmbedUrl(movie.fullMovie) : null, [movie]);
 
-  // LICENSING Logic: Prevent donations for Vintage Visions and Restricted Licensed content
+  // LICENSING Logic: Prevent donations for Vintage Visions, Copyrighted Music, or manual override.
   const canCollectDonations = useMemo(() => {
     if (!movie) return false;
     const isVintage = allCategories.publicDomainIndie?.movieKeys?.includes(movie.key);
-    const isLicensedTitle = movie.title?.toLowerCase().includes('last christmas');
-    return !isVintage && !movie.hasCopyrightMusic && !isLicensedTitle;
+    const isManualDisabled = movie.isSupportEnabled === false;
+    
+    return !isVintage && !movie.hasCopyrightMusic && !isManualDisabled;
   }, [movie, allCategories]);
 
   const handleGoHome = useCallback(() => {
@@ -171,15 +182,18 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-        if (!vimeoEmbedUrl) return;
+        if (!embedUrl) return;
         try {
             const data = JSON.parse(event.data);
-            if (data.event === 'finish' || data.method === 'finish') handleMovieEnd();
+            // Support both YouTube and Vimeo end events
+            if (data.event === 'finish' || data.method === 'finish' || data.event === 'onStateChange' && data.info === 0) {
+                handleMovieEnd();
+            }
         } catch (e) {}
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [vimeoEmbedUrl, handleMovieEnd]);
+  }, [embedUrl, handleMovieEnd]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -196,8 +210,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   }, [movieKey, movie]);
 
   useEffect(() => {
-      if (playerMode === 'full' && videoRef.current && !vimeoEmbedUrl) playContent();
-  }, [playerMode, vimeoEmbedUrl, playContent]);
+      if (playerMode === 'full' && videoRef.current && !embedUrl) playContent();
+  }, [playerMode, embedUrl, playContent]);
 
   if (isDataLoading || !movie) return <LoadingSpinner />;
 
@@ -212,8 +226,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     {showPostPlay && <PostPlayOverlay movies={recommendedMovies} onSelect={handlePostPlaySelect} onHome={handleGoHome} />}
                     {playerMode === 'full' && (
                         <>
-                            {vimeoEmbedUrl ? (
-                                <iframe src={vimeoEmbedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={movie.title}></iframe>
+                            {embedUrl ? (
+                                <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={movie.title}></iframe>
                             ) : (
                                 <>
                                     <video ref={videoRef} src={movie.fullMovie} className="w-full h-full" controls={!isPaused} playsInline autoPlay onContextMenu={(e) => e.preventDefault()} controlsList="nodownload" onEnded={handleMovieEnd} onPause={() => setIsPaused(true)} onPlay={() => setIsPaused(false)} />

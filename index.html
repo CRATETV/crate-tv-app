@@ -46,6 +46,23 @@
         letter-spacing: 0.15em;
         text-align: center;
       }
+
+      /* Premium Look: Hide all scrollbars while maintaining scroll functionality */
+      ::-webkit-scrollbar {
+        display: none;
+        width: 0 !important;
+      }
+      * {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
     </style>
     <script type="importmap">
 {

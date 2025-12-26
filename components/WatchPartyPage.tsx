@@ -14,18 +14,28 @@ interface WatchPartyPageProps {
 
 const REACTION_TYPES = ['🔥', '😲', '❤️', '👏', '😢'] as const;
 
-const getVimeoEmbedUrl = (url: string): string | null => {
+const getEmbedUrl = (url: string): string | null => {
     if (!url) return null;
+    
+    // Vimeo Detection
     const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
-    const match = url.match(vimeoRegex);
-    if (match && match[1]) {
-        return `https://player.vimeo.com/video/${match[1]}?autoplay=1&color=ff0000&title=0&byline=0&portrait=0`;
+    const vimeoMatch = url.match(vimeoRegex);
+    if (vimeoMatch && vimeoMatch[1]) {
+        return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&color=ff0000&title=0&byline=0&portrait=0`;
     }
-    const eventRegex = /vimeo\.com\/event\/(\d+)/;
-    const eventMatch = url.match(eventRegex);
-    if (eventMatch && eventMatch[1]) {
-        return `https://player.vimeo.com/event/${eventMatch[1]}/embed?autoplay=1&api=1&color=ff0000&title=0&byline=0&portrait=0`;
+    const vimeoEventRegex = /vimeo\.com\/event\/(\d+)/;
+    const vimeoEventMatch = url.match(vimeoEventRegex);
+    if (vimeoEventMatch && vimeoEventMatch[1]) {
+        return `https://player.vimeo.com/event/${vimeoEventMatch[1]}/embed?autoplay=1&api=1&color=ff0000&title=0&byline=0&portrait=0`;
     }
+
+    // YouTube Detection
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const ytMatch = url.match(youtubeRegex);
+    if (ytMatch && ytMatch[1]) {
+        return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1`;
+    }
+
     return null;
 };
 
@@ -54,7 +64,7 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newMessage.trim() || !user) return;
-        setIsSending(true);
+        setIsSending(false);
         try {
             await fetch('/api/send-chat-message', {
                 method: 'POST',
@@ -130,7 +140,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     const hasAccess = !movie?.isWatchPartyPaid || unlockedWatchPartyKeys.has(movieKey);
-    const vimeoEmbedUrl = useMemo(() => movie ? getVimeoEmbedUrl(movie.fullMovie) : null, [movie]);
+    const embedUrl = useMemo(() => movie ? getEmbedUrl(movie.fullMovie) : null, [movie]);
     const isLiveStream = useMemo(() => {
         return movie?.fullMovie?.toLowerCase().endsWith('.m3u8') || movie?.fullMovie?.includes('.m3u8?');
     }, [movie?.fullMovie]);
@@ -148,16 +158,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [movieKey]);
     
     useEffect(() => {
-        if (!hasAccess || vimeoEmbedUrl) return; 
+        if (!hasAccess || embedUrl) return; 
         const video = videoRef.current;
         if (!video) return;
         const handleCanPlay = () => setIsVideoReady(true);
         video.addEventListener('canplay', handleCanPlay);
         return () => { if (video) video.removeEventListener('canplay', handleCanPlay); };
-    }, [hasAccess, vimeoEmbedUrl]);
+    }, [hasAccess, embedUrl]);
 
     useEffect(() => {
-        if (!hasAccess || vimeoEmbedUrl) return; 
+        if (!hasAccess || embedUrl) return; 
         const video = videoRef.current;
         if (!video || !partyState) return;
 
@@ -179,7 +189,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (Math.abs(video.currentTime - partyState.currentTime) > 5) {
             video.currentTime = partyState.currentTime;
         }
-    }, [partyState, hasAccess, isLiveStream, vimeoEmbedUrl]);
+    }, [partyState, hasAccess, isLiveStream, embedUrl]);
 
     const logSentiment = async (type: string) => {
         if (!videoRef.current) return;
@@ -259,9 +269,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
                     {/* Media Player: Fixed Aspect Ratio */}
                     <div className="flex-none w-full aspect-video bg-black relative shadow-2xl z-30 overflow-hidden">
-                        {vimeoEmbedUrl ? (
+                        {embedUrl ? (
                             <iframe
-                                src={vimeoEmbedUrl}
+                                src={embedUrl}
                                 className="w-full h-full"
                                 frameBorder="0"
                                 allow="autoplay; fullscreen; picture-in-picture"

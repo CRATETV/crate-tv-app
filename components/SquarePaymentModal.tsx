@@ -58,14 +58,12 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                 if (!applicationId || !locationId) throw new Error('Payment configuration is incomplete.');
 
                 const payments = Square.payments(applicationId, locationId);
-                // FIX: Square SDK 'style' only supports specific keys. backgroundColor is not one of them.
-                // We style the container div instead for the visual background.
                 const card = await payments.card({
                     style: {
                         'input': {
                             'color': '#ffffff',
                             'fontSize': '16px',
-                            'fontFamily': 'Inter, sans-serif'
+                            'fontFamily': 'sans-serif'
                         },
                         'input.is-focus': {
                             'color': '#ffffff'
@@ -180,7 +178,6 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                         </div>
                     )}
 
-                    {/* Styled Container for Square Card Input */}
                     <div id="card-container" className="min-h-[100px] bg-black/40 rounded-xl p-4 border border-white/10 focus-within:border-red-500/50 transition-colors"></div>
 
                     {errorMessage && <p className="text-red-500 text-xs mt-4 font-bold uppercase tracking-widest">{errorMessage}</p>}

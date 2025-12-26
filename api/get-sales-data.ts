@@ -3,6 +3,8 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { AnalyticsData, Movie, PayoutRequest, AdminPayout, BillSavingsTransaction, User } from '../types.js';
 
+const SYSTEM_RESET_DATE = '2025-05-23T00:00:00Z'; // The "New System" start date
+
 interface SquarePayment {
   id: string;
   created_at: string;
@@ -44,7 +46,8 @@ async function fetchAllSquarePayments(accessToken: string, locationId: string | 
 
     do {
         const url = new URL(`${squareUrlBase}/v2/payments`);
-        url.searchParams.append('begin_time', '2020-01-01T00:00:00Z');
+        // Filter Square payments to only show those from the new system launch date
+        url.searchParams.append('begin_time', SYSTEM_RESET_DATE);
         if (locationId) url.searchParams.append('location_id', locationId);
         if (cursor) url.searchParams.append('cursor', cursor);
 
@@ -70,25 +73,21 @@ export async function POST(request: Request) {
     const errors: { square: string | null, firebase: string | null, critical: string | null } = { square: null, firebase: null, critical: null };
     try {
         const { password } = await request.json();
-        // Authentication...
-        const festivalAdminPassword = 'PWFF1218';
-        if (password !== process.env.ADMIN_PASSWORD && password !== process.env.ADMIN_MASTER_PASSWORD && password !== festivalAdminPassword) {
+        
+        if (password !== process.env.ADMIN_PASSWORD && password !== process.env.ADMIN_MASTER_PASSWORD) {
             throw new Error('Unauthorized');
         }
 
-        // --- Firebase Init ---
         const firebaseError = getInitializationError();
         if (firebaseError) errors.firebase = firebaseError;
         const db = getAdminDb();
         const auth = getAdminAuth();
 
-        // --- Square Init ---
         const isProduction = process.env.VERCEL_ENV === 'production';
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
         const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
         if (!accessToken) errors.square = 'Square Access Token is not configured.';
 
-        // --- Helper to safely list auth users ---
         const safeListAllAuthUsers = async () => {
             if (!auth) return [];
             try {
@@ -102,9 +101,11 @@ export async function POST(request: Request) {
                 return allUsers;
             } catch (e) {
                 console.warn("Failed to list all auth users:", e);
-                return []; // Fallback to empty array, we will use Firestore count later
+                return [];
             }
         };
+
+        const resetTimestamp = new Date(SYSTEM_RESET_DATE);
 
         // --- Parallel Data Fetching ---
         const squarePromise = accessToken ? fetchAllSquarePayments(accessToken, locationId) : Promise.resolve([]);
@@ -112,8 +113,10 @@ export async function POST(request: Request) {
         const viewsPromise = db ? db.collection('view_counts').get() : Promise.resolve(null);
         const locationsPromise = db ? db.collection('view_locations').get() : Promise.resolve(null);
         const usersPromise = db ? db.collection('users').get() : Promise.resolve(null);
-        const adminPayoutsPromise = db ? db.collection('admin_payouts').orderBy('payoutDate', 'desc').get() : Promise.resolve(null);
-        const billSavingsPromise = db ? db.collection('bill_savings_transactions').orderBy('transactionDate', 'desc').get() : Promise.resolve(null);
+        
+        // Filter Firestore records by the System Reset Date
+        const adminPayoutsPromise = db ? db.collection('admin_payouts').where('payoutDate', '>=', resetTimestamp).orderBy('payoutDate', 'desc').get() : Promise.resolve(null);
+        const billSavingsPromise = db ? db.collection('bill_savings_transactions').where('transactionDate', '>=', resetTimestamp).orderBy('transactionDate', 'desc').get() : Promise.resolve(null);
         const authUsersPromise = safeListAllAuthUsers();
 
         const [
@@ -127,12 +130,10 @@ export async function POST(request: Request) {
             allAuthUsers
         ] = await Promise.all([squarePromise.catch(e => { errors.square = e.message; return []; }), moviesPromise, viewsPromise, locationsPromise, usersPromise, adminPayoutsPromise, billSavingsPromise, authUsersPromise]);
 
-        // --- Process Data ---
         const allMovies: Record<string, Movie> = {};
         moviesSnapshot?.forEach(doc => { allMovies[doc.id] = doc.data() as Movie; });
 
         const viewCounts: Record<string, number> = {};
-        // FIX: Ensure count from Firestore is treated as a number.
         viewsSnapshot?.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count) || 0; });
         
         const movieLikes: Record<string, number> = {};
@@ -150,12 +151,8 @@ export async function POST(request: Request) {
             const userData = doc.data() as User;
             if (userData.email) {
                 allUsersList.push({ email: userData.email });
-                if (userData.isActor) {
-                    actorUsers.push({ email: userData.email });
-                }
-                if (userData.isFilmmaker) {
-                    filmmakerUsers.push({ email: userData.email });
-                }
+                if (userData.isActor) actorUsers.push({ email: userData.email });
+                if (userData.isFilmmaker) filmmakerUsers.push({ email: userData.email });
                 if (userData.hasFestivalAllAccess || (userData.unlockedBlockIds && userData.unlockedBlockIds.length > 0)) {
                     festivalUsers.push(userData.email);
                 }
@@ -167,8 +164,6 @@ export async function POST(request: Request) {
             }
         });
 
-        // Calculate Total Users: Use Auth list if available (more accurate), otherwise fallback to Firestore docs
-        // The filtered list of auth users (those with emails)
         const validAuthUsers = allAuthUsers.filter(u => u.email);
         const totalUsers = validAuthUsers.length > 0 ? validAuthUsers.length : allUsersList.length;
 
@@ -183,14 +178,10 @@ export async function POST(request: Request) {
         billSavingsSnapshot?.forEach(doc => {
             const transaction = { id: doc.id, ...doc.data() } as BillSavingsTransaction;
             billSavingsTransactions.push(transaction);
-            if (transaction.type === 'deposit') {
-                billSavingsPotTotal += transaction.amount;
-            } else if (transaction.type === 'withdrawal') {
-                billSavingsPotTotal -= transaction.amount;
-            }
+            if (transaction.type === 'deposit') billSavingsPotTotal += transaction.amount;
+            else if (transaction.type === 'withdrawal') billSavingsPotTotal -= transaction.amount;
         });
 
-        // --- Financial Calculations ---
         let totalDonations = 0;
         const donationsByFilm: Record<string, number> = {};
         let totalSales = 0;
@@ -217,25 +208,19 @@ export async function POST(request: Request) {
                 salesByBlock[details.blockTitle].units++;
                 salesByBlock[details.blockTitle].revenue += p.amount_money.amount;
             } else if (details.type === 'billSavingsDeposit') {
-                // Deposits from card are tracked in their own collection,
-                // but we should add them to the platform's revenue total.
                 totalSales += p.amount_money.amount;
             }
         });
 
-        // FIX: Ensure view counts are treated as numbers in the reduction to prevent type errors.
         const totalAdRevenue = (Object.values(viewCounts).reduce((s, c) => s + Number(c || 0), 0) / 1000) * AD_CPM_IN_CENTS;
-        // FIX: Cast revenue properties to Number to avoid potential type mismatches.
         const totalFestivalRevenue = Number(festivalPassSales.revenue || 0) + Number(festivalBlockSales.revenue || 0);
         const totalRevenue = totalDonations + totalSales + totalMerchRevenue + totalAdRevenue + totalFestivalRevenue;
 
-        // Calculate Crate TV's total share
         const crateTvDonationShare = totalDonations * DONATION_PLATFORM_CUT;
         const crateTvAdShare = totalAdRevenue * (1 - AD_REVENUE_FILMMAKER_SHARE);
         const crateTvMerchCut = totalMerchRevenue * MERCH_PLATFORM_CUT;
         const crateTvFestivalShare = totalFestivalRevenue * FESTIVAL_PLATFORM_CUT;
         const totalCrateTvRevenue = crateTvDonationShare + crateTvAdShare + crateTvMerchCut + crateTvFestivalShare + totalSales;
-
 
         const filmmakerPayouts = Object.values(allMovies).map(movie => {
             const filmDonations = donationsByFilm[movie.title] || 0;

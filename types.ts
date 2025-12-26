@@ -23,6 +23,7 @@ export interface Movie {
   releaseDateTime?: string;
   durationInMinutes?: number;
   hasCopyrightMusic?: boolean;
+  isSupportEnabled?: boolean;
   isWatchPartyEnabled?: boolean;
   watchPartyStartTime?: string;
   isWatchPartyPaid?: boolean;

@@ -1,6 +1,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, PayoutRequest, User, SentimentPoint } from '../types.js';
 
+const SYSTEM_RESET_DATE = '2025-05-23T00:00:00Z';
 const AD_CPM_IN_CENTS = 500;
 const AD_REVENUE_FILMMAKER_SHARE = 0.50;
 const DONATION_PLATFORM_CUT = 0.30;
@@ -8,10 +9,6 @@ const DONATION_PLATFORM_CUT = 0.30;
 export async function POST(request: Request) {
     try {
         const { directorName, password } = await request.json();
-
-        const primaryAdminPassword = process.env.ADMIN_PASSWORD;
-        const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
-        let isAuthenticated = !!password && (password === primaryAdminPassword || password === masterPassword);
         
         if (!directorName) return new Response(JSON.stringify({ error: 'Name required' }), { status: 400 });
         
@@ -20,10 +17,22 @@ export async function POST(request: Request) {
         const db = getAdminDb();
         if (!db) throw new Error("DB fail");
 
-        const donationsSnapshot = await db.collection('donations').where('directorName', '==', directorName).get();
+        const resetTimestamp = new Date(SYSTEM_RESET_DATE);
+
+        // Filter donations and payouts by reset date
+        const donationsSnapshot = await db.collection('donations')
+            .where('directorName', '==', directorName)
+            .where('timestamp', '>=', resetTimestamp)
+            .get();
+            
+        const payoutsSnapshot = await db.collection('payout_requests')
+            .where('directorName', '==', directorName)
+            .where('status', '==', 'completed')
+            .where('completionDate', '>=', resetTimestamp)
+            .get();
+
         const moviesSnapshot = await db.collection('movies').get();
         const viewsSnapshot = await db.collection('view_counts').get();
-        const payoutsSnapshot = await db.collection('payout_requests').where('directorName', '==', directorName).where('status', '==', 'completed').get();
         const usersSnapshot = await db.collection('users').get();
         
         const allMovies: Record<string, Movie> = {};
@@ -55,7 +64,6 @@ export async function POST(request: Request) {
             const grossDonations = donationsByFilm[film.key] || 0;
             const grossAdRevenue = ((viewCounts[film.key] || 0) / 1000) * AD_CPM_IN_CENTS;
             
-            // FETCH SENTIMENT DATA
             const sentimentSnap = await db.collection('movies').doc(film.key).collection('sentiment').orderBy('timestamp', 'asc').get();
             const sentimentData: SentimentPoint[] = sentimentSnap.docs.map(d => d.data() as SentimentPoint);
 
@@ -81,7 +89,7 @@ export async function POST(request: Request) {
             totalDonations: filmPerformances.reduce((s, f) => s + f.netDonationEarnings, 0),
             totalAdRevenue: filmPerformances.reduce((s, f) => s + f.netAdEarnings, 0),
             totalPaidOut,
-            balance: totalEarnings - totalPaidOut,
+            balance: Math.max(0, totalEarnings - totalPaidOut), // Starting at zero for new system
             films: filmPerformances.sort((a,b) => b.views - a.views),
         };
 

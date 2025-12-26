@@ -90,12 +90,13 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const synopsisIsLong = synopsisText.replace(/<[^>]+>/g, '').length > 200;
 
   // LICENSING RESTRICTIONS:
-  // No donations for Vintage Visions (publicDomainIndie) or Licensed content (hasCopyrightMusic or specific titles)
+  // No donations for Vintage Visions (publicDomainIndie), Copyrighted Music, or when manually disabled.
   const canCollectDonations = useMemo(() => {
     if (!movie) return false;
     const isVintage = allCategories.publicDomainIndie?.movieKeys?.includes(movie.key);
-    const isLicensedTitle = movie.title?.toLowerCase().includes('last christmas');
-    return !isVintage && !movie.hasCopyrightMusic && !isLicensedTitle;
+    const isManualDisabled = movie.isSupportEnabled === false;
+    
+    return !isVintage && !movie.hasCopyrightMusic && !isManualDisabled;
   }, [movie, allCategories]);
 
   useEffect(() => {
