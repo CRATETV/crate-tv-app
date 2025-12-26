@@ -54,15 +54,24 @@ export async function POST(request: Request) {
     const socialCopy = JSON.parse(textResponse.text || '{}');
 
     // Generate Cinematic Image
+    // Using 'as any' to satisfy the TypeScript compiler for properties like imageConfig 
+    // which may not be present in the local definition of GenerateContentConfig
     const imageResponse = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: [{ text: `A cinematic promotional movie still for "${title}". No text. 16:9.` }],
-      config: { imageConfig: { aspectRatio: "16:9" } }
+      config: { imageConfig: { aspectRatio: "16:9" } } as any
     });
 
     let base64Image = '';
-    for (const part of imageResponse.candidates[0].content.parts) {
-      if (part.inlineData) { base64Image = part.inlineData.data; break; }
+    // Safety check using optional chaining to resolve "possibly undefined" errors
+    const parts = imageResponse.candidates?.[0]?.content?.parts;
+    if (parts) {
+      for (const part of parts) {
+        if (part.inlineData?.data) { 
+          base64Image = part.inlineData.data; 
+          break; 
+        }
+      }
     }
 
     return new Response(JSON.stringify({ 
