@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie, FilmBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
-declare const Square: any; // Allow use of Square global from the SDK script
+declare const Square: any;
 
 interface SquarePaymentModalProps {
     movie?: Movie;
@@ -57,23 +57,27 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
 
                 if (!applicationId || !locationId) throw new Error('Payment configuration is incomplete.');
 
-                // Modern Web Payments SDK Initialization
                 const payments = Square.payments(applicationId, locationId);
+                // FIX: Square SDK 'style' only supports specific keys. backgroundColor is not one of them.
+                // We style the container div instead.
                 const card = await payments.card({
                     style: {
-                        '.input-container': {
-                            backgroundColor: '#111',
-                            borderColor: '#333',
-                            borderRadius: '8px',
-                        },
-                        '.input-container.is-focus': {
-                            borderColor: '#ef4444'
-                        },
-                        '.input-container.is-error': {
-                            borderColor: '#ff0000'
-                        },
                         'input': {
-                            color: '#fff'
+                            'color': '#ffffff',
+                            'fontSize': '16px',
+                            'fontFamily': 'Inter, sans-serif'
+                        },
+                        'input.is-focus': {
+                            'color': '#ffffff'
+                        },
+                        'input.is-error': {
+                            'color': '#ff4444'
+                        },
+                        '.message-text': {
+                            'color': '#9ca3af'
+                        },
+                        '.message-icon': {
+                            'color': '#ef4444'
                         }
                     }
                 });
@@ -99,7 +103,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                 retryCount++;
                 setTimeout(pollForSquare, 200);
             } else {
-                setErrorMessage('Square payment library failed to load. Please check your connection.');
+                setErrorMessage('Square library failed to load.');
                 setStatus('error');
             }
         };
@@ -123,39 +127,29 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
 
     const handlePayment = async () => {
         if (!cardInstance.current) return;
-
         setStatus('processing');
         setErrorMessage('');
-
         try {
             const result = await cardInstance.current.tokenize();
             if (result.status !== 'OK') {
                 throw new Error(result.errors?.[0]?.message || 'Failed to process card.');
             }
-
-            const paymentData = {
-                sourceId: result.token,
-                paymentType,
-                amount: paymentDetails.amount,
-                itemId: paymentType === 'block' ? block?.id : movie?.key,
-                movieTitle: movie?.title,
-                directorName: movie?.director,
-                email,
-            };
-
             const response = await fetch('/api/process-square-payment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(paymentData),
+                body: JSON.stringify({
+                    sourceId: result.token,
+                    paymentType,
+                    amount: paymentDetails.amount,
+                    itemId: paymentType === 'block' ? block?.id : movie?.key,
+                    movieTitle: movie?.title,
+                    directorName: movie?.director,
+                    email,
+                }),
             });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Payment failed.');
-            }
-
+            if (!response.ok) throw new Error((await response.json()).error || 'Payment failed.');
             setStatus('success');
-            onPaymentSuccess({ paymentType, itemId: paymentData.itemId, amount: paymentDetails.amount, email });
+            onPaymentSuccess({ paymentType, itemId: paymentType === 'block' ? block?.id : movie?.key, amount: paymentDetails.amount, email });
         } catch (error) {
             setErrorMessage(error instanceof Error ? error.message : 'An unknown error occurred.');
             setStatus('error');
@@ -171,24 +165,23 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                     <p className="text-gray-400 mb-6 text-sm">{paymentDetails.description}</p>
                     
                     {(paymentType === 'donation' || paymentType === 'billSavingsDeposit') && (
-                        <div className="space-y-4 mb-6">
-                             <div>
-                                <label htmlFor="customAmount" className="form-label">Amount (USD)</label>
-                                <input
-                                    type="number"
-                                    id="customAmount"
-                                    value={customAmount}
-                                    onChange={e => setCustomAmount(e.target.value)}
-                                    className="form-input"
-                                    min="1.00"
-                                    step="1.00"
-                                    required
-                                />
-                            </div>
+                        <div className="mb-6">
+                            <label htmlFor="customAmount" className="form-label">Amount (USD)</label>
+                            <input
+                                type="number"
+                                id="customAmount"
+                                value={customAmount}
+                                onChange={e => setCustomAmount(e.target.value)}
+                                className="form-input"
+                                min="1.00"
+                                step="1.00"
+                                required
+                            />
                         </div>
                     )}
 
-                    <div id="card-container" ref={cardRef} className="min-h-[100px] bg-black/20 rounded-xl p-2 border border-white/5"></div>
+                    {/* Styled Container for Square Card Input */}
+                    <div id="card-container" className="min-h-[100px] bg-black/40 rounded-xl p-4 border border-white/10 focus-within:border-red-500/50 transition-colors"></div>
 
                     {errorMessage && <p className="text-red-500 text-xs mt-4 font-bold uppercase tracking-widest">{errorMessage}</p>}
                 </div>

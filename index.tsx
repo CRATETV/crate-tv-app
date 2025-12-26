@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -131,10 +130,11 @@ const AppRouter: React.FC = () => {
     // Unified Portal Route
     case '/portal': {
       if (!authInitialized || (user && !claimsLoaded)) return <LoadingSpinner />;
-      if (user && (user.isActor || user.isFilmmaker)) {
+      // REDIRECT verified roles to the private dashboard
+      if (user && (user.isActor || user.isFilmmaker || user.isIndustryPro)) {
         return <CreatorDashboardPage />;
       }
-      return <CreatorPortalPage />; // Public-facing portal page
+      return <CreatorPortalPage />; // Public-facing portal page for everyone else
     }
 
     // Public Routes

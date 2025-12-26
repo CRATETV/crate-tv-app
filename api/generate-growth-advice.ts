@@ -5,7 +5,6 @@ export async function POST(request: Request) {
   try {
     const { password, metrics } = (await request.json()) as { password: string, metrics: GrowthAnalyticsData['keyMetrics'] };
 
-    // --- Authentication ---
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
     if (password !== primaryAdminPassword && password !== masterPassword) {
@@ -31,9 +30,7 @@ export async function POST(request: Request) {
       - Top Market: ${metrics.topCountries[0]?.country || 'N/A'}
       - Flagship Film: ${metrics.mostViewedFilm.title} (${metrics.mostViewedFilm.views} views)
 
-      Context: Crate TV is built on the "Creator-Loop" model. Filmmakers bring their own tribes; we provide the stage. We want to scale to 10k users without spending $1M on traditional ads.
-
-      Task: Provide exactly 3 concise, actionable, bullet-pointed strategies for each of the following keys:
+      Task: Provide exactly 3 concise, actionable, bullet-pointed strategies for each:
       1. User Growth (Viral creator-led acquisition).
       2. Revenue (Monetization beyond tips).
       3. Community Engagement (The 'Watercooler' effect).
@@ -44,39 +41,29 @@ export async function POST(request: Request) {
 
     const response = await ai.models.generateContent({
         model: 'gemini-3-pro-preview',
-        contents: prompt,
+        contents: [{ parts: [{ text: prompt }] }],
         config: {
             responseMimeType: "application/json",
             responseSchema: {
                 type: Type.OBJECT,
                 properties: {
-                    userGrowth: {
-                        type: Type.ARRAY,
-                        items: { type: Type.STRING },
-                        description: "3 strategies to turn filmmakers into marketing engines."
-                    },
-                    revenueGrowth: {
-                        type: Type.ARRAY,
-                        items: { type: Type.STRING },
-                        description: "3 creative monetization ideas."
-                    },
-                    communityEngagement: {
-                        type: Type.ARRAY,
-                        items: { type: Type.STRING },
-                        description: "3 ways to build a cult-like community around these films."
-                    },
-                    advertisingSuggestions: {
-                        type: Type.ARRAY,
-                        items: { type: Type.STRING },
-                        description: "3 specific, tactical, low-cost ad experiments."
-                    }
+                    userGrowth: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    revenueGrowth: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    communityEngagement: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    advertisingSuggestions: { type: Type.ARRAY, items: { type: Type.STRING } }
                 },
                 required: ["userGrowth", "revenueGrowth", "communityEngagement", "advertisingSuggestions"]
             }
         }
     });
     
-    const advice = JSON.parse(response.text || '{}');
+    const rawText = response.text;
+    if (!rawText) throw new Error("No response from strategic model.");
+
+    const startIdx = rawText.indexOf('{');
+    const endIdx = rawText.lastIndexOf('}');
+    if (startIdx === -1 || endIdx === -1) throw new Error("Strategic advice format was invalid.");
+    const advice = JSON.parse(rawText.substring(startIdx, endIdx + 1));
 
     return new Response(JSON.stringify({ advice }), {
       status: 200,

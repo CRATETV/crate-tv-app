@@ -1,13 +1,9 @@
 import { GoogleGenAI } from '@google/genai';
 
-// This is a Vercel Serverless Function
-// Path: /api/generate-monologue
-
 export async function POST(request: Request) {
   try {
     const { genre, emotion, password } = await request.json();
 
-    // Simple password check to protect the endpoint
     if (password !== 'cratebio') {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
@@ -35,13 +31,11 @@ export async function POST(request: Request) {
             -   A character name (e.g., "CHARACTER: Alex").
             -   A brief, one-sentence context for the scene (e.g., "CONTEXT: Alex is speaking to their estranged father for the first time in ten years.").
             -   The monologue text itself.
-        4.  **Content:** The monologue should be compelling, emotionally resonant, and give an actor something interesting to work with. It should feel like a real scene from a play or film. Do not include any introductory or concluding text like "Here is your monologue:".
     `;
 
-    // FIX: Updated model to gemini-3-flash-preview for basic text tasks as per GenAI guidelines.
     const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: prompt,
+        contents: [{ parts: [{ text: prompt }] }],
     });
     
     const monologue = response.text || "Could not generate a monologue at this time. Please try again.";

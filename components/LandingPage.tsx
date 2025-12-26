@@ -113,7 +113,7 @@ const LandingPage: React.FC = () => {
                 
                 <main className="flex-grow">
                     {/* Hero Cinematic Backdrop */}
-                    <div className="relative w-full h-[60vh] md:h-[56.25vw] max-h-[95vh] min-h-[500px] md:min-h-[650px]">
+                    <div className="relative w-full h-[70vh] md:h-[56.25vw] max-h-[95vh] min-h-[600px] md:min-h-[650px]">
                         {heroMovies.length > 0 && (
                             <Hero
                                 movies={heroMovies}
@@ -130,16 +130,16 @@ const LandingPage: React.FC = () => {
                             {/* Darkness overlay for text readability */}
                             <div className="absolute inset-0 bg-black/40 pointer-events-none"></div>
                             
-                            <div className="relative z-30 max-w-4xl w-full">
-                                <h2 className="text-4xl md:text-6xl lg:text-7xl font-black mb-6 drop-shadow-[0_5px_15px_rgba(0,0,0,1)] animate-[fadeInHeroContent_0.8s_ease-out] leading-tight">
+                            <div className="relative z-30 max-w-4xl w-full pt-16">
+                                <h2 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black mb-6 drop-shadow-[0_5px_15px_rgba(0,0,0,1)] animate-[fadeInHeroContent_0.8s_ease-out] leading-tight">
                                     Unlimited stories from<br className="hidden md:block"/> independent voices.
                                 </h2>
-                                <p className="text-xl md:text-2xl font-medium mb-12 drop-shadow-[0_2px_8px_rgba(0,0,0,1)] animate-[fadeInHeroContent_1s_ease-out] text-gray-100">
+                                <p className="text-lg md:text-2xl font-medium mb-12 drop-shadow-[0_2px_8px_rgba(0,0,0,1)] animate-[fadeInHeroContent_1s_ease-out] text-gray-100 px-4">
                                     Watch for free. Support the community.
                                 </p>
                                 
-                                <div className="w-full max-w-3xl mx-auto animate-[fadeInHeroContent_1.2s_ease-out]">
-                                    <p className="text-lg md:text-xl mb-6 font-normal drop-shadow-md">
+                                <div className="w-full max-w-3xl mx-auto animate-[fadeInHeroContent_1.2s_ease-out] px-4">
+                                    <p className="text-base md:text-xl mb-6 font-normal drop-shadow-md">
                                         Ready to watch? Join for free and start exploring.
                                     </p>
                                     <form onSubmit={handleGetStarted} className="flex flex-col md:flex-row gap-3 items-start justify-center">

@@ -3,7 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
+const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 const adminEmail = 'cratetiv@gmail.com';
 
 const getIp = (req: Request) => {
@@ -55,18 +55,29 @@ export async function POST(request: Request) {
         });
 
         // Send an email notification to the admin
-        const subject = `New Film Submission: "${filmTitle}"`;
+        const subject = `🎬 New Film Submission: "${filmTitle}"`;
         const emailHtml = `
-            <div style="font-family: sans-serif; line-height: 1.6;">
-                <h1>New Film Submission in Pipeline</h1>
-                <p>A new film has been submitted and is ready for review in the Admin Dashboard.</p>
-                <ul>
-                    <li><strong>Film Title:</strong> ${filmTitle}</li>
-                    <li><strong>Director:</strong> ${directorName}</li>
-                    <li><strong>Submitter Email:</strong> ${email ? `<a href="mailto:${email}">${email}</a>` : 'Not provided (manual entry)'}</li>
-                    <li><strong>Music Rights:</strong> Confirmed</li>
-                </ul>
-                <p>You can review, approve, and add this film to a category from the "Submission Pipeline" tab in the admin panel.</p>
+            <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+                <h1 style="color: #ef4444; border-bottom: 2px solid #ef4444; padding-bottom: 10px;">New Submission in Pipeline</h1>
+                <p>A new film has been submitted by a creator and is ready for your review in the <strong>Admin Dashboard</strong>.</p>
+                
+                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>Film Title:</strong> ${filmTitle}</p>
+                    <p style="margin: 5px 0;"><strong>Director:</strong> ${directorName}</p>
+                    <p style="margin: 5px 0;"><strong>Submitter Email:</strong> ${email ? `<a href="mailto:${email}" style="color: #ef4444;">${email}</a>` : 'Not provided'}</p>
+                    <p style="margin: 5px 0;"><strong>Music Rights:</strong> ✅ Confirmed</p>
+                </div>
+
+                <p><strong>Synopsis:</strong></p>
+                <p style="font-style: italic; color: #666;">${synopsis}</p>
+                
+                <div style="margin-top: 30px; text-align: center;">
+                    <a href="https://cratetv.net/admin" style="background-color: #ef4444; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Open Admin Pipeline</a>
+                </div>
+                
+                <p style="font-size: 12px; color: #999; margin-top: 40px; border-top: 1px solid #eee; pt-10;">
+                    This is an automated notification from the Crate TV Infrastructure.
+                </p>
             </div>
         `;
         
@@ -74,14 +85,17 @@ export async function POST(request: Request) {
             from: `Crate TV Submissions <${fromEmail}>`,
             to: [adminEmail],
             subject: subject,
-            html: emailHtml
+            html: emailHtml,
+            reply_to: email || adminEmail
         };
-        
-        if (email) {
-            resendOptions.reply_to = email;
-        }
 
-        await resend.emails.send(resendOptions);
+        const { error: emailError } = await resend.emails.send(resendOptions);
+        
+        if (emailError) {
+            console.error('Resend error:', emailError);
+            // We still return 200 because the pipeline entry WAS created in Firestore.
+            return new Response(JSON.stringify({ success: true, warning: 'Database updated but email notification failed.' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
         
         return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 

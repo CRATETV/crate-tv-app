@@ -45,10 +45,14 @@ const CreatorDashboardPage: React.FC = () => {
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={false} />
             <main className="flex-grow pt-24 pb-24 md:pb-0">
                 <div className="max-w-7xl mx-auto px-4 md:px-12">
-                     <div className="mb-8 flex justify-between items-end">
+                     <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                         <div>
                             <h1 className="text-4xl font-black uppercase tracking-tighter">Command Center</h1>
                             <p className="text-gray-400 mt-2 font-bold uppercase text-[10px] tracking-widest">Active Operator: {user.name}</p>
+                        </div>
+                        <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-full">
+                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-green-500">Secure Professional Session</span>
                         </div>
                     </div>
 

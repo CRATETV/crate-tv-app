@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -70,11 +69,12 @@ const LoginPage: React.FC = () => {
 
     return (
         <div className="min-h-screen text-white flex flex-col bg-black">
-            <header className="absolute top-0 left-0 p-8">
+            {/* Header now part of flex flow to avoid overlap */}
+            <header className="p-8 flex justify-center md:justify-start">
                  <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" alt="Crate TV" className="w-32 h-auto" />
             </header>
             <main className="flex-grow flex items-center justify-center p-4">
-                <div className="w-full max-w-md bg-[#181818] p-8 rounded-lg shadow-2xl border border-gray-800">
+                <div className="w-full max-w-md bg-[#181818] p-8 rounded-lg shadow-2xl border border-gray-800 animate-[fadeIn_0.4s_ease-out]">
                     <h1 className="text-3xl font-bold mb-6">{isLoginView ? 'Sign In' : 'Join for Free'}</h1>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {!isLoginView && (

@@ -1,7 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
 
-// This is a Vercel Serverless Function
-// It will be accessible at the path /api/generate-fact
 export async function POST(request: Request) {
   try {
     const { name, bio } = await request.json();
@@ -21,10 +19,9 @@ export async function POST(request: Request) {
     
     const prompt = `Generate a single, interesting, and little-known fun fact about the actor ${name}. Their provided biography is: "${bio}". The fact should be short, engaging, and suitable for a movie app. Do not start the fact with their name. For example, instead of saying "${name} once did...", say "Once did...". The fact should be a single, concise sentence.`;
 
-    // FIX: Updated model to gemini-3-flash-preview for basic text tasks as per GenAI guidelines.
     const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: prompt,
+        contents: [{ parts: [{ text: prompt }] }],
     });
     
     const fact = response.text || "Could not generate a fun fact at this time.";

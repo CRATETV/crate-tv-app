@@ -237,10 +237,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }
 
     return (
-        <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden">
+        <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden overscroll-none">
             <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full min-h-0">
                 
                 <div className="flex-grow flex flex-col relative h-full min-h-0">
+                    {/* Header: Fixed size */}
                     <div className="flex-none bg-black/90 backdrop-blur-md p-3 flex items-center justify-between border-b border-white/5 pt-[max(0.75rem,env(safe-area-inset-top))]">
                         <button onClick={handleGoHome} className="text-gray-400 hover:text-white transition-colors" aria-label="Back to Home"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
                         <div className="text-center min-w-0 px-4 flex flex-col items-center">
@@ -256,6 +257,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         <div className="w-6"></div>
                     </div>
 
+                    {/* Media Player: Fixed Aspect Ratio */}
                     <div className="flex-none w-full aspect-video bg-black relative shadow-2xl z-30 overflow-hidden">
                         {vimeoEmbedUrl ? (
                             <iframe
@@ -282,27 +284,30 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     autoPlay 
                                     controls={isLiveStream} 
                                 />
-                                {/* REACTION OVERLAY */}
-                                <div className="absolute bottom-4 left-4 z-50 flex gap-3 animate-[fadeIn_1s_ease-out]">
-                                    {REACTION_TYPES.map(emoji => (
-                                        <button 
-                                            key={emoji} 
-                                            onClick={() => logSentiment(emoji)}
-                                            className="text-2xl hover:scale-150 transition-transform active:scale-95 drop-shadow-xl p-2 bg-black/20 rounded-full backdrop-blur-sm"
-                                        >
-                                            {emoji}
-                                        </button>
-                                    ))}
-                                </div>
                             </>
                         )}
                     </div>
+
+                    {/* Reaction Bar: Dedicated row below video on mobile, fixed height */}
+                    <div className="flex-none bg-black/40 border-b border-white/5 py-2 px-4 flex justify-around items-center z-40">
+                         {REACTION_TYPES.map(emoji => (
+                            <button 
+                                key={emoji} 
+                                onClick={() => logSentiment(emoji)}
+                                className="text-xl md:text-2xl hover:scale-125 transition-transform active:scale-95 drop-shadow-xl p-2 rounded-full"
+                            >
+                                {emoji}
+                            </button>
+                        ))}
+                    </div>
                     
-                    <div className="flex-grow flex flex-col md:hidden overflow-hidden bg-[#0a0a0a] min-h-0">
+                    {/* Chat Area: Fills remaining space, stays above keyboard */}
+                    <div className="flex-grow flex flex-col md:hidden overflow-hidden bg-[#0a0a0a] min-h-0 relative">
                         <EmbeddedChat movieKey={movieKey} user={user} />
                     </div>
                 </div>
 
+                {/* Desktop Chat Sidebar */}
                 <div className="hidden md:flex w-80 lg:w-96 flex-shrink-0 h-full border-l border-gray-800 min-h-0 overflow-hidden">
                     <EmbeddedChat movieKey={movieKey} user={user} />
                 </div>

@@ -79,8 +79,8 @@ const Header: React.FC<HeaderProps> = ({
         { path: '/classics', label: 'Vintage' },
     ];
 
-    // Add Creator Hub shortcut for people with creator roles
-    if (user && (user.isActor || user.isFilmmaker)) {
+    // Add Creator Hub shortcut for people with creator or industry roles
+    if (user && (user.isActor || user.isFilmmaker || user.isIndustryPro)) {
         navLinks.push({ path: '/portal', label: 'Creator Hub' });
     }
     
@@ -139,7 +139,7 @@ const Header: React.FC<HeaderProps> = ({
                                         <p className="text-sm font-bold text-white truncate">{user.name || user.email}</p>
                                     </div>
                                     <a href="/account" onClick={(e) => handleNavigate(e, '/account')} className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors">Account</a>
-                                    {(user.isActor || user.isFilmmaker) && <a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors font-bold text-red-500">Creator Hub</a>}
+                                    {(user.isActor || user.isFilmmaker || user.isIndustryPro) && <a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors font-bold text-red-500">Creator Hub</a>}
                                     <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors">Sign out</button>
                                 </div>
                             )}
