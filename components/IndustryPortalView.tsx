@@ -5,7 +5,7 @@ import { Movie } from '../types';
 
 const TerminalStat: React.FC<{ label: string; value: string; color?: string }> = ({ label, value, color = 'text-green-500' }) => (
     <div className="border border-green-900/30 p-4 bg-black">
-        <p className="text-[10px] font-mono text-green-700 uppercase tracking-widest mb-1">>> {label}</p>
+        <p className="text-[10px] font-mono text-green-700 uppercase tracking-widest mb-1">{" >> "} {label}</p>
         <p className={`text-2xl font-mono ${color} tracking-tighter`}>{value}</p>
     </div>
 );
@@ -15,7 +15,7 @@ const IndustryPortalView: React.FC = () => {
     const [stats, setStats] = useState<any[]>([]);
 
     useEffect(() => {
-        // Build mock discovery metrics for the Bento Box
+        // Build mock distribution metrics for the Bento Box
         const filmData = (Object.values(movies) as Movie[]).map(m => ({
             id: m.key,
             title: m.title,
