@@ -76,10 +76,15 @@ export async function POST(request: Request) {
     if (parts) {
       for (const part of parts) {
         if (part.inlineData) { 
-          base64Image = part.inlineData.data; 
+          // FIX: Added nullish coalescing to prevent TS2322 error
+          base64Image = part.inlineData.data ?? ''; 
           break; 
         }
       }
+    }
+
+    if (!base64Image) {
+        console.warn("Image generation returned no image data. Proceeding with text only.");
     }
 
     return new Response(JSON.stringify({ 

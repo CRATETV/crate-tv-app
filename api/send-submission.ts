@@ -3,6 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+// Standardized fromEmail: many Resend accounts can ONLY send from verified domains or onboarding@resend.dev
 const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 const adminEmail = 'cratetiv@gmail.com';
 
@@ -81,25 +82,28 @@ export async function POST(request: Request) {
             </div>
         `;
         
-        const resendOptions: any = {
+        const { error: emailError } = await resend.emails.send({
             from: `Crate TV Submissions <${fromEmail}>`,
             to: [adminEmail],
             subject: subject,
             html: emailHtml,
             reply_to: email || adminEmail
-        };
-
-        const { error: emailError } = await resend.emails.send(resendOptions);
+        });
         
         if (emailError) {
-            console.error('Resend error:', emailError);
-            return new Response(JSON.stringify({ success: true, warning: 'Database updated but email notification failed.' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            console.error('[Resend Error] Submission notification failed:', emailError);
+            // We return 200 because the pipeline entry WAS created in Firestore successfully.
+            return new Response(JSON.stringify({ 
+                success: true, 
+                warning: 'Film added to pipeline, but email notification to admin failed. Please check Resend dashboard configuration.',
+                errorDetails: emailError.message 
+            }), { status: 200, headers: { 'Content-Type': 'application/json' } });
         }
         
         return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
-        console.error('Submission error:', error);
+        console.error('Submission API Error:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
         return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
