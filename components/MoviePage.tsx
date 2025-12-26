@@ -1,18 +1,18 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
-import ActorBioModal from './components/ActorBioModal';
-import Header from './components/Header';
-import Footer from './components/Footer';
-import LoadingSpinner from './components/LoadingSpinner';
-import BackToTopButton from './components/BackToTopButton';
-import RokuBanner from './components/RokuBanner';
-import SquarePaymentModal from './components/SquarePaymentModal';
+import ActorBioModal from './ActorBioModal';
+import Header from './Header';
+import Footer from './Footer';
+import LoadingSpinner from './LoadingSpinner';
+import BackToTopButton from './BackToTopButton';
+import RokuBanner from './RokuBanner';
+import SquarePaymentModal from './SquarePaymentModal';
 import { isMovieReleased } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
-import PauseOverlay from './components/PauseOverlay';
-import MovieDetailsModal from './components/MovieDetailsModal';
-import DirectorCreditsModal from './components/DirectorCreditsModal';
+import PauseOverlay from './PauseOverlay';
+import MovieDetailsModal from './MovieDetailsModal';
+import DirectorCreditsModal from './DirectorCreditsModal';
 
 interface MoviePageProps {
   movieKey: string;
@@ -218,7 +218,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   return (
         <div className="flex flex-col min-h-screen bg-[#050505] text-white">
             {playerMode !== 'full' && (
-                <Header searchQuery={searchQuery} onSearch={setSearchQuery} isScrolled={true} onMobileSearchClick={() => setIsMobileSearchOpen(true)} onSearchSubmit={(q) => { if(q) window.location.href = `/?search=${encodeURIComponent(q)}`; }} />
+                <Header searchQuery={searchQuery} onSearch={setSearchQuery} isScrolled={true} onMobileSearchClick={() => setIsMobileSearchOpen(true)} onSearchSubmit={(q: string) => { if(q) window.location.href = `/?search=${encodeURIComponent(q)}`; }} />
             )}
 
             <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
@@ -341,9 +341,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
               </>
             )}
             {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
-            {selectedDirector && <DirectorCreditsModal directorName={selectedDirector} onClose={() => setSelectedDirector(null)} allMovies={allMovies} onSelectMovie={(m) => { window.history.pushState({}, '', `/movie/${m.key}`); window.dispatchEvent(new Event('pushstate')); window.scrollTo(0, 0); }} />}
+            {selectedDirector && <DirectorCreditsModal directorName={selectedDirector} onClose={() => setSelectedDirector(null)} allMovies={allMovies} onSelectMovie={(m: Movie) => { window.history.pushState({}, '', `/movie/${m.key}`); window.dispatchEvent(new Event('pushstate')); window.scrollTo(0, 0); }} />}
             {isSupportModalOpen && movie && <SquarePaymentModal movie={movie} paymentType="donation" onClose={() => setIsSupportModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} />}
-            {isDetailsModalOpen && movie && <MovieDetailsModal movie={movie} isLiked={isLiked} onToggleLike={toggleLikeMovie} onClose={() => setIsDetailsModalOpen(false)} onSelectActor={setSelectedActor} allMovies={allMovies} allCategories={allCategories} onSelectRecommendedMovie={(m) => { setIsDetailsModalOpen(false); window.history.pushState({}, '', `/movie/${m.key}`); window.dispatchEvent(new Event('pushstate')); }} onSupportMovie={() => { setIsDetailsModalOpen(false); setIsSupportModalOpen(true); }} />}
+            {isDetailsModalOpen && movie && <MovieDetailsModal movie={movie} isLiked={isLiked} onToggleLike={toggleLikeMovie} onClose={() => setIsDetailsModalOpen(false)} onSelectActor={setSelectedActor} allMovies={allMovies} allCategories={allCategories} onSelectRecommendedMovie={(m: Movie) => { setIsDetailsModalOpen(false); window.history.pushState({}, '', `/movie/${m.key}`); window.dispatchEvent(new Event('pushstate')); }} onSupportMovie={() => { setIsDetailsModalOpen(false); setIsSupportModalOpen(true); }} />}
         </div>
     );
 };
