@@ -126,6 +126,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const isOnWatchlist = useMemo(() => watchlist.includes(movieKey), [watchlist, movieKey]);
   const vimeoEmbedUrl = useMemo(() => movie ? getVimeoEmbedUrl(movie.fullMovie) : null, [movie]);
 
+  // LICENSING Logic: Prevent donations for Vintage Visions and Restricted Licensed content
+  const canCollectDonations = useMemo(() => {
+    if (!movie) return false;
+    const isVintage = allCategories.publicDomainIndie?.movieKeys?.includes(movie.key);
+    const isLicensedTitle = movie.title?.toLowerCase().includes('last christmas');
+    return !isVintage && !movie.hasCopyrightMusic && !isLicensedTitle;
+  }, [movie, allCategories]);
+
   const handleGoHome = useCallback(() => {
     window.history.pushState({}, '', '/');
     window.dispatchEvent(new Event('pushstate'));
@@ -139,7 +147,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     window.dispatchEvent(new Event('pushstate'));
   };
 
-  // FIX: Added missing handlePaymentSuccess function to resolve the "Cannot find name 'handlePaymentSuccess'" error.
   const handlePaymentSuccess = useCallback(() => {
     setShowSupportSuccess(true);
     setTimeout(() => setShowSupportSuccess(false), 3000);
@@ -201,7 +208,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             )}
 
             <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
-                <div className="relative w-full aspect-video bg-black secure-video-container group/player">
+                <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container group/player">
                     {showPostPlay && <PostPlayOverlay movies={recommendedMovies} onSelect={handlePostPlaySelect} onHome={handleGoHome} />}
                     {playerMode === 'full' && (
                         <>
@@ -232,7 +239,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                   <div className="max-w-4xl mx-auto p-6 md:p-12 -mt-8 relative z-30">
                       <h1 className="text-4xl md:text-7xl font-black text-white mb-8 tracking-tighter">{movie.title || 'Untitled Film'}</h1>
                       <div className="flex flex-wrap items-center gap-4 mb-10">
-                          <button onClick={() => setIsSupportModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-purple-900/20"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" /></svg>Support Filmmaker</button>
+                          {canCollectDonations && (
+                            <button onClick={() => setIsSupportModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-purple-900/20"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" /></svg>Support Filmmaker</button>
+                          )}
                           <button onClick={() => setIsDetailsModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl border border-white/10"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>More Info</button>
                       </div>
 
@@ -243,7 +252,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                        
                       <RokuBanner />
 
-                      {/* POWERHOUSE TALENT SECTION: Visual Actor Cards */}
                       <div className="mt-16 pt-12 border-t border-white/5 space-y-10">
                           <section>
                                <div className="flex items-center gap-3 mb-8">

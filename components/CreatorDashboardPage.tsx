@@ -1,131 +1,81 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';
 import BottomNavBar from './BottomNavBar';
 import ActorPortalView from './ActorPortalView';
 import FilmmakerDashboardView from './FilmmakerDashboardView';
+import IndustryPortalView from './IndustryPortalView';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
-import { Movie } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
-import { useMemo } from 'react';
+
+type DashboardRole = 'filmmaker' | 'actor' | 'industry';
 
 const CreatorDashboardPage: React.FC = () => {
     const { user } = useAuth();
-    const { movies } = useFestival();
+    const [activeView, setActiveView] = useState<DashboardRole>(() => {
+        if (user?.isIndustryPro) return 'industry';
+        if (user?.isFilmmaker) return 'filmmaker';
+        return 'actor';
+    });
     
-    // Default to the most "active" role (filmmaker > actor), or whichever they have.
-    const [activeView, setActiveView] = useState<'filmmaker' | 'actor'>(() => 
-        user?.isFilmmaker ? 'filmmaker' : 'actor'
-    );
-    
-    // This effect ensures the view updates if the user object loads or changes after initial render.
     useEffect(() => {
         if (user) {
-            setActiveView(user.isFilmmaker ? 'filmmaker' : 'actor');
+            if (!user.isIndustryPro && activeView === 'industry') {
+                 setActiveView(user.isFilmmaker ? 'filmmaker' : 'actor');
+            }
         }
     }, [user]);
 
-
-    const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
-        e.preventDefault();
-        window.history.pushState({}, '', path);
-        window.dispatchEvent(new Event('pushstate'));
-    };
-    
-    const handleSearch = (query: string) => {
-        window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
-        window.dispatchEvent(new Event('pushstate'));
-    };
-
-    const handleMobileSearch = () => {
-        window.history.pushState({}, '', '/?action=search');
-        window.dispatchEvent(new Event('pushstate'));
-    };
-    
-    // FIX: Add a more robust guard. The child components (Filmmaker/Actor views)
-    // require the user's name to be present. Waiting for `user.name`
-    // to be present prevents a race condition and the resulting infinite loading screen.
     if (!user || !user.name) {
         return <LoadingSpinner />;
     }
 
-    const isDualRole = user.isFilmmaker && user.isActor;
+    // Role Toggles
+    const roles: { id: DashboardRole; label: string; icon: string; access: boolean }[] = [
+        { id: 'filmmaker', label: 'Filmmaker', icon: '🎥', access: !!user.isFilmmaker },
+        { id: 'actor', label: 'Actor', icon: '🎭', access: !!user.isActor },
+        { id: 'industry', label: 'Industry Terminal', icon: '📟', access: !!user.isIndustryPro || user.email === 'cratetiv@gmail.com' },
+    ];
+
+    const visibleRoles = roles.filter(r => r.access);
 
     return (
-        <div className="flex flex-col min-h-screen text-white">
-            <Header 
-                searchQuery=""
-                onSearch={handleSearch} 
-                isScrolled={true} 
-                onMobileSearchClick={handleMobileSearch}
-                showSearch={false} 
-                showNavLinks={false} 
-            />
-            <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
-                <div className="max-w-7xl mx-auto">
-                     <div className="mb-8">
-                        <h1 className="text-4xl font-bold text-white">Welcome, {user.name}</h1>
-                        {isDualRole && (
-                            <p className="text-gray-400 mt-2">You have access to both Filmmaker and Actor portals. Switch between them below.</p>
-                        )}
-                    </div>
-
-                    {isDualRole ? (
-                        <div className="mb-8">
-                            <div className="flex items-center gap-2 md:gap-6 border-b border-gray-700">
-                                <button
-                                    onClick={() => setActiveView('filmmaker')}
-                                    className={`flex items-center gap-2 py-3 px-4 font-semibold border-b-4 transition-colors ${activeView === 'filmmaker' ? 'border-purple-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                    Filmmaker Dashboard
-                                </button>
-                                <button
-                                    onClick={() => setActiveView('actor')}
-                                    className={`flex items-center gap-2 py-3 px-4 font-semibold border-b-4 transition-colors ${activeView === 'actor' ? 'border-purple-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                                    Actor Portal
-                                </button>
-                            </div>
+        <div className="flex flex-col min-h-screen text-white bg-black">
+            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={false} />
+            <main className="flex-grow pt-24 pb-24 md:pb-0">
+                <div className="max-w-7xl mx-auto px-4 md:px-12">
+                     <div className="mb-8 flex justify-between items-end">
+                        <div>
+                            <h1 className="text-4xl font-black uppercase tracking-tighter">Command Center</h1>
+                            <p className="text-gray-400 mt-2 font-bold uppercase text-[10px] tracking-widest">Active Operator: {user.name}</p>
                         </div>
-                    ) : null}
-
-                    <div className="mt-8">
-                        {activeView === 'filmmaker' && user.isFilmmaker && (
-                            <>
-                                <FilmmakerDashboardView />
-                                {!user.isActor && (
-                                    <div className="mt-12 text-center bg-gray-800/50 border border-gray-700 p-8 rounded-lg">
-                                        <h3 className="text-2xl font-bold text-white">Unlock the Actor Portal</h3>
-                                        <p className="text-gray-300 my-4 max-w-lg mx-auto">Create a public profile, connect in the Green Room, and access tools like our AI Monologue Generator.</p>
-                                        <a href="/actor-signup" onClick={(e) => handleNavigate(e, '/actor-signup')} className="submit-btn inline-block bg-purple-600 hover:bg-purple-700">Activate Actor Tools</a>
-                                        <p className="text-xs text-gray-500 mt-2">This will add actor features to your existing account.</p>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                        {activeView === 'actor' && user.isActor && (
-                            <>
-                                <ActorPortalView />
-                                {!user.isFilmmaker && (
-                                    <div className="mt-12 text-center bg-gray-800/50 border border-gray-700 p-8 rounded-lg">
-                                        <h3 className="text-2xl font-bold text-white">Unlock the Filmmaker Dashboard</h3>
-                                        <p className="text-gray-300 my-4 max-w-lg mx-auto">Access your film's performance analytics, track revenue, and manage payouts.</p>
-                                        <a href="/filmmaker-signup" onClick={(e) => handleNavigate(e, '/filmmaker-signup')} className="submit-btn inline-block bg-purple-600 hover:bg-purple-700">Activate Filmmaker Tools</a>
-                                        <p className="text-xs text-gray-500 mt-2">This will add filmmaker features to your existing account.</p>
-                                    </div>
-                                )}
-                            </>
-                        )}
                     </div>
 
+                    {visibleRoles.length > 1 && (
+                        <div className="mb-10 flex gap-2 p-1 bg-white/5 border border-white/5 rounded-2xl w-max">
+                            {visibleRoles.map(role => (
+                                <button
+                                    key={role.id}
+                                    onClick={() => setActiveView(role.id)}
+                                    className={`px-6 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center gap-3 ${activeView === role.id ? 'bg-red-600 text-white shadow-xl shadow-red-900/20' : 'text-gray-500 hover:text-gray-300'}`}
+                                >
+                                    <span>{role.icon}</span>
+                                    {role.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="animate-[fadeIn_0.5s_ease-out]">
+                        {activeView === 'filmmaker' && <FilmmakerDashboardView />}
+                        {activeView === 'actor' && <ActorPortalView />}
+                        {activeView === 'industry' && <IndustryPortalView />}
+                    </div>
                 </div>
             </main>
             <CollapsibleFooter showActorLinks={true} />
-            <BottomNavBar onSearchClick={handleMobileSearch} />
+            <BottomNavBar onSearchClick={() => {}} />
         </div>
     );
 };

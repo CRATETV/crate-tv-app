@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category } from '../types';
 import DirectorCreditsModal from './DirectorCreditsModal';
@@ -89,6 +88,15 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const isOnWatchlist = useMemo(() => watchlist.includes(movie.key), [watchlist, movie.key]);
   const synopsisText = movie.synopsis || '';
   const synopsisIsLong = synopsisText.replace(/<[^>]+>/g, '').length > 200;
+
+  // LICENSING RESTRICTIONS:
+  // No donations for Vintage Visions (publicDomainIndie) or Licensed content (hasCopyrightMusic or specific titles)
+  const canCollectDonations = useMemo(() => {
+    if (!movie) return false;
+    const isVintage = allCategories.publicDomainIndie?.movieKeys?.includes(movie.key);
+    const isLicensedTitle = movie.title?.toLowerCase().includes('last christmas');
+    return !isVintage && !movie.hasCopyrightMusic && !isLicensedTitle;
+  }, [movie, allCategories]);
 
   useEffect(() => {
     const status = getWatchPartyStatus(movie);
@@ -184,7 +192,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         ref={modalContentRef}
       >
-        {/* Cinematic Close Button */}
         <button onClick={onClose} className="fixed md:absolute top-5 right-5 text-white bg-black/40 backdrop-blur-xl rounded-full p-2.5 hover:bg-red-600 transition-all z-50 shadow-2xl border border-white/10 group active:scale-95">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 group-hover:rotate-90 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
@@ -219,7 +226,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                         Play
                     </button>
 
-                  {!movie.hasCopyrightMusic && (
+                  {canCollectDonations && (
                     <button 
                       onClick={() => onSupportMovie(movie)} 
                       className="flex items-center justify-center px-6 py-3 bg-purple-600 text-white font-black rounded-lg hover:bg-purple-500 transition-all transform hover:scale-105 active:scale-95 shadow-2xl"
@@ -312,12 +319,14 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
         </div>
 
         {selectedDirector && (
-            <DirectorCreditsModal
-                directorName={selectedDirector}
-                onClose={() => setSelectedDirector(null)}
-                allMovies={allMovies}
-                onSelectMovie={handleSelectMovieFromDirector}
-            />
+            <div className="z-[110]">
+                <DirectorCreditsModal
+                    directorName={selectedDirector}
+                    onClose={() => setSelectedDirector(null)}
+                    allMovies={allMovies}
+                    onSelectMovie={handleSelectMovieFromDirector}
+                />
+            </div>
         )}
       </div>
     </div>

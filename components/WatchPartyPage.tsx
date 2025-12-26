@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,6 +12,8 @@ interface WatchPartyPageProps {
   movieKey: string;
 }
 
+const REACTION_TYPES = ['🔥', '😲', '❤️', '👏', '😢'] as const;
+
 const getVimeoEmbedUrl = (url: string): string | null => {
     if (!url) return null;
     const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
@@ -23,7 +24,7 @@ const getVimeoEmbedUrl = (url: string): string | null => {
     const eventRegex = /vimeo\.com\/event\/(\d+)/;
     const eventMatch = url.match(eventRegex);
     if (eventMatch && eventMatch[1]) {
-        return `https://player.vimeo.com/event/${eventMatch[1]}/embed?autoplay=1&color=ff0000&title=0&byline=0&portrait=0`;
+        return `https://player.vimeo.com/event/${eventMatch[1]}/embed?autoplay=1&api=1&color=ff0000&title=0&byline=0&portrait=0`;
     }
     return null;
 };
@@ -55,12 +56,11 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
         if (!newMessage.trim() || !user) return;
         setIsSending(true);
         try {
-            const response = await fetch('/api/send-chat-message', {
+            await fetch('/api/send-chat-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ movieKey, userName: user.name || user.email, userAvatar: user.avatar || 'fox', text: newMessage }),
             });
-            if (!response.ok) throw new Error('Failed to send message.');
             setNewMessage('');
         } catch (error) {
             console.error("Failed to send message:", error);
@@ -181,6 +181,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         }
     }, [partyState, hasAccess, isLiveStream, vimeoEmbedUrl]);
 
+    const logSentiment = async (type: string) => {
+        if (!videoRef.current) return;
+        try {
+            await fetch('/api/log-sentiment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey, type, timestamp: videoRef.current.currentTime })
+            });
+        } catch (e) {}
+    };
+
     const handleGoHome = () => {
         window.history.pushState({}, '', '/');
         window.dispatchEvent(new Event('pushstate'));
@@ -225,15 +236,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         );
     }
 
-    if (partyState?.status === 'waiting') {
-        return (
-             <div className="flex flex-col h-[100svh] bg-black text-white items-center justify-center text-center p-4">
-                <h1 className="text-4xl font-bold mb-4 animate-pulse">Waiting for the host...</h1>
-                <p className="text-gray-400">The screening for "{movie.title}" will begin shortly.</p>
-            </div>
-        );
-    }
-    
     return (
         <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden">
             <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full min-h-0">
@@ -280,6 +282,18 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     autoPlay 
                                     controls={isLiveStream} 
                                 />
+                                {/* REACTION OVERLAY */}
+                                <div className="absolute bottom-4 left-4 z-50 flex gap-3 animate-[fadeIn_1s_ease-out]">
+                                    {REACTION_TYPES.map(emoji => (
+                                        <button 
+                                            key={emoji} 
+                                            onClick={() => logSentiment(emoji)}
+                                            className="text-2xl hover:scale-150 transition-transform active:scale-95 drop-shadow-xl p-2 bg-black/20 rounded-full backdrop-blur-sm"
+                                        >
+                                            {emoji}
+                                        </button>
+                                    ))}
+                                </div>
                             </>
                         )}
                     </div>

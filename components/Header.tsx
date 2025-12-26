@@ -78,11 +78,17 @@ const Header: React.FC<HeaderProps> = ({
         { path: '/', label: 'Home' },
         { path: '/classics', label: 'Vintage' },
     ];
+
+    // Add Creator Hub shortcut for people with creator roles
+    if (user && (user.isActor || user.isFilmmaker)) {
+        navLinks.push({ path: '/portal', label: 'Creator Hub' });
+    }
     
     return (
         <header className={headerClasses} style={{ top: topOffset }}>
             <div className="max-w-[1800px] mx-auto px-4 md:px-12 flex items-center justify-between">
                 <div className="flex items-center gap-10">
+                    {/* Logo intentionally removed for cinematic focus */}
                     {showNavLinks && user && (
                         <nav className="hidden md:flex items-center gap-8">
                             {navLinks.map(link => (
@@ -90,7 +96,7 @@ const Header: React.FC<HeaderProps> = ({
                                     key={link.path} 
                                     href={link.path} 
                                     onClick={(e) => handleNavigate(e, link.path)} 
-                                    className="transition-colors text-sm font-black uppercase tracking-[0.2em] text-gray-300 hover:text-white"
+                                    className={`transition-colors text-sm font-black uppercase tracking-[0.2em] ${link.label === 'Creator Hub' ? 'text-red-500 hover:text-white' : 'text-gray-300 hover:text-white'}`}
                                 >
                                     {link.label}
                                 </a>

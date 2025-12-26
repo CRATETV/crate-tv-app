@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Header from './Header';
 import Hero from './Hero';
@@ -114,7 +113,7 @@ const LandingPage: React.FC = () => {
                 
                 <main className="flex-grow">
                     {/* Hero Cinematic Backdrop */}
-                    <div className="relative w-full h-[56.25vw] max-h-[95vh] min-h-[650px]">
+                    <div className="relative w-full h-[60vh] md:h-[56.25vw] max-h-[95vh] min-h-[500px] md:min-h-[650px]">
                         {heroMovies.length > 0 && (
                             <Hero
                                 movies={heroMovies}

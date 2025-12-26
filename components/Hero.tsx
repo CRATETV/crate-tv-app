@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Movie } from '../types';
 import LaurelPreview from './LaurelPreview';
@@ -39,20 +38,20 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
   }, [currentIndex, currentMovie.trailer]);
 
   return (
-    <div className="relative w-full h-[75vh] md:h-[56.25vw] md:max-h-[95vh] min-h-[500px] md:min-h-[600px] bg-black overflow-hidden">
+    <div className="relative w-full h-[60vh] md:h-[56.25vw] md:max-h-[95vh] min-h-[450px] md:min-h-[600px] bg-black overflow-hidden">
       <div className="absolute inset-0 overflow-hidden">
         {/* Poster Image */}
         <img
           key={`poster-${currentMovie.key}`}
           src={`/api/proxy-image?url=${encodeURIComponent(currentMovie.poster)}`}
           alt="" 
-          className={`w-full h-full object-cover transition-opacity duration-1000 ease-in-out animate-ken-burns scale-110 ${showVideo ? 'opacity-0' : 'opacity-100'}`}
+          className={`w-full h-full object-cover transition-opacity duration-1000 ease-in-out animate-ken-burns scale-105 md:scale-110 ${showVideo ? 'opacity-0' : 'opacity-100'}`}
           crossOrigin="anonymous"
         />
 
         {/* Award Overlay Priority Logic for Hero */}
         {!showVideo && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm pointer-events-none transition-opacity duration-1000">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[80%] md:max-w-sm pointer-events-none transition-opacity duration-1000">
                 {currentMovie.customLaurelUrl ? (
                     <img src={currentMovie.customLaurelUrl} alt="Award" className="w-full h-auto drop-shadow-2xl" />
                 ) : (currentMovie.awardName && currentMovie.awardYear) ? (
@@ -86,7 +85,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
 
       {/* Main Content (Title/Synop/Buttons) */}
       {!hideContent && (
-        <div className="relative z-10 flex flex-col justify-end md:justify-center h-full px-4 md:px-12 pb-24 md:pb-24 text-white pointer-events-none">
+        <div className="relative z-10 flex flex-col justify-end md:justify-center h-full px-4 md:px-12 pb-16 md:pb-24 text-white pointer-events-none">
             <h1 className="text-3xl md:text-6xl lg:text-7xl font-black mb-3 md:mb-4 max-w-2xl animate-[fadeInHeroContent_0.8s_ease-out] drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] leading-tight">
             {currentMovie.title}
             </h1>

@@ -1,4 +1,3 @@
-
 // This file contains type definitions for the Crate TV application.
 
 export interface Actor {
@@ -37,6 +36,53 @@ export interface Movie {
   customLaurelUrl?: string;
 }
 
+export interface SentimentPoint {
+    timestamp: number; // in seconds
+    type: '🔥' | '😲' | '❤️' | '👏' | '😢';
+}
+
+export interface User {
+  uid: string;
+  email: string | null;
+  name?: string;
+  avatar?: string;
+  isActor?: boolean;
+  isFilmmaker?: boolean;
+  isIndustryPro?: boolean; 
+  isPremiumSubscriber?: boolean;
+  watchlist?: string[];
+  watchedMovies?: string[];
+  likedMovies?: string[];
+  hasFestivalAllAccess?: boolean;
+  unlockedBlockIds?: string[];
+  purchasedMovieKeys?: string[];
+  unlockedWatchPartyKeys?: string[];
+  rokuDeviceId?: string;
+  actorProfileSlug?: string;
+}
+
+export interface FilmmakerFilmPerformance {
+    key: string;
+    title: string;
+    views: number;
+    likes: number;
+    watchlistAdds: number;
+    grossDonations: number;
+    grossAdRevenue: number;
+    netDonationEarnings: number;
+    netAdEarnings: number;
+    totalEarnings: number;
+    sentimentData?: SentimentPoint[];
+}
+
+export interface FilmmakerAnalytics {
+    totalDonations: number;
+    totalAdRevenue: number;
+    totalPaidOut: number;
+    balance: number;
+    films: FilmmakerFilmPerformance[];
+}
+
 export interface Category {
   title: string;
   movieKeys: string[];
@@ -50,64 +96,75 @@ export interface SiteSettings {
   maintenanceMode?: boolean;
 }
 
-export interface FilmBlock {
+export interface AnalyticsData {
+    totalRevenue: number;
+    totalCrateTvRevenue: number;
+    totalAdminPayouts: number;
+    pastAdminPayouts: AdminPayout[];
+    billSavingsPotTotal: number;
+    billSavingsTransactions: BillSavingsTransaction[];
+    totalUsers: number;
+    viewCounts: Record<string, number>;
+    movieLikes: Record<string, number>;
+    watchlistCounts: Record<string, number>;
+    filmmakerPayouts: FilmmakerPayout[];
+    viewLocations: Record<string, Record<string, number>>;
+    allUsers: { email: string }[];
+    actorUsers: { email: string }[];
+    filmmakerUsers: { email: string }[];
+    totalDonations: number;
+    totalSales: number;
+    totalMerchRevenue: number;
+    totalAdRevenue: number;
+    crateTvMerchCut: number;
+    merchSales: Record<string, { name: string; units: number; revenue: number }>;
+    totalFestivalRevenue: number;
+    festivalPassSales: { units: number, revenue: number };
+    festivalBlockSales: { units: number, revenue: number };
+    salesByBlock: Record<string, { units: number, revenue: number }>;
+    festivalUsers: string[];
+}
+
+export interface AdminPayout {
+    id: string;
+    amount: number;
+    reason: string;
+    payoutDate: any;
+}
+
+export interface BillSavingsTransaction {
+    id: string;
+    type: 'deposit' | 'withdrawal';
+    amount: number;
+    reason: string;
+    transactionDate: any;
+}
+
+export interface PayoutRequest {
   id: string;
-  title: string;
-  time: string;
-  movieKeys: string[];
+  directorName: string;
+  amount: number;
+  payoutMethod: 'PayPal' | 'Venmo' | 'Other';
+  payoutDetails: string;
+  status: 'pending' | 'completed';
+  requestDate: any;
+  completionDate?: any;
 }
 
-export interface FestivalDay {
-  day: number;
-  date: string;
-  blocks: FilmBlock[];
+export interface ChatMessage {
+    id: string;
+    userName: string;
+    userAvatar: string;
+    text: string;
+    timestamp: any;
 }
 
-export interface FestivalConfig {
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  isFestivalLive?: boolean;
-}
-
-export interface AboutData {
-  missionStatement: string;
-  story: string;
-  belief1Title: string;
-  belief1Body: string;
-  belief2Title: string;
-  belief2Body: string;
-  belief3Title: string;
-  belief3Body: string;
-  founderName: string;
-  founderTitle: string;
-  founderBio: string;
-  founderPhoto: string;
-}
-
-export interface AdConfig {
-    socialBarScript?: string;
-    vastTagUrl?: string;
-}
-
-export interface User {
-  uid: string;
-  email: string | null;
-  name?: string;
-  avatar?: string;
-  isActor?: boolean;
-  isFilmmaker?: boolean;
-  isPremiumSubscriber?: boolean;
-  watchlist?: string[];
-  watchedMovies?: string[];
-  likedMovies?: string[];
-  hasFestivalAllAccess?: boolean;
-  unlockedBlockIds?: string[];
-  purchasedMovieKeys?: string[];
-  unlockedWatchPartyKeys?: string[];
-  rokuDeviceId?: string;
-  actorProfileSlug?: string;
+export interface WatchPartyState {
+    isPlaying: boolean;
+    currentTime: number;
+    status: 'waiting' | 'live' | 'ended';
+    lastUpdatedBy: string;
+    lastUpdated?: any;
 }
 
 export interface MoviePipelineEntry {
@@ -155,148 +212,40 @@ export interface ActorPost {
     likes: string[];
 }
 
-export interface PayoutRequest {
+export interface FestivalConfig {
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  isFestivalLive?: boolean;
+}
+
+export interface FestivalDay {
+  day: number;
+  date: string;
+  blocks: FilmBlock[];
+}
+
+export interface FilmBlock {
   id: string;
-  directorName: string;
-  amount: number;
-  payoutMethod: 'PayPal' | 'Venmo' | 'Other';
-  payoutDetails: string;
-  status: 'pending' | 'completed';
-  requestDate: any;
-  completionDate?: any;
+  title: string;
+  time: string;
+  movieKeys: string[];
 }
 
-export interface AdminPayout {
-    id: string;
-    amount: number;
-    reason: string;
-    payoutDate: any;
-}
-
-export interface BillSavingsTransaction {
-    id: string;
-    type: 'deposit' | 'withdrawal';
-    amount: number;
-    reason: string;
-    transactionDate: any;
-}
-
-export interface SecurityEvent {
-    id: string;
-    type: string;
-    ip: string | null;
-    timestamp: any;
-    details: Record<string, any>;
-}
-
-export interface SecurityReport {
-    totalEvents: number;
-    eventsByType: Record<string, number>;
-    suspiciousIps: { ip: string; count: number; types: string[] }[];
-    recentEvents: SecurityEvent[];
-    threatLevel: 'red' | 'yellow' | 'green';
-}
-
-export interface AiSecurityAdvice {
-    summary: string;
-    recommendations: string[];
-}
-
-export interface GrowthAnalyticsData {
-    historical: {
-        users: MonthlyDataPoint[];
-        revenue: MonthlyDataPoint[];
-    };
-    projections: {
-        users: MonthlyDataPoint[];
-        revenue: MonthlyDataPoint[];
-    };
-    keyMetrics: {
-        totalVisitors: number;
-        totalUsers: number;
-        conversionRate: number;
-        dailyActiveUsers: number;
-        weeklyActiveUsers: number;
-        totalRevenue: number;
-        projectedUsersYtd: number;
-        projectedRevenueYtd: number;
-        totalViews: number;
-        totalLikes: number;
-        totalWatchlistAdds: number;
-        totalFilms: number;
-        mostViewedFilm: { title: string; views: number };
-        mostLikedFilm: { title: string; likes: number };
-        avgRevenuePerUser: number;
-        totalDonations: number;
-        totalSales: number;
-        audienceBreakdown: { total: number, actors: number, filmmakers: number };
-        topCountries: { country: string, views: number }[];
-        topEarningFilms: { title: string, totalRevenue: number }[];
-    };
-    aboutData?: AboutData;
-    avgMoMUserGrowth: number;
-}
-
-export interface MonthlyDataPoint {
-    month: string;
-    value: number;
-}
-
-export interface AiGrowthAdvice {
-    userGrowth: string[];
-    revenueGrowth: string[];
-    communityEngagement: string[];
-}
-
-
-export interface FilmmakerFilmPerformance {
-    key: string;
-    title: string;
-    views: number;
-    likes: number;
-    watchlistAdds: number;
-    grossDonations: number;
-    grossAdRevenue: number;
-    netDonationEarnings: number;
-    netAdEarnings: number;
-    totalEarnings: number;
-}
-
-export interface FilmmakerAnalytics {
-    totalDonations: number;
-    totalAdRevenue: number;
-    totalPaidOut: number;
-    balance: number;
-    films: FilmmakerFilmPerformance[];
-}
-
-export interface AnalyticsData {
-    totalRevenue: number;
-    totalCrateTvRevenue: number;
-    totalAdminPayouts: number;
-    pastAdminPayouts: AdminPayout[];
-    billSavingsPotTotal: number;
-    billSavingsTransactions: BillSavingsTransaction[];
-    totalUsers: number;
-    viewCounts: Record<string, number>;
-    movieLikes: Record<string, number>;
-    watchlistCounts: Record<string, number>;
-    filmmakerPayouts: FilmmakerPayout[];
-    viewLocations: Record<string, Record<string, number>>;
-    allUsers: { email: string }[];
-    actorUsers: { email: string }[];
-    filmmakerUsers: { email: string }[];
-    totalDonations: number;
-    totalSales: number;
-    totalMerchRevenue: number;
-    totalAdRevenue: number;
-    crateTvMerchCut: number;
-    merchSales: Record<string, { name: string; units: number; revenue: number }>;
-    totalFestivalRevenue: number;
-    festivalPassSales: { units: number, revenue: number };
-    festivalBlockSales: { units: number, revenue: number };
-    salesByBlock: Record<string, { units: number, revenue: number }>;
-    festivalUsers: string[];
+export interface AboutData {
+  missionStatement: string;
+  story: string;
+  belief1Title: string;
+  belief1Body: string;
+  belief2Title: string;
+  belief2Body: string;
+  belief3Title: string;
+  belief3Body: string;
+  founderName: string;
+  founderTitle: string;
+  founderBio: string;
+  founderPhoto: string;
 }
 
 export interface FilmmakerPayout {
@@ -309,18 +258,73 @@ export interface FilmmakerPayout {
     totalFilmmakerPayout: number;
 }
 
-export interface ChatMessage {
-    id: string;
-    userName: string;
-    userAvatar: string;
-    text: string;
-    timestamp: any;
+export interface AdConfig {
 }
 
-export interface WatchPartyState {
-    isPlaying: boolean;
-    currentTime: number;
-    status: 'waiting' | 'live' | 'ended';
-    lastUpdatedBy: string;
-    lastUpdated?: any;
+export interface MonthlyDataPoint {
+  month: string;
+  value: number;
+}
+
+export interface GrowthAnalyticsData {
+  historical: {
+    users: MonthlyDataPoint[];
+    revenue: MonthlyDataPoint[];
+  };
+  projections: {
+    users: MonthlyDataPoint[];
+    revenue: MonthlyDataPoint[];
+  };
+  keyMetrics: {
+    totalVisitors: number;
+    totalUsers: number;
+    conversionRate: number;
+    dailyActiveUsers: number;
+    weeklyActiveUsers: number;
+    totalRevenue: number;
+    projectedUsersYtd: number;
+    projectedRevenueYtd: number;
+    totalViews: number;
+    totalLikes: number;
+    totalWatchlistAdds: number;
+    totalFilms: number;
+    mostViewedFilm: { title: string; views: number };
+    mostLikedFilm: { title: string; likes: number };
+    avgRevenuePerUser: number;
+    totalDonations: number;
+    totalSales: number;
+    audienceBreakdown: { total: number; actors: number; filmmakers: number };
+    topCountries: { country: string; views: number }[];
+    topEarningFilms: { title: string; totalRevenue: number; adRevenue: number; donationRevenue: number }[];
+  };
+  aboutData?: AboutData;
+  avgMoMUserGrowth: number;
+}
+
+export interface AiGrowthAdvice {
+  userGrowth: string[];
+  revenueGrowth: string[];
+  communityEngagement: string[];
+  advertisingSuggestions?: string[];
+}
+
+export interface SecurityEvent {
+  id: string;
+  type: string;
+  ip?: string;
+  timestamp: any;
+  details?: any;
+}
+
+export interface SecurityReport {
+  totalEvents: number;
+  eventsByType: Record<string, number>;
+  suspiciousIps: { ip: string; count: number; types: string[] }[];
+  recentEvents: SecurityEvent[];
+  threatLevel: 'red' | 'yellow' | 'green';
+}
+
+export interface AiSecurityAdvice {
+  summary: string;
+  recommendations: string[];
 }

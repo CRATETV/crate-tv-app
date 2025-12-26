@@ -1,17 +1,17 @@
-
 import { GoogleGenAI, Type } from '@google/genai';
-import { GrowthAnalyticsData, AiGrowthAdvice, Movie } from '../types.js';
+import { GrowthAnalyticsData } from '../types.js';
 
 export async function POST(request: Request) {
   try {
     const { password, metrics } = (await request.json()) as { password: string, metrics: GrowthAnalyticsData['keyMetrics'] };
 
-    // --- Authentication & Validation ---
+    // --- Authentication ---
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
     if (password !== primaryAdminPassword && password !== masterPassword) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
+
     if (!process.env.API_KEY) {
       throw new Error("API_KEY environment variable is not set.");
     }
@@ -24,21 +24,22 @@ export async function POST(request: Request) {
     const prompt = `
       You are a world-class growth strategy consultant for 'Crate TV', a niche, professional streaming service for independent films. 
       Current Stats:
-      - Users: ${metrics.totalUsers}
-      - Total Revenue: $${(metrics.totalRevenue / 100).toFixed(2)}
+      - Total Registered Users: ${metrics.totalUsers}
+      - Conversion Rate (Visitors to Users): ${metrics.conversionRate.toFixed(2)}%
+      - Total Platform Revenue: $${(metrics.totalRevenue / 100).toFixed(2)}
       - Catalog Size: ${metrics.totalFilms} films
       - Top Market: ${metrics.topCountries[0]?.country || 'N/A'}
-      - Top Performing Film: ${metrics.mostViewedFilm.title}
+      - Flagship Film: ${metrics.mostViewedFilm.title} (${metrics.mostViewedFilm.views} views)
 
-      Strategic Narrative: Crate TV grows by leveraging the "Creator-Loop." Filmmakers have existing social circles; Crate TV provides the stage. Your advice should focus on how to make filmmakers the ultimate marketing agents for the platform.
+      Context: Crate TV is built on the "Creator-Loop" model. Filmmakers bring their own tribes; we provide the stage. We want to scale to 10k users without spending $1M on traditional ads.
 
-      Task: Provide a concise list of actionable strategies to:
-      1. Scale Users (focus on viral creator-led sharing).
-      2. Optimize Revenue (focus on high-intent sponsorship and tips).
-      3. Retain Community (focus on Watch Party dynamics).
-      4. Advertising: Suggest 3 specific, low-cost advertising experiments (e.g. niche subreddits, geo-targeted ads).
+      Task: Provide exactly 3 concise, actionable, bullet-pointed strategies for each of the following keys:
+      1. User Growth (Viral creator-led acquisition).
+      2. Revenue (Monetization beyond tips).
+      3. Community Engagement (The 'Watercooler' effect).
+      4. Advertising Suggestions (Low-cost, high-ROAS tactical experiments).
 
-      Your response must be a JSON object matching the provided schema.
+      Your response MUST be a valid JSON object matching the provided schema.
     `;
 
     const response = await ai.models.generateContent({
@@ -51,25 +52,26 @@ export async function POST(request: Request) {
                 properties: {
                     userGrowth: {
                         type: Type.ARRAY,
-                        description: "Strategies to turn creators into marketers.",
-                        items: { type: Type.STRING }
+                        items: { type: Type.STRING },
+                        description: "3 strategies to turn filmmakers into marketing engines."
                     },
                     revenueGrowth: {
                         type: Type.ARRAY,
-                        description: "Creative monetization beyond just donations.",
-                        items: { type: Type.STRING }
+                        items: { type: Type.STRING },
+                        description: "3 creative monetization ideas."
                     },
                     communityEngagement: {
                         type: Type.ARRAY,
-                        description: "Building a cult-following around indie cinema.",
-                        items: { type: Type.STRING }
+                        items: { type: Type.STRING },
+                        description: "3 ways to build a cult-like community around these films."
                     },
                     advertisingSuggestions: {
                         type: Type.ARRAY,
-                        description: "Specific advertising experiments.",
-                        items: { type: Type.STRING }
+                        items: { type: Type.STRING },
+                        description: "3 specific, tactical, low-cost ad experiments."
                     }
-                }
+                },
+                required: ["userGrowth", "revenueGrowth", "communityEngagement", "advertisingSuggestions"]
             }
         }
     });
@@ -83,8 +85,9 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error generating growth advice:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-    return new Response(JSON.stringify({ error: `Failed to generate advice: ${errorMessage}` }), {
+    return new Response(JSON.stringify({ error: `Failed to generate strategy: ${errorMessage}` }), {
       status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }

@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { FilmmakerAnalytics, Movie, FilmmakerFilmPerformance } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import PayoutExplanationModal from './PayoutExplanationModal';
-import TopTenShareableImage from './TopTenShareableImage';
-import html2canvas from 'html2canvas';
+import HypeMap from './HypeMap';
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
 
@@ -76,40 +75,32 @@ const PayoutModal: React.FC<{ balance: number; directorName: string; onClose: ()
     );
 };
 
-const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; poster: string }> = ({ film, poster }) => {
+const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; movie: Movie }> = ({ film, movie }) => {
     return (
-        <div className="bg-gray-800/50 border border-gray-700 p-4 rounded-lg flex flex-col md:flex-row gap-6 hover:border-gray-500 transition-colors">
-            <img src={`/api/proxy-image?url=${encodeURIComponent(poster)}`} alt={film.title} className="w-32 h-48 object-cover rounded-md flex-shrink-0 self-center md:self-start shadow-lg" crossOrigin="anonymous"/>
-            <div className="flex-grow">
-                <h3 className="font-black text-2xl text-white uppercase tracking-tighter">{film.title}</h3>
-                
-                <div className="grid grid-cols-3 gap-4 my-4 text-center">
-                    <div title="Total Views">
-                        <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Views</p>
-                        <p className="font-bold text-2xl">{film.views.toLocaleString()}</p>
+        <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-2xl space-y-6 hover:border-gray-500 transition-colors">
+            <div className="flex flex-col md:flex-row gap-6">
+                <img src={movie.poster} alt={film.title} className="w-32 h-48 object-cover rounded-xl shadow-lg border border-white/5" />
+                <div className="flex-grow space-y-4">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h3 className="font-black text-2xl text-white uppercase tracking-tighter">{film.title}</h3>
+                            <div className="flex items-center gap-4 mt-1">
+                                <div className="flex items-center gap-1"><span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Views</span> <span className="text-sm font-bold">{film.views.toLocaleString()}</span></div>
+                                <div className="flex items-center gap-1"><span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Revenue</span> <span className="text-sm font-bold text-green-500">{formatCurrency(film.totalEarnings)}</span></div>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                             <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Discovery Score</p>
+                             <p className="text-xl font-black text-red-500">{(film.views * 0.1 + film.likes * 2).toFixed(0)}</p>
+                        </div>
                     </div>
-                    <div title="Total Likes">
-                        <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Likes</p>
-                        <p className="font-bold text-2xl text-red-500">{film.likes.toLocaleString()}</p>
-                    </div>
-                    <div title="Added to My List">
-                        <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-1">Watchlisted</p>
-                        <p className="font-bold text-2xl text-purple-500">{film.watchlistAdds.toLocaleString()}</p>
-                    </div>
-                </div>
 
-                <div className="bg-gray-900/50 p-4 rounded-xl space-y-2 border border-white/5">
-                    <div className="flex justify-between text-sm">
-                        <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Net Donations</span>
-                        <span className="font-black text-green-400">{formatCurrency(film.netDonationEarnings)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                        <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Net Ad Revenue</span>
-                        <span className="font-black text-green-400">{formatCurrency(film.netAdEarnings)}</span>
-                    </div>
-                    <div className="flex justify-between text-xl font-black border-t border-white/10 pt-2 mt-2">
-                        <span className="text-white uppercase tracking-tighter">Total</span>
-                        <span className="text-green-500">{formatCurrency(film.totalEarnings)}</span>
+                    <div className="bg-black/40 p-4 rounded-xl border border-white/5">
+                        <div className="flex justify-between items-center mb-3">
+                            <h4 className="text-[10px] font-black uppercase text-red-500 tracking-widest">Audience Hype Map</h4>
+                            <span className="text-[8px] text-gray-700 font-bold">REAL-TIME SENTIMENT DATA</span>
+                        </div>
+                        <HypeMap sentiment={film.sentimentData || []} duration={movie.durationInMinutes ? movie.durationInMinutes * 60 : 3600} />
                     </div>
                 </div>
             </div>
@@ -140,7 +131,7 @@ const FilmmakerDashboardView: React.FC = () => {
                     body: JSON.stringify({ directorName: user.name }),
                 });
 
-                if (!analyticsRes.ok) throw new Error((await analyticsRes.json()).error || 'Failed to load analytics.');
+                if (!analyticsRes.ok) throw new Error('Failed to load analytics.');
                 const analyticsData = await analyticsRes.json();
                 setAnalytics(analyticsData.analytics);
                 
@@ -171,7 +162,7 @@ const FilmmakerDashboardView: React.FC = () => {
                     <div className="flex items-center gap-3 mb-4">
                         <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Earnings & Payouts</h2>
                         <button onClick={() => setIsExplanationModalOpen(true)} className="text-gray-500 hover:text-white transition-colors">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         </button>
                     </div>
                     {payoutStatus === 'requested' ? (
@@ -197,7 +188,7 @@ const FilmmakerDashboardView: React.FC = () => {
                 <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-8">Film Statistics</h2>
                 <div className="space-y-6">
                     {analytics.films && analytics.films.map(film => (
-                        <FilmPerformanceCard key={film.key} film={film} poster={allMovies[film.key]?.poster || ''} />
+                        <FilmPerformanceCard key={film.key} film={film} movie={allMovies[film.key]} />
                     ))}
                 </div>
             </div>
