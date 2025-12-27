@@ -106,21 +106,25 @@ const AdminPage: React.FC = () => {
     
             // Process pipeline data (Non-critical, depends on role)
             const pipelineResResult = results[1];
-            if (pipelineResResult.status === 'fulfilled' && pipelineResResult.value.ok) {
-                const pipelineData = await pipelineResResult.value.json();
-                setPipeline(pipelineData.pipeline || []);
-            } else if (pipelineResResult.status === 'fulfilled' && pipelineResResult.value.status !== 401) {
-                // Only show error if it wasn't an expected "Unauthorized" for that role
-                errors.push('Failed to fetch submission pipeline.');
+            if (pipelineResResult.status === 'fulfilled') {
+                if (pipelineResResult.value.ok) {
+                    const pipelineData = await pipelineResResult.value.json();
+                    setPipeline(pipelineData.pipeline || []);
+                } else if (pipelineResResult.value.status !== 401) {
+                    // Only show error if it wasn't a standard 401 (Not allowed)
+                    errors.push('Failed to fetch submission pipeline.');
+                }
             }
     
             // Process payouts (Non-critical, depends on role)
             const payoutsResResult = results[2];
-            if (payoutsResResult.status === 'fulfilled' && payoutsResResult.value.ok) {
-                const payoutsData = await payoutsResResult.value.json();
-                setPayoutRequests(payoutsData.payoutRequests || []);
-            } else if (payoutsResResult.status === 'fulfilled' && payoutsResResult.value.status !== 401) {
-                errors.push('Failed to fetch payout requests.');
+            if (payoutsResResult.status === 'fulfilled') {
+                if (payoutsResResult.value.ok) {
+                    const payoutsData = await payoutsResResult.value.json();
+                    setPayoutRequests(payoutsData.payoutRequests || []);
+                } else if (payoutsResResult.value.status !== 401) {
+                    errors.push('Failed to fetch payout requests.');
+                }
             }
 
             // Process permissions (Critical)
@@ -129,11 +133,14 @@ const AdminPage: React.FC = () => {
                 const permsData = await permsResResult.value.json();
                 setPermissions(permsData.permissions || {});
             } else {
-                errors.push('Failed to fetch user role permissions.');
+                // If permissions fail, we only error if it's not a 401
+                if (permsResResult.status === 'fulfilled' && permsResResult.value.status !== 401) {
+                    errors.push('Failed to fetch user role permissions.');
+                }
             }
     
             if (errors.length > 0) {
-                setError(`Some data failed to load: ${errors.join(' ')}`);
+                setError(`Notification: ${errors.join(' ')}`);
             }
     
         } catch (err) {
@@ -263,10 +270,10 @@ const AdminPage: React.FC = () => {
         
         if (tabs.length > 0 && !tabs.includes(activeTab)) {
             setActiveTab(tabs[0]);
-        } else if (tabs.length === 0) {
+        } else if (tabs.length === 0 && !error) {
             setError("Your role does not have any permissions assigned.");
         }
-    }, [role, permissions, activeTab]);
+    }, [role, permissions, activeTab, error]);
 
     // Renders the login form
     if (!isAuthenticated) {
@@ -345,7 +352,7 @@ const AdminPage: React.FC = () => {
                    ))}
                 </div>
                 
-                {error && <div className="p-4 mb-4 text-red-300 bg-red-900/50 border border-red-700 rounded-md">{error}</div>}
+                {error && <div className="p-4 mb-4 text-orange-300 bg-orange-900/30 border border-orange-700 rounded-md text-xs">{error}</div>}
 
                 <div>
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" onNavigateToGrowth={() => setActiveTab('growth')} />}

@@ -13,21 +13,30 @@ export async function POST(request: Request) {
         const festivalAdminPassword = process.env.FESTIVAL_ADMIN_PASSWORD;
 
         let isAuthenticated = false;
-        if (
-            (primaryAdminPassword && password === primaryAdminPassword) || 
-            (masterPassword && password === masterPassword) ||
-            (collaboratorPassword && password === collaboratorPassword) ||
-            (festivalAdminPassword && password === festivalAdminPassword)
-        ) {
+        let role = '';
+
+        if (primaryAdminPassword && password === primaryAdminPassword) {
+            role = 'super_admin';
+            isAuthenticated = true;
+        } else if (masterPassword && password === masterPassword) {
+            role = 'master';
+            isAuthenticated = true;
+        } else if (collaboratorPassword && password === collaboratorPassword) {
+            role = 'collaborator';
+            isAuthenticated = true;
+        } else if (festivalAdminPassword && password === festivalAdminPassword) {
+            role = 'festival_admin';
             isAuthenticated = true;
         } else {
              for (const key in process.env) {
                 if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
+                    role = key.replace('ADMIN_PASSWORD_', '').toLowerCase();
                     isAuthenticated = true;
                     break;
                 }
             }
         }
+        
         const anyPasswordSet = primaryAdminPassword || masterPassword || collaboratorPassword || festivalAdminPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
         if (!anyPasswordSet) isAuthenticated = true;
 
