@@ -59,6 +59,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             setDataSource('live');
             
             try {
+                // Primary movies listener
                 const moviesUnsub = db.collection('movies').onSnapshot(snapshot => {
                     const liveMovies: Record<string, Movie> = {};
                     snapshot.forEach(doc => {
@@ -68,15 +69,19 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 });
                 unsubscribes.push(moviesUnsub);
 
+                // Categories listener with automatic unlisted content filtering
                 const categoriesUnsub = db.collection('categories').onSnapshot(snapshot => {
                     const liveCategories: Record<string, Category> = {};
                     snapshot.forEach(doc => {
                         const catData = doc.data() as Category;
-                        // Filter unlisted movies out of the categories for public feed
+                        
+                        // CRITICAL: Filter out movies marked as isUnlisted from the public category views.
+                        // They will still be in the 'movies' map for Watch Party direct access.
                         const filteredKeys = (catData.movieKeys || []).filter(key => {
                             const movie = movies[key];
                             return !movie?.isUnlisted;
                         });
+                        
                         liveCategories[doc.id] = { ...catData, movieKeys: filteredKeys };
                     });
                     setCategories(liveCategories);

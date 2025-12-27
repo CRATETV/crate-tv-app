@@ -36,7 +36,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
     expiry.setFullYear(expiry.getFullYear() + 1);
     
     const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-    return (expiry.getTime() - now.getTime()) < thirtyDaysInMs && (expiry.getTime() - now.getTime()) > 0;
+    const timeToExpiry = expiry.getTime() - now.getTime();
+    return timeToExpiry < thirtyDaysInMs && timeToExpiry > 0;
   }, [movie.publishedAt]);
 
   const isNew = React.useMemo(() => {
@@ -133,13 +134,13 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
       {/* Badges Overlay */}
       <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
           {isActuallyComingSoon && (
-              <span className="bg-blue-600 text-[8px] font-black px-2 py-0.5 rounded shadow-lg text-white uppercase tracking-widest">Coming Soon</span>
+              <span className="bg-blue-600 text-[8px] font-black px-2 py-1 rounded shadow-lg text-white uppercase tracking-widest">Coming Soon</span>
           )}
           {isLeavingSoon && !isActuallyComingSoon && (
-              <span className="bg-amber-600 text-[8px] font-black px-2 py-0.5 rounded shadow-lg text-white uppercase tracking-widest">Leaving Soon</span>
+              <span className="bg-amber-600 text-[8px] font-black px-2 py-1 rounded shadow-lg text-white uppercase tracking-widest">Leaving Soon</span>
           )}
           {isNew && !isActuallyComingSoon && (
-                <span className="text-[8px] font-black bg-red-600 text-white px-2 py-0.5 rounded tracking-widest shadow-lg uppercase">NEW</span>
+                <span className="text-[8px] font-black bg-red-600 text-white px-2 py-1 rounded tracking-widest shadow-lg uppercase">NEW</span>
           )}
       </div>
 

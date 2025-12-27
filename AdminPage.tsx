@@ -91,7 +91,7 @@ const AdminPage: React.FC = () => {
                 fetch('/api/get-admin-permissions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) })
             ]);
     
-            // Process live data
+            // Process live data (Critical)
             const dataResResult = results[0];
             if (dataResResult.status === 'fulfilled' && dataResResult.value.ok) {
                 const data = await dataResResult.value.json();
@@ -104,25 +104,26 @@ const AdminPage: React.FC = () => {
                 errors.push('Failed to fetch live site data.');
             }
     
-            // Process pipeline data
+            // Process pipeline data (Non-critical, depends on role)
             const pipelineResResult = results[1];
             if (pipelineResResult.status === 'fulfilled' && pipelineResResult.value.ok) {
                 const pipelineData = await pipelineResResult.value.json();
                 setPipeline(pipelineData.pipeline || []);
-            } else {
+            } else if (pipelineResResult.status === 'fulfilled' && pipelineResResult.value.status !== 401) {
+                // Only show error if it wasn't an expected "Unauthorized" for that role
                 errors.push('Failed to fetch submission pipeline.');
             }
     
-            // Process payouts
+            // Process payouts (Non-critical, depends on role)
             const payoutsResResult = results[2];
             if (payoutsResResult.status === 'fulfilled' && payoutsResResult.value.ok) {
                 const payoutsData = await payoutsResResult.value.json();
                 setPayoutRequests(payoutsData.payoutRequests || []);
-            } else {
+            } else if (payoutsResResult.status === 'fulfilled' && payoutsResResult.value.status !== 401) {
                 errors.push('Failed to fetch payout requests.');
             }
 
-            // Process permissions
+            // Process permissions (Critical)
             const permsResResult = results[3];
             if (permsResResult.status === 'fulfilled' && permsResResult.value.ok) {
                 const permsData = await permsResResult.value.json();
@@ -132,7 +133,7 @@ const AdminPage: React.FC = () => {
             }
     
             if (errors.length > 0) {
-                setError(`Could not load some data: ${errors.join(' ')}`);
+                setError(`Some data failed to load: ${errors.join(' ')}`);
             }
     
         } catch (err) {
@@ -182,7 +183,6 @@ const AdminPage: React.FC = () => {
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : 'An error occurred during deletion.');
         } finally {
-            // FIX: Corrected typo where setIsDeleting was used instead of setIsSaving.
             setIsSaving(false);
         }
     };

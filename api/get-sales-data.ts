@@ -1,7 +1,7 @@
 // This is a Vercel Serverless Function
 // Path: /api/get-sales-data
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
-import { AnalyticsData, Movie, PayoutRequest, AdminPayout, BillSavingsTransaction, User } from '../types.js';
+import { AnalyticsData, Movie, PayoutRequest, AdminPayout, BillSavingsTransaction, User, FilmmakerPayout } from '../types.js';
 
 const SYSTEM_RESET_DATE = '2025-05-23T00:00:00Z'; // The "New System" start date
 
@@ -74,7 +74,32 @@ export async function POST(request: Request) {
     try {
         const { password } = await request.json();
         
-        if (password !== process.env.ADMIN_PASSWORD && password !== process.env.ADMIN_MASTER_PASSWORD) {
+        // --- Authentication ---
+        const primaryAdminPassword = process.env.ADMIN_PASSWORD;
+        const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
+        const collaboratorPassword = process.env.COLLABORATOR_PASSWORD;
+        const festivalAdminPassword = process.env.FESTIVAL_ADMIN_PASSWORD;
+
+        let isAuthenticated = false;
+        if (
+            (primaryAdminPassword && password === primaryAdminPassword) || 
+            (masterPassword && password === masterPassword) ||
+            (collaboratorPassword && password === collaboratorPassword) ||
+            (festivalAdminPassword && password === festivalAdminPassword)
+        ) {
+            isAuthenticated = true;
+        } else {
+             for (const key in process.env) {
+                if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
+                    isAuthenticated = true;
+                    break;
+                }
+            }
+        }
+        const anyPasswordSet = primaryAdminPassword || masterPassword || collaboratorPassword || festivalAdminPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
+        if (!anyPasswordSet) isAuthenticated = true;
+
+        if (!isAuthenticated) {
             throw new Error('Unauthorized');
         }
 
@@ -115,8 +140,8 @@ export async function POST(request: Request) {
         const usersPromise = db ? db.collection('users').get() : Promise.resolve(null);
         
         // Filter Firestore records by the System Reset Date
-        const adminPayoutsPromise = db ? db.collection('admin_payouts').where('payoutDate', '>=', resetTimestamp).orderBy('payoutDate', 'desc').get() : Promise.resolve(null);
-        const billSavingsPromise = db ? db.collection('bill_savings_transactions').where('transactionDate', '>=', resetTimestamp).orderBy('transactionDate', 'desc').get() : Promise.resolve(null);
+        const adminPayoutsPromise = db ? db.collection('admin_payouts').where('payoutDate', '>=', resetTimestamp).get() : Promise.resolve(null);
+        const billSavingsPromise = db ? db.collection('bill_savings_transactions').where('transactionDate', '>=', resetTimestamp).get() : Promise.resolve(null);
         const authUsersPromise = safeListAllAuthUsers();
 
         const [
@@ -128,7 +153,16 @@ export async function POST(request: Request) {
             adminPayoutsSnapshot,
             billSavingsSnapshot,
             allAuthUsers
-        ] = await Promise.all([squarePromise.catch(e => { errors.square = e.message; return []; }), moviesPromise, viewsPromise, locationsPromise, usersPromise, adminPayoutsPromise, billSavingsPromise, authUsersPromise]);
+        ] = await Promise.all([
+            squarePromise.catch(e => { errors.square = e.message; return []; }), 
+            moviesPromise, 
+            viewsPromise, 
+            locationsPromise, 
+            usersPromise, 
+            adminPayoutsPromise, 
+            billSavingsPromise, 
+            authUsersPromise
+        ]);
 
         const allMovies: Record<string, Movie> = {};
         moviesSnapshot?.forEach(doc => { allMovies[doc.id] = doc.data() as Movie; });
@@ -222,7 +256,7 @@ export async function POST(request: Request) {
         const crateTvFestivalShare = totalFestivalRevenue * FESTIVAL_PLATFORM_CUT;
         const totalCrateTvRevenue = crateTvDonationShare + crateTvAdShare + crateTvMerchCut + crateTvFestivalShare + totalSales;
 
-        const filmmakerPayouts = Object.values(allMovies).map(movie => {
+        const filmmakerPayouts: FilmmakerPayout[] = Object.values(allMovies).map(movie => {
             const filmDonations = donationsByFilm[movie.title] || 0;
             const filmmakerDonationPayout = filmDonations * (1 - DONATION_PLATFORM_CUT);
             const filmAdRevenue = ((viewCounts[movie.key] || 0) / 1000) * AD_CPM_IN_CENTS;

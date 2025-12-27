@@ -1,3 +1,4 @@
+
 // This is a Vercel Serverless Function
 // Path: /api/get-pipeline-data
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -11,15 +12,32 @@ export async function POST(request: Request) {
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
         const collaboratorPassword = process.env.COLLABORATOR_PASSWORD;
+        const festivalAdminPassword = process.env.FESTIVAL_ADMIN_PASSWORD;
+
         let isAuthenticated = false;
+        // FIX: Declare 'role' variable to avoid ReferenceError when assigning it inside the loop
+        let role = '';
 
         if (
             (primaryAdminPassword && password === primaryAdminPassword) ||
             (masterPassword && password === masterPassword) ||
-            (collaboratorPassword && password === collaboratorPassword)
+            (collaboratorPassword && password === collaboratorPassword) ||
+            (festivalAdminPassword && password === festivalAdminPassword)
         ) {
             isAuthenticated = true;
+        } else {
+             for (const key in process.env) {
+                if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
+                    role = key.replace('ADMIN_PASSWORD_', '').toLowerCase();
+                    isAuthenticated = true;
+                    break;
+                }
+            }
         }
+
+        // Allow access if no passwords are configured at all (Initial Setup Mode)
+        const anyPasswordSet = primaryAdminPassword || masterPassword || collaboratorPassword || festivalAdminPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
+        if (!anyPasswordSet) isAuthenticated = true;
 
         if (!isAuthenticated) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' }});

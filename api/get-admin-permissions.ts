@@ -6,11 +6,19 @@ export async function POST(request: Request) {
     try {
         const { password } = await request.json();
 
-        // --- Authentication (any valid admin can fetch permissions) ---
+        // --- Authentication ---
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
+        const collaboratorPassword = process.env.COLLABORATOR_PASSWORD;
+        const festivalAdminPassword = process.env.FESTIVAL_ADMIN_PASSWORD;
+
         let isAuthenticated = false;
-        if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
+        if (
+            (primaryAdminPassword && password === primaryAdminPassword) || 
+            (masterPassword && password === masterPassword) ||
+            (collaboratorPassword && password === collaboratorPassword) ||
+            (festivalAdminPassword && password === festivalAdminPassword)
+        ) {
             isAuthenticated = true;
         } else {
              for (const key in process.env) {
@@ -20,7 +28,7 @@ export async function POST(request: Request) {
                 }
             }
         }
-        const anyPasswordSet = primaryAdminPassword || masterPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
+        const anyPasswordSet = primaryAdminPassword || masterPassword || collaboratorPassword || festivalAdminPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
         if (!anyPasswordSet) isAuthenticated = true;
 
         if (!isAuthenticated) {
