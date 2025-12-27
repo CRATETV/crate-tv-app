@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo } from 'react';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings } from '../types';
@@ -48,11 +47,10 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         let unsubscribes: (() => void)[] = [];
 
         const fetchDataWithFallback = async () => {
-            await initializeFirebaseAuth(); // Ensure firebase is ready
+            await initializeFirebaseAuth();
             const db = getDbInstance();
 
             if (!db) {
-                console.warn("Firestore not available, using fallback data.");
                 setDataSource('fallback');
                 setIsLoading(false);
                 return;
@@ -61,33 +59,11 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             setDataSource('live');
             
             try {
-                // Set up listeners for live data.
                 const moviesUnsub = db.collection('movies').onSnapshot(snapshot => {
-                    const uniqueMoviesByTitle: Map<string, Movie> = new Map();
-                    snapshot.forEach(doc => {
-                        const movie = { key: doc.id, ...doc.data() } as Movie;
-                        if (!movie.title) return; // Skip movies without a title
-
-                        const normalizedTitle = movie.title.trim().toLowerCase();
-                        const existingMovie = uniqueMoviesByTitle.get(normalizedTitle);
-
-                        // If a movie with this title doesn't exist, add it.
-                        if (!existingMovie) {
-                            uniqueMoviesByTitle.set(normalizedTitle, movie);
-                        } else {
-                            // If the new movie has a fullMovie URL and the existing one doesn't, replace it.
-                            // This prioritizes the more complete entry.
-                            if (movie.fullMovie && !existingMovie.fullMovie) {
-                                uniqueMoviesByTitle.set(normalizedTitle, movie);
-                            }
-                        }
-                    });
-
-                    // Convert the map of unique movies back to the Record<string, Movie> format
                     const liveMovies: Record<string, Movie> = {};
-                    for (const movie of uniqueMoviesByTitle.values()) {
-                        liveMovies[movie.key] = movie;
-                    }
+                    snapshot.forEach(doc => {
+                        liveMovies[doc.id] = { key: doc.id, ...doc.data() } as Movie;
+                    });
                     setMovies(liveMovies);
                 });
                 unsubscribes.push(moviesUnsub);
@@ -95,20 +71,14 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 const categoriesUnsub = db.collection('categories').onSnapshot(snapshot => {
                     const liveCategories: Record<string, Category> = {};
                     snapshot.forEach(doc => {
-                        liveCategories[doc.id] = doc.data() as Category;
+                        const catData = doc.data() as Category;
+                        // Filter unlisted movies out of the categories for public feed
+                        const filteredKeys = (catData.movieKeys || []).filter(key => {
+                            const movie = movies[key];
+                            return !movie?.isUnlisted;
+                        });
+                        liveCategories[doc.id] = { ...catData, movieKeys: filteredKeys };
                     });
-                    
-                    // ROBUST FALLBACK: If the live 'nowStreaming' category is missing,
-                    // has no movieKeys property, or has an empty movieKeys array,
-                    // merge the fallback data to ensure the banner is always visible.
-                    const liveNowStreaming = liveCategories.nowStreaming;
-                    if (
-                        (!liveNowStreaming || !liveNowStreaming.movieKeys || liveNowStreaming.movieKeys.length === 0) &&
-                        categoriesData.nowStreaming
-                    ) {
-                        liveNowStreaming ? liveNowStreaming.movieKeys = categoriesData.nowStreaming.movieKeys : liveCategories.nowStreaming = categoriesData.nowStreaming;
-                    }
-
                     setCategories(liveCategories);
                 });
                 unsubscribes.push(categoriesUnsub);
@@ -118,11 +88,6 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 });
                 unsubscribes.push(aboutUnsub);
                 
-                const adsUnsub = db.collection('content').doc('ads').onSnapshot(doc => {
-                    if (doc.exists) setAdConfig(doc.data() as AdConfig);
-                });
-                unsubscribes.push(adsUnsub);
-
                 const settingsUnsub = db.collection('content').doc('settings').onSnapshot(doc => {
                     if (doc.exists) setSettings(doc.data() as SiteSettings);
                 });
@@ -141,19 +106,16 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 unsubscribes.push(festivalDaysUnsub);
 
             } catch (error) {
-                console.error("Error setting up Firestore listeners:", error);
-                setDataSource('fallback'); // Revert to fallback if listeners fail
+                console.error("Error setting up listeners:", error);
+                setDataSource('fallback');
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchDataWithFallback();
-
-        return () => {
-            unsubscribes.forEach(unsub => unsub());
-        };
-    }, []);
+        return () => unsubscribes.forEach(unsub => unsub());
+    }, [movies]); // Re-subscribe if movies reference map changes to ensure filter stays fresh
 
     const value: FestivalContextType = {
         isLoading,

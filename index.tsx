@@ -77,9 +77,16 @@ const AppRouter: React.FC = () => {
     useEffect(() => {
       const currentPath = window.location.pathname + window.location.search;
       const loginUrl = new URL('/login', window.location.origin);
+      
       // Don't set a redirect for the root path
       if (currentPath !== '/' && currentPath !== '/login') {
           loginUrl.searchParams.set('redirect', currentPath);
+          
+          // CRITICAL: If the user is coming from a shared Watch Party link,
+          // we want to show the Signup view by default so they can "Join" the party.
+          if (currentPath.startsWith('/watchparty')) {
+              loginUrl.searchParams.set('view', 'signup');
+          }
       }
       // Use replaceState to not add a bad entry to the browser's history
       window.history.replaceState({}, '', loginUrl.toString());

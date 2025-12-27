@@ -7,6 +7,15 @@ export interface Actor {
   highResPhoto: string;
 }
 
+export interface Episode {
+  id: string;
+  title: string;
+  synopsis: string;
+  url: string;
+  duration?: number;
+  thumbnail?: string;
+}
+
 export interface Movie {
   key: string;
   title: string;
@@ -21,6 +30,10 @@ export interface Movie {
   likes?: number;
   rating?: number;
   releaseDateTime?: string;
+  publishedAt?: string; // Date the movie was first made live (for 12-month timer)
+  isUnlisted?: boolean; // Hidden from catalog/search, only for Watch Parties
+  isSeries?: boolean;
+  episodes?: Episode[];
   durationInMinutes?: number;
   hasCopyrightMusic?: boolean;
   isSupportEnabled?: boolean;

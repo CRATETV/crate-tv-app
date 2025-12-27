@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Movie } from '../types';
 import LaurelPreview from './LaurelPreview';
@@ -15,7 +14,7 @@ interface MovieCardProps {
   isComingSoon?: boolean;
 }
 
-export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWatched, isOnWatchlist, isLiked, onToggleLike, onToggleWatchlist, onSupportMovie, isComingSoon }) => {
+export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWatched, isOnWatchlist, isLiked, onToggleLike, onToggleWatchlist, onSupportMovie }) => {
   if (!movie) return null;
   const [isAnimatingLike, setIsAnimatingLike] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
@@ -25,12 +24,27 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
   const previewLimitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  const now = new Date();
+  
+  const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
+  const isActuallyComingSoon = releaseDate && releaseDate > now;
+
+  const isLeavingSoon = React.useMemo(() => {
+    if (!movie.publishedAt) return false;
+    const published = new Date(movie.publishedAt);
+    const expiry = new Date(published);
+    expiry.setFullYear(expiry.getFullYear() + 1);
+    
+    const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+    return (expiry.getTime() - now.getTime()) < thirtyDaysInMs && (expiry.getTime() - now.getTime()) > 0;
+  }, [movie.publishedAt]);
+
   const isNew = React.useMemo(() => {
     if (!movie.releaseDateTime) return false;
     const release = new Date(movie.releaseDateTime);
     const fourteenDaysAgo = new Date();
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-    return release > fourteenDaysAgo && release <= new Date();
+    return release > fourteenDaysAgo && release <= now;
   }, [movie.releaseDateTime]);
 
   const handleToggleLike = (e: React.MouseEvent) => {
@@ -55,7 +69,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
   };
 
   const handleMouseEnter = () => {
-    if (isComingSoon || (!movie.trailer && !movie.fullMovie)) return;
+    if (isActuallyComingSoon || (!movie.trailer && !movie.fullMovie)) return;
     
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     if (previewLimitTimeoutRef.current) clearTimeout(previewLimitTimeoutRef.current);
@@ -116,7 +130,20 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
         crossOrigin="anonymous"
       />
 
-      {/* Award Overlay Priority Logic */}
+      {/* Badges Overlay */}
+      <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+          {isActuallyComingSoon && (
+              <span className="bg-blue-600 text-[8px] font-black px-2 py-0.5 rounded shadow-lg text-white uppercase tracking-widest">Coming Soon</span>
+          )}
+          {isLeavingSoon && !isActuallyComingSoon && (
+              <span className="bg-amber-600 text-[8px] font-black px-2 py-0.5 rounded shadow-lg text-white uppercase tracking-widest">Leaving Soon</span>
+          )}
+          {isNew && !isActuallyComingSoon && (
+                <span className="text-[8px] font-black bg-red-600 text-white px-2 py-0.5 rounded tracking-widest shadow-lg uppercase">NEW</span>
+          )}
+      </div>
+
+      {/* Award Overlay */}
       {!showPreview && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[85%] pointer-events-none group-hover:opacity-0 transition-all duration-300">
               {movie.customLaurelUrl ? (
@@ -183,9 +210,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
                     </svg>
                 </button>
             </div>
-            {isNew && (
-                <span className="text-[7px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded tracking-tighter shadow-lg">NEW</span>
-            )}
             {isWatched && (
                 <span className="text-[7px] font-black bg-white/20 text-white px-1.5 py-0.5 rounded tracking-tighter">WATCHED</span>
             )}
