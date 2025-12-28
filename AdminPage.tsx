@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, PayoutRequest } from './types';
+import { Movie, Category, AboutData, FestivalDay, FestivalConfig } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
 import MovieEditor from './components/MovieEditor';
 import CategoryEditor from './components/CategoryEditor';
@@ -11,9 +11,6 @@ import WatchPartyManager from './components/WatchPartyManager';
 import SecurityTab from './components/SecurityTab';
 import FallbackGenerator from './components/FallbackGenerator';
 import EmailSender from './components/EmailSender';
-import AdminPayoutsTab from './components/AdminPayoutsTab';
-import { MoviePipelineTab } from './components/MoviePipelineTab';
-import PermissionsManager from './components/PermissionsManager';
 import SaveStatusToast from './components/SaveStatusToast';
 import MonetizationTab from './components/MonetizationTab';
 import HeroManager from './components/HeroManager';
@@ -25,23 +22,18 @@ const ALL_TABS: Record<string, string> = {
     analytics: '📊 Platform Analytics',
     growth: '✨ Growth Intelligence',
     pitchDeck: '🚀 LIFT Labs Pitch',
-    jury: '⚖️ Grand Jury',
     hero: '🎬 Hero Spotlight',
     movies: '🎞️ Movies',
-    pipeline: '📥 Pipeline',
     laurels: '🏆 Laurel Awards',
-    payouts: '💸 Payouts',
     categories: '📂 Categories',
     festival: '🎪 Festival',
     watchParty: '🍿 Watch Party',
     about: '📄 About Page',
     email: '✉️ Email',
-    monetization: '💰 AI Monetization',
+    monetization: '💰 Revenue Model',
     security: '🛡️ Security',
-    fallback: '💾 Fallback Data',
-    permissions: '🔑 Permissions'
+    fallback: '💾 Fallback Data'
 };
-
 
 const AdminPage: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -57,13 +49,7 @@ const AdminPage: React.FC = () => {
     const [aboutData, setAboutData] = useState<AboutData | null>(null);
     const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
-    const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
-    const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
-    const [permissions, setPermissions] = useState<Record<string, string[]>>({});
-    const [allowedTabs, setAllowedTabs] = useState<string[]>([]);
     const [activeTab, setActiveTab] = useState('analytics');
-    const [pipelineItemToConvert, setPipelineItemToConvert] = useState<MoviePipelineEntry | null>(null);
-
 
     // Save states
     const [isSaving, setIsSaving] = useState(false);
@@ -83,18 +69,12 @@ const AdminPage: React.FC = () => {
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);
         setError('');
-        const errors: string[] = [];
-        const warnings: string[] = [];
     
         try {
             const results = await Promise.allSettled([
-                fetch('/api/get-live-data?noCache=true'),
-                fetch('/api/get-pipeline-data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) }),
-                fetch('/api/get-payouts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) }),
-                fetch('/api/get-admin-permissions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: adminPassword }) })
+                fetch('/api/get-live-data?noCache=true')
             ]);
     
-            // Process live data (Critical)
             const dataResResult = results[0];
             if (dataResResult.status === 'fulfilled' && dataResResult.value.ok) {
                 const data = await dataResResult.value.json();
@@ -104,53 +84,8 @@ const AdminPage: React.FC = () => {
                 setFestivalData(data.festivalData || []);
                 setFestivalConfig(data.festivalConfig || null);
             } else {
-                errors.push('Failed to fetch live site data.');
+                setError('Failed to fetch live site data.');
             }
-    
-            // Process pipeline data (Non-critical)
-            const pipelineResResult = results[1];
-            if (pipelineResResult.status === 'fulfilled') {
-                if (pipelineResResult.value.ok) {
-                    const pipelineData = await pipelineResResult.value.json();
-                    setPipeline(pipelineData.pipeline || []);
-                    if (pipelineData.warning) warnings.push(pipelineData.warning);
-                } else if (pipelineResResult.value.status !== 401) {
-                    // Only show error if it wasn't a standard 401 (Not allowed)
-                    errors.push('Failed to fetch submission pipeline.');
-                }
-            }
-    
-            // Process payouts (Non-critical)
-            const payoutsResResult = results[2];
-            if (payoutsResResult.status === 'fulfilled') {
-                if (payoutsResResult.value.ok) {
-                    const payoutsData = await payoutsResResult.value.json();
-                    setPayoutRequests(payoutsData.payoutRequests || []);
-                    if (payoutsData.warning) warnings.push(payoutsData.warning);
-                } else if (payoutsResResult.value.status !== 401) {
-                    errors.push('Failed to fetch payout requests.');
-                }
-            }
-
-            // Process permissions (Critical)
-            const permsResResult = results[3];
-            if (permsResResult.status === 'fulfilled') {
-                if (permsResResult.value.ok) {
-                    const permsData = await permsResResult.value.json();
-                    setPermissions(permsData.permissions || {});
-                    if (permsData.warning) warnings.push(permsData.warning);
-                } else if (permsResResult.value.status !== 401) {
-                    errors.push('Failed to fetch user role permissions.');
-                }
-            }
-    
-            if (errors.length > 0) {
-                setError(`Notification: ${errors.join(' ')}`);
-            } else if (warnings.length > 0) {
-                 // Use first significant warning for user guidance
-                 setError(`System Warning: ${warnings[0]}`);
-            }
-    
         } catch (err) {
             setError(err instanceof Error ? err.message : 'A critical error occurred while loading data.');
         } finally {
@@ -158,7 +93,7 @@ const AdminPage: React.FC = () => {
         }
     }, []);
 
-    const handleSaveData = async (type: 'movies' | 'categories' | 'about' | 'festival', dataToSave: any, pipelineItemIdToDelete?: string | null) => {
+    const handleSaveData = async (type: 'movies' | 'categories' | 'about' | 'festival', dataToSave: any) => {
         setIsSaving(true);
         setSaveMessage('');
         setSaveError('');
@@ -167,12 +102,12 @@ const AdminPage: React.FC = () => {
             const response = await fetch('/api/publish-data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password, type, data: dataToSave, pipelineItemIdToDelete }),
+                body: JSON.stringify({ password, type, data: dataToSave }),
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Failed to save.');
             setSaveMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} saved & published successfully!`);
-            fetchAllData(password!); // Refresh all data after a successful save
+            fetchAllData(password!);
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : 'An error occurred while saving.');
         } finally {
@@ -194,7 +129,7 @@ const AdminPage: React.FC = () => {
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Failed to delete movie.');
             setSaveMessage(`Movie deleted & published successfully!`);
-            fetchAllData(password!); // Refresh data
+            fetchAllData(password!);
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : 'An error occurred during deletion.');
         } finally {
@@ -216,7 +151,7 @@ const AdminPage: React.FC = () => {
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Failed to set Now Streaming.');
             setSaveMessage(`Successfully set new "Now Streaming" film!`);
-            fetchAllData(password!); // Refresh all data after a successful save
+            fetchAllData(password!);
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : 'An error occurred while setting Now Streaming.');
         } finally {
@@ -254,36 +189,9 @@ const AdminPage: React.FC = () => {
         setIsAuthenticated(false);
         setPassword('');
         setRole(null);
-        setAllowedTabs([]);
         setError('');
     };
 
-    useEffect(() => {
-        if (!role) return;
-
-        let tabs: string[] = [];
-        if (role === 'super_admin' || role === 'master') {
-            tabs = Object.keys(ALL_TABS);
-        } else {
-            // Default permissions for built-in roles if not defined in DB
-            const defaultPermissions: Record<string, string[]> = {
-                collaborator: ['movies', 'categories', 'pipeline', 'fallback'],
-                festival_admin: ['festival'],
-                jury: ['jury', 'pipeline']
-            };
-            tabs = permissions[role] || defaultPermissions[role] || [];
-        }
-        
-        setAllowedTabs(tabs);
-        
-        if (tabs.length > 0 && !tabs.includes(activeTab)) {
-            setActiveTab(tabs[0]);
-        } else if (tabs.length === 0 && !error) {
-            setError("Your role does not have any permissions assigned.");
-        }
-    }, [role, permissions, activeTab, error]);
-
-    // Renders the login form
     if (!isAuthenticated) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
@@ -307,7 +215,6 @@ const AdminPage: React.FC = () => {
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
                                     className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white"
-                                    aria-label={showPassword ? "Hide password" : "Show password"}
                                 >
                                     {showPassword ? (
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" /></svg>
@@ -362,28 +269,18 @@ const AdminPage: React.FC = () => {
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-2 mb-10">
-                   {allowedTabs.map(tabId => (
-                        <TabButton key={tabId} tabId={tabId} label={ALL_TABS[tabId as keyof typeof ALL_TABS]} />
+                   {Object.entries(ALL_TABS).map(([tabId, label]) => (
+                        <TabButton key={tabId} tabId={tabId} label={label} />
                    ))}
                 </div>
-                
-                {error && (
-                    <div className={`p-4 mb-8 rounded-xl flex items-center gap-3 animate-[fadeIn_0.5s_ease-out] ${error.startsWith('System Warning:') ? 'bg-orange-500/10 border border-orange-500/30 text-orange-400' : 'bg-blue-500/10 border border-blue-500/30 text-blue-400'}`}>
-                         <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                         <span className="text-xs font-bold leading-relaxed">{error}</span>
-                    </div>
-                )}
 
                 <div className="animate-[fadeIn_0.5s_ease-out]">
-                    {activeTab === 'analytics' && <AnalyticsPage viewMode="full" onNavigateToGrowth={() => setActiveTab('growth')} />}
+                    {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'growth' && <GrowthAnalyticsTab />}
                     {activeTab === 'pitchDeck' && <PitchDeckPage />}
-                    {activeTab === 'jury' && <JuryPortal pipeline={pipeline} />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
-                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data, pipelineId) => handleSaveData('movies', data, pipelineId)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} movieToCreate={pipelineItemToConvert} onCreationDone={() => setPipelineItemToConvert(null)} />}
-                    {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => { setPipelineItemToConvert(item); setActiveTab('movies'); }} onRefresh={() => fetchAllData(password)} />}
+                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}
-                    {activeTab === 'payouts' && <AdminPayoutsTab />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={setFestivalData} onConfigChange={setFestivalConfig} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}
                     {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (movie) => handleSaveData('movies', { [movie.key]: movie })} />}
@@ -392,13 +289,6 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'monetization' && <MonetizationTab />}
                     {activeTab === 'security' && <SecurityTab />}
                     {activeTab === 'fallback' && <FallbackGenerator movies={movies} categories={categories} festivalData={festivalData} festivalConfig={festivalConfig} aboutData={aboutData} />}
-                    {activeTab === 'permissions' && (role === 'super_admin' || role === 'master') && 
-                        <PermissionsManager 
-                            allTabs={ALL_TABS}
-                            initialPermissions={permissions}
-                            onRefresh={() => fetchAllData(password)}
-                        />
-                    }
                 </div>
             </div>
             

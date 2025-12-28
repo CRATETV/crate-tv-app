@@ -30,8 +30,9 @@ const SubmitPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
-    const emailSubject = encodeURIComponent("Film Submission for Crate TV Catalog Consideration");
-    const emailBody = encodeURIComponent(`Hello Crate TV Team,
+    const handleEmailSubmit = () => {
+        const emailSubject = encodeURIComponent("Film Submission for Crate TV Catalog Consideration");
+        const emailBody = encodeURIComponent(`Hello Crate TV Team,
 
 I would like to submit my work for consideration in your year-round streaming catalog.
 
@@ -56,7 +57,8 @@ LEGAL CONFIRMATION:
 Thank you,
 [Your Name]`);
 
-    const emailMailto = `mailto:cratetiv@gmail.com?subject=${emailSubject}&body=${emailBody}`;
+        window.location.href = `mailto:cratetiv@gmail.com?subject=${emailSubject}&body=${emailBody}`;
+    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -142,7 +144,7 @@ Thank you,
                         {/* FESTIVAL PATH */}
                         <div className="bg-gray-900/40 border border-white/5 p-8 md:p-12 rounded-3xl flex flex-col items-center text-center group hover:bg-gray-900/60 transition-all duration-500 hover:border-red-500/20 shadow-2xl">
                             <div className="w-16 h-16 bg-red-600/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20 group-hover:scale-110 transition-transform">
-                                <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                                <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
                             </div>
                             <h2 className="text-3xl font-black mb-4 uppercase tracking-tight">The Festival Path</h2>
                             <p className="text-gray-400 mb-8 flex-grow leading-relaxed">
@@ -157,19 +159,19 @@ Thank you,
                         {/* PLATFORM PATH */}
                         <div className="bg-gray-900/40 border border-white/5 p-8 md:p-12 rounded-3xl flex flex-col items-center text-center group hover:bg-gray-900/60 transition-all duration-500 hover:border-purple-500/20 shadow-2xl">
                             <div className="w-16 h-16 bg-purple-600/10 rounded-full flex items-center justify-center mb-6 border border-purple-500/20 group-hover:scale-110 transition-transform">
-                                <svg className="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                                <svg className="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                             </div>
                             <h2 className="text-3xl font-black mb-4 uppercase tracking-tight">The Catalog Path</h2>
                             <p className="text-gray-400 mb-8 flex-grow leading-relaxed">
                                 Submit directly to the **Crate TV Streaming Catalog**. Best for filmmakers looking for non-exclusive year-round distribution and direct monetization.
                             </p>
                             <div className="space-y-4 w-full">
-                                <a 
-                                    href={emailMailto}
+                                <button 
+                                    onClick={handleEmailSubmit}
                                     className="block w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-purple-900/20 text-lg text-center"
                                 >
                                     Email us Your Film
-                                </a>
+                                </button>
                                 <button 
                                     onClick={() => setShowDirectForm(!showDirectForm)}
                                     className="text-xs text-gray-500 hover:text-white transition-colors uppercase font-black tracking-widest border-b border-transparent hover:border-gray-500 pb-1"
@@ -185,7 +187,7 @@ Thank you,
                             onClick={() => handleNavigate('/submission-terms')}
                             className="text-gray-400 hover:text-red-500 transition-colors text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2 mx-auto"
                         >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 010.707 0.293l5.414 5.414a1 1 0 010.293 0.707V19a2 2 0 01-2 2z" /></svg>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 010.707 0.293l5.414 5.414a1 1 0 010.293 0.707V19a2 2 0 01-2 2z" /></svg>
                             Review Submission Rules & Non-Exclusive Terms
                         </button>
                     </div>

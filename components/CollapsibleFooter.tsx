@@ -37,11 +37,9 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
     window.scrollTo(0, 0);
   };
 
-  // Fixed mailto handler to ensure it triggers correctly without being caught by the internal router
-  const handleEmailClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const emailSubject = encodeURIComponent("Film Submission Consideration");
-    const emailBody = encodeURIComponent("Hello Crate TV Team,\n\nI would like to submit my film for consideration.\n\nFilm Title: \nDirector: \nLink to Screener: ");
+  const handleEmailClick = () => {
+    const emailSubject = encodeURIComponent("Film Submission for Crate TV Catalog");
+    const emailBody = encodeURIComponent("Hello Crate TV Team,\n\nI am reaching out to submit my film for consideration in your year-round catalog.\n\nFilm Title: \nDirector: \nLink to Screener: ");
     window.location.href = `mailto:cratetiv@gmail.com?subject=${emailSubject}&body=${emailBody}`;
   };
 
