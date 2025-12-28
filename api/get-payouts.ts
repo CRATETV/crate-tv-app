@@ -38,7 +38,6 @@ export async function POST(request: Request) {
         }
     }
 
-    // Initial Setup Fallback
     const anyPasswordSet = primaryAdminPassword || masterPassword || collaboratorPassword || festivalAdminPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
     if (!anyPasswordSet) isAuthenticated = true;
 
@@ -48,7 +47,12 @@ export async function POST(request: Request) {
     
     // --- Firestore Logic ---
     const initError = getInitializationError();
-    if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
+    if (initError) {
+        return new Response(JSON.stringify({ payoutRequests: [], warning: initError }), {
+            status: 200, 
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
     
     const db = getAdminDb();
     if (!db) throw new Error("Database connection failed.");

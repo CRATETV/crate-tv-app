@@ -1,3 +1,4 @@
+
 // FIX: The Firebase V9 modular imports are failing, indicating an older SDK version (likely v8) is installed.
 // The code has been refactored to use the v8 namespaced/compat syntax for all Firebase App, Auth, and Firestore interactions.
 import firebase from 'firebase/compat/app';
@@ -100,17 +101,13 @@ export const getUserProfile = async (uid: string): Promise<User | null> => {
             isFilmmaker: data.isFilmmaker === true, // Coerce to boolean, defaulting to false
             avatar: data.avatar || 'fox',
             isPremiumSubscriber: data.isPremiumSubscriber === true, // Default to false
-// FIX: Explicitly type the 'item' in the array filter as 'any' to help TypeScript's type inference. This resolves the 'unknown[]' is not assignable to 'string[]' error by ensuring the type guard correctly narrows the array type.
             watchlist: Array.isArray(data.watchlist) ? data.watchlist.filter((item: any): item is string => typeof item === 'string') : [],
-// FIX: Explicitly type the 'item' in the array filter as 'any' to help TypeScript's type inference. This resolves the 'unknown[]' is not assignable to 'string[]' error by ensuring the type guard correctly narrows the array type.
             watchedMovies: Array.isArray(data.watchedMovies) ? data.watchedMovies.filter((item: any): item is string => typeof item === 'string') : [],
-// FIX: Explicitly type the 'item' in the array filter as 'any' to help TypeScript's type inference. This resolves the 'unknown[]' is not assignable to 'string[]' error by ensuring the type guard correctly narrows the array type.
             likedMovies: Array.isArray(data.likedMovies) ? data.likedMovies.filter((item: any): item is string => typeof item === 'string') : [],
             hasFestivalAllAccess: data.hasFestivalAllAccess === true,
-// FIX: Explicitly type the 'item' in the array filter as 'any' to help TypeScript's type inference. This resolves the 'unknown[]' is not assignable to 'string[]' error by ensuring the type guard correctly narrows the array type.
             unlockedBlockIds: Array.isArray(data.unlockedBlockIds) ? data.unlockedBlockIds.filter((item: any): item is string => typeof item === 'string') : [],
-// FIX: Explicitly type the 'item' in the array filter as 'any' to help TypeScript's type inference. This resolves the 'unknown[]' is not assignable to 'string[]' error by ensuring the type guard correctly narrows the array type.
             purchasedMovieKeys: Array.isArray(data.purchasedMovieKeys) ? data.purchasedMovieKeys.filter((item: any): item is string => typeof item === 'string') : [],
+            rentals: data.rentals || {},
             rokuDeviceId: data.rokuDeviceId || undefined,
         };
         return userProfile;
@@ -136,6 +133,7 @@ export const createUserProfile = async (uid: string, email: string, name?: strin
         hasFestivalAllAccess: false,
         unlockedBlockIds: [],
         purchasedMovieKeys: [],
+        rentals: {}
     };
     await userDocRef.set(newUser);
 

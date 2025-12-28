@@ -1,8 +1,7 @@
-import { GoogleGenAI, Type } from '@google/genai';
-import { Movie } from '../types';
 
-// This is a Vercel Serverless Function
-// It will be accessible at the path /api/generate-recommendations
+import { Type } from '@google/genai';
+import { generateContentWithRetry } from './_lib/geminiRetry.js';
+
 export async function POST(request: Request) {
   try {
     const { likedTitles, allMovies } = await request.json();
@@ -14,13 +13,6 @@ export async function POST(request: Request) {
       });
     }
 
-    if (!process.env.API_KEY) {
-      throw new Error("API_KEY environment variable is not set.");
-    }
-
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
-    // Create a string representation of the available movies catalog
     const availableMoviesCatalog = Object.entries(allMovies)
       .map(([key, movie]: [string, any]) => `"${key}": "${movie.title}"`)
       .join(',\n');
@@ -28,21 +20,15 @@ export async function POST(request: Request) {
     const prompt = `
       You are a film recommendation expert for an indie streaming service called Crate TV.
       A user likes the following movies: ${JSON.stringify(likedTitles)}.
-
-      Based on these preferences, recommend up to 7 other movies from the available catalog below.
-      Prioritize movies that share similar genres, themes, directors, or actors.
-      Do not recommend movies that are already in the user's liked list.
-
-      Available movie catalog (as a JSON object of "key": "title"):
+      Recommend up to 7 other movies from the available catalog below.
+      Available movie catalog:
       {
         ${availableMoviesCatalog}
       }
-
-      Respond with a JSON object that matches this schema: { "recommendedKeys": ["key1", "key2"] }.
+      Respond with a JSON object: { "recommendedKeys": ["key1", "key2"] }.
     `;
 
-    // FIX: Updated model to gemini-3-flash-preview for basic text tasks as per GenAI guidelines.
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithRetry({
         model: 'gemini-3-flash-preview',
         contents: prompt,
         config: {
@@ -59,7 +45,6 @@ export async function POST(request: Request) {
         }
     });
     
-    // Since we expect a JSON response, parse the text
     const responseJson = JSON.parse(response.text || '{}');
     const recommendedKeys = responseJson.recommendedKeys || [];
 
@@ -69,8 +54,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Error generating recommendations:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-    return new Response(JSON.stringify({ error: `Failed to generate recommendations: ${errorMessage}` }), {
+    return new Response(JSON.stringify({ error: `Failed: ${error instanceof Error ? error.message : "Unknown"}` }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

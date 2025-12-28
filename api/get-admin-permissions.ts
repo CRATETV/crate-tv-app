@@ -46,7 +46,13 @@ export async function POST(request: Request) {
 
         // --- Firestore Logic ---
         const initError = getInitializationError();
-        if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
+        if (initError) {
+             return new Response(JSON.stringify({ permissions: {}, warning: initError }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+        
         const db = getAdminDb();
         if (!db) throw new Error("Database connection failed.");
 

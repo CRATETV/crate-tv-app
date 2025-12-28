@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import ActorBioModal from './ActorBioModal';
@@ -105,9 +106,43 @@ const RecommendedMovieLink: React.FC<{ movie: Movie }> = ({ movie }) => {
 }
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist } = useAuth();
+  const { likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, purchaseMovie } = useAuth();
   const { isLoading: isDataLoading, movies: allMovies, categories: allCategories } = useFestival();
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
+  
+  const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
+
+  const hasAccess = useMemo(() => {
+    if (!movie) return true;
+    if (!movie.isForSale) return true;
+    
+    const expiration = rentals[movieKey];
+    if (!expiration) return false;
+    
+    return new Date(expiration) > new Date();
+  }, [movie, rentals, movieKey]);
+
+  useEffect(() => {
+    if (!movie?.isForSale || !rentals[movieKey]) return;
+
+    const timer = setInterval(() => {
+        const expiration = new Date(rentals[movieKey]);
+        const now = new Date();
+        const diff = expiration.getTime() - now.getTime();
+
+        if (diff <= 0) {
+            setTimeRemaining(null);
+            clearInterval(timer);
+        } else {
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            setTimeRemaining(`${h}h ${m}m remaining`);
+        }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [movieKey, movie, rentals]);
+
   const recommendedMovies = useMemo(() => {
     if (!movie || !movie.key) return [];
     const recommendedKeys = new Set<string>();
@@ -129,6 +164,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [showSupportSuccess, setShowSupportSuccess] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
@@ -136,14 +172,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const isOnWatchlist = useMemo(() => watchlist.includes(movieKey), [watchlist, movieKey]);
   const embedUrl = useMemo(() => movie ? getEmbedUrl(movie.fullMovie) : null, [movie]);
 
-  // LICENSING RESTRICTION logic fix
   const canCollectDonations = useMemo(() => {
     if (!movie) return false;
     const isVintage = allCategories.publicDomainIndie?.movieKeys?.includes(movie.key);
     const isCopyrightRestricted = movie.hasCopyrightMusic === true;
     const isManualDisabled = movie.isSupportEnabled === false;
-    
-    return !isVintage && !isCopyrightRestricted && !isManualDisabled;
+    return !isVintage && !isCopyrightRestricted && !isManualDisabled && !movie.isForSale;
   }, [movie, allCategories]);
 
   const handleGoHome = useCallback(() => {
@@ -163,6 +197,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     setShowSupportSuccess(true);
     setTimeout(() => setShowSupportSuccess(false), 3000);
   }, []);
+
+  const handlePurchaseSuccess = async () => {
+    await purchaseMovie(movieKey);
+    setIsPurchaseModalOpen(false);
+    setPlayerMode('full');
+  };
 
   const playContent = useCallback(async () => {
     if (videoRef.current) {
@@ -199,7 +239,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     const params = new URLSearchParams(window.location.search);
     if (movie) {
         setReleased(isMovieReleased(movie));
-        if ((params.get('play') === 'true') && movie.fullMovie && isMovieReleased(movie)) {
+        if ((params.get('play') === 'true') && movie.fullMovie && isMovieReleased(movie) && hasAccess) {
             setPlayerMode('full');
             setShowPostPlay(false);
         } else {
@@ -207,11 +247,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             setShowPostPlay(false);
         }
     } 
-  }, [movieKey, movie]);
+  }, [movieKey, movie, hasAccess]);
 
   useEffect(() => {
-      if (playerMode === 'full' && videoRef.current && !embedUrl) playContent();
-  }, [playerMode, embedUrl, playContent]);
+      if (playerMode === 'full' && videoRef.current && !embedUrl && hasAccess) playContent();
+  }, [playerMode, embedUrl, playContent, hasAccess]);
 
   if (isDataLoading || !movie) return <LoadingSpinner />;
 
@@ -226,13 +266,44 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     {showPostPlay && <PostPlayOverlay movies={recommendedMovies} onSelect={handlePostPlaySelect} onHome={handleGoHome} />}
                     {playerMode === 'full' && (
                         <>
-                            {embedUrl ? (
-                                <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={movie.title}></iframe>
-                            ) : (
+                            {hasAccess ? (
                                 <>
-                                    <video ref={videoRef} src={movie.fullMovie} className="w-full h-full" controls={!isPaused} playsInline autoPlay onContextMenu={(e) => e.preventDefault()} controlsList="nodownload" onEnded={handleMovieEnd} onPause={() => setIsPaused(true)} onPlay={() => setIsPaused(false)} />
-                                    {isPaused && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={isOnWatchlist} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => videoRef.current?.play()} onRewind={() => { if(videoRef.current) videoRef.current.currentTime -= 10; }} onForward={() => { if(videoRef.current) videoRef.current.currentTime += 10; }} onToggleLike={() => toggleLikeMovie(movieKey)} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
+                                    {embedUrl ? (
+                                        <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={movie.title}></iframe>
+                                    ) : (
+                                        <>
+                                            <video ref={videoRef} src={movie.fullMovie} className="w-full h-full" controls={!isPaused} playsInline autoPlay onContextMenu={(e) => e.preventDefault()} controlsList="nodownload" onEnded={handleMovieEnd} onPause={() => setIsPaused(true)} onPlay={() => setIsPaused(false)} />
+                                            {isPaused && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={isOnWatchlist} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => videoRef.current?.play()} onRewind={() => { if(videoRef.current) videoRef.current.currentTime -= 10; }} onForward={() => { if(videoRef.current) videoRef.current.currentTime += 10; }} onToggleLike={() => toggleLikeMovie(movieKey)} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
+                                        </>
+                                    )}
                                 </>
+                            ) : (
+                                <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-8 bg-black/90 backdrop-blur-3xl overflow-hidden">
+                                    <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20 blur-2xl" />
+                                    <div className="relative z-10 text-center space-y-6 animate-[fadeIn_0.5s_ease-out]">
+                                        <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto border-2 border-green-500 shadow-[0_0_50px_rgba(34,197,94,0.3)]">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        </div>
+                                        <div>
+                                            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter">Rental Expired or Required</h2>
+                                            <p className="text-gray-400 mt-2 text-lg font-medium">Enjoy 24 hours of access to this masterpiece for just <span className="text-green-500 font-bold">${movie.salePrice?.toFixed(2)}</span></p>
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                            <button 
+                                                onClick={() => setIsPurchaseModalOpen(true)}
+                                                className="px-10 py-4 bg-green-600 hover:bg-green-500 text-white font-black rounded-xl transition-all transform hover:scale-105 active:scale-95 shadow-2xl"
+                                            >
+                                                Rent Film (24h)
+                                            </button>
+                                            <button 
+                                                onClick={handleGoHome}
+                                                className="px-10 py-4 bg-white/5 hover:bg-white/10 text-white font-black rounded-xl border border-white/10 transition-all"
+                                            >
+                                                Return Home
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             )}
                         </>
                     )}
@@ -243,7 +314,18 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             <div className="relative w-full h-full flex items-center justify-center p-8 md:p-0">
                                 <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt={movie.title} className="w-full h-full object-contain md:max-w-2xl rounded-lg shadow-2xl" crossOrigin="anonymous" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent"></div>
-                                {released && <button onClick={() => setPlayerMode('full')} className="absolute group/playbtn text-white bg-black/40 backdrop-blur-md rounded-full p-6 hover:bg-white transition-all transform hover:scale-110 active:scale-95 shadow-2xl border-4 border-white/30"><svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 group-hover/playbtn:text-black transition-colors" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg></button>}
+                                {released && (
+                                    <button 
+                                        onClick={() => hasAccess ? setPlayerMode('full') : setIsPurchaseModalOpen(true)} 
+                                        className={`absolute group/playbtn text-white bg-black/40 backdrop-blur-md rounded-full p-6 hover:bg-white transition-all transform hover:scale-110 active:scale-95 shadow-2xl border-4 border-white/30`}
+                                    >
+                                        {hasAccess ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 group-hover/playbtn:text-black transition-colors" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 group-hover/playbtn:text-green-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        )}
+                                    </button>
+                                )}
                             </div>
                         </>
                     )}
@@ -251,9 +333,20 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
                 {playerMode !== 'full' && (
                   <div className="max-w-4xl mx-auto p-6 md:p-12 -mt-8 relative z-30">
-                      <h1 className="text-4xl md:text-7xl font-black text-white mb-8 tracking-tighter">{movie.title || 'Untitled Film'}</h1>
+                      <div className="flex justify-between items-start mb-4">
+                         <h1 className="text-4xl md:text-7xl font-black text-white tracking-tighter">{movie.title || 'Untitled Film'}</h1>
+                         {timeRemaining && (
+                            <div className="bg-red-600 text-white px-4 py-2 rounded-full font-black text-xs uppercase tracking-widest animate-pulse shadow-lg">
+                                {timeRemaining}
+                            </div>
+                         )}
+                      </div>
+                      
                       <div className="flex flex-wrap items-center gap-4 mb-10">
-                          {canCollectDonations && (
+                          {!hasAccess && (
+                             <button onClick={() => setIsPurchaseModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center px-8 py-4 bg-green-600 hover:bg-green-500 text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-green-900/20">Rent Film (24h) - ${movie.salePrice?.toFixed(2)}</button>
+                          )}
+                          {hasAccess && canCollectDonations && (
                             <button onClick={() => setIsSupportModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-purple-900/20"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0V7.5A1.5 1.5 0 0110 6V3.5zM3.5 6A1.5 1.5 0 015 4.5h1.5a1.5 1.5 0 013 0V6a1.5 1.5 0 00-1.5 1.5v1.5a1.5 1.5 0 01-3 0V9a1 1 0 00-1-1H3a1 1 0 01-1-1V6a1 1 0 011-1h.5zM6 14.5a1.5 1.5 0 013 0V16a1 1 0 001 1h3a1 1 0 011 1v2a1 1 0 01-1 1h-3.5a1.5 1.5 0 01-3 0v-1.5A1.5 1.5 0 016 15v-1.5z" /></svg>Support Filmmaker</button>
                           )}
                           <button onClick={() => setIsDetailsModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl border border-white/10"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>More Info</button>
@@ -343,6 +436,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
             {selectedDirector && <DirectorCreditsModal directorName={selectedDirector} onClose={() => setSelectedDirector(null)} allMovies={allMovies} onSelectMovie={(m: Movie) => { window.history.pushState({}, '', `/movie/${m.key}`); window.dispatchEvent(new Event('pushstate')); window.scrollTo(0, 0); }} />}
             {isSupportModalOpen && movie && <SquarePaymentModal movie={movie} paymentType="donation" onClose={() => setIsSupportModalOpen(false)} onPaymentSuccess={handlePaymentSuccess} />}
+            {isPurchaseModalOpen && movie && <SquarePaymentModal movie={movie} paymentType="movie" onClose={() => setIsPurchaseModalOpen(false)} onPaymentSuccess={handlePurchaseSuccess} />}
             {isDetailsModalOpen && movie && <MovieDetailsModal movie={movie} isLiked={isLiked} onToggleLike={toggleLikeMovie} onClose={() => setIsDetailsModalOpen(false)} onSelectActor={setSelectedActor} allMovies={allMovies} allCategories={allCategories} onSelectRecommendedMovie={(m: Movie) => { setIsDetailsModalOpen(false); window.history.pushState({}, '', `/movie/${m.key}`); window.dispatchEvent(new Event('pushstate')); }} onSupportMovie={() => { setIsDetailsModalOpen(false); setIsSupportModalOpen(true); }} />}
         </div>
     );

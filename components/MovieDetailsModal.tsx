@@ -1,9 +1,11 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category, Episode } from '../types';
 import DirectorCreditsModal from './DirectorCreditsModal';
 import Countdown from './Countdown';
 import { isMovieReleased } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
+import SquarePaymentModal from './SquarePaymentModal';
 
 interface MovieDetailsModalProps {
   movie: Movie;
@@ -44,12 +46,22 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   onSupportMovie,
   onPlayMovie,
 }) => {
-  const { watchlist, toggleWatchlist } = useAuth();
+  const { watchlist, toggleWatchlist, rentals, purchaseMovie } = useAuth();
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
 
   const [released, setReleased] = useState(() => isMovieReleased(movie));
   const isOnWatchlist = useMemo(() => watchlist.includes(movie.key), [watchlist, movie.key]);
+  
+  const isRented = useMemo(() => {
+    const expiration = rentals[movie.key];
+    if (!expiration) return false;
+    return new Date(expiration) > new Date();
+  }, [rentals, movie.key]);
+
+  const needsPurchase = movie.isForSale && !isRented;
   
   const expiryDate = useMemo(() => {
     if (!movie.publishedAt) return null;
@@ -63,7 +75,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     const isVintage = allCategories.publicDomainIndie?.movieKeys?.includes(movie.key);
     const isCopyrightRestricted = movie.hasCopyrightMusic === true;
     const isManualDisabled = movie.isSupportEnabled === false;
-    return !isVintage && !isCopyrightRestricted && !isManualDisabled;
+    return !isVintage && !isCopyrightRestricted && !isManualDisabled && !movie.isForSale;
   }, [movie, allCategories]);
 
   useEffect(() => {
@@ -77,7 +89,32 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     return () => clearInterval(interval);
   }, [movie, released]);
 
+  useEffect(() => {
+    if (!isRented || !rentals[movie.key]) return;
+
+    const timer = setInterval(() => {
+        const expiration = new Date(rentals[movie.key]);
+        const now = new Date();
+        const diff = expiration.getTime() - now.getTime();
+
+        if (diff <= 0) {
+            setTimeRemaining(null);
+            clearInterval(timer);
+        } else {
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            setTimeRemaining(`${h}h ${m}m remaining`);
+        }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [movie.key, rentals, isRented]);
+
   const handlePlayButtonClick = (url?: string) => {
+      if (needsPurchase) {
+          setShowPurchaseModal(true);
+          return;
+      }
       if (onPlayMovie) onPlayMovie(movie);
       else {
           onClose();
@@ -85,6 +122,11 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
           window.history.pushState({}, '', `/movie/${movie.key}?play=true${targetUrl ? `&stream=${targetUrl}` : ''}`);
           window.dispatchEvent(new Event('pushstate'));
       }
+  };
+
+  const handlePurchaseSuccess = async () => {
+      await purchaseMovie(movie.key);
+      setShowPurchaseModal(false);
   };
 
   return (
@@ -105,14 +147,34 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-black/30"></div>
             
             <div className="absolute bottom-10 left-10 right-10 text-white z-10">
-                <h2 className="text-4xl md:text-6xl font-black mb-8 uppercase tracking-tighter leading-none">{movie.title}</h2>
+                <div className="flex items-center gap-4 mb-4">
+                   <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none">{movie.title}</h2>
+                   {timeRemaining && (
+                        <div className="bg-red-600 text-white px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest animate-pulse shadow-lg">
+                            {timeRemaining}
+                        </div>
+                   )}
+                </div>
+                
                 <div className="flex flex-wrap items-center gap-4">
                     {released ? (
                         <>
                             {!movie.isSeries && (
-                                <button onClick={() => handlePlayButtonClick()} className="flex items-center justify-center px-10 py-4 bg-white text-black font-black rounded-xl hover:bg-gray-200 transition-all transform hover:scale-105 active:scale-95 shadow-2xl">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-                                    Play Now
+                                <button 
+                                    onClick={() => handlePlayButtonClick()} 
+                                    className={`flex items-center justify-center px-10 py-4 ${needsPurchase ? 'bg-green-600 text-white' : 'bg-white text-black'} font-black rounded-xl hover:opacity-90 transition-all transform hover:scale-105 active:scale-95 shadow-2xl`}
+                                >
+                                    {needsPurchase ? (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            Rent Film (24h) - ${movie.salePrice?.toFixed(2)}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                                            Play Now
+                                        </>
+                                    )}
                                 </button>
                             )}
                             {canCollectDonations && (
@@ -190,6 +252,15 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                 onClose={() => setSelectedDirector(null)}
                 allMovies={allMovies}
                 onSelectMovie={onSelectRecommendedMovie}
+            />
+        )}
+
+        {showPurchaseModal && (
+            <SquarePaymentModal
+                paymentType="movie"
+                movie={movie}
+                onClose={() => setShowPurchaseModal(false)}
+                onPaymentSuccess={handlePurchaseSuccess}
             />
         )}
       </div>

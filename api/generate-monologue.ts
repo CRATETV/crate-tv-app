@@ -1,4 +1,5 @@
-import { GoogleGenAI } from '@google/genai';
+
+import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
 export async function POST(request: Request) {
   try {
@@ -15,25 +16,9 @@ export async function POST(request: Request) {
       });
     }
 
-    if (!process.env.API_KEY) {
-      throw new Error("API_KEY environment variable is not set.");
-    }
+    const prompt = `You are a playwright. Generate a short, original, one-minute monologue for: Genre: ${genre}, Emotion: ${emotion}. Format as: CHARACTER: [Name], CONTEXT: [One sentence], and the text.`;
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
-    const prompt = `
-        You are a world-class playwright and screenwriter. Your task is to generate a short, original, one-minute monologue for an actor to practice.
-
-        Instructions:
-        1.  **Genre:** ${genre}
-        2.  **Character's Core Emotion:** ${emotion}
-        3.  **Format:** The response must be plain text and formatted exactly as follows:
-            -   A character name (e.g., "CHARACTER: Alex").
-            -   A brief, one-sentence context for the scene (e.g., "CONTEXT: Alex is speaking to their estranged father for the first time in ten years.").
-            -   The monologue text itself.
-    `;
-
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithRetry({
         model: 'gemini-3-flash-preview',
         contents: [{ parts: [{ text: prompt }] }],
     });
@@ -46,8 +31,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Error generating monologue:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-    return new Response(JSON.stringify({ error: `Failed to generate monologue: ${errorMessage}` }), {
+    return new Response(JSON.stringify({ error: `Failed: ${error instanceof Error ? error.message : "Unknown"}` }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

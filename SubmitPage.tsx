@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Header from './components/Header';
 import CollapsibleFooter from './components/CollapsibleFooter';
@@ -7,7 +6,7 @@ import PublicS3Uploader from './components/PublicS3Uploader';
 
 const FilmFreewayButton: React.FC<{ className?: string }> = ({ className = "" }) => (
     <a 
-        href="https://filmfreeway.com" // Filmmakers should be instructed to search "Crate TV"
+        href="https://filmfreeway.com" 
         target="_blank"
         rel="noopener noreferrer"
         className={`inline-flex items-center gap-3 bg-[#2D3A44] hover:bg-[#3d4c58] text-white px-6 py-3 rounded-lg font-bold transition-all transform hover:scale-105 active:scale-95 shadow-xl border border-white/10 ${className}`}
@@ -31,9 +30,8 @@ const SubmitPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
-    const handleEmailSubmit = () => {
-        const subject = encodeURIComponent("Film Submission for Crate TV Catalog Consideration");
-        const body = encodeURIComponent(`Hello Crate TV Team,
+    const emailSubject = encodeURIComponent("Film Submission for Crate TV Catalog Consideration");
+    const emailBody = encodeURIComponent(`Hello Crate TV Team,
 
 I would like to submit my work for consideration in your year-round streaming catalog.
 
@@ -52,13 +50,13 @@ Password (if applicable):
 
 LEGAL CONFIRMATION:
 -------------------
-[X] I have reviewed the Submission Terms at cratetv.net/submission-terms and I agree to the 전시 (Exhibition) terms.
-[X] I certify that I own the rights to all music and content within this film.
+[ ] I have reviewed the Submission Terms at cratetv.net/submission-terms and I agree to the Exhibition terms.
+[ ] I certify that I own the rights to all music and content within this film.
 
 Thank you,
 [Your Name]`);
-        window.location.href = `mailto:cratetiv@gmail.com?subject=${subject}&body=${body}`;
-    };
+
+    const emailMailto = `mailto:cratetiv@gmail.com?subject=${emailSubject}&body=${emailBody}`;
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -166,12 +164,12 @@ Thank you,
                                 Submit directly to the **Crate TV Streaming Catalog**. Best for filmmakers looking for non-exclusive year-round distribution and direct monetization.
                             </p>
                             <div className="space-y-4 w-full">
-                                <button 
-                                    onClick={handleEmailSubmit}
-                                    className="w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-purple-900/20 text-lg"
+                                <a 
+                                    href={emailMailto}
+                                    className="block w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-purple-900/20 text-lg text-center"
                                 >
                                     Email us Your Film
-                                </button>
+                                </a>
                                 <button 
                                     onClick={() => setShowDirectForm(!showDirectForm)}
                                     className="text-xs text-gray-500 hover:text-white transition-colors uppercase font-black tracking-widest border-b border-transparent hover:border-gray-500 pb-1"
@@ -187,7 +185,7 @@ Thank you,
                             onClick={() => handleNavigate('/submission-terms')}
                             className="text-gray-400 hover:text-red-500 transition-colors text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2 mx-auto"
                         >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 010.707 0.293l5.414 5.414a1 1 0 010.293 0.707V19a2 2 0 01-2 2z" /></svg>
                             Review Submission Rules & Non-Exclusive Terms
                         </button>
                     </div>

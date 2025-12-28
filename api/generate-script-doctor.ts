@@ -1,4 +1,6 @@
-import { GoogleGenAI, Type } from '@google/genai';
+
+import { Type } from '@google/genai';
+import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
 export async function POST(request: Request) {
   try {
@@ -6,24 +8,9 @@ export async function POST(request: Request) {
 
     if (password !== 'cratebio') return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
 
-    if (!process.env.API_KEY) throw new Error("API_KEY not set");
+    const prompt = `Script Doctor analysis for "${title}": "${scriptText}". Provide scores, critique, market fit, and comparable titles in JSON.`;
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
-    const prompt = `
-      You are a professional Script Doctor and Industry Consultant for Crate TV.
-      Analyze the following script/treatment for the project titled "${title}":
-      
-      "${scriptText}"
-
-      Provide a deep-dive analysis in JSON format:
-      1. Narrative Pulse: (Score 1-10 on pacing, character, and stakes).
-      2. Constructive Critique: (3 specific ways to improve the dramatic tension).
-      3. Market Fit: (Which global regions and demographics will this resonate with most?).
-      4. Comparable Titles: (3 successful indie or major films with similar vibes).
-    `;
-
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithRetry({
         model: 'gemini-3-pro-preview',
         contents: prompt,
         config: {

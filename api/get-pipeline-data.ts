@@ -1,4 +1,3 @@
-
 // This is a Vercel Serverless Function
 // Path: /api/get-pipeline-data
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -15,15 +14,19 @@ export async function POST(request: Request) {
         const festivalAdminPassword = process.env.FESTIVAL_ADMIN_PASSWORD;
 
         let isAuthenticated = false;
-        // FIX: Declare 'role' variable to avoid ReferenceError when assigning it inside the loop
         let role = '';
 
-        if (
-            (primaryAdminPassword && password === primaryAdminPassword) ||
-            (masterPassword && password === masterPassword) ||
-            (collaboratorPassword && password === collaboratorPassword) ||
-            (festivalAdminPassword && password === festivalAdminPassword)
-        ) {
+        if (primaryAdminPassword && password === primaryAdminPassword) {
+            role = 'super_admin';
+            isAuthenticated = true;
+        } else if (masterPassword && password === masterPassword) {
+            role = 'master';
+            isAuthenticated = true;
+        } else if (collaboratorPassword && password === collaboratorPassword) {
+            role = 'collaborator';
+            isAuthenticated = true;
+        } else if (festivalAdminPassword && password === festivalAdminPassword) {
+            role = 'festival_admin';
             isAuthenticated = true;
         } else {
              for (const key in process.env) {
@@ -45,7 +48,13 @@ export async function POST(request: Request) {
         
         // --- Firestore Logic ---
         const initError = getInitializationError();
-        if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
+        if (initError) {
+            // Return 200 with a warning instead of a 500 crash if config is missing
+            return new Response(JSON.stringify({ pipeline: [], warning: initError }), {
+                status: 200, 
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
         
         const db = getAdminDb();
         if (!db) throw new Error("Database connection failed.");

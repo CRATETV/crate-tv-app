@@ -1,4 +1,6 @@
-import { GoogleGenAI, Type } from '@google/genai';
+
+import { Type } from '@google/genai';
+import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
 export async function POST(request: Request) {
   try {
@@ -7,32 +9,13 @@ export async function POST(request: Request) {
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
     if (password !== primaryAdminPassword && password !== masterPassword) {
-      return new Response(JSON.stringify({ error: 'Unauthorized: Admin password mismatch' }), { status: 401 });
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    if (!process.env.API_KEY) throw new Error("API_KEY environment variable is not configured on the server.");
+    // 1. Generate Viral Copy + Press Release with Retry
+    const textPrompt = `Create a social media "Kit" (3 IG, 3 X, 3 FB, 15 hashtags) and Press Release for: "${title}" by ${director}. Synopsis: "${synopsis}". Respond in JSON.`;
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-    // 1. Generate Viral Copy + Press Release
-    const textPrompt = `
-      You are a specialized publicist for Crate TV.
-      Task: Create a social media "Kit" AND an Industry Press Release for:
-      Title: "${title}"
-      Director: "${director}"
-      Synopsis: "${synopsis}"
-
-      Generate:
-      - 3 Instagram Captions.
-      - 3 X (Twitter) Posts.
-      - 3 Facebook Posts.
-      - 15 hashtags.
-      - A professional, standard-format Press Release (FOR IMMEDIATE RELEASE).
-
-      Response must be valid JSON matching the schema.
-    `;
-
-    const textResponse = await ai.models.generateContent({
+    const textResponse = await generateContentWithRetry({
       model: 'gemini-3-flash-preview',
       contents: [{ parts: [{ text: textPrompt }] }],
       config: {
@@ -51,18 +34,11 @@ export async function POST(request: Request) {
       }
     });
 
-    const rawText = textResponse.text;
-    if (!rawText) throw new Error("The AI failed to generate text content (likely blocked by safety filters).");
+    const socialCopy = JSON.parse(textResponse.text || '{}');
 
-    const startIdx = rawText.indexOf('{');
-    const endIdx = rawText.lastIndexOf('}');
-    if (startIdx === -1 || endIdx === -1) throw new Error("The AI response was not in a valid JSON format.");
-    const cleanJson = rawText.substring(startIdx, endIdx + 1);
-    const socialCopy = JSON.parse(cleanJson);
-
-    // 2. Generate Cinematic Image
-    const imagePrompt = `A cinematic high-quality promotional movie still for a film titled "${title}". Directed by ${director}. High-end cinematography, 16:9 aspect ratio, dramatic cinematic lighting, movie set atmosphere. No text, subtitles, or logos.`;
-    const imageResponse = await ai.models.generateContent({
+    // 2. Generate Cinematic Image with Retry
+    const imagePrompt = `A cinematic high-quality promotional movie still for a film titled "${title}". Directed by ${director}. 16:9 aspect ratio, no text.`;
+    const imageResponse = await generateContentWithRetry({
       model: 'gemini-2.5-flash-image',
       contents: [{ parts: [{ text: imagePrompt }] }],
       config: { 
@@ -71,17 +47,9 @@ export async function POST(request: Request) {
     });
 
     let base64Image = '';
-    const candidates = imageResponse.candidates;
-    if (candidates && candidates.length > 0) {
-        const parts = candidates[0].content?.parts;
-        if (parts) {
-            for (const part of parts) {
-                if (part.inlineData) { 
-                    base64Image = part.inlineData.data ?? ''; 
-                    break; 
-                }
-            }
-        }
+    const part = imageResponse.candidates?.[0]?.content?.parts.find(p => p.inlineData);
+    if (part?.inlineData) {
+        base64Image = part.inlineData.data;
     }
 
     return new Response(JSON.stringify({ 
@@ -91,7 +59,6 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("Social Kit API error:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unexpected server error occurred during AI synthesis.";
-    return new Response(JSON.stringify({ error: errorMessage }), { status: 500 });
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown" }), { status: 500 });
   }
 }

@@ -30,7 +30,8 @@ interface AuthContextType {
     // Festival & Purchase related
     hasFestivalAllAccess: boolean;
     unlockedFestivalBlockIds: Set<string>;
-    purchasedMovieKeys: Set<string>;
+    purchasedMovieKeys: Set<string>; // Legacy
+    rentals: Record<string, string>; // Maps movieKey to ISO expiration
     unlockedWatchPartyKeys: Set<string>;
     unlockFestivalBlock: (blockId: string) => Promise<void>;
     grantFestivalAllAccess: () => Promise<void>;
@@ -225,6 +226,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const hasFestivalAllAccess = user?.hasFestivalAllAccess || false;
     const unlockedFestivalBlockIds = useMemo(() => new Set(user?.unlockedBlockIds || []), [user]);
     const purchasedMovieKeys = useMemo(() => new Set(user?.purchasedMovieKeys || []), [user]);
+    const rentals = user?.rentals || {};
     const unlockedWatchPartyKeys = useMemo(() => new Set(user?.unlockedWatchPartyKeys || []), [user]);
 
     const unlockFestivalBlock = async (blockId: string) => {
@@ -241,10 +243,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const purchaseMovie = async (movieKey: string) => {
-        if (!user || purchasedMovieKeys.has(movieKey)) return;
-        const newPurchased = [...(user.purchasedMovieKeys || []), movieKey];
-        await updateUserProfile(user.uid, { purchasedMovieKeys: newPurchased });
-        setUser(currentUser => currentUser ? ({ ...currentUser, purchasedMovieKeys: newPurchased }) : null);
+        if (!user) return;
+        
+        // Calculate expiration date: Now + 24 Hours
+        const expirationDate = new Date();
+        expirationDate.setHours(expirationDate.getHours() + 24);
+        
+        const newRentals = {
+            ...(user.rentals || {}),
+            [movieKey]: expirationDate.toISOString()
+        };
+        
+        await updateUserProfile(user.uid, { rentals: newRentals });
+        setUser(currentUser => currentUser ? ({ ...currentUser, rentals: newRentals }) : null);
     };
 
     const unlockWatchParty = async (movieKey: string) => {
@@ -288,6 +299,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         hasFestivalAllAccess,
         unlockedFestivalBlockIds,
         purchasedMovieKeys,
+        rentals,
         unlockedWatchPartyKeys,
         unlockFestivalBlock,
         grantFestivalAllAccess,

@@ -37,7 +37,7 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
     window.scrollTo(0, 0);
   };
 
-  const emailHref = "mailto:cratetiv@gmail.com?subject=Film%20Submission%20Consideration&body=Hello%20Crate%20TV,%0D%0A%0D%0AI%20would%20like%20to%20submit%20my%20film%20for%20consideration.%0D%0A%0D%0AFilm%20Title:%20%0D%0ADirector:%20%0D%0ALink%20to%20Screener:%20";
+  const emailHref = "mailto:cratetiv@gmail.com?subject=Film%20Submission%20Consideration&body=Hello%20Crate%20TV%20Team,%0A%0AI%20would%20like%20to%20submit%20my%20film%20for%20consideration.%0A%0AFilm%20Title:%20%0ADirector:%20%0ALink%20to%20Screener:%20";
 
   return (
     <div className={`fixed bottom-0 left-0 right-0 z-30 transition-all duration-500 ease-in-out hidden md:block ${isOpen ? 'translate-y-0' : 'translate-y-[calc(100%-2.5rem)]'}`}>

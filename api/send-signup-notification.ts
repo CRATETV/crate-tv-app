@@ -1,60 +1,30 @@
 import { Resend } from 'resend';
 
-// This is a Vercel Serverless Function
-// It will be accessible at the path /api/send-signup-notification
-
-const resend = new Resend(process.env.RESEND_API_KEY || 're_DB9YrhLH_PRYF6PESKVh3x1vXLJLrXsL6');
-const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
-const toEmail = 'cratetiv@gmail.com';
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@cratetv.net';
+const ADMIN_EMAIL = 'cratetiv@gmail.com';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { email } = body;
+    const { email } = await request.json();
 
     if (!email) {
-      return new Response(JSON.stringify({ error: 'Email of new user is required.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify({ error: 'User email is required.' }), { status: 400 });
     }
 
-    const subject = `🎉 New Crate TV Sign-Up: ${email}`;
-    const emailHtml = `
-      <div>
-        <h1>New User Sign-Up</h1>
-        <p>A new user has just signed up for Crate TV with the following email address:</p>
-        <p><strong>${email}</strong></p>
-        <p>Welcome them to the community!</p>
-      </div>
-    `;
-
-    const { data, error } = await resend.emails.send({
-        from: `Crate TV Notifications <${fromEmail}>`,
-        to: [toEmail],
-        subject: subject,
-        html: emailHtml,
+    const { error } = await resend.emails.send({
+        from: `Crate TV Alerts <${FROM_EMAIL}>`,
+        to: [ADMIN_EMAIL],
+        subject: `🎉 New Sign-Up: ${email}`,
+        html: `<div><h1>New User</h1><p>The user <strong>${email}</strong> has registered.</p></div>`,
     });
 
-    if (error) {
-        console.error('Resend error:', error);
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
-    }
+    if (error) throw new Error(error.message);
 
-    return new Response(JSON.stringify({ message: 'Notification sent successfully.' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
 
   } catch (error) {
-    console.error('Error in send-signup-notification API:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-    return new Response(JSON.stringify({ error: `Failed to send notification: ${errorMessage}` }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Sign-up notify error:', error);
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), { status: 500 });
   }
 }

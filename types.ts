@@ -1,3 +1,4 @@
+
 // This file contains type definitions for the Crate TV application.
 
 export interface Actor {
@@ -69,7 +70,8 @@ export interface User {
   likedMovies?: string[];
   hasFestivalAllAccess?: boolean;
   unlockedBlockIds?: string[];
-  purchasedMovieKeys?: string[];
+  purchasedMovieKeys?: string[]; // Legacy - now rentals handles time-limited
+  rentals?: Record<string, string>; // Maps movieKey to ISO expiration date
   unlockedWatchPartyKeys?: string[];
   rokuDeviceId?: string;
   actorProfileSlug?: string;
@@ -125,7 +127,7 @@ export interface AnalyticsData {
     viewLocations: Record<string, Record<string, number>>;
     allUsers: { email: string }[];
     actorUsers: { email: string }[];
-    filmmakerUsers: { email: string }[];
+    filmmakerUsers: { email: string }[] ;
     totalDonations: number;
     totalSales: number;
     totalMerchRevenue: number;

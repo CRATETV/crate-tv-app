@@ -35,6 +35,8 @@ const emptyMovie: Movie = {
     isSupportEnabled: true,
     isWatchPartyEnabled: false,
     watchPartyStartTime: '',
+    isForSale: false,
+    salePrice: 5.00,
 };
 
 const MovieEditor: React.FC<MovieEditorProps> = ({ 
@@ -94,43 +96,11 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         
         if (type === 'checkbox') {
              setFormData({ ...formData, [name]: target.checked });
+        } else if (type === 'number') {
+            setFormData({ ...formData, [name]: parseFloat(value) || 0 });
         } else {
             setFormData({ ...formData, [name]: value });
         }
-    };
-
-    // Cast Management
-    const handleAddActor = () => {
-        if (!formData) return;
-        const newActor: Actor = { name: '', bio: '', photo: '', highResPhoto: '' };
-        setFormData({ ...formData, cast: [...(formData.cast || []), newActor] });
-    };
-
-    const handleActorChange = (index: number, field: keyof Actor, value: string) => {
-        if (!formData) return;
-        const newCast = [...formData.cast];
-        newCast[index] = { ...newCast[index], [field]: value };
-        setFormData({ ...formData, cast: newCast });
-    };
-
-    const handleRemoveActor = (index: number) => {
-        if (!formData) return;
-        const newCast = formData.cast.filter((_, i) => i !== index);
-        setFormData({ ...formData, cast: newCast });
-    };
-
-    // Episode Management
-    const handleEpisodeAdd = () => {
-        if (!formData) return;
-        const newEp: Episode = { id: `ep_${Date.now()}`, title: 'New Episode', synopsis: '', url: '' };
-        setFormData({ ...formData, episodes: [...(formData.episodes || []), newEp] });
-    };
-
-    const handleEpisodeChange = (index: number, field: keyof Episode, value: any) => {
-        if (!formData || !formData.episodes) return;
-        const newEpisodes = [...formData.episodes];
-        newEpisodes[index] = { ...newEpisodes[index], [field]: value };
-        setFormData({ ...formData, episodes: newEpisodes });
     };
 
     const handleSave = async () => {
@@ -166,8 +136,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             <thead className="bg-gray-900/50 text-[10px] uppercase tracking-widest text-gray-500">
                                 <tr>
                                     <th className="p-4">Title</th>
-                                    <th className="p-4">Director</th>
-                                    <th className="p-4">Status Tags</th>
+                                    <th className="p-4">Access Status</th>
                                     <th className="p-4 text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -176,18 +145,27 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     <tr key={movie.key} className="hover:bg-gray-700/30">
                                         <td className="p-4 flex items-center gap-3">
                                             <img src={movie.poster} className="w-8 h-12 object-cover rounded" />
-                                            <span className="font-bold text-white uppercase text-xs">{movie.title}</span>
+                                            <div>
+                                                <span className="font-bold text-white uppercase text-xs block">{movie.title}</span>
+                                                <span className="text-[9px] text-gray-500 uppercase tracking-widest">Dir. {movie.director}</span>
+                                            </div>
                                         </td>
-                                        <td className="p-4 text-gray-400 text-xs">{movie.director}</td>
                                         <td className="p-4">
                                             <div className="flex flex-wrap gap-2">
-                                                {movie.isUnlisted && <span className="bg-gray-700 text-[8px] px-1.5 py-0.5 rounded font-black text-white">UNLISTED</span>}
-                                                {movie.isSeries && <span className="bg-purple-900 text-[8px] px-1.5 py-0.5 rounded font-black text-white">SERIES</span>}
-                                                {movie.releaseDateTime && new Date(movie.releaseDateTime) > new Date() && <span className="bg-blue-900 text-[8px] px-1.5 py-0.5 rounded font-black text-white">LOCKED</span>}
+                                                {movie.isForSale ? (
+                                                    <span className="bg-green-600/20 text-green-400 border border-green-500/30 text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-widest">
+                                                        Rental Enabled (${movie.salePrice})
+                                                    </span>
+                                                ) : (
+                                                    <span className="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-widest">
+                                                        Free Access
+                                                    </span>
+                                                )}
+                                                {movie.isUnlisted && <span className="bg-gray-700 text-[8px] px-1.5 py-0.5 rounded font-black text-white uppercase">Unlisted</span>}
                                             </div>
                                         </td>
                                         <td className="p-4 text-right">
-                                            <button onClick={() => setSelectedMovieKey(movie.key)} className="text-blue-400 font-bold text-xs uppercase hover:underline">Edit</button>
+                                            <button onClick={() => setSelectedMovieKey(movie.key)} className="text-blue-400 font-bold text-[10px] uppercase tracking-widest hover:text-blue-300 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">Edit</button>
                                         </td>
                                     </tr>
                                 ))}
@@ -198,12 +176,14 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             ) : (
                 <div className="bg-gray-800 p-8 rounded-3xl border border-gray-700 space-y-12 shadow-2xl animate-[fadeIn_0.3s_ease-out]">
                     <div className="flex justify-between items-center border-b border-gray-700 pb-6">
-                        <h3 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{formData.title || 'New Movie'}</h3>
+                        <div>
+                            <h3 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{formData.title || 'New Movie'}</h3>
+                            <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Movie ID: {formData.key}</p>
+                        </div>
                         <button onClick={() => setSelectedMovieKey('')} className="bg-gray-700 hover:bg-gray-600 text-white font-black px-6 py-2 rounded-xl uppercase text-xs tracking-widest">Back to Catalog</button>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                        {/* LEFT COLUMN: Narrative & Info */}
                         <div className="space-y-8">
                             <section className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">01. Narrative Data</h4>
@@ -217,7 +197,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
 
                             <section className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">02. Asset Management</h4>
-                                <div className="space-y-4 bg-black/20 p-6 rounded-2xl border border-white/5">
+                                <div className="bg-black/20 p-6 rounded-2xl border border-white/5 space-y-4">
                                     <div>
                                         <label className="form-label">Full Movie URL</label>
                                         <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} placeholder="https://..." className="form-input mb-2" />
@@ -232,14 +212,40 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             </section>
                         </div>
 
-                        {/* RIGHT COLUMN: Logistics & Series */}
                         <div className="space-y-8">
                              <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">03. Distribution Logistics</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">03. Distribution & Monetization</h4>
+                                
+                                {/* PAY-PER-VIEW SETTINGS */}
+                                <div className="bg-gradient-to-br from-green-600/10 to-transparent p-6 rounded-2xl border border-green-500/20 space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h4 className="text-[10px] font-black uppercase text-green-500 tracking-widest">Rental (24h PPV)</h4>
+                                            <p className="text-[9px] text-gray-500 uppercase font-bold mt-1">Enable to put film behind paywall</p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" name="isForSale" checked={formData.isForSale || false} onChange={handleChange} className="sr-only peer" />
+                                            <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-green-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                                        </label>
+                                    </div>
+                                    {formData.isForSale && (
+                                        <div className="animate-[fadeIn_0.3s_ease-out] space-y-4 pt-4 border-t border-white/5">
+                                            <div>
+                                                <label className="form-label">Rental Price (USD)</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-black">$</span>
+                                                    <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} className="form-input !pl-7 !bg-black/40" step="0.01" />
+                                                </div>
+                                                <p className="text-[9px] text-gray-500 mt-2 italic">Upon purchase, users receive 24 hours of streaming access.</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4 bg-black/20 p-6 rounded-2xl border border-white/5">
                                     <label className="flex items-center gap-3 cursor-pointer">
                                         <input type="checkbox" name="isUnlisted" checked={formData.isUnlisted || false} onChange={handleChange} className="w-5 h-5 rounded border-gray-700 text-red-600" />
-                                        <span className="text-[10px] font-black uppercase text-gray-400">Unlisted (Party Only)</span>
+                                        <span className="text-[10px] font-black uppercase text-gray-400">Unlisted Mode</span>
                                     </label>
                                     <label className="flex items-center gap-3 cursor-pointer">
                                         <input type="checkbox" name="isSeries" checked={formData.isSeries || false} onChange={handleChange} className="w-5 h-5 rounded border-gray-700 text-purple-600" />
@@ -249,51 +255,13 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="form-label">Launch Date (Hype Mode)</label>
+                                        <label className="form-label">Launch Date</label>
                                         <input type="datetime-local" name="releaseDateTime" value={formData.releaseDateTime ? new Date(formData.releaseDateTime).toISOString().slice(0, 16) : ''} onChange={handleChange} className="form-input" />
                                     </div>
                                     <div>
-                                        <label className="form-label">Go Live Date (12-Month Window)</label>
+                                        <label className="form-label">Published At</label>
                                         <input type="datetime-local" name="publishedAt" value={formData.publishedAt ? new Date(formData.publishedAt).toISOString().slice(0, 16) : ''} onChange={handleChange} className="form-input" />
                                     </div>
-                                </div>
-
-                                {formData.isSeries && (
-                                    <div className="space-y-4 pt-4 border-t border-gray-700">
-                                        <div className="flex justify-between items-center">
-                                            <h4 className="text-[10px] font-black uppercase text-purple-400 tracking-widest">Episode List</h4>
-                                            <button onClick={handleEpisodeAdd} className="bg-purple-600 text-[9px] font-black px-3 py-1 rounded">Add Episode</button>
-                                        </div>
-                                        <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                                            {formData.episodes?.map((ep, idx) => (
-                                                <div key={ep.id} className="p-4 bg-black/40 border border-white/5 rounded-xl space-y-2">
-                                                    <input type="text" value={ep.title} onChange={e => handleEpisodeChange(idx, 'title', e.target.value)} placeholder="Episode Title" className="form-input !py-1 text-xs" />
-                                                    <input type="text" value={ep.url} onChange={e => handleEpisodeChange(idx, 'url', e.target.value)} placeholder="Episode Stream URL" className="form-input !py-1 text-xs" />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </section>
-
-                            <section className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">04. Cast Management</h4>
-                                    <button onClick={handleAddActor} className="text-[9px] font-black uppercase bg-white/5 border border-white/10 px-3 py-1 rounded-md hover:bg-white/10 transition-colors">Add Actor</button>
-                                </div>
-                                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                                    {formData.cast?.map((actor, idx) => (
-                                        <div key={idx} className="p-4 bg-black/40 border border-white/5 rounded-2xl space-y-3">
-                                            <div className="flex justify-between items-center">
-                                                <input type="text" value={actor.name} onChange={e => handleActorChange(idx, 'name', e.target.value)} placeholder="Actor Name" className="bg-transparent border-none text-white font-bold p-0 focus:ring-0 w-full" />
-                                                <button onClick={() => handleRemoveActor(idx)} className="text-red-500 text-xs font-black uppercase tracking-widest hover:underline ml-4">Remove</button>
-                                            </div>
-                                            <div className="flex gap-2 items-center">
-                                                <input type="text" value={actor.photo} onChange={e => handleActorChange(idx, 'photo', e.target.value)} placeholder="Photo URL" className="form-input !py-1 text-xs" />
-                                                <S3Uploader label="Upload" onUploadSuccess={(url) => handleActorChange(idx, 'photo', url)} />
-                                            </div>
-                                        </div>
-                                    ))}
                                 </div>
                             </section>
                         </div>
@@ -302,7 +270,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                     <div className="pt-8 border-t border-gray-700 flex flex-col sm:flex-row gap-4 justify-between">
                         <button onClick={() => onDeleteMovie(formData.key)} className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-black py-4 px-8 rounded-2xl uppercase tracking-widest text-xs transition-all border border-red-500/20">Delete Movie</button>
                         <button onClick={handleSave} disabled={isSaving} className="bg-white hover:bg-gray-200 text-black font-black py-4 px-16 rounded-2xl uppercase tracking-widest text-xs shadow-xl disabled:opacity-20 transform hover:scale-105 transition-all">
-                            {isSaving ? 'Processing...' : 'Publish to Catalog'}
+                            {isSaving ? 'Processing...' : 'Publish All Changes'}
                         </button>
                     </div>
                 </div>

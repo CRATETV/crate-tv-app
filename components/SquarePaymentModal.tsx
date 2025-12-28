@@ -19,7 +19,6 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
     const [customAmount, setCustomAmount] = useState('10.00');
     const [email, setEmail] = useState(user?.email || '');
 
-    const cardRef = useRef<HTMLDivElement>(null);
     const cardInstance = useRef<any>(null);
 
     const paymentDetails = useMemo(() => {
@@ -30,7 +29,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
             case 'block':
                 return { amount: 10.00, title: `Block: ${block?.title}`, description: `Access all films in the "${block?.title}" block.` };
             case 'movie':
-                 return { amount: movie?.salePrice || 5.00, title: `Film: ${movie?.title}`, description: 'Permanently own this film to watch anytime.' };
+                 return { amount: movie?.salePrice || 5.00, title: `Rent: ${movie?.title}`, description: '24-hour access to stream this film.' };
             case 'watchPartyTicket':
                  return { amount: movie?.watchPartyPrice || 5.00, title: `Watch Party Ticket`, description: `Live Screening: "${movie?.title}"` };
             case 'subscription':
@@ -55,28 +54,14 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                 if (!configRes.ok) throw new Error('Could not load payment configuration.');
                 const { applicationId, locationId } = await configRes.json();
 
-                if (!applicationId || !locationId) throw new Error('Payment configuration is incomplete.');
-
                 const payments = Square.payments(applicationId, locationId);
                 const card = await payments.card({
                     style: {
-                        'input': {
-                            'color': '#ffffff',
-                            'fontSize': '16px',
-                            'fontFamily': 'sans-serif'
-                        },
-                        'input.is-focus': {
-                            'color': '#ffffff'
-                        },
-                        'input.is-error': {
-                            'color': '#ff4444'
-                        },
-                        '.message-text': {
-                            'color': '#9ca3af'
-                        },
-                        '.message-icon': {
-                            'color': '#ef4444'
-                        }
+                        'input': { 'color': '#ffffff', 'fontSize': '16px' },
+                        'input.is-focus': { 'color': '#ffffff' },
+                        'input.is-error': { 'color': '#ff4444' },
+                        '.message-text': { 'color': '#9ca3af' },
+                        '.message-icon': { 'color': '#ef4444' }
                     }
                 });
                 
@@ -95,9 +80,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
         
         const pollForSquare = () => {
             if (!isMounted) return;
-            if (typeof Square !== 'undefined') {
-                initializeSquare();
-            } else if (retryCount < MAX_RETRIES) {
+            if (typeof Square !== 'undefined') initializeSquare();
+            else if (retryCount < MAX_RETRIES) {
                 retryCount++;
                 setTimeout(pollForSquare, 200);
             } else {
@@ -129,9 +113,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
         setErrorMessage('');
         try {
             const result = await cardInstance.current.tokenize();
-            if (result.status !== 'OK') {
-                throw new Error(result.errors?.[0]?.message || 'Failed to process card.');
-            }
+            if (result.status !== 'OK') throw new Error(result.errors?.[0]?.message || 'Failed to process card.');
+            
             const response = await fetch('/api/process-square-payment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -159,22 +142,16 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[80] p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
             <div className="bg-[#111] rounded-2xl shadow-2xl w-full max-w-md border border-white/5 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
                 <div className="p-6 overflow-y-auto">
-                    <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">{paymentDetails.title}</h2>
+                    <div className="flex justify-between items-start mb-2">
+                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{paymentDetails.title}</h2>
+                        <span className="text-lg font-black text-green-500">${paymentDetails.amount.toFixed(2)}</span>
+                    </div>
                     <p className="text-gray-400 mb-6 text-sm">{paymentDetails.description}</p>
                     
                     {(paymentType === 'donation' || paymentType === 'billSavingsDeposit') && (
                         <div className="mb-6">
                             <label htmlFor="customAmount" className="form-label">Amount (USD)</label>
-                            <input
-                                type="number"
-                                id="customAmount"
-                                value={customAmount}
-                                onChange={e => setCustomAmount(e.target.value)}
-                                className="form-input"
-                                min="1.00"
-                                step="1.00"
-                                required
-                            />
+                            <input type="number" id="customAmount" value={customAmount} onChange={e => setCustomAmount(e.target.value)} className="form-input" min="1.00" step="1.00" required />
                         </div>
                     )}
 
@@ -185,14 +162,14 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
 
                 <div className="bg-gray-900/50 p-6 rounded-b-2xl mt-auto border-t border-white/5">
                     {status === 'success' ? (
-                        <div className="text-center text-green-400 font-bold uppercase tracking-widest">Success! Thank you.</div>
+                        <div className="text-center text-green-400 font-bold uppercase tracking-widest">Access Granted! Enjoy the film.</div>
                     ) : (
                         <button
                             onClick={handlePayment}
                             disabled={status === 'loading' || status === 'processing'}
                             className="w-full submit-btn !bg-white !text-black disabled:opacity-50"
                         >
-                            {status === 'loading' ? 'Initializing...' : status === 'processing' ? 'Securing...' : `Confirm ${paymentDetails.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`}
+                            {status === 'loading' ? 'Securing Gateway...' : status === 'processing' ? 'Authorizing...' : `Authorize Rental`}
                         </button>
                     )}
                 </div>

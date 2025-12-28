@@ -82,6 +82,7 @@ const AdminPage: React.FC = () => {
         setIsLoading(true);
         setError('');
         const errors: string[] = [];
+        const warnings: string[] = [];
     
         try {
             const results = await Promise.allSettled([
@@ -104,24 +105,26 @@ const AdminPage: React.FC = () => {
                 errors.push('Failed to fetch live site data.');
             }
     
-            // Process pipeline data (Non-critical, depends on role)
+            // Process pipeline data (Non-critical)
             const pipelineResResult = results[1];
             if (pipelineResResult.status === 'fulfilled') {
                 if (pipelineResResult.value.ok) {
                     const pipelineData = await pipelineResResult.value.json();
                     setPipeline(pipelineData.pipeline || []);
+                    if (pipelineData.warning) warnings.push(pipelineData.warning);
                 } else if (pipelineResResult.value.status !== 401) {
                     // Only show error if it wasn't a standard 401 (Not allowed)
                     errors.push('Failed to fetch submission pipeline.');
                 }
             }
     
-            // Process payouts (Non-critical, depends on role)
+            // Process payouts (Non-critical)
             const payoutsResResult = results[2];
             if (payoutsResResult.status === 'fulfilled') {
                 if (payoutsResResult.value.ok) {
                     const payoutsData = await payoutsResResult.value.json();
                     setPayoutRequests(payoutsData.payoutRequests || []);
+                    if (payoutsData.warning) warnings.push(payoutsData.warning);
                 } else if (payoutsResResult.value.status !== 401) {
                     errors.push('Failed to fetch payout requests.');
                 }
@@ -129,18 +132,21 @@ const AdminPage: React.FC = () => {
 
             // Process permissions (Critical)
             const permsResResult = results[3];
-            if (permsResResult.status === 'fulfilled' && permsResResult.value.ok) {
-                const permsData = await permsResResult.value.json();
-                setPermissions(permsData.permissions || {});
-            } else {
-                // If permissions fail, we only error if it's not a 401
-                if (permsResResult.status === 'fulfilled' && permsResResult.value.status !== 401) {
+            if (permsResResult.status === 'fulfilled') {
+                if (permsResResult.value.ok) {
+                    const permsData = await permsResResult.value.json();
+                    setPermissions(permsData.permissions || {});
+                    if (permsData.warning) warnings.push(permsData.warning);
+                } else if (permsResResult.value.status !== 401) {
                     errors.push('Failed to fetch user role permissions.');
                 }
             }
     
             if (errors.length > 0) {
                 setError(`Notification: ${errors.join(' ')}`);
+            } else if (warnings.length > 0) {
+                 // Use first significant warning for user guidance
+                 setError(`System Warning: ${warnings[0]}`);
             }
     
         } catch (err) {
@@ -279,18 +285,21 @@ const AdminPage: React.FC = () => {
     if (!isAuthenticated) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
-                <div className="w-full max-w-sm">
-                    <form onSubmit={handleLogin} className="bg-gray-800 shadow-md rounded-lg px-8 pt-6 pb-8 mb-4">
-                        <h1 className="text-2xl font-bold mb-6 text-center">Admin Access</h1>
+                <div className="w-full max-sm px-4">
+                    <form onSubmit={handleLogin} className="bg-gray-800 shadow-md rounded-2xl px-8 pt-6 pb-8 mb-4 border border-white/5">
+                        <div className="text-center mb-6">
+                            <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-24 mx-auto mb-2 opacity-50" alt="Crate TV" />
+                            <h1 className="text-2xl font-black uppercase tracking-tighter">Command Center</h1>
+                        </div>
                         <div className="mb-4">
-                            <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="password">Password</label>
+                            <label className="block text-gray-400 text-[10px] font-black uppercase tracking-widest mb-2" htmlFor="password">Access Token</label>
                             <div className="relative">
                                 <input
                                     id="password"
                                     type={showPassword ? 'text' : 'password'}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="form-input pr-10"
+                                    className="form-input pr-10 !bg-black/40"
                                 />
                                 <button
                                     type="button"
@@ -306,9 +315,9 @@ const AdminPage: React.FC = () => {
                                 </button>
                             </div>
                         </div>
-                        {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
+                        {error && <p className="text-red-500 text-xs italic mb-4 font-bold text-center">{error}</p>}
                         <div className="flex items-center justify-between">
-                            <button className="submit-btn w-full" type="submit">
+                            <button className="submit-btn w-full !rounded-xl" type="submit">
                                 Sign In
                             </button>
                         </div>
@@ -325,36 +334,45 @@ const AdminPage: React.FC = () => {
     const TabButton: React.FC<{ tabId: string, label: string }> = ({ tabId, label }) => (
         <button
             onClick={() => setActiveTab(tabId)}
-            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tabId ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === tabId ? 'bg-red-600 text-white shadow-lg shadow-red-900/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
         >
             {label}
         </button>
     );
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-8">
+        <div className="min-h-screen bg-[#0a0a0a] text-white p-4 sm:p-8">
             <div className="max-w-7xl mx-auto">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+                <div className="flex justify-between items-center mb-10 pb-6 border-b border-white/5">
                     <div className="flex items-center gap-4">
-                        {isSaving && <div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-white"></div>}
+                         <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-16 h-auto" alt="Logo" />
+                         <h1 className="text-3xl font-black uppercase tracking-tighter">Admin <span className="text-red-600">Console</span></h1>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        {isSaving && <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-red-500"></div>}
                         <button
                             onClick={handleLogout}
-                            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+                            className="bg-white/5 hover:bg-red-600 text-gray-400 hover:text-white font-black py-2 px-6 rounded-xl transition-all uppercase text-[10px] tracking-widest border border-white/5"
                         >
                             Sign Out
                         </button>
                     </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 mb-8 border-b border-gray-700 pb-4">
+                
+                <div className="flex flex-wrap items-center gap-2 mb-10">
                    {allowedTabs.map(tabId => (
                         <TabButton key={tabId} tabId={tabId} label={ALL_TABS[tabId as keyof typeof ALL_TABS]} />
                    ))}
                 </div>
                 
-                {error && <div className="p-4 mb-4 text-orange-300 bg-orange-900/30 border border-orange-700 rounded-md text-xs">{error}</div>}
+                {error && (
+                    <div className={`p-4 mb-8 rounded-xl flex items-center gap-3 animate-[fadeIn_0.5s_ease-out] ${error.startsWith('System Warning:') ? 'bg-orange-500/10 border border-orange-500/30 text-orange-400' : 'bg-blue-500/10 border border-blue-500/30 text-blue-400'}`}>
+                         <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                         <span className="text-xs font-bold leading-relaxed">{error}</span>
+                    </div>
+                )}
 
-                <div>
+                <div className="animate-[fadeIn_0.5s_ease-out]">
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" onNavigateToGrowth={() => setActiveTab('growth')} />}
                     {activeTab === 'growth' && <GrowthAnalyticsTab />}
                     {activeTab === 'jury' && <JuryPortal pipeline={pipeline} />}
