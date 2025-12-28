@@ -47,6 +47,23 @@ const SynergyCard: React.FC<{ title: string; body: string; icon: string }> = ({ 
     </div>
 );
 
+const Screenshot: React.FC<{ src: string; caption: string; type?: 'mobile' | 'desktop' }> = ({ src, caption, type = 'desktop' }) => (
+    <div className="flex flex-col gap-4 group">
+        <div className={`${type === 'mobile' ? 'w-48 aspect-[9/19]' : 'w-full aspect-video'} bg-gray-900 rounded-xl overflow-hidden border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform group-hover:scale-[1.02]`}>
+            {/* Browser Header if Desktop */}
+            {type === 'desktop' && (
+                <div className="bg-gray-800 h-6 flex items-center px-3 gap-1.5 border-b border-white/5">
+                    <div className="w-2 h-2 rounded-full bg-red-500/50"></div>
+                    <div className="w-2 h-2 rounded-full bg-yellow-500/50"></div>
+                    <div className="w-2 h-2 rounded-full bg-green-500/50"></div>
+                </div>
+            )}
+            <img src={src} alt={caption} className="w-full h-full object-cover" />
+        </div>
+        <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest text-center">{caption}</p>
+    </div>
+);
+
 const PitchDeckPage: React.FC = () => {
     const handlePrint = () => {
         window.print();
@@ -66,7 +83,7 @@ const PitchDeckPage: React.FC = () => {
                     onClick={handlePrint}
                     className="bg-red-600 hover:bg-red-500 text-white font-black px-6 py-2 rounded-lg text-[10px] uppercase tracking-widest shadow-2xl transition-all"
                 >
-                    Export for LIFT Labs
+                    Export to PDF
                 </button>
             </div>
 
@@ -80,156 +97,134 @@ const PitchDeckPage: React.FC = () => {
                         CRATE <span className="text-white/10">TV</span>
                     </h1>
                     <h2 className="text-3xl md:text-5xl font-black text-gray-400 uppercase tracking-tighter leading-none">
-                        Discovery-as-a-Service for <br/>
-                        <span className="text-white">The Next Generation of Cinema.</span>
+                        Independent Discovery-as-a-Service <br/>
+                        <span className="text-white">The Philadelphia Tech Catalyst.</span>
                     </h2>
                     <div className="pt-16 flex items-center gap-10">
                         <div className="h-px flex-grow bg-gradient-to-r from-red-600 to-transparent"></div>
                         <div className="flex flex-col text-right">
-                             <span className="text-[10px] font-black uppercase text-gray-600 tracking-widest">A Partnership with</span>
-                             <span className="text-lg font-black text-white italic">COMCAST NBCUniversal</span>
+                             <span className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Designed for</span>
+                             <span className="text-lg font-black text-white italic">The Next Era of Broadcast</span>
                         </div>
                     </div>
                 </div>
             </Slide>
 
-            {/* SLIDE 2: THE PROBLEM */}
-            <Slide title="The Discovery Crisis" subtitle="Market Inefficiency in Streaming">
+            {/* SLIDE 2: THE INTERFACE (NEW: SCREENSHOTS) */}
+            <Slide title="The Cinematic Experience" subtitle="UI/UX Optimized for Discovery">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                    <div className="space-y-6">
+                        <Screenshot 
+                            src="https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/fling+webapp.png" 
+                            caption="Cinematic Feed & Dynamic Hero Spotlight"
+                        />
+                        <div className="p-6 bg-red-600/10 border border-red-500/20 rounded-2xl">
+                            <p className="text-gray-300 text-sm leading-relaxed italic">
+                                "Our UI eliminates 'Infinite Scroll Fatigue' by prioritizing narrative weight over algorithmic volume."
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-8">
+                         <div className="flex gap-6 items-end">
+                            <Screenshot 
+                                src="https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/Burst.png" 
+                                caption="Mobile First App" 
+                                type="mobile"
+                            />
+                            <div className="flex-grow p-6 bg-white/5 rounded-2xl border border-white/10 mb-8">
+                                <h4 className="text-white font-bold mb-2">Cross-Platform Sync</h4>
+                                <p className="text-gray-400 text-xs leading-relaxed">Native-feel PWA (Progressive Web App) ensures seamless hand-off between mobile browsing and 10-foot TV viewing.</p>
+                            </div>
+                         </div>
+                    </div>
+                </div>
+            </Slide>
+
+            {/* SLIDE 3: THE MARKET GAP */}
+            <Slide title="The Content Inefficiency" subtitle="Streaming's Talent Bottleneck">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
                     <div className="space-y-10">
                         <div className="bg-red-600/10 border-l-4 border-red-600 p-6 rounded-r-xl">
-                            <h4 className="text-xl font-bold mb-2">Algorithmic Erasure</h4>
-                            <p className="text-gray-400">92% of independent short films—the farm system of Hollywood—never reach a premium living room interface. They are buried by volume-based algorithms.</p>
+                            <h4 className="text-xl font-bold mb-2">Discovery Score &lt; 5%</h4>
+                            <p className="text-gray-400">95% of high-quality independent pilots and short films are invisible to major studio scouts. Legacy UI prevents "The Next Big Thing" from surfacing.</p>
                         </div>
                         <div className="bg-white/5 border-l-4 border-gray-600 p-6 rounded-r-xl">
-                            <h4 className="text-xl font-bold mb-2">Engagement Plateaus</h4>
-                            <p className="text-gray-400">Gen-Z and Alpha viewers are migrating from long-form traditional streaming to short-form community platforms. Legacy UI is struggling to bridge the gap.</p>
+                            <h4 className="text-xl font-bold mb-2">Platform Fatigue</h4>
+                            <p className="text-gray-400">Viewers are overwhelmed by generic content. Data shows a 40% surge in demand for community-curated, "authentic" narrative experiences.</p>
                         </div>
                     </div>
                     <div className="relative">
                         <div className="absolute -inset-4 bg-red-600/20 blur-3xl opacity-50"></div>
                         <div className="relative bg-gray-900 border border-white/10 p-10 rounded-[2rem] text-center shadow-2xl">
-                            <p className="text-7xl font-black text-white mb-2 tracking-tighter">8.5m</p>
-                            <p className="text-gray-500 uppercase font-black text-xs tracking-widest">Hours of Unexploited Content</p>
-                            <p className="mt-6 text-sm text-gray-400 italic">High-fidelity independent assets currently sitting on personal hard drives without an enterprise pipeline.</p>
+                            <p className="text-7xl font-black text-white mb-2 tracking-tighter">84%</p>
+                            <p className="text-gray-500 uppercase font-black text-xs tracking-widest">Audience Retention Rate</p>
+                            <p className="mt-6 text-sm text-gray-400 italic">Crate TV's curated format generates significantly higher "Scene Engagement" than standard algorithmic feeds.</p>
                         </div>
                     </div>
                 </div>
             </Slide>
 
-            {/* SLIDE 3: THE SOLUTION */}
-            <Slide title="The Artist-First Engine" subtitle="Curation Over Chaos">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="p-8 bg-white text-black rounded-[2.5rem] flex flex-col justify-between">
-                        <h3 className="text-2xl font-black uppercase leading-tight">Human <br/>Curation</h3>
-                        <p className="text-sm font-bold opacity-70">Hand-picked by professional curators from Playhouse West, ensuring Peacock-level quality on an indie budget.</p>
-                    </div>
-                    <div className="p-8 bg-red-600 text-white rounded-[2.5rem] flex flex-col justify-between transform scale-105 shadow-2xl z-10">
-                        <h3 className="text-2xl font-black uppercase leading-tight">Automated <br/>Pipelines</h3>
-                        <p className="text-sm font-bold opacity-90">Proprietary "One-Click" Roku & Web packaging. We move content from submission to big screen in &lt; 24 hours.</p>
-                    </div>
-                    <div className="p-8 bg-gray-900 text-white border border-white/10 rounded-[2.5rem] flex flex-col justify-between">
-                        <h3 className="text-2xl font-black uppercase leading-tight">Equitable <br/>Returns</h3>
-                        <p className="text-sm font-bold opacity-50">A 70/30 creator-first split powered by secure Square infrastructure, creating a sustainable talent incubator.</p>
-                    </div>
-                </div>
-            </Slide>
-
-            {/* SLIDE 4: TECH ALPHA - AI TELEMETRY */}
-            <Slide title="AI Intelligence" subtitle="Data-Driven Talent Scouting">
+            {/* SLIDE 4: THE DATA EDGE */}
+            <Slide title="Audience Telemetry" subtitle="AI-Driven Talent Scouting">
                 <div className="space-y-12">
                     <div className="bg-gradient-to-r from-purple-900/40 to-black p-8 rounded-[2rem] border border-purple-500/20">
                         <div className="flex items-center gap-4 mb-6">
                             <span className="text-3xl">✨</span>
-                            <h3 className="text-2xl font-black uppercase tracking-tighter">Gemini-Powered Metadata</h3>
+                            <h3 className="text-2xl font-black uppercase tracking-tighter">Gemini-Powered "Hype Maps"</h3>
                         </div>
                         <p className="text-gray-300 text-lg leading-relaxed max-w-3xl">
-                            We leverage **Google Gemini AI** to generate strategic growth roadmaps and deep-sentiment "Hype Maps." We don't just track views; we track **narrative impact**—identifying which scenes trigger peak engagement.
+                            We use advanced AI to track second-by-second sentiment. We identify **high-velocity directors** before they hit the mainstream, providing a "De-Risked" pipeline for original programming acquisition.
                         </p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="p-6 bg-black border border-white/5 rounded-2xl">
-                             <p className="text-[10px] font-black text-red-500 uppercase mb-4 tracking-widest">Product Feature</p>
-                             <h4 className="text-xl font-bold mb-2 text-white">Script Doctor</h4>
-                             <p className="text-sm text-gray-500 italic">AI analysis of narrative market-fit before a frame is even shot.</p>
+                             <p className="text-[10px] font-black text-red-500 uppercase mb-4 tracking-widest">Prediction Engine</p>
+                             <h4 className="text-xl font-bold mb-2 text-white">Talent Velocity Map</h4>
+                             <p className="text-sm text-gray-500 italic">Identifies actors and directors with high "Industry Re-watch" co-efficients.</p>
                         </div>
                         <div className="p-6 bg-black border border-white/5 rounded-2xl">
-                             <p className="text-[10px] font-black text-red-500 uppercase mb-4 tracking-widest">Data Asset</p>
-                             <h4 className="text-xl font-bold mb-2 text-white">Hype Map Telemetry</h4>
-                             <p className="text-sm text-gray-400">Real-time heatmaps of audience sentiment to identify "Breakout Stars" for NBCU acquisition.</p>
+                             <p className="text-[10px] font-black text-red-500 uppercase mb-4 tracking-widest">Metadata Asset</p>
+                             <h4 className="text-xl font-bold mb-2 text-white">Scene Retention Analysis</h4>
+                             <p className="text-sm text-gray-400">Deep telemetry on which narrative hooks trigger user conversions and community engagement.</p>
                         </div>
                     </div>
                 </div>
             </Slide>
 
-            {/* SLIDE 5: COMCAST SYNERGY */}
-            <Slide title="Comcast Synergy" subtitle="Plugging into the Ecosystem">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                    <div className="space-y-6">
-                        <SynergyCard 
-                            icon="📺"
-                            title="X1 / Flex Integration"
-                            body="Direct metadata injection into Xfinity global search, positioning indie content alongside major studio releases."
-                        />
-                        <SynergyCard 
-                            icon="🎬"
-                            title="Peacock Talent Pipeline"
-                            body="Crate TV acts as a low-risk testing ground for emerging directors and actors before they transition to Peacock Originals."
-                        />
+            {/* SLIDE 5: SCALABILITY */}
+            <Slide title="Accelerate with Us" subtitle="The Future is Philadelphia">
+                <div className="flex flex-col md:flex-row gap-12 items-center">
+                    <div className="flex-1 space-y-6">
+                        <h4 className="text-3xl font-black uppercase text-white">Why Now?</h4>
+                        <p className="text-lg text-gray-400 leading-relaxed">
+                            Crate TV is at the intersection of **Interactive Media** and **Infrastructure Scalability**. We are ready to pilot our "Discovery-as-a-Service" model at enterprise scale.
+                        </p>
+                        <div className="bg-red-600 p-6 rounded-2xl text-white font-bold italic">
+                            "We are building the farm system for the future of cinematic talent."
+                        </div>
                     </div>
-                    <div className="space-y-6">
-                        <SynergyCard 
-                            icon="🏙️"
-                            title="Philadelphia HQ Advantage"
-                            body="Direct physical synergy with Comcast Center. We represent the soul of the Philadelphia creative tech community."
-                        />
-                        <SynergyCard 
-                            icon="📶"
-                            title="Xfinity Mobile Engagement"
-                            body="Optimized PWA architecture for data-efficient streaming on Xfinity Mobile, bypassing high-barrier app store downloads."
-                        />
+                    <div className="w-full md:w-80 bg-white/5 border border-white/10 rounded-3xl p-8 space-y-4">
+                        <p className="text-[10px] font-black uppercase text-gray-500">Proposal Pillars</p>
+                        <ul className="text-sm space-y-3 font-bold text-gray-200">
+                            <li>● Distribution Pilot</li>
+                            <li>● API Metadata Exchange</li>
+                            <li>● Local Talent Showcase</li>
+                            <li>● Venture Partnership</li>
+                        </ul>
                     </div>
                 </div>
             </Slide>
 
-            {/* SLIDE 6: TRACTION & PHILADELPHIA ROOTS */}
-            <Slide title="Philadelphia Built" subtitle="The Infrastructure of Trust">
-                 <div className="relative h-64 md:h-80 rounded-[3rem] overflow-hidden mb-10 border border-white/10">
-                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg" className="w-full h-full object-cover opacity-50" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
-                    <div className="absolute bottom-8 left-8">
-                         <h3 className="text-5xl font-black text-white italic tracking-tighter uppercase">Local Power. Global Vision.</h3>
-                    </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-white/5 p-6 rounded-2xl border border-white/10 text-center">
-                        <p className="text-3xl font-black text-white">100%</p>
-                        <p className="text-[10px] uppercase text-gray-500 font-bold mt-1">Creator Ownership</p>
-                    </div>
-                    <div className="bg-white/5 p-6 rounded-2xl border border-white/10 text-center">
-                        <p className="text-3xl font-black text-white">4K</p>
-                        <p className="text-[10px] uppercase text-gray-500 font-bold mt-1">Mastering Standards</p>
-                    </div>
-                    <div className="bg-white/5 p-6 rounded-2xl border border-white/10 text-center">
-                        <p className="text-3xl font-black text-white">Roku</p>
-                        <p className="text-[10px] uppercase text-gray-500 font-bold mt-1">Native SDK Pipeline</p>
-                    </div>
-                    <div className="bg-white/5 p-6 rounded-2xl border border-white/10 text-center">
-                        <p className="text-3xl font-black text-white">Square</p>
-                        <p className="text-[10px] uppercase text-gray-500 font-bold mt-1">Secure Monetization</p>
-                    </div>
-                </div>
-            </Slide>
-
-            {/* SLIDE 7: THE TEAM & VISION */}
-            <Slide title="Join the Movement" subtitle="The Future of Interactive Cinema">
+            {/* SLIDE 6: VISION */}
+            <Slide>
                 <div className="text-center space-y-10 max-w-3xl mx-auto py-10">
-                    <p className="text-2xl md:text-4xl text-gray-300 font-medium italic leading-tight">
-                        "Crate TV is not just a streaming service. It is a digital home for the bold voices Comcast LIFT Labs was designed to champion."
+                    <p className="text-2xl md:text-5xl text-gray-300 font-black italic leading-tight uppercase tracking-tighter">
+                        Elevate the Unseen. <br/>
+                        Scale the Story.
                     </p>
                     <div className="pt-12">
                          <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" alt="Crate TV" className="w-56 h-auto mx-auto mb-6" />
-                         <p className="text-red-500 font-black uppercase tracking-[0.6em] text-sm">Elevate the Unseen.</p>
+                         <p className="text-red-500 font-black uppercase tracking-[0.6em] text-xs">A New Era of Independent Cinema.</p>
                     </div>
                 </div>
             </Slide>
@@ -245,7 +240,6 @@ const PitchDeckPage: React.FC = () => {
                     from { opacity: 0; transform: translateY(15px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
-                .break-after-page { page-break-after: always; }
             `}</style>
         </div>
     );

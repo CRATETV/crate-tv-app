@@ -63,7 +63,7 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                         <h3 className="text-4xl md:text-6xl font-black text-white leading-tight tracking-tighter uppercase">
                             Ready to start your <span className="text-red-600">next chapter?</span>
                         </h3>
-                        <p className="text-xl text-gray-300 max-w-2xl font-medium leading-relaxed">
+                        <p className="text-xl text-gray-300 max-w-2xl mx-auto font-medium leading-relaxed">
                             Crate TV is looking for the bold, the unique, and the visionary. Submit via <strong className="text-white">FilmFreeway</strong> for the festival, or <strong className="text-white">Email us</strong> to join our year-round catalog.
                         </p>
                     </div>
@@ -100,17 +100,18 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                     </ul>
                 </div>
                 <div>
-                    <h3 className="font-bold text-white mb-4">For Industry</h3>
+                    <h3 className="font-bold text-white mb-4">Partnerships</h3>
                     <ul className="space-y-2">
-                        <li><a href="/talent" onClick={(e) => handleNavigate(e, '/talent')} className="hover:text-white transition">For Talent Agents</a></li>
+                        <li><a href="/pitch-deck" onClick={(e) => handleNavigate(e, '/pitch-deck')} className="text-red-500 font-black hover:text-white transition uppercase text-xs tracking-widest">LIFT Labs Pitch Deck</a></li>
+                        <li><a href="/talent" onClick={(e) => handleNavigate(e, '/talent')} className="hover:text-white transition">Talent Acquisition</a></li>
                         <li><a href="/actors-directory" onClick={(e) => handleNavigate(e, '/actors-directory')} className="hover:text-white transition">Actors Directory</a></li>
                     </ul>
                 </div>
                 <div>
                     <h3 className="font-bold text-white mb-4">Affiliates</h3>
                     <ul className="space-y-2">
-                        <li><a href="https://playhousewest.com/philly/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Playhouse West Philadelphia</a></li>
-                        <li><a href="https://www.48hourfilm.com/philadelphia" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Philadelphia 48 Hour Film Project</a></li>
+                    <li><a href="https://playhousewest.com/philly/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Playhouse West Philadelphia</a></li>
+                    <li><a href="https://www.48hourfilm.com/philadelphia" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Philadelphia 48 Hour Film Project</a></li>
                     </ul>
                 </div>
                 </div>

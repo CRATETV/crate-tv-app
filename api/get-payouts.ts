@@ -1,77 +1,60 @@
-// This is a Vercel Serverless Function
-// It will be accessible at the path /api/get-payouts
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { PayoutRequest } from '../types.js';
 
 export async function POST(request: Request) {
   try {
     const { password } = await request.json();
 
-    // --- Authentication ---
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
-    const collaboratorPassword = process.env.COLLABORATOR_PASSWORD;
-    const festivalAdminPassword = process.env.FESTIVAL_ADMIN_PASSWORD;
-    
     let isAuthenticated = false;
-    let role = '';
 
-    if (primaryAdminPassword && password === primaryAdminPassword) {
-        role = 'super_admin';
+    if (password && (password === primaryAdminPassword || password === masterPassword)) {
         isAuthenticated = true;
-    } else if (masterPassword && password === masterPassword) {
-        role = 'master';
-        isAuthenticated = true;
-    } else if (collaboratorPassword && password === collaboratorPassword) {
-        role = 'collaborator';
-        isAuthenticated = true;
-    } else if (festivalAdminPassword && password === festivalAdminPassword) {
-        role = 'festival_admin';
-        isAuthenticated = true;
-    } else {
+    } else if (password) {
         for (const key in process.env) {
             if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
-                role = key.replace('ADMIN_PASSWORD_', '').toLowerCase();
                 isAuthenticated = true;
                 break;
             }
         }
     }
 
-    const anyPasswordSet = primaryAdminPassword || masterPassword || collaboratorPassword || festivalAdminPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
+    const anyPasswordSet = process.env.ADMIN_PASSWORD || process.env.ADMIN_MASTER_PASSWORD || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
     if (!anyPasswordSet) isAuthenticated = true;
 
     if (!isAuthenticated) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' }});
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
     
-    // --- Firestore Logic ---
     const initError = getInitializationError();
     if (initError) {
-        return new Response(JSON.stringify({ payoutRequests: [], warning: initError }), {
+        return new Response(JSON.stringify({ payoutRequests: [], warning: initError }), { 
             status: 200, 
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' } 
         });
     }
     
     const db = getAdminDb();
-    if (!db) throw new Error("Database connection failed.");
+    if (!db) {
+        return new Response(JSON.stringify({ payoutRequests: [], warning: "Database connection unavailable." }), { 
+            status: 200, 
+            headers: { 'Content-Type': 'application/json' } 
+        });
+    }
 
     const payoutsSnapshot = await db.collection('payout_requests').orderBy('requestDate', 'desc').get();
-    
-    const payoutRequests: PayoutRequest[] = [];
-    payoutsSnapshot.forEach(doc => {
-        payoutRequests.push({ id: doc.id, ...doc.data() } as PayoutRequest);
-    });
+    const payoutRequests = payoutsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    return new Response(JSON.stringify({ payoutRequests }), {
-      status: 200, 
-      headers: { 'Content-Type': 'application/json' }
+    return new Response(JSON.stringify({ payoutRequests }), { 
+        status: 200, 
+        headers: { 'Content-Type': 'application/json' } 
     });
 
   } catch (error) {
-    console.error("Error fetching payout requests:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unknown server error occurred.";
-    return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    console.error("Payouts fetch error:", error);
+    return new Response(JSON.stringify({ error: (error as Error).message }), { 
+        status: 500, 
+        headers: { 'Content-Type': 'application/json' } 
+    });
   }
 }

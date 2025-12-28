@@ -60,12 +60,12 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                 key: newKey,
                 title: movieToCreate.title,
                 synopsis: movieToCreate.synopsis,
-                cast: movieToCreate.cast.split(',').map(name => ({ 
+                cast: movieToCreate.cast ? movieToCreate.cast.split(',').map(name => ({ 
                     name: name.trim(), 
                     photo: '', 
                     bio: '', 
                     highResPhoto: '' 
-                })),
+                })) : [],
                 director: movieToCreate.director,
                 fullMovie: movieToCreate.movieUrl,
                 poster: movieToCreate.posterUrl,
@@ -81,7 +81,11 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         if (selectedMovieKey) {
             const movieData = allMovies[selectedMovieKey];
             if (movieData) {
-                setFormData({ ...movieData });
+                // Defensive check to ensure cast is always an array
+                setFormData({ 
+                    ...movieData, 
+                    cast: Array.isArray(movieData.cast) ? movieData.cast : [] 
+                });
             } else if (selectedMovieKey.startsWith('newmovie')) {
                 setFormData({ ...emptyMovie, key: selectedMovieKey });
             }
@@ -108,19 +112,19 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         if (!formData) return;
         setFormData({
             ...formData,
-            cast: [...formData.cast, { name: '', bio: '', photo: '', highResPhoto: '' }]
+            cast: [...(formData.cast || []), { name: '', bio: '', photo: '', highResPhoto: '' }]
         });
     };
 
     const handleActorChange = (index: number, field: keyof Actor, value: string) => {
-        if (!formData) return;
+        if (!formData || !formData.cast) return;
         const newCast = [...formData.cast];
         newCast[index] = { ...newCast[index], [field]: value };
         setFormData({ ...formData, cast: newCast });
     };
 
     const handleRemoveActor = (index: number) => {
-        if (!formData) return;
+        if (!formData || !formData.cast) return;
         const newCast = formData.cast.filter((_, i) => i !== index);
         setFormData({ ...formData, cast: newCast });
     };
@@ -241,29 +245,45 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 </div>
                             </section>
 
-                            {/* RESTORED CAST SECTION */}
                             <section className="space-y-4">
                                 <div className="flex justify-between items-center">
                                     <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">03. Cast & Talents</h4>
                                     <button onClick={handleAddActor} className="text-[10px] font-black text-blue-400 hover:text-white uppercase tracking-widest">+ Add Member</button>
                                 </div>
-                                <div className="space-y-4">
-                                    {formData.cast.map((actor, index) => (
-                                        <div key={index} className="bg-black/20 p-4 rounded-xl border border-white/5 space-y-3 relative group">
-                                            <button onClick={() => handleRemoveActor(index)} className="absolute top-2 right-2 text-gray-600 hover:text-red-500 transition-colors">
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                <div className="space-y-6">
+                                    {formData.cast && formData.cast.map((actor, index) => (
+                                        <div key={index} className="bg-black/40 p-6 rounded-2xl border border-white/10 space-y-4 relative group shadow-inner">
+                                            <button onClick={() => handleRemoveActor(index)} className="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition-colors bg-white/5 p-1 rounded-lg">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                                             </button>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <input type="text" value={actor.name} onChange={(e) => handleActorChange(index, 'name', e.target.value)} placeholder="Actor Name" className="form-input !py-2 text-xs" />
-                                                <input type="text" value={actor.photo} onChange={(e) => handleActorChange(index, 'photo', e.target.value)} placeholder="Profile Photo URL" className="form-input !py-2 text-xs" />
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="form-label">Actor Name</label>
+                                                    <input type="text" value={actor.name} onChange={(e) => handleActorChange(index, 'name', e.target.value)} placeholder="Full Name" className="form-input" />
+                                                </div>
+                                                <div>
+                                                    <label className="form-label">Profile Pic (Thumbnail)</label>
+                                                    <input type="text" value={actor.photo} onChange={(e) => handleActorChange(index, 'photo', e.target.value)} placeholder="Photo URL" className="form-input" />
+                                                </div>
                                             </div>
-                                            <textarea value={actor.bio} onChange={(e) => handleActorChange(index, 'bio', e.target.value)} placeholder="Short Bio" rows={2} className="form-input !py-2 text-xs" />
-                                            <div className="flex items-center gap-3">
-                                                <input type="text" value={actor.highResPhoto} onChange={(e) => handleActorChange(index, 'highResPhoto', e.target.value)} placeholder="High-Res Photo URL" className="form-input !py-2 text-xs" />
-                                                <S3Uploader label="Upload" onUploadSuccess={(url) => handleActorChange(index, 'highResPhoto', url)} />
+                                            <div>
+                                                <label className="form-label">Professional Bio</label>
+                                                <textarea value={actor.bio} onChange={(e) => handleActorChange(index, 'bio', e.target.value)} placeholder="Brief acting history..." rows={3} className="form-input" />
+                                            </div>
+                                            <div className="pt-2">
+                                                <label className="form-label">High-Resolution Bio Photo</label>
+                                                <div className="flex items-center gap-3">
+                                                    <input type="text" value={actor.highResPhoto} onChange={(e) => handleActorChange(index, 'highResPhoto', e.target.value)} placeholder="High-Res URL" className="form-input flex-grow" />
+                                                    <S3Uploader label="Upload" onUploadSuccess={(url) => handleActorChange(index, 'highResPhoto', url)} />
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
+                                    {(!formData.cast || formData.cast.length === 0) && (
+                                        <div className="py-12 border-2 border-dashed border-white/5 rounded-2xl text-center">
+                                            <p className="text-gray-600 font-bold uppercase tracking-widest text-[10px]">No cast members added yet.</p>
+                                        </div>
+                                    )}
                                 </div>
                             </section>
                         </div>
@@ -272,7 +292,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                              <section className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">04. Distribution & Monetization</h4>
                                 
-                                {/* PAY-PER-VIEW SETTINGS */}
                                 <div className="bg-gradient-to-br from-green-600/10 to-transparent p-6 rounded-2xl border border-green-500/20 space-y-4">
                                     <div className="flex justify-between items-center">
                                         <div>
