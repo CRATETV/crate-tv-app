@@ -43,6 +43,7 @@ import { WatchPartyPage } from './components/WatchPartyPage';
 import TalentPage from './components/TalentPage';
 import LinkRokuPage from './components/LinkRokuPage';
 import SubmissionTermsPage from './components/SubmissionTermsPage';
+import PitchDeckPage from './components/PitchDeckPage';
 
 
 const rootElement = document.getElementById('root');
@@ -133,6 +134,8 @@ const AppRouter: React.FC = () => {
       return <TopTenPage />;
     case '/submission-terms':
       return <SubmissionTermsPage />;
+    case '/pitch-deck':
+      return <PitchDeckPage />;
     
     // Unified Portal Route
     case '/portal': {

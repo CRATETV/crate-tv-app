@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -18,6 +17,8 @@ import BottomNavBar from './components/BottomNavBar';
 import SquarePaymentModal from './components/SquarePaymentModal';
 import FestivalLiveModal from './components/FestivalLiveModal';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
+import NowStreamingBanner from './components/NowPlayingBanner';
+import NewFilmAnnouncementModal from './components/NewFilmAnnouncementModal';
 
 // Dynamic Thematic Header Row
 const HolidaySpecialTitle: React.FC<{ settings: SiteSettings }> = ({ settings }) => {
@@ -101,6 +102,7 @@ const App: React.FC = () => {
     const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
     const [supportMovieModal, setSupportMovieModal] = useState<Movie | null>(null);
     const [showFestivalModal, setShowFestivalModal] = useState(false);
+    const [showNowStreamingModal, setShowNowStreamingModal] = useState(false);
     const [liveWatchParty, setLiveWatchParty] = useState<Movie | null>(null);
     
     // INTELLIGENT HERO FALLBACK
@@ -132,6 +134,12 @@ const App: React.FC = () => {
         }
         return spotlightMovies;
     }, [movies, categories.featured]);
+
+    const nowStreamingMovie = useMemo(() => {
+        const keys = categories.nowStreaming?.movieKeys || [];
+        if (keys.length === 0) return null;
+        return movies[keys[0]] || null;
+    }, [movies, categories.nowStreaming]);
 
     const topTenMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
@@ -195,6 +203,13 @@ const App: React.FC = () => {
         }
         setLiveWatchParty(null);
     }
+
+    const handleCloseNowStreamingModal = () => {
+        if (nowStreamingMovie) {
+            sessionStorage.setItem('nowStreamingModalSeen_' + nowStreamingMovie.key, 'true');
+        }
+        setShowNowStreamingModal(false);
+    };
     
     useEffect(() => {
         if (heroMovies.length > 1) {
@@ -207,9 +222,14 @@ const App: React.FC = () => {
 
     useEffect(() => {
         if (isLoading || !dataSource) return;
+        
+        // Modal Logic: Festival takes precedence
         if (isFestivalLive && !sessionStorage.getItem('festivalModalSeen')) {
             setShowFestivalModal(true);
+        } else if (nowStreamingMovie && !sessionStorage.getItem('nowStreamingModalSeen_' + nowStreamingMovie.key)) {
+            setShowNowStreamingModal(true);
         }
+
         const fourHours = 4 * 60 * 60 * 1000;
         const now = Date.now();
         const activeParty = (Object.values(movies) as Movie[]).find(m => {
@@ -220,7 +240,7 @@ const App: React.FC = () => {
         if (activeParty && sessionStorage.getItem('livePartyBannerDismissed') !== activeParty.key) {
             setLiveWatchParty(activeParty);
         }
-    }, [isLoading, isFestivalLive, dataSource, movies]);
+    }, [isLoading, isFestivalLive, dataSource, movies, nowStreamingMovie]);
 
     if (isLoading) return <LoadingSpinner />;
 
@@ -267,6 +287,15 @@ const App: React.FC = () => {
                             />
                         ) : (
                           <>
+                            {/* Only show the Now Streaming banner if NOT in Holiday mode, to prevent clutter */}
+                            {nowStreamingMovie && !settings.isHolidayModeActive && (
+                                <NowStreamingBanner 
+                                    movie={nowStreamingMovie} 
+                                    onSelectMovie={handleSelectMovie} 
+                                    onPlayMovie={handlePlayMovie} 
+                                />
+                            )}
+
                             {settings.isHolidayModeActive && cratemasCategory && cratemasCategory.movieKeys && cratemasCategory.movieKeys.length > 0 && (
                                 <MovieCarousel
                                     key="cratemas"
@@ -313,21 +342,6 @@ const App: React.FC = () => {
                                 />
                             )}
 
-                            {recommendedMovies.length > 0 && (
-                                <MovieCarousel
-                                    key="recommendations"
-                                    title="Recommended for You"
-                                    movies={recommendedMovies}
-                                    onSelectMovie={handlePlayMovie}
-                                    watchedMovies={watchedMovies}
-                                    watchlist={watchlist}
-                                    likedMovies={likedMovies}
-                                    onToggleLike={toggleLikeMovie}
-                                    onToggleWatchlist={toggleWatchlist}
-                                    onSupportMovie={handleSupportMovie}
-                                />
-                            )}
-
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as Category;
                                 const categoryMovies = typedCategory.movieKeys
@@ -359,7 +373,7 @@ const App: React.FC = () => {
 
             <CollapsibleFooter />
             <BackToTopButton />
-            <BottomNavBar onSearchClick={() => setIsMobileSearchOpen(true)} />
+            <BottomNavBar onSearchClick={() => {}} />
 
             {detailsMovie && (
                 <MovieDetailsModal 
@@ -394,6 +408,16 @@ const App: React.FC = () => {
                 />
             )}
             {showFestivalModal && <FestivalLiveModal onClose={handleCloseFestivalModal} onNavigate={handleNavigateToFestival} />}
+            {showNowStreamingModal && nowStreamingMovie && (
+                <NewFilmAnnouncementModal 
+                    movie={nowStreamingMovie} 
+                    onClose={handleCloseNowStreamingModal} 
+                    onWatchNow={() => {
+                        handleCloseNowStreamingModal();
+                        handlePlayMovie(nowStreamingMovie);
+                    }} 
+                />
+            )}
         </div>
     );
 };

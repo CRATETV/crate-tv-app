@@ -43,6 +43,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     allMovies, 
     onSave, 
     onDeleteMovie, 
+    onSetNowStreaming,
     movieToCreate, 
     onCreationDone 
 }) => {
@@ -165,7 +166,15 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             </div>
                                         </td>
                                         <td className="p-4 text-right">
-                                            <button onClick={() => setSelectedMovieKey(movie.key)} className="text-blue-400 font-bold text-[10px] uppercase tracking-widest hover:text-blue-300 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">Edit</button>
+                                            <div className="flex justify-end gap-2">
+                                                <button 
+                                                    onClick={() => onSetNowStreaming(movie.key)}
+                                                    className="text-red-500 font-bold text-[10px] uppercase tracking-widest hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-lg border border-red-500/30 transition-all"
+                                                >
+                                                    Feature
+                                                </button>
+                                                <button onClick={() => setSelectedMovieKey(movie.key)} className="text-blue-400 font-bold text-[10px] uppercase tracking-widest hover:text-blue-300 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">Edit</button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
