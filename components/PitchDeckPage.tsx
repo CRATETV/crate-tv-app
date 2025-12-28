@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 
 const Slide: React.FC<{ 
+    id?: string;
     children: React.ReactNode; 
     dark?: boolean; 
     title?: string; 
     subtitle?: string;
     gradient?: string;
-}> = ({ children, dark = true, title, subtitle, gradient }) => (
-    <section className={`pitch-slide w-full flex flex-col p-8 md:p-20 relative overflow-hidden break-after-page ${gradient ? gradient : (dark ? 'bg-[#050505] text-white' : 'bg-white text-black')}`}>
+}> = ({ id, children, dark = true, title, subtitle, gradient }) => (
+    <section id={id} className={`pitch-slide w-full flex flex-col p-8 md:p-20 relative overflow-hidden break-after-page ${gradient ? gradient : (dark ? 'bg-[#050505] text-white' : 'bg-white text-black')}`} style={{ minHeight: '1080px', width: '1920px' }}>
         {/* Header Branding */}
         <div className="flex justify-between items-center mb-12 border-b border-white/10 pb-6 relative z-10">
             <div className="flex items-center gap-4">
@@ -55,13 +56,47 @@ const FeatureCard: React.FC<{ icon: string; title: string; desc: string; color: 
 
 const PitchDeckPage: React.FC = () => {
     const [partnerName, setPartnerName] = useState('Comcast NBCUniversal LIFT Labs');
+    const [isExportingJpegs, setIsExportingJpegs] = useState(false);
 
     const handlePrint = () => {
         window.print();
     };
 
+    const handleDownloadJpegs = async () => {
+        setIsExportingJpegs(true);
+        try {
+            const { default: html2canvas } = await import('html2canvas');
+            const slides = document.querySelectorAll('.pitch-slide');
+            
+            for (let i = 0; i < slides.length; i++) {
+                const slide = slides[i] as HTMLElement;
+                const canvas = await html2canvas(slide, {
+                    scale: 2, // High resolution
+                    useCORS: true,
+                    backgroundColor: '#050505',
+                    logging: false,
+                    width: 1920,
+                    height: 1080
+                });
+                
+                const link = document.createElement('a');
+                link.download = `CrateTV_Pitch_Slide_${i + 1}.jpg`;
+                link.href = canvas.toDataURL('image/jpeg', 0.9);
+                link.click();
+                
+                // Small delay to prevent browser download congestion
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        } catch (error) {
+            console.error('JPEG Export failed:', error);
+            alert('Failed to export JPEGs. Please ensure the page is fully loaded.');
+        } finally {
+            setIsExportingJpegs(false);
+        }
+    };
+
     return (
-        <div className="bg-[#050505] min-h-screen selection:bg-red-600 selection:text-white">
+        <div className="bg-[#050505] min-h-screen selection:bg-red-600 selection:text-white flex flex-col items-center">
             {/* Nav Controls */}
             <div className="fixed top-6 right-6 z-50 flex flex-wrap items-center gap-3 no-print bg-black/60 p-3 rounded-2xl backdrop-blur-xl border border-white/10 shadow-2xl">
                 <div className="flex flex-col gap-1 mr-4">
@@ -80,6 +115,13 @@ const PitchDeckPage: React.FC = () => {
                     className="bg-gray-800 hover:bg-gray-700 text-white font-black px-5 py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all"
                 >
                     Exit
+                </button>
+                <button 
+                    onClick={handleDownloadJpegs}
+                    disabled={isExportingJpegs}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-5 py-2.5 rounded-xl text-[10px] uppercase tracking-widest shadow-2xl transition-all disabled:opacity-50"
+                >
+                    {isExportingJpegs ? 'Generating...' : 'Download JPEGs'}
                 </button>
                 <button 
                     onClick={handlePrint}
