@@ -8,6 +8,7 @@ interface CollapsibleFooterProps {
 const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice = false, showActorLinks = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'opening' | 'copied'>('idle');
 
   useEffect(() => {
     const handleNavigation = () => {
@@ -38,14 +39,27 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
   };
 
   const handleEmailClick = () => {
-    const emailSubject = encodeURIComponent("Film Submission for Crate TV Catalog");
-    const emailBody = encodeURIComponent("Hello Crate TV Team,\n\nI am reaching out to submit my film for consideration in your year-round catalog.\n\nFilm Title: \nDirector: \nLink to Screener: ");
-    window.location.href = `mailto:cratetiv@gmail.com?subject=${emailSubject}&body=${emailBody}`;
+    const emailAddr = "cratetiv@gmail.com";
+    const emailSubject = encodeURIComponent("Film Submission inquiry for Crate TV");
+    const emailBody = encodeURIComponent("Hello Crate TV Team,\n\nI'm interested in learning more about your catalog.");
+    
+    setEmailStatus('opening');
+    window.location.href = `mailto:${emailAddr}?subject=${emailSubject}&body=${emailBody}`;
+    
+    // Fallback: If mailto fails to open or window doesn't blur, provide copy option
+    setTimeout(() => {
+        setEmailStatus('idle');
+    }, 2000);
+  };
+
+  const copyEmailToClipboard = () => {
+    navigator.clipboard.writeText("cratetiv@gmail.com");
+    setEmailStatus('copied');
+    setTimeout(() => setEmailStatus('idle'), 2000);
   };
 
   return (
     <div className={`fixed bottom-0 left-0 right-0 z-30 transition-all duration-500 ease-in-out hidden md:block ${isOpen ? 'translate-y-0' : 'translate-y-[calc(100%-2.5rem)]'}`}>
-        {/* Toggle Button */}
         <div className={`flex justify-center transition-opacity duration-300 ${isNearBottom || isOpen ? 'opacity-100' : 'opacity-0'}`}>
              <button 
                 onClick={() => setIsOpen(!isOpen)}
@@ -57,18 +71,15 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                 </svg>
             </button>
         </div>
-        {/* Footer Content */}
         <footer className="bg-black text-gray-400 py-12 px-4 md:px-12 border-t border-gray-800 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
             <div className="max-w-7xl mx-auto">
-                
-                {/* Filmmaker CTA Section */}
                 <div className="mb-16 pb-16 border-b border-white/5 flex flex-col md:flex-row items-center gap-10">
                     <div className="flex-1 text-center md:text-left space-y-4">
                         <h3 className="text-4xl md:text-6xl font-black text-white leading-tight tracking-tighter uppercase">
                             Ready to start your <span className="text-red-600">next chapter?</span>
                         </h3>
                         <p className="text-xl text-gray-300 max-w-2xl mx-auto font-medium leading-relaxed">
-                            Crate TV is looking for the bold, the unique, and the visionary. Submit via <strong className="text-white">FilmFreeway</strong> for the festival, or <strong className="text-white">Email us</strong> to join our year-round catalog.
+                            Submit via <strong className="text-white">FilmFreeway</strong> for the festival, or <strong className="text-white">Email us</strong> for catalog consideration.
                         </p>
                     </div>
                     <div className="flex-shrink-0 flex flex-col sm:flex-row gap-4">
@@ -76,14 +87,22 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                             onClick={(e) => handleNavigate(e, '/submit')}
                             className="inline-flex items-center justify-center bg-white text-black font-black px-10 py-4 rounded-xl hover:bg-gray-200 transition-all transform hover:scale-105 active:scale-95 shadow-xl text-base uppercase tracking-widest"
                         >
-                            Visit Filmmaker Hub
+                            Filmmaker Hub
                         </button>
-                        <button 
-                            onClick={handleEmailClick}
-                            className="inline-flex items-center justify-center bg-gray-800 text-white font-black px-10 py-4 rounded-xl hover:bg-gray-700 transition-all border border-white/10 text-base uppercase tracking-widest"
-                        >
-                            Email us Directly
-                        </button>
+                        <div className="flex flex-col gap-2">
+                             <button 
+                                onClick={handleEmailClick}
+                                className="inline-flex items-center justify-center bg-gray-800 text-white font-black px-10 py-4 rounded-xl hover:bg-gray-700 transition-all border border-white/10 text-base uppercase tracking-widest min-w-[220px]"
+                            >
+                                {emailStatus === 'opening' ? 'Opening Mail...' : 'Email us Directly'}
+                            </button>
+                            <button 
+                                onClick={copyEmailToClipboard}
+                                className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors"
+                            >
+                                {emailStatus === 'copied' ? 'Address Copied!' : 'Copy Email Address'}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -121,7 +140,7 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                 
                 {showPortalNotice && (
                 <div className="border-t border-gray-800 pt-8 mt-8 text-center text-sm text-yellow-400 bg-yellow-900/30 p-4 rounded-lg">
-                    <p><strong>Festival Submission Notice:</strong> Please note that we will not accept films created for any of Playhouse West-Philadelphia's film festivals until after the festival has concluded. Thank you for your understanding.</p>
+                    <p><strong>Festival Submission Notice:</strong> Please note that we will not accept films created for any of Playhouse West-Philadelphia's film festivals until after the festival has concluded.</p>
                 </div>
                 )}
 

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Actor } from '../types';
 import { generateActorFact, findImdbUrl } from '../services/geminiService';
-// import html2canvas from 'html2canvas'; // Removed for lazy-loading
 
 interface ActorBioModalProps {
   actor: Actor;
@@ -29,7 +28,6 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
   }, [onClose]);
 
   useEffect(() => {
-    // Reset state when actor changes
     setIsLoadingFact(true);
     setFact(null);
     setFactError(null);
@@ -38,17 +36,20 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
     setCopyStatus('idle');
 
     const fetchActorData = async () => {
-      // Fetch fact
       try {
         const generatedFact = await generateActorFact(actor.name, actor.bio);
         setFact(generatedFact);
       } catch (error) {
-        setFactError(error instanceof Error ? error.message : "Could not load fun fact.");
+        const msg = error instanceof Error ? error.message : "";
+        if (msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("Quota")) {
+            setFactError("Crate AI is currently handling a lot of requests. Try again in a moment!");
+        } else {
+            setFactError("Could not load fun fact at this time.");
+        }
       } finally {
         setIsLoadingFact(false);
       }
       
-      // Fetch IMDb URL non-critically.
       findImdbUrl(actor.name).then(url => {
           setImdbUrl(url);
       });
@@ -66,19 +67,14 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
     const profileUrl = `${window.location.origin}/actors-directory/${slug}`;
 
     try {
-        // Dynamically import html2canvas only when needed for performance
         const { default: html2canvas } = await import('html2canvas');
-        
         const canvas = await html2canvas(modalContentRef.current, {
-            backgroundColor: '#2d3748', // Match the modal's background
-            useCORS: true, // Important for external images
+            backgroundColor: '#2d3748',
+            useCORS: true,
         });
         
         const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-        
-        if (!blob) {
-            throw new Error('Could not create image from modal.');
-        }
+        if (!blob) throw new Error('Could not create image.');
 
         const file = new File([blob], `${actor.name.replace(/\s/g, '_')}_bio.png`, { type: 'image/png' });
         
@@ -91,18 +87,15 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
 
         if (navigator.canShare && navigator.canShare(shareData)) {
             await navigator.share(shareData);
-        } else if (navigator.share) { // Fallback for browsers that can't share files
+        } else if (navigator.share) {
              await navigator.share({ title: shareData.title, text: shareData.text, url: shareData.url });
-        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        } else {
             await navigator.clipboard.writeText(profileUrl);
             setCopyStatus('copied');
             setTimeout(() => setCopyStatus('idle'), 2500);
-        } else {
-            throw new Error('Sharing is not supported on this browser.');
         }
     } catch (error) {
         if (error instanceof Error && error.name !== 'AbortError') {
-             console.error('Sharing failed:', error);
              setCopyStatus('error');
              setTimeout(() => setCopyStatus('idle'), 2500);
         }
@@ -110,7 +103,6 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
         setIsSharing(false);
     }
   };
-
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
@@ -125,13 +117,6 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
           </svg>
         </button>
         
-        <img
-            src={`/api/proxy-image?url=${encodeURIComponent("https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png")}`}
-            alt="Crate TV Logo"
-            crossOrigin="anonymous"
-            className="absolute top-4 left-4 w-32 h-auto opacity-50 pointer-events-none"
-        />
-        
         <div className="grid grid-cols-1 md:grid-cols-3">
             <div className="md:col-span-1 p-4 sm:p-6 flex flex-col items-center justify-center">
                  <img
@@ -140,67 +125,36 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
                     crossOrigin="anonymous"
                     className={`w-32 h-32 sm:w-48 sm:h-48 rounded-full object-cover shadow-lg border-4 border-gray-600 transition-all duration-500 ease-in-out ${isImageLoaded ? 'opacity-100 blur-0' : 'opacity-50 blur-md'}`}
                     onLoad={() => setIsImageLoaded(true)}
-                    decoding="async"
-                    onContextMenu={(e) => e.preventDefault()}
                  />
             </div>
             <div className="md:col-span-2 p-4 sm:p-6 md:pl-0 flex flex-col justify-center">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-2">
                     <h2 className="text-2xl sm:text-3xl font-bold text-white">{actor.name}</h2>
                     {imdbUrl && (
-                        <a
-                            href={imdbUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-[#f5c518] text-black font-bold text-sm px-3 py-1 rounded-md hover:bg-yellow-400 transition-colors self-center"
-                            aria-label={`Visit ${actor.name}'s IMDb page`}
-                        >
-                            IMDb
-                        </a>
+                        <a href={imdbUrl} target="_blank" rel="noopener noreferrer" className="bg-[#f5c518] text-black font-bold text-sm px-3 py-1 rounded-md hover:bg-yellow-400 transition-colors self-center">IMDb</a>
                     )}
-                    <button
-                        onClick={handleShare}
-                        disabled={isSharing}
-                        className="text-gray-400 hover:text-white transition-colors self-center p-1 rounded-full hover:bg-gray-700 disabled:cursor-wait"
-                        aria-label="Share actor bio"
-                    >
-                        {isSharing ? (
-                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                        ) : (
+                    <button onClick={handleShare} disabled={isSharing} className="text-gray-400 hover:text-white transition-colors self-center p-1 rounded-full hover:bg-gray-700">
+                        {isSharing ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : (
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 100-2.186m0 2.186c-.18.324-.283.696-.283 1.093s.103.77.283 1.093m0-2.186l-9.566-5.314" />
                             </svg>
                         )}
                     </button>
-                    {copyStatus === 'copied' && (
-                        <span className="text-sm text-green-400 transition-opacity animate-[fadeIn_0.3s_ease-out]">Link copied!</span>
-                    )}
-                    {copyStatus === 'error' && (
-                        <span className="text-sm text-red-400 transition-opacity animate-[fadeIn_0.3s_ease-out]">Failed to share.</span>
-                    )}
                 </div>
                 <div className="text-gray-300 text-base leading-relaxed mb-6">
                     <p>{actor.bio}</p>
                 </div>
 
-                {/* AI Fun Fact Section */}
                 <div className="bg-gray-800/50 border border-gray-600 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-red-400 mb-2">✨ AI Fun Fact</h3>
                   {isLoadingFact && (
                     <div className="flex items-center space-x-2">
                       <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-gray-400"></div>
-                      <p className="text-gray-400 text-sm">Generating a fun fact...</p>
+                      <p className="text-gray-400 text-sm">Generating...</p>
                     </div>
                   )}
-                  {factError && (
-                    <p className="text-yellow-500 text-sm">{factError}</p>
-                  )}
-                  {fact && !isLoadingFact && (
-                     <p className="text-white italic">"{fact}"</p>
-                  )}
+                  {factError && <p className="text-yellow-500 text-sm italic">{factError}</p>}
+                  {fact && !isLoadingFact && <p className="text-white italic">"{fact}"</p>}
                 </div>
             </div>
         </div>

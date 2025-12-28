@@ -15,7 +15,6 @@ import SaveStatusToast from './components/SaveStatusToast';
 import MonetizationTab from './components/MonetizationTab';
 import HeroManager from './components/HeroManager';
 import LaurelManager from './components/LaurelManager';
-import JuryPortal from './components/JuryPortal';
 import PitchDeckPage from './components/PitchDeckPage';
 
 const ALL_TABS: Record<string, string> = {
@@ -43,7 +42,6 @@ const AdminPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [role, setRole] = useState<string | null>(null);
 
-    // Data states
     const [movies, setMovies] = useState<Record<string, Movie>>({});
     const [categories, setCategories] = useState<Record<string, Category>>({});
     const [aboutData, setAboutData] = useState<AboutData | null>(null);
@@ -51,7 +49,6 @@ const AdminPage: React.FC = () => {
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
     const [activeTab, setActiveTab] = useState('analytics');
 
-    // Save states
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
     const [saveError, setSaveError] = useState('');
@@ -275,7 +272,7 @@ const AdminPage: React.FC = () => {
                 </div>
 
                 <div className="animate-[fadeIn_0.5s_ease-out]">
-                    {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
+                    {activeTab === 'analytics' && <AnalyticsPage viewMode="full" onNavigateToGrowth={() => setActiveTab('growth')} />}
                     {activeTab === 'growth' && <GrowthAnalyticsTab />}
                     {activeTab === 'pitchDeck' && <PitchDeckPage />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}

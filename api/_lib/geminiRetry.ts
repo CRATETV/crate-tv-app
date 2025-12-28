@@ -1,9 +1,8 @@
-
 import { GoogleGenAI, GenerateContentParameters, GenerateContentResponse } from '@google/genai';
 
 /**
  * Executes a Gemini API call with exponential backoff retry logic.
- * Specifically targets 429 (Resource Exhausted) errors.
+ * Specifically targets 429 (Resource Exhausted) errors and 503 errors.
  */
 export async function generateContentWithRetry(
   params: GenerateContentParameters,
@@ -20,16 +19,17 @@ export async function generateContentWithRetry(
       lastError = error;
       const errorMessage = error.message || "";
       
-      // Check for 429 Resource Exhausted or 503 Service Unavailable
+      // Check for 429 Resource Exhausted, 8 RESOURCE_EXHAUSTED, or 503 Service Unavailable
       const isRetryable = errorMessage.includes("429") || 
                           errorMessage.includes("503") || 
                           errorMessage.includes("Quota exceeded") ||
+                          errorMessage.includes("RESOURCE_EXHAUSTED") ||
                           errorMessage.includes("Resource exhausted");
 
       if (isRetryable && attempt < maxRetries) {
-        // Exponential backoff: 1s, 2s, 4s...
-        const delay = Math.pow(2, attempt) * 1000;
-        console.warn(`Gemini Quota limit hit. Retrying attempt ${attempt + 1}/${maxRetries} after ${delay}ms...`);
+        // Exponential backoff: 2s, 4s, 8s...
+        const delay = Math.pow(2, attempt + 1) * 1000;
+        console.warn(`Gemini limit hit (Attempt ${attempt + 1}). Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
