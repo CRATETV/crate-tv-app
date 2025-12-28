@@ -37,7 +37,13 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
     window.scrollTo(0, 0);
   };
 
-  const emailHref = "mailto:cratetiv@gmail.com?subject=Film%20Submission%20Consideration&body=Hello%20Crate%20TV%20Team,%0A%0AI%20would%20like%20to%20submit%20my%20film%20for%20consideration.%0A%0AFilm%20Title:%20%0ADirector:%20%0ALink%20to%20Screener:%20";
+  // Fixed mailto handler to ensure it triggers correctly without being caught by the internal router
+  const handleEmailClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const emailSubject = encodeURIComponent("Film Submission Consideration");
+    const emailBody = encodeURIComponent("Hello Crate TV Team,\n\nI would like to submit my film for consideration.\n\nFilm Title: \nDirector: \nLink to Screener: ");
+    window.location.href = `mailto:cratetiv@gmail.com?subject=${emailSubject}&body=${emailBody}`;
+  };
 
   return (
     <div className={`fixed bottom-0 left-0 right-0 z-30 transition-all duration-500 ease-in-out hidden md:block ${isOpen ? 'translate-y-0' : 'translate-y-[calc(100%-2.5rem)]'}`}>
@@ -74,12 +80,12 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                         >
                             Visit Filmmaker Hub
                         </button>
-                        <a 
-                            href={emailHref}
+                        <button 
+                            onClick={handleEmailClick}
                             className="inline-flex items-center justify-center bg-gray-800 text-white font-black px-10 py-4 rounded-xl hover:bg-gray-700 transition-all border border-white/10 text-base uppercase tracking-widest"
                         >
                             Email us Directly
-                        </a>
+                        </button>
                     </div>
                 </div>
 
@@ -102,7 +108,6 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                 <div>
                     <h3 className="font-bold text-white mb-4">Partnerships</h3>
                     <ul className="space-y-2">
-                        <li><a href="/pitch-deck" onClick={(e) => handleNavigate(e, '/pitch-deck')} className="text-red-500 font-black hover:text-white transition uppercase text-xs tracking-widest">LIFT Labs Pitch Deck</a></li>
                         <li><a href="/talent" onClick={(e) => handleNavigate(e, '/talent')} className="hover:text-white transition">Talent Acquisition</a></li>
                         <li><a href="/actors-directory" onClick={(e) => handleNavigate(e, '/actors-directory')} className="hover:text-white transition">Actors Directory</a></li>
                     </ul>

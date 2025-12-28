@@ -47,20 +47,30 @@ const SynergyCard: React.FC<{ title: string; body: string; icon: string }> = ({ 
     </div>
 );
 
-const Screenshot: React.FC<{ src: string; caption: string; type?: 'mobile' | 'desktop' }> = ({ src, caption, type = 'desktop' }) => (
-    <div className="flex flex-col gap-4 group">
-        <div className={`${type === 'mobile' ? 'w-48 aspect-[9/19]' : 'w-full aspect-video'} bg-gray-900 rounded-xl overflow-hidden border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform group-hover:scale-[1.02]`}>
+const Screenshot: React.FC<{ src: string; caption: string; movieTitle: string; type?: 'mobile' | 'desktop' }> = ({ src, caption, movieTitle, type = 'desktop' }) => (
+    <div className="flex flex-col gap-4 group items-center">
+        <div className={`${type === 'mobile' ? 'w-56 aspect-[9/19]' : 'w-full aspect-video'} bg-gray-900 rounded-xl overflow-hidden border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform group-hover:scale-[1.02] flex flex-col`}>
             {/* Browser Header if Desktop */}
             {type === 'desktop' && (
-                <div className="bg-gray-800 h-6 flex items-center px-3 gap-1.5 border-b border-white/5">
+                <div className="bg-gray-800 h-6 flex items-center px-3 gap-1.5 border-b border-white/5 flex-none">
                     <div className="w-2 h-2 rounded-full bg-red-500/50"></div>
                     <div className="w-2 h-2 rounded-full bg-yellow-500/50"></div>
                     <div className="w-2 h-2 rounded-full bg-green-500/50"></div>
+                    <span className="text-[7px] text-gray-500 ml-2 font-mono truncate">cratetv.net/movie/{movieTitle.toLowerCase().replace(/\s/g, '')}</span>
                 </div>
             )}
-            <img src={src} alt={caption} className="w-full h-full object-cover" />
+            <div className="flex-grow flex items-center justify-center bg-black overflow-hidden p-2">
+                <img 
+                    src={src} 
+                    alt={movieTitle} 
+                    className="w-full h-full object-contain drop-shadow-2xl" 
+                />
+            </div>
         </div>
-        <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest text-center">{caption}</p>
+        <div className="text-center">
+            <p className="text-[11px] font-black text-white uppercase tracking-tighter">{caption}</p>
+            <p className="text-[9px] font-bold text-red-500 uppercase tracking-widest mt-0.5">Featuring: {movieTitle}</p>
+        </div>
     </div>
 );
 
@@ -104,19 +114,20 @@ const PitchDeckPage: React.FC = () => {
                         <div className="h-px flex-grow bg-gradient-to-r from-red-600 to-transparent"></div>
                         <div className="flex flex-col text-right">
                              <span className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Designed for</span>
-                             <span className="text-lg font-black text-white italic">The Next Era of Broadcast</span>
+                             <span className="text-lg font-black text-white italic">NBCUniversal LIFT Labs</span>
                         </div>
                     </div>
                 </div>
             </Slide>
 
-            {/* SLIDE 2: THE INTERFACE (NEW: SCREENSHOTS) */}
-            <Slide title="The Cinematic Experience" subtitle="UI/UX Optimized for Discovery">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            {/* SLIDE 2: THE INTERFACE (SHOWCASING ACTUAL WEBAPP) */}
+            <Slide title="The Product Suite" subtitle="Proprietary UI/UX for the Multi-Device Era">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-end">
                     <div className="space-y-6">
                         <Screenshot 
-                            src="https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/fling+webapp.png" 
-                            caption="Cinematic Feed & Dynamic Hero Spotlight"
+                            src="https://cratetelevision.s3.amazonaws.com/Lifeless+poster+remake+.jpg" 
+                            movieTitle="Lifeless"
+                            caption="Webapp: Cinematic Desktop View"
                         />
                         <div className="p-6 bg-red-600/10 border border-red-500/20 rounded-2xl">
                             <p className="text-gray-300 text-sm leading-relaxed italic">
@@ -125,17 +136,22 @@ const PitchDeckPage: React.FC = () => {
                         </div>
                     </div>
                     <div className="flex flex-col gap-8">
-                         <div className="flex gap-6 items-end">
+                        <div className="flex gap-8 items-end justify-center">
                             <Screenshot 
-                                src="https://cratetelevision.s3.us-east-1.amazonaws.com/Webapp+posters/Burst.png" 
-                                caption="Mobile First App" 
+                                src="https://cratetelevision.s3.us-east-1.amazonaws.com/Gemeni+Time+Service.JPG" 
+                                movieTitle="Gemini Time Service"
+                                caption="Webapp: Mobile Player" 
                                 type="mobile"
                             />
-                            <div className="flex-grow p-6 bg-white/5 rounded-2xl border border-white/10 mb-8">
-                                <h4 className="text-white font-bold mb-2">Cross-Platform Sync</h4>
-                                <p className="text-gray-400 text-xs leading-relaxed">Native-feel PWA (Progressive Web App) ensures seamless hand-off between mobile browsing and 10-foot TV viewing.</p>
+                            <div className="flex-grow p-8 bg-white/5 rounded-3xl border border-white/10 mb-12 max-w-xs">
+                                <h4 className="text-white font-black uppercase tracking-tighter mb-3">Seamless PWA Integration</h4>
+                                <p className="text-gray-400 text-xs leading-relaxed font-medium">Native-feel Progressive Web App architecture ensures instant performance without the friction of app store downloads.</p>
+                                <div className="mt-6 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                                    <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">Zero Install Friction</span>
+                                </div>
                             </div>
-                         </div>
+                        </div>
                     </div>
                 </div>
             </Slide>
