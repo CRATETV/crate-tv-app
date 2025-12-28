@@ -1,4 +1,3 @@
-
 import { Type } from '@google/genai';
 import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
@@ -47,9 +46,14 @@ export async function POST(request: Request) {
     });
 
     let base64Image = '';
-    const part = imageResponse.candidates?.[0]?.content?.parts.find(p => p.inlineData);
-    if (part?.inlineData) {
-        base64Image = part.inlineData.data;
+    const candidate = imageResponse.candidates?.[0];
+    const parts = candidate?.content?.parts;
+    
+    if (parts && Array.isArray(parts)) {
+        const part = parts.find(p => p.inlineData);
+        if (part && part.inlineData && part.inlineData.data) {
+            base64Image = part.inlineData.data;
+        }
     }
 
     return new Response(JSON.stringify({ 
