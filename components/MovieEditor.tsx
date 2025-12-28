@@ -104,6 +104,27 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         }
     };
 
+    const handleAddActor = () => {
+        if (!formData) return;
+        setFormData({
+            ...formData,
+            cast: [...formData.cast, { name: '', bio: '', photo: '', highResPhoto: '' }]
+        });
+    };
+
+    const handleActorChange = (index: number, field: keyof Actor, value: string) => {
+        if (!formData) return;
+        const newCast = [...formData.cast];
+        newCast[index] = { ...newCast[index], [field]: value };
+        setFormData({ ...formData, cast: newCast });
+    };
+
+    const handleRemoveActor = (index: number) => {
+        if (!formData) return;
+        const newCast = formData.cast.filter((_, i) => i !== index);
+        setFormData({ ...formData, cast: newCast });
+    };
+
     const handleSave = async () => {
         if (!formData) return;
         setIsSaving(true);
@@ -219,11 +240,37 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     </div>
                                 </div>
                             </section>
+
+                            {/* RESTORED CAST SECTION */}
+                            <section className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">03. Cast & Talents</h4>
+                                    <button onClick={handleAddActor} className="text-[10px] font-black text-blue-400 hover:text-white uppercase tracking-widest">+ Add Member</button>
+                                </div>
+                                <div className="space-y-4">
+                                    {formData.cast.map((actor, index) => (
+                                        <div key={index} className="bg-black/20 p-4 rounded-xl border border-white/5 space-y-3 relative group">
+                                            <button onClick={() => handleRemoveActor(index)} className="absolute top-2 right-2 text-gray-600 hover:text-red-500 transition-colors">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                            </button>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <input type="text" value={actor.name} onChange={(e) => handleActorChange(index, 'name', e.target.value)} placeholder="Actor Name" className="form-input !py-2 text-xs" />
+                                                <input type="text" value={actor.photo} onChange={(e) => handleActorChange(index, 'photo', e.target.value)} placeholder="Profile Photo URL" className="form-input !py-2 text-xs" />
+                                            </div>
+                                            <textarea value={actor.bio} onChange={(e) => handleActorChange(index, 'bio', e.target.value)} placeholder="Short Bio" rows={2} className="form-input !py-2 text-xs" />
+                                            <div className="flex items-center gap-3">
+                                                <input type="text" value={actor.highResPhoto} onChange={(e) => handleActorChange(index, 'highResPhoto', e.target.value)} placeholder="High-Res Photo URL" className="form-input !py-2 text-xs" />
+                                                <S3Uploader label="Upload" onUploadSuccess={(url) => handleActorChange(index, 'highResPhoto', url)} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
                         </div>
 
                         <div className="space-y-8">
                              <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">03. Distribution & Monetization</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">04. Distribution & Monetization</h4>
                                 
                                 {/* PAY-PER-VIEW SETTINGS */}
                                 <div className="bg-gradient-to-br from-green-600/10 to-transparent p-6 rounded-2xl border border-green-500/20 space-y-4">

@@ -19,10 +19,12 @@ import MonetizationTab from './components/MonetizationTab';
 import HeroManager from './components/HeroManager';
 import LaurelManager from './components/LaurelManager';
 import JuryPortal from './components/JuryPortal';
+import PitchDeckPage from './components/PitchDeckPage';
 
 const ALL_TABS: Record<string, string> = {
     analytics: '📊 Platform Analytics',
     growth: '✨ Growth Intelligence',
+    pitchDeck: '🚀 LIFT Labs Pitch',
     jury: '⚖️ Grand Jury',
     hero: '🎬 Hero Spotlight',
     movies: '🎞️ Movies',
@@ -375,6 +377,7 @@ const AdminPage: React.FC = () => {
                 <div className="animate-[fadeIn_0.5s_ease-out]">
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" onNavigateToGrowth={() => setActiveTab('growth')} />}
                     {activeTab === 'growth' && <GrowthAnalyticsTab />}
+                    {activeTab === 'pitchDeck' && <PitchDeckPage />}
                     {activeTab === 'jury' && <JuryPortal pipeline={pipeline} />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data, pipelineId) => handleSaveData('movies', data, pipelineId)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} movieToCreate={pipelineItemToConvert} onCreationDone={() => setPipelineItemToConvert(null)} />}
