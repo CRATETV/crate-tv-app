@@ -46,7 +46,7 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
     setEmailStatus('opening');
     window.location.href = `mailto:${emailAddr}?subject=${emailSubject}&body=${emailBody}`;
     
-    // Fallback: If mailto fails to open or window doesn't blur, provide copy option
+    // Reset status after a few seconds so the button doesn't stay stuck on "Opening..."
     setTimeout(() => {
         setEmailStatus('idle');
     }, 2000);

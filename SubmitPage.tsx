@@ -24,6 +24,7 @@ const SubmitPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showDirectForm, setShowDirectForm] = useState(false);
+    const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
     
     const handleNavigate = (path: string) => {
         window.history.pushState({}, '', path);
@@ -58,6 +59,12 @@ Thank you,
 [Your Name]`);
 
         window.location.href = `mailto:cratetiv@gmail.com?subject=${emailSubject}&body=${emailBody}`;
+    };
+
+    const copyEmailToClipboard = () => {
+        navigator.clipboard.writeText("cratetiv@gmail.com");
+        setCopyStatus('copied');
+        setTimeout(() => setCopyStatus('idle'), 2000);
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -166,15 +173,23 @@ Thank you,
                                 Submit directly to the **Crate TV Streaming Catalog**. Best for filmmakers looking for non-exclusive year-round distribution and direct monetization.
                             </p>
                             <div className="space-y-4 w-full">
-                                <button 
-                                    onClick={handleEmailSubmit}
-                                    className="block w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-purple-900/20 text-lg text-center"
-                                >
-                                    Email us Your Film
-                                </button>
+                                <div className="flex flex-col gap-2">
+                                    <button 
+                                        onClick={handleEmailSubmit}
+                                        className="block w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-purple-900/20 text-lg text-center"
+                                    >
+                                        Email us Your Film
+                                    </button>
+                                    <button 
+                                        onClick={copyEmailToClipboard}
+                                        className="text-[10px] text-gray-500 hover:text-white uppercase font-black tracking-widest text-center"
+                                    >
+                                        {copyStatus === 'copied' ? 'Email Address Copied!' : 'Copy Email Address Instead'}
+                                    </button>
+                                </div>
                                 <button 
                                     onClick={() => setShowDirectForm(!showDirectForm)}
-                                    className="text-xs text-gray-500 hover:text-white transition-colors uppercase font-black tracking-widest border-b border-transparent hover:border-gray-500 pb-1"
+                                    className="text-xs text-gray-500 hover:text-white transition-colors uppercase font-black tracking-widest border-b border-transparent hover:border-gray-500 pb-1 mx-auto block"
                                 >
                                     {showDirectForm ? 'Hide Form' : 'Use Direct Upload Form'}
                                 </button>

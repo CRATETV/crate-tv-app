@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const Slide: React.FC<{ 
     children: React.ReactNode; 
@@ -7,12 +7,13 @@ const Slide: React.FC<{
     subtitle?: string;
     gradient?: string;
 }> = ({ children, dark = true, title, subtitle, gradient }) => (
-    <section className={`w-full min-h-screen flex flex-col p-8 md:p-20 relative overflow-hidden break-after-page print:h-[11in] print:w-[8.5in] print:p-8 ${gradient ? gradient : (dark ? 'bg-[#050505] text-white' : 'bg-white text-black')}`}>
-        <div className="flex justify-between items-center mb-12 border-b border-white/10 pb-6 print:mb-4 relative z-10">
+    <section className={`pitch-slide w-full flex flex-col p-8 md:p-20 relative overflow-hidden break-after-page ${gradient ? gradient : (dark ? 'bg-[#050505] text-white' : 'bg-white text-black')}`}>
+        {/* Header Branding */}
+        <div className="flex justify-between items-center mb-12 border-b border-white/10 pb-6 relative z-10">
             <div className="flex items-center gap-4">
                 <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" alt="Crate TV" className={`w-20 h-auto ${!dark && 'invert'}`} />
                 <div className="h-6 w-px bg-white/20"></div>
-                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/50">LIFT LABS PITCH 2025</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/50">PLATFORM PITCH 2025</p>
             </div>
             <div className="text-right">
                 <p className={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-red-500' : 'text-red-600'}`}>CONFIDENTIAL PROPOSAL</p>
@@ -39,7 +40,7 @@ const Slide: React.FC<{
 
         <div className="flex justify-between items-end mt-12 text-[9px] font-black uppercase tracking-widest text-white/30 border-t border-white/5 pt-6 relative z-10">
             <span>Philadelphia, PA</span>
-            <span>© 2025 Crate TV // Comcast NBCUniversal LIFT Labs Selection</span>
+            <span>© 2025 Crate TV // Independent Cinema Infrastructure</span>
         </div>
     </section>
 );
@@ -53,22 +54,36 @@ const FeatureCard: React.FC<{ icon: string; title: string; desc: string; color: 
 );
 
 const PitchDeckPage: React.FC = () => {
+    const [partnerName, setPartnerName] = useState('Comcast NBCUniversal LIFT Labs');
+
     const handlePrint = () => {
         window.print();
     };
 
     return (
         <div className="bg-[#050505] min-h-screen selection:bg-red-600 selection:text-white">
-            <div className="fixed top-6 right-6 z-50 flex gap-3 no-print">
+            {/* Nav Controls */}
+            <div className="fixed top-6 right-6 z-50 flex flex-wrap items-center gap-3 no-print bg-black/60 p-3 rounded-2xl backdrop-blur-xl border border-white/10 shadow-2xl">
+                <div className="flex flex-col gap-1 mr-4">
+                    <label className="text-[8px] font-black uppercase text-gray-500 tracking-widest">Tailor Pitch For:</label>
+                    <input 
+                        type="text" 
+                        value={partnerName}
+                        onChange={(e) => setPartnerName(e.target.value)}
+                        placeholder="Company Name..."
+                        className="bg-white/5 border border-white/10 text-white text-xs px-3 py-1.5 rounded focus:outline-none focus:border-red-500 w-48"
+                    />
+                </div>
+                <div className="h-10 w-px bg-white/10 mx-2"></div>
                 <button 
                     onClick={() => window.history.back()}
-                    className="bg-gray-900/80 backdrop-blur-md hover:bg-gray-800 text-white font-black px-5 py-2 rounded-lg text-[10px] uppercase tracking-widest border border-white/10 transition-all"
+                    className="bg-gray-800 hover:bg-gray-700 text-white font-black px-5 py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all"
                 >
                     Exit
                 </button>
                 <button 
                     onClick={handlePrint}
-                    className="bg-red-600 hover:bg-red-500 text-white font-black px-6 py-2 rounded-lg text-[10px] uppercase tracking-widest shadow-2xl transition-all"
+                    className="bg-red-600 hover:bg-red-500 text-white font-black px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest shadow-2xl transition-all"
                 >
                     Export PDF
                 </button>
@@ -90,8 +105,8 @@ const PitchDeckPage: React.FC = () => {
                     <div className="pt-16 flex items-center gap-10">
                         <div className="h-px flex-grow bg-gradient-to-r from-red-600 to-transparent"></div>
                         <div className="flex flex-col text-right">
-                             <span className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Selected for</span>
-                             <span className="text-xl font-black text-white italic">Comcast NBCUniversal LIFT Labs</span>
+                             <span className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Tailored Proposal for</span>
+                             <span className="text-xl font-black text-white italic">{partnerName}</span>
                         </div>
                     </div>
                 </div>
@@ -125,13 +140,13 @@ const PitchDeckPage: React.FC = () => {
             </Slide>
 
             {/* SLIDE 3: FESTIVAL PARTNERSHIP */}
-            <Slide title="Virtual Festival Hub" subtitle="Supporting Playhouse West Philadelphia" gradient="bg-gradient-to-br from-[#1a0b2e] via-[#050505] to-black">
+            <Slide title="Virtual Festival Hub" subtitle="Online Expansion of the Live Experience" gradient="bg-gradient-to-br from-[#1a0b2e] via-[#050505] to-black">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
                     <div className="space-y-8">
                          <div className="bg-purple-600/10 border border-purple-500/30 p-8 rounded-3xl">
                             <h3 className="text-3xl font-black uppercase text-purple-400 mb-4">Official Digital Partner</h3>
                             <p className="text-gray-300 text-lg leading-relaxed">
-                                We broadcast high-velocity selections from institutions like the <strong className="text-white">Playhouse West Philadelphia Film Festival</strong> to a global audience.
+                                Partnering with institutions like the <strong className="text-white">Playhouse West Philadelphia Film Festival</strong>, we broadcast their selections to a global audience.
                             </p>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -150,8 +165,8 @@ const PitchDeckPage: React.FC = () => {
                     <div className="relative text-center">
                         <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-64 h-auto mx-auto mb-8 drop-shadow-[0_0_30px_rgba(139,92,246,0.3)]" alt="Crate TV" />
                         <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10">
-                            <p className="text-xs font-black text-purple-500 uppercase tracking-[0.3em] mb-4">The Philly Catalyst</p>
-                            <p className="text-xl font-bold text-white italic">"Expanding the reach of Philadelphia's finest independent voices."</p>
+                            <p className="text-xs font-black text-purple-500 uppercase tracking-[0.3em] mb-4">The Discovery Engine</p>
+                            <p className="text-xl font-bold text-white italic">"Extending the reach of the finest independent voices beyond local theater."</p>
                         </div>
                     </div>
                 </div>
@@ -190,20 +205,20 @@ const PitchDeckPage: React.FC = () => {
             </Slide>
 
             {/* SLIDE 5: WHY NOW */}
-            <Slide title="Ready to Scale" subtitle="Partnering with Comcast LIFT Labs" gradient="bg-gradient-to-t from-red-600/10 to-black">
+            <Slide title="Ready to Scale" subtitle={`Strategic Alignment with ${partnerName}`} gradient="bg-gradient-to-t from-red-600/10 to-black">
                 <div className="flex flex-col md:flex-row gap-12 items-center">
                     <div className="flex-1 space-y-10">
                         <h4 className="text-4xl font-black uppercase text-white tracking-tighter leading-tight">Operational and <span className="text-red-600">Built.</span></h4>
                         <div className="space-y-6 text-gray-400 text-xl leading-relaxed">
                             <p>Crate TV is not a "concept." We are a **functional media infrastructure** with an active Roku presence and AWS backbone.</p>
-                            <p>With **Comcast LIFT Labs**, we intend to scale our model to thousands of creators and millions of viewers.</p>
+                            <p>We are ready to scale our "Discovery-as-a-Service" model to thousands of creators and millions of viewers.</p>
                         </div>
                         <div className="bg-red-600 p-8 rounded-3xl text-white font-black italic text-2xl shadow-2xl uppercase tracking-tight">
                             "Lifting the best stories off the ground."
                         </div>
                     </div>
                     <div className="w-full md:w-80 bg-white/5 border border-white/10 rounded-[2.5rem] p-10 space-y-6">
-                        <p className="text-xs font-black uppercase text-red-500 tracking-[0.3em]">Infrastructure</p>
+                        <p className="text-xs font-black uppercase text-red-500 tracking-[0.3em]">Infrastructure Core</p>
                         <ul className="text-sm space-y-4 font-bold text-gray-200 uppercase tracking-tighter">
                             <li className="flex items-center gap-3">● Active Roku Channel</li>
                             <li className="flex items-center gap-3">● Full AWS/CDN Backend</li>
@@ -214,12 +229,84 @@ const PitchDeckPage: React.FC = () => {
                 </div>
             </Slide>
 
+            {/* SLIDE 6: CLOSING */}
+            <Slide>
+                <div className="text-center space-y-12 max-w-4xl mx-auto py-10">
+                    <p className="text-3xl md:text-8xl text-white font-black italic leading-none uppercase tracking-tighter">
+                        Scale the Discovery. <br/>
+                        <span className="text-red-600">Partner with Crate TV.</span>
+                    </p>
+                    <div className="pt-12">
+                         <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" alt="Crate TV" className="w-64 h-auto mx-auto mb-8 drop-shadow-[0_0_40px_rgba(255,0,0,0.4)]" />
+                         <p className="text-white font-black uppercase tracking-[0.4em] text-sm italic">Proposed to {partnerName}</p>
+                    </div>
+                </div>
+            </Slide>
+
             <style>{`
+                @page {
+                    size: 1920px 1080px;
+                    margin: 0;
+                }
                 @media print {
-                    body { background: white !important; }
+                    :root {
+                        color-scheme: dark !important;
+                    }
+                    html, body {
+                        background-color: #050505 !important;
+                        color: white !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        width: 1920px !important;
+                        height: 1080px !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
                     .no-print { display: none !important; }
-                    .break-after-page { page-break-after: always; }
-                    section { min-height: 100vh; height: 100vh; }
+                    .break-after-page { page-break-after: always !important; }
+                    
+                    .pitch-slide { 
+                        min-height: 1080px !important; 
+                        height: 1080px !important; 
+                        width: 1920px !important;
+                        background-color: #050505 !important;
+                        color: white !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        page-break-inside: avoid !important;
+                    }
+
+                    /* Specific high-priority background overrides for print engines */
+                    .bg-\[\#050505\] { background-color: #050505 !important; }
+                    .bg-black { background-color: #000000 !important; }
+                    .bg-gray-900 { background-color: #111827 !important; }
+                    .bg-red-600 { background-color: #dc2626 !important; }
+                    .bg-white\/5 { background-color: rgba(255, 255, 255, 0.05) !important; }
+                    .bg-purple-600\/10 { background-color: rgba(147, 51, 234, 0.1) !important; }
+                    
+                    /* Force Text Colors */
+                    .text-white { color: #ffffff !important; }
+                    .text-red-500 { color: #ef4444 !important; }
+                    .text-red-600 { color: #dc2626 !important; }
+                    .text-gray-300 { color: #d1d5db !important; }
+                    .text-gray-400 { color: #9ca3af !important; }
+
+                    /* Force Gradients */
+                    .bg-gradient-to-br { 
+                        background-image: linear-gradient(to bottom right, var(--tw-gradient-from), var(--tw-gradient-to, var(--tw-gradient-stops))) !important; 
+                        -webkit-print-color-adjust: exact !important;
+                    }
+                    .bg-gradient-to-r { background-image: linear-gradient(to right, var(--tw-gradient-from), var(--tw-gradient-to, var(--tw-gradient-stops))) !important; }
+                    .bg-gradient-to-t { background-image: linear-gradient(to top, var(--tw-gradient-from), var(--tw-gradient-to, var(--tw-gradient-stops))) !important; }
+                    
+                    /* Utility to ensure all nested borders and backgrounds render */
+                    * { 
+                        -webkit-print-color-adjust: exact !important; 
+                        print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                    }
                 }
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(30px); }

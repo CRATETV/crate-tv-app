@@ -42,6 +42,7 @@ const AdminPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [role, setRole] = useState<string | null>(null);
 
+    // Data states
     const [movies, setMovies] = useState<Record<string, Movie>>({});
     const [categories, setCategories] = useState<Record<string, Category>>({});
     const [aboutData, setAboutData] = useState<AboutData | null>(null);
@@ -49,6 +50,7 @@ const AdminPage: React.FC = () => {
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
     const [activeTab, setActiveTab] = useState('analytics');
 
+    // Save states
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
     const [saveError, setSaveError] = useState('');

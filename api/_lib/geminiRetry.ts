@@ -24,7 +24,8 @@ export async function generateContentWithRetry(
                           errorMessage.includes("503") || 
                           errorMessage.includes("Quota exceeded") ||
                           errorMessage.includes("RESOURCE_EXHAUSTED") ||
-                          errorMessage.includes("Resource exhausted");
+                          errorMessage.includes("Resource exhausted") ||
+                          errorMessage.includes("limit");
 
       if (isRetryable && attempt < maxRetries) {
         // Exponential backoff: 2s, 4s, 8s...
