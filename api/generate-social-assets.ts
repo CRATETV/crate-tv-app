@@ -11,15 +11,8 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    // 1. Generate Viral Copy + Press Release (Usually higher quota)
-    let socialCopy = {
-        instagram: [],
-        twitter: [],
-        facebook: [],
-        hashtags: [],
-        pressRelease: "Press release generation failed due to API limits."
-    };
-
+    // 1. Generate Viral Copy + Press Release (Cheaper text quota)
+    let socialCopy = null;
     try {
         const textPrompt = `Create a social media "Kit" (3 IG, 3 X, 3 FB, 15 hashtags) and Press Release for: "${title}" by ${director}. Synopsis: "${synopsis}". Respond in JSON.`;
         const textResponse = await generateContentWithRetry({
@@ -42,17 +35,16 @@ export async function POST(request: Request) {
         });
         socialCopy = JSON.parse(textResponse.text || '{}');
     } catch (textError: any) {
-        console.warn("Text generation hit limit:", textError.message);
-        // If text fails, we return a special error so the UI knows we hit the daily limit
-        if (textError.message?.includes('429') || textError.message?.includes('limit')) {
+        if (textError.message?.includes('RESOURCE_EXHAUSTED') || textError.isQuotaError) {
             return new Response(JSON.stringify({ 
-                error: "Daily AI Limit Exceeded. Crate TV's AI needs a rest! Please try again tomorrow or upgrade to a paid API key.",
+                error: "AI Quota Exceeded. The text generator is at its daily limit. Your database changes are saved, but this optional kit is unavailable.",
                 isQuotaError: true 
             }), { status: 200, headers: { 'Content-Type': 'application/json' } });
         }
+        throw textError;
     }
 
-    // 2. Generate Cinematic Image (Very low quota on free tier)
+    // 2. Generate Cinematic Image (Expensive image quota)
     let base64Image = '';
     try {
         const imagePrompt = `A cinematic high-quality promotional movie still for a film titled "${title}". Directed by ${director}. 16:9 aspect ratio, no text.`;
@@ -64,18 +56,13 @@ export async function POST(request: Request) {
           } as any
         });
 
-        const candidate = imageResponse.candidates?.[0];
-        const parts = candidate?.content?.parts;
-        
-        if (parts && Array.isArray(parts)) {
-            const part = parts.find(p => p.inlineData);
-            if (part && part.inlineData && part.inlineData.data) {
-                base64Image = part.inlineData.data;
-            }
+        const part = imageResponse.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+        if (part?.inlineData?.data) {
+            base64Image = part.inlineData.data;
         }
     } catch (imageError: any) {
         console.warn("Image generation hit quota limit. Returning text-only kit.");
-        // We don't throw here; we want to at least return the text copy
+        // We let this fail silently and just return the text kit
     }
 
     return new Response(JSON.stringify({ 
@@ -86,6 +73,6 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("Social Kit API error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown" }), { status: 500 });
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Internal Error" }), { status: 500 });
   }
 }

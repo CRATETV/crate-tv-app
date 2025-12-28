@@ -30,6 +30,7 @@ const SocialKitModal: React.FC<SocialKitModalProps> = ({ title, synopsis, direct
     const [isLoading, setIsLoading] = useState(true);
     const [kit, setKit] = useState<{ copy: any, image: string, imageSkipped?: boolean } | null>(null);
     const [error, setError] = useState('');
+    const [isQuotaError, setIsQuotaError] = useState(false);
     const [activeTab, setActiveTab] = useState<'social' | 'press'>('social');
 
     useEffect(() => {
@@ -43,13 +44,14 @@ const SocialKitModal: React.FC<SocialKitModalProps> = ({ title, synopsis, direct
                 });
                 const data = await res.json();
                 
-                // Handle the 200-but-with-error scenario (Quota hit)
-                if (data.error && data.isQuotaError) {
-                    throw new Error(data.error);
+                if (data.isQuotaError) {
+                    setIsQuotaError(true);
+                    setError(data.error);
+                } else if (!res.ok) {
+                    throw new Error(data.error || 'Failed to generate assets.');
+                } else {
+                    setKit(data);
                 }
-                
-                if (!res.ok) throw new Error(data.error || 'Failed to generate assets.');
-                setKit(data);
             } catch (err) {
                 console.error("Kit Generation Error:", err);
                 setError(err instanceof Error ? err.message : 'An unknown error occurred during kit generation.');
@@ -118,10 +120,17 @@ ${(kit.copy.hashtags || []).join(' ')}
                         </div>
                     ) : error ? (
                         <div className="h-64 flex flex-col items-center justify-center text-center space-y-4">
-                            <div className="text-red-500 text-5xl">⚠️</div>
-                            <h3 className="text-xl font-bold text-white uppercase tracking-tighter">AI Service Busy</h3>
+                            <div className="text-red-500 text-5xl">{isQuotaError ? '⏳' : '⚠️'}</div>
+                            <h3 className="text-xl font-bold text-white uppercase tracking-tighter">
+                                {isQuotaError ? 'AI Free Limit Reached' : 'AI Service Busy'}
+                            </h3>
                             <p className="text-gray-400 max-w-md mx-auto">{error}</p>
-                            <button onClick={onClose} className="mt-4 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white underline">Close and Try Again Later</button>
+                            <div className="bg-white/5 p-4 rounded-xl border border-white/5 mt-6">
+                                <p className="text-xs text-gray-500 uppercase font-black tracking-widest leading-relaxed">
+                                    Notice: Your movie data was saved successfully. Only this AI-generated toolkit is affected. Try again tomorrow for a free kit, or enable billing in AI Studio to remove this limit.
+                                </p>
+                            </div>
+                            <button onClick={onClose} className="mt-8 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white underline">Close and Continue</button>
                         </div>
                     ) : kit && (
                         activeTab === 'social' ? (
@@ -133,8 +142,8 @@ ${(kit.copy.hashtags || []).join(' ')}
                                         ) : (
                                             <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 p-8 text-center">
                                                 <svg className="w-12 h-12 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                                <p className="text-sm font-bold uppercase tracking-widest">Image Generation Skipped</p>
-                                                <p className="text-xs mt-2 opacity-60">You've reached your daily quota for cinematic images. The text-based kit is still available below.</p>
+                                                <p className="text-sm font-bold uppercase tracking-widest">Visual Generation Skipped</p>
+                                                <p className="text-xs mt-2 opacity-60">Daily quota reached for promotional images. The text kit is ready below.</p>
                                             </div>
                                         )}
                                     </div>
@@ -157,9 +166,9 @@ ${(kit.copy.hashtags || []).join(' ')}
                 </div>
 
                 <div className="p-8 border-t border-white/5 bg-white/[0.02] flex justify-between items-center">
-                    <p className="text-[10px] text-gray-500 max-w-xs leading-relaxed uppercase font-bold tracking-tighter">AI generated press release follows industry AP standards.</p>
+                    <p className="text-[10px] text-gray-500 max-w-xs leading-relaxed uppercase font-bold tracking-tighter">AI toolkit is an optional add-on and does not affect database integrity.</p>
                     <div className="flex gap-4">
-                        <button onClick={onClose} className="px-6 py-4 text-gray-400 hover:text-white uppercase font-black text-xs">Discard</button>
+                        <button onClick={onClose} className="px-6 py-4 text-gray-400 hover:text-white uppercase font-black text-xs">Close</button>
                         {!error && !isLoading && <button onClick={handleDownloadAll} className="bg-red-600 hover:bg-red-700 text-white font-black px-10 py-4 rounded-xl shadow-xl shadow-red-900/20 uppercase tracking-widest text-xs transition-all transform active:scale-95">Download Kit (.zip)</button>}
                     </div>
                 </div>

@@ -20,22 +20,34 @@ export async function generateContentWithRetry(
       const errorMessage = error.message || "";
       
       // Check for 429 Resource Exhausted, 8 RESOURCE_EXHAUSTED, or 503 Service Unavailable
-      const isRetryable = errorMessage.includes("429") || 
-                          errorMessage.includes("503") || 
-                          errorMessage.includes("Quota exceeded") ||
-                          errorMessage.includes("RESOURCE_EXHAUSTED") ||
-                          errorMessage.includes("Resource exhausted") ||
-                          errorMessage.includes("limit");
+      const isQuotaError = errorMessage.includes("429") || 
+                           errorMessage.includes("limit") ||
+                           errorMessage.includes("Quota exceeded") ||
+                           errorMessage.includes("RESOURCE_EXHAUSTED") ||
+                           errorMessage.includes("Resource exhausted");
 
-      if (isRetryable && attempt < maxRetries) {
-        // Exponential backoff: 2s, 4s, 8s...
+      if (isQuotaError) {
+          // If we've hit the limit, provide an actionable message
+          const enhancedError = new Error(
+              `AI Quota Exceeded (8 RESOURCE_EXHAUSTED). To fix this, enable billing in your Google AI Studio project (aistudio.google.com) or wait 24 hours. Costs are fractions of a penny: ai.google.dev/gemini-api/docs/billing`
+          );
+          (enhancedError as any).isQuotaError = true;
+          
+          if (attempt < maxRetries) {
+              const delay = Math.pow(2, attempt + 1) * 1000;
+              console.warn(`Gemini limit hit. Retrying in ${delay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
+          }
+          throw enhancedError;
+      }
+
+      if (errorMessage.includes("503") && attempt < maxRetries) {
         const delay = Math.pow(2, attempt + 1) * 1000;
-        console.warn(`Gemini limit hit (Attempt ${attempt + 1}). Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
       
-      // If not retryable or we've reached max retries, throw the error
       throw error;
     }
   }

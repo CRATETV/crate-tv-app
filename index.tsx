@@ -134,7 +134,7 @@ const AppRouter: React.FC = () => {
       return <TopTenPage />;
     case '/submission-terms':
       return <SubmissionTermsPage />;
-    case '/pitch-deck':
+    case '/pitchdeck':
       return <PitchDeckPage />;
     
     // Unified Portal Route

@@ -81,7 +81,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         if (selectedMovieKey) {
             const movieData = allMovies[selectedMovieKey];
             if (movieData) {
-                // Defensive check to ensure cast is always an array
                 setFormData({ 
                     ...movieData, 
                     cast: Array.isArray(movieData.cast) ? movieData.cast : [] 
@@ -133,18 +132,21 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         if (!formData) return;
         setIsSaving(true);
         try {
+            // Decoupled save: This only hits Firestore and S3.
+            // If Gemini is down/quota-hit, this will still SUCCEED.
             await onSave({ [formData.key]: formData });
             setSelectedMovieKey('');
         } catch (err) {
             console.error("Save failed:", err);
+            alert("Database update failed. Check your internet connection.");
         } finally {
             setIsSaving(false);
         }
     };
 
     const filteredMovies = (Object.values(allMovies) as Movie[])
-        .filter(m => m.title.toLowerCase().includes(searchTerm.toLowerCase()))
-        .sort((a, b) => a.title.localeCompare(b.title));
+        .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
+        .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
     return (
         <div className="space-y-6 pb-20">
@@ -212,9 +214,15 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                     <div className="flex justify-between items-center border-b border-gray-700 pb-6">
                         <div>
                             <h3 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{formData.title || 'New Movie'}</h3>
-                            <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Movie ID: {formData.key}</p>
+                            <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Database ID: {formData.key}</p>
                         </div>
-                        <button onClick={() => setSelectedMovieKey('')} className="bg-gray-700 hover:bg-gray-600 text-white font-black px-6 py-2 rounded-xl uppercase text-xs tracking-widest">Back to Catalog</button>
+                        <div className="flex items-center gap-4">
+                            <div className="hidden md:flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-full border border-white/5">
+                                <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Database Live</span>
+                            </div>
+                            <button onClick={() => setSelectedMovieKey('')} className="bg-gray-700 hover:bg-gray-600 text-white font-black px-6 py-2 rounded-xl uppercase text-xs tracking-widest transition-all">Back to Catalog</button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -270,33 +278,21 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                 <label className="form-label">Professional Bio</label>
                                                 <textarea value={actor.bio} onChange={(e) => handleActorChange(index, 'bio', e.target.value)} placeholder="Brief acting history..." rows={3} className="form-input" />
                                             </div>
-                                            <div className="pt-2">
-                                                <label className="form-label">High-Resolution Bio Photo</label>
-                                                <div className="flex items-center gap-3">
-                                                    <input type="text" value={actor.highResPhoto} onChange={(e) => handleActorChange(index, 'highResPhoto', e.target.value)} placeholder="High-Res URL" className="form-input flex-grow" />
-                                                    <S3Uploader label="Upload" onUploadSuccess={(url) => handleActorChange(index, 'highResPhoto', url)} />
-                                                </div>
-                                            </div>
                                         </div>
                                     ))}
-                                    {(!formData.cast || formData.cast.length === 0) && (
-                                        <div className="py-12 border-2 border-dashed border-white/5 rounded-2xl text-center">
-                                            <p className="text-gray-600 font-bold uppercase tracking-widest text-[10px]">No cast members added yet.</p>
-                                        </div>
-                                    )}
                                 </div>
                             </section>
                         </div>
 
                         <div className="space-y-8">
                              <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">04. Distribution & Monetization</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">04. Access & Monetization</h4>
                                 
                                 <div className="bg-gradient-to-br from-green-600/10 to-transparent p-6 rounded-2xl border border-green-500/20 space-y-4">
                                     <div className="flex justify-between items-center">
                                         <div>
-                                            <h4 className="text-[10px] font-black uppercase text-green-500 tracking-widest">Rental (24h PPV)</h4>
-                                            <p className="text-[9px] text-gray-500 uppercase font-bold mt-1">Enable to put film behind paywall</p>
+                                            <h4 className="text-[10px] font-black uppercase text-green-500 tracking-widest">Rental Mode</h4>
+                                            <p className="text-[9px] text-gray-500 uppercase font-bold mt-1">Require 24h PPV for this film</p>
                                         </div>
                                         <label className="relative inline-flex items-center cursor-pointer">
                                             <input type="checkbox" name="isForSale" checked={formData.isForSale || false} onChange={handleChange} className="sr-only peer" />
@@ -311,7 +307,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-black">$</span>
                                                     <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} className="form-input !pl-7 !bg-black/40" step="0.01" />
                                                 </div>
-                                                <p className="text-[9px] text-gray-500 mt-2 italic">Upon purchase, users receive 24 hours of streaming access.</p>
                                             </div>
                                         </div>
                                     )}
@@ -338,15 +333,25 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         <input type="datetime-local" name="publishedAt" value={formData.publishedAt ? new Date(formData.publishedAt).toISOString().slice(0, 16) : ''} onChange={handleChange} className="form-input" />
                                     </div>
                                 </div>
+
+                                <div className="pt-8 mt-8 border-t border-white/5">
+                                     <div className="bg-indigo-600/10 p-6 rounded-2xl border border-indigo-500/20">
+                                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Smart Discovery Meta</h4>
+                                        <p className="text-[10px] text-gray-500 leading-relaxed">AI generation for social kits and fun facts is performed separately via the "Pipeline" tab. Standard database updates are always unlimited.</p>
+                                     </div>
+                                </div>
                             </section>
                         </div>
                     </div>
 
-                    <div className="pt-8 border-t border-gray-700 flex flex-col sm:flex-row gap-4 justify-between">
-                        <button onClick={() => onDeleteMovie(formData.key)} className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-black py-4 px-8 rounded-2xl uppercase tracking-widest text-xs transition-all border border-red-500/20">Delete Movie</button>
-                        <button onClick={handleSave} disabled={isSaving} className="bg-white hover:bg-gray-200 text-black font-black py-4 px-16 rounded-2xl uppercase tracking-widest text-xs shadow-xl disabled:opacity-20 transform hover:scale-105 transition-all">
-                            {isSaving ? 'Processing...' : 'Publish All Changes'}
-                        </button>
+                    <div className="pt-8 border-t border-gray-700 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                        <button onClick={() => onDeleteMovie(formData.key)} className="w-full sm:w-auto bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-black py-4 px-8 rounded-2xl uppercase tracking-widest text-xs transition-all border border-red-500/20">Delete Movie</button>
+                        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                            <button onClick={() => setSelectedMovieKey('')} className="bg-gray-800 text-gray-400 font-black py-4 px-8 rounded-2xl uppercase tracking-widest text-xs hover:text-white transition-colors">Discard Draft</button>
+                            <button onClick={handleSave} disabled={isSaving} className="bg-white hover:bg-gray-200 text-black font-black py-4 px-16 rounded-2xl uppercase tracking-widest text-xs shadow-xl disabled:opacity-20 transform hover:scale-105 transition-all">
+                                {isSaving ? 'Saving to Database...' : 'Commit & Publish'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
