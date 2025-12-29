@@ -344,3 +344,23 @@ export interface AiSecurityAdvice {
   summary: string;
   recommendations: string[];
 }
+
+/**
+ * AIStudio interface for global window augmentation.
+ * Defines the methods used for checking and selecting API keys in the AI environment.
+ */
+export interface AIStudio {
+  hasSelectedApiKey: () => Promise<boolean>;
+  openSelectKey: () => Promise<void>;
+}
+
+/**
+ * Global interface augmentation for window.aistudio
+ * This resolves TS2339 build errors during production builds.
+ * FIX: Used the named AIStudio interface to ensure identical modifiers and consistent typing across declarations.
+ */
+declare global {
+  interface Window {
+    aistudio: AIStudio;
+  }
+}
