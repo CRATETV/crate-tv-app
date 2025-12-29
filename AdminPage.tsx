@@ -17,10 +17,10 @@ import LaurelManager from './components/LaurelManager';
 import PitchDeckPage from './components/PitchDeckPage';
 
 const ALL_TABS: Record<string, string> = {
+    movies: '🎞️ Movies',
     analytics: '📊 Platform Analytics',
     pitchDeck: '🚀 LIFT Labs Pitch',
     hero: '🎬 Hero Spotlight',
-    movies: '🎞️ Movies',
     laurels: '🏆 Laurel Awards',
     categories: '📂 Categories',
     festival: '🎪 Festival',
@@ -46,7 +46,7 @@ const AdminPage: React.FC = () => {
     const [aboutData, setAboutData] = useState<AboutData | null>(null);
     const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
-    const [activeTab, setActiveTab] = useState('analytics');
+    const [activeTab, setActiveTab] = useState('movies');
 
     // Save states
     const [isSaving, setIsSaving] = useState(false);

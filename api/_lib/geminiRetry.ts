@@ -19,16 +19,18 @@ export async function generateContentWithRetry(
       lastError = error;
       const errorMessage = error.message || "";
       
+      // Look for code 8 or RESOURCE_EXHAUSTED or 429 in the error message
       const isQuotaError = errorMessage.includes("429") || 
                            errorMessage.includes("limit") ||
                            errorMessage.includes("Quota exceeded") ||
                            errorMessage.includes("RESOURCE_EXHAUSTED") ||
-                           errorMessage.includes("Resource exhausted");
+                           errorMessage.includes("Resource exhausted") ||
+                           errorMessage.includes("8");
 
       if (isQuotaError) {
           if (attempt < maxRetries) {
               const delay = Math.pow(2, attempt + 1) * 1000;
-              console.warn(`Gemini limit hit. Retrying in ${delay}ms...`);
+              console.warn(`Gemini limit hit (8). Retrying in ${delay}ms...`);
               await new Promise(resolve => setTimeout(resolve, delay));
               continue;
           }

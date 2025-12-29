@@ -134,7 +134,7 @@ export async function POST(request: Request) {
 
         await batch.commit();
 
-        // Assemble current state and push to S3 for instant live updates
+        // Regenerate and publish (Crucial for live site)
         const liveData = await assembleLiveData(db);
         await publishToS3(liveData);
 

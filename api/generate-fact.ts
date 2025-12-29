@@ -60,13 +60,13 @@ export async function POST(request: Request) {
           headers: { 'Content-Type': 'application/json' },
         });
     } catch (apiError: any) {
-        // HANDLES 429 RESOURCE_EXHAUSTED GRACEFULLY
-        if (apiError.message?.includes('429') || apiError.message?.includes('limit') || apiError.isQuotaError) {
+        // HANDLES 429 / 8 RESOURCE_EXHAUSTED GRACEFULLY
+        if (apiError.message?.includes('429') || apiError.message?.includes('limit') || apiError.message?.includes('8') || apiError.isQuotaError) {
             return new Response(JSON.stringify({ 
-                fact: "New actor insights arriving soon! (AI limit reached for today).",
+                fact: "New actor insights arriving soon! (AI service busy).",
                 isQuotaError: true 
             }), {
-              status: 200, // Return 200 to keep UI happy
+              status: 200, // Return 200 to keep UI from breaking
               headers: { 'Content-Type': 'application/json' },
             });
         }
