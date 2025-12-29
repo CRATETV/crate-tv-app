@@ -77,7 +77,7 @@ export async function POST(request: Request) {
         const initError = getInitializationError();
         if (initError) throw new Error(initError);
         const db = getAdminDb();
-        if (!db) throw new Error("DB unreachable");
+        if (!db) throw new Error("Database connection failed.");
 
         const batch = db.batch();
 
@@ -96,7 +96,9 @@ export async function POST(request: Request) {
             }
             case 'set_now_streaming': {
                 const { key } = data;
-                batch.set(db.collection('categories').doc('nowStreaming'), {
+                // Instantly update the Now Streaming document
+                const nowStreamingRef = db.collection('categories').doc('nowStreaming');
+                batch.set(nowStreamingRef, {
                     title: 'Now Streaming',
                     movieKeys: [key]
                 }, { merge: false });
@@ -134,7 +136,7 @@ export async function POST(request: Request) {
 
         await batch.commit();
 
-        // Regenerate and publish (Crucial for live site)
+        // Refresh and push live data to S3
         const liveData = await assembleLiveData(db);
         await publishToS3(liveData);
 

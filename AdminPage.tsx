@@ -19,7 +19,6 @@ import PitchDeckPage from './components/PitchDeckPage';
 const ALL_TABS: Record<string, string> = {
     movies: '🎞️ Movies',
     analytics: '📊 Platform Analytics',
-    pitchDeck: '🚀 LIFT Labs Pitch',
     hero: '🎬 Hero Spotlight',
     laurels: '🏆 Laurel Awards',
     categories: '📂 Categories',
@@ -103,7 +102,7 @@ const AdminPage: React.FC = () => {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Failed to save.');
-            setSaveMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} saved & published successfully!`);
+            setSaveMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} saved successfully!`);
             fetchAllData(password!);
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : 'An error occurred while saving.');
@@ -125,7 +124,7 @@ const AdminPage: React.FC = () => {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Failed to delete movie.');
-            setSaveMessage(`Movie deleted & published successfully!`);
+            setSaveMessage(`Movie deleted successfully!`);
             fetchAllData(password!);
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : 'An error occurred during deletion.');
@@ -147,10 +146,10 @@ const AdminPage: React.FC = () => {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Failed to set Now Streaming.');
-            setSaveMessage(`Successfully set new "Now Streaming" film!`);
+            setSaveMessage(`Banner Updated: "${movies[movieKey]?.title}" is now the featured film!`);
             fetchAllData(password!);
         } catch (err) {
-            setSaveError(err instanceof Error ? err.message : 'An error occurred while setting Now Streaming.');
+            setSaveError(err instanceof Error ? err.message : 'An error occurred while setting banner.');
         } finally {
             setIsSaving(false);
         }
@@ -272,10 +271,10 @@ const AdminPage: React.FC = () => {
                 </div>
 
                 <div className="animate-[fadeIn_0.5s_ease-out]">
+                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} />}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'pitchDeck' && <PitchDeckPage />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
-                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={setFestivalData} onConfigChange={setFestivalConfig} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Actor } from '../types';
-import { generateActorFact, findImdbUrl } from '../services/geminiService';
+import { findImdbUrl } from '../services/geminiService';
 
 interface ActorBioModalProps {
   actor: Actor;
@@ -8,9 +8,6 @@ interface ActorBioModalProps {
 }
 
 const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
-  const [fact, setFact] = useState<string | null>(null);
-  const [isLoadingFact, setIsLoadingFact] = useState<boolean>(true);
-  const [factError, setFactError] = useState<string | null>(null);
   const [imdbUrl, setImdbUrl] = useState<string | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -27,32 +24,13 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
   }, [onClose]);
 
   useEffect(() => {
-    setIsLoadingFact(true);
-    setFact(null);
-    setFactError(null);
     setImdbUrl(null);
     setIsImageLoaded(false);
 
-    const fetchActorData = async () => {
-      // 1. Fetch Fun Fact (Non-blocking)
-      try {
-        const generatedFact = await generateActorFact(actor.name, actor.bio);
-        setFact(generatedFact);
-      } catch (error) {
-        // Fail silently to avoid 8 RESOURCE_EXHAUSTED blocking UI
-        console.warn("AI Fact Generator skipped due to quota or network:", error);
-        setFactError("Fun facts temporarily offline.");
-      } finally {
-        setIsLoadingFact(false);
-      }
-      
-      // 2. Fetch IMDb (Non-blocking)
-      findImdbUrl(actor.name).then(url => {
-          setImdbUrl(url);
-      }).catch(() => null);
-    };
-
-    fetchActorData();
+    // Fetch IMDb (Non-blocking)
+    findImdbUrl(actor.name).then(url => {
+        setImdbUrl(url);
+    }).catch(() => null);
   }, [actor]);
 
   const handleShare = async () => {
@@ -120,7 +98,7 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
                  />
             </div>
             <div className="md:col-span-2 p-4 sm:p-6 md:pl-0 flex flex-col justify-center">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-2">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4">
                     <h2 className="text-2xl sm:text-3xl font-bold text-white">{actor.name}</h2>
                     {imdbUrl && (
                         <a href={imdbUrl} target="_blank" rel="noopener noreferrer" className="bg-[#f5c518] text-black font-bold text-sm px-3 py-1 rounded-md hover:bg-yellow-400 transition-colors self-center">IMDb</a>
@@ -128,29 +106,13 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
                     <button onClick={handleShare} disabled={isSharing} className="text-gray-400 hover:text-white transition-colors self-center p-1 rounded-full hover:bg-gray-700">
                         {isSharing ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : (
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 100-2.186m0 2.186c-.18.324-.283.696-.283 1.093s.103.77.283 1.093m0-2.186l-9.566-5.314" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25(2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 100-2.186m0 2.186c-.18.324-.283.696-.283 1.093s1.03.77.283 1.093m0-2.186l-9.566-5.314" />
                             </svg>
                         )}
                     </button>
                 </div>
-                <div className="text-gray-300 text-base leading-relaxed mb-6">
+                <div className="text-gray-300 text-base leading-relaxed">
                     <p>{actor.bio}</p>
-                </div>
-
-                <div className="bg-gray-800/50 border border-gray-600 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-red-400 mb-2">✨ AI Fun Fact</h3>
-                  {isLoadingFact ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-gray-400"></div>
-                      <p className="text-gray-400 text-sm">Generating...</p>
-                    </div>
-                  ) : factError ? (
-                    <p className="text-gray-500 text-xs italic">{factError}</p>
-                  ) : fact ? (
-                    <p className="text-white italic">"{fact}"</p>
-                  ) : (
-                    <p className="text-gray-500 text-xs italic">No fact available.</p>
-                  )}
                 </div>
             </div>
         </div>

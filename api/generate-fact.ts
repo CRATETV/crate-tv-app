@@ -45,7 +45,7 @@ export async function POST(request: Request) {
             contents: [{ parts: [{ text: prompt }] }],
         });
         
-        const fact = response.text || "Highly versatile performer known for deep character work.";
+        const fact = response.text || "A versatile performer dedicated to the craft of independent cinema.";
 
         // 3. SAVE TO CACHE (Store for future free use)
         if (!initError && db) {
@@ -63,10 +63,10 @@ export async function POST(request: Request) {
         // HANDLES 429 / 8 RESOURCE_EXHAUSTED GRACEFULLY
         if (apiError.message?.includes('429') || apiError.message?.includes('limit') || apiError.message?.includes('8') || apiError.isQuotaError) {
             return new Response(JSON.stringify({ 
-                fact: "New actor insights arriving soon! (AI service busy).",
+                fact: "Insights arriving soon! (AI service currently busy).",
                 isQuotaError: true 
             }), {
-              status: 200, // Return 200 to keep UI from breaking
+              status: 200, // Return 200 to keep UI from crashing
               headers: { 'Content-Type': 'application/json' },
             });
         }

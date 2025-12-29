@@ -2,7 +2,7 @@ import { GoogleGenAI, GenerateContentParameters, GenerateContentResponse } from 
 
 /**
  * Executes a Gemini API call with exponential backoff retry logic.
- * Specifically targets 429 (Resource Exhausted) errors and 503 errors.
+ * Specifically targets 429 (Resource Exhausted) and code 8 errors.
  */
 export async function generateContentWithRetry(
   params: GenerateContentParameters,
@@ -19,23 +19,23 @@ export async function generateContentWithRetry(
       lastError = error;
       const errorMessage = error.message || "";
       
-      // Look for code 8 or RESOURCE_EXHAUSTED or 429 in the error message
+      // Catch specific quota/exhausted strings and the code 8 (gRPC RESOURCE_EXHAUSTED)
       const isQuotaError = errorMessage.includes("429") || 
                            errorMessage.includes("limit") ||
                            errorMessage.includes("Quota exceeded") ||
                            errorMessage.includes("RESOURCE_EXHAUSTED") ||
-                           errorMessage.includes("Resource exhausted") ||
-                           errorMessage.includes("8");
+                           errorMessage.includes("8") ||
+                           errorMessage.includes("Resource exhausted");
 
       if (isQuotaError) {
           if (attempt < maxRetries) {
               const delay = Math.pow(2, attempt + 1) * 1000;
-              console.warn(`Gemini limit hit (8). Retrying in ${delay}ms...`);
+              console.warn(`Gemini quota limit hit. Retrying in ${delay}ms...`);
               await new Promise(resolve => setTimeout(resolve, delay));
               continue;
           }
-          // Wrap as a passive error that won't crash callers that don't expect it
-          const passiveError = new Error("AI Service temporarily reached its limit.");
+          // Flag this as a passive quota error for the UI
+          const passiveError = new Error("The AI service has reached its temporary limit.");
           (passiveError as any).isQuotaError = true;
           throw passiveError;
       }
