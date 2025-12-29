@@ -13,7 +13,6 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
   const [factError, setFactError] = useState<string | null>(null);
   const [imdbUrl, setImdbUrl] = useState<string | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [isSharing, setIsSharing] = useState(false);
   const modalContentRef = useRef<HTMLDivElement>(null);
 
@@ -33,26 +32,24 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
     setFactError(null);
     setImdbUrl(null);
     setIsImageLoaded(false);
-    setCopyStatus('idle');
 
     const fetchActorData = async () => {
+      // 1. Fetch Fun Fact (Non-blocking)
       try {
         const generatedFact = await generateActorFact(actor.name, actor.bio);
         setFact(generatedFact);
       } catch (error) {
-        const msg = error instanceof Error ? error.message : "";
-        if (msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("Quota")) {
-            setFactError("Crate AI is currently handling a lot of requests. Try again in a moment!");
-        } else {
-            setFactError("Could not load fun fact at this time.");
-        }
+        // Fail silently to avoid 8 RESOURCE_EXHAUSTED blocking UI
+        console.warn("AI Fact Generator skipped due to quota or network:", error);
+        setFactError("Fun facts temporarily offline.");
       } finally {
         setIsLoadingFact(false);
       }
       
+      // 2. Fetch IMDb (Non-blocking)
       findImdbUrl(actor.name).then(url => {
           setImdbUrl(url);
-      });
+      }).catch(() => null);
     };
 
     fetchActorData();
@@ -61,7 +58,6 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
   const handleShare = async () => {
     if (isSharing || !modalContentRef.current) return;
     setIsSharing(true);
-    setCopyStatus('idle');
 
     const slug = actor.name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-');
     const profileUrl = `${window.location.origin}/actors-directory/${slug}`;
@@ -91,14 +87,10 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
              await navigator.share({ title: shareData.title, text: shareData.text, url: shareData.url });
         } else {
             await navigator.clipboard.writeText(profileUrl);
-            setCopyStatus('copied');
-            setTimeout(() => setCopyStatus('idle'), 2500);
+            alert("Profile link copied!");
         }
     } catch (error) {
-        if (error instanceof Error && error.name !== 'AbortError') {
-             setCopyStatus('error');
-             setTimeout(() => setCopyStatus('idle'), 2500);
-        }
+        console.error("Share failed", error);
     } finally {
         setIsSharing(false);
     }
@@ -147,14 +139,18 @@ const ActorBioModal: React.FC<ActorBioModalProps> = ({ actor, onClose }) => {
 
                 <div className="bg-gray-800/50 border border-gray-600 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-red-400 mb-2">✨ AI Fun Fact</h3>
-                  {isLoadingFact && (
+                  {isLoadingFact ? (
                     <div className="flex items-center space-x-2">
                       <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-gray-400"></div>
                       <p className="text-gray-400 text-sm">Generating...</p>
                     </div>
+                  ) : factError ? (
+                    <p className="text-gray-500 text-xs italic">{factError}</p>
+                  ) : fact ? (
+                    <p className="text-white italic">"{fact}"</p>
+                  ) : (
+                    <p className="text-gray-500 text-xs italic">No fact available.</p>
                   )}
-                  {factError && <p className="text-yellow-500 text-sm italic">{factError}</p>}
-                  {fact && !isLoadingFact && <p className="text-white italic">"{fact}"</p>}
                 </div>
             </div>
         </div>

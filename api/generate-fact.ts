@@ -25,7 +25,6 @@ export async function POST(request: Request) {
             if (profileDoc.exists) {
                 const data = profileDoc.data();
                 if (data?.cachedAiFact) {
-                    console.log(`[AI Cache] Returning stored fact for ${name}`);
                     return new Response(JSON.stringify({ fact: data.cachedAiFact, cached: true }), {
                         status: 200,
                         headers: { 'Content-Type': 'application/json' },
@@ -61,12 +60,13 @@ export async function POST(request: Request) {
           headers: { 'Content-Type': 'application/json' },
         });
     } catch (apiError: any) {
-        if (apiError.message?.includes('429') || apiError.message?.includes('limit')) {
+        // HANDLES 429 RESOURCE_EXHAUSTED GRACEFULLY
+        if (apiError.message?.includes('429') || apiError.message?.includes('limit') || apiError.isQuotaError) {
             return new Response(JSON.stringify({ 
-                fact: "Crate TV's AI is popular! We've hit our daily discovery limit. Check back soon for more facts.",
+                fact: "New actor insights arriving soon! (AI limit reached for today).",
                 isQuotaError: true 
             }), {
-              status: 200,
+              status: 200, // Return 200 to keep UI happy
               headers: { 'Content-Type': 'application/json' },
             });
         }

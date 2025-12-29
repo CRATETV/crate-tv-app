@@ -33,7 +33,6 @@ type FilmPerformanceData = {
 
 interface AnalyticsPageProps {
     viewMode: 'full' | 'festival';
-    onNavigateToGrowth?: () => void;
 }
 
 const AudienceEmailList: React.FC<{ title: string; users: { email: string }[] }> = ({ title, users }) => {
@@ -68,95 +67,7 @@ const AudienceEmailList: React.FC<{ title: string; users: { email: string }[] }>
     );
 };
 
-const CountrySnapshot: React.FC<{ 
-    movie: Movie; 
-    locations: Record<string, number>;
-}> = ({ movie, locations }) => {
-    const snapshotRef = useRef<HTMLDivElement>(null);
-    const [isGenerating, setIsGenerating] = useState(false);
-
-    const handleShare = async () => {
-        if (!snapshotRef.current || isGenerating) return;
-        setIsGenerating(true);
-        try {
-            const { default: html2canvas } = await import('html2canvas');
-            const canvas = await html2canvas(snapshotRef.current, {
-                useCORS: true, 
-                backgroundColor: '#111827', // Tailwind gray-900
-            });
-            
-            const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-            if (!blob) throw new Error('Could not create image from snapshot.');
-    
-            const file = new File([blob], `cratetv_viewership_${movie.key}.png`, { type: 'image/png' });
-            
-            if (navigator.share && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: `Viewership for ${movie.title}`,
-                    text: `Here's the country-wise traffic bifurcation for "${movie.title}" on Crate TV.`,
-                    files: [file]
-                });
-            } else {
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `cratetv_viewership_${movie.key}.png`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-            }
-        } catch (error) {
-            console.error('Sharing failed:', error);
-            alert('Could not generate snapshot. Please try again.');
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
-    const sortedLocations = Object.entries(locations).sort(([, a], [, b]) => Number(b) - Number(a));
-    const totalViews = sortedLocations.reduce((sum, [, count]) => sum + Number(count), 0);
-
-    return (
-        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 mt-4">
-            <div ref={snapshotRef} className="bg-gray-900 p-6 rounded-md">
-                <div className="flex justify-between items-start mb-4">
-                    <img src={`/api/proxy-image?url=${encodeURIComponent("https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png")}`} alt="Crate TV" className="w-24 h-auto" crossOrigin="anonymous"/>
-                    <div className="text-right">
-                        <p className="text-xs text-gray-400">As of ${new Date().toLocaleDateString()}</p>
-                        <p className="font-bold text-white text-lg">Total Views: ${formatNumber(totalViews)}</p>
-                    </div>
-                </div>
-                <h4 className="text-lg font-bold text-white mb-3">Viewership Snapshot: <span className="text-purple-400">{movie.title}</span></h4>
-                <div className="overflow-x-auto max-h-60">
-                    <table className="w-full text-left text-sm">
-                        <thead className="text-xs text-gray-400 uppercase bg-gray-700/50 sticky top-0">
-                            <tr>
-                                <th className="p-2">Country</th>
-                                <th className="p-2 text-right">Views</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sortedLocations.map(([code, count]) => (
-                                <tr key={code} className="border-b border-gray-800">
-                                    <td className="p-2 font-medium text-white">{(code)}</td>
-                                    <td className="p-2 text-right">{formatNumber(Number(count))}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div className="mt-4 text-right">
-                <button onClick={handleShare} disabled={isGenerating} className="submit-btn bg-purple-600 hover:bg-purple-700">
-                    {isGenerating ? 'Generating...' : 'Share Snapshot'}
-                </button>
-            </div>
-        </div>
-    );
-};
-
-
-const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode, onNavigateToGrowth }) => {
+const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const isFestivalView = viewMode === 'festival';
     const [activeTab, setActiveTab] = useState(isFestivalView ? 'festival' : 'overview');
     const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
@@ -165,8 +76,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode, onNavigateToGro
     const [error, setError] = useState<{ square: string | null, firebase: string | null, critical: string | null }>({ square: null, firebase: null, critical: null });
     const [selectedGeoMovie, setSelectedGeoMovie] = useState<string>('');
     const [selectedFilmForReport, setSelectedFilmForReport] = useState<FilmPerformanceData | null>(null);
-    const [festivalPayoutStatus, setFestivalPayoutStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
-    const [festivalPayoutMessage, setFestivalPayoutMessage] = useState('');
     const [expandedPayoutRow, setExpandedPayoutRow] = useState<string | null>(null);
 
     // State for Admin Payout
@@ -199,10 +108,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode, onNavigateToGro
             setAnalyticsData(analyticsJson.analyticsData);
             setError(analyticsJson.errors);
             setAllMovies(liveDataRes.data.movies);
-            if (analyticsJson.analyticsData?.viewLocations) {
-                const firstMovieWithGeo = Object.keys(analyticsJson.analyticsData.viewLocations)[0];
-                setSelectedGeoMovie(firstMovieWithGeo || '');
-            }
             
         } catch (err) {
             setError(prev => ({ ...prev, critical: err instanceof Error ? err.message : 'An unknown error occurred during data fetch.' }));
@@ -236,9 +141,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode, onNavigateToGro
         }).sort((a, b) => b.views - a.views);
     }, [analyticsData, allMovies]);
     
-    const handleFestivalPayout = async () => {};
     const handleAdminPayout = async (e: React.FormEvent) => { e.preventDefault(); };
-    const handleShare = async () => {};
 
     if (isLoading) {
         return <LoadingSpinner />;
@@ -257,27 +160,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode, onNavigateToGro
 
     return (
         <div style={{ padding: '1rem', backgroundColor: '#1F2937', borderRadius: '8px' }}>
-            {/* AI Discovery Banner */}
-            {!isFestivalView && (
-                <div className="mb-8 bg-gradient-to-r from-purple-900/40 via-indigo-900/40 to-blue-900/40 border border-purple-500/30 p-4 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-purple-600/20 p-2 rounded-lg text-2xl">✨</div>
-                        <div>
-                            <h3 className="font-bold text-white">Looking for Growth Strategy?</h3>
-                            <p className="text-sm text-purple-200">The new <strong>Growth Intelligence</strong> dashboard provides AI-driven roadmaps and viral marketing insights.</p>
-                        </div>
-                    </div>
-                    {onNavigateToGrowth && (
-                        <button 
-                            onClick={onNavigateToGrowth}
-                            className="bg-purple-600 hover:bg-purple-500 text-white font-black py-2.5 px-6 rounded-lg transition-all text-sm whitespace-nowrap"
-                        >
-                            Open Growth Dashboard
-                        </button>
-                    )}
-                </div>
-            )}
-
             {!isFestivalView && (
                 <div className="no-print flex flex-wrap items-center gap-2 mb-6 border-b border-gray-600 pb-4">
                     <TabButton tabId="overview" label="Overview" />
@@ -311,7 +193,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode, onNavigateToGro
                                 <h3 className="text-xl font-bold mb-4 text-white">Top Film Performance</h3>
                                 <div className="overflow-x-auto"><table className="w-full text-left">
                                     <thead className="text-xs text-gray-400 uppercase bg-gray-700/50"><tr><th className="p-3">Film</th><th className="p-3">Views</th><th className="p-3">Likes</th><th className="p-3">Donations</th><th className="p-3 no-print">Actions</th></tr></thead>
-                                    <tbody>{filmPerformanceData.slice(0, 5).map(film => (
+                                    <tbody>{filmPerformanceData.slice(0, 10).map(film => (
                                         <tr key={film.key} className="border-b border-gray-700"><td className="p-3 font-medium text-white">{film.title}</td><td className="p-3">{formatNumber(film.views)}</td><td className="p-3">{formatNumber(film.likes)}</td><td className="p-3">{formatCurrency(film.donations)}</td><td className="p-3 no-print"><button onClick={() => setSelectedFilmForReport(film)} className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md">View Report</button></td></tr>
                                     ))}</tbody>
                                 </table></div>
@@ -389,6 +271,13 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode, onNavigateToGro
                         </div>
                     )}
                 </div>
+            )}
+            
+            {selectedFilmForReport && (
+                <FilmReportModal 
+                    filmData={selectedFilmForReport}
+                    onClose={() => setSelectedFilmForReport(null)} 
+                />
             )}
         </div>
     );

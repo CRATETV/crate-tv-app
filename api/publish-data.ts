@@ -96,7 +96,6 @@ export async function POST(request: Request) {
             }
             case 'set_now_streaming': {
                 const { key } = data;
-                // Replace the nowStreaming list with only the featured film
                 batch.set(db.collection('categories').doc('nowStreaming'), {
                     title: 'Now Streaming',
                     movieKeys: [key]
@@ -135,7 +134,7 @@ export async function POST(request: Request) {
 
         await batch.commit();
 
-        // Regenerate and publish (Crucial for live site)
+        // Assemble current state and push to S3 for instant live updates
         const liveData = await assembleLiveData(db);
         await publishToS3(liveData);
 

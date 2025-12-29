@@ -19,7 +19,6 @@ export async function generateContentWithRetry(
       lastError = error;
       const errorMessage = error.message || "";
       
-      // Check for 429 Resource Exhausted, 8 RESOURCE_EXHAUSTED, or 503 Service Unavailable
       const isQuotaError = errorMessage.includes("429") || 
                            errorMessage.includes("limit") ||
                            errorMessage.includes("Quota exceeded") ||
@@ -27,19 +26,16 @@ export async function generateContentWithRetry(
                            errorMessage.includes("Resource exhausted");
 
       if (isQuotaError) {
-          // If we've hit the limit, provide an actionable message
-          const enhancedError = new Error(
-              `AI Quota Exceeded (8 RESOURCE_EXHAUSTED). To fix this, enable billing in your Google AI Studio project (aistudio.google.com) or wait 24 hours. Costs are fractions of a penny: ai.google.dev/gemini-api/docs/billing`
-          );
-          (enhancedError as any).isQuotaError = true;
-          
           if (attempt < maxRetries) {
               const delay = Math.pow(2, attempt + 1) * 1000;
               console.warn(`Gemini limit hit. Retrying in ${delay}ms...`);
               await new Promise(resolve => setTimeout(resolve, delay));
               continue;
           }
-          throw enhancedError;
+          // Wrap as a passive error that won't crash callers that don't expect it
+          const passiveError = new Error("AI Service temporarily reached its limit.");
+          (passiveError as any).isQuotaError = true;
+          throw passiveError;
       }
 
       if (errorMessage.includes("503") && attempt < maxRetries) {
