@@ -8,6 +8,8 @@ export async function generateContentWithRetry(
   params: GenerateContentParameters,
   maxRetries: number = 3
 ): Promise<GenerateContentResponse> {
+  // Always create a new instance right before making an API call 
+  // to ensure we pick up the latest process.env.API_KEY injected by window.aistudio.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   let lastError: any;
 
@@ -19,7 +21,7 @@ export async function generateContentWithRetry(
       lastError = error;
       const errorMessage = error.message || "";
       
-      // Catch specific quota/exhausted strings and the code 8 (gRPC RESOURCE_EXHAUSTED)
+      // Look for code 8 or RESOURCE_EXHAUSTED or 429 in the error message
       const isQuotaError = errorMessage.includes("429") || 
                            errorMessage.includes("limit") ||
                            errorMessage.includes("Quota exceeded") ||
@@ -30,14 +32,21 @@ export async function generateContentWithRetry(
       if (isQuotaError) {
           if (attempt < maxRetries) {
               const delay = Math.pow(2, attempt + 1) * 1000;
-              console.warn(`Gemini quota limit hit. Retrying in ${delay}ms...`);
+              console.warn(`Gemini limit hit. Retrying in ${delay}ms...`);
               await new Promise(resolve => setTimeout(resolve, delay));
               continue;
           }
-          // Flag this as a passive quota error for the UI
-          const passiveError = new Error("The AI service has reached its temporary limit.");
+          // Wrap as a passive error that won't crash callers
+          const passiveError = new Error("AI Service temporarily reached its limit.");
           (passiveError as any).isQuotaError = true;
           throw passiveError;
+      }
+
+      // Handle Key Specific Errors as per instructions
+      if (errorMessage.includes("Requested entity was not found.")) {
+          const keyError = new Error("API Key configuration error. Please re-select your key.");
+          (keyError as any).isKeyError = true;
+          throw keyError;
       }
 
       if (errorMessage.includes("503") && attempt < maxRetries) {

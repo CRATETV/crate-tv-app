@@ -96,7 +96,6 @@ export async function POST(request: Request) {
             }
             case 'set_now_streaming': {
                 const { key } = data;
-                // Instantly update the Now Streaming document
                 const nowStreamingRef = db.collection('categories').doc('nowStreaming');
                 batch.set(nowStreamingRef, {
                     title: 'Now Streaming',

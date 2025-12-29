@@ -18,7 +18,8 @@ import PitchDeckPage from './components/PitchDeckPage';
 
 const ALL_TABS: Record<string, string> = {
     movies: '🎞️ Movies',
-    analytics: '📊 Platform Analytics',
+    analytics: '📊 Analytics',
+    pitchDeck: '📽️ Pitch Deck',
     hero: '🎬 Hero Spotlight',
     laurels: '🏆 Laurel Awards',
     categories: '📂 Categories',
@@ -26,9 +27,9 @@ const ALL_TABS: Record<string, string> = {
     watchParty: '🍿 Watch Party',
     about: '📄 About Page',
     email: '✉️ Email',
-    monetization: '💰 Revenue Model',
+    monetization: '💰 Revenue',
     security: '🛡️ Security',
-    fallback: '💾 Fallback Data'
+    fallback: '💾 Fallback'
 };
 
 const AdminPage: React.FC = () => {
@@ -52,6 +53,9 @@ const AdminPage: React.FC = () => {
     const [saveMessage, setSaveMessage] = useState('');
     const [saveError, setSaveError] = useState('');
 
+    // Paid AI Tier State
+    const [isProAI, setIsProAI] = useState(false);
+
     useEffect(() => {
         const savedPassword = sessionStorage.getItem('adminPassword');
         if (savedPassword) {
@@ -60,17 +64,47 @@ const AdminPage: React.FC = () => {
         } else {
             setIsLoading(false);
         }
+
+        // Check if user has already selected a key for Pro AI mode
+        if (window.aistudio) {
+            window.aistudio.hasSelectedApiKey().then((hasKey: boolean) => {
+                setIsProAI(hasKey);
+            });
+        }
     }, []);
+
+    const handleLogin = async (e?: React.FormEvent | null, storedPassword?: string) => {
+        e?.preventDefault();
+        const passToTry = storedPassword || password;
+        try {
+            const response = await fetch('/api/admin-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: passToTry }),
+            });
+            const data = await response.json();
+            if (data.success) {
+                sessionStorage.setItem('adminPassword', passToTry);
+                setIsAuthenticated(true);
+                setRole(data.role);
+                fetchAllData(passToTry);
+            } else {
+                setError('Invalid password.');
+                setIsLoading(false);
+            }
+        } catch (err) {
+            setError('An error occurred.');
+            setIsLoading(false);
+        }
+    };
 
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);
         setError('');
-    
         try {
             const results = await Promise.allSettled([
                 fetch('/api/get-live-data?noCache=true')
             ]);
-    
             const dataResResult = results[0];
             if (dataResResult.status === 'fulfilled' && dataResResult.value.ok) {
                 const data = await dataResResult.value.json();
@@ -89,6 +123,18 @@ const AdminPage: React.FC = () => {
         }
     }, []);
 
+    const handleUpgradeAI = async () => {
+        if (!window.aistudio) return;
+        try {
+            await window.aistudio.openSelectKey();
+            // Assume success per instructions and update local state
+            setIsProAI(true);
+            setSaveMessage("Pro AI Mode Activated! High-tier models and quota are now active.");
+        } catch (err) {
+            console.error("Key selection failed", err);
+        }
+    };
+
     const handleSaveData = async (type: 'movies' | 'categories' | 'about' | 'festival', dataToSave: any) => {
         setIsSaving(true);
         setSaveMessage('');
@@ -106,28 +152,6 @@ const AdminPage: React.FC = () => {
             fetchAllData(password!);
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : 'An error occurred while saving.');
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleDeleteMovie = async (movieKey: string) => {
-        setIsSaving(true);
-        setSaveMessage('');
-        setSaveError('');
-        const password = sessionStorage.getItem('adminPassword');
-        try {
-            const response = await fetch('/api/publish-data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password, type: 'delete_movie', data: { key: movieKey } }),
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Failed to delete movie.');
-            setSaveMessage(`Movie deleted successfully!`);
-            fetchAllData(password!);
-        } catch (err) {
-            setSaveError(err instanceof Error ? err.message : 'An error occurred during deletion.');
         } finally {
             setIsSaving(false);
         }
@@ -155,31 +179,28 @@ const AdminPage: React.FC = () => {
         }
     };
 
-    const handleLogin = async (e?: React.FormEvent | null, storedPassword?: string) => {
-        e?.preventDefault();
-        const passToTry = storedPassword || password;
+    const handleDeleteMovie = async (movieKey: string) => {
+        setIsSaving(true);
+        setSaveMessage('');
+        setSaveError('');
+        const password = sessionStorage.getItem('adminPassword');
         try {
-            const response = await fetch('/api/admin-login', {
+            const response = await fetch('/api/publish-data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: passToTry }),
+                body: JSON.stringify({ password, type: 'delete_movie', data: { key: movieKey } }),
             });
             const data = await response.json();
-            if (data.success) {
-                sessionStorage.setItem('adminPassword', passToTry);
-                setIsAuthenticated(true);
-                setRole(data.role);
-                fetchAllData(passToTry);
-            } else {
-                setError('Invalid password.');
-                setIsLoading(false);
-            }
+            if (!response.ok) throw new Error(data.error || 'Failed to delete movie.');
+            setSaveMessage(`Movie deleted successfully!`);
+            fetchAllData(password!);
         } catch (err) {
-            setError('An error occurred.');
-            setIsLoading(false);
+            setSaveError(err instanceof Error ? err.message : 'An error occurred during deletion.');
+        } finally {
+            setIsSaving(false);
         }
     };
-    
+
     const handleLogout = () => {
         sessionStorage.removeItem('adminPassword');
         setIsAuthenticated(false);
@@ -190,22 +211,22 @@ const AdminPage: React.FC = () => {
 
     if (!isAuthenticated) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+            <div className="flex items-center justify-center min-h-screen bg-black text-white">
                 <div className="w-full max-sm px-4">
-                    <form onSubmit={handleLogin} className="bg-gray-800 shadow-md rounded-2xl px-8 pt-6 pb-8 mb-4 border border-white/5">
-                        <div className="text-center mb-6">
-                            <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-24 mx-auto mb-2 opacity-50" alt="Crate TV" />
+                    <form onSubmit={handleLogin} className="bg-gray-900 border border-gray-800 p-8 rounded-2xl shadow-2xl">
+                        <div className="text-center mb-8">
+                            <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-32 mx-auto mb-4" alt="Crate TV" />
                             <h1 className="text-2xl font-black uppercase tracking-tighter">Command Center</h1>
                         </div>
-                        <div className="mb-4">
-                            <label className="block text-gray-400 text-[10px] font-black uppercase tracking-widest mb-2" htmlFor="password">Access Token</label>
+                        <div className="mb-6">
+                            <label className="form-label" htmlFor="password">Access Token</label>
                             <div className="relative">
                                 <input
                                     id="password"
                                     type={showPassword ? 'text' : 'password'}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="form-input pr-10 !bg-black/40"
+                                    className="form-input"
                                 />
                                 <button
                                     type="button"
@@ -221,11 +242,7 @@ const AdminPage: React.FC = () => {
                             </div>
                         </div>
                         {error && <p className="text-red-500 text-xs italic mb-4 font-bold text-center">{error}</p>}
-                        <div className="flex items-center justify-between">
-                            <button className="submit-btn w-full !rounded-xl" type="submit">
-                                Sign In
-                            </button>
-                        </div>
+                        <button className="submit-btn w-full" type="submit">Sign In</button>
                     </form>
                 </div>
             </div>
@@ -236,45 +253,63 @@ const AdminPage: React.FC = () => {
         return <LoadingSpinner />;
     }
 
-    const TabButton: React.FC<{ tabId: string, label: string }> = ({ tabId, label }) => (
-        <button
-            onClick={() => setActiveTab(tabId)}
-            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === tabId ? 'bg-red-600 text-white shadow-lg shadow-red-900/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-        >
-            {label}
-        </button>
-    );
-
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white p-4 sm:p-8">
             <div className="max-w-7xl mx-auto">
-                <div className="flex justify-between items-center mb-10 pb-6 border-b border-white/5">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 pb-6 border-b border-white/5 gap-6">
                     <div className="flex items-center gap-4">
                          <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-16 h-auto" alt="Logo" />
-                         <h1 className="text-3xl font-black uppercase tracking-tighter">Admin <span className="text-red-600">Console</span></h1>
+                         <h1 className="text-3xl font-black uppercase tracking-tighter">Admin Console</h1>
                     </div>
-                    <div className="flex items-center gap-4">
-                        {isSaving && <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-red-500"></div>}
-                        <button
-                            onClick={handleLogout}
-                            className="bg-white/5 hover:bg-red-600 text-gray-400 hover:text-white font-black py-2 px-6 rounded-xl transition-all uppercase text-[10px] tracking-widest border border-white/5"
-                        >
-                            Sign Out
-                        </button>
+                    
+                    {/* Paid AI Tier Status */}
+                    <div className="flex flex-wrap items-center gap-4">
+                        <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border transition-all ${isProAI ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-white/5 border-white/10'}`}>
+                            <div className={`w-2 h-2 rounded-full ${isProAI ? 'bg-indigo-400 animate-pulse' : 'bg-gray-600'}`}></div>
+                            <div className="text-left">
+                                <p className={`text-[9px] font-black uppercase tracking-widest ${isProAI ? 'text-indigo-400' : 'text-gray-500'}`}>
+                                    {isProAI ? 'Pro AI Active' : 'Lite AI Mode'}
+                                </p>
+                                {!isProAI && (
+                                    <button onClick={handleUpgradeAI} className="text-[10px] font-bold text-white underline hover:text-indigo-400 transition-colors">
+                                        Activate Paid Tier
+                                    </button>
+                                )}
+                                {isProAI && (
+                                    <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="text-[10px] font-medium text-gray-500 hover:underline">Billing Docs</a>
+                                )}
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                            {isSaving && <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-red-500"></div>}
+                            <button
+                                onClick={handleLogout}
+                                className="bg-white/5 hover:bg-red-600 text-gray-400 hover:text-white font-black py-2 px-6 rounded-xl transition-all uppercase text-[10px] tracking-widest border border-white/5"
+                            >
+                                Sign Out
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-2 mb-10">
+                <div className="flex flex-wrap items-center gap-2 mb-10 overflow-x-auto pb-2 scrollbar-hide">
                    {Object.entries(ALL_TABS).map(([tabId, label]) => (
-                        <TabButton key={tabId} tabId={tabId} label={label} />
+                        <button
+                            key={tabId}
+                            onClick={() => setActiveTab(tabId)}
+                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all whitespace-nowrap ${activeTab === tabId ? 'bg-red-600 text-white shadow-lg shadow-red-900/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+                        >
+                            {label}
+                        </button>
                    ))}
                 </div>
 
                 <div className="animate-[fadeIn_0.5s_ease-out]">
-                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} />}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'pitchDeck' && <PitchDeckPage />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
+                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={setFestivalData} onConfigChange={setFestivalConfig} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}

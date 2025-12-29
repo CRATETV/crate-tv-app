@@ -1,10 +1,9 @@
-
 import { Type } from '@google/genai';
 import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
 export async function POST(request: Request) {
   try {
-    const { likedTitles, allMovies } = await request.json();
+    const { likedTitles, allMovies, isProAI } = await request.json();
 
     if (!Array.isArray(likedTitles) || likedTitles.length === 0 || !allMovies) {
       return new Response(JSON.stringify({ error: 'likedTitles (array) and allMovies (object) are required.' }), {
@@ -28,8 +27,10 @@ export async function POST(request: Request) {
       Respond with a JSON object: { "recommendedKeys": ["key1", "key2"] }.
     `;
 
+    const model = isProAI ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
+
     const response = await generateContentWithRetry({
-        model: 'gemini-3-flash-preview',
+        model: model,
         contents: prompt,
         config: {
             responseMimeType: "application/json",
