@@ -20,7 +20,6 @@ import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import NowStreamingBanner from './components/NowPlayingBanner';
 import NewFilmAnnouncementModal from './components/NewFilmAnnouncementModal';
 
-// Dynamic Thematic Header Row
 const HolidaySpecialTitle: React.FC<{ settings: SiteSettings }> = ({ settings }) => {
     const handleNavigate = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -67,23 +66,11 @@ const HolidaySpecialTitle: React.FC<{ settings: SiteSettings }> = ({ settings })
             onClick={handleNavigate}
         >
             <div className="relative inline-block self-start">
-                <div className="absolute -inset-8 pointer-events-none z-20">
-                    <div className="absolute top-0 left-4 w-2 h-2 bg-white rounded-full animate-[holiday-twinkle_3s_infinite] opacity-0 shadow-[0_0_15px_#fff]"></div>
-                    <div className="absolute top-12 right-0 w-1.5 h-1.5 bg-white rounded-full animate-[holiday-twinkle_4s_infinite_1s] opacity-0 shadow-[0_0_15px_#fff]"></div>
-                    <div style={{ backgroundColor: currentTheme.particleColor }} className="absolute top-6 left-1/4 w-1.5 h-1.5 rounded-full animate-[holiday-twinkle_2.5s_infinite_1.2s] opacity-0 shadow-[0_0_15px_currentColor]"></div>
-                </div>
-
                 <div className="flex items-baseline gap-6">
-                    <h2 className={`text-6xl md:text-8xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-br ${currentTheme.gradient} relative z-10 py-2 transition-all duration-700 drop-shadow-[0_0_20px_${currentTheme.glow}] group-hover/title:drop-shadow-[0_0_55px_${currentTheme.hoverGlow}] group-hover/title:scale-[1.05]`}>
+                    <h2 className={`text-5xl md:text-8xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-br ${currentTheme.gradient} relative z-10 py-2 transition-all duration-700 drop-shadow-[0_0_20px_${currentTheme.glow}] group-hover/title:drop-shadow-[0_0_55px_${currentTheme.hoverGlow}] group-hover/title:scale-[1.05]`}>
                         {name}
                     </h2>
-                    
-                    <div className="flex items-center gap-2 opacity-0 -translate-x-4 group-hover/title:opacity-100 group-hover/title:translate-x-0 transition-all duration-500 ease-out">
-                        <span className="h-[2px] w-16 bg-gradient-to-r from-transparent to-white"></span>
-                        <span className="text-[12px] text-white font-black uppercase tracking-[0.5em] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">The Collection</span>
-                    </div>
                 </div>
-
                 <div className={`absolute bottom-0 left-0 w-0 h-[4px] bg-gradient-to-r ${currentTheme.gradient} group-hover/title:w-full transition-all duration-700 ease-in-out opacity-90 shadow-[0_0_25px_rgba(255,255,255,0.4)]`}></div>
             </div>
         </div>
@@ -99,37 +86,23 @@ const App: React.FC = () => {
     const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-    const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
     const [supportMovieModal, setSupportMovieModal] = useState<Movie | null>(null);
     const [showFestivalModal, setShowFestivalModal] = useState(false);
     const [showNowStreamingModal, setShowNowStreamingModal] = useState(false);
     const [liveWatchParty, setLiveWatchParty] = useState<Movie | null>(null);
     
-    // INTELLIGENT HERO FALLBACK
     const heroMovies = useMemo(() => {
         const featuredCategory = categories.featured;
         let spotlightMovies: Movie[] = [];
-        
-        // Priority 1: Hand-picked featured list
         if (featuredCategory?.movieKeys && featuredCategory.movieKeys.length > 0) {
             spotlightMovies = featuredCategory.movieKeys
                 .map((key: string) => movies[key])
                 .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m));
         }
-        
-        // Priority 2: High rated/Recent releases fallback
         if (spotlightMovies.length === 0) {
             spotlightMovies = (Object.values(movies) as Movie[])
                 .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !!m.title && !!m.poster)
-                .sort((a, b) => {
-                    const ratingA = a.rating || 0;
-                    const ratingB = b.rating || 0;
-                    if (ratingB !== ratingA) return ratingB - ratingA;
-                    
-                    const dateA = a.releaseDateTime ? new Date(a.releaseDateTime).getTime() : 0;
-                    const dateB = b.releaseDateTime ? new Date(b.releaseDateTime).getTime() : 0;
-                    return dateB - dateA;
-                })
+                .sort((a, b) => (b.rating || 0) - (a.rating || 0))
                 .slice(0, 4);
         }
         return spotlightMovies;
@@ -150,7 +123,7 @@ const App: React.FC = () => {
 
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
-        const query = searchQuery.toLowerCase();
+        const query = searchQuery.toLowerCase().trim();
         return (Object.values(movies) as Movie[]).filter((movie: Movie | undefined) =>
             movie && (
                 (movie.title || '').toLowerCase().includes(query) ||
@@ -164,96 +137,34 @@ const App: React.FC = () => {
     const watchlist = useMemo<Set<string>>(() => new Set(watchlistArray), [watchlistArray]);
     const watchedMovies = useMemo<Set<string>>(() => new Set(watchedMoviesArray), [watchedMoviesArray]);
 
-    const watchlistMovies = useMemo(() => {
-        return (watchlistArray || [])
-            .map((key: string) => movies[key])
-            .filter((m: Movie | undefined): m is Movie => !!m)
-            .reverse();
-    }, [movies, watchlistArray]);
-
-    const cratemasCategory = useMemo(() => {
-        if (categories.cratemas) return categories.cratemas;
-        const found = (Object.values(categories) as Category[]).find(c => c.title && c.title.toLowerCase() === 'cratemas');
-        return found || categoriesData.cratemas;
-    }, [categories]);
-
     const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
     const handlePlayMovie = (movie: Movie) => {
         window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
         window.dispatchEvent(new Event('pushstate'));
     };
-    const handleSelectFromSearch = (movie: Movie) => {
-        setIsMobileSearchOpen(false);
-        setSearchQuery('');
-        handlePlayMovie(movie);
-    };
-    const handleSupportMovie = (movie: Movie) => setSupportMovieModal(movie);
-    const handleCloseFestivalModal = () => {
-        sessionStorage.setItem('festivalModalSeen', 'true');
-        setShowFestivalModal(false);
-    };
-    const handleNavigateToFestival = () => {
-        handleCloseFestivalModal();
-        window.history.pushState({}, '', '/festival');
-        window.dispatchEvent(new Event('pushstate'));
-    }
-    const handleDismissPartyBanner = () => {
-        if (liveWatchParty) {
-            sessionStorage.setItem('livePartyBannerDismissed', liveWatchParty.key);
-        }
-        setLiveWatchParty(null);
-    }
 
-    const handleCloseNowStreamingModal = () => {
-        if (nowStreamingMovie) {
-            sessionStorage.setItem('nowStreamingModalSeen_' + nowStreamingMovie.key, 'true');
-        }
-        setShowNowStreamingModal(false);
+    const handleSearchClick = () => {
+        setSearchQuery('');
+        setIsMobileSearchOpen(true);
     };
-    
+
     useEffect(() => {
         if (heroMovies.length > 1) {
-            const interval = setInterval(() => {
-                setHeroIndex(prevIndex => (prevIndex + 1) % heroMovies.length);
-            }, 8000);
+            const interval = setInterval(() => setHeroIndex(prev => (prev + 1) % heroMovies.length), 8000);
             return () => clearInterval(interval);
         }
     }, [heroMovies.length]);
 
-    useEffect(() => {
-        if (isLoading || !dataSource) return;
-        
-        // Modal Logic: Festival takes precedence
-        if (isFestivalLive && !sessionStorage.getItem('festivalModalSeen')) {
-            setShowFestivalModal(true);
-        } else if (nowStreamingMovie && !sessionStorage.getItem('nowStreamingModalSeen_' + nowStreamingMovie.key)) {
-            setShowNowStreamingModal(true);
-        }
-
-        const fourHours = 4 * 60 * 60 * 1000;
-        const now = Date.now();
-        const activeParty = (Object.values(movies) as Movie[]).find(m => {
-            if (!m || !m.isWatchPartyEnabled || !m.watchPartyStartTime) return false;
-            const startTime = new Date(m.watchPartyStartTime).getTime();
-            return now >= startTime && (now - startTime < fourHours);
-        });
-        if (activeParty && sessionStorage.getItem('livePartyBannerDismissed') !== activeParty.key) {
-            setLiveWatchParty(activeParty);
-        }
-    }, [isLoading, isFestivalLive, dataSource, movies, nowStreamingMovie]);
-
     if (isLoading) return <LoadingSpinner />;
-
-    const bannerHeight = liveWatchParty ? '3rem' : '0px';
 
     return (
         <div className="flex flex-col min-h-screen text-white overflow-x-hidden w-full relative">
-            {liveWatchParty && <LiveWatchPartyBanner movie={liveWatchParty} onClose={handleDismissPartyBanner} />}
+            {liveWatchParty && <LiveWatchPartyBanner movie={liveWatchParty} onClose={() => setLiveWatchParty(null)} />}
             <Header 
                 searchQuery={searchQuery} 
                 onSearch={setSearchQuery} 
-                onMobileSearchClick={() => setIsMobileSearchOpen(true)}
-                topOffset={bannerHeight}
+                onMobileSearchClick={handleSearchClick}
+                topOffset={liveWatchParty ? '3rem' : '0px'}
             />
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden">
                 {isFestivalLive ? (
@@ -275,7 +186,7 @@ const App: React.FC = () => {
                         {searchQuery ? (
                             <MovieCarousel
                                 key="search-results"
-                                title={searchResults.length > 0 ? `Search Results for "${searchQuery}"` : `No results found for "${searchQuery}"`}
+                                title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`}
                                 movies={searchResults}
                                 onSelectMovie={handlePlayMovie}
                                 watchedMovies={watchedMovies}
@@ -283,11 +194,10 @@ const App: React.FC = () => {
                                 likedMovies={likedMovies}
                                 onToggleLike={toggleLikeMovie}
                                 onToggleWatchlist={toggleWatchlist}
-                                onSupportMovie={handleSupportMovie}
+                                onSupportMovie={setSupportMovieModal}
                             />
                         ) : (
                           <>
-                            {/* Only show the Now Streaming banner if NOT in Holiday mode, to prevent clutter */}
                             {nowStreamingMovie && !settings.isHolidayModeActive && (
                                 <NowStreamingBanner 
                                     movie={nowStreamingMovie} 
@@ -295,61 +205,13 @@ const App: React.FC = () => {
                                     onPlayMovie={handlePlayMovie} 
                                 />
                             )}
-
-                            {settings.isHolidayModeActive && cratemasCategory && cratemasCategory.movieKeys && cratemasCategory.movieKeys.length > 0 && (
-                                <MovieCarousel
-                                    key="cratemas"
-                                    title={<HolidaySpecialTitle settings={settings} />}
-                                    movies={cratemasCategory.movieKeys.map((k: string) => movies[k]).filter((m: Movie | undefined): m is Movie => !!m)}
-                                    onSelectMovie={handlePlayMovie}
-                                    watchedMovies={watchedMovies}
-                                    watchlist={watchlist}
-                                    likedMovies={likedMovies}
-                                    onToggleLike={toggleLikeMovie}
-                                    onToggleWatchlist={toggleWatchlist}
-                                    onSupportMovie={handleSupportMovie}
-                                />
-                            )}
-                            
-                            {topTenMovies.length > 0 && (
-                                <MovieCarousel
-                                    key="top-ten"
-                                    title="Top 10 on Crate TV Today"
-                                    movies={topTenMovies}
-                                    onSelectMovie={handlePlayMovie}
-                                    showRankings={true}
-                                    watchedMovies={watchedMovies}
-                                    watchlist={watchlist}
-                                    likedMovies={likedMovies}
-                                    onToggleLike={toggleLikeMovie}
-                                    onToggleWatchlist={toggleWatchlist}
-                                    onSupportMovie={handleSupportMovie}
-                                />
-                            )}
-
-                            {watchlistMovies.length > 0 && (
-                                <MovieCarousel
-                                    key="watchlist"
-                                    title="My List"
-                                    movies={watchlistMovies}
-                                    onSelectMovie={handlePlayMovie}
-                                    watchedMovies={watchedMovies}
-                                    watchlist={watchlist}
-                                    likedMovies={likedMovies}
-                                    onToggleLike={toggleLikeMovie}
-                                    onToggleWatchlist={toggleWatchlist}
-                                    onSupportMovie={handleSupportMovie}
-                                />
-                            )}
-
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as Category;
+                                if (key === 'featured' || key === 'nowStreaming' || key === 'publicDomainIndie') return null;
                                 const categoryMovies = typedCategory.movieKeys
                                     .map(movieKey => movies[movieKey])
                                     .filter((m: Movie | undefined): m is Movie => !!m);
-                                
-                                if (categoryMovies.length === 0 || key === 'featured' || key === 'nowStreaming' || key === 'cratemas' || key === 'publicDomainIndie' || (typedCategory?.title && typedCategory.title.toLowerCase() === 'cratemas')) return null;
-
+                                if (categoryMovies.length === 0) return null;
                                 return (
                                     <MovieCarousel
                                         key={key}
@@ -361,7 +223,7 @@ const App: React.FC = () => {
                                         likedMovies={likedMovies}
                                         onToggleLike={toggleLikeMovie}
                                         onToggleWatchlist={toggleWatchlist}
-                                        onSupportMovie={handleSupportMovie}
+                                        onSupportMovie={setSupportMovieModal}
                                     />
                                 );
                             })}
@@ -373,7 +235,7 @@ const App: React.FC = () => {
 
             <CollapsibleFooter />
             <BackToTopButton />
-            <BottomNavBar onSearchClick={() => {}} />
+            <BottomNavBar onSearchClick={handleSearchClick} />
 
             {detailsMovie && (
                 <MovieDetailsModal 
@@ -386,36 +248,16 @@ const App: React.FC = () => {
                     allCategories={categories}
                     onSelectRecommendedMovie={handleSelectMovie}
                     onPlayMovie={handlePlayMovie}
-                    onSupportMovie={handleSupportMovie}
+                    onSupportMovie={setSupportMovieModal}
                 />
             )}
-            {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
             {isMobileSearchOpen && (
                 <SearchOverlay 
                   searchQuery={searchQuery}
                   onSearch={setSearchQuery}
                   onClose={() => setIsMobileSearchOpen(false)}
                   results={searchResults}
-                  onSelectMovie={handleSelectFromSearch}
-                />
-            )}
-            {supportMovieModal && (
-                <SquarePaymentModal
-                    movie={supportMovieModal}
-                    paymentType="donation"
-                    onClose={() => setSupportMovieModal(null)}
-                    onPaymentSuccess={() => setSupportMovieModal(null)}
-                />
-            )}
-            {showFestivalModal && <FestivalLiveModal onClose={handleCloseFestivalModal} onNavigate={handleNavigateToFestival} />}
-            {showNowStreamingModal && nowStreamingMovie && (
-                <NewFilmAnnouncementModal 
-                    movie={nowStreamingMovie} 
-                    onClose={handleCloseNowStreamingModal} 
-                    onWatchNow={() => {
-                        handleCloseNowStreamingModal();
-                        handlePlayMovie(nowStreamingMovie);
-                    }} 
+                  onSelectMovie={(m) => { setIsMobileSearchOpen(false); handlePlayMovie(m); }}
                 />
             )}
         </div>

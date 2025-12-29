@@ -1,22 +1,13 @@
-// This is a Vercel Serverless Function
-// It will be accessible at the path /api/get-live-data
 import { getApiData } from './_lib/data.js';
 import { Movie } from '../types.js';
 
-// More robust title normalization and typo correction
 const normalizeTitle = (title: string): string => {
     if (!title) return '';
-    let normalized = title
-        .replace(/[\u200B-\u200D\uFEFF]/g, '') // remove zero-width spaces
-        .replace(/\s+/g, ' ') // collapse whitespace
+    return title
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/\s+/g, ' ')
         .trim()
         .toLowerCase();
-    
-    // Specific fix for the user's reported issue
-    if (normalized.startsWith('gemeni time service')) {
-        normalized = normalized.replace('gemeni', 'gemini');
-    }
-    return normalized;
 };
 
 export async function GET(request: Request) {
@@ -26,7 +17,6 @@ export async function GET(request: Request) {
 
         const data = await getApiData({ noCache });
 
-        // --- START OF DEDUPLICATION AND NORMALIZATION LOGIC ---
         if (data && data.movies) {
             const uniqueMoviesByTitle: Map<string, Movie> = new Map();
             Object.values(data.movies).forEach((movie: any) => {
@@ -36,11 +26,19 @@ export async function GET(request: Request) {
                 const normalizedTitle = normalizeTitle(m.title);
                 const existingMovie = uniqueMoviesByTitle.get(normalizedTitle);
 
+                /**
+                 * DEDUPLICATION & SELECTION LOGIC
+                 * If we find multiple versions of the same film (e.g. from pipeline errors),
+                 * we keep the one that is "more complete" (has a movie URL and poster).
+                 */
                 if (!existingMovie) {
                     uniqueMoviesByTitle.set(normalizedTitle, m);
                 } else {
-                    // Prioritize entry with a full movie URL to ensure functionality
-                    if (m.fullMovie && !existingMovie.fullMovie) {
+                    // Check if current version is more complete than existing
+                    const currentScore = (m.fullMovie ? 2 : 0) + (m.poster ? 1 : 0);
+                    const existingScore = (existingMovie.fullMovie ? 2 : 0) + (existingMovie.poster ? 1 : 0);
+                    
+                    if (currentScore > existingScore) {
                         uniqueMoviesByTitle.set(normalizedTitle, m);
                     }
                 }
@@ -52,24 +50,34 @@ export async function GET(request: Request) {
             }
             data.movies = dedupedMovies;
         }
-        // --- END OF LOGIC ---
 
+        // Permanently filter out Animation category until officially started
+        if (data.categories) {
+            if (data.categories.animation) delete data.categories.animation;
+            
+            // Clean up movie keys in categories to ensure no orphaned/deleted keys exist
+            Object.keys(data.categories).forEach(catKey => {
+                const cat = data.categories[catKey];
+                if (cat.movieKeys) {
+                    cat.movieKeys = cat.movieKeys.filter((k: string) => !!data.movies[k]);
+                }
+            });
+        }
 
         return new Response(JSON.stringify(data), {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
-                // Cache on the edge for 1 minute, allow stale for 5 minutes
-                'Cache-Control': 's-maxage=60, stale-while-revalidate=300'
+                'Cache-Control': 's-maxage=30, stale-while-revalidate=120'
             },
         });
     } catch (error) {
         console.error("Error in /api/get-live-data:", error);
-        return new Response(JSON.stringify({ error: 'Failed to fetch application data.' }), {
+        // If data fetching completely fails but we are running, the system should 
+        // still function with its internal fallbacks.
+        return new Response(JSON.stringify({ error: 'System processing...' }), {
             status: 500,
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Content-Type': 'application/json' }
         });
     }
 }

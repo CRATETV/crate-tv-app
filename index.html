@@ -11,11 +11,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+      :root {
+        --sat: env(safe-area-inset-top);
+        --sar: env(safe-area-inset-right);
+        --sab: env(safe-area-inset-bottom);
+        --sal: env(safe-area-inset-left);
+      }
       body {
         font-family: 'Inter', sans-serif;
         background-color: #050505;
         margin: 0;
         color: white;
+        overflow-x: hidden;
+        -webkit-tap-highlight-color: transparent;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
       }
       .form-input {
         width: 100%;
@@ -28,14 +37,12 @@
         font-weight: 600;
       }
       
-      /* Force white/light-themed native calendar picker */
       input[type="datetime-local"].form-input,
       input[type="date"].form-input,
       input[type="time"].form-input {
-        color-scheme: light;
+        color-scheme: dark;
       }
 
-      /* Invert the calendar icon so it shows as white on the dark input */
       input::-webkit-calendar-picker-indicator {
         filter: invert(1);
         cursor: pointer;
@@ -65,9 +72,13 @@
         text-transform: uppercase;
         letter-spacing: 0.15em;
         text-align: center;
+        transition: all 0.2s;
+      }
+      .submit-btn:active {
+        transform: scale(0.98);
+        opacity: 0.9;
       }
 
-      /* Premium Look: Hide all scrollbars while maintaining scroll functionality */
       ::-webkit-scrollbar {
         display: none;
         width: 0 !important;
@@ -79,9 +90,12 @@
       .scrollbar-hide::-webkit-scrollbar {
         display: none;
       }
-      .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
+      
+      /* Mobile safe area adjustments */
+      @media (max-width: 768px) {
+        body {
+            padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+        }
       }
     </style>
     <script type="importmap">
