@@ -31,6 +31,7 @@ export const categoriesData: Record<string, Category> = {
   "awardWinners": {
     "title": "Award-Winning Films",
     "movieKeys": [
+      "fighter",
       "lifeless",
       "foodiecalldirectorscut",
       "iloveyoublack",
@@ -64,6 +65,7 @@ export const categoriesData: Record<string, Category> = {
   "drama": {
     "title": "Dramas",
     "movieKeys": [
+      "fighter",
       "lifeless",
       "almasvows",
       "finallycaught",
@@ -96,6 +98,7 @@ export const categoriesData: Record<string, Category> = {
   "featured": {
     "title": "Featured Films",
     "movieKeys": [
+      "fighter",
       "newmovie1756741314485",
       "lifeless",
       "foodiecalldirectorscut",
@@ -105,6 +108,7 @@ export const categoriesData: Record<string, Category> = {
   "newReleases": {
     "title": "New Releases",
     "movieKeys": [
+      "fighter",
       "newmovie1765384164206",
       "newmovie1764602379299",
       "newmovie1763986220979",
@@ -123,7 +127,7 @@ export const categoriesData: Record<string, Category> = {
   "nowStreaming": {
     "title": "Now Streaming",
     "movieKeys": [
-      "newmovie1765384164206"
+      "fighter"
     ]
   },
   "publicDomainIndie": {
@@ -153,6 +157,44 @@ export const categoriesData: Record<string, Category> = {
 };
 
 export const moviesData: Record<string, Movie> = {
+  "fighter": {
+    "key": "fighter",
+    "title": "Fighter",
+    "synopsis": "Minutes before a career-defining match, a teenage boxer with Down’s syndrome must fight his family and a skeptical committee for his right to enter the ring.",
+    "cast": [
+      {
+        "name": "Tommy Jessop",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Tommy is a legendary actor—the first with Down syndrome to play Hamlet on stage and star in a BBC primetime drama.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Simon Kunz",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Actor Simon Kunz is a powerhouse of British cinema and television with a career spanning over 30 years. Most fans will immediately recognize him as Martin, the beloved and loyal butler in the Disney classic The Parent Trap (1998)",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Laura Morgan",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Robbie O’Neill",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Bugsy Steel",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fighter+Short+Film.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fighter+.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fighter+.webp",
+    "likes": 0,
+    "publishedAt": new Date().toISOString()
+  },
   "almasvows": {
     "key": "almasvows",
     "title": "Alma's Vows",
@@ -512,7 +554,7 @@ export const moviesData: Record<string, Movie> = {
         "name": "Joshua Daniel",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png",
         "bio": "Joshua Daniel excels as an actor, showcasing both comedic timing and dramatic depth. Joshua is the founder of the Actors Build, an organization dedicated to empowering independent artists in short film, and movie reel creation.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Joshua+Daniel+(2).png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Joshua+Daniel+(2).png"
       }
     ],
     "director": "Joshua Daniel",
@@ -1277,7 +1319,7 @@ export const moviesData: Record<string, Movie> = {
         "name": "Ajinkya Dhage",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/AJ+Photo.png",
         "bio": "With a strong foundation in the Meisner technique, Ajinkya has honed his craft through years of dedicated study and practice, becoming a prominent figure in the local theater scene.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Aj+bio+photo.png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Aj+bio+photo.png"
       }
     ],
     "director": "Shaunpaul Costello, Seth Sharpe",

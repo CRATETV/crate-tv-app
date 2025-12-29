@@ -54,7 +54,7 @@ const AdminPage: React.FC = () => {
     const [saveError, setSaveError] = useState('');
 
     // Paid AI Tier State
-    const [isProAI, setIsProAI] = useState(false);
+    const [isProAI, setIsProAI] = useState(() => localStorage.getItem('cratetv_pro_ai') === 'true');
 
     useEffect(() => {
         const savedPassword = sessionStorage.getItem('adminPassword');
@@ -65,10 +65,13 @@ const AdminPage: React.FC = () => {
             setIsLoading(false);
         }
 
-        // Check if user has already selected a key for Pro AI mode
+        // Check for platform-injected keys (if in AI Studio)
         if (window.aistudio) {
             window.aistudio.hasSelectedApiKey().then((hasKey: boolean) => {
-                setIsProAI(hasKey);
+                if (hasKey) {
+                    setIsProAI(true);
+                    localStorage.setItem('cratetv_pro_ai', 'true');
+                }
             });
         }
     }, []);
@@ -124,14 +127,21 @@ const AdminPage: React.FC = () => {
     }, []);
 
     const handleUpgradeAI = async () => {
-        if (!window.aistudio) return;
-        try {
-            await window.aistudio.openSelectKey();
-            // Assume success per instructions and update local state
-            setIsProAI(true);
-            setSaveMessage("Pro AI Mode Activated! High-tier models and quota are now active.");
-        } catch (err) {
-            console.error("Key selection failed", err);
+        if (window.aistudio) {
+            try {
+                await window.aistudio.openSelectKey();
+                setIsProAI(true);
+                localStorage.setItem('cratetv_pro_ai', 'true');
+                setSaveMessage("Pro AI Mode Activated via AI Studio!");
+            } catch (err) {
+                console.error("Key selection failed", err);
+            }
+        } else {
+            // Manual toggle for standard web deployments
+            const newState = !isProAI;
+            setIsProAI(newState);
+            localStorage.setItem('cratetv_pro_ai', newState.toString());
+            setSaveMessage(newState ? "Pro AI Mode Manually Activated!" : "Lite AI Mode Active.");
         }
     };
 
@@ -270,13 +280,11 @@ const AdminPage: React.FC = () => {
                                 <p className={`text-[9px] font-black uppercase tracking-widest ${isProAI ? 'text-indigo-400' : 'text-gray-500'}`}>
                                     {isProAI ? 'Pro AI Active' : 'Lite AI Mode'}
                                 </p>
-                                {!isProAI && (
-                                    <button onClick={handleUpgradeAI} className="text-[10px] font-bold text-white underline hover:text-indigo-400 transition-colors">
-                                        Activate Paid Tier
-                                    </button>
-                                )}
+                                <button onClick={handleUpgradeAI} className="text-[10px] font-bold text-white underline hover:text-indigo-400 transition-colors">
+                                    {isProAI ? 'Deactivate Pro' : 'Activate Paid Tier'}
+                                </button>
                                 {isProAI && (
-                                    <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="text-[10px] font-medium text-gray-500 hover:underline">Billing Docs</a>
+                                    <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="ml-2 text-[10px] font-medium text-gray-500 hover:underline">Docs</a>
                                 )}
                             </div>
                         </div>

@@ -12,12 +12,15 @@ interface ImdbResponse {
 
 export const generateActorFact = async (name: string, bio: string): Promise<string> => {
   try {
+    // Check if the user has activated Pro AI mode
+    const isProAI = localStorage.getItem('cratetv_pro_ai') === 'true';
+
     const response = await fetch('/api/generate-fact', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ name, bio }),
+      body: JSON.stringify({ name, bio, isProAI }),
     });
 
     if (!response.ok) {
