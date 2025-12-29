@@ -35,7 +35,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ searchQuery, onSearch, on
 
   return (
     <div
-      className="fixed inset-0 bg-black/95 backdrop-blur-xl z-50 flex flex-col animate-[fadeIn_0.2s_ease-out]"
+      className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-50 flex flex-col animate-[fadeIn_0.2s_ease-out]"
       role="dialog"
       aria-modal="true"
     >
@@ -71,9 +71,9 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ searchQuery, onSearch, on
           </form>
       </div>
       
-      <div className="flex-grow overflow-y-auto px-6 mt-10 pb-20 scrollbar-hide">
+      <div className="flex-grow overflow-y-auto px-6 mt-10 pb-24 scrollbar-hide">
         {searchQuery && results.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6 animate-[fadeIn_0.4s_ease-out]">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 animate-[fadeIn_0.4s_ease-out]">
             {results.map(movie => (
               <div key={movie.key} className="animate-slide-in-up">
                 <MovieCard movie={movie} onSelectMovie={onSelectMovie} />

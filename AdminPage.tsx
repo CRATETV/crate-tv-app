@@ -14,7 +14,6 @@ import SaveStatusToast from './components/SaveStatusToast';
 import MonetizationTab from './components/MonetizationTab';
 import HeroManager from './components/HeroManager';
 import LaurelManager from './components/LaurelManager';
-import PitchDeckPage from './components/PitchDeckPage';
 
 const ALL_TABS: Record<string, string> = {
     movies: '🎞️ Movies',
@@ -60,7 +59,6 @@ const AdminPage: React.FC = () => {
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);
         try {
-            // Silently fetch data, don't show "issues" warnings if basic movies load.
             const dataRes = await fetch('/api/get-live-data?noCache=true');
             if (dataRes.ok) {
                 const data = await dataRes.json();
@@ -71,8 +69,7 @@ const AdminPage: React.FC = () => {
                 setFestivalConfig(data.festivalConfig || null);
             }
         } catch (err) {
-            console.error("Data load issue:", err);
-            // We don't set a UI error here because the app might still be usable with cached data.
+            console.warn("Background data load silent issue:", err);
         } finally {
             setIsLoading(false);
         }
@@ -97,7 +94,7 @@ const AdminPage: React.FC = () => {
                 setIsLoading(false);
             }
         } catch (err) {
-            setError('Authentication service unavailable.');
+            setError('Authentication service unreachable.');
             setIsLoading(false);
         }
     };
@@ -114,13 +111,13 @@ const AdminPage: React.FC = () => {
                 body: JSON.stringify({ password: pass, type, data: dataToSave }),
             });
             if (response.ok) {
-                setSaveMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} synchronized successfully.`);
+                setSaveMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} deployed successfully.`);
                 fetchAllData(pass!);
             } else {
-                throw new Error("Server rejected the update.");
+                throw new Error("Server rejected changes.");
             }
         } catch (err) {
-            setSaveError(err instanceof Error ? err.message : "Sync failure occurred.");
+            setSaveError("Failed to sync changes with live site.");
         } finally {
             setIsSaving(false);
         }
@@ -136,11 +133,11 @@ const AdminPage: React.FC = () => {
                 body: JSON.stringify({ password: pass, type: 'set_now_streaming', data: { key: movieKey } }),
             });
             if (response.ok) {
-                setSaveMessage(`Hero Banner updated to "${movies[movieKey]?.title}"`);
+                setSaveMessage(`Banner set to "${movies[movieKey]?.title}"`);
                 fetchAllData(pass!);
             }
         } catch (err) {
-            setSaveError("Failed to update banner.");
+            setSaveError("Banner update failed.");
         } finally {
             setIsSaving(false);
         }
@@ -153,7 +150,7 @@ const AdminPage: React.FC = () => {
                     <form onSubmit={handleLogin} className="bg-gray-900 border border-white/10 p-10 rounded-[2.5rem] shadow-2xl">
                         <div className="text-center mb-10">
                             <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-32 mx-auto mb-6" alt="Crate TV" />
-                            <h1 className="text-xl font-black uppercase tracking-[0.2em] text-gray-500">Command Control</h1>
+                            <h1 className="text-xl font-black uppercase tracking-[0.2em] text-gray-500">System Command</h1>
                         </div>
                         <div className="mb-8">
                             <label className="form-label" htmlFor="password">Access Token</label>
@@ -183,7 +180,7 @@ const AdminPage: React.FC = () => {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-8 border-b border-white/5 pb-10">
                     <div className="flex items-center gap-6">
                          <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-20" alt="Logo" />
-                         <h1 className="text-4xl font-black uppercase tracking-tighter">System Console <span className="text-red-600">V4.2</span></h1>
+                         <h1 className="text-4xl font-black uppercase tracking-tighter">Admin Console <span className="text-red-600">V4.2</span></h1>
                     </div>
                     
                     <div className="flex items-center gap-4">
@@ -210,12 +207,13 @@ const AdminPage: React.FC = () => {
                 </div>
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
-                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={() => Promise.resolve()} onSetNowStreaming={handleSetNowStreaming} />}
+                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => Promise.resolve()} onSetNowStreaming={handleSetNowStreaming} />}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
-                    {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={setFestivalData} onConnect={() => {}} onConfigChange={setFestivalConfig} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}
+                    {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={(d) => setFestivalData(d)} onConfigChange={(c) => setFestivalConfig(c)} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}
+                    {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}
                     {activeTab === 'about' && aboutData && <AboutEditor initialData={aboutData} onSave={(newData) => handleSaveData('about', newData)} isSaving={isSaving} />}
                     {activeTab === 'email' && <EmailSender />}
                     {activeTab === 'monetization' && <MonetizationTab />}

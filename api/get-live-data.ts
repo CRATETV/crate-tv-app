@@ -28,15 +28,14 @@ export async function GET(request: Request) {
 
                 /**
                  * DEDUPLICATION & SELECTION LOGIC
-                 * If we find multiple versions of the same film (e.g. from pipeline errors),
-                 * we keep the one that is "more complete" (has a movie URL and poster).
+                 * If we find multiple versions of the same film, we keep the most complete one.
                  */
                 if (!existingMovie) {
                     uniqueMoviesByTitle.set(normalizedTitle, m);
                 } else {
                     // Check if current version is more complete than existing
-                    const currentScore = (m.fullMovie ? 2 : 0) + (m.poster ? 1 : 0);
-                    const existingScore = (existingMovie.fullMovie ? 2 : 0) + (existingMovie.poster ? 1 : 0);
+                    const currentScore = (m.fullMovie ? 2 : 0) + (m.poster ? 1 : 0) + (m.cast?.length > 0 ? 1 : 0);
+                    const existingScore = (existingMovie.fullMovie ? 2 : 0) + (existingMovie.poster ? 1 : 0) + (existingMovie.cast?.length > 0 ? 1 : 0);
                     
                     if (currentScore > existingScore) {
                         uniqueMoviesByTitle.set(normalizedTitle, m);
@@ -51,17 +50,9 @@ export async function GET(request: Request) {
             data.movies = dedupedMovies;
         }
 
-        // Permanently filter out Animation category until officially started
-        if (data.categories) {
-            if (data.categories.animation) delete data.categories.animation;
-            
-            // Clean up movie keys in categories to ensure no orphaned/deleted keys exist
-            Object.keys(data.categories).forEach(catKey => {
-                const cat = data.categories[catKey];
-                if (cat.movieKeys) {
-                    cat.movieKeys = cat.movieKeys.filter((k: string) => !!data.movies[k]);
-                }
-            });
+        // Filter out Animation category until ready
+        if (data.categories?.animation) {
+            delete data.categories.animation;
         }
 
         return new Response(JSON.stringify(data), {
@@ -73,10 +64,8 @@ export async function GET(request: Request) {
         });
     } catch (error) {
         console.error("Error in /api/get-live-data:", error);
-        // If data fetching completely fails but we are running, the system should 
-        // still function with its internal fallbacks.
         return new Response(JSON.stringify({ error: 'System processing...' }), {
-            status: 500,
+            status: 200, // Return 200 with error message to allow frontend fallback logic to trigger gracefully
             headers: { 'Content-Type': 'application/json' }
         });
     }

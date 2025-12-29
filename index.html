@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#141414">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.gstatic.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       :root {
@@ -24,7 +24,10 @@
         color: white;
         overflow-x: hidden;
         -webkit-tap-highlight-color: transparent;
-        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        padding-top: var(--sat);
+        padding-bottom: var(--sab);
+        padding-left: var(--sal);
+        padding-right: var(--sar);
       }
       .form-input {
         width: 100%;
@@ -89,13 +92,6 @@
       }
       .scrollbar-hide::-webkit-scrollbar {
         display: none;
-      }
-      
-      /* Mobile safe area adjustments */
-      @media (max-width: 768px) {
-        body {
-            padding-bottom: calc(5rem + env(safe-area-inset-bottom));
-        }
       }
     </style>
     <script type="importmap">
