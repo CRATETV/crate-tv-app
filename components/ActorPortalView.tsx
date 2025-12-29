@@ -1,8 +1,6 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import PlayFinder from './PlayFinder';
 import ActorProfileEditor from './ActorProfileEditor';
-import MonologueGenerator from './MonologueGenerator';
 import LoadingSpinner from './LoadingSpinner';
 
 const ActorPortalView: React.FC = () => {
@@ -32,15 +30,21 @@ const ActorPortalView: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                 <div className="lg:col-span-2 space-y-12">
                     <ActorProfileEditor actorName={user.name} />
-                    <MonologueGenerator />
                 </div>
 
                 <div className="space-y-12">
-                    <PlayFinder />
-                    
                     <div className="bg-gradient-to-br from-red-600/10 to-transparent p-8 rounded-3xl border border-white/5 space-y-4 shadow-xl">
                         <h3 className="text-lg font-black uppercase tracking-tighter text-white">Crate Talent Network</h3>
-                        <p className="text-sm text-gray-400 leading-relaxed font-medium">Your profile is automatically made available to verified talent agents in our new <span className="text-green-500 font-bold">Industry Terminal</span>. Keep your headshots and bio updated to increase your Discovery Score.</p>
+                        <p className="text-sm text-gray-400 leading-relaxed font-medium">Your profile is automatically made available to verified talent agents in our <span className="text-green-500 font-bold">Industry Terminal</span>. Keep your headshots and bio updated to increase your Discovery Score.</p>
+                        <div className="pt-4 border-t border-white/5">
+                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Verified Status</p>
+                            <p className="text-green-500 font-bold text-sm mt-1">✓ Active Selection Feed</p>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
+                         <h4 className="text-xs font-black uppercase text-gray-400 mb-2">Platform Notice</h4>
+                         <p className="text-xs text-gray-500 leading-relaxed">Headshots and bios are synced globally across all devices, including the Crate TV Roku channel. High-resolution images are required for professional accreditation.</p>
                     </div>
                 </div>
             </div>

@@ -6,7 +6,6 @@ import CategoryEditor from './components/CategoryEditor';
 import AboutEditor from './components/AboutEditor';
 import FestivalEditor from './components/FestivalEditor';
 import AnalyticsPage from './components/AnalyticsPage';
-import GrowthAnalyticsTab from './components/GrowthAnalyticsTab';
 import WatchPartyManager from './components/WatchPartyManager';
 import SecurityTab from './components/SecurityTab';
 import FallbackGenerator from './components/FallbackGenerator';
@@ -19,7 +18,6 @@ import PitchDeckPage from './components/PitchDeckPage';
 
 const ALL_TABS: Record<string, string> = {
     analytics: '📊 Platform Analytics',
-    growth: '✨ Growth Intelligence',
     pitchDeck: '🚀 LIFT Labs Pitch',
     hero: '🎬 Hero Spotlight',
     movies: '🎞️ Movies',
@@ -274,8 +272,7 @@ const AdminPage: React.FC = () => {
                 </div>
 
                 <div className="animate-[fadeIn_0.5s_ease-out]">
-                    {activeTab === 'analytics' && <AnalyticsPage viewMode="full" onNavigateToGrowth={() => setActiveTab('growth')} />}
-                    {activeTab === 'growth' && <GrowthAnalyticsTab />}
+                    {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'pitchDeck' && <PitchDeckPage />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={handleDeleteMovie} onSetNowStreaming={handleSetNowStreaming} />}

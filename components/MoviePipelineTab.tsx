@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { MoviePipelineEntry } from '../types';
 import { deleteMoviePipelineEntry } from '../services/firebaseService';
-import SocialKitModal from './SocialKitModal';
 
 interface MoviePipelineTabProps {
     pipeline: MoviePipelineEntry[];
@@ -25,9 +24,6 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
     const [newEntry, setNewEntry] = useState(emptyEntry);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
-    
-    // Social Kit State
-    const [socialKitItem, setSocialKitItem] = useState<MoviePipelineEntry | null>(null);
 
     const handleDelete = async (id: string) => {
         if (!window.confirm("Are you sure you want to permanently delete this submission? This cannot be undone.")) return;
@@ -135,13 +131,6 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
                                             <h3 className="text-2xl font-black text-white uppercase tracking-tighter">{item.title}</h3>
                                             <p className="text-red-500 font-bold uppercase text-[10px] tracking-widest mt-1">Directed by {item.director}</p>
                                         </div>
-                                        <button 
-                                            onClick={() => setSocialKitItem(item)}
-                                            className="bg-white/5 hover:bg-indigo-600 text-gray-400 hover:text-white p-2 rounded-lg transition-all border border-white/5 hover:border-indigo-500 group"
-                                            title="Generate Social Kit"
-                                        >
-                                            <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                        </button>
                                     </div>
                                     <p className="text-sm text-gray-400 mt-4 line-clamp-3 italic leading-relaxed">"{item.synopsis}"</p>
                                     
@@ -170,15 +159,6 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
                 <div className="py-20 text-center border-2 border-dashed border-gray-800 rounded-3xl">
                     <p className="text-gray-600 font-bold uppercase tracking-[0.4em]">Pipeline Empty</p>
                 </div>
-            )}
-
-            {socialKitItem && (
-                <SocialKitModal 
-                    title={socialKitItem.title}
-                    synopsis={socialKitItem.synopsis}
-                    director={socialKitItem.director}
-                    onClose={() => setSocialKitItem(null)}
-                />
             )}
         </div>
     );

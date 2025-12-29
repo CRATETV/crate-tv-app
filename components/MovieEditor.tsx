@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Movie, Actor, MoviePipelineEntry, Episode } from '../types';
+import { Movie, Actor, MoviePipelineEntry } from '../types';
 import S3Uploader from './S3Uploader';
 
 interface MovieEditorProps {
@@ -132,8 +132,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         if (!formData) return;
         setIsSaving(true);
         try {
-            // Decoupled save: This only hits Firestore and S3.
-            // If Gemini is down/quota-hit, this will still SUCCEED.
             await onSave({ [formData.key]: formData });
             setSelectedMovieKey('');
         } catch (err) {
@@ -246,6 +244,11 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         <S3Uploader label="Or Upload Movie File" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
                                     </div>
                                     <div>
+                                        <label className="form-label">Trailer URL</label>
+                                        <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} placeholder="https://..." className="form-input mb-2" />
+                                        <S3Uploader label="Or Upload Trailer File" onUploadSuccess={(url) => setFormData({...formData, trailer: url})} />
+                                    </div>
+                                    <div>
                                         <label className="form-label">Portrait Poster</label>
                                         <input type="text" name="poster" value={formData.poster} onChange={handleChange} placeholder="Poster URL" className="form-input mb-2" />
                                         <S3Uploader label="Upload Poster" onUploadSuccess={(url) => setFormData({...formData, poster: url})} />
@@ -332,13 +335,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         <label className="form-label">Published At</label>
                                         <input type="datetime-local" name="publishedAt" value={formData.publishedAt ? new Date(formData.publishedAt).toISOString().slice(0, 16) : ''} onChange={handleChange} className="form-input" />
                                     </div>
-                                </div>
-
-                                <div className="pt-8 mt-8 border-t border-white/5">
-                                     <div className="bg-indigo-600/10 p-6 rounded-2xl border border-indigo-500/20">
-                                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Smart Discovery Meta</h4>
-                                        <p className="text-[10px] text-gray-500 leading-relaxed">AI generation for social kits and fun facts is performed separately via the "Pipeline" tab. Standard database updates are always unlimited.</p>
-                                     </div>
                                 </div>
                             </section>
                         </div>

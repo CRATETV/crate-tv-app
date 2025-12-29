@@ -108,7 +108,7 @@ ${(kit.copy.hashtags || []).join(' ')}
                         )}
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
-                        <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
 
@@ -130,7 +130,7 @@ ${(kit.copy.hashtags || []).join(' ')}
                                     Notice: Your movie data was saved successfully. Only this AI-generated toolkit is affected. Try again tomorrow for a free kit, or enable billing in AI Studio to remove this limit.
                                 </p>
                             </div>
-                            <button onClick={onClose} className="mt-8 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white underline">Close and Continue</button>
+                            <button onClick={onClose} className="mt-8 bg-white text-black font-black py-3 px-8 rounded-xl uppercase tracking-widest text-[10px] shadow-2xl transition-all active:scale-95">Close and Return to Database</button>
                         </div>
                     ) : kit && (
                         activeTab === 'social' ? (

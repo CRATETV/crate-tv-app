@@ -16,11 +16,6 @@ const checkAuth = (password: string | null) => {
     return false;
 };
 
-const normalizeTitle = (title: string): string => {
-    if (!title) return '';
-    return title.replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
-};
-
 const assembleLiveData = async (db: Firestore) => {
     const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap, settingsSnap] = await Promise.all([
         db.collection('movies').get(),
@@ -99,6 +94,15 @@ export async function POST(request: Request) {
                 });
                 break;
             }
+            case 'set_now_streaming': {
+                const { key } = data;
+                // Replace the nowStreaming list with only the featured film
+                batch.set(db.collection('categories').doc('nowStreaming'), {
+                    title: 'Now Streaming',
+                    movieKeys: [key]
+                }, { merge: false });
+                break;
+            }
             case 'movies':
                 for (const [id, docData] of Object.entries(data)) {
                     batch.set(db.collection('movies').doc(id), docData as object, { merge: true });
@@ -112,7 +116,21 @@ export async function POST(request: Request) {
             case 'settings':
                 batch.set(db.collection('content').doc('settings'), data, { merge: true });
                 break;
-            // Additional cases for about, festival etc remain standard
+            case 'about':
+                batch.set(db.collection('content').doc('about'), data, { merge: true });
+                break;
+            case 'festival': {
+                const { config, schedule } = data;
+                if (config) {
+                    batch.set(db.collection('festival').doc('config'), config, { merge: true });
+                }
+                if (schedule && Array.isArray(schedule)) {
+                    for (const day of schedule) {
+                        batch.set(db.collection('festival').doc('schedule').collection('days').doc(`day${day.day}`), day);
+                    }
+                }
+                break;
+            }
         }
 
         await batch.commit();
