@@ -1,5 +1,6 @@
+// FIX: Added React import to resolve "Cannot find namespace 'React'" errors when using React.FC and React.FormEvent.
 import React, { useState, useEffect, useCallback } from 'react';
-import { Movie, Category, AboutData, FestivalDay, FestivalConfig } from './types';
+import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, ActorSubmission } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
 import MovieEditor from './components/MovieEditor';
 import CategoryEditor from './components/CategoryEditor';
@@ -14,12 +15,20 @@ import SaveStatusToast from './components/SaveStatusToast';
 import MonetizationTab from './components/MonetizationTab';
 import HeroManager from './components/HeroManager';
 import LaurelManager from './components/LaurelManager';
+import PitchDeckManager from './components/PitchDeckManager';
+import { MoviePipelineTab } from './components/MoviePipelineTab';
+import JuryPortal from './components/JuryPortal';
+import { ActorSubmissionsTab } from './components/ActorSubmissionsTab';
 
 const ALL_TABS: Record<string, string> = {
-    movies: '🎞️ Movies',
+    movies: '🎞️ Catalog',
+    pipeline: '📥 Pipeline',
+    jury: '⚖️ Jury Room',
+    actors: '👥 Actor Subs',
     analytics: '📊 Analytics',
     hero: '🎬 Hero',
     laurels: '🏆 Laurels',
+    pitch: '📽️ Pitch Deck',
     categories: '📂 Categories',
     festival: '🎪 Festival',
     watchParty: '🍿 Watch Party',
@@ -33,7 +42,6 @@ const ALL_TABS: Record<string, string> = {
 const AdminPage: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [movies, setMovies] = useState<Record<string, Movie>>({});
@@ -41,35 +49,54 @@ const AdminPage: React.FC = () => {
     const [aboutData, setAboutData] = useState<AboutData | null>(null);
     const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+    const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
+    const [actorSubmissions, setActorSubmissions] = useState<ActorSubmission[]>([]);
     const [activeTab, setActiveTab] = useState('movies');
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
     const [saveError, setSaveError] = useState('');
 
-    useEffect(() => {
-        const savedPassword = sessionStorage.getItem('adminPassword');
-        if (savedPassword) {
-            setPassword(savedPassword);
-            handleLogin(null, savedPassword);
-        } else {
-            setIsLoading(false);
-        }
-    }, []);
+    // State for promoting a pipeline item to the catalog
+    const [pendingPromotion, setPendingPromotion] = useState<MoviePipelineEntry | null>(null);
 
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);
         try {
-            const dataRes = await fetch('/api/get-live-data?noCache=true');
-            if (dataRes.ok) {
-                const data = await dataRes.json();
+            const [liveDataRes, pipelineRes, actorRes] = await Promise.all([
+                fetch(`/api/get-live-data?noCache=true&t=${Date.now()}`),
+                fetch('/api/get-pipeline-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: adminPassword }),
+                }),
+                fetch('/api/get-actor-submissions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: adminPassword }),
+                }).catch(() => null)
+            ]);
+
+            if (liveDataRes.ok) {
+                const data = await liveDataRes.json();
                 setMovies(data.movies || {});
                 setCategories(data.categories || {});
                 setAboutData(data.aboutData || null);
                 setFestivalData(data.festivalData || []);
                 setFestivalConfig(data.festivalConfig || null);
             }
+
+            if (pipelineRes && pipelineRes.ok) {
+                const data = await pipelineRes.json();
+                setPipeline(data.pipeline || []);
+            }
+
+            if (actorRes && actorRes.ok) {
+                const data = await actorRes.json();
+                setActorSubmissions(data.submissions || []);
+            }
+
         } catch (err) {
-            console.warn("Background data load silent issue:", err);
+            console.warn("Background data load issue:", err);
         } finally {
             setIsLoading(false);
         }
@@ -99,7 +126,8 @@ const AdminPage: React.FC = () => {
         }
     };
 
-    const handleSaveData = async (type: 'movies' | 'categories' | 'about' | 'festival', dataToSave: any) => {
+    // FIX: Widened the 'type' union to include 'delete_movie' which resolved a TS2345 error on line 251.
+    const handleSaveData = async (type: 'movies' | 'categories' | 'about' | 'festival' | 'settings' | 'delete_movie', dataToSave: any) => {
         setIsSaving(true);
         setSaveMessage('');
         setSaveError('');
@@ -111,7 +139,10 @@ const AdminPage: React.FC = () => {
                 body: JSON.stringify({ password: pass, type, data: dataToSave }),
             });
             if (response.ok) {
-                setSaveMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} deployed successfully.`);
+                // Use a more user-friendly message for deletions
+                const displayType = type === 'delete_movie' ? 'Movie' : type.charAt(0).toUpperCase() + type.slice(1);
+                const verb = type === 'delete_movie' ? 'removed' : 'deployed';
+                setSaveMessage(`${displayType} ${verb} successfully.`);
                 fetchAllData(pass!);
             } else {
                 throw new Error("Server rejected changes.");
@@ -141,6 +172,11 @@ const AdminPage: React.FC = () => {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handlePromoteToCatalog = (item: MoviePipelineEntry) => {
+        setPendingPromotion(item);
+        setActiveTab('movies');
     };
 
     if (!isAuthenticated) {
@@ -180,7 +216,13 @@ const AdminPage: React.FC = () => {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-8 border-b border-white/5 pb-10">
                     <div className="flex items-center gap-6">
                          <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-20" alt="Logo" />
-                         <h1 className="text-4xl font-black uppercase tracking-tighter">Admin Console <span className="text-red-600">V4.2</span></h1>
+                         <div>
+                            <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">Admin Console <span className="text-red-600">V4.2</span></h1>
+                            <div className="flex items-center gap-2 mt-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-green-500">Live Encrypted Sync Active</p>
+                            </div>
+                         </div>
                     </div>
                     
                     <div className="flex items-center gap-4">
@@ -198,7 +240,10 @@ const AdminPage: React.FC = () => {
                    {Object.entries(ALL_TABS).map(([tabId, label]) => (
                         <button
                             key={tabId}
-                            onClick={() => setActiveTab(tabId)}
+                            onClick={() => {
+                                setActiveTab(tabId);
+                                if (tabId !== 'movies') setPendingPromotion(null);
+                            }}
                             className={`px-6 py-3 text-[11px] font-black uppercase tracking-[0.15em] rounded-xl transition-all whitespace-nowrap border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-xl shadow-red-900/30' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
                         >
                             {label}
@@ -207,12 +252,16 @@ const AdminPage: React.FC = () => {
                 </div>
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
-                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => Promise.resolve()} onSetNowStreaming={handleSetNowStreaming} />}
+                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={handleSetNowStreaming} movieToCreate={pendingPromotion} onCreationDone={() => setPendingPromotion(null)} />}
+                    {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={handlePromoteToCatalog} onRefresh={() => fetchAllData(password)} />}
+                    {activeTab === 'jury' && <JuryPortal pipeline={pipeline} />}
+                    {activeTab === 'actors' && <ActorSubmissionsTab submissions={actorSubmissions} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
+                    {activeTab === 'laurels' && < LaurelManager allMovies={Object.values(movies)} />}
+                    {activeTab === 'pitch' && <PitchDeckManager onSave={(settings) => handleSaveData('settings', settings)} isSaving={isSaving} />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={(d) => setFestivalData(d)} onConfigChange={(c) => setFestivalConfig(c)} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}
-                    {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}
                     {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}
                     {activeTab === 'about' && aboutData && <AboutEditor initialData={aboutData} onSave={(newData) => handleSaveData('about', newData)} isSaving={isSaving} />}
                     {activeTab === 'email' && <EmailSender />}

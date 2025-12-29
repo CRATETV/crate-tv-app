@@ -1,3 +1,4 @@
+
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
 
 
@@ -185,7 +186,8 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fighter+Short+Film.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fighter+.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fighter+.webp",
-    "likes": 0
+    "likes": 0,
+    "publishedAt": new Date().toISOString()
   },
   "almasvows": {
     "key": "almasvows",
@@ -434,7 +436,7 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Cathrine Tillotson",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Cathrine Tillotson is a driven actor with a passion for performing. They possess a strong stage presence and a natural connection with audiences. Eager to learn and grow, they strive to bring compelling characters to life.",
+        "bio": "Cathrine Tillotson is a disabled actor with a passion for performing. They possess a strong stage presence and a natural connection with audiences. Eager to learn and grow, they strive to bring compelling characters to life.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
@@ -693,9 +695,9 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Kathryn Wylde",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/KatWylde.png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/KatWylde.png",
         "bio": "Kathryn Wylde is an emerging actor with a passion for storytelling, demonstrating their skills both on screen and behind the camera.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/KatWylde.png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/KatWylde.png"
       }
     ],
     "director": "Darrah Lashley",
@@ -925,9 +927,9 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/What+If++The+Movie.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/I+love+you+black.+poster+.png",
     "likes": 0,
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/what+If+poster+for+instant+tv+(1920+x+1080+px)+(1925+x+1085+px)+(1920+x+1080+px).png",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/iloveimg-resized+2/what+If+poster+for+instant+tv+(1920+x+1080+px)+(1080+x+1620+px).png",
     "title": "What If ",
-    "synopsis": "Desperately seeking love and a date for her cousin's wedding, Sophia bypasses the usual suspects and takes a wild chance on a psychic medium.",
+    "synopsis": "Sophia bypasses the usual suspects and takes a wild chance on a psychic medium.",
     "cast": [
       {
         "name": "Salome Denoon",
@@ -970,21 +972,21 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Aatiq Simmons ",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
         "name": "Richard Frohman ",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
         "name": "Lucie Paige Krovatin",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/That+Loud.png",
@@ -1012,27 +1014,27 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Cyan Zhong",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
         "name": "Sumner Sykes ",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
         "name": "Sara Montse",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
     "tvPoster": "",
     "watchPartyStartTime": "",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemeni+Time+Service.JPG",
-    "synopsis": "In a world where everyone knows their expiration date Fern is anxious about her broken time device and seeks help in an unexpected place.",
+    "synopsis": "In a world where everyone knows their expiration date Fern is anxious about her broken time device.",
     "likes": 2
   },
   "newmovie1763381218900": {
@@ -1045,7 +1047,7 @@ export const moviesData: Record<string, Movie> = {
     "rating": 0,
     "hasCopyrightMusic": true,
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Trudy+(1).mp4",
-    "synopsis": "After a haunting breakup, a tightly-wound woman obsessed with control uses written contracts to manage her relationships. As she struggles to re-enter the world, Trudy must decide if living on her own terms is really living at all.",
+    "synopsis": "After a breakup, a tightly-wound woman obsessed with control uses written contracts to manage her relationships.",
     "title": "Trudy ",
     "isWatchPartyEnabled": false,
     "producers": "",
@@ -1054,45 +1056,27 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Julia De Palma",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
         "name": "Haley Cassidy ",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
         "name": "Gina Hendricks",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
         "name": "Michael Dwayne Paylor",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
-      },
-      {
-        "name": "Joe Hough",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
-      },
-      {
-        "name": "Christopher Castagna",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
-      },
-      {
-        "name": "Nicole D'Arecca",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
     "tvPoster": "",
@@ -1132,7 +1116,7 @@ export const moviesData: Record<string, Movie> = {
     "rating": 0,
     "hasCopyrightMusic": false,
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/When+Good+Americans+Die+Michael+Mina.mp4",
-    "synopsis": "As Charlie’s family falls apart, and Sadie’s father falls ill, they dream of a new life in Paris.",
+    "synopsis": "As Charlie’s family falls apart they dream of a new life in Paris.",
     "title": "When Good Americans Die ",
     "isWatchPartyEnabled": false,
     "producers": "",
@@ -1141,27 +1125,15 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Annaliese Schreiber",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       },
       {
         "name": "Michael James Mina",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
-      },
-      {
-        "name": "Rochelle Longwill",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
-      },
-      {
-        "name": " Richard Dubin",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
     "tvPoster": "",
@@ -1179,7 +1151,7 @@ export const moviesData: Record<string, Movie> = {
     "rating": 0,
     "hasCopyrightMusic": false,
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Bereavement+.mov",
-    "synopsis": "The sudden, brutal loss of their teenage son shatters the world of a loving couple, forcing them onto two completely separate paths of agonizing grief.",
+    "synopsis": "The sudden loss of their teenage son shatters the world of a loving couple.",
     "title": "Bereavement",
     "isWatchPartyEnabled": false,
     "producers": "",
@@ -1188,9 +1160,9 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Tyler Andrews ",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
     "tvPoster": "",
@@ -1205,14 +1177,14 @@ export const moviesData: Record<string, Movie> = {
     "cast": [
       {
         "name": "Michelle Reale-Opalesky",
-        "bio": "Michelle Reale-Opalesky is a captivating actor with a remarkable range. She effortlessly inhabits diverse roles and seamlessly transitions between drama and comedy.",
+        "bio": "Michelle Reale-Opalesky is a captivating actor with a remarkable range.",
         "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg",
         "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg"
       }
     ],
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results.png",
     "likes": 0,
-    "synopsis": "Confined to a sterile medical waiting room, three women await life-altering results—but only one of them seems to have a handle on everything. A short film created for the Playhouse West-Philadelphia 3-3-3 film festival.",
+    "synopsis": "Three women await life-altering results in a medical waiting room.",
     "title": "Results",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results+.mp4"
@@ -1220,10 +1192,10 @@ export const moviesData: Record<string, Movie> = {
   "silentlove": {
     "key": "silentlove",
     "poster": "https://cratetelevision.s3.amazonaws.com/silent+Love++poster+remake+.jpg",
-    "synopsis": "Unspoken feelings have kept Vicky and Toby in the friend zone forever. Their relationship faces a turning point when Toby takes a step towards a future without Vicky.",
+    "synopsis": "Unspoken feelings have kept Vicky and Toby in the friend zone forever.",
     "cast": [
       {
-        "bio": "Salome Denoon is a versatile artist whose creative pursuits span performance, writing, editing, and digital media. As an actress, she has graced both stage and screen. She also brings her talents to the digital realm as the developer of Crate TV.",
+        "bio": "Salome Denoon is an actress and developer of Crate TV.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png",
         "name": "Salome Denoon",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
@@ -1239,16 +1211,16 @@ export const moviesData: Record<string, Movie> = {
   "slap": {
     "key": "slap",
     "title": "Slap",
-    "synopsis": "One unforgettable night of debauchery, poor decisions,  comes to an abrupt, stinging end with a single, perfectly-timed SLAP.",
+    "synopsis": "One night of debauchery comes to a stinging end.",
     "cast": [
       {
         "name": "Seth Sharpe",
-        "photo": "",
-        "bio": "",
-        "highResPhoto": ""
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Information regarding this actor is currently unavailable.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
-    "director": "Shaunpaul Costello, Seth Sharpe",
+    "director": "Shaunpaul Costello",
     "trailer": "",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Slap.png",
@@ -1258,12 +1230,12 @@ export const moviesData: Record<string, Movie> = {
   "smirk": {
     "key": "smirk",
     "title": "Smirk",
-    "synopsis": "Consumed by the pain of his failing marriage, a man retreats into a dream world where divorce is his only solace.",
+    "synopsis": "A man retreats into a dream world where divorce is his only solace.",
     "cast": [
       {
         "name": "Salome Denoon",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png",
-        "bio": "Salome Denoon is a versatile artist whose creative pursuits span performance, writing, editing, and digital media. As an actress, she has graced both stage and screen. She also brings her talents to the digital realm as the developer of Crate TV.",
+        "bio": "Salome Denoon is the developer of Crate TV.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
       }
     ],
@@ -1277,7 +1249,7 @@ export const moviesData: Record<string, Movie> = {
   "streeteatstheboot": {
     "key": "streeteatstheboot",
     "title": "Street Eats The Boot",
-    "synopsis": "A captivating documentary that explores the vibrant world of Central Louisiana food trucks.",
+    "synopsis": "Documentary exploring Louisiana food trucks.",
     "cast": [],
     "director": "Andrew W Trimble",
     "trailer": "",
@@ -1289,9 +1261,9 @@ export const moviesData: Record<string, Movie> = {
   "suspense": {
     "key": "suspense",
     "title": "Suspense",
-    "synopsis": "A woman home alone with her baby is terrorized by a tramp trying to break in. This 1913 silent film is notable for its innovative use of split-screen.",
+    "synopsis": "A woman home alone with her baby is terrorized by a tramp.",
     "cast": [],
-    "director": "Lois Weber, Phillips Smalley",
+    "director": "Lois Weber",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Suspense.+(Rex+Motion+Picture+Co.+US+1913).mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/suspense+movie+poster+.jpeg",
@@ -1308,15 +1280,15 @@ export const moviesData: Record<string, Movie> = {
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Ted+and+Nathalie+.JPG",
     "likes": 0,
     "director": "Michelle M. Charles ",
-    "synopsis": "A loving boyfriend confronts his avoidant girlfriend after multiple failed attempts to be seen together in public.",
+    "synopsis": "A loving boyfriend confronts his avoidant girlfriend.",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/TED+AND+NATALIE+compressed+-+Lotus+Blossom+Productions+(1080p%2C+h264%2C+youtube).mp4"
   },
   "thefallofthehouseofusher": {
     "key": "thefallofthehouseofusher",
     "title": "The Fall of the House of Usher",
-    "synopsis": "Based on the story by Edgar Allan Poe, this avant-garde silent film depicts the tale of a brother and sister living in a decaying mansion.",
+    "synopsis": "Based on the story by Edgar Allan Poe.",
     "cast": [],
-    "director": "James Sibley Watson, Melville Webber",
+    "director": "James Sibley Watson",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/The-Fall-of-the-House-of-Usher-1928-Film-Guild_360p.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/the+Fall+of+House+Of+Usher+.jpeg",

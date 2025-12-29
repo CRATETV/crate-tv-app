@@ -114,18 +114,16 @@ const App: React.FC = () => {
         return movies[keys[0]] || null;
     }, [movies, categories.nowStreaming]);
 
-    const topTenMovies = useMemo(() => {
-        return (Object.values(movies) as Movie[])
-            .filter((movie: Movie | undefined): movie is Movie => !!movie && !!movie.title)
-            .sort((a, b) => (b.likes || 0) - (a.likes || 0))
-            .slice(0, 10);
-    }, [movies]);
-
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
         const query = searchQuery.toLowerCase().trim();
         return (Object.values(movies) as Movie[]).filter((movie: Movie | undefined) =>
-            movie && (
+            movie && 
+            // VITAL: Ignore records that don't have a poster or a valid title
+            // This prevents "broken" duplicate entries from showing up.
+            movie.poster && movie.poster.length > 5 &&
+            movie.title && movie.title.length > 0 &&
+            (
                 (movie.title || '').toLowerCase().includes(query) ||
                 (movie.director || '').toLowerCase().includes(query) ||
                 (movie.cast || []).some(actor => (actor.name || '').toLowerCase().includes(query))

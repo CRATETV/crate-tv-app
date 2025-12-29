@@ -13,13 +13,15 @@ export async function GET(request: Request) {
     // Trim whitespace from the URL which can cause issues.
     imageUrl = imageUrl.trim();
 
-    // Robustly encode special characters for S3.
-    // The browser/server decodes the query param, so we need to re-encode spaces, +, ', etc.
-    // before fetching. Using chained replace calls is more reliable than a single regex for this.
+    /**
+     * CRITICAL FIX: Removed .replace(/\+/g, '%20'). 
+     * In S3 object keys, a '+' character is literal. 
+     * Replacing it with '%20' (space) was causing 404s for files like "Fighter+.webp".
+     * Standard fetch handles the literal '+' correctly for S3.
+     */
     const correctedImageUrl = imageUrl
-        .replace(/\+/g, '%20') // Replace '+' with space encoding
-        .replace(/\s/g, '%20') // Replace actual spaces with encoding
-        .replace(/'/g, '%27'); // Replace apostrophes with encoding
+        .replace(/\s/g, '%20') // Re-encode actual spaces
+        .replace(/'/g, '%27'); // Re-encode apostrophes
 
     const imageResponse = await fetch(correctedImageUrl);
     

@@ -1,4 +1,3 @@
-
 // This file contains type definitions for the Crate TV application.
 
 export interface Actor {
@@ -110,6 +109,7 @@ export interface SiteSettings {
   holidayTagline?: string;
   holidayTheme?: 'christmas' | 'valentines' | 'gold' | 'generic';
   maintenanceMode?: boolean;
+  pitchTargetCompany?: string;
 }
 
 export interface AnalyticsData {

@@ -107,27 +107,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         }
     };
 
-    const handleAddActor = () => {
-        if (!formData) return;
-        setFormData({
-            ...formData,
-            cast: [...(formData.cast || []), { name: '', bio: '', photo: '', highResPhoto: '' }]
-        });
-    };
-
-    const handleActorChange = (index: number, field: keyof Actor, value: string) => {
-        if (!formData || !formData.cast) return;
-        const newCast = [...formData.cast];
-        newCast[index] = { ...newCast[index], [field]: value };
-        setFormData({ ...formData, cast: newCast });
-    };
-
-    const handleRemoveActor = (index: number) => {
-        if (!formData || !formData.cast) return;
-        const newCast = formData.cast.filter((_, i) => i !== index);
-        setFormData({ ...formData, cast: newCast });
-    };
-
     const handleSave = async () => {
         if (!formData) return;
         setIsSaving(true);
@@ -136,14 +115,22 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             setSelectedMovieKey('');
         } catch (err) {
             console.error("Save failed:", err);
-            alert("Database update failed. Check your internet connection.");
+            alert("Database update failed.");
         } finally {
             setIsSaving(false);
         }
     };
 
     const filteredMovies = (Object.values(allMovies) as Movie[])
-        .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(m => {
+            const query = searchTerm.toLowerCase().trim();
+            if (!query) return true;
+            return (
+                (m.title || '').toLowerCase().includes(query) ||
+                (m.key || '').toLowerCase().includes(query) ||
+                (m.director || '').toLowerCase().includes(query)
+            );
+        })
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
     return (
@@ -151,58 +138,95 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             {!formData ? (
                 <div className="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden shadow-2xl">
                     <div className="p-6 bg-gray-900/50 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <h3 className="font-black text-gray-300 uppercase text-[10px] tracking-widest">Master Catalog</h3>
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
+                            <h3 className="font-black text-gray-300 uppercase text-[10px] tracking-widest">Master Catalog Control</h3>
+                        </div>
                         <div className="flex gap-2 w-full sm:w-auto">
-                            <input type="text" placeholder="Filter..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="form-input !py-1.5 text-xs w-full sm:w-48" />
-                            <button onClick={() => setSelectedMovieKey(`newmovie${Date.now()}`)} className="bg-green-600 hover:bg-green-700 text-white font-black py-1.5 px-4 rounded text-[10px] uppercase tracking-widest">New Movie</button>
+                            <input 
+                                type="text" 
+                                placeholder="Search by title, ID, or director..." 
+                                value={searchTerm} 
+                                onChange={(e) => setSearchTerm(e.target.value)} 
+                                className="form-input !py-1.5 text-xs w-full sm:w-64" 
+                            />
+                            <button onClick={() => setSelectedMovieKey(`newmovie${Date.now()}`)} className="bg-green-600 hover:bg-green-700 text-white font-black py-1.5 px-4 rounded-xl text-[10px] uppercase tracking-widest transition-all">Add Film</button>
                         </div>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
-                            <thead className="bg-gray-900/50 text-[10px] uppercase tracking-widest text-gray-500">
+                            <thead className="bg-gray-900/50 text-[10px] uppercase tracking-widest text-gray-500 border-b border-gray-700">
                                 <tr>
-                                    <th className="p-4">Title</th>
-                                    <th className="p-4">Access Status</th>
+                                    <th className="p-4">Film Metadata</th>
+                                    <th className="p-4">Asset Status</th>
                                     <th className="p-4 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-700">
-                                {filteredMovies.map(movie => (
-                                    <tr key={movie.key} className="hover:bg-gray-700/30">
-                                        <td className="p-4 flex items-center gap-3">
-                                            <img src={movie.poster} className="w-8 h-12 object-cover rounded" />
-                                            <div>
-                                                <span className="font-bold text-white uppercase text-xs block">{movie.title}</span>
-                                                <span className="text-[9px] text-gray-500 uppercase tracking-widest">Dir. {movie.director}</span>
-                                            </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="flex flex-wrap gap-2">
-                                                {movie.isForSale ? (
-                                                    <span className="bg-green-600/20 text-green-400 border border-green-500/30 text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-widest">
-                                                        Rental Enabled (${movie.salePrice})
-                                                    </span>
-                                                ) : (
-                                                    <span className="bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-widest">
-                                                        Free Access
-                                                    </span>
-                                                )}
-                                                {movie.isUnlisted && <span className="bg-gray-700 text-[8px] px-1.5 py-0.5 rounded font-black text-white uppercase">Unlisted</span>}
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <button 
-                                                    onClick={() => onSetNowStreaming(movie.key)}
-                                                    className="text-red-500 font-bold text-[10px] uppercase tracking-widest hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-lg border border-red-500/30 transition-all"
-                                                >
-                                                    Feature
-                                                </button>
-                                                <button onClick={() => setSelectedMovieKey(movie.key)} className="text-blue-400 font-bold text-[10px] uppercase tracking-widest hover:text-blue-300 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">Edit</button>
-                                            </div>
+                                {filteredMovies.map(movie => {
+                                    const hasVideo = movie.fullMovie && movie.fullMovie.length > 10;
+                                    const hasPoster = movie.poster && movie.poster.length > 10;
+                                    const isHealthy = hasVideo && hasPoster;
+
+                                    return (
+                                        <tr key={movie.key} className="hover:bg-white/[0.02] transition-colors">
+                                            <td className="p-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-14 bg-black rounded overflow-hidden flex-shrink-0 border border-white/5">
+                                                        {movie.poster ? (
+                                                            <img src={movie.poster} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-[8px] text-gray-700">NO IMG</div>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-black text-white uppercase text-sm block tracking-tight">{movie.title || 'Untitled'}</span>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <span className="text-[9px] text-gray-500 font-mono uppercase">ID: {movie.key}</span>
+                                                            <span className="text-[9px] text-red-500 font-bold uppercase">Dir: {movie.director || 'N/A'}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="flex items-center gap-3">
+                                                    {isHealthy ? (
+                                                        <span className="bg-green-600/10 text-green-500 border border-green-500/20 text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-widest">Verified Live</span>
+                                                    ) : (
+                                                        <span className="bg-red-600/10 text-red-500 border border-red-500/20 text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-widest">Draft / Broken</span>
+                                                    )}
+                                                    <div className="flex gap-1.5">
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${hasVideo ? 'bg-blue-500 shadow-[0_0_5px_rgba(59,130,246,0.5)]' : 'bg-gray-700'}`} title="Video Stream Ready"></div>
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${hasPoster ? 'bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.5)]' : 'bg-gray-700'}`} title="Poster Asset Found"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <button 
+                                                        onClick={() => onSetNowStreaming(movie.key)}
+                                                        className="text-white bg-red-600/20 border border-red-600/30 font-black text-[9px] uppercase tracking-widest hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-lg transition-all"
+                                                    >
+                                                        Feature
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => setSelectedMovieKey(movie.key)} 
+                                                        className="text-white bg-white/5 hover:bg-white/10 border border-white/10 font-black text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all"
+                                                    >
+                                                        Manage
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                {filteredMovies.length === 0 && (
+                                    <tr>
+                                        <td colSpan={3} className="p-12 text-center text-gray-500 text-xs font-bold uppercase tracking-widest italic">
+                                            No titles matching your criteria found in the catalog.
                                         </td>
                                     </tr>
-                                ))}
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -212,13 +236,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                     <div className="flex justify-between items-center border-b border-gray-700 pb-6">
                         <div>
                             <h3 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{formData.title || 'New Movie'}</h3>
-                            <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Database ID: {formData.key}</p>
+                            <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Database Reference: {formData.key}</p>
                         </div>
                         <div className="flex items-center gap-4">
-                            <div className="hidden md:flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-full border border-white/5">
-                                <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
-                                <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Database Live</span>
-                            </div>
                             <button onClick={() => setSelectedMovieKey('')} className="bg-gray-700 hover:bg-gray-600 text-white font-black px-6 py-2 rounded-xl uppercase text-xs tracking-widest transition-all">Back to Catalog</button>
                         </div>
                     </div>
@@ -244,77 +264,17 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         <S3Uploader label="Or Upload Movie File" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
                                     </div>
                                     <div>
-                                        <label className="form-label">Trailer URL</label>
-                                        <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} placeholder="https://..." className="form-input mb-2" />
-                                        <S3Uploader label="Or Upload Trailer File" onUploadSuccess={(url) => setFormData({...formData, trailer: url})} />
-                                    </div>
-                                    <div>
                                         <label className="form-label">Portrait Poster</label>
                                         <input type="text" name="poster" value={formData.poster} onChange={handleChange} placeholder="Poster URL" className="form-input mb-2" />
                                         <S3Uploader label="Upload Poster" onUploadSuccess={(url) => setFormData({...formData, poster: url})} />
                                     </div>
                                 </div>
                             </section>
-
-                            <section className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">03. Cast & Talents</h4>
-                                    <button onClick={handleAddActor} className="text-[10px] font-black text-blue-400 hover:text-white uppercase tracking-widest">+ Add Member</button>
-                                </div>
-                                <div className="space-y-6">
-                                    {formData.cast && formData.cast.map((actor, index) => (
-                                        <div key={index} className="bg-black/40 p-6 rounded-2xl border border-white/10 space-y-4 relative group shadow-inner">
-                                            <button onClick={() => handleRemoveActor(index)} className="absolute top-4 right-4 text-gray-500 hover:text-red-500 transition-colors bg-white/5 p-1 rounded-lg">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                            </button>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="form-label">Actor Name</label>
-                                                    <input type="text" value={actor.name} onChange={(e) => handleActorChange(index, 'name', e.target.value)} placeholder="Full Name" className="form-input" />
-                                                </div>
-                                                <div>
-                                                    <label className="form-label">Profile Pic (Thumbnail)</label>
-                                                    <input type="text" value={actor.photo} onChange={(e) => handleActorChange(index, 'photo', e.target.value)} placeholder="Photo URL" className="form-input" />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="form-label">Professional Bio</label>
-                                                <textarea value={actor.bio} onChange={(e) => handleActorChange(index, 'bio', e.target.value)} placeholder="Brief acting history..." rows={3} className="form-input" />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
                         </div>
 
                         <div className="space-y-8">
                              <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">04. Access & Monetization</h4>
-                                
-                                <div className="bg-gradient-to-br from-green-600/10 to-transparent p-6 rounded-2xl border border-green-500/20 space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <h4 className="text-[10px] font-black uppercase text-green-500 tracking-widest">Rental Mode</h4>
-                                            <p className="text-[9px] text-gray-500 uppercase font-bold mt-1">Require 24h PPV for this film</p>
-                                        </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" name="isForSale" checked={formData.isForSale || false} onChange={handleChange} className="sr-only peer" />
-                                            <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-green-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                                        </label>
-                                    </div>
-                                    {formData.isForSale && (
-                                        <div className="animate-[fadeIn_0.3s_ease-out] space-y-4 pt-4 border-t border-white/5">
-                                            <div>
-                                                <label className="form-label">Rental Price (USD)</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-black">$</span>
-                                                    <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} className="form-input !pl-7 !bg-black/40" step="0.01" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">03. Cast & Status</h4>
                                 <div className="grid grid-cols-2 gap-4 bg-black/20 p-6 rounded-2xl border border-white/5">
                                     <label className="flex items-center gap-3 cursor-pointer">
                                         <input type="checkbox" name="isUnlisted" checked={formData.isUnlisted || false} onChange={handleChange} className="w-5 h-5 rounded border-gray-700 text-red-600" />
@@ -322,18 +282,13 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     </label>
                                     <label className="flex items-center gap-3 cursor-pointer">
                                         <input type="checkbox" name="isSeries" checked={formData.isSeries || false} onChange={handleChange} className="w-5 h-5 rounded border-gray-700 text-purple-600" />
-                                        <span className="text-[10px] font-black uppercase text-gray-400">Mark as Series</span>
+                                        <span className="text-[10px] font-black uppercase text-gray-400">Series</span>
                                     </label>
                                 </div>
-                                
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 gap-4">
                                     <div>
-                                        <label className="form-label">Launch Date</label>
+                                        <label className="form-label">Release Date</label>
                                         <input type="datetime-local" name="releaseDateTime" value={formData.releaseDateTime ? new Date(formData.releaseDateTime).toISOString().slice(0, 16) : ''} onChange={handleChange} className="form-input" />
-                                    </div>
-                                    <div>
-                                        <label className="form-label">Published At</label>
-                                        <input type="datetime-local" name="publishedAt" value={formData.publishedAt ? new Date(formData.publishedAt).toISOString().slice(0, 16) : ''} onChange={handleChange} className="form-input" />
                                     </div>
                                 </div>
                             </section>
@@ -343,9 +298,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                     <div className="pt-8 border-t border-gray-700 flex flex-col sm:flex-row gap-4 justify-between items-center">
                         <button onClick={() => onDeleteMovie(formData.key)} className="w-full sm:w-auto bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-black py-4 px-8 rounded-2xl uppercase tracking-widest text-xs transition-all border border-red-500/20">Delete Movie</button>
                         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                            <button onClick={() => setSelectedMovieKey('')} className="bg-gray-800 text-gray-400 font-black py-4 px-8 rounded-2xl uppercase tracking-widest text-xs hover:text-white transition-colors">Discard Draft</button>
                             <button onClick={handleSave} disabled={isSaving} className="bg-white hover:bg-gray-200 text-black font-black py-4 px-16 rounded-2xl uppercase tracking-widest text-xs shadow-xl disabled:opacity-20 transform hover:scale-105 transition-all">
-                                {isSaving ? 'Saving to Database...' : 'Commit & Publish'}
+                                {isSaving ? 'Deploying...' : 'Save and Deploy'}
                             </button>
                         </div>
                     </div>
