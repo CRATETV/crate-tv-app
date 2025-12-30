@@ -51,6 +51,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [selectedMovieKey, setSelectedMovieKey] = useState<string>('');
     const [formData, setFormData] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isPurging, setIsPurging] = useState(false);
+    const [isSpotlighting, setIsSpotlighting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     
     const [newActorName, setNewActorName] = useState('');
@@ -122,7 +124,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         try {
             await onSave({ [formData.key]: formData });
             setSelectedMovieKey('');
-            onRefresh();
         } catch (err) {
             alert("Save failed. Check uplink.");
         } finally {
@@ -133,13 +134,27 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const handleDelete = async () => {
         if (!formData) return;
         if (!window.confirm(`PERMANENT ACTION: Purge "${formData.title}" from global database? This scrub is final.`)) return;
-        setIsSaving(true);
+        setIsPurging(true);
         try {
             await onDeleteMovie(formData.key);
             setSelectedMovieKey('');
-            onRefresh();
-        } catch (err) {} finally {
-            setIsSaving(false);
+        } catch (err) {
+            alert("Purge failed. Cluster may be busy.");
+        } finally {
+            setIsPurging(false);
+        }
+    };
+
+    const handleSpotlight = async () => {
+        if (!formData) return;
+        setIsSpotlighting(true);
+        try {
+            await onSetNowStreaming(formData.key);
+            setSelectedMovieKey('');
+        } catch (err) {
+            alert("Spotlight update failed.");
+        } finally {
+            setIsSpotlighting(false);
         }
     };
 
@@ -212,17 +227,18 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                 </div>
             ) : (
                 <div className="bg-[#0f0f0f] rounded-[2.5rem] border border-white/5 p-8 md:p-12 space-y-12 animate-[fadeIn_0.3s_ease-out]">
-                    <div className="flex justify-between items-center border-b border-white/5 pb-10">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/5 pb-10 gap-6">
                         <div>
                             <h3 className="text-4xl font-black text-white uppercase tracking-tighter">{formData.title || 'Draft Master'}</h3>
                             <p className="text-[10px] text-gray-600 font-black uppercase mt-2 tracking-[0.4em]">UUID: {formData.key}</p>
                         </div>
-                        <div className="flex gap-4">
+                        <div className="flex flex-wrap gap-4">
                             <button 
-                                onClick={() => { onSetNowStreaming(formData.key); setSelectedMovieKey(''); }} 
-                                className="bg-red-600/10 border border-red-500/30 text-red-500 px-6 py-3 rounded-xl uppercase text-[10px] font-black hover:bg-red-600 hover:text-white transition-all shadow-lg"
+                                onClick={handleSpotlight}
+                                disabled={isSpotlighting}
+                                className="bg-red-600/10 border border-red-500/30 text-red-500 px-6 py-3 rounded-xl uppercase text-[10px] font-black hover:bg-red-600 hover:text-white transition-all shadow-lg disabled:opacity-50"
                             >
-                                Set as Spotlight
+                                {isSpotlighting ? 'Syncing Spotlight...' : 'Set as Spotlight'}
                             </button>
                             <button onClick={() => setSelectedMovieKey('')} className="bg-white/5 text-gray-400 px-6 py-3 rounded-xl uppercase text-[10px] font-black">Catalog Root</button>
                         </div>
@@ -310,7 +326,13 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                         </div>
                     </div>
                     <div className="pt-12 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-6">
-                        <button onClick={handleDelete} className="text-gray-600 hover:text-red-500 font-black uppercase text-[10px] tracking-widest transition-colors">Purge Global Manifest</button>
+                        <button 
+                            onClick={handleDelete} 
+                            disabled={isPurging}
+                            className="text-gray-600 hover:text-red-500 font-black uppercase text-[10px] tracking-widest transition-colors disabled:opacity-20"
+                        >
+                            {isPurging ? 'Purging Global Record...' : 'Purge Global Manifest'}
+                        </button>
                         <button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-black py-5 px-20 rounded-2xl uppercase tracking-[0.2em] shadow-2xl shadow-red-900/40 transition-all active:scale-95 disabled:opacity-20">
                             {isSaving ? 'Synchronizing Cluster...' : 'Commit Changes'}
                         </button>

@@ -29,7 +29,6 @@ const App: React.FC = () => {
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [activeParties, setActiveParties] = useState<Record<string, WatchPartyState>>({});
     
-    // Listen for live watch parties to inform the spotlight button
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
@@ -69,9 +68,11 @@ const App: React.FC = () => {
         return movies[keys[0]] || null;
     }, [movies, categories.nowStreaming]);
 
-    // Check if the spotlight movie is currently in a live watch party
+    // SECURE CHECK: Must be 'live' in DB AND enabled in movie metadata to show the Live button
     const isNowStreamingLive = useMemo(() => {
-        return nowStreamingMovie ? !!activeParties[nowStreamingMovie.key] : false;
+        if (!nowStreamingMovie) return false;
+        const partyState = activeParties[nowStreamingMovie.key];
+        return !!partyState && nowStreamingMovie.isWatchPartyEnabled === true;
     }, [nowStreamingMovie, activeParties]);
 
     const searchResults = useMemo(() => {
@@ -94,8 +95,7 @@ const App: React.FC = () => {
     const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
     
     const handlePlayMovie = (movie: Movie) => {
-        // Redirect logic: If it's live, go to watchparty, otherwise go to standard player
-        const path = activeParties[movie.key] 
+        const path = (activeParties[movie.key] && movie.isWatchPartyEnabled)
             ? `/watchparty/${movie.key}` 
             : `/movie/${movie.key}?play=true`;
         
@@ -117,8 +117,8 @@ const App: React.FC = () => {
 
     if (isLoading) return <LoadingSpinner />;
 
-    // Detect if ANY watch party is live for the top banner
-    const livePartyKey = Object.keys(activeParties)[0];
+    // Detect ANY live party that is also enabled in catalog
+    const livePartyKey = Object.keys(activeParties).find(key => movies[key]?.isWatchPartyEnabled);
     const livePartyMovie = livePartyKey ? movies[livePartyKey] : null;
 
     return (
@@ -176,8 +176,6 @@ const App: React.FC = () => {
                                 const titleLower = (typedCategory.title || '').toLowerCase();
                                 
                                 if (key === 'featured' || key === 'nowStreaming' || key === 'publicDomainIndie') return null;
-                                
-                                // DEDUPLICATION & HOLIDAY LOGIC
                                 if ((key === 'cratemas' || titleLower === 'cratemas') && !settings.isHolidayModeActive) return null;
                                 
                                 const categoryMovies = typedCategory.movieKeys

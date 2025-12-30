@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -100,8 +99,9 @@ const WatchPartyControlRoom: React.FC<{
     movie: Movie;
     partyState: WatchPartyState | undefined;
     onStartParty: () => void;
+    onEndParty: () => void;
     onSyncState: (state: Partial<WatchPartyState>) => void;
-}> = ({ movie, partyState, onStartParty, onSyncState }) => {
+}> = ({ movie, partyState, onStartParty, onEndParty, onSyncState }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const { user } = useAuth();
     const lastSyncTime = useRef(0);
@@ -110,7 +110,6 @@ const WatchPartyControlRoom: React.FC<{
     const handlePause = () => videoRef.current && onSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime });
     const handleSeeked = () => videoRef.current && onSyncState({ currentTime: videoRef.current.currentTime });
     
-    // Periodically sync time while playing to keep viewers in check
     const handleTimeUpdate = () => {
         const video = videoRef.current;
         if (video && !video.paused && (Date.now() - lastSyncTime.current > 5000)) {
@@ -123,8 +122,6 @@ const WatchPartyControlRoom: React.FC<{
         const video = videoRef.current;
         if (!video || !partyState) return;
         
-        // This logic is for the admin's player to reflect the canonical state.
-        // It's less critical since the admin is the source of truth, but good for consistency.
         if (partyState.isPlaying && video.paused) {
             video.play().catch(e => console.warn("Admin autoplay was prevented", e));
         } else if (!partyState.isPlaying && !video.paused) {
@@ -137,11 +134,18 @@ const WatchPartyControlRoom: React.FC<{
     }, [partyState]);
     
     const status = getPartyStatusText(movie, partyState);
-    const canStart = movie.isWatchPartyEnabled && movie.watchPartyStartTime && new Date() >= new Date(movie.watchPartyStartTime) && partyState?.status === 'waiting';
+    const canStart = movie.isWatchPartyEnabled && movie.watchPartyStartTime && new Date() >= new Date(movie.watchPartyStartTime) && (partyState?.status === 'waiting' || !partyState);
 
     return (
         <div className="mb-8 bg-black/50 p-6 rounded-lg border-2 border-pink-500">
-            <h2 className="text-2xl font-bold text-white mb-4">Current Watch Party Control Room</h2>
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-white">Current Watch Party Control Room</h2>
+                {partyState?.status === 'live' && (
+                    <button onClick={onEndParty} className="bg-red-600/10 text-red-500 border border-red-500/30 px-4 py-2 rounded-lg font-black text-xs uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all">
+                        Kill Session (End Party)
+                    </button>
+                )}
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-4">
                     <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
@@ -183,18 +187,13 @@ const WatchPartyControlRoom: React.FC<{
     );
 };
 
-// Correctly formats a UTC ISO string for a datetime-local input, accounting for timezone.
 const formatISOForInput = (isoString?: string): string => {
     if (!isoString) return '';
     try {
         const date = new Date(isoString);
         if (isNaN(date.getTime())) return '';
-        
-        // Create a new date that is offset by the timezone, so the final ISO string's YYYY-MM-DDTHH:MM part matches the local time.
-        const tzoffset = date.getTimezoneOffset() * 60000; //offset in milliseconds
-        const localISOTime = new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
-        
-        return localISOTime;
+        const tzoffset = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
     } catch (e) {
         return '';
     }
@@ -206,16 +205,7 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
         onChange({ isWatchPartyEnabled: e.target.checked });
     };
 
-    const handlePaidToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
-        onChange({ isWatchPartyPaid: e.target.checked });
-    };
-
-    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        onChange({ watchPartyPrice: parseFloat(e.target.value) || 0 });
-    };
-
     const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        // Convert the local datetime-local string to a UTC ISO string before saving
         if (e.target.value) {
             const localDate = new Date(e.target.value);
             onChange({ watchPartyStartTime: localDate.toISOString() });
@@ -240,27 +230,6 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
                     <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-pink-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
                 </label>
             </td>
-             <td className="p-3">
-                <div className="flex items-center gap-3">
-                    <label className="relative inline-flex items-center cursor-pointer" title="Make this a paid event">
-                        <input type="checkbox" checked={movie.isWatchPartyPaid || false} onChange={handlePaidToggle} className="sr-only peer" />
-                        <div className="w-9 h-5 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-green-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
-                    </label>
-                    {movie.isWatchPartyPaid && (
-                        <div className="relative">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                            <input
-                                type="number"
-                                value={movie.watchPartyPrice || 0}
-                                onChange={handlePriceChange}
-                                className="form-input !py-1 !pl-5 text-xs w-20"
-                                step="0.01"
-                                min="0"
-                            />
-                        </div>
-                    )}
-                </div>
-            </td>
             <td className="p-3">
                 <input
                     type="datetime-local"
@@ -274,8 +243,6 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
     );
 };
 
-
-// --- MAIN COMPONENT ---
 
 const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (movie: Movie) => Promise<void>; }> = ({ allMovies, onSave }) => {
     const [movieSettings, setMovieSettings] = useState<Record<string, Movie>>(allMovies);
@@ -308,12 +275,10 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         const liveOrWaiting = enabledMovies.find(m => {
             const state = partyStates[m.key];
             const startTime = new Date(m.watchPartyStartTime!);
-            // A party is considered "active" if it's within the 4-hour window from its start time
             return startTime <= now && (now.getTime() - startTime.getTime() < 4 * 60 * 60 * 1000);
         });
 
         if (liveOrWaiting) return liveOrWaiting;
-
         const nextUpcoming = enabledMovies.find(m => new Date(m.watchPartyStartTime!) > now);
         return nextUpcoming || null;
     }, [movieSettings, partyStates]);
@@ -340,7 +305,6 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
             await Promise.all(changedMovies.map(movie => onSave(movie)));
             setSaveStatus('success');
         } catch (error) {
-            console.error("Failed to save watch party settings:", error);
             setSaveStatus('error');
         } finally {
             setIsSaving(false);
@@ -352,7 +316,6 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         if (!user || !currentPartyMovie) return;
         const db = getDbInstance();
         if (!db) return;
-
         const syncRef = db.collection('watch_parties').doc(currentPartyMovie.key);
         await syncRef.set({
             ...newState,
@@ -370,12 +333,15 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ movieKey: currentPartyMovie.key, password }),
             });
-            if (!response.ok) {
-                throw new Error((await response.json()).error || 'Failed to start party.');
-            }
-        } catch (error) {
-            alert(`Error: Could not start the party. ${(error as Error).message}`);
-        }
+            if (!response.ok) throw new Error((await response.json()).error || 'Failed');
+        } catch (error) {}
+    };
+
+    const handleEndParty = async () => {
+        if (!currentPartyMovie || !window.confirm("This will kill the live session for everyone. Are you sure?")) return;
+        const db = getDbInstance();
+        if (!db) return;
+        await db.collection('watch_parties').doc(currentPartyMovie.key).set({ status: 'ended', isPlaying: false }, { merge: true });
     };
 
     const filteredMovies = (Object.values(allMovies) as Movie[])
@@ -390,6 +356,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                     movie={currentPartyMovie}
                     partyState={partyStates[currentPartyMovie.key]}
                     onStartParty={handleStartParty}
+                    onEndParty={handleEndParty}
                     onSyncState={handleSyncState}
                 />
             )}
@@ -424,7 +391,6 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                                 <th className="p-3">Film Title</th>
                                 <th className="p-3">Status</th>
                                 <th className="p-3">Enabled</th>
-                                <th className="p-3">Paid</th>
                                 <th className="p-3">Start Time</th>
                             </tr>
                         </thead>

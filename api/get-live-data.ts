@@ -11,53 +11,55 @@ export async function GET(request: Request) {
 
         if (data && data.movies) {
             const finalMovies: Record<string, Movie> = {};
-            const processedTitles = new Set<string>();
+            const processedFingerprints = new Set<string>();
             
-            // PRIORITY DEDUPLICATION: Ensure "Gemini Time Service" and "Fighter" only appear once
             const movieArray = Object.values(data.movies) as Movie[];
             
-            // Sort: Movies with playable files and posters always take precedence over drafts
+            // PRIORITY SORT: Movies with video files and posters always take precedence
             movieArray.sort((a, b) => {
-                const aScore = (a.fullMovie ? 10 : 0) + (a.poster ? 5 : 0);
-                const bScore = (b.fullMovie ? 10 : 0) + (b.poster ? 5 : 0);
+                const aScore = (a.fullMovie ? 100 : 0) + (a.poster ? 50 : 0) + (a.synopsis?.length > 10 ? 10 : 0);
+                const bScore = (b.fullMovie ? 100 : 0) + (b.poster ? 50 : 0) + (b.synopsis?.length > 10 ? 10 : 0);
                 return bScore - aScore;
             });
 
             movieArray.forEach((m: Movie) => {
                 if (!m || !m.title || !m.key) return;
                 
-                const titleLower = m.title.toLowerCase().trim();
+                // NORMALIZATION: Handle "Gemeni" vs "Gemini" and spacing issues
+                const fingerprint = m.title
+                    .toLowerCase()
+                    .replace(/gemeni/g, 'gemini') // Automatic correction for common typo
+                    .replace(/[^a-z0-9]/g, '')    // Strip all special chars and spaces
+                    .trim();
                 
-                // SCRUB 1: Block placeholders
-                if (titleLower.includes('untitled') || titleLower === 'draft master') return;
+                // Block placeholders
+                if (fingerprint.includes('untitled') || fingerprint === 'draftmaster') return;
                 
-                // SCRUB 2: Enforce Single-Entry for Gemini, Fighter, and all other titles
-                if (processedTitles.has(titleLower)) return;
+                // Enforce Single-Entry per normalized fingerprint
+                if (processedFingerprints.has(fingerprint)) return;
                 
-                processedTitles.add(titleLower);
+                processedFingerprints.add(fingerprint);
                 finalMovies[m.key] = m;
             });
 
             data.movies = finalMovies;
         }
 
-        // CATEGORY SCRUBBING: Ensure no duplicate rows (like Cratemas) appear
         if (data.categories) {
             const finalCategories: Record<string, Category> = {};
-            const processedRowTitles = new Set<string>();
-
-            // System rows that are protected from deduplication logic
+            const processedRowFingerprints = new Set<string>();
             const protectedKeys = ['nowStreaming', 'featured', 'publicDomainIndie'];
 
             Object.entries(data.categories).forEach(([key, category]) => {
                 const cat = category as Category;
                 if (!cat || !cat.title) return;
                 
-                const titleLower = cat.title.toLowerCase().trim();
+                const fingerprint = cat.title.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
                 
-                // If it's a duplicate row title (e.g. "Cratemas"), merge the keys and skip creating a new row
-                if (processedRowTitles.has(titleLower) && !protectedKeys.includes(key)) {
-                    const existingKey = Object.keys(finalCategories).find(k => finalCategories[k].title.toLowerCase().trim() === titleLower);
+                if (processedRowFingerprints.has(fingerprint) && !protectedKeys.includes(key)) {
+                    const existingKey = Object.keys(finalCategories).find(k => 
+                        finalCategories[k].title.toLowerCase().replace(/[^a-z0-9]/g, '').trim() === fingerprint
+                    );
                     if (existingKey) {
                         const mergedKeys = Array.from(new Set([...finalCategories[existingKey].movieKeys, ...(cat.movieKeys || [])]));
                         finalCategories[existingKey].movieKeys = mergedKeys.filter(k => !!data.movies[k]);
@@ -65,29 +67,21 @@ export async function GET(request: Request) {
                     return; 
                 }
 
-                if (!protectedKeys.includes(key)) {
-                    processedRowTitles.add(titleLower);
-                }
-
-                // Filter out movies that were purged in the movie scrub phase
+                if (!protectedKeys.includes(key)) processedRowFingerprints.add(fingerprint);
                 if (Array.isArray(cat.movieKeys)) {
                     cat.movieKeys = cat.movieKeys.filter((k: string) => !!data.movies[k]);
                 }
-                
                 finalCategories[key] = cat;
             });
 
             data.categories = finalCategories;
         }
 
-        // INSTANT REFLECTION: Set cache to 0 to bypass all ISP/Browser caching for professional sync
-        const cacheHeader = 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
-
         return new Response(JSON.stringify(data), {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
-                'Cache-Control': cacheHeader,
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
                 'Pragma': 'no-cache',
                 'Expires': '0'
             },

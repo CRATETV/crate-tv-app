@@ -1,17 +1,17 @@
 import { GoogleGenAI, GenerateContentParameters, GenerateContentResponse } from '@google/genai';
 
 /**
- * ELITE RETRY ENGINE V5.1
- * Specifically hardened for Error 8 (Resource Exhausted) on Paid Tiers.
+ * ELITE RETRY ENGINE V5.2
+ * Hardened for Paid Tiers. 10 Retry Cycle.
  */
 export async function generateContentWithRetry(
   params: GenerateContentParameters,
-  maxRetries: number = 5
+  maxRetries: number = 10
 ): Promise<GenerateContentResponse> {
   let lastError: any;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    // CRITICAL: Re-instantiate client per attempt to ensure clean environmental state
+    // Fresh client instance per call
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     try {
@@ -21,9 +21,6 @@ export async function generateContentWithRetry(
       lastError = error;
       const errorMessage = error.message || "";
       
-      // ERROR 8 / 429 DETECTION
-      // Code 8 is 'Resource Exhausted'. On paid tiers, this is typically 
-      // a Requests Per Minute (RPM) threshold rather than a daily cap.
       const isTransientLimit = 
           errorMessage.includes("429") || 
           errorMessage.includes("RESOURCE_EXHAUSTED") ||
@@ -34,26 +31,24 @@ export async function generateContentWithRetry(
 
       if (isTransientLimit) {
           if (attempt < maxRetries) {
-              // FOR PAID TIERS: Jittered exponential backoff clears the RPM bucket
-              const baseDelay = Math.pow(2.2, attempt + 1) * 1000;
+              // Linear-Exponential Hybrid Backoff
+              const baseDelay = (attempt < 3) ? 1000 : Math.pow(2, attempt) * 1000;
               const jitter = Math.random() * 1000; 
               const totalDelay = baseDelay + jitter;
               
-              console.warn(`[Crate AI] Throttled (Attempt ${attempt + 1}/${maxRetries}). Retrying in ${totalDelay.toFixed(0)}ms...`);
+              console.warn(`[Crate AI] Paid Tier Throttled (Attempt ${attempt + 1}/${maxRetries}). Backing off ${totalDelay.toFixed(0)}ms...`);
               await new Promise(resolve => setTimeout(resolve, totalDelay));
               continue;
           }
           
-          // Custom error flag for UI handling
-          const finalError = new Error("AI nodes are at peak capacity. Database record saved, enrichment deferred.");
+          const finalError = new Error("AI nodes are at peak capacity. Please retry the operation in 30 seconds.");
           (finalError as any).isQuotaError = true;
           (finalError as any).code = 8;
           throw finalError;
       }
 
-      // 503 SERVICE UNAVAILABLE
       if (errorMessage.includes("503") && attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 1500 * (attempt + 1)));
+        await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1)));
         continue;
       }
       

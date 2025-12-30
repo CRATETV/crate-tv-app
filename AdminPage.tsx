@@ -123,27 +123,22 @@ const AdminPage: React.FC = () => {
             });
             const result = await response.json();
             if (response.ok && result.success) {
-                setSaveMessage(`Cluster synchronized.`);
-                fetchAllData(pass!);
+                setSaveMessage(`Sync Complete.`);
+                // Force a deep refresh of all local data models
+                await fetchAllData(pass!);
             } else {
-                throw new Error(result.error);
+                throw new Error(result.error || "Operation rejected by server.");
             }
         } catch (err) {
-            setSaveMessage("Sync acknowledged.");
+            setSaveMessage(err instanceof Error ? err.message : "Synchronization failed.");
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleSetNowStreaming = async (movieKey: string) => {
-        setIsSaving(true);
-        const pass = sessionStorage.getItem('adminPassword');
-        const newCategories = { ...categories };
-        newCategories.nowStreaming = {
-            title: 'Now Streaming',
-            movieKeys: [movieKey]
-        };
-        await handleSaveData('categories', newCategories);
+        // Direct route to spotlight sync
+        await handleSaveData('set_now_streaming', { key: movieKey });
     };
 
     const handlePromoteToCatalog = (item: MoviePipelineEntry) => {
