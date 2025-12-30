@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category, Episode } from '../types';
 import DirectorCreditsModal from './DirectorCreditsModal';
@@ -111,6 +110,14 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   }, [movie.key, rentals, isRented]);
 
   const handlePlayButtonClick = (url?: string) => {
+      if (!released) {
+          // Tease with trailer if not released
+          if (movie.trailer) {
+              window.history.pushState({}, '', `/movie/${movie.key}?play=true&teaser=true`);
+              window.dispatchEvent(new Event('pushstate'));
+          }
+          return;
+      }
       if (needsPurchase) {
           setShowPurchaseModal(true);
           return;
@@ -187,6 +194,14 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                         <div className="bg-blue-600 text-white font-black px-8 py-4 rounded-xl shadow-lg flex flex-col sm:flex-row items-center gap-4">
                             <span className="uppercase text-xs tracking-widest bg-white/20 px-2 py-0.5 rounded">Premieres Soon</span>
                             <Countdown targetDate={movie.releaseDateTime!} onEnd={() => setReleased(true)} className="text-lg font-mono" />
+                            {movie.trailer && (
+                                <button 
+                                    onClick={() => handlePlayButtonClick()}
+                                    className="ml-4 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-xs uppercase tracking-widest transition-colors"
+                                >
+                                    Watch Trailer
+                                </button>
+                            )}
                         </div>
                     )}
                     

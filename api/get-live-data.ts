@@ -1,5 +1,5 @@
 import { getApiData } from './_lib/data.js';
-import { Movie } from '../types.js';
+import { Movie, Category } from '../types.js';
 
 export async function GET(request: Request) {
     try {
@@ -10,34 +10,63 @@ export async function GET(request: Request) {
 
         if (data && data.movies) {
             const finalMovies: Record<string, Movie> = {};
+            const processedTitles = new Set<string>();
             
-            Object.values(data.movies).forEach((movie: any) => {
-                const m = movie as Movie;
+            // DEDUPLICATION ENGINE: Prioritize movies with full content
+            const movieArray = Object.values(data.movies) as Movie[];
+            
+            // Sort so movies with a fullMovie URL come first
+            movieArray.sort((a, b) => {
+                if (a.fullMovie && !b.fullMovie) return -1;
+                if (!a.fullMovie && b.fullMovie) return 1;
+                return 0;
+            });
+
+            movieArray.forEach((m: Movie) => {
                 if (!m || !m.title || !m.key) return;
-
-                const titleLower = m.title.toLowerCase();
-
-                // SCRUB 1: Aggressively remove any draft or "Untitled" entries
+                
+                const titleLower = m.title.toLowerCase().trim();
+                
+                // SCRUB 1: Remove "Untitled" or "Draft" placeholder entries
                 if (titleLower.includes('untitled') || titleLower === 'draft master') return;
-
-                // SCRUB 2: Handle "Fighter" duplicates. 
-                // Only keep the primary feature if multiple "Fighter" entries exist.
-                if (titleLower === 'fighter' && m.key !== 'fighter' && !m.fullMovie) return;
-
+                
+                // SCRUB 2: Deduplicate "Fighter", "Gemini Time Service", etc.
+                if (processedTitles.has(titleLower)) return;
+                
+                processedTitles.add(titleLower);
                 finalMovies[m.key] = m;
             });
 
             data.movies = finalMovies;
         }
 
-        // SCRUB 3: Clean categories of orphaned keys (films removed by scrub or deletion)
+        // CATEGORY SCRUBBING: Remove duplicate rows and orphaned keys
         if (data.categories) {
-            Object.keys(data.categories).forEach(catKey => {
-                const cat = data.categories[catKey];
-                if (cat && Array.isArray(cat.movieKeys)) {
+            const finalCategories: Record<string, Category> = {};
+            const processedCatTitles = new Set<string>();
+
+            Object.entries(data.categories).forEach(([key, category]) => {
+                const cat = category as Category;
+                if (!cat || !cat.title) return;
+                
+                const titleLower = cat.title.toLowerCase().trim();
+                
+                // Merge or Skip duplicate row titles (e.g., Cratemas)
+                if (processedCatTitles.has(titleLower) && key !== 'featured' && key !== 'nowStreaming') {
+                    return; 
+                }
+
+                processedCatTitles.add(titleLower);
+
+                // Filter out movies that were scrubbed
+                if (Array.isArray(cat.movieKeys)) {
                     cat.movieKeys = cat.movieKeys.filter((k: string) => !!data.movies[k]);
                 }
+                
+                finalCategories[key] = cat;
             });
+
+            data.categories = finalCategories;
         }
 
         const cacheHeader = noCache 

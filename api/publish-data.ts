@@ -94,7 +94,9 @@ export async function POST(request: Request) {
             }
             case 'delete_movie': {
                 const { key } = data;
+                // Deep delete movie record
                 batch.delete(db.collection('movies').doc(key));
+                // Destructive scrub from categories
                 const categoriesSnap = await db.collection('categories').get();
                 categoriesSnap.forEach(doc => {
                     const c = doc.data();
@@ -110,12 +112,12 @@ export async function POST(request: Request) {
                 }
                 break;
             case 'categories':
-                // ATOMIC FIX: Explicitly find and delete rows removed in the UI
+                // ATOMIC SYNC: Remove rows in DB that are missing from incoming data set
                 const currentCatsSnap = await db.collection('categories').get();
                 const incomingKeys = Object.keys(data);
                 
                 currentCatsSnap.forEach(doc => {
-                    // Protected system rows
+                    // System-protected rows (Spotlight + Feature)
                     if (doc.id === 'nowStreaming' || doc.id === 'featured') return;
                     
                     // If row in DB is NOT in the incoming update, it's a deletion. Purge it.
@@ -125,7 +127,7 @@ export async function POST(request: Request) {
                 });
 
                 for (const [id, docData] of Object.entries(data)) {
-                    batch.set(db.collection('categories').doc(id), docData as object, { merge: false }); // merge: false ensures full document replacement
+                    batch.set(db.collection('categories').doc(id), docData as object, { merge: false }); // merge: false ensures exact overwrite
                 }
                 break;
             case 'settings':

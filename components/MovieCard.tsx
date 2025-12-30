@@ -70,7 +70,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
   };
 
   const handleMouseEnter = () => {
-    if (isActuallyComingSoon || (!movie.trailer && !movie.fullMovie)) return;
+    // Tease the trailer for coming soon, but never the full movie
+    if (isActuallyComingSoon && !movie.trailer) return;
     
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     if (previewLimitTimeoutRef.current) clearTimeout(previewLimitTimeoutRef.current);
@@ -94,7 +95,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
 
   const handleMetadataLoaded = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const video = e.currentTarget;
-    if (video.duration > 0) {
+    if (video.duration > 0 && !isActuallyComingSoon) {
         video.currentTime = Math.min(60, video.duration * 0.3);
     }
   };
@@ -106,7 +107,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
     };
   }, []);
 
-  const videoSrc = movie.trailer || movie.fullMovie;
+  const videoSrc = movie.trailer || (!isActuallyComingSoon ? movie.fullMovie : '');
 
   const cleanSynopsis = (html: string) => {
     const doc = new DOMParser().parseFromString(html, 'text/html');

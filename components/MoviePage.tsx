@@ -12,7 +12,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import PauseOverlay from './PauseOverlay';
 import MovieDetailsModal from './MovieDetailsModal';
-import DirectorCreditsModal from './DirectorCreditsModal';
 
 interface MoviePageProps {
   movieKey: string;
@@ -69,7 +68,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   const playContent = useCallback(async () => {
     if (videoRef.current && !hasTrackedViewRef.current && movie?.key) {
-        // PROFESSIONAL STANDARD: Force orientation and prevent downloads
+        // SECURE CINEMA MODE: Force landscape on mobile
         try {
             if (containerRef.current?.requestFullscreen) {
                 await containerRef.current.requestFullscreen();
@@ -124,7 +123,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     autoPlay 
                                     onPause={() => setIsPaused(true)} 
                                     onPlay={() => setIsPaused(false)}
-                                    controlsList="nodownload" // SECURE: Remove download button
+                                    controlsList="nodownload" // SECURE: Prevents download button in browser
                                 />
                                 {isPaused && <PauseOverlay movie={movie} isLiked={likedMoviesArray.includes(movieKey)} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => videoRef.current?.play()} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={() => toggleLikeMovie(movieKey)} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
                             </div>
@@ -138,9 +137,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 ) : (
                     <div className="relative w-full h-full flex items-center justify-center">
                          <img src={movie.poster} className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-20" />
-                         <img src={movie.poster} className="relative w-full h-full object-contain max-w-2xl rounded-lg shadow-2xl" />
-                         <button onClick={() => hasAccess ? setPlayerMode('full') : setIsPurchaseModalOpen(true)} className="absolute bg-white/10 backdrop-blur-md rounded-full p-8 border-4 border-white/20 hover:scale-110 transition-all shadow-2xl">
-                            <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
+                         <img src={movie.poster} className="relative w-full h-full object-contain max-w-2xl rounded-lg shadow-2xl border border-white/5" />
+                         <button onClick={() => hasAccess ? setPlayerMode('full') : setIsPurchaseModalOpen(true)} className="absolute bg-white/10 backdrop-blur-md rounded-full p-8 border-4 border-white/20 hover:scale-110 transition-all shadow-2xl group">
+                            <svg className="w-16 h-16 text-white group-hover:text-red-500 transition-colors" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
                          </button>
                     </div>
                 )}
@@ -154,7 +153,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             <p className="text-red-500 font-black uppercase tracking-[0.4em] text-xs">Dir. {movie.director}</p>
                         </div>
                         <div className="flex gap-4 w-full md:w-auto">
-                            <button onClick={() => setIsSupportModalOpen(true)} className="flex-1 md:flex-none bg-purple-600 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl">Support Creator</button>
+                            <button onClick={() => setIsSupportModalOpen(true)} className="flex-1 md:flex-none bg-purple-600 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:bg-purple-700 transition-all active:scale-95">Support Creator</button>
                             <button onClick={() => setIsDetailsModalOpen(true)} className="flex-1 md:flex-none bg-white/5 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs border border-white/10">Full Credits</button>
                         </div>
                     </div>

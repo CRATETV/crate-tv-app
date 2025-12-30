@@ -123,7 +123,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             setSelectedMovieKey('');
             onRefresh();
         } catch (err) {
-            alert("Uplink failed. Check sync state.");
+            alert("Save failed. Check uplink.");
         } finally {
             setIsSaving(false);
         }
@@ -142,10 +142,26 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         }
     };
 
-    // FIX: Type casting for Sort/Filter efficiency
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+
+    // Expiry logic: 12 months from publishedAt
+    const getLicensingStatus = () => {
+        if (!formData?.publishedAt) return null;
+        const pub = new Date(formData.publishedAt);
+        const exp = new Date(pub);
+        exp.setFullYear(exp.getFullYear() + 1);
+        const diff = exp.getTime() - new Date().getTime();
+        const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        return { 
+            expiry: exp.toLocaleDateString(), 
+            daysLeft, 
+            isUrgent: daysLeft < 30 && daysLeft > 0 
+        };
+    };
+
+    const license = getLicensingStatus();
 
     return (
         <div className="space-y-6 pb-20">
@@ -201,18 +217,24 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Title" className="form-input bg-black/40" />
                                 <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={6} placeholder="Synopsis" className="form-input bg-black/40" />
                                 <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Director" className="form-input bg-black/40" />
+                                <div className="pt-4">
+                                     <label className="form-label">Premiere Release Date (Sets 'Coming Soon' if future)</label>
+                                     <input type="datetime-local" name="releaseDateTime" value={formData.releaseDateTime ? new Date(new Date(formData.releaseDateTime).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''} onChange={(e) => setFormData({...formData, releaseDateTime: e.target.value ? new Date(e.target.value).toISOString() : ''})} className="form-input bg-black/40" />
+                                </div>
                             </section>
+
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Paywall</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Licensing & Contracts</h4>
                                 <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-4">
-                                    <label className="flex items-center gap-3 cursor-pointer group">
-                                        <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
-                                        <span className="text-sm font-bold text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Lock behind Paywall</span>
-                                    </label>
-                                    {formData.isForSale && (
-                                        <div className="pt-2 animate-[fadeIn_0.2s_ease-out]">
-                                            <label className="form-label">Rental Price (USD)</label>
-                                            <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} step="0.01" className="form-input bg-black/40" />
+                                    <div>
+                                        <label className="form-label">Publication Date (Internal Tracking)</label>
+                                        <input type="date" value={formData.publishedAt?.split('T')[0] || ''} onChange={(e) => setFormData({...formData, publishedAt: e.target.value ? new Date(e.target.value).toISOString() : ''})} className="form-input bg-black/40" />
+                                    </div>
+                                    {license && (
+                                        <div className={`p-4 rounded-xl border ${license.isUrgent ? 'bg-red-950/20 border-red-500/30' : 'bg-green-950/10 border-green-500/20'}`}>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Non-Exclusive Window</p>
+                                            <p className="text-sm font-bold text-white">Expires: {license.expiry}</p>
+                                            <p className={`text-xs mt-1 font-bold ${license.isUrgent ? 'text-red-500' : 'text-gray-500'}`}>{license.daysLeft > 0 ? `${license.daysLeft} days remaining` : 'EXPIRED'}</p>
                                         </div>
                                     )}
                                 </div>
@@ -224,6 +246,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-4">
                                     <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} placeholder="High-Bitrate Film URL" className="form-input bg-black/40" />
                                     <S3Uploader label="Ingest Film Master" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
+                                    <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} placeholder="Trailer URL (Required for 'Coming Soon' Tease)" className="form-input bg-black/40" />
+                                    <S3Uploader label="Ingest Teaser/Trailer" onUploadSuccess={(url) => setFormData({...formData, trailer: url})} />
                                     <input type="text" name="poster" value={formData.poster} onChange={handleChange} placeholder="Poster URL" className="form-input bg-black/40" />
                                     <S3Uploader label="Ingest Poster" onUploadSuccess={(url) => setFormData({...formData, poster: url})} />
                                 </div>
