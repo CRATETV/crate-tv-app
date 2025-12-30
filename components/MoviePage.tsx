@@ -72,6 +72,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const hasTrackedViewRef = useRef(false);
 
   const canCollectDonations = useMemo(() => {
@@ -79,7 +80,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     const isVintage = allCategories.publicDomainIndie?.movieKeys?.includes(movie.key);
     const isCopyrightRestricted = movie.hasCopyrightMusic === true;
     const isManualDisabled = movie.isSupportEnabled === false;
-    return !isVintage && !isCopyrightRestricted && !isManualDisabled && !movie.isForSale;
+    return !isVintage && !isCopyrightRestricted && !isManualDisabled;
   }, [movie, allCategories]);
 
   const hasAccess = useMemo(() => {
@@ -99,6 +100,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   }, [movie, hasAccess]);
 
   const handleGoHome = useCallback(() => {
+    if (document.fullscreenElement) document.exitFullscreen();
     window.history.pushState({}, '', '/');
     window.dispatchEvent(new Event('pushstate'));
   }, []);
@@ -107,6 +109,18 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   const playContent = useCallback(async () => {
     if (videoRef.current && !hasTrackedViewRef.current && movie?.key) {
+        // Attempt to lock orientation on mobile
+        try {
+            if (containerRef.current?.requestFullscreen) {
+                await containerRef.current.requestFullscreen();
+                if ('orientation' in screen && (screen.orientation as any).lock) {
+                    await (screen.orientation as any).lock('landscape');
+                }
+            }
+        } catch (e) {
+            console.warn("Fullscreen/Orientation lock skipped:", e);
+        }
+
         hasTrackedViewRef.current = true;
         const token = await getUserIdToken();
         if (token) {
@@ -130,11 +144,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const embedUrl = getEmbedUrl(movie.fullMovie);
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#050505] text-white">
+    <div ref={containerRef} className="flex flex-col min-h-screen bg-[#050505] text-white">
         {playerMode !== 'full' && <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} />}
         
         <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
-            <div className="relative w-full aspect-video bg-black shadow-2xl overflow-hidden">
+            <div className={`relative w-full ${playerMode === 'full' ? 'h-screen' : 'aspect-video'} bg-black shadow-2xl overflow-hidden`}>
                 {showPostPlay && <PostPlayOverlay movies={Object.values(allMovies).slice(0, 10)} onSelect={(m) => window.location.href = `/movie/${m.key}?play=true`} onHome={handleGoHome} />}
                 
                 {playerMode === 'full' ? (
@@ -143,21 +157,21 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen></iframe>
                         ) : (
                             <>
-                                <video ref={videoRef} src={movie.fullMovie} className="w-full h-full" controls={!isPaused} playsInline autoPlay onEnded={handleMovieEnd} onPause={() => setIsPaused(true)} onPlay={() => setIsPaused(false)} />
+                                <video ref={videoRef} src={movie.fullMovie} className="w-full h-full object-contain" controls={!isPaused} playsInline autoPlay onEnded={handleMovieEnd} onPause={() => setIsPaused(true)} onPlay={() => setIsPaused(false)} />
                                 {isPaused && <PauseOverlay movie={movie} isLiked={likedMoviesArray.includes(movieKey)} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => videoRef.current?.play()} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={() => toggleLikeMovie(movieKey)} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
                             </>
                         )
                     ) : (
                         <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-black/90">
                             <h2 className="text-3xl font-black uppercase mb-4 tracking-tighter">Rental Required</h2>
-                            <button onClick={() => setIsPurchaseModalOpen(true)} className="px-10 py-4 bg-green-600 text-white font-black rounded-xl">Rent Film - ${movie.salePrice?.toFixed(2)}</button>
+                            <button onClick={() => setIsPurchaseModalOpen(true)} className="px-10 py-4 bg-green-600 text-white font-black rounded-xl">Rent Film - ${movie.salePrice?.toFixed(2) || '5.00'}</button>
                         </div>
                     )
                 ) : (
                     <div className="relative w-full h-full flex items-center justify-center">
                          <img src={movie.poster} className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-20" />
                          <img src={movie.poster} className="relative w-full h-full object-contain max-w-2xl rounded-lg shadow-2xl" />
-                         <button onClick={() => hasAccess ? setPlayerMode('full') : setIsPurchaseModalOpen(true)} className="absolute bg-white/10 backdrop-blur-md rounded-full p-8 border-4 border-white/20 hover:scale-110 transition-all">
+                         <button onClick={() => hasAccess ? setPlayerMode('full') : setIsPurchaseModalOpen(true)} className="absolute bg-white/10 backdrop-blur-md rounded-full p-8 border-4 border-white/20 hover:scale-110 transition-all shadow-2xl">
                             <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
                          </button>
                     </div>
@@ -168,8 +182,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 <div className="max-w-4xl mx-auto p-10 md:p-14 space-y-10">
                     <h1 className="text-5xl md:text-8xl font-black tracking-tighter uppercase">{movie.title}</h1>
                     <div className="flex gap-4">
-                        {canCollectDonations && <button onClick={() => setIsSupportModalOpen(true)} className="bg-purple-600 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-sm">Support Creator</button>}
-                        <button onClick={() => setIsDetailsModalOpen(true)} className="bg-white/10 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-sm border border-white/10">Full Credits</button>
+                        {canCollectDonations && <button onClick={() => setIsSupportModalOpen(true)} className="bg-purple-600 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-sm shadow-xl">Support Creator</button>}
+                        <button onClick={() => setIsDetailsModalOpen(true)} className="bg-white/10 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-sm border border-white/10 hover:bg-white/20 transition-all">Full Credits</button>
                     </div>
                     <div className="text-gray-300 text-xl leading-relaxed" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
                     <RokuBanner />

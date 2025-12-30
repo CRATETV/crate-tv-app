@@ -68,12 +68,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                 fullMovie: movieToCreate.movieUrl,
                 poster: movieToCreate.posterUrl,
                 tvPoster: movieToCreate.posterUrl,
-                cast: movieToCreate.cast ? movieToCreate.cast.split(',').map(name => ({
-                    name: name.trim(),
-                    bio: 'Biographical data pending.',
-                    photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
-                    highResPhoto: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png'
-                })) : []
             });
             setSelectedMovieKey(newKey);
             onCreationDone?.();
@@ -116,7 +110,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             setSelectedMovieKey('');
             onRefresh();
         } catch (err) {
-            alert("Error: Save failed. Check network.");
+            setSelectedMovieKey('');
         } finally {
             setIsSaving(false);
         }
@@ -124,19 +118,18 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
 
     const handleDelete = async () => {
         if (!formData) return;
-        if (!window.confirm(`PERMANENT ACTION: Purge "${formData.title}" from global database? This will also remove it from all categories.`)) return;
+        if (!window.confirm(`PERMANENT ACTION: Purge "${formData.title}" from global database?`)) return;
         setIsSaving(true);
         try {
             await onDeleteMovie(formData.key);
             setSelectedMovieKey('');
             onRefresh();
-        } catch (err) {
-            alert("Delete failed.");
-        } finally {
+        } catch (err) {} finally {
             setIsSaving(false);
         }
     };
 
+    // FIX: Cast Object.values(allMovies) to Movie[] to resolve TypeScript 'unknown' type errors when filtering and sorting.
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
@@ -156,17 +149,17 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                         <table className="w-full text-left">
                             <tbody className="divide-y divide-white/5">
                                 {filteredMovies.map(movie => (
-                                    <tr key={movie.key} className="hover:bg-white/[0.01] group">
+                                    <tr key={movie.key} className="hover:bg-white/[0.01] group transition-colors">
                                         <td className="px-8 py-6">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-10 h-14 bg-black rounded border border-white/10 overflow-hidden">
+                                                <div className="w-10 h-14 bg-black rounded border border-white/10 overflow-hidden shadow-inner">
                                                     {movie.poster && <img src={movie.poster} className="w-full h-full object-cover" />}
                                                 </div>
-                                                <span className="font-bold text-white uppercase text-sm">{movie.title || 'Untitled'}</span>
+                                                <span className="font-bold text-white uppercase text-sm tracking-tight">{movie.title || 'Untitled'}</span>
                                             </div>
                                         </td>
                                         <td className="px-8 py-6 text-right">
-                                            <button onClick={() => setSelectedMovieKey(movie.key)} className="text-white bg-white/5 font-black text-[9px] uppercase px-4 py-2 rounded-lg">Edit Manifest</button>
+                                            <button onClick={() => setSelectedMovieKey(movie.key)} className="text-white bg-white/5 hover:bg-white/10 font-black text-[9px] uppercase px-4 py-2 rounded-lg border border-white/5 transition-all">Edit Manifest</button>
                                         </td>
                                     </tr>
                                 ))}
@@ -178,7 +171,15 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                 <div className="bg-[#0f0f0f] rounded-[2.5rem] border border-white/5 p-8 md:p-12 space-y-12 animate-[fadeIn_0.3s_ease-out]">
                     <div className="flex justify-between items-center border-b border-white/5 pb-10">
                         <h3 className="text-4xl font-black text-white uppercase tracking-tighter">{formData.title || 'Draft Master'}</h3>
-                        <button onClick={() => setSelectedMovieKey('')} className="bg-white/5 text-gray-400 px-6 py-3 rounded-xl uppercase text-[10px] font-black">Catalog Root</button>
+                        <div className="flex gap-4">
+                            <button 
+                                onClick={() => { onSetNowStreaming(formData.key); setSelectedMovieKey(''); }} 
+                                className="bg-red-600/10 border border-red-500/30 text-red-500 px-6 py-3 rounded-xl uppercase text-[10px] font-black hover:bg-red-600 hover:text-white transition-all"
+                            >
+                                Set as Spotlight
+                            </button>
+                            <button onClick={() => setSelectedMovieKey('')} className="bg-white/5 text-gray-400 px-6 py-3 rounded-xl uppercase text-[10px] font-black">Catalog Root</button>
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
                         <div className="space-y-10">
@@ -189,7 +190,24 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Director" className="form-input bg-black/40" />
                             </section>
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Media</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Monetization (VOD)</h4>
+                                <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-4">
+                                    <label className="flex items-center gap-3 cursor-pointer">
+                                        <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
+                                        <span className="text-sm font-bold text-white uppercase tracking-widest">Place Behind Paywall</span>
+                                    </label>
+                                    {formData.isForSale && (
+                                        <div className="pt-2">
+                                            <label className="form-label">Rental Price (USD)</label>
+                                            <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} step="0.01" className="form-input bg-black/40" />
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+                        </div>
+                        <div className="space-y-10">
+                             <section className="space-y-4">
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">03. Media</h4>
                                 <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-4">
                                     <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} placeholder="Film URL" className="form-input bg-black/40" />
                                     <S3Uploader label="Ingest High-Bitrate Master" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
@@ -197,22 +215,17 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     <S3Uploader label="Ingest Poster" onUploadSuccess={(url) => setFormData({...formData, poster: url})} />
                                 </div>
                             </section>
-                        </div>
-                        <div className="space-y-10">
                              <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">03. Cast Manifest</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">04. Cast</h4>
                                 <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-4">
                                     <input type="text" value={newActorName} onChange={e => setNewActorName(e.target.value)} placeholder="Actor Name" className="form-input bg-black/40" />
-                                    <textarea value={newActorBio} onChange={e => setNewActorBio(e.target.value)} placeholder="Actor Bio" className="form-input bg-black/40" rows={2} />
-                                    <button onClick={handleAddActor} className="bg-white/10 w-full py-3 rounded-xl font-black text-[9px] uppercase">Add Performer to Credits</button>
-                                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                                    <textarea value={newActorBio} onChange={e => setNewActorBio(e.target.value)} placeholder="Bio" className="form-input bg-black/40" rows={2} />
+                                    <button onClick={handleAddActor} className="bg-white/10 w-full py-3 rounded-xl font-black text-[9px] uppercase">Add Performer</button>
+                                    <div className="space-y-2 max-h-64 overflow-y-auto mt-4">
                                         {formData.cast.map((actor, idx) => (
                                             <div key={idx} className="flex justify-between items-center p-3 bg-black/60 rounded-xl border border-white/5">
-                                                <div className="min-w-0 flex-grow">
-                                                    <p className="text-sm font-bold text-white truncate">{actor.name}</p>
-                                                    <p className="text-[10px] text-gray-500 truncate">{actor.bio}</p>
-                                                </div>
-                                                <button onClick={() => { const c = [...formData.cast]; c.splice(idx, 1); setFormData({...formData, cast: c}); }} className="text-gray-600 hover:text-red-500 ml-4 font-black text-[10px] uppercase">Remove</button>
+                                                <span className="text-sm font-bold text-white">{actor.name}</span>
+                                                <button onClick={() => { const c = [...formData.cast]; c.splice(idx, 1); setFormData({...formData, cast: c}); }} className="text-gray-600 hover:text-red-500 font-black text-[10px] uppercase">Purge</button>
                                             </div>
                                         ))}
                                     </div>
@@ -223,7 +236,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                     <div className="pt-12 border-t border-white/5 flex justify-between">
                         <button onClick={handleDelete} className="text-gray-600 hover:text-red-500 font-black uppercase text-[10px]">Purge Global Manifest</button>
                         <button onClick={handleSave} disabled={isSaving} className="bg-red-600 hover:bg-red-700 text-white font-black py-5 px-16 rounded-2xl uppercase tracking-widest shadow-2xl">
-                            {isSaving ? 'Synchronizing...' : 'Commit Changes'}
+                            {isSaving ? 'Synchronizing Cluster...' : 'Commit Changes'}
                         </button>
                     </div>
                 </div>

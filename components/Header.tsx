@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useFestival } from '../contexts/FestivalContext';
 import { avatars } from './avatars';
 
 interface HeaderProps {
@@ -26,19 +27,22 @@ const Header: React.FC<HeaderProps> = ({
     onSignInClick,
     showNavLinks = true,
     topOffset = '0px',
-    isStaging,
     autoFocus,
 }) => {
     const { user, logout } = useAuth();
+    const { categories, movies } = useFestival();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    const nowStreamingMovie = useMemo(() => {
+        const key = categories.nowStreaming?.movieKeys?.[0];
+        return key ? movies[key] : null;
+    }, [categories, movies]);
+
     useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 50);
-        };
+        const handleScroll = () => setIsScrolled(window.scrollY > 50);
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
@@ -53,13 +57,6 @@ const Header: React.FC<HeaderProps> = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    useEffect(() => {
-        if (autoFocus && inputRef.current) {
-            inputRef.current.focus();
-        }
-    }, [autoFocus]);
-
-
     const handleNavigate = (e: React.MouseEvent, path: string) => {
         e.preventDefault();
         window.history.pushState({}, '', path);
@@ -67,54 +64,37 @@ const Header: React.FC<HeaderProps> = ({
         setIsProfileMenuOpen(false);
     };
 
-    const handleLogout = async () => {
-        await logout();
-        setIsProfileMenuOpen(false);
-    };
-
     const headerClasses = `fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${isScrolled || isScrolledProp ? 'bg-black/85 backdrop-blur-xl border-b border-white/5 py-3' : 'bg-transparent py-5'}`;
     
-    const navLinks = [
-        { path: '/', label: 'Home' },
-        { path: '/classics', label: 'Vintage' },
-    ];
-
-    // Add Creator Hub shortcut ONLY for people with actor or filmmaker roles
-    if (user && (user.isActor || user.isFilmmaker)) {
-        navLinks.push({ path: '/portal', label: 'Creator Hub' });
-    }
+    const navLinks = [{ path: '/', label: 'Home' }, { path: '/classics', label: 'Vintage' }];
+    if (user && (user.isActor || user.isFilmmaker)) navLinks.push({ path: '/portal', label: 'Creator Hub' });
     
     return (
         <header className={headerClasses} style={{ top: topOffset }}>
             <div className="max-w-[1800px] mx-auto px-4 md:px-12 flex items-center justify-between">
                 <div className="flex items-center gap-10">
                     <div className="flex items-center gap-4">
-                        <button 
-                            onClick={(e) => handleNavigate(e, '/movie/fighter?play=true')}
-                            className="group flex items-center gap-3 bg-red-600/10 border border-red-600/20 hover:bg-red-600 transition-all px-4 py-2 rounded-xl"
-                        >
-                            <div className="flex items-center gap-1.5">
-                                <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-                                </span>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-red-500 group-hover:text-white transition-colors">Now Streaming</span>
-                            </div>
-                            <span className="text-white font-black text-xs uppercase tracking-tighter hidden sm:inline">Fighter</span>
-                        </button>
+                        {nowStreamingMovie && (
+                            <button 
+                                onClick={(e) => handleNavigate(e, `/movie/${nowStreamingMovie.key}?play=true`)}
+                                className="group flex items-center gap-3 bg-red-600/10 border border-red-600/20 hover:bg-red-600 transition-all px-4 py-2 rounded-xl"
+                            >
+                                <div className="flex items-center gap-1.5">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                                    </span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-red-500 group-hover:text-white transition-colors">Now Streaming</span>
+                                </div>
+                                <span className="text-white font-black text-xs uppercase tracking-tighter hidden sm:inline">{nowStreamingMovie.title}</span>
+                            </button>
+                        )}
                     </div>
 
                     {showNavLinks && user && (
                         <nav className="hidden md:flex items-center gap-8">
                             {navLinks.map(link => (
-                                <a 
-                                    key={link.path} 
-                                    href={link.path} 
-                                    onClick={(e) => handleNavigate(e, link.path)} 
-                                    className={`transition-colors text-sm font-black uppercase tracking-[0.2em] ${link.label === 'Creator Hub' ? 'text-red-500 hover:text-white' : 'text-gray-300 hover:text-white'}`}
-                                >
-                                    {link.label}
-                                </a>
+                                <a key={link.path} href={link.path} onClick={(e) => handleNavigate(e, link.path)} className={`transition-colors text-sm font-black uppercase tracking-[0.2em] ${link.label === 'Creator Hub' ? 'text-red-500 hover:text-white' : 'text-gray-300 hover:text-white'}`}>{link.label}</a>
                             ))}
                         </nav>
                     )}
@@ -154,8 +134,7 @@ const Header: React.FC<HeaderProps> = ({
                                         <p className="text-sm font-bold text-white truncate">{user.name || user.email}</p>
                                     </div>
                                     <a href="/account" onClick={(e) => handleNavigate(e, '/account')} className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors">Account</a>
-                                    {(user.isActor || user.isFilmmaker) && <a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors font-bold text-red-500">Creator Hub</a>}
-                                    <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors">Sign out</button>
+                                    <button onClick={logout} className="w-full text-left block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors">Sign out</button>
                                 </div>
                             )}
                         </div>

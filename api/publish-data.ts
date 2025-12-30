@@ -86,11 +86,15 @@ export async function POST(request: Request) {
         const batch = db.batch();
 
         switch (type) {
+            case 'set_now_streaming': {
+                const { key } = data;
+                const catRef = db.collection('categories').doc('nowStreaming');
+                batch.set(catRef, { title: 'Now Streaming', movieKeys: [key] }, { merge: false });
+                break;
+            }
             case 'delete_movie': {
                 const { key } = data;
-                // Delete from movies collection
                 batch.delete(db.collection('movies').doc(key));
-                // Scrub from all categories
                 const categoriesSnap = await db.collection('categories').get();
                 categoriesSnap.forEach(doc => {
                     const c = doc.data();
@@ -106,18 +110,12 @@ export async function POST(request: Request) {
                 }
                 break;
             case 'categories':
-                // OVERWRITE STRATEGY: Delete existing categories and replace with new set 
-                // to handle deletions (like Cratemas extra row) correctly.
                 const currentCatsSnap = await db.collection('categories').get();
                 const newCatKeys = Object.keys(data);
                 
                 currentCatsSnap.forEach(doc => {
-                    // Protected keys
                     if (doc.id === 'nowStreaming' || doc.id === 'featured') return;
-                    // If not in the new save payload, delete it from the DB permanently
-                    if (!newCatKeys.includes(doc.id)) {
-                        batch.delete(doc.ref);
-                    }
+                    if (!newCatKeys.includes(doc.id)) batch.delete(doc.ref);
                 });
 
                 for (const [id, docData] of Object.entries(data)) {
@@ -144,7 +142,6 @@ export async function POST(request: Request) {
 
         await batch.commit();
 
-        // Assemble and push live data
         const liveData = await assembleLiveData(db);
         await publishToS3(liveData);
 

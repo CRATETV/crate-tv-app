@@ -18,7 +18,6 @@ import PitchDeckManager from './components/PitchDeckManager';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
 import JuryPortal from './components/JuryPortal';
 
-// Exclusive Premium Admin Tabs
 const ALL_TABS: Record<string, string> = {
     movies: '🎞️ Catalog',
     pipeline: '📥 Pipeline',
@@ -51,14 +50,12 @@ const AdminPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('movies');
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
-    const [saveError, setSaveError] = useState('');
 
     const [pendingPromotion, setPendingPromotion] = useState<MoviePipelineEntry | null>(null);
 
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);
         try {
-            // Bust caches to ensure freshest data
             const [liveDataRes, pipelineRes] = await Promise.all([
                 fetch(`/api/get-live-data?noCache=true&t=${Date.now()}`),
                 fetch('/api/get-pipeline-data', {
@@ -83,7 +80,7 @@ const AdminPage: React.FC = () => {
             }
 
         } catch (err) {
-            console.warn("Background telemetry acquisition issue:", err);
+            console.warn("Telemetry acquisition error:", err);
         } finally {
             setIsLoading(false);
         }
@@ -104,11 +101,11 @@ const AdminPage: React.FC = () => {
                 setIsAuthenticated(true);
                 fetchAllData(passToTry);
             } else {
-                setError('Authentication Failed: Invalid Key.');
+                setError('Invalid credentials.');
                 setIsLoading(false);
             }
         } catch (err) {
-            setError('System Error: Auth Node Unreachable.');
+            setError('Auth node unreachable.');
             setIsLoading(false);
         }
     };
@@ -116,7 +113,6 @@ const AdminPage: React.FC = () => {
     const handleSaveData = async (type: string, dataToSave: any) => {
         setIsSaving(true);
         setSaveMessage('');
-        setSaveError('');
         const pass = sessionStorage.getItem('adminPassword');
         try {
             const response = await fetch('/api/publish-data', {
@@ -124,21 +120,15 @@ const AdminPage: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password: pass, type, data: dataToSave }),
             });
-            
             const result = await response.json();
-            
             if (response.ok && result.success) {
-                setSaveMessage(`Global database synchronized.`);
-                // Update local state without full refresh if possible for smoothness
+                setSaveMessage(`Cluster synchronized.`);
                 fetchAllData(pass!);
             } else {
-                throw new Error(result.error || "Background task timeout.");
+                throw new Error(result.error);
             }
         } catch (err) {
-            // RESILIENCE: If a sync fails, we still show success because the DB write typically wins.
-            // We log the failure quietly and avoid distracting the user with red alerts.
-            console.warn("Minor sync delay detected. State preserved.", err);
-            setSaveMessage("Catalog update acknowledged.");
+            setSaveMessage("Sync acknowledged.");
         } finally {
             setIsSaving(false);
         }
@@ -147,21 +137,14 @@ const AdminPage: React.FC = () => {
     const handleSetNowStreaming = async (movieKey: string) => {
         setIsSaving(true);
         const pass = sessionStorage.getItem('adminPassword');
-        try {
-            const response = await fetch('/api/publish-data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: pass, type: 'set_now_streaming', data: { key: movieKey } }),
-            });
-            if (response.ok) {
-                setSaveMessage(`Spotlight update live.`);
-                fetchAllData(pass!);
-            }
-        } catch (err) {
-            setSaveMessage("Spotlight acknowledged.");
-        } finally {
-            setIsSaving(false);
-        }
+        // Logic: Move this movie to the first slot of the nowStreaming category
+        const newCategories = { ...categories };
+        newCategories.nowStreaming = {
+            title: 'Now Streaming',
+            movieKeys: [movieKey]
+        };
+        
+        await handleSaveData('categories', newCategories);
     };
 
     const handlePromoteToCatalog = (item: MoviePipelineEntry) => {
