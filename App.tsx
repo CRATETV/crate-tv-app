@@ -142,12 +142,9 @@ const App: React.FC = () => {
                                 const typedCategory = category as Category;
                                 const titleLower = (typedCategory.title || '').toLowerCase();
                                 
-                                // SYSTEM LISTS EXCLUSION
                                 if (key === 'featured' || key === 'nowStreaming' || key === 'publicDomainIndie') return null;
                                 
                                 // DEDUPLICATION & HOLIDAY LOGIC
-                                // If holiday row is ACTIVE, we show Cratemas here.
-                                // If holiday row is INACTIVE, we hide it even if it's in the categories list.
                                 if ((key === 'cratemas' || titleLower === 'cratemas') && !settings.isHolidayModeActive) return null;
                                 
                                 const categoryMovies = typedCategory.movieKeys

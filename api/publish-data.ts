@@ -63,10 +63,9 @@ const publishToS3 = async (liveData: any) => {
             Key: 'live-data.json',
             Body: JSON.stringify(liveData, null, 2),
             ContentType: 'application/json',
-            CacheControl: 'public, s-maxage=10, stale-while-revalidate=60'
+            CacheControl: 'public, s-maxage=1, stale-while-revalidate=5'
         }));
     } catch (err) {
-        // Silently log S3 issues but don't fail the primary DB operation
         console.error("[S3 Sync Error] Background cache refresh failed:", err);
     }
 };
@@ -89,7 +88,12 @@ export async function POST(request: Request) {
         switch (type) {
             case 'delete_movie': {
                 const { key } = data;
+                // Delete from movies collection
                 batch.delete(db.collection('movies').doc(key));
+                // Delete from view_counts and view_locations
+                batch.delete(db.collection('view_counts').doc(key));
+                batch.delete(db.collection('view_locations').doc(key));
+                // Scrub from all categories
                 const categoriesSnap = await db.collection('categories').get();
                 categoriesSnap.forEach(doc => {
                     const c = doc.data();
@@ -114,6 +118,14 @@ export async function POST(request: Request) {
                 }
                 break;
             case 'categories':
+                // OVERWRITE STRATEGY: Delete all existing categories and replace with new set 
+                // to handle deletions (like Cratemas extra row) correctly.
+                const oldCats = await db.collection('categories').get();
+                oldCats.forEach(doc => {
+                    if (doc.id !== 'nowStreaming' && doc.id !== 'featured') {
+                        batch.delete(doc.ref);
+                    }
+                });
                 for (const [id, docData] of Object.entries(data)) {
                     batch.set(db.collection('categories').doc(id), docData as object, { merge: true });
                 }
@@ -126,9 +138,7 @@ export async function POST(request: Request) {
                 break;
             case 'festival': {
                 const { config, schedule } = data;
-                if (config) {
-                    batch.set(db.collection('festival').doc('config'), config, { merge: true });
-                }
+                if (config) batch.set(db.collection('festival').doc('config'), config, { merge: true });
                 if (schedule && Array.isArray(schedule)) {
                     for (const day of schedule) {
                         batch.set(db.collection('festival').doc('schedule').collection('days').doc(`day${day.day}`), day);
@@ -148,7 +158,6 @@ export async function POST(request: Request) {
 
     } catch (error) {
         console.error("Critical Publish Delay:", error);
-        // We still return a valid response to keep the admin UI seamless
         return new Response(JSON.stringify({ success: true, warning: 'Primary database synced, cache updating.' }), { status: 200 });
     }
 }
