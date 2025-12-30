@@ -81,7 +81,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
   const [categories, setCategories] = useState<Record<string, Category>>(initialCategories);
   const [editingCategoryKey, setEditingCategoryKey] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dirtyTimeout = useRef<any>(null);
   
   const [holidaySettings, setHolidaySettings] = useState<SiteSettings>({
       isHolidayModeActive: settings.isHolidayModeActive || false,
@@ -90,8 +90,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
       holidayTheme: settings.holidayTheme || 'christmas'
   });
 
-  // CRITICAL: Prevent the "flipping" toggle bug by only accepting external settings 
-  // when we are NOT currently in the middle of a local update or save.
+  // PREVENT "TOGGLE FLIPPING": Only update from incoming props if we aren't mid-edit
   useEffect(() => {
     if (!isSaving && !isDirty) {
         setHolidaySettings({
@@ -139,13 +138,12 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
       setIsDirty(true);
       setHolidaySettings(prev => ({ ...prev, [field]: value }));
       
-      // Clear the dirty flag after 10 seconds if no save occurs, as a fallback
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => setIsDirty(false), 10000);
+      // Auto-clear dirty flag after a long pause if no save happened
+      if (dirtyTimeout.current) clearTimeout(dirtyTimeout.current);
+      dirtyTimeout.current = setTimeout(() => setIsDirty(false), 15000);
   };
 
   const saveHolidaySettings = async () => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     const password = sessionStorage.getItem('adminPassword');
     try {
         const res = await fetch('/api/publish-data', {
@@ -155,10 +153,10 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
         });
         if (res.ok) {
             setIsDirty(false);
-            alert("Channel Configuration Live.");
+            alert("Holiday configuration deployed!");
         }
     } catch (err) {
-        alert("Sync failed.");
+        alert("Sync failed. Check connection.");
     }
   };
 
@@ -167,11 +165,11 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
       <div className="bg-gradient-to-br from-indigo-900/20 via-gray-900 to-black border border-indigo-500/20 p-8 rounded-[2rem] shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
               <div>
-                  <h3 className="text-2xl font-black text-indigo-400 uppercase tracking-tighter">Holiday Channel Config</h3>
-                  <p className="text-gray-400 text-sm mt-1">Control visibility and branding of seasonal content rows.</p>
+                  <h3 className="text-2xl font-black text-indigo-400 uppercase tracking-tighter">Seasonal Engine</h3>
+                  <p className="text-gray-400 text-sm mt-1">Configure the specialized holiday row visibility and branding.</p>
               </div>
               <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
-                <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Master Toggle</span>
+                <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Active State</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                     <input 
                         type="checkbox" 
@@ -187,67 +185,66 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                   <div>
-                      <label className="form-label">Branding Label</label>
+                      <label className="form-label">Row Label</label>
                       <input 
                         type="text" 
                         value={holidaySettings.holidayName}
                         onChange={(e) => handleHolidaySettingChange('holidayName', e.target.value)}
                         placeholder="e.g. Cratemas"
-                        className="form-input bg-black/40 border-white/10"
+                        className="form-input !bg-black/40"
                       />
                   </div>
                   <div>
-                      <label className="form-label">Narrative Tagline</label>
+                      <label className="form-label">Promotional Tagline</label>
                       <textarea 
                         value={holidaySettings.holidayTagline}
                         onChange={(e) => handleHolidaySettingChange('holidayTagline', e.target.value)}
                         rows={3}
-                        className="form-input bg-black/40 border-white/10"
+                        className="form-input !bg-black/40"
                       />
                   </div>
               </div>
 
               <div className="space-y-6">
                    <div>
-                      <label className="form-label">Theme Profile</label>
+                      <label className="form-label">Atmospheric Theme</label>
                       <select 
                         value={holidaySettings.holidayTheme}
                         onChange={(e) => handleHolidaySettingChange('holidayTheme', e.target.value)}
-                        className="form-input bg-black/40 border-white/10"
+                        className="form-input !bg-black/40"
                       >
-                          <option value="christmas">Christmas</option>
-                          <option value="valentines">Valentine's</option>
-                          <option value="gold">Anniversary Gold</option>
-                          <option value="generic">Clean Dark</option>
+                          <option value="christmas">Christmas (Green/Red)</option>
+                          <option value="valentines">Valentine's (Pink/Deep Red)</option>
+                          <option value="gold">Gold Anniversary (Black/Gold)</option>
+                          <option value="generic">Modern Dark (Neutral)</option>
                       </select>
                   </div>
                   
                   <button 
                     onClick={saveHolidaySettings}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl shadow-lg transition-all active:scale-95"
                   >
-                      {isSaving ? 'Syncing...' : 'Publish Global Branding'}
+                      Deploy Seasonal Parameters
                   </button>
               </div>
           </div>
       </div>
 
       <div className="flex justify-between items-center mb-6 pt-4 border-t border-white/5">
-        <h2 className="text-xl font-black text-white uppercase tracking-widest">Catalog Sub-Categories</h2>
-        <button onClick={addNewCategory} className="bg-red-600 hover:bg-red-700 text-white font-black py-2 px-4 rounded-xl text-[10px] uppercase tracking-widest">+ Add Row</button>
+        <h2 className="text-xl font-black text-white uppercase tracking-widest">Permanent Categories</h2>
+        <button onClick={addNewCategory} className="bg-red-600 hover:bg-red-700 text-white font-black py-2 px-4 rounded-xl text-[10px] uppercase tracking-widest">+ Create Row</button>
       </div>
 
       <div className="space-y-4">
         {Object.entries(categories).map(([key, category]: [string, Category]) => {
-          if (key === 'cratemas' || (category.title && category.title.toLowerCase() === 'cratemas')) {
-              if (!holidaySettings.isHolidayModeActive && !isDirty) return null;
-          }
+          // Hide Cratemas entry from the category list if mode is off to prevent confusion
+          if (key === 'cratemas' && !holidaySettings.isHolidayModeActive && !isDirty) return null;
           
           return (
-            <div key={key} className={`bg-gray-900 border border-white/5 p-6 rounded-2xl transition-all duration-300`}>
+            <div key={key} className={`bg-gray-900 border border-white/5 p-6 rounded-2xl`}>
               <div className="flex justify-between items-center mb-3">
                 <div className="flex-grow">
-                    <label className="text-[9px] uppercase font-black text-gray-600 mb-2 block tracking-widest">Catalog Row Title</label>
+                    <label className="text-[9px] uppercase font-black text-gray-600 mb-2 block tracking-widest">Internal ID: {key}</label>
                     <input
                         type="text"
                         value={category.title}
@@ -255,11 +252,11 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                         className="text-lg font-black bg-transparent text-white focus:outline-none focus:bg-white/5 rounded-lg px-3 py-2 w-full border border-transparent focus:border-white/10"
                     />
                 </div>
-                <button onClick={() => deleteCategory(key)} className="text-[10px] text-red-500 hover:text-red-400 ml-4 font-black uppercase tracking-widest">Delete Row</button>
+                <button onClick={() => deleteCategory(key)} className="text-[10px] text-red-500 hover:text-red-400 ml-4 font-black uppercase tracking-widest">Delete</button>
               </div>
               <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
-                  <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{category.movieKeys.length} Production Assets Attached</p>
-                  <button onClick={() => setEditingCategoryKey(key)} className="bg-white/10 hover:bg-white/20 text-white font-black py-2 px-6 rounded-xl text-[10px] uppercase tracking-widest transition-all">Select Films</button>
+                  <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{category.movieKeys.length} Assets Attached</p>
+                  <button onClick={() => setEditingCategoryKey(key)} className="bg-white/10 hover:bg-white/20 text-white font-black py-2 px-6 rounded-xl text-[10px] uppercase tracking-widest transition-all">Assign Content</button>
               </div>
             </div>
           );
@@ -268,7 +265,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
       
       <div className="mt-8 pt-6 border-t border-white/5">
         <button onClick={() => onSave(categories)} disabled={isSaving} className="bg-red-600 hover:bg-red-700 disabled:bg-gray-800 text-white font-black py-4 px-10 rounded-2xl uppercase tracking-widest shadow-2xl transition-all">
-            {isSaving ? 'Syncing Catalog...' : 'Commit Row Changes'}
+            {isSaving ? 'Syncing Base Catalog...' : 'Commit Category Changes'}
         </button>
       </div>
 

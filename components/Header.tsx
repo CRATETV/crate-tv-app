@@ -88,7 +88,22 @@ const Header: React.FC<HeaderProps> = ({
         <header className={headerClasses} style={{ top: topOffset }}>
             <div className="max-w-[1800px] mx-auto px-4 md:px-12 flex items-center justify-between">
                 <div className="flex items-center gap-10">
-                    {/* Logo intentionally removed for cinematic focus */}
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={(e) => handleNavigate(e, '/movie/fighter?play=true')}
+                            className="group flex items-center gap-3 bg-red-600/10 border border-red-600/20 hover:bg-red-600 transition-all px-4 py-2 rounded-xl"
+                        >
+                            <div className="flex items-center gap-1.5">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                                </span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-red-500 group-hover:text-white transition-colors">Now Streaming</span>
+                            </div>
+                            <span className="text-white font-black text-xs uppercase tracking-tighter hidden sm:inline">Fighter</span>
+                        </button>
+                    </div>
+
                     {showNavLinks && user && (
                         <nav className="hidden md:flex items-center gap-8">
                             {navLinks.map(link => (

@@ -1,11 +1,6 @@
 import { getApiData } from './_lib/data.js';
 import { Movie } from '../types.js';
 
-const normalizeTitle = (title: string): string => {
-    if (!title) return '';
-    return title.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
-};
-
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -14,36 +9,25 @@ export async function GET(request: Request) {
         const data = await getApiData({ noCache });
 
         if (data && data.movies && !noCache) {
-            // assembling unique movies by key while respecting title normalization for legacy support
-            const processedMovies: Record<string, Movie> = {};
+            const finalMovies: Record<string, Movie> = {};
             
             Object.values(data.movies).forEach((movie: any) => {
                 const m = movie as Movie;
+                // INCLUSIVE FILTERING: Only skip if absolutely critical ID is missing.
+                // This ensures "Fighter" and other record-only films appear.
                 if (!m || !m.title || !m.key) return;
                 
-                // We prioritize films that have a source file and art.
-                const score = (m.fullMovie ? 10 : 0) + (m.poster ? 5 : 0);
-                
-                const existing = processedMovies[m.key];
-                if (!existing || score > (processedMovies[m.key] as any)._score) {
-                    processedMovies[m.key] = { ...m, _score: score } as any;
-                }
-            });
-
-            // Clean up the temporary score key
-            const finalMovies: Record<string, Movie> = {};
-            Object.values(processedMovies).forEach(m => {
-                const { _score, ...rest } = m as any;
-                finalMovies[m.key] = rest;
+                finalMovies[m.key] = m;
             });
 
             data.movies = finalMovies;
         }
 
+        // Clean categories of orphaned keys
         if (data.categories && !noCache) {
             Object.keys(data.categories).forEach(catKey => {
                 const cat = data.categories[catKey];
-                if (cat.movieKeys) {
+                if (cat && Array.isArray(cat.movieKeys)) {
                     cat.movieKeys = cat.movieKeys.filter((k: string) => !!data.movies[k]);
                 }
             });
@@ -63,7 +47,7 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        return new Response(JSON.stringify({ error: 'Manifest sync stabilization...' }), {
+        return new Response(JSON.stringify({ error: 'System stabilizing...' }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         });

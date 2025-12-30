@@ -1,4 +1,3 @@
-
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
 
 

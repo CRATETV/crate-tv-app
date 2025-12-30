@@ -6,7 +6,7 @@ import { GoogleGenAI, GenerateContentParameters, GenerateContentResponse } from 
  */
 export async function generateContentWithRetry(
   params: GenerateContentParameters,
-  maxRetries: number = 5
+  maxRetries: number = 4
 ): Promise<GenerateContentResponse> {
   let lastError: any;
 
@@ -32,12 +32,12 @@ export async function generateContentWithRetry(
 
       if (isQuotaError) {
           if (attempt < maxRetries) {
-              // Increased Exponential Backoff for Paid Tier Stability
-              const baseDelay = Math.pow(2.5, attempt + 1) * 1500;
-              const jitter = Math.random() * 1500;
+              // Exponential Backoff with Jitter
+              const baseDelay = Math.pow(2.2, attempt + 1) * 1000;
+              const jitter = Math.random() * 1000;
               const totalDelay = baseDelay + jitter;
               
-              console.warn(`[Gemini] Resource Exhausted (8/429). Attempt ${attempt + 1}. Retrying in ${totalDelay.toFixed(0)}ms...`);
+              console.warn(`[Gemini] Rate limited. Attempt ${attempt + 1}. Retrying in ${totalDelay.toFixed(0)}ms...`);
               await new Promise(resolve => setTimeout(resolve, totalDelay));
               continue;
           }
