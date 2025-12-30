@@ -1,6 +1,5 @@
-// FIX: Added React import to resolve "Cannot find namespace 'React'" errors when using React.FC and React.FormEvent.
 import React, { useState, useEffect, useCallback } from 'react';
-import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, ActorSubmission } from './types';
+import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
 import MovieEditor from './components/MovieEditor';
 import CategoryEditor from './components/CategoryEditor';
@@ -18,13 +17,12 @@ import LaurelManager from './components/LaurelManager';
 import PitchDeckManager from './components/PitchDeckManager';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
 import JuryPortal from './components/JuryPortal';
-import { ActorSubmissionsTab } from './components/ActorSubmissionsTab';
 
+// Removed 'actors' tab as requested
 const ALL_TABS: Record<string, string> = {
     movies: '🎞️ Catalog',
     pipeline: '📥 Pipeline',
     jury: '⚖️ Jury Room',
-    actors: '👥 Actor Subs',
     analytics: '📊 Analytics',
     hero: '🎬 Hero',
     laurels: '🏆 Laurels',
@@ -50,30 +48,23 @@ const AdminPage: React.FC = () => {
     const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
     const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
-    const [actorSubmissions, setActorSubmissions] = useState<ActorSubmission[]>([]);
     const [activeTab, setActiveTab] = useState('movies');
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
     const [saveError, setSaveError] = useState('');
 
-    // State for promoting a pipeline item to the catalog
     const [pendingPromotion, setPendingPromotion] = useState<MoviePipelineEntry | null>(null);
 
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);
         try {
-            const [liveDataRes, pipelineRes, actorRes] = await Promise.all([
+            const [liveDataRes, pipelineRes] = await Promise.all([
                 fetch(`/api/get-live-data?noCache=true&t=${Date.now()}`),
                 fetch('/api/get-pipeline-data', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password: adminPassword }),
-                }),
-                fetch('/api/get-actor-submissions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: adminPassword }),
-                }).catch(() => null)
+                })
             ]);
 
             if (liveDataRes.ok) {
@@ -88,11 +79,6 @@ const AdminPage: React.FC = () => {
             if (pipelineRes && pipelineRes.ok) {
                 const data = await pipelineRes.json();
                 setPipeline(data.pipeline || []);
-            }
-
-            if (actorRes && actorRes.ok) {
-                const data = await actorRes.json();
-                setActorSubmissions(data.submissions || []);
             }
 
         } catch (err) {
@@ -126,8 +112,7 @@ const AdminPage: React.FC = () => {
         }
     };
 
-    // FIX: Widened the 'type' union to include 'delete_movie' which resolved a TS2345 error on line 251.
-    const handleSaveData = async (type: 'movies' | 'categories' | 'about' | 'festival' | 'settings' | 'delete_movie', dataToSave: any) => {
+    const handleSaveData = async (type: string, dataToSave: any) => {
         setIsSaving(true);
         setSaveMessage('');
         setSaveError('');
@@ -139,7 +124,6 @@ const AdminPage: React.FC = () => {
                 body: JSON.stringify({ password: pass, type, data: dataToSave }),
             });
             if (response.ok) {
-                // Use a more user-friendly message for deletions
                 const displayType = type === 'delete_movie' ? 'Movie' : type.charAt(0).toUpperCase() + type.slice(1);
                 const verb = type === 'delete_movie' ? 'removed' : 'deployed';
                 setSaveMessage(`${displayType} ${verb} successfully.`);
@@ -164,7 +148,7 @@ const AdminPage: React.FC = () => {
                 body: JSON.stringify({ password: pass, type: 'set_now_streaming', data: { key: movieKey } }),
             });
             if (response.ok) {
-                setSaveMessage(`Banner set to "${movies[movieKey]?.title}"`);
+                setSaveMessage(`Featured banner updated.`);
                 fetchAllData(pass!);
             }
         } catch (err) {
@@ -186,22 +170,22 @@ const AdminPage: React.FC = () => {
                     <form onSubmit={handleLogin} className="bg-gray-900 border border-white/10 p-10 rounded-[2.5rem] shadow-2xl">
                         <div className="text-center mb-10">
                             <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-32 mx-auto mb-6" alt="Crate TV" />
-                            <h1 className="text-xl font-black uppercase tracking-[0.2em] text-gray-500">System Command</h1>
+                            <h1 className="text-xl font-black uppercase tracking-[0.2em] text-gray-600">Secure Terminal</h1>
                         </div>
                         <div className="mb-8">
-                            <label className="form-label" htmlFor="password">Access Token</label>
+                            <label className="form-label" htmlFor="password">Operator Key</label>
                             <input
                                 id="password"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="form-input text-center tracking-widest"
+                                className="form-input text-center tracking-widest bg-black/40 border-white/5"
                                 placeholder="••••••••"
                                 required
                             />
                         </div>
                         {error && <p className="text-red-500 text-xs font-bold mb-6 text-center">{error}</p>}
-                        <button className="submit-btn w-full !rounded-2xl py-4" type="submit">Unlock System</button>
+                        <button className="submit-btn w-full !rounded-2xl py-4 bg-red-600 hover:bg-red-700 transition-colors" type="submit">Establish Uplink</button>
                     </form>
                 </div>
             </div>
@@ -211,16 +195,16 @@ const AdminPage: React.FC = () => {
     if (isLoading) return <LoadingSpinner />;
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white">
+        <div className="min-h-screen bg-[#050505] text-white selection:bg-red-600 selection:text-white">
             <div className="max-w-[1800px] mx-auto p-4 md:p-10">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-8 border-b border-white/5 pb-10">
                     <div className="flex items-center gap-6">
                          <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-20" alt="Logo" />
                          <div>
-                            <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">Admin Console <span className="text-red-600">V4.2</span></h1>
+                            <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">Studio <span className="text-red-600">Command</span></h1>
                             <div className="flex items-center gap-2 mt-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-green-500">Live Encrypted Sync Active</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-green-500">Infrastructure Online // Global Node Ready</p>
                             </div>
                          </div>
                     </div>
@@ -255,10 +239,9 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={handleSetNowStreaming} movieToCreate={pendingPromotion} onCreationDone={() => setPendingPromotion(null)} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={handlePromoteToCatalog} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'jury' && <JuryPortal pipeline={pipeline} />}
-                    {activeTab === 'actors' && <ActorSubmissionsTab submissions={actorSubmissions} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
-                    {activeTab === 'laurels' && < LaurelManager allMovies={Object.values(movies)} />}
+                    {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}
                     {activeTab === 'pitch' && <PitchDeckManager onSave={(settings) => handleSaveData('settings', settings)} isSaving={isSaving} />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={(d) => setFestivalData(d)} onConfigChange={(c) => setFestivalConfig(c)} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}

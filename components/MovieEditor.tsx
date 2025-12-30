@@ -51,6 +51,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [formData, setFormData] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [newActorName, setNewActorName] = useState('');
 
     useEffect(() => {
         if (movieToCreate) {
@@ -107,6 +108,25 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         }
     };
 
+    const handleAddActor = () => {
+        if (!formData || !newActorName.trim()) return;
+        const newActor: Actor = {
+            name: newActorName.trim(),
+            photo: '',
+            bio: '',
+            highResPhoto: ''
+        };
+        setFormData({ ...formData, cast: [...formData.cast, newActor] });
+        setNewActorName('');
+    };
+
+    const handleRemoveActor = (index: number) => {
+        if (!formData) return;
+        const newCast = [...formData.cast];
+        newCast.splice(index, 1);
+        setFormData({ ...formData, cast: newCast });
+    };
+
     const handleSave = async () => {
         if (!formData) return;
         setIsSaving(true);
@@ -115,7 +135,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             setSelectedMovieKey('');
         } catch (err) {
             console.error("Save failed:", err);
-            alert("Database update failed.");
+            alert("Database synchronization failed. Verify internet connection.");
         } finally {
             setIsSaving(false);
         }
@@ -136,84 +156,86 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     return (
         <div className="space-y-6 pb-20">
             {!formData ? (
-                <div className="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden shadow-2xl">
-                    <div className="p-6 bg-gray-900/50 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
-                            <h3 className="font-black text-gray-300 uppercase text-[10px] tracking-widest">Master Catalog Control</h3>
+                <div className="bg-[#0f0f0f] rounded-3xl border border-white/5 overflow-hidden shadow-2xl animate-[fadeIn_0.4s_ease-out]">
+                    <div className="p-8 bg-white/[0.02] flex flex-col sm:flex-row justify-between items-center gap-6 border-b border-white/5">
+                        <div>
+                            <h3 className="text-xl font-black text-white uppercase tracking-widest">Master Catalog</h3>
+                            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-1">{filteredMovies.length} Active Production Assets</p>
                         </div>
-                        <div className="flex gap-2 w-full sm:w-auto">
-                            <input 
-                                type="text" 
-                                placeholder="Search by title, ID, or director..." 
-                                value={searchTerm} 
-                                onChange={(e) => setSearchTerm(e.target.value)} 
-                                className="form-input !py-1.5 text-xs w-full sm:w-64" 
-                            />
-                            <button onClick={() => setSelectedMovieKey(`newmovie${Date.now()}`)} className="bg-green-600 hover:bg-green-700 text-white font-black py-1.5 px-4 rounded-xl text-[10px] uppercase tracking-widest transition-all">Add Film</button>
+                        <div className="flex gap-3 w-full sm:w-auto">
+                            <div className="relative flex-grow">
+                                <input 
+                                    type="text" 
+                                    placeholder="Search by title, ID, or director..." 
+                                    value={searchTerm} 
+                                    onChange={(e) => setSearchTerm(e.target.value)} 
+                                    className="form-input !py-3 !pl-10 text-xs w-full sm:w-80 bg-black/40 border-white/10" 
+                                />
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                            </div>
+                            <button onClick={() => setSelectedMovieKey(`newmovie${Date.now()}`)} className="bg-red-600 hover:bg-red-700 text-white font-black py-3 px-6 rounded-xl text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-red-900/20 whitespace-nowrap">+ Ingest New</button>
                         </div>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
-                            <thead className="bg-gray-900/50 text-[10px] uppercase tracking-widest text-gray-500 border-b border-gray-700">
+                            <thead className="bg-white/[0.01] text-[10px] uppercase tracking-[0.3em] text-gray-500">
                                 <tr>
-                                    <th className="p-4">Film Metadata</th>
-                                    <th className="p-4">Asset Status</th>
-                                    <th className="p-4 text-right">Actions</th>
+                                    <th className="px-8 py-5">Production Record</th>
+                                    <th className="px-8 py-5">Global Impression</th>
+                                    <th className="px-8 py-5 text-right">Terminal Commands</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-700">
+                            <tbody className="divide-y divide-white/5">
                                 {filteredMovies.map(movie => {
                                     const hasVideo = movie.fullMovie && movie.fullMovie.length > 10;
                                     const hasPoster = movie.poster && movie.poster.length > 10;
-                                    const isHealthy = hasVideo && hasPoster;
 
                                     return (
-                                        <tr key={movie.key} className="hover:bg-white/[0.02] transition-colors">
-                                            <td className="p-4">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-14 bg-black rounded overflow-hidden flex-shrink-0 border border-white/5">
+                                        <tr key={movie.key} className="hover:bg-white/[0.02] transition-colors group">
+                                            <td className="px-8 py-4">
+                                                <div className="flex items-center gap-6">
+                                                    <div className="w-12 h-16 bg-black rounded-lg overflow-hidden flex-shrink-0 border border-white/10 shadow-2xl">
                                                         {movie.poster ? (
                                                             <img src={movie.poster} className="w-full h-full object-cover" />
                                                         ) : (
-                                                            <div className="w-full h-full flex items-center justify-center text-[8px] text-gray-700">NO IMG</div>
+                                                            <div className="w-full h-full flex items-center justify-center text-[8px] text-gray-800 uppercase font-black tracking-tighter">NO_ART</div>
                                                         )}
                                                     </div>
                                                     <div>
-                                                        <span className="font-black text-white uppercase text-sm block tracking-tight">{movie.title || 'Untitled'}</span>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <span className="text-[9px] text-gray-500 font-mono uppercase">ID: {movie.key}</span>
-                                                            <span className="text-[9px] text-red-500 font-bold uppercase">Dir: {movie.director || 'N/A'}</span>
+                                                        <span className="font-black text-white uppercase text-base block tracking-tight group-hover:text-red-500 transition-colors">{movie.title || 'Draft Ingest'}</span>
+                                                        <div className="flex items-center gap-3 mt-1">
+                                                            <span className="text-[10px] text-gray-600 font-mono">SYS_ID: {movie.key}</span>
+                                                            <div className="h-1 w-1 bg-gray-800 rounded-full"></div>
+                                                            <span className="text-[10px] text-red-600 font-black uppercase">Dir: {movie.director || 'UNASSIGNED'}</span>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="p-4">
-                                                <div className="flex items-center gap-3">
-                                                    {isHealthy ? (
-                                                        <span className="bg-green-600/10 text-green-500 border border-green-500/20 text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-widest">Verified Live</span>
-                                                    ) : (
-                                                        <span className="bg-red-600/10 text-red-500 border border-red-500/20 text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-widest">Draft / Broken</span>
-                                                    )}
-                                                    <div className="flex gap-1.5">
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${hasVideo ? 'bg-blue-500 shadow-[0_0_5px_rgba(59,130,246,0.5)]' : 'bg-gray-700'}`} title="Video Stream Ready"></div>
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${hasPoster ? 'bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.5)]' : 'bg-gray-700'}`} title="Poster Asset Found"></div>
+                                            <td className="px-8 py-4">
+                                                <div className="flex items-center gap-6">
+                                                    <div className="space-y-1">
+                                                        <p className="text-[9px] text-gray-600 uppercase font-black tracking-widest">Aggregate Feedback</p>
+                                                        <p className="text-sm font-bold text-gray-300">{(movie.likes || 0).toLocaleString()} <span className="text-[10px] text-gray-600 font-normal">Likes</span></p>
+                                                    </div>
+                                                    <div className="flex gap-2 opacity-20 group-hover:opacity-100 transition-opacity">
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${hasVideo ? 'bg-blue-500' : 'bg-gray-800'}`} title="HLS/MP4 Bitrate Ready"></div>
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${hasPoster ? 'bg-orange-500' : 'bg-gray-800'}`} title="Key Art Synced"></div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-right">
-                                                <div className="flex justify-end gap-2">
+                                            <td className="px-8 py-4 text-right">
+                                                <div className="flex justify-end gap-3 opacity-60 group-hover:opacity-100 transition-opacity">
                                                     <button 
                                                         onClick={() => onSetNowStreaming(movie.key)}
-                                                        className="text-white bg-red-600/20 border border-red-600/30 font-black text-[9px] uppercase tracking-widest hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-lg transition-all"
+                                                        className="text-gray-500 hover:text-white font-black text-[9px] uppercase tracking-widest border border-white/5 hover:border-white/20 bg-white/5 hover:bg-red-600 px-4 py-2 rounded-xl transition-all"
                                                     >
-                                                        Feature
+                                                        Spotlight
                                                     </button>
                                                     <button 
                                                         onClick={() => setSelectedMovieKey(movie.key)} 
-                                                        className="text-white bg-white/5 hover:bg-white/10 border border-white/10 font-black text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all"
+                                                        className="text-white bg-white/10 hover:bg-white/20 font-black text-[9px] uppercase tracking-widest px-4 py-2 rounded-xl transition-all"
                                                     >
-                                                        Manage
+                                                        Edit
                                                     </button>
                                                 </div>
                                             </td>
@@ -222,8 +244,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 })}
                                 {filteredMovies.length === 0 && (
                                     <tr>
-                                        <td colSpan={3} className="p-12 text-center text-gray-500 text-xs font-bold uppercase tracking-widest italic">
-                                            No titles matching your criteria found in the catalog.
+                                        <td colSpan={3} className="p-20 text-center text-gray-600 text-xs font-black uppercase tracking-[0.5em]">
+                                            Telemetry search for "{searchTerm}" returned zero records
                                         </td>
                                     </tr>
                                 )}
@@ -232,74 +254,152 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                     </div>
                 </div>
             ) : (
-                <div className="bg-gray-800 p-8 rounded-3xl border border-gray-700 space-y-12 shadow-2xl animate-[fadeIn_0.3s_ease-out]">
-                    <div className="flex justify-between items-center border-b border-gray-700 pb-6">
+                <div className="bg-[#0f0f0f] rounded-[2.5rem] border border-white/5 p-8 md:p-12 space-y-12 shadow-[0_50px_100px_rgba(0,0,0,0.8)] animate-[fadeIn_0.3s_ease-out]">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 border-b border-white/5 pb-10">
                         <div>
-                            <h3 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{formData.title || 'New Movie'}</h3>
-                            <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Database Reference: {formData.key}</p>
+                            <p className="text-red-500 text-[10px] font-black uppercase tracking-[0.5em] mb-2">Production Record</p>
+                            <h3 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter leading-none">{formData.title || 'New Manifest'}</h3>
+                            <div className="flex items-center gap-3 mt-4">
+                                <span className="text-[10px] text-gray-600 font-mono bg-white/5 px-2 py-1 rounded">SYS_KEY: {formData.key}</span>
+                                <span className="text-[10px] text-gray-600 font-mono bg-white/5 px-2 py-1 rounded">REV: 4.2.0</span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                            <button onClick={() => setSelectedMovieKey('')} className="bg-gray-700 hover:bg-gray-600 text-white font-black px-6 py-2 rounded-xl uppercase text-xs tracking-widest transition-all">Back to Catalog</button>
+                        <button onClick={() => setSelectedMovieKey('')} className="bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-black px-8 py-4 rounded-2xl uppercase text-[10px] tracking-widest transition-all border border-white/10">Catalog Root</button>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                        <div className="space-y-12">
+                            <section className="space-y-6">
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em] border-l-4 border-red-600 pl-4">01. Narrative Stack</h4>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="form-label">Production Title</label>
+                                        <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Master Title" className="form-input bg-black/40 border-white/10" />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Narrative Summary</label>
+                                        <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} placeholder="HTML and standard text supported..." rows={8} className="form-input bg-black/40 border-white/10" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="form-label">Primary Director</label>
+                                            <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Full Name" className="form-input bg-black/40 border-white/10" />
+                                        </div>
+                                        <div>
+                                            <label className="form-label">Lead Producers</label>
+                                            <input type="text" name="producers" value={formData.producers} onChange={handleChange} placeholder="Names (CSV)" className="form-input bg-black/40 border-white/10" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section className="space-y-6">
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em] border-l-4 border-red-600 pl-4">02. Media Pipeline</h4>
+                                <div className="grid grid-cols-1 gap-6">
+                                    <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
+                                        <div>
+                                            <label className="form-label">Distribution Source (S3/HLS)</label>
+                                            <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} placeholder="https://..." className="form-input mb-3 bg-black/40 border-white/10" />
+                                            <S3Uploader label="Ingest High-Bitrate Master" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+                                            <div>
+                                                <label className="form-label">Trailer Link</label>
+                                                <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} placeholder="Promotional URL" className="form-input bg-black/40 border-white/10" />
+                                            </div>
+                                            <div>
+                                                <label className="form-label">Primary Key Art (2:3)</label>
+                                                <input type="text" name="poster" value={formData.poster} onChange={handleChange} placeholder="Asset URL" className="form-input mb-2 bg-black/40 border-white/10" />
+                                                <S3Uploader label="Ingest Artwork" onUploadSuccess={(url) => setFormData({...formData, poster: url})} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+
+                        <div className="space-y-12">
+                             <section className="space-y-6">
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em] border-l-4 border-red-600 pl-4">03. Cast Attribution</h4>
+                                <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
+                                    <div className="flex gap-2">
+                                        <input 
+                                            type="text" 
+                                            value={newActorName} 
+                                            onChange={(e) => setNewActorName(e.target.value)} 
+                                            placeholder="Actor stage name..." 
+                                            className="form-input !py-2.5 text-xs bg-black/40 border-white/10" 
+                                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddActor())}
+                                        />
+                                        <button 
+                                            type="button" 
+                                            onClick={handleAddActor} 
+                                            className="bg-white/10 hover:bg-white/20 text-white font-black px-4 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all"
+                                        >
+                                            Assign
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-hide pr-2">
+                                        {formData.cast && formData.cast.length > 0 ? formData.cast.map((actor, idx) => (
+                                            <div key={idx} className="flex items-center justify-between p-3 bg-black/40 border border-white/5 rounded-xl group/actor">
+                                                <span className="text-sm font-bold text-white uppercase tracking-tight">{actor.name}</span>
+                                                <button 
+                                                    onClick={() => handleRemoveActor(idx)}
+                                                    className="text-gray-600 hover:text-red-500 transition-colors"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+                                                </button>
+                                            </div>
+                                        )) : (
+                                            <p className="text-center py-10 text-gray-700 text-[10px] font-black uppercase tracking-widest italic">Zero performers attributed</p>
+                                        )}
+                                    </div>
+                                    <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest italic leading-relaxed">Infrastructure Note: Performance metrics and headshots are automatically fetched from verified directory profiles based on name matching.</p>
+                                </div>
+                            </section>
+
+                            <section className="space-y-6">
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em] border-l-4 border-red-600 pl-4">04. Network Deployment Config</h4>
+                                <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-8">
+                                    <div className="grid grid-cols-2 gap-8">
+                                        <label className="flex items-center gap-4 cursor-pointer group">
+                                            <div className="relative">
+                                                <input type="checkbox" name="isUnlisted" checked={formData.isUnlisted || false} onChange={handleChange} className="sr-only peer" />
+                                                <div className="w-12 h-6 bg-gray-800 rounded-full peer peer-checked:bg-red-600 transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-6"></div>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black uppercase text-white tracking-widest group-hover:text-red-500 transition-colors">Unlisted Mode</span>
+                                                <span className="text-[8px] text-gray-600 uppercase font-bold mt-0.5">Private URL only</span>
+                                            </div>
+                                        </label>
+                                        <label className="flex items-center gap-4 cursor-pointer group">
+                                            <div className="relative">
+                                                <input type="checkbox" name="isSeries" checked={formData.isSeries || false} onChange={handleChange} className="sr-only peer" />
+                                                <div className="w-12 h-6 bg-gray-800 rounded-full peer peer-checked:bg-purple-600 transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-6"></div>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black uppercase text-white tracking-widest group-hover:text-purple-500 transition-colors">Series Logic</span>
+                                                <span className="text-[8px] text-gray-600 uppercase font-bold mt-0.5">Episode modules</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div className="space-y-4 pt-4 border-t border-white/5">
+                                        <div>
+                                            <label className="form-label">Global Schedule Date (UTC)</label>
+                                            <input type="datetime-local" name="releaseDateTime" value={formData.releaseDateTime ? new Date(formData.releaseDateTime).toISOString().slice(0, 16) : ''} onChange={handleChange} className="form-input bg-black/40 border-white/10" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                        <div className="space-y-8">
-                            <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">01. Narrative Data</h4>
-                                <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Film Title" className="form-input" />
-                                <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} placeholder="Synopsis (HTML supported)" rows={6} className="form-input" />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Director(s)" className="form-input" />
-                                    <input type="text" name="producers" value={formData.producers} onChange={handleChange} placeholder="Producer(s)" className="form-input" />
-                                </div>
-                            </section>
-
-                            <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">02. Asset Management</h4>
-                                <div className="bg-black/20 p-6 rounded-2xl border border-white/5 space-y-4">
-                                    <div>
-                                        <label className="form-label">Full Movie URL</label>
-                                        <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} placeholder="https://..." className="form-input mb-2" />
-                                        <S3Uploader label="Or Upload Movie File" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
-                                    </div>
-                                    <div>
-                                        <label className="form-label">Portrait Poster</label>
-                                        <input type="text" name="poster" value={formData.poster} onChange={handleChange} placeholder="Poster URL" className="form-input mb-2" />
-                                        <S3Uploader label="Upload Poster" onUploadSuccess={(url) => setFormData({...formData, poster: url})} />
-                                    </div>
-                                </div>
-                            </section>
-                        </div>
-
-                        <div className="space-y-8">
-                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.2em]">03. Cast & Status</h4>
-                                <div className="grid grid-cols-2 gap-4 bg-black/20 p-6 rounded-2xl border border-white/5">
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <input type="checkbox" name="isUnlisted" checked={formData.isUnlisted || false} onChange={handleChange} className="w-5 h-5 rounded border-gray-700 text-red-600" />
-                                        <span className="text-[10px] font-black uppercase text-gray-400">Unlisted Mode</span>
-                                    </label>
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <input type="checkbox" name="isSeries" checked={formData.isSeries || false} onChange={handleChange} className="w-5 h-5 rounded border-gray-700 text-purple-600" />
-                                        <span className="text-[10px] font-black uppercase text-gray-400">Series</span>
-                                    </label>
-                                </div>
-                                <div className="grid grid-cols-1 gap-4">
-                                    <div>
-                                        <label className="form-label">Release Date</label>
-                                        <input type="datetime-local" name="releaseDateTime" value={formData.releaseDateTime ? new Date(formData.releaseDateTime).toISOString().slice(0, 16) : ''} onChange={handleChange} className="form-input" />
-                                    </div>
-                                </div>
-                            </section>
-                        </div>
-                    </div>
-
-                    <div className="pt-8 border-t border-gray-700 flex flex-col sm:flex-row gap-4 justify-between items-center">
-                        <button onClick={() => onDeleteMovie(formData.key)} className="w-full sm:w-auto bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white font-black py-4 px-8 rounded-2xl uppercase tracking-widest text-xs transition-all border border-red-500/20">Delete Movie</button>
+                    <div className="pt-12 border-t border-white/5 flex flex-col sm:flex-row gap-6 justify-between items-center">
+                        <button onClick={() => onDeleteMovie(formData.key)} className="w-full sm:w-auto bg-white/5 hover:bg-red-600/20 text-gray-600 hover:text-red-500 font-black py-4 px-10 rounded-2xl uppercase tracking-widest text-[10px] transition-all border border-white/5 hover:border-red-500/20">Purge Record</button>
                         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                            <button onClick={handleSave} disabled={isSaving} className="bg-white hover:bg-gray-200 text-black font-black py-4 px-16 rounded-2xl uppercase tracking-widest text-xs shadow-xl disabled:opacity-20 transform hover:scale-105 transition-all">
-                                {isSaving ? 'Deploying...' : 'Save and Deploy'}
+                            <button onClick={handleSave} disabled={isSaving} className="bg-red-600 hover:bg-red-700 text-white font-black py-5 px-20 rounded-2xl uppercase tracking-widest text-sm shadow-2xl disabled:opacity-20 transform hover:scale-105 active:scale-95 transition-all">
+                                {isSaving ? 'Establishing Network Sync...' : 'Commit to Global Feed'}
                             </button>
                         </div>
                     </div>
