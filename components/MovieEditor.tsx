@@ -123,7 +123,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             setSelectedMovieKey('');
             onRefresh();
         } catch (err) {
-            alert("Save failed. Check uplink.");
+            alert("Uplink failed. Check sync state.");
         } finally {
             setIsSaving(false);
         }
@@ -131,7 +131,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
 
     const handleDelete = async () => {
         if (!formData) return;
-        if (!window.confirm(`PERMANENT ACTION: Purge "${formData.title}" from the global database? This also removes it from all categories.`)) return;
+        if (!window.confirm(`PERMANENT ACTION: Purge "${formData.title}" from global database? This scrub is final.`)) return;
         setIsSaving(true);
         try {
             await onDeleteMovie(formData.key);
@@ -142,6 +142,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         }
     };
 
+    // FIX: Type casting for Sort/Filter efficiency
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
@@ -202,7 +203,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Director" className="form-input bg-black/40" />
                             </section>
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Monetization</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Paywall</h4>
                                 <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-4">
                                     <label className="flex items-center gap-3 cursor-pointer group">
                                         <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
@@ -219,7 +220,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                         </div>
                         <div className="space-y-10">
                              <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">03. Media Masters</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">03. Master Files</h4>
                                 <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-4">
                                     <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} placeholder="High-Bitrate Film URL" className="form-input bg-black/40" />
                                     <S3Uploader label="Ingest Film Master" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />

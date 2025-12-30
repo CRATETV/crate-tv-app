@@ -29,43 +29,13 @@ const getEmbedUrl = (url: string): string | null => {
     return null;
 };
 
-const PostPlayOverlay: React.FC<{ movies: Movie[]; onSelect: (movie: Movie) => void; onHome: () => void; }> = ({ movies, onSelect, onHome }) => {
-    const [countdown, setCountdown] = useState(15);
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setCountdown(prev => {
-                if (prev <= 1) { clearInterval(timer); onHome(); return 0; }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => clearInterval(timer);
-    }, [onHome]);
-    return (
-        <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 animate-[fadeIn_0.5s_ease-out]">
-            <div className="max-w-5xl w-full text-center font-inter">
-                <p className="text-red-500 font-black uppercase tracking-[0.3em] mb-2 text-sm">Thanks for watching</p>
-                <h2 className="text-3xl md:text-5xl font-black text-white mb-10 tracking-tighter uppercase">What's Next?</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4 mb-12">
-                    {movies.slice(0, 6).map(m => (
-                        <button key={m.key} onClick={() => onSelect(m)} className="group relative aspect-[3/4] rounded-lg overflow-hidden border border-white/10 hover:border-red-500 transition-all hover:scale-105 shadow-2xl">
-                            <img src={m.poster} alt={m.title} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" />
-                        </button>
-                    ))}
-                </div>
-                <button onClick={onHome} className="px-10 py-4 bg-white text-black font-black rounded-full hover:bg-red-600 hover:text-white transition-all text-xs uppercase tracking-widest">Back to Feed ({countdown}s)</button>
-            </div>
-        </div>
-    );
-};
-
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, purchaseMovie } = useAuth();
+  const { likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals } = useAuth();
   const { movies: allMovies, categories: allCategories, isLoading: isDataLoading } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
   const [playerMode, setPlayerMode] = useState<'poster' | 'full'>('poster');
   const [isPaused, setIsPaused] = useState(false);
-  const [showPostPlay, setShowPostPlay] = useState(false);
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
@@ -97,11 +67,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     window.dispatchEvent(new Event('pushstate'));
   }, []);
 
-  const handleMovieEnd = useCallback(() => setShowPostPlay(true), []);
-
   const playContent = useCallback(async () => {
     if (videoRef.current && !hasTrackedViewRef.current && movie?.key) {
-        // PROFESSIONAL STANDARD: Force landscape mode on mobile devices for cinema experience
+        // PROFESSIONAL STANDARD: Force orientation and prevent downloads
         try {
             if (containerRef.current?.requestFullscreen) {
                 await containerRef.current.requestFullscreen();
@@ -110,7 +78,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 }
             }
         } catch (e) {
-            console.warn("Auto-orientation lock skipped:", e);
+            console.warn("Secure orientation lock skipped:", e);
         }
 
         hasTrackedViewRef.current = true;
@@ -131,7 +99,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   }, [playerMode, hasAccess, playContent]);
 
   if (isDataLoading) return <LoadingSpinner />;
-  if (!movie) return <div className="h-screen flex items-center justify-center font-black uppercase tracking-widest text-gray-800">Film Missing from Cluster</div>;
+  if (!movie) return <div className="h-screen flex items-center justify-center font-black uppercase tracking-widest text-gray-800 bg-black">Content Restricted</div>;
 
   const embedUrl = getEmbedUrl(movie.fullMovie);
 
@@ -141,31 +109,38 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         
         <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
             <div className={`relative w-full ${playerMode === 'full' ? 'h-screen' : 'aspect-video'} bg-black shadow-2xl overflow-hidden`}>
-                {showPostPlay && <PostPlayOverlay movies={Object.values(allMovies).slice(0, 10)} onSelect={(m) => window.location.href = `/movie/${m.key}?play=true`} onHome={handleGoHome} />}
-                
                 {playerMode === 'full' ? (
                     hasAccess ? (
                         embedUrl ? (
                             <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen></iframe>
                         ) : (
-                            <>
-                                <video ref={videoRef} src={movie.fullMovie} className="w-full h-full object-contain" controls={!isPaused} playsInline autoPlay onEnded={handleMovieEnd} onPause={() => setIsPaused(true)} onPlay={() => setIsPaused(false)} />
+                            <div className="relative w-full h-full" onContextMenu={(e) => e.preventDefault()}>
+                                <video 
+                                    ref={videoRef} 
+                                    src={movie.fullMovie} 
+                                    className="w-full h-full object-contain" 
+                                    controls={!isPaused} 
+                                    playsInline 
+                                    autoPlay 
+                                    onPause={() => setIsPaused(true)} 
+                                    onPlay={() => setIsPaused(false)}
+                                    controlsList="nodownload" // SECURE: Remove download button
+                                />
                                 {isPaused && <PauseOverlay movie={movie} isLiked={likedMoviesArray.includes(movieKey)} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => videoRef.current?.play()} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={() => toggleLikeMovie(movieKey)} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
-                            </>
+                            </div>
                         )
                     ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-black/95 backdrop-blur-xl">
-                            <h2 className="text-4xl font-black uppercase mb-4 tracking-tighter">Access Restriced</h2>
-                            <p className="text-gray-400 mb-8 font-bold uppercase tracking-widest text-xs">A professional rental is required to view this title.</p>
-                            <button onClick={() => setIsPurchaseModalOpen(true)} className="px-12 py-5 bg-white text-black font-black rounded-2xl hover:scale-105 transition-all shadow-2xl uppercase tracking-widest text-sm">Rent Film — ${movie.salePrice?.toFixed(2) || '5.00'}</button>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-black/95">
+                            <h2 className="text-4xl font-black uppercase mb-4 tracking-tighter">Rental Required</h2>
+                            <button onClick={() => setIsPurchaseModalOpen(true)} className="px-12 py-5 bg-white text-black font-black rounded-2xl">Rent Film — ${movie.salePrice?.toFixed(2) || '5.00'}</button>
                         </div>
                     )
                 ) : (
                     <div className="relative w-full h-full flex items-center justify-center">
                          <img src={movie.poster} className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-20" />
-                         <img src={movie.poster} className="relative w-full h-full object-contain max-w-2xl rounded-lg shadow-2xl border border-white/5" />
-                         <button onClick={() => hasAccess ? setPlayerMode('full') : setIsPurchaseModalOpen(true)} className="absolute bg-white/10 backdrop-blur-md rounded-full p-8 border-4 border-white/20 hover:scale-110 transition-all shadow-2xl group">
-                            <svg className="w-16 h-16 text-white group-hover:text-red-500 transition-colors" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
+                         <img src={movie.poster} className="relative w-full h-full object-contain max-w-2xl rounded-lg shadow-2xl" />
+                         <button onClick={() => hasAccess ? setPlayerMode('full') : setIsPurchaseModalOpen(true)} className="absolute bg-white/10 backdrop-blur-md rounded-full p-8 border-4 border-white/20 hover:scale-110 transition-all shadow-2xl">
+                            <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
                          </button>
                     </div>
                 )}
@@ -179,8 +154,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             <p className="text-red-500 font-black uppercase tracking-[0.4em] text-xs">Dir. {movie.director}</p>
                         </div>
                         <div className="flex gap-4 w-full md:w-auto">
-                            <button onClick={() => setIsSupportModalOpen(true)} className="flex-1 md:flex-none bg-purple-600 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl hover:bg-purple-700 transition-all active:scale-95">Support Creator</button>
-                            <button onClick={() => setIsDetailsModalOpen(true)} className="flex-1 md:flex-none bg-white/5 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs border border-white/10 hover:bg-white/10 transition-all active:scale-95">Catalog Details</button>
+                            <button onClick={() => setIsSupportModalOpen(true)} className="flex-1 md:flex-none bg-purple-600 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl">Support Creator</button>
+                            <button onClick={() => setIsDetailsModalOpen(true)} className="flex-1 md:flex-none bg-white/5 px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs border border-white/10">Full Credits</button>
                         </div>
                     </div>
                     <div className="text-gray-300 text-xl md:text-2xl leading-relaxed font-medium max-w-4xl" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
@@ -195,7 +170,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
         {isDetailsModalOpen && <MovieDetailsModal movie={movie} isLiked={likedMoviesArray.includes(movieKey)} onToggleLike={toggleLikeMovie} onClose={() => setIsDetailsModalOpen(false)} onSelectActor={setSelectedActor} allMovies={allMovies} allCategories={allCategories} onSelectRecommendedMovie={(m) => window.location.href = `/movie/${m.key}`} onSupportMovie={() => setIsSupportModalOpen(true)} />}
         {isPurchaseModalOpen && <SquarePaymentModal movie={movie} paymentType="movie" onClose={() => setIsPurchaseModalOpen(false)} onPaymentSuccess={() => window.location.reload()} />}
-        {isSupportModalOpen && <SquarePaymentModal movie={movie} paymentType="donation" onClose={() => setIsSupportModalOpen(false)} onPaymentSuccess={() => alert('Success: Support packet processed.')} />}
+        {isSupportModalOpen && <SquarePaymentModal movie={movie} paymentType="donation" onClose={() => setIsSupportModalOpen(false)} onPaymentSuccess={() => alert('Support recorded.')} />}
     </div>
   );
 };

@@ -63,7 +63,7 @@ const publishToS3 = async (liveData: any) => {
             Key: 'live-data.json',
             Body: JSON.stringify(liveData, null, 2),
             ContentType: 'application/json',
-            CacheControl: 'no-store, max-age=0' // Force edge and browser to never cache the master file
+            CacheControl: 'no-store, max-age=0'
         }));
     } catch (err) {
         console.error("[S3 Sync Error] Background cache refresh failed:", err);
@@ -94,9 +94,7 @@ export async function POST(request: Request) {
             }
             case 'delete_movie': {
                 const { key } = data;
-                // Delete from movies collection
                 batch.delete(db.collection('movies').doc(key));
-                // Scrub from all categories
                 const categoriesSnap = await db.collection('categories').get();
                 categoriesSnap.forEach(doc => {
                     const c = doc.data();
@@ -112,19 +110,22 @@ export async function POST(request: Request) {
                 }
                 break;
             case 'categories':
-                // OVERWRITE STRATEGY: Delete removed categories and replace with new set 
+                // ATOMIC FIX: Explicitly find and delete rows removed in the UI
                 const currentCatsSnap = await db.collection('categories').get();
-                const newCatKeys = Object.keys(data);
+                const incomingKeys = Object.keys(data);
                 
                 currentCatsSnap.forEach(doc => {
+                    // Protected system rows
                     if (doc.id === 'nowStreaming' || doc.id === 'featured') return;
-                    if (!newCatKeys.includes(doc.id)) {
+                    
+                    // If row in DB is NOT in the incoming update, it's a deletion. Purge it.
+                    if (!incomingKeys.includes(doc.id)) {
                         batch.delete(doc.ref);
                     }
                 });
 
                 for (const [id, docData] of Object.entries(data)) {
-                    batch.set(db.collection('categories').doc(id), docData as object, { merge: true });
+                    batch.set(db.collection('categories').doc(id), docData as object, { merge: false }); // merge: false ensures full document replacement
                 }
                 break;
             case 'settings':
@@ -153,7 +154,7 @@ export async function POST(request: Request) {
         return new Response(JSON.stringify({ success: true }), { status: 200 });
 
     } catch (error) {
-        console.error("Critical Publish Delay:", error);
+        console.error("Critical Publish Error:", error);
         return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
     }
 }

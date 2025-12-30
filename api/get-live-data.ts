@@ -8,23 +8,30 @@ export async function GET(request: Request) {
 
         const data = await getApiData({ noCache });
 
-        if (data && data.movies && !noCache) {
+        if (data && data.movies) {
             const finalMovies: Record<string, Movie> = {};
             
             Object.values(data.movies).forEach((movie: any) => {
                 const m = movie as Movie;
-                // INCLUSIVE FILTERING: Only skip if absolutely critical ID is missing.
-                // This ensures "Fighter" and other record-only films appear.
                 if (!m || !m.title || !m.key) return;
-                
+
+                const titleLower = m.title.toLowerCase();
+
+                // SCRUB 1: Aggressively remove any draft or "Untitled" entries
+                if (titleLower.includes('untitled') || titleLower === 'draft master') return;
+
+                // SCRUB 2: Handle "Fighter" duplicates. 
+                // Only keep the primary feature if multiple "Fighter" entries exist.
+                if (titleLower === 'fighter' && m.key !== 'fighter' && !m.fullMovie) return;
+
                 finalMovies[m.key] = m;
             });
 
             data.movies = finalMovies;
         }
 
-        // Clean categories of orphaned keys
-        if (data.categories && !noCache) {
+        // SCRUB 3: Clean categories of orphaned keys (films removed by scrub or deletion)
+        if (data.categories) {
             Object.keys(data.categories).forEach(catKey => {
                 const cat = data.categories[catKey];
                 if (cat && Array.isArray(cat.movieKeys)) {
