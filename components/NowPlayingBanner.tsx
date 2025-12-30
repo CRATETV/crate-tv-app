@@ -18,10 +18,19 @@ const NowStreamingBanner: React.FC<NowStreamingBannerProps> = ({ movie, onSelect
     setIsExpanded(true);
   };
 
+  const handleBannerClick = () => {
+    onSelectMovie(movie);
+  };
+
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onPlayMovie(movie);
+  };
+
   return (
     <div
       className="relative w-full h-auto min-h-[16rem] md:min-h-[20rem] rounded-lg overflow-hidden cursor-pointer group mb-8 md:mb-12 bg-black"
-      onClick={() => onSelectMovie(movie)}
+      onClick={handleBannerClick}
       role="button"
       aria-label={`View details for ${movie.title}`}
     >
@@ -51,7 +60,7 @@ const NowStreamingBanner: React.FC<NowStreamingBannerProps> = ({ movie, onSelect
         </div>
         <div className="flex items-center gap-4">
             <button
-                onClick={(e) => { e.stopPropagation(); onPlayMovie(movie); }}
+                onClick={handlePlayClick}
                 className="flex items-center justify-center px-6 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-300 transition-colors"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>

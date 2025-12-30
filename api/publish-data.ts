@@ -63,7 +63,7 @@ const publishToS3 = async (liveData: any) => {
             Key: 'live-data.json',
             Body: JSON.stringify(liveData, null, 2),
             ContentType: 'application/json',
-            CacheControl: 'public, s-maxage=1, stale-while-revalidate=5'
+            CacheControl: 'no-store, max-age=0' // Force edge and browser to never cache the master file
         }));
     } catch (err) {
         console.error("[S3 Sync Error] Background cache refresh failed:", err);
@@ -90,9 +90,6 @@ export async function POST(request: Request) {
                 const { key } = data;
                 // Delete from movies collection
                 batch.delete(db.collection('movies').doc(key));
-                // Delete from view_counts and view_locations
-                batch.delete(db.collection('view_counts').doc(key));
-                batch.delete(db.collection('view_locations').doc(key));
                 // Scrub from all categories
                 const categoriesSnap = await db.collection('categories').get();
                 categoriesSnap.forEach(doc => {
@@ -103,29 +100,26 @@ export async function POST(request: Request) {
                 });
                 break;
             }
-            case 'set_now_streaming': {
-                const { key } = data;
-                const nowStreamingRef = db.collection('categories').doc('nowStreaming');
-                batch.set(nowStreamingRef, {
-                    title: 'Now Streaming',
-                    movieKeys: [key]
-                }, { merge: false });
-                break;
-            }
             case 'movies':
                 for (const [id, docData] of Object.entries(data)) {
                     batch.set(db.collection('movies').doc(id), docData as object, { merge: true });
                 }
                 break;
             case 'categories':
-                // OVERWRITE STRATEGY: Delete all existing categories and replace with new set 
+                // OVERWRITE STRATEGY: Delete existing categories and replace with new set 
                 // to handle deletions (like Cratemas extra row) correctly.
-                const oldCats = await db.collection('categories').get();
-                oldCats.forEach(doc => {
-                    if (doc.id !== 'nowStreaming' && doc.id !== 'featured') {
+                const currentCatsSnap = await db.collection('categories').get();
+                const newCatKeys = Object.keys(data);
+                
+                currentCatsSnap.forEach(doc => {
+                    // Protected keys
+                    if (doc.id === 'nowStreaming' || doc.id === 'featured') return;
+                    // If not in the new save payload, delete it from the DB permanently
+                    if (!newCatKeys.includes(doc.id)) {
                         batch.delete(doc.ref);
                     }
                 });
+
                 for (const [id, docData] of Object.entries(data)) {
                     batch.set(db.collection('categories').doc(id), docData as object, { merge: true });
                 }
@@ -150,14 +144,14 @@ export async function POST(request: Request) {
 
         await batch.commit();
 
-        // Assemble and push live data as a non-blocking background task
+        // Assemble and push live data
         const liveData = await assembleLiveData(db);
-        publishToS3(liveData).catch(console.error);
+        await publishToS3(liveData);
 
         return new Response(JSON.stringify({ success: true }), { status: 200 });
 
     } catch (error) {
         console.error("Critical Publish Delay:", error);
-        return new Response(JSON.stringify({ success: true, warning: 'Primary database synced, cache updating.' }), { status: 200 });
+        return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
     }
 }

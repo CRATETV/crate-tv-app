@@ -14,6 +14,7 @@ interface FestivalContextType {
     dataSource: 'live' | 'fallback' | null;
     adConfig: AdConfig | null;
     settings: SiteSettings;
+    refreshData: () => Promise<void>;
 }
 
 const FestivalContext = createContext<FestivalContextType | undefined>(undefined);
@@ -43,84 +44,44 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         return now >= new Date(festivalConfig.startDate) && now < new Date(festivalConfig.endDate);
     }, [festivalConfig]);
 
-    useEffect(() => {
-        let unsubscribes: (() => void)[] = [];
+    const fetchData = async (forceNoCache = false) => {
+        try {
+            // Using a dynamic timestamp to bust edge caches immediately
+            const res = await fetch(`/api/get-live-data?t=${Date.now()}&noCache=${forceNoCache}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.movies) setMovies(data.movies);
+                if (data.categories) setCategories(data.categories);
+                if (data.aboutData) setAboutData(data.aboutData);
+                if (data.settings) setSettings(data.settings);
+                if (data.festivalConfig) setFestivalConfig(data.festivalConfig);
+                if (data.festivalData) setFestivalData(data.festivalData);
+                setDataSource('live');
+            }
+        } catch (err) {
+            console.error("Live sync failed, using local fallback.", err);
+            setDataSource('fallback');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-        const fetchDataWithFallback = async () => {
+    useEffect(() => {
+        fetchData();
+        
+        // Setup real-time listener for settings which control visibility toggles
+        const init = async () => {
             await initializeFirebaseAuth();
             const db = getDbInstance();
-
-            if (!db) {
-                setDataSource('fallback');
-                setIsLoading(false);
-                return;
-            }
-            
-            setDataSource('live');
-            
-            try {
-                // Primary movies listener
-                const moviesUnsub = db.collection('movies').onSnapshot(snapshot => {
-                    const liveMovies: Record<string, Movie> = {};
-                    snapshot.forEach(doc => {
-                        liveMovies[doc.id] = { key: doc.id, ...doc.data() } as Movie;
-                    });
-                    setMovies(liveMovies);
-                });
-                unsubscribes.push(moviesUnsub);
-
-                // Categories listener with automatic unlisted content filtering
-                const categoriesUnsub = db.collection('categories').onSnapshot(snapshot => {
-                    const liveCategories: Record<string, Category> = {};
-                    snapshot.forEach(doc => {
-                        const catData = doc.data() as Category;
-                        
-                        // CRITICAL: Filter out movies marked as isUnlisted from the public category views.
-                        // They will still be in the 'movies' map for Watch Party direct access.
-                        const filteredKeys = (catData.movieKeys || []).filter(key => {
-                            const movie = movies[key];
-                            return !movie?.isUnlisted;
-                        });
-                        
-                        liveCategories[doc.id] = { ...catData, movieKeys: filteredKeys };
-                    });
-                    setCategories(liveCategories);
-                });
-                unsubscribes.push(categoriesUnsub);
-
-                const aboutUnsub = db.collection('content').doc('about').onSnapshot(doc => {
-                    if (doc.exists) setAboutData(doc.data() as AboutData);
-                });
-                unsubscribes.push(aboutUnsub);
-                
-                const settingsUnsub = db.collection('content').doc('settings').onSnapshot(doc => {
+            if (db) {
+                return db.collection('content').doc('settings').onSnapshot(doc => {
                     if (doc.exists) setSettings(doc.data() as SiteSettings);
                 });
-                unsubscribes.push(settingsUnsub);
-
-                const festivalConfigUnsub = db.collection('festival').doc('config').onSnapshot(doc => {
-                    if (doc.exists) setFestivalConfig(doc.data() as FestivalConfig);
-                });
-                unsubscribes.push(festivalConfigUnsub);
-                
-                const festivalDaysUnsub = db.collection('festival').doc('schedule').collection('days').onSnapshot(snapshot => {
-                    const days: FestivalDay[] = [];
-                    snapshot.forEach(doc => days.push(doc.data() as FestivalDay));
-                    setFestivalData(days.sort((a, b) => a.day - b.day));
-                });
-                unsubscribes.push(festivalDaysUnsub);
-
-            } catch (error) {
-                console.error("Error setting up listeners:", error);
-                setDataSource('fallback');
-            } finally {
-                setIsLoading(false);
             }
         };
-
-        fetchDataWithFallback();
-        return () => unsubscribes.forEach(unsub => unsub());
-    }, [movies]); // Re-subscribe if movies reference map changes to ensure filter stays fresh
+        const unsubPromise = init();
+        return () => { unsubPromise.then(unsub => unsub?.()); };
+    }, []);
 
     const value: FestivalContextType = {
         isLoading,
@@ -132,7 +93,8 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         isFestivalLive,
         dataSource,
         adConfig,
-        settings
+        settings,
+        refreshData: () => fetchData(true)
     };
 
     return (
