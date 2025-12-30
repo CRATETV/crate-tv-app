@@ -74,8 +74,12 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             await initializeFirebaseAuth();
             const db = getDbInstance();
             if (db) {
+                // INSTANT SYNC: Listen for changes to the settings doc and re-fetch if anyone publishes
                 return db.collection('content').doc('settings').onSnapshot(doc => {
-                    if (doc.exists) setSettings(doc.data() as SiteSettings);
+                    if (doc.exists) {
+                        setSettings(doc.data() as SiteSettings);
+                        fetchData(true); // Always force re-fetch when settings update
+                    }
                 });
             }
         };

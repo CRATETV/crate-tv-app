@@ -15,6 +15,7 @@ interface HeaderProps {
     topOffset?: string;
     isStaging?: boolean;
     autoFocus?: boolean;
+    isLiveSpotlight?: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -27,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({
     onSignInClick,
     showNavLinks = true,
     topOffset = '0px',
-    autoFocus,
+    isLiveSpotlight = false,
 }) => {
     const { user, logout } = useAuth();
     const { categories, movies } = useFestival();
@@ -69,6 +70,10 @@ const Header: React.FC<HeaderProps> = ({
     const navLinks = [{ path: '/', label: 'Home' }, { path: '/classics', label: 'Vintage' }];
     if (user && (user.isActor || user.isFilmmaker)) navLinks.push({ path: '/portal', label: 'Creator Hub' });
     
+    const spotlightPath = isLiveSpotlight && nowStreamingMovie 
+        ? `/watchparty/${nowStreamingMovie.key}`
+        : nowStreamingMovie ? `/movie/${nowStreamingMovie.key}?play=true` : '/';
+
     return (
         <header className={headerClasses} style={{ top: topOffset }}>
             <div className="max-w-[1800px] mx-auto px-4 md:px-12 flex items-center justify-between">
@@ -76,15 +81,17 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="flex items-center gap-4">
                         {nowStreamingMovie && (
                             <button 
-                                onClick={(e) => handleNavigate(e, `/movie/${nowStreamingMovie.key}?play=true`)}
-                                className="group flex items-center gap-3 bg-red-600/10 border border-red-600/20 hover:bg-red-600 transition-all px-4 py-2 rounded-xl"
+                                onClick={(e) => handleNavigate(e, spotlightPath)}
+                                className={`group flex items-center gap-3 ${isLiveSpotlight ? 'bg-red-600' : 'bg-red-600/10 border border-red-600/20'} hover:bg-red-600 transition-all px-4 py-2 rounded-xl shadow-lg`}
                             >
                                 <div className="flex items-center gap-1.5">
                                     <span className="relative flex h-2 w-2">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isLiveSpotlight ? 'bg-white' : 'bg-red-400'} opacity-75`}></span>
+                                        <span className={`relative inline-flex rounded-full h-2 w-2 ${isLiveSpotlight ? 'bg-white' : 'bg-red-600'}`}></span>
                                     </span>
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-red-500 group-hover:text-white transition-colors">Now Streaming</span>
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${isLiveSpotlight ? 'text-white' : 'text-red-500'} group-hover:text-white transition-colors`}>
+                                        {isLiveSpotlight ? 'Join Live Party' : 'Now Streaming'}
+                                    </span>
                                 </div>
                                 <span className="text-white font-black text-xs uppercase tracking-tighter hidden sm:inline">{nowStreamingMovie.title}</span>
                             </button>

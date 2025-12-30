@@ -6,20 +6,21 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const noCache = searchParams.get('noCache') === 'true';
 
+        // Fetch master data from S3/Firestore
         const data = await getApiData({ noCache });
 
         if (data && data.movies) {
             const finalMovies: Record<string, Movie> = {};
             const processedTitles = new Set<string>();
             
-            // DEDUPLICATION ENGINE: Prioritize movies with full content
+            // PRIORITY DEDUPLICATION: Ensure "Gemini Time Service" and "Fighter" only appear once
             const movieArray = Object.values(data.movies) as Movie[];
             
-            // Sort so movies with a fullMovie URL come first
+            // Sort: Movies with playable files and posters always take precedence over drafts
             movieArray.sort((a, b) => {
-                if (a.fullMovie && !b.fullMovie) return -1;
-                if (!a.fullMovie && b.fullMovie) return 1;
-                return 0;
+                const aScore = (a.fullMovie ? 10 : 0) + (a.poster ? 5 : 0);
+                const bScore = (b.fullMovie ? 10 : 0) + (b.poster ? 5 : 0);
+                return bScore - aScore;
             });
 
             movieArray.forEach((m: Movie) => {
@@ -27,10 +28,10 @@ export async function GET(request: Request) {
                 
                 const titleLower = m.title.toLowerCase().trim();
                 
-                // SCRUB 1: Remove "Untitled" or "Draft" placeholder entries
+                // SCRUB 1: Block placeholders
                 if (titleLower.includes('untitled') || titleLower === 'draft master') return;
                 
-                // SCRUB 2: Deduplicate "Fighter", "Gemini Time Service", etc.
+                // SCRUB 2: Enforce Single-Entry for Gemini, Fighter, and all other titles
                 if (processedTitles.has(titleLower)) return;
                 
                 processedTitles.add(titleLower);
@@ -40,10 +41,13 @@ export async function GET(request: Request) {
             data.movies = finalMovies;
         }
 
-        // CATEGORY SCRUBBING: Remove duplicate rows and orphaned keys
+        // CATEGORY SCRUBBING: Ensure no duplicate rows (like Cratemas) appear
         if (data.categories) {
             const finalCategories: Record<string, Category> = {};
-            const processedCatTitles = new Set<string>();
+            const processedRowTitles = new Set<string>();
+
+            // System rows that are protected from deduplication logic
+            const protectedKeys = ['nowStreaming', 'featured', 'publicDomainIndie'];
 
             Object.entries(data.categories).forEach(([key, category]) => {
                 const cat = category as Category;
@@ -51,14 +55,21 @@ export async function GET(request: Request) {
                 
                 const titleLower = cat.title.toLowerCase().trim();
                 
-                // Merge or Skip duplicate row titles (e.g., Cratemas)
-                if (processedCatTitles.has(titleLower) && key !== 'featured' && key !== 'nowStreaming') {
+                // If it's a duplicate row title (e.g. "Cratemas"), merge the keys and skip creating a new row
+                if (processedRowTitles.has(titleLower) && !protectedKeys.includes(key)) {
+                    const existingKey = Object.keys(finalCategories).find(k => finalCategories[k].title.toLowerCase().trim() === titleLower);
+                    if (existingKey) {
+                        const mergedKeys = Array.from(new Set([...finalCategories[existingKey].movieKeys, ...(cat.movieKeys || [])]));
+                        finalCategories[existingKey].movieKeys = mergedKeys.filter(k => !!data.movies[k]);
+                    }
                     return; 
                 }
 
-                processedCatTitles.add(titleLower);
+                if (!protectedKeys.includes(key)) {
+                    processedRowTitles.add(titleLower);
+                }
 
-                // Filter out movies that were scrubbed
+                // Filter out movies that were purged in the movie scrub phase
                 if (Array.isArray(cat.movieKeys)) {
                     cat.movieKeys = cat.movieKeys.filter((k: string) => !!data.movies[k]);
                 }
@@ -69,21 +80,20 @@ export async function GET(request: Request) {
             data.categories = finalCategories;
         }
 
-        const cacheHeader = noCache 
-            ? 'no-store, no-cache, must-revalidate, proxy-revalidate' 
-            : 's-maxage=5, stale-while-revalidate=30';
+        // INSTANT REFLECTION: Set cache to 0 to bypass all ISP/Browser caching for professional sync
+        const cacheHeader = 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
 
         return new Response(JSON.stringify(data), {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
                 'Cache-Control': cacheHeader,
-                'Pragma': noCache ? 'no-cache' : 'auto',
+                'Pragma': 'no-cache',
                 'Expires': '0'
             },
         });
     } catch (error) {
-        return new Response(JSON.stringify({ error: 'System stabilizing...' }), {
+        return new Response(JSON.stringify({ error: 'System processing...' }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         });

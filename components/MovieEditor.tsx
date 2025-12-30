@@ -68,6 +68,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                 fullMovie: movieToCreate.movieUrl,
                 poster: movieToCreate.posterUrl,
                 tvPoster: movieToCreate.posterUrl,
+                publishedAt: new Date().toISOString(),
                 cast: movieToCreate.cast ? movieToCreate.cast.split(',').map(name => ({
                     name: name.trim(),
                     bio: 'Biographical data pending.',
@@ -146,10 +147,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
-    // Expiry logic: 12 months from publishedAt
-    const getLicensingStatus = () => {
-        if (!formData?.publishedAt) return null;
-        const pub = new Date(formData.publishedAt);
+    const getLicensingStatus = (publishedAt?: string) => {
+        if (!publishedAt) return null;
+        const pub = new Date(publishedAt);
         const exp = new Date(pub);
         exp.setFullYear(exp.getFullYear() + 1);
         const diff = exp.getTime() - new Date().getTime();
@@ -160,8 +160,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             isUrgent: daysLeft < 30 && daysLeft > 0 
         };
     };
-
-    const license = getLicensingStatus();
 
     return (
         <div className="space-y-6 pb-20">
@@ -177,21 +175,37 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <tbody className="divide-y divide-white/5">
-                                {filteredMovies.map(movie => (
-                                    <tr key={movie.key} className="hover:bg-white/[0.01] group transition-colors">
-                                        <td className="px-8 py-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-14 bg-black rounded border border-white/10 overflow-hidden shadow-inner">
-                                                    {movie.poster && <img src={movie.poster} className="w-full h-full object-cover" />}
+                                {filteredMovies.map(movie => {
+                                    const status = getLicensingStatus(movie.publishedAt);
+                                    return (
+                                        <tr key={movie.key} className="hover:bg-white/[0.01] group transition-colors">
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-14 bg-black rounded border border-white/10 overflow-hidden shadow-inner">
+                                                        {movie.poster && <img src={movie.poster} className="w-full h-full object-cover" />}
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-bold text-white uppercase text-sm tracking-tight">{movie.title || 'Untitled'}</span>
+                                                        <p className="text-[9px] text-gray-600 font-black uppercase mt-1 tracking-widest">
+                                                            Ingested: {movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'N/A'}
+                                                            {movie.isForSale && <span className="ml-2 text-green-600">$ Paywall</span>}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <span className="font-bold text-white uppercase text-sm tracking-tight">{movie.title || 'Untitled'}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-6 text-right">
-                                            <button onClick={() => setSelectedMovieKey(movie.key)} className="text-white bg-white/5 hover:bg-white/10 font-black text-[9px] uppercase px-4 py-2 rounded-lg border border-white/5 transition-all">Edit Manifest</button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td className="px-8 py-6 hidden md:table-cell">
+                                                {status && (
+                                                    <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-full border ${status.isUrgent ? 'border-red-600/50 text-red-500 bg-red-600/5' : 'border-white/5 text-gray-500'}`}>
+                                                        {status.daysLeft > 0 ? `${status.daysLeft}d left` : 'Expired'}
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="px-8 py-6 text-right">
+                                                <button onClick={() => setSelectedMovieKey(movie.key)} className="text-white bg-white/5 hover:bg-white/10 font-black text-[9px] uppercase px-4 py-2 rounded-lg border border-white/5 transition-all">Edit Manifest</button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
@@ -199,7 +213,10 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             ) : (
                 <div className="bg-[#0f0f0f] rounded-[2.5rem] border border-white/5 p-8 md:p-12 space-y-12 animate-[fadeIn_0.3s_ease-out]">
                     <div className="flex justify-between items-center border-b border-white/5 pb-10">
-                        <h3 className="text-4xl font-black text-white uppercase tracking-tighter">{formData.title || 'Draft Master'}</h3>
+                        <div>
+                            <h3 className="text-4xl font-black text-white uppercase tracking-tighter">{formData.title || 'Draft Master'}</h3>
+                            <p className="text-[10px] text-gray-600 font-black uppercase mt-2 tracking-[0.4em]">UUID: {formData.key}</p>
+                        </div>
                         <div className="flex gap-4">
                             <button 
                                 onClick={() => { onSetNowStreaming(formData.key); setSelectedMovieKey(''); }} 
@@ -224,19 +241,30 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             </section>
 
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Licensing & Contracts</h4>
-                                <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-4">
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Paywall & License</h4>
+                                <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-6">
                                     <div>
-                                        <label className="form-label">Publication Date (Internal Tracking)</label>
-                                        <input type="date" value={formData.publishedAt?.split('T')[0] || ''} onChange={(e) => setFormData({...formData, publishedAt: e.target.value ? new Date(e.target.value).toISOString() : ''})} className="form-input bg-black/40" />
+                                        <label className="flex items-center gap-3 cursor-pointer group">
+                                            <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
+                                            <span className="text-sm font-bold text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Lock behind Paywall (Rental)</span>
+                                        </label>
+                                        {formData.isForSale && (
+                                            <div className="pt-4 animate-[fadeIn_0.2s_ease-out]">
+                                                <label className="form-label">Rental Price (USD)</label>
+                                                <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} step="0.01" className="form-input bg-black/40" />
+                                            </div>
+                                        )}
                                     </div>
-                                    {license && (
-                                        <div className={`p-4 rounded-xl border ${license.isUrgent ? 'bg-red-950/20 border-red-500/30' : 'bg-green-950/10 border-green-500/20'}`}>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Non-Exclusive Window</p>
-                                            <p className="text-sm font-bold text-white">Expires: {license.expiry}</p>
-                                            <p className={`text-xs mt-1 font-bold ${license.isUrgent ? 'text-red-500' : 'text-gray-500'}`}>{license.daysLeft > 0 ? `${license.daysLeft} days remaining` : 'EXPIRED'}</p>
-                                        </div>
-                                    )}
+                                    <div className="pt-4 border-t border-white/5">
+                                        <label className="form-label">Exhibition Start (Tracking)</label>
+                                        <input type="date" value={formData.publishedAt?.split('T')[0] || ''} onChange={(e) => setFormData({...formData, publishedAt: e.target.value ? new Date(e.target.value).toISOString() : ''})} className="form-input bg-black/40" />
+                                        {formData.publishedAt && (
+                                            <div className="mt-4 p-4 rounded-xl bg-black/60 border border-white/5">
+                                                <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">12-Month Non-Exclusive Window</p>
+                                                <p className="text-sm font-bold text-white mt-1">Expires: {getLicensingStatus(formData.publishedAt)?.expiry}</p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </section>
                         </div>

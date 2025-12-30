@@ -1,18 +1,17 @@
 import { GoogleGenAI, GenerateContentParameters, GenerateContentResponse } from '@google/genai';
 
 /**
- * Executes a Gemini API call with exponential jittered backoff retry logic.
- * Optimized for both Free and Paid tiers to mitigate rate limits (RPM/TPM).
+ * ELITE RETRY ENGINE V5.1
+ * Specifically hardened for Error 8 (Resource Exhausted) on Paid Tiers.
  */
 export async function generateContentWithRetry(
   params: GenerateContentParameters,
-  maxRetries: number = 4
+  maxRetries: number = 5
 ): Promise<GenerateContentResponse> {
   let lastError: any;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    // CRITICAL: Always create a new instance right before the call
-    // to ensure we pick up the latest API key injected into the environment.
+    // CRITICAL: Re-instantiate client per attempt to ensure clean environmental state
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     try {
@@ -22,40 +21,39 @@ export async function generateContentWithRetry(
       lastError = error;
       const errorMessage = error.message || "";
       
-      // Look for 429 (Rate Limit) or 8 (Resource Exhausted - gRPC code)
-      const isQuotaError = errorMessage.includes("429") || 
-                           errorMessage.includes("RESOURCE_EXHAUSTED") ||
-                           errorMessage.includes("limit") ||
-                           errorMessage.includes("Quota exceeded") ||
-                           errorMessage.includes(" 8 ") || 
-                           errorMessage.startsWith("8 ");
+      // ERROR 8 / 429 DETECTION
+      // Code 8 is 'Resource Exhausted'. On paid tiers, this is typically 
+      // a Requests Per Minute (RPM) threshold rather than a daily cap.
+      const isTransientLimit = 
+          errorMessage.includes("429") || 
+          errorMessage.includes("RESOURCE_EXHAUSTED") ||
+          errorMessage.includes("quota") ||
+          errorMessage.includes("limit") ||
+          errorMessage.includes(" 8 ") || 
+          errorMessage.startsWith("8 ");
 
-      if (isQuotaError) {
+      if (isTransientLimit) {
           if (attempt < maxRetries) {
-              // Exponential Backoff with Jitter
+              // FOR PAID TIERS: Jittered exponential backoff clears the RPM bucket
               const baseDelay = Math.pow(2.2, attempt + 1) * 1000;
-              const jitter = Math.random() * 1000;
+              const jitter = Math.random() * 1000; 
               const totalDelay = baseDelay + jitter;
               
-              console.warn(`[Gemini] Rate limited. Attempt ${attempt + 1}. Retrying in ${totalDelay.toFixed(0)}ms...`);
+              console.warn(`[Crate AI] Throttled (Attempt ${attempt + 1}/${maxRetries}). Retrying in ${totalDelay.toFixed(0)}ms...`);
               await new Promise(resolve => setTimeout(resolve, totalDelay));
               continue;
           }
-          const passiveError = new Error("AI intelligence nodes at peak capacity. Changes committed, but insights skipped.");
-          (passiveError as any).isQuotaError = true;
-          throw passiveError;
+          
+          // Custom error flag for UI handling
+          const finalError = new Error("AI nodes are at peak capacity. Database record saved, enrichment deferred.");
+          (finalError as any).isQuotaError = true;
+          (finalError as any).code = 8;
+          throw finalError;
       }
 
-      if (errorMessage.includes("Requested entity was not found.")) {
-          const keyError = new Error("API Key configuration error. Please re-verify settings in AI Studio.");
-          (keyError as any).isKeyError = true;
-          throw keyError;
-      }
-
-      // Retry on 503 (Service Unavailable)
+      // 503 SERVICE UNAVAILABLE
       if (errorMessage.includes("503") && attempt < maxRetries) {
-        const delay = Math.pow(2, attempt + 1) * 1000;
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise(resolve => setTimeout(resolve, 1500 * (attempt + 1)));
         continue;
       }
       

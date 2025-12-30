@@ -22,7 +22,7 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
         try {
             const token = await getUserIdToken();
             if (!token) {
-                throw new Error("You must be logged in to view your profile.");
+                throw new Error("Authentication session required.");
             }
             const response = await fetch('/api/get-actor-profile', {
                 method: 'POST',
@@ -31,11 +31,22 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
                     'Authorization': `Bearer ${token}`
                 },
             });
-            if (!response.ok) throw new Error((await response.json()).error || 'Failed to fetch profile.');
             const data = await response.json();
-            setProfile(data.profile);
+            
+            if (!response.ok) {
+                // If it's just a temporary AI error, don't break the whole editor
+                if (data.isQuotaError) {
+                    setError("AI services are at peak capacity. You can still edit your bio and photos manually.");
+                } else {
+                    throw new Error(data.error || 'Failed to fetch profile.');
+                }
+            }
+            
+            if (data.profile) {
+                setProfile(data.profile);
+            }
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Could not load your profile data.');
+            setError(err instanceof Error ? err.message : 'Could not load profile data.');
         } finally {
             setIsLoading(false);
         }
@@ -62,9 +73,8 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
 
         try {
             const token = await getUserIdToken();
-            if (!token) {
-                throw new Error("Authentication session has expired. Please log in again.");
-            }
+            if (!token) throw new Error("Auth session expired.");
+            
             const response = await fetch('/api/update-actor-profile', {
                 method: 'POST',
                 headers: { 
@@ -78,11 +88,14 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
                     imdbUrl: profile.imdbUrl,
                 }),
             });
-            if (!response.ok) throw new Error((await response.json()).error || 'Failed to save profile.');
-            setSuccess('Your profile has been updated successfully!');
-            setTimeout(() => setSuccess(''), 3000);
+            const result = await response.json();
+            
+            if (!response.ok) throw new Error(result.error || 'Failed to save changes.');
+            
+            setSuccess('Manifest updated. Profile changes are now live across Crate TV.');
+            setTimeout(() => setSuccess(''), 4000);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            setError(err instanceof Error ? err.message : 'A system error occurred.');
         } finally {
             setIsSaving(false);
         }
@@ -90,67 +103,95 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-96 bg-gray-800/50 border border-gray-700 rounded-lg">
-                <LoadingSpinner />
+            <div className="flex flex-col items-center justify-center h-96 bg-[#0f0f0f] border border-white/5 rounded-[2rem] space-y-4">
+                <div className="w-10 h-10 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Synchronizing Profile...</p>
             </div>
         );
     }
 
-    if (error && !profile.bio) { // Show big error if initial load fails
-        return <p className="text-red-400 text-center">{error}</p>;
-    }
-
     return (
-        <form onSubmit={handleSubmit} className="bg-gray-800/50 border border-gray-700 p-6 md:p-8 rounded-lg space-y-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-white">Update Your Public Profile</h2>
+        <form onSubmit={handleSubmit} className="bg-[#0f0f0f] border border-white/5 p-8 md:p-12 rounded-[2.5rem] space-y-12 animate-[fadeIn_0.4s_ease-out]">
+            <div className="border-b border-white/5 pb-8">
+                <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Profile Manifest</h2>
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-2">Manage your professional digital footprint.</p>
+            </div>
             
-            <div className="space-y-6">
-                <div>
-                    <label htmlFor="bio" className="block text-sm font-medium text-gray-400 mb-2">Your Bio</label>
+            <div className="space-y-10">
+                <section className="space-y-4">
+                    <label htmlFor="bio" className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">01. Professional Biography</label>
                     <textarea
                         id="bio"
                         name="bio"
                         value={profile.bio || ''}
                         onChange={handleInputChange}
-                        className="form-input"
-                        rows={6}
+                        className="form-input bg-black/40 min-h-[160px] leading-relaxed text-gray-300"
+                        placeholder="Detail your professional experience and technique..."
                         required
                     />
-                </div>
+                </section>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <section className="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div className="space-y-4">
-                        <label className="block text-sm font-medium text-gray-400">Profile Photo (Square)</label>
-                        {profile.photo && <img src={profile.photo} alt="Profile preview" className="w-32 h-32 object-cover rounded-lg border-2 border-gray-600" />}
-                        <PublicS3Uploader label="Upload New Photo" onUploadSuccess={(url) => handleUrlUpdate('photo', url)} />
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">02. Primary Headshot</label>
+                        <div className="aspect-square w-32 bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl mb-4 group relative">
+                            {profile.photo ? (
+                                <img src={profile.photo} alt="Current" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-800 font-black text-[10px] uppercase">No File</div>
+                            )}
+                        </div>
+                        <PublicS3Uploader label="Replace Image" onUploadSuccess={(url) => handleUrlUpdate('photo', url)} />
                     </div>
                      <div className="space-y-4">
-                        <label className="block text-sm font-medium text-gray-400">High-Res Photo (for Bio Modal)</label>
-                        {profile.highResPhoto && <img src={profile.highResPhoto} alt="High-res preview" className="w-32 h-32 object-cover rounded-lg border-2 border-gray-600" />}
-                        <PublicS3Uploader label="Upload High-Res Photo" onUploadSuccess={(url) => handleUrlUpdate('highResPhoto', url)} />
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">03. High-Resolution Source</label>
+                        <div className="aspect-video w-full max-w-[200px] bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl mb-4 group relative">
+                            {profile.highResPhoto ? (
+                                <img src={profile.highResPhoto} alt="Current High Res" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-800 font-black text-[10px] uppercase">No File</div>
+                            )}
+                        </div>
+                        <PublicS3Uploader label="Replace High-Res" onUploadSuccess={(url) => handleUrlUpdate('highResPhoto', url)} />
                     </div>
-                </div>
+                </section>
 
-                <div>
-                    <label htmlFor="imdbUrl" className="block text-sm font-medium text-gray-400 mb-2">IMDb Profile URL (Optional)</label>
+                <section className="space-y-4">
+                    <label htmlFor="imdbUrl" className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">04. External Accreditation</label>
                     <input
                         type="url"
                         id="imdbUrl"
                         name="imdbUrl"
                         value={profile.imdbUrl || ''}
                         onChange={handleInputChange}
-                        className="form-input"
+                        className="form-input bg-black/40"
                         placeholder="https://www.imdb.com/name/nm..."
                     />
-                </div>
+                </section>
             </div>
 
-            {error && <p className="text-red-400 text-sm mt-4">{error}</p>}
-            {success && <p className="text-green-400 text-sm mt-4">{success}</p>}
+            <div className="pt-8 border-t border-white/5">
+                {error && (
+                    <div className="mb-6 p-4 bg-red-900/10 border border-red-500/20 rounded-xl flex items-center gap-3">
+                         <span className="text-red-500 text-lg">⚠️</span>
+                         <p className="text-red-500 text-xs font-bold uppercase tracking-widest">{error}</p>
+                    </div>
+                )}
+                {success && (
+                    <div className="mb-6 p-4 bg-green-900/10 border border-green-500/20 rounded-xl flex items-center gap-3">
+                         <span className="text-green-500 text-lg">✓</span>
+                         <p className="text-green-500 text-xs font-bold uppercase tracking-widest">{success}</p>
+                    </div>
+                )}
 
-            <button type="submit" disabled={isSaving} className="submit-btn bg-purple-600 hover:bg-purple-700 w-full mt-4">
-                {isSaving ? 'Saving...' : 'Save Changes'}
-            </button>
+                <button 
+                    type="submit" 
+                    disabled={isSaving} 
+                    className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-800 disabled:text-gray-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] shadow-2xl transition-all transform active:scale-[0.98]"
+                >
+                    {isSaving ? 'Synchronizing Cluster...' : 'Commit Changes'}
+                </button>
+            </div>
         </form>
     );
 };

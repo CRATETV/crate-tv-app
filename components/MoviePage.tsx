@@ -68,7 +68,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   const playContent = useCallback(async () => {
     if (videoRef.current && !hasTrackedViewRef.current && movie?.key) {
-        // SECURE CINEMA MODE: Force landscape on mobile
         try {
             if (containerRef.current?.requestFullscreen) {
                 await containerRef.current.requestFullscreen();
@@ -123,7 +122,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     autoPlay 
                                     onPause={() => setIsPaused(true)} 
                                     onPlay={() => setIsPaused(false)}
-                                    controlsList="nodownload" // SECURE: Prevents download button in browser
+                                    controlsList="nodownload" 
                                 />
                                 {isPaused && <PauseOverlay movie={movie} isLiked={likedMoviesArray.includes(movieKey)} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => videoRef.current?.play()} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={() => toggleLikeMovie(movieKey)} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
                             </div>
@@ -131,7 +130,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     ) : (
                         <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-black/95">
                             <h2 className="text-4xl font-black uppercase mb-4 tracking-tighter">Rental Required</h2>
-                            <button onClick={() => setIsPurchaseModalOpen(true)} className="px-12 py-5 bg-white text-black font-black rounded-2xl">Rent Film — ${movie.salePrice?.toFixed(2) || '5.00'}</button>
+                            <p className="text-gray-400 mb-8 text-center max-w-sm">This film is locked behind a cinematic paywall. Renting grants 24-hour access to the master high-bitrate file.</p>
+                            <button onClick={() => setIsPurchaseModalOpen(true)} className="px-12 py-5 bg-white text-black font-black rounded-2xl hover:scale-105 transition-all shadow-xl">Rent Film — ${movie.salePrice?.toFixed(2) || '5.00'}</button>
+                            <button onClick={handleGoHome} className="mt-8 text-xs font-black uppercase tracking-widest text-gray-600 hover:text-white transition-colors">Return to Home</button>
                         </div>
                     )
                 ) : (

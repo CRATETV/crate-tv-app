@@ -39,6 +39,7 @@ const ALL_TABS: Record<string, string> = {
 const AdminPage: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [movies, setMovies] = useState<Record<string, Movie>>({});
@@ -137,13 +138,11 @@ const AdminPage: React.FC = () => {
     const handleSetNowStreaming = async (movieKey: string) => {
         setIsSaving(true);
         const pass = sessionStorage.getItem('adminPassword');
-        // Logic: Move this movie to the first slot of the nowStreaming category
         const newCategories = { ...categories };
         newCategories.nowStreaming = {
             title: 'Now Streaming',
             movieKeys: [movieKey]
         };
-        
         await handleSaveData('categories', newCategories);
     };
 
@@ -161,17 +160,30 @@ const AdminPage: React.FC = () => {
                             <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-32 mx-auto mb-6" alt="Crate TV" />
                             <h1 className="text-xl font-black uppercase tracking-[0.2em] text-gray-700">Studio Command</h1>
                         </div>
-                        <div className="mb-8">
+                        <div className="mb-8 relative">
                             <label className="form-label" htmlFor="password">Operator Key</label>
-                            <input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="form-input text-center tracking-widest bg-white/5 border-white/10"
-                                placeholder="••••••••"
-                                required
-                            />
+                            <div className="relative">
+                                <input
+                                    id="password"
+                                    type={showPassword ? "text" : "password"}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="form-input text-center tracking-widest bg-white/5 border-white/10 pr-12"
+                                    placeholder="••••••••"
+                                    required
+                                />
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                                >
+                                    {showPassword ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" /></svg>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074L3.707 2.293zM10 12a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /><path d="M2 10s.955-2.263 2.828-4.136A10.046 10.046 0 0110 3c4.478 0 8.268 2.943 9.542 7-.153.483-.32.95-.5 1.401l-1.473-1.473A8.014 8.014 0 0010 8c-2.04 0-3.87.768-5.172 2.035l-1.473-1.473A8.013 8.013 0 002 10z" /></svg>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                         {error && <p className="text-red-500 text-[10px] font-bold mb-6 text-center uppercase tracking-widest">{error}</p>}
                         <button className="submit-btn w-full !rounded-2xl py-4 bg-red-600 hover:bg-red-700 transition-colors" type="submit">Establish Uplink</button>

@@ -6,15 +6,15 @@ import LoadingSpinner from './components/LoadingSpinner';
 import MovieDetailsModal from './components/MovieDetailsModal';
 import ActorBioModal from './components/ActorBioModal';
 import SearchOverlay from './components/SearchOverlay';
-import { Movie, Actor, Category, SiteSettings } from './types';
-import { isMovieReleased, categoriesData } from './constants';
+import { Movie, Actor, Category, WatchPartyState } from './types';
+import { isMovieReleased } from './constants';
 import { useAuth } from './contexts/AuthContext';
 import { useFestival } from './contexts/FestivalContext';
 import FestivalHero from './components/FestivalHero';
 import BackToTopButton from './components/BackToTopButton';
 import CollapsibleFooter from './components/CollapsibleFooter';
 import BottomNavBar from './components/BottomNavBar';
-import SquarePaymentModal from './components/SquarePaymentModal';
+import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import NowStreamingBanner from './components/NowPlayingBanner';
 
@@ -27,9 +27,25 @@ const App: React.FC = () => {
     const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-    const [supportMovieModal, setSupportMovieModal] = useState<Movie | null>(null);
-    const [liveWatchParty, setLiveWatchParty] = useState<Movie | null>(null);
+    const [activeParties, setActiveParties] = useState<Record<string, WatchPartyState>>({});
     
+    // Listen for live watch parties to inform the spotlight button
+    useEffect(() => {
+        const db = getDbInstance();
+        if (!db) return;
+        const unsubscribe = db.collection('watch_parties').onSnapshot(snapshot => {
+            const states: Record<string, WatchPartyState> = {};
+            snapshot.forEach(doc => {
+                const data = doc.data() as WatchPartyState;
+                if (data.status === 'live') {
+                    states[doc.id] = data;
+                }
+            });
+            setActiveParties(states);
+        });
+        return () => unsubscribe();
+    }, []);
+
     const heroMovies = useMemo(() => {
         const featuredCategory = categories.featured;
         let spotlightMovies: Movie[] = [];
@@ -53,6 +69,11 @@ const App: React.FC = () => {
         return movies[keys[0]] || null;
     }, [movies, categories.nowStreaming]);
 
+    // Check if the spotlight movie is currently in a live watch party
+    const isNowStreamingLive = useMemo(() => {
+        return nowStreamingMovie ? !!activeParties[nowStreamingMovie.key] : false;
+    }, [nowStreamingMovie, activeParties]);
+
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
         const query = searchQuery.toLowerCase().trim();
@@ -71,8 +92,14 @@ const App: React.FC = () => {
     const watchedMovies = useMemo<Set<string>>(() => new Set(watchedMoviesArray), [watchedMoviesArray]);
 
     const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
+    
     const handlePlayMovie = (movie: Movie) => {
-        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+        // Redirect logic: If it's live, go to watchparty, otherwise go to standard player
+        const path = activeParties[movie.key] 
+            ? `/watchparty/${movie.key}` 
+            : `/movie/${movie.key}?play=true`;
+        
+        window.history.pushState({}, '', path);
         window.dispatchEvent(new Event('pushstate'));
     };
 
@@ -90,14 +117,19 @@ const App: React.FC = () => {
 
     if (isLoading) return <LoadingSpinner />;
 
+    // Detect if ANY watch party is live for the top banner
+    const livePartyKey = Object.keys(activeParties)[0];
+    const livePartyMovie = livePartyKey ? movies[livePartyKey] : null;
+
     return (
         <div className="flex flex-col min-h-screen text-white overflow-x-hidden w-full relative">
-            {liveWatchParty && <LiveWatchPartyBanner movie={liveWatchParty} onClose={() => setLiveWatchParty(null)} />}
+            {livePartyMovie && <LiveWatchPartyBanner movie={livePartyMovie} onClose={() => setActiveParties({})} />}
             <Header 
                 searchQuery={searchQuery} 
                 onSearch={setSearchQuery} 
                 onMobileSearchClick={handleSearchClick}
-                topOffset={liveWatchParty ? '3rem' : '0px'}
+                topOffset={livePartyMovie ? '3rem' : '0px'}
+                isLiveSpotlight={isNowStreamingLive}
             />
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden">
                 {isFestivalLive ? (
@@ -135,7 +167,8 @@ const App: React.FC = () => {
                                 <NowStreamingBanner 
                                     movie={nowStreamingMovie} 
                                     onSelectMovie={handleSelectMovie} 
-                                    onPlayMovie={handlePlayMovie} 
+                                    onPlayMovie={handlePlayMovie}
+                                    isLive={isNowStreamingLive}
                                 />
                             )}
                             {Object.entries(categories).map(([key, category]) => {

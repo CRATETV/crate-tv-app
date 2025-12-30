@@ -29,13 +29,13 @@ export async function POST(request: Request) {
     const userData = userDoc.data();
 
     if (!userDoc.exists || !userData || !userData.name) {
-        return new Response(JSON.stringify({ error: "Your user profile could not be found or is incomplete. Please contact support." }), { status: 404, headers: { 'Content-Type': 'application/json' }});
+        return new Response(JSON.stringify({ error: "User profile record incomplete." }), { status: 404, headers: { 'Content-Type': 'application/json' }});
     }
 
     let profile: ActorProfile | null = null;
     let foundSlug: string | null = userData.actorProfileSlug || null;
 
-    // 1. Try to fetch with existing slug
+    // 1. Fetch with existing slug
     if (foundSlug) {
         const profileDoc = await db.collection('actor_profiles').doc(foundSlug).get();
         if (profileDoc.exists) {
@@ -43,19 +43,18 @@ export async function POST(request: Request) {
         }
     }
 
-    // 2. If not found via slug, try to find by name (handles name changes)
+    // 2. Fetch by name search
     if (!profile) {
         const profileQuery = await db.collection('actor_profiles').where('name', '==', userData.name).limit(1).get();
         if (!profileQuery.empty) {
             const profileDoc = profileQuery.docs[0];
             profile = profileDoc.data() as ActorProfile;
             foundSlug = profileDoc.id;
-            // Write back the correct slug to the user profile for future efficiency
             await userRef.update({ actorProfileSlug: foundSlug });
         }
     }
     
-    // 3. If still not found, try to generate from movie data
+    // 3. Last Resort: Backfill from movie credits
     if (!profile) {
         const moviesSnapshot = await db.collection('movies').get();
         let bestActorData: Actor | null = null;
@@ -73,32 +72,22 @@ export async function POST(request: Request) {
             }
         }
         
-        if (bestActorData) {
-            const newSlug = slugify(bestActorData.name);
-            const newProfileData: ActorProfile = {
-                name: bestActorData.name,
-                slug: newSlug,
-                bio: bestActorData.bio || 'Bio not available.',
-                photo: bestActorData.photo || '',
-                highResPhoto: bestActorData.highResPhoto || bestActorData.photo || '',
-                imdbUrl: '',
-            };
-            
-            // Save the new profile and update the user doc with the new slug
-            await db.collection('actor_profiles').doc(newSlug).set(newProfileData);
-            await userRef.update({ actorProfileSlug: newSlug });
-            
-            profile = newProfileData;
-            foundSlug = newSlug;
-        }
+        const newSlug = slugify(userData.name);
+        const newProfileData: ActorProfile = {
+            name: userData.name,
+            slug: newSlug,
+            bio: bestActorData?.bio || 'Biography data pending synchronization.',
+            photo: bestActorData?.photo || 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
+            highResPhoto: bestActorData?.highResPhoto || bestActorData?.photo || 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
+            imdbUrl: '',
+        };
+        
+        await db.collection('actor_profiles').doc(newSlug).set(newProfileData, { merge: true });
+        await userRef.update({ actorProfileSlug: newSlug });
+        profile = newProfileData;
     }
     
-    // 4. Return result or error
-    if (profile) {
-        return new Response(JSON.stringify({ profile }), { status: 200, headers: { 'Content-Type': 'application/json' }});
-    } else {
-        return new Response(JSON.stringify({ error: 'Actor profile not found. If you just signed up, your profile may still be generating. Try again in a minute.' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
-    }
+    return new Response(JSON.stringify({ profile }), { status: 200, headers: { 'Content-Type': 'application/json' }});
 
   } catch (error) {
     console.error("Error fetching actor profile:", error);
