@@ -68,6 +68,12 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                 fullMovie: movieToCreate.movieUrl,
                 poster: movieToCreate.posterUrl,
                 tvPoster: movieToCreate.posterUrl,
+                cast: movieToCreate.cast ? movieToCreate.cast.split(',').map(name => ({
+                    name: name.trim(),
+                    bio: 'Biographical data pending.',
+                    photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
+                    highResPhoto: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png'
+                })) : []
             });
             setSelectedMovieKey(newKey);
             onCreationDone?.();
@@ -102,6 +108,13 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         setNewActorBio('');
     };
 
+    const handleUpdateActorBio = (index: number, newBio: string) => {
+        if (!formData) return;
+        const updatedCast = [...formData.cast];
+        updatedCast[index] = { ...updatedCast[index], bio: newBio };
+        setFormData({ ...formData, cast: updatedCast });
+    };
+
     const handleSave = async () => {
         if (!formData) return;
         setIsSaving(true);
@@ -110,7 +123,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             setSelectedMovieKey('');
             onRefresh();
         } catch (err) {
-            setSelectedMovieKey('');
+            alert("Save failed. Check uplink.");
         } finally {
             setIsSaving(false);
         }
@@ -118,7 +131,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
 
     const handleDelete = async () => {
         if (!formData) return;
-        if (!window.confirm(`PERMANENT ACTION: Purge "${formData.title}" from global database?`)) return;
+        if (!window.confirm(`PERMANENT ACTION: Purge "${formData.title}" from the global database? This also removes it from all categories.`)) return;
         setIsSaving(true);
         try {
             await onDeleteMovie(formData.key);
@@ -129,7 +142,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         }
     };
 
-    // FIX: Cast Object.values(allMovies) to Movie[] to resolve TypeScript 'unknown' type errors when filtering and sorting.
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
@@ -174,7 +186,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                         <div className="flex gap-4">
                             <button 
                                 onClick={() => { onSetNowStreaming(formData.key); setSelectedMovieKey(''); }} 
-                                className="bg-red-600/10 border border-red-500/30 text-red-500 px-6 py-3 rounded-xl uppercase text-[10px] font-black hover:bg-red-600 hover:text-white transition-all"
+                                className="bg-red-600/10 border border-red-500/30 text-red-500 px-6 py-3 rounded-xl uppercase text-[10px] font-black hover:bg-red-600 hover:text-white transition-all shadow-lg"
                             >
                                 Set as Spotlight
                             </button>
@@ -190,14 +202,14 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Director" className="form-input bg-black/40" />
                             </section>
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Monetization (VOD)</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Monetization</h4>
                                 <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-4">
-                                    <label className="flex items-center gap-3 cursor-pointer">
+                                    <label className="flex items-center gap-3 cursor-pointer group">
                                         <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
-                                        <span className="text-sm font-bold text-white uppercase tracking-widest">Place Behind Paywall</span>
+                                        <span className="text-sm font-bold text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Lock behind Paywall</span>
                                     </label>
                                     {formData.isForSale && (
-                                        <div className="pt-2">
+                                        <div className="pt-2 animate-[fadeIn_0.2s_ease-out]">
                                             <label className="form-label">Rental Price (USD)</label>
                                             <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} step="0.01" className="form-input bg-black/40" />
                                         </div>
@@ -207,25 +219,36 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                         </div>
                         <div className="space-y-10">
                              <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">03. Media</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">03. Media Masters</h4>
                                 <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-4">
-                                    <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} placeholder="Film URL" className="form-input bg-black/40" />
-                                    <S3Uploader label="Ingest High-Bitrate Master" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
+                                    <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} placeholder="High-Bitrate Film URL" className="form-input bg-black/40" />
+                                    <S3Uploader label="Ingest Film Master" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
                                     <input type="text" name="poster" value={formData.poster} onChange={handleChange} placeholder="Poster URL" className="form-input bg-black/40" />
                                     <S3Uploader label="Ingest Poster" onUploadSuccess={(url) => setFormData({...formData, poster: url})} />
                                 </div>
                             </section>
                              <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">04. Cast</h4>
-                                <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-4">
-                                    <input type="text" value={newActorName} onChange={e => setNewActorName(e.target.value)} placeholder="Actor Name" className="form-input bg-black/40" />
-                                    <textarea value={newActorBio} onChange={e => setNewActorBio(e.target.value)} placeholder="Bio" className="form-input bg-black/40" rows={2} />
-                                    <button onClick={handleAddActor} className="bg-white/10 w-full py-3 rounded-xl font-black text-[9px] uppercase">Add Performer</button>
-                                    <div className="space-y-2 max-h-64 overflow-y-auto mt-4">
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">04. Cast Manifest</h4>
+                                <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-6">
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <input type="text" value={newActorName} onChange={e => setNewActorName(e.target.value)} placeholder="Performer Name" className="form-input bg-black/40" />
+                                        <textarea value={newActorBio} onChange={e => setNewActorBio(e.target.value)} placeholder="Biography" className="form-input bg-black/40" rows={2} />
+                                        <button onClick={handleAddActor} className="bg-white/10 w-full py-4 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-all">Add Performer to Credits</button>
+                                    </div>
+                                    
+                                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                                         {formData.cast.map((actor, idx) => (
-                                            <div key={idx} className="flex justify-between items-center p-3 bg-black/60 rounded-xl border border-white/5">
-                                                <span className="text-sm font-bold text-white">{actor.name}</span>
-                                                <button onClick={() => { const c = [...formData.cast]; c.splice(idx, 1); setFormData({...formData, cast: c}); }} className="text-gray-600 hover:text-red-500 font-black text-[10px] uppercase">Purge</button>
+                                            <div key={idx} className="bg-black/60 p-5 rounded-2xl border border-white/5 space-y-3 relative group">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-sm font-black text-white uppercase tracking-tight">{actor.name}</span>
+                                                    <button onClick={() => { const c = [...formData.cast]; c.splice(idx, 1); setFormData({...formData, cast: c}); }} className="text-gray-600 hover:text-red-500 font-black text-[10px] uppercase">Remove</button>
+                                                </div>
+                                                <textarea 
+                                                    value={actor.bio} 
+                                                    onChange={(e) => handleUpdateActorBio(idx, e.target.value)}
+                                                    className="w-full bg-white/5 border-none rounded-lg p-3 text-xs text-gray-400 focus:ring-1 focus:ring-red-500/50 resize-none h-20"
+                                                    placeholder="Edit bio..."
+                                                />
                                             </div>
                                         ))}
                                     </div>
@@ -233,9 +256,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             </section>
                         </div>
                     </div>
-                    <div className="pt-12 border-t border-white/5 flex justify-between">
-                        <button onClick={handleDelete} className="text-gray-600 hover:text-red-500 font-black uppercase text-[10px]">Purge Global Manifest</button>
-                        <button onClick={handleSave} disabled={isSaving} className="bg-red-600 hover:bg-red-700 text-white font-black py-5 px-16 rounded-2xl uppercase tracking-widest shadow-2xl">
+                    <div className="pt-12 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-6">
+                        <button onClick={handleDelete} className="text-gray-600 hover:text-red-500 font-black uppercase text-[10px] tracking-widest transition-colors">Purge Global Manifest</button>
+                        <button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-black py-5 px-20 rounded-2xl uppercase tracking-[0.2em] shadow-2xl shadow-red-900/40 transition-all active:scale-95 disabled:opacity-20">
                             {isSaving ? 'Synchronizing Cluster...' : 'Commit Changes'}
                         </button>
                     </div>

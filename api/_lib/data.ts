@@ -3,7 +3,7 @@ import { moviesData as fallbackMovies, categoriesData as fallbackCategories, fes
 
 let cachedData: any = null;
 let lastFetchTime = 0;
-// REDUCED: Cache duration lowered to 1 second to ensure near-instant reflection of admin changes
+// REDUCED: Cache duration lowered to 1 second for standard requests; admin requests bypass this entirely via options.
 const CACHE_DURATION = 1000; 
 
 let s3Client: S3Client | null = null;
@@ -33,7 +33,7 @@ const getFallbackData = () => ({
 
 export const getApiData = async (options: { noCache?: boolean } = {}) => {
     const now = Date.now();
-    // Bypass cache entirely if noCache is requested (usually by admin or background sync)
+    // Bypass cache entirely if noCache is requested (usually by admin actions)
     if (!options.noCache && cachedData && (now - lastFetchTime < CACHE_DURATION)) {
         return cachedData;
     }

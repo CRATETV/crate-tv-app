@@ -94,7 +94,9 @@ export async function POST(request: Request) {
             }
             case 'delete_movie': {
                 const { key } = data;
+                // Delete from movies collection
                 batch.delete(db.collection('movies').doc(key));
+                // Scrub from all categories
                 const categoriesSnap = await db.collection('categories').get();
                 categoriesSnap.forEach(doc => {
                     const c = doc.data();
@@ -110,12 +112,15 @@ export async function POST(request: Request) {
                 }
                 break;
             case 'categories':
+                // OVERWRITE STRATEGY: Delete removed categories and replace with new set 
                 const currentCatsSnap = await db.collection('categories').get();
                 const newCatKeys = Object.keys(data);
                 
                 currentCatsSnap.forEach(doc => {
                     if (doc.id === 'nowStreaming' || doc.id === 'featured') return;
-                    if (!newCatKeys.includes(doc.id)) batch.delete(doc.ref);
+                    if (!newCatKeys.includes(doc.id)) {
+                        batch.delete(doc.ref);
+                    }
                 });
 
                 for (const [id, docData] of Object.entries(data)) {
