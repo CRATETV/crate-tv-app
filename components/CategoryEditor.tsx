@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Category, Movie, SiteSettings } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
@@ -29,8 +28,8 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
   };
 
   const filteredMovies = allMovies
-    .filter(movie => movie.title.toLowerCase().includes(searchTerm.toLowerCase()))
-    .sort((a, b) => a.title.localeCompare(b.title));
+    .filter(movie => (movie.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[110] p-4" onClick={onClose}>
@@ -81,35 +80,28 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
   const { settings } = useFestival();
   const [categories, setCategories] = useState<Record<string, Category>>(initialCategories);
   const [editingCategoryKey, setEditingCategoryKey] = useState<string | null>(null);
-  const [localError, setLocalError] = useState('');
+  const [isDirty, setIsDirty] = useState(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
-  // Holiday Settings State
   const [holidaySettings, setHolidaySettings] = useState<SiteSettings>({
       isHolidayModeActive: settings.isHolidayModeActive || false,
       holidayName: settings.holidayName || 'Cratemas',
-      holidayTagline: settings.holidayTagline || 'Our curated collection of holiday stories, independent spirit, and cinematic cheer.',
+      holidayTagline: settings.holidayTagline || 'Our curated collection of holiday stories.',
       holidayTheme: settings.holidayTheme || 'christmas'
   });
 
-  const prevIsSaving = useRef(isSaving);
-
+  // CRITICAL: Prevent the "flipping" toggle bug by only accepting external settings 
+  // when we are NOT currently in the middle of a local update or save.
   useEffect(() => {
-    setHolidaySettings({
-        isHolidayModeActive: settings.isHolidayModeActive || false,
-        holidayName: settings.holidayName || 'Cratemas',
-        holidayTagline: settings.holidayTagline || 'Our curated collection of holiday stories, independent spirit, and cinematic cheer.',
-        holidayTheme: settings.holidayTheme || 'christmas'
-    });
-  }, [settings]);
-
-  useEffect(() => {
-    if (prevIsSaving.current === true && isSaving === false) {
-       setCategories(initialCategories);
-    } else if (!isSaving && Object.keys(categories).length === 0) {
-       setCategories(initialCategories);
+    if (!isSaving && !isDirty) {
+        setHolidaySettings({
+            isHolidayModeActive: settings.isHolidayModeActive || false,
+            holidayName: settings.holidayName || 'Cratemas',
+            holidayTagline: settings.holidayTagline || 'Our curated collection of holiday stories.',
+            holidayTheme: settings.holidayTheme || 'christmas'
+        });
     }
-    prevIsSaving.current = isSaving;
-  }, [initialCategories, isSaving]);
+  }, [settings, isSaving, isDirty]);
 
   const handleCategoryChange = (key: string, field: 'title', value: string) => {
     setCategories(prev => ({
@@ -141,53 +133,45 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
         delete next[key];
         return next;
     });
-
-    if (!key.startsWith('custom_')) {
-        const password = sessionStorage.getItem('adminPassword');
-        try {
-            const response = await fetch('/api/publish-data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password, type: 'delete_category', data: { key } }),
-            });
-            if (!response.ok) throw new Error('Failed to delete from database.');
-        } catch (err) {
-            setLocalError(err instanceof Error ? err.message : 'Deletion failed.');
-            setCategories(initialCategories);
-        }
-    }
   };
 
   const handleHolidaySettingChange = (field: keyof SiteSettings, value: any) => {
+      setIsDirty(true);
       setHolidaySettings(prev => ({ ...prev, [field]: value }));
+      
+      // Clear the dirty flag after 10 seconds if no save occurs, as a fallback
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => setIsDirty(false), 10000);
   };
 
   const saveHolidaySettings = async () => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     const password = sessionStorage.getItem('adminPassword');
     try {
-        await fetch('/api/publish-data', {
+        const res = await fetch('/api/publish-data', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password, type: 'settings', data: holidaySettings }),
         });
-        alert("Holiday settings updated successfully!");
+        if (res.ok) {
+            setIsDirty(false);
+            alert("Channel Configuration Live.");
+        }
     } catch (err) {
-        console.error("Failed to update holiday settings:", err);
-        alert("Failed to save holiday settings.");
+        alert("Sync failed.");
     }
   };
 
   return (
     <div className="space-y-10">
-      {/* Dynamic Holiday Brand Manager */}
-      <div className="bg-gradient-to-br from-indigo-900/20 via-gray-900 to-black border border-indigo-500/20 p-8 rounded-2xl shadow-xl">
+      <div className="bg-gradient-to-br from-indigo-900/20 via-gray-900 to-black border border-indigo-500/20 p-8 rounded-[2rem] shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
               <div>
-                  <h3 className="text-2xl font-black text-indigo-400 uppercase tracking-tighter">Holiday Brand Manager</h3>
-                  <p className="text-gray-400 text-sm mt-1">Customize your platform's special seasonal collection branding.</p>
+                  <h3 className="text-2xl font-black text-indigo-400 uppercase tracking-tighter">Holiday Channel Config</h3>
+                  <p className="text-gray-400 text-sm mt-1">Control visibility and branding of seasonal content rows.</p>
               </div>
-              <div className="flex items-center gap-4 bg-black/40 p-3 rounded-xl border border-white/5">
-                <span className="text-sm font-bold text-gray-400">Active?</span>
+              <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
+                <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Master Toggle</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                     <input 
                         type="checkbox" 
@@ -195,7 +179,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                         onChange={(e) => handleHolidaySettingChange('isHolidayModeActive', e.target.checked)} 
                         className="sr-only peer" 
                     />
-                    <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                 </label>
               </div>
           </div>
@@ -203,95 +187,89 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                   <div>
-                      <label className="form-label">Special Event Name</label>
+                      <label className="form-label">Branding Label</label>
                       <input 
                         type="text" 
                         value={holidaySettings.holidayName}
                         onChange={(e) => handleHolidaySettingChange('holidayName', e.target.value)}
-                        placeholder="e.g. Cratemas, Love Stories, Scares"
-                        className="form-input"
+                        placeholder="e.g. Cratemas"
+                        className="form-input bg-black/40 border-white/10"
                       />
                   </div>
                   <div>
-                      <label className="form-label">Tagline / Description</label>
+                      <label className="form-label">Narrative Tagline</label>
                       <textarea 
                         value={holidaySettings.holidayTagline}
                         onChange={(e) => handleHolidaySettingChange('holidayTagline', e.target.value)}
                         rows={3}
-                        className="form-input"
-                        placeholder="Explain the collection to your viewers..."
+                        className="form-input bg-black/40 border-white/10"
                       />
                   </div>
               </div>
 
               <div className="space-y-6">
                    <div>
-                      <label className="form-label">Visual Theme</label>
+                      <label className="form-label">Theme Profile</label>
                       <select 
                         value={holidaySettings.holidayTheme}
                         onChange={(e) => handleHolidaySettingChange('holidayTheme', e.target.value)}
-                        className="form-input"
+                        className="form-input bg-black/40 border-white/10"
                       >
-                          <option value="christmas">Christmas (Green/Red/Snow)</option>
-                          <option value="valentines">Valentine's (Pink/Rose/Hearts)</option>
-                          <option value="gold">Gold & Black (Awards/Anniversary)</option>
-                          <option value="generic">Generic Brand (Clean Dark)</option>
+                          <option value="christmas">Christmas</option>
+                          <option value="valentines">Valentine's</option>
+                          <option value="gold">Anniversary Gold</option>
+                          <option value="generic">Clean Dark</option>
                       </select>
                   </div>
                   
-                  <div className="p-4 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
-                      <p className="text-xs text-indigo-300 leading-relaxed italic">
-                        <strong>Pro-Tip:</strong> Changing the theme updates animations and color accents across the home feed row and the collection page instantly.
-                      </p>
-                  </div>
-
                   <button 
                     onClick={saveHolidaySettings}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-indigo-900/40 active:scale-95"
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
-                      Publish Holiday Brand Update
+                      {isSaving ? 'Syncing...' : 'Publish Global Branding'}
                   </button>
               </div>
           </div>
       </div>
 
-      <div className="flex justify-between items-center mb-6 pt-4 border-t border-gray-800">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-300">Other Film Categories</h2>
-        <button onClick={addNewCategory} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-transform hover:scale-105">+ Add New Category</button>
+      <div className="flex justify-between items-center mb-6 pt-4 border-t border-white/5">
+        <h2 className="text-xl font-black text-white uppercase tracking-widest">Catalog Sub-Categories</h2>
+        <button onClick={addNewCategory} className="bg-red-600 hover:bg-red-700 text-white font-black py-2 px-4 rounded-xl text-[10px] uppercase tracking-widest">+ Add Row</button>
       </div>
-
-      {localError && <div className="p-3 mb-4 bg-red-900/50 border border-red-700 text-red-200 rounded-md text-sm">{localError}</div>}
 
       <div className="space-y-4">
         {Object.entries(categories).map(([key, category]: [string, Category]) => {
-          if (key === 'cratemas' || (category.title && category.title.toLowerCase() === 'cratemas')) return null;
+          if (key === 'cratemas' || (category.title && category.title.toLowerCase() === 'cratemas')) {
+              if (!holidaySettings.isHolidayModeActive && !isDirty) return null;
+          }
           
           return (
-            <div key={key} className={`bg-gray-800 p-4 rounded-lg border transition-all duration-300 ${key.startsWith('custom_') ? 'border-purple-500 shadow-lg shadow-purple-900/20' : 'border-gray-700'}`}>
+            <div key={key} className={`bg-gray-900 border border-white/5 p-6 rounded-2xl transition-all duration-300`}>
               <div className="flex justify-between items-center mb-3">
                 <div className="flex-grow">
-                    <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Category Title</label>
+                    <label className="text-[9px] uppercase font-black text-gray-600 mb-2 block tracking-widest">Catalog Row Title</label>
                     <input
                         type="text"
                         value={category.title}
                         onChange={e => handleCategoryChange(key, 'title', e.target.value)}
-                        placeholder="Enter category name..."
-                        className="text-lg font-semibold bg-transparent text-white focus:outline-none focus:bg-gray-700 rounded-md px-2 w-full border border-transparent focus:border-gray-600"
+                        className="text-lg font-black bg-transparent text-white focus:outline-none focus:bg-white/5 rounded-lg px-3 py-2 w-full border border-transparent focus:border-white/10"
                     />
                 </div>
-                <button onClick={() => deleteCategory(key)} className="text-xs text-red-500 hover:text-red-400 ml-4 font-bold uppercase tracking-wider">Delete</button>
+                <button onClick={() => deleteCategory(key)} className="text-[10px] text-red-500 hover:text-red-400 ml-4 font-black uppercase tracking-widest">Delete Row</button>
               </div>
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-700/50">
-                  <p className="text-xs text-gray-400"><strong className="text-gray-300">{category.movieKeys.length}</strong> film(s) currently assigned</p>
-                  <button onClick={() => setEditingCategoryKey(key)} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-1.5 px-4 rounded-md text-xs transition-colors">Manage Assigned Films</button>
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
+                  <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{category.movieKeys.length} Production Assets Attached</p>
+                  <button onClick={() => setEditingCategoryKey(key)} className="bg-white/10 hover:bg-white/20 text-white font-black py-2 px-6 rounded-xl text-[10px] uppercase tracking-widest transition-all">Select Films</button>
               </div>
             </div>
           );
         })}
       </div>
       
-      <div className="mt-8 pt-6 border-t border-gray-700">
-        <button onClick={() => onSave(categories)} disabled={isSaving} className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition-all shadow-lg">{isSaving ? 'Publishing...' : 'Save & Publish All Categories'}</button>
+      <div className="mt-8 pt-6 border-t border-white/5">
+        <button onClick={() => onSave(categories)} disabled={isSaving} className="bg-red-600 hover:bg-red-700 disabled:bg-gray-800 text-white font-black py-4 px-10 rounded-2xl uppercase tracking-widest shadow-2xl transition-all">
+            {isSaving ? 'Syncing Catalog...' : 'Commit Row Changes'}
+        </button>
       </div>
 
       {editingCategoryKey && (

@@ -15,71 +15,12 @@ import BackToTopButton from './components/BackToTopButton';
 import CollapsibleFooter from './components/CollapsibleFooter';
 import BottomNavBar from './components/BottomNavBar';
 import SquarePaymentModal from './components/SquarePaymentModal';
-import FestivalLiveModal from './components/FestivalLiveModal';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import NowStreamingBanner from './components/NowPlayingBanner';
-import NewFilmAnnouncementModal from './components/NewFilmAnnouncementModal';
-
-const HolidaySpecialTitle: React.FC<{ settings: SiteSettings }> = ({ settings }) => {
-    const handleNavigate = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        window.history.pushState({}, '', '/cratemas');
-        window.dispatchEvent(new Event('pushstate'));
-    };
-
-    const name = settings.holidayName || 'Cratemas';
-    const theme = settings.holidayTheme || 'christmas';
-
-    const themes = {
-        christmas: {
-            gradient: 'from-[#ff0000] via-white to-[#22c55e]',
-            glow: 'rgba(255,0,0,0.4)',
-            hoverGlow: 'rgba(255,0,0,0.9)',
-            particleColor: '#ff0000'
-        },
-        valentines: {
-            gradient: 'from-[#f43f5e] via-white to-[#be123c]',
-            glow: 'rgba(244,63,94,0.4)',
-            hoverGlow: 'rgba(190,18,60,0.9)',
-            particleColor: '#f43f5e'
-        },
-        gold: {
-            gradient: 'from-[#fbbf24] via-[#fef3c7] to-[#d97706]',
-            glow: 'rgba(251,191,36,0.4)',
-            hoverGlow: 'rgba(217,119,6,0.9)',
-            particleColor: '#fbbf24'
-        },
-        generic: {
-            gradient: 'from-white via-gray-300 to-gray-500',
-            glow: 'rgba(255,255,255,0.2)',
-            hoverGlow: 'rgba(255,255,255,0.4)',
-            particleColor: '#ffffff'
-        }
-    };
-
-    const currentTheme = themes[theme] || themes.christmas;
-
-    return (
-        <div 
-            className="flex flex-col mb-10 px-2 select-none cursor-pointer group/title transition-all duration-500"
-            onClick={handleNavigate}
-        >
-            <div className="relative inline-block self-start">
-                <div className="flex items-baseline gap-6">
-                    <h2 className={`text-5xl md:text-8xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-br ${currentTheme.gradient} relative z-10 py-2 transition-all duration-700 drop-shadow-[0_0_20px_${currentTheme.glow}] group-hover/title:drop-shadow-[0_0_55px_${currentTheme.hoverGlow}] group-hover/title:scale-[1.05]`}>
-                        {name}
-                    </h2>
-                </div>
-                <div className={`absolute bottom-0 left-0 w-0 h-[4px] bg-gradient-to-r ${currentTheme.gradient} group-hover/title:w-full transition-all duration-700 ease-in-out opacity-90 shadow-[0_0_25px_rgba(255,255,255,0.4)]`}></div>
-            </div>
-        </div>
-    );
-};
 
 const App: React.FC = () => {
     const { likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
-    const { isLoading, movies, categories, isFestivalLive, festivalConfig, dataSource, settings } = useFestival();
+    const { isLoading, movies, categories, isFestivalLive, festivalConfig, settings } = useFestival();
     
     const [heroIndex, setHeroIndex] = useState(0);
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
@@ -87,8 +28,6 @@ const App: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [supportMovieModal, setSupportMovieModal] = useState<Movie | null>(null);
-    const [showFestivalModal, setShowFestivalModal] = useState(false);
-    const [showNowStreamingModal, setShowNowStreamingModal] = useState(false);
     const [liveWatchParty, setLiveWatchParty] = useState<Movie | null>(null);
     
     const heroMovies = useMemo(() => {
@@ -118,11 +57,7 @@ const App: React.FC = () => {
         if (!searchQuery) return [];
         const query = searchQuery.toLowerCase().trim();
         return (Object.values(movies) as Movie[]).filter((movie: Movie | undefined) =>
-            movie && 
-            // VITAL: Ignore records that don't have a poster or a valid title
-            // This prevents "broken" duplicate entries from showing up.
-            movie.poster && movie.poster.length > 5 &&
-            movie.title && movie.title.length > 0 &&
+            movie && movie.poster && movie.title &&
             (
                 (movie.title || '').toLowerCase().includes(query) ||
                 (movie.director || '').toLowerCase().includes(query) ||
@@ -192,7 +127,7 @@ const App: React.FC = () => {
                                 likedMovies={likedMovies}
                                 onToggleLike={toggleLikeMovie}
                                 onToggleWatchlist={toggleWatchlist}
-                                onSupportMovie={setSupportMovieModal}
+                                onSupportMovie={() => {}}
                             />
                         ) : (
                           <>
@@ -205,7 +140,14 @@ const App: React.FC = () => {
                             )}
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as Category;
+                                const titleLower = (typedCategory.title || '').toLowerCase();
+                                
+                                // Core filtering logic: Exclude internal system lists
                                 if (key === 'featured' || key === 'nowStreaming' || key === 'publicDomainIndie') return null;
+                                
+                                // Holiday logic: If holiday mode is OFF, hide anything identified as Cratemas (by key OR title)
+                                if ((key === 'cratemas' || titleLower === 'cratemas') && !settings.isHolidayModeActive) return null;
+                                
                                 const categoryMovies = typedCategory.movieKeys
                                     .map(movieKey => movies[movieKey])
                                     .filter((m: Movie | undefined): m is Movie => !!m);
@@ -221,7 +163,7 @@ const App: React.FC = () => {
                                         likedMovies={likedMovies}
                                         onToggleLike={toggleLikeMovie}
                                         onToggleWatchlist={toggleWatchlist}
-                                        onSupportMovie={setSupportMovieModal}
+                                        onSupportMovie={() => {}}
                                     />
                                 );
                             })}
@@ -246,9 +188,10 @@ const App: React.FC = () => {
                     allCategories={categories}
                     onSelectRecommendedMovie={handleSelectMovie}
                     onPlayMovie={handlePlayMovie}
-                    onSupportMovie={setSupportMovieModal}
+                    onSupportMovie={() => {}}
                 />
             )}
+            {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
             {isMobileSearchOpen && (
                 <SearchOverlay 
                   searchQuery={searchQuery}

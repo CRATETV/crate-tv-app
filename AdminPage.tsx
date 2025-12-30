@@ -18,7 +18,7 @@ import PitchDeckManager from './components/PitchDeckManager';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
 import JuryPortal from './components/JuryPortal';
 
-// Removed 'actors' tab as requested
+// Exclusive Premium Admin Tabs
 const ALL_TABS: Record<string, string> = {
     movies: '🎞️ Catalog',
     pipeline: '📥 Pipeline',
@@ -58,6 +58,7 @@ const AdminPage: React.FC = () => {
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);
         try {
+            // Append timestamp to bust deep browser/CDN caches
             const [liveDataRes, pipelineRes] = await Promise.all([
                 fetch(`/api/get-live-data?noCache=true&t=${Date.now()}`),
                 fetch('/api/get-pipeline-data', {
@@ -82,7 +83,7 @@ const AdminPage: React.FC = () => {
             }
 
         } catch (err) {
-            console.warn("Background data load issue:", err);
+            console.warn("Telemetry acquisition issue:", err);
         } finally {
             setIsLoading(false);
         }
@@ -103,11 +104,11 @@ const AdminPage: React.FC = () => {
                 setIsAuthenticated(true);
                 fetchAllData(passToTry);
             } else {
-                setError('Invalid access token.');
+                setError('Authentication Failed: Invalid Key.');
                 setIsLoading(false);
             }
         } catch (err) {
-            setError('Authentication service unreachable.');
+            setError('System Error: Auth Node Unreachable.');
             setIsLoading(false);
         }
     };
@@ -124,15 +125,13 @@ const AdminPage: React.FC = () => {
                 body: JSON.stringify({ password: pass, type, data: dataToSave }),
             });
             if (response.ok) {
-                const displayType = type === 'delete_movie' ? 'Movie' : type.charAt(0).toUpperCase() + type.slice(1);
-                const verb = type === 'delete_movie' ? 'removed' : 'deployed';
-                setSaveMessage(`${displayType} ${verb} successfully.`);
+                setSaveMessage(`Manifest Synchronized Successfully.`);
                 fetchAllData(pass!);
             } else {
-                throw new Error("Server rejected changes.");
+                throw new Error("Sync Rejected.");
             }
         } catch (err) {
-            setSaveError("Failed to sync changes with live site.");
+            setSaveError("System Fault: Global Sync Failed.");
         } finally {
             setIsSaving(false);
         }
@@ -148,11 +147,11 @@ const AdminPage: React.FC = () => {
                 body: JSON.stringify({ password: pass, type: 'set_now_streaming', data: { key: movieKey } }),
             });
             if (response.ok) {
-                setSaveMessage(`Featured banner updated.`);
+                setSaveMessage(`Hero Spotlight Updated.`);
                 fetchAllData(pass!);
             }
         } catch (err) {
-            setSaveError("Banner update failed.");
+            setSaveError("Spotlight Sync Failed.");
         } finally {
             setIsSaving(false);
         }
@@ -167,10 +166,10 @@ const AdminPage: React.FC = () => {
         return (
             <div className="flex items-center justify-center min-h-screen bg-[#050505] text-white p-4">
                 <div className="w-full max-w-sm">
-                    <form onSubmit={handleLogin} className="bg-gray-900 border border-white/10 p-10 rounded-[2.5rem] shadow-2xl">
+                    <form onSubmit={handleLogin} className="bg-[#0f0f0f] border border-white/5 p-10 rounded-[2.5rem] shadow-2xl">
                         <div className="text-center mb-10">
                             <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-32 mx-auto mb-6" alt="Crate TV" />
-                            <h1 className="text-xl font-black uppercase tracking-[0.2em] text-gray-600">Secure Terminal</h1>
+                            <h1 className="text-xl font-black uppercase tracking-[0.2em] text-gray-700">Studio Command</h1>
                         </div>
                         <div className="mb-8">
                             <label className="form-label" htmlFor="password">Operator Key</label>
@@ -179,12 +178,12 @@ const AdminPage: React.FC = () => {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="form-input text-center tracking-widest bg-black/40 border-white/5"
+                                className="form-input text-center tracking-widest bg-white/5 border-white/10"
                                 placeholder="••••••••"
                                 required
                             />
                         </div>
-                        {error && <p className="text-red-500 text-xs font-bold mb-6 text-center">{error}</p>}
+                        {error && <p className="text-red-500 text-[10px] font-bold mb-6 text-center uppercase tracking-widest">{error}</p>}
                         <button className="submit-btn w-full !rounded-2xl py-4 bg-red-600 hover:bg-red-700 transition-colors" type="submit">Establish Uplink</button>
                     </form>
                 </div>
@@ -204,7 +203,7 @@ const AdminPage: React.FC = () => {
                             <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">Studio <span className="text-red-600">Command</span></h1>
                             <div className="flex items-center gap-2 mt-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-green-500">Infrastructure Online // Global Node Ready</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-green-500">Global Node Cluster Online</p>
                             </div>
                          </div>
                     </div>

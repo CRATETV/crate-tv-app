@@ -1,19 +1,20 @@
 import { GoogleGenAI, GenerateContentParameters, GenerateContentResponse } from '@google/genai';
 
 /**
- * Executes a Gemini API call with exponential backoff retry logic.
- * Specifically targets 429 (Resource Exhausted) and code 8 errors.
+ * Executes a Gemini API call with exponential jittered backoff retry logic.
+ * Optimized for both Free and Paid tiers to mitigate rate limits (RPM/TPM).
  */
 export async function generateContentWithRetry(
   params: GenerateContentParameters,
-  maxRetries: number = 3
+  maxRetries: number = 5
 ): Promise<GenerateContentResponse> {
-  // Always create a new instance right before making an API call 
-  // to ensure we pick up the latest process.env.API_KEY injected by window.aistudio.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   let lastError: any;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    // CRITICAL: Always create a new instance right before the call
+    // to ensure we pick up the latest API key injected into the environment.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     try {
       const response = await ai.models.generateContent(params);
       return response;
@@ -21,34 +22,37 @@ export async function generateContentWithRetry(
       lastError = error;
       const errorMessage = error.message || "";
       
-      // Look for code 8 or RESOURCE_EXHAUSTED or 429 in the error message
+      // Look for 429 (Rate Limit) or 8 (Resource Exhausted - gRPC code)
       const isQuotaError = errorMessage.includes("429") || 
+                           errorMessage.includes("RESOURCE_EXHAUSTED") ||
                            errorMessage.includes("limit") ||
                            errorMessage.includes("Quota exceeded") ||
-                           errorMessage.includes("RESOURCE_EXHAUSTED") ||
-                           errorMessage.includes("8") ||
-                           errorMessage.includes("Resource exhausted");
+                           errorMessage.includes(" 8 ") || 
+                           errorMessage.startsWith("8 ");
 
       if (isQuotaError) {
           if (attempt < maxRetries) {
-              const delay = Math.pow(2, attempt + 1) * 1000;
-              console.warn(`Gemini limit hit. Retrying in ${delay}ms...`);
-              await new Promise(resolve => setTimeout(resolve, delay));
+              // Increased Exponential Backoff for Paid Tier Stability
+              const baseDelay = Math.pow(2.5, attempt + 1) * 1500;
+              const jitter = Math.random() * 1500;
+              const totalDelay = baseDelay + jitter;
+              
+              console.warn(`[Gemini] Resource Exhausted (8/429). Attempt ${attempt + 1}. Retrying in ${totalDelay.toFixed(0)}ms...`);
+              await new Promise(resolve => setTimeout(resolve, totalDelay));
               continue;
           }
-          // Wrap as a passive error that won't crash callers
-          const passiveError = new Error("AI Service temporarily reached its limit.");
+          const passiveError = new Error("AI intelligence nodes at peak capacity. Changes committed, but insights skipped.");
           (passiveError as any).isQuotaError = true;
           throw passiveError;
       }
 
-      // Handle Key Specific Errors as per instructions
       if (errorMessage.includes("Requested entity was not found.")) {
-          const keyError = new Error("API Key configuration error. Please re-select your key.");
+          const keyError = new Error("API Key configuration error. Please re-verify settings in AI Studio.");
           (keyError as any).isKeyError = true;
           throw keyError;
       }
 
+      // Retry on 503 (Service Unavailable)
       if (errorMessage.includes("503") && attempt < maxRetries) {
         const delay = Math.pow(2, attempt + 1) * 1000;
         await new Promise(resolve => setTimeout(resolve, delay));
