@@ -73,7 +73,6 @@ const App: React.FC = () => {
         const keys = categories.nowStreaming?.movieKeys || [];
         if (keys.length === 0) return null;
         const m = movies[keys[0]];
-        // Only show spotlight if released and public
         return (m && isMovieReleased(m) && !m.isUnlisted) ? m : null;
     }, [movies, categories.nowStreaming]);
 
@@ -171,15 +170,7 @@ const App: React.FC = () => {
                             />
                         ) : (
                           <>
-                            {nowStreamingMovie && !settings.isHolidayModeActive && (
-                                <NowStreamingBanner 
-                                    movie={nowStreamingMovie} 
-                                    onSelectMovie={handleSelectMovie} 
-                                    onPlayMovie={handlePlayMovie}
-                                    isLive={isNowStreamingLive}
-                                />
-                            )}
-                            
+                            {/* PRIORITY 1: COMING SOON - Always show first to build hype */}
                             {comingSoonMovies.length > 0 && (
                                 <MovieCarousel
                                     key="coming-soon"
@@ -196,6 +187,15 @@ const App: React.FC = () => {
                                 />
                             )}
 
+                            {nowStreamingMovie && !settings.isHolidayModeActive && (
+                                <NowStreamingBanner 
+                                    movie={nowStreamingMovie} 
+                                    onSelectMovie={handleSelectMovie} 
+                                    onPlayMovie={handlePlayMovie}
+                                    isLive={isNowStreamingLive}
+                                />
+                            )}
+                            
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as Category;
                                 const titleLower = (typedCategory.title || '').toLowerCase();
@@ -203,7 +203,6 @@ const App: React.FC = () => {
                                 if (key === 'featured' || key === 'nowStreaming' || key === 'publicDomainIndie') return null;
                                 if ((key === 'cratemas' || titleLower === 'cratemas') && !settings.isHolidayModeActive) return null;
                                 
-                                // Filter normal categories to only show RELEASED and PUBLIC films
                                 const categoryMovies = typedCategory.movieKeys
                                     .map(movieKey => movies[movieKey])
                                     .filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m));

@@ -17,10 +17,12 @@ import LaurelManager from './components/LaurelManager';
 import PitchDeckManager from './components/PitchDeckManager';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
 import JuryPortal from './components/JuryPortal';
+import TalentInquiriesTab from './components/TalentInquiriesTab';
 
 const ALL_TABS: Record<string, string> = {
     movies: '🎞️ Catalog',
     pipeline: '📥 Pipeline',
+    inquiries: '🎭 Inquiries',
     jury: '⚖️ Jury Room',
     analytics: '📊 Analytics',
     hero: '🎬 Hero',
@@ -124,7 +126,6 @@ const AdminPage: React.FC = () => {
             const result = await response.json();
             if (response.ok && result.success) {
                 setSaveMessage(`Sync Complete.`);
-                // Force a deep refresh of all local data models
                 await fetchAllData(pass!);
             } else {
                 throw new Error(result.error || "Operation rejected by server.");
@@ -137,7 +138,6 @@ const AdminPage: React.FC = () => {
     };
 
     const handleSetNowStreaming = async (movieKey: string) => {
-        // Direct route to spotlight sync
         await handleSaveData('set_now_streaming', { key: movieKey });
     };
 
@@ -234,6 +234,7 @@ const AdminPage: React.FC = () => {
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={handleSetNowStreaming} movieToCreate={pendingPromotion} onCreationDone={() => setPendingPromotion(null)} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={handlePromoteToCatalog} onRefresh={() => fetchAllData(password)} />}
+                    {activeTab === 'inquiries' && <TalentInquiriesTab />}
                     {activeTab === 'jury' && <JuryPortal pipeline={pipeline} />}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
