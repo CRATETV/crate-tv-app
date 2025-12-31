@@ -188,6 +188,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                     <p className="text-[9px] text-gray-600 font-black uppercase mt-1 tracking-widest">
                                                         Ingested: {movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'N/A'}
                                                         {movie.isForSale && <span className="ml-2 text-green-600">$ Paywall</span>}
+                                                        {movie.isUnlisted && <span className="ml-2 text-amber-500">🔒 Watch Party Only</span>}
                                                     </p>
                                                 </div>
                                             </div>
@@ -227,15 +228,22 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={6} placeholder="Synopsis" className="form-input bg-black/40" />
                                 <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Director" className="form-input bg-black/40" />
                                 <div className="pt-4">
-                                     <label className="form-label">Premiere Release Date</label>
+                                     <label className="form-label">Premiere Release Date (Sets "Coming Soon")</label>
                                      <input type="datetime-local" name="releaseDateTime" value={formData.releaseDateTime ? new Date(new Date(formData.releaseDateTime).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''} onChange={(e) => setFormData({...formData, releaseDateTime: e.target.value ? new Date(e.target.value).toISOString() : ''})} className="form-input bg-white/20 text-white font-black" />
                                 </div>
                             </section>
 
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Paywall & License</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Visibility & License</h4>
                                 <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-6">
                                     <div className="space-y-4">
+                                        <label className="flex items-center gap-3 cursor-pointer group border-b border-white/5 pb-4">
+                                            <input type="checkbox" name="isUnlisted" checked={formData.isUnlisted} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-amber-500 focus:ring-amber-500" />
+                                            <div>
+                                                <span className="text-sm font-bold text-amber-500 uppercase tracking-widest group-hover:text-amber-400 transition-colors">Watch Party Only (Unlisted)</span>
+                                                <p className="text-[8px] text-gray-600 font-bold uppercase tracking-wider mt-1">Film will be hidden from catalog and search. Available only via direct link.</p>
+                                            </div>
+                                        </label>
                                         <label className="flex items-center gap-3 cursor-pointer group">
                                             <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
                                             <span className="text-sm font-bold text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Lock behind Paywall (Rental)</span>
