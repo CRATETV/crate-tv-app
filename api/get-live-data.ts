@@ -51,6 +51,7 @@ export async function GET(request: Request) {
                 
                 const fingerprint = cat.title.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
                 
+                // Merge duplicate rows if they appear due to sync issues
                 if (processedRowFingerprints.has(fingerprint) && !protectedKeys.includes(key)) {
                     const existingKey = Object.keys(finalCategories).find(k => 
                         finalCategories[k].title.toLowerCase().replace(/[^a-z0-9]/g, '').trim() === fingerprint
@@ -63,8 +64,24 @@ export async function GET(request: Request) {
                 }
 
                 if (!protectedKeys.includes(key)) processedRowFingerprints.add(fingerprint);
+                
                 if (Array.isArray(cat.movieKeys)) {
-                    cat.movieKeys = cat.movieKeys.filter((k: string) => !!data.movies[k]);
+                    // Filter out deleted movies
+                    let validKeys = cat.movieKeys.filter((k: string) => !!data.movies[k]);
+
+                    // GLOBAL SORTING: Put newest movies at the front for EVERY category
+                    validKeys.sort((a, b) => {
+                        const movieA = data.movies[a];
+                        const movieB = data.movies[b];
+                        
+                        // Fallback order: releaseDateTime -> publishedAt -> 0
+                        const dateA = new Date(movieA.releaseDateTime || movieA.publishedAt || 0).getTime();
+                        const dateB = new Date(movieB.releaseDateTime || movieB.publishedAt || 0).getTime();
+                        
+                        return dateB - dateA; // Descending (Newest first)
+                    });
+
+                    cat.movieKeys = validKeys;
                 }
                 finalCategories[key] = cat;
             });

@@ -52,21 +52,29 @@ const App: React.FC = () => {
         if (featuredCategory?.movieKeys && featuredCategory.movieKeys.length > 0) {
             spotlightMovies = featuredCategory.movieKeys
                 .map((key: string) => movies[key])
-                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m));
+                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted);
         }
         if (spotlightMovies.length === 0) {
             spotlightMovies = (Object.values(movies) as Movie[])
-                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !!m.title && !!m.poster)
+                .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !!m.title && !!m.poster && !m.isUnlisted)
                 .sort((a, b) => (b.rating || 0) - (a.rating || 0))
                 .slice(0, 4);
         }
         return spotlightMovies;
     }, [movies, categories.featured]);
 
+    const comingSoonMovies = useMemo(() => {
+        return (Object.values(movies) as Movie[])
+            .filter(m => !!m && !isMovieReleased(m) && !m.isUnlisted)
+            .sort((a, b) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
+    }, [movies]);
+
     const nowStreamingMovie = useMemo(() => {
         const keys = categories.nowStreaming?.movieKeys || [];
         if (keys.length === 0) return null;
-        return movies[keys[0]] || null;
+        const m = movies[keys[0]];
+        // Only show spotlight if released and public
+        return (m && isMovieReleased(m) && !m.isUnlisted) ? m : null;
     }, [movies, categories.nowStreaming]);
 
     const isNowStreamingLive = useMemo(() => {
@@ -79,7 +87,7 @@ const App: React.FC = () => {
         if (!searchQuery) return [];
         const query = searchQuery.toLowerCase().trim();
         return (Object.values(movies) as Movie[]).filter((movie: Movie | undefined) =>
-            movie && movie.poster && movie.title &&
+            movie && movie.poster && movie.title && !movie.isUnlisted && isMovieReleased(movie) &&
             (
                 (movie.title || '').toLowerCase().includes(query) ||
                 (movie.director || '').toLowerCase().includes(query) ||
@@ -171,6 +179,23 @@ const App: React.FC = () => {
                                     isLive={isNowStreamingLive}
                                 />
                             )}
+                            
+                            {comingSoonMovies.length > 0 && (
+                                <MovieCarousel
+                                    key="coming-soon"
+                                    title="Premiering Soon"
+                                    movies={comingSoonMovies}
+                                    onSelectMovie={handleSelectMovie}
+                                    watchedMovies={watchedMovies}
+                                    watchlist={watchlist}
+                                    likedMovies={likedMovies}
+                                    onToggleLike={toggleLikeMovie}
+                                    onToggleWatchlist={toggleWatchlist}
+                                    onSupportMovie={() => {}}
+                                    isComingSoonCarousel={true}
+                                />
+                            )}
+
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as Category;
                                 const titleLower = (typedCategory.title || '').toLowerCase();
@@ -178,9 +203,11 @@ const App: React.FC = () => {
                                 if (key === 'featured' || key === 'nowStreaming' || key === 'publicDomainIndie') return null;
                                 if ((key === 'cratemas' || titleLower === 'cratemas') && !settings.isHolidayModeActive) return null;
                                 
+                                // Filter normal categories to only show RELEASED and PUBLIC films
                                 const categoryMovies = typedCategory.movieKeys
                                     .map(movieKey => movies[movieKey])
-                                    .filter((m: Movie | undefined): m is Movie => !!m);
+                                    .filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m));
+                                
                                 if (categoryMovies.length === 0) return null;
                                 return (
                                     <MovieCarousel
