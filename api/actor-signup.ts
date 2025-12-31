@@ -92,6 +92,7 @@ export async function POST(request: Request) {
         photo: photoUrl,
         highResPhoto: highResPhotoUrl,
         imdbUrl: imdbUrl || '',
+        email: email, // Direct professional contact
     };
     batch.set(actorProfileRef, actorProfileData, { merge: true });
 

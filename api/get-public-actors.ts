@@ -22,9 +22,11 @@ export async function GET(request: Request) {
     if (!db) throw new Error("Database connection failed.");
 
     // 1. Fetch all movie and category data at once for efficiency
-    const [moviesSnapshot, categoriesSnapshot] = await Promise.all([
+    const [moviesSnapshot, categoriesSnapshot, profilesSnapshot, usersSnapshot] = await Promise.all([
         db.collection('movies').get(),
-        db.collection('categories').get()
+        db.collection('categories').get(),
+        db.collection('actor_profiles').get(),
+        db.collection('users').where('isActor', '==', true).get()
     ]);
 
     const allMovies: Record<string, Movie> = {};
@@ -32,33 +34,35 @@ export async function GET(request: Request) {
         allMovies[doc.id] = doc.data() as Movie;
     });
 
+    const userEmailMap = new Map<string, string>();
+    usersSnapshot.forEach(doc => {
+        const u = doc.data();
+        if (u.name && u.email) userEmailMap.set(u.name.trim().toLowerCase(), u.email);
+    });
+
     const classicsCategory = categoriesSnapshot.docs.find(doc => doc.id === 'publicDomainIndie')?.data() as Category | undefined;
     const classicsMovieKeys = new Set(classicsCategory?.movieKeys || []);
 
-    // 2. Identify all actors who have appeared in a classic film
     const classicActorNames = new Set<string>();
     for (const key of classicsMovieKeys) {
         const movie = allMovies[key];
         if (movie && movie.cast) {
             movie.cast.forEach(actor => {
                 if (actor.name && actor.name.trim()) {
-                    classicActorNames.add(actor.name.trim());
+                    classicActorNames.add(actor.name.trim().toLowerCase());
                 }
             });
         }
     }
     
-    // 3. Get all existing profiles and filter out classic actors immediately
-    const profilesSnapshot = await db.collection('actor_profiles').get();
     const existingProfiles: Record<string, ActorProfile> = {};
     profilesSnapshot.forEach(doc => {
         const profile = doc.data() as ActorProfile;
-        if (profile.name && !classicActorNames.has(profile.name.trim())) {
+        if (profile.name && !classicActorNames.has(profile.name.trim().toLowerCase())) {
              existingProfiles[doc.id] = profile;
         }
     });
 
-    // 4. Scan non-classic movies to find actors to backfill
     const allActorsInMovies = new Map<string, Actor>();
     Object.entries(allMovies).forEach(([movieKey, movie]) => {
         if (classicsMovieKeys.has(movieKey)) return;
@@ -76,13 +80,12 @@ export async function GET(request: Request) {
         }
     });
 
-    // 5. Create a batch to add any new, non-classic profiles found in movies
     const batch = db.batch();
     let newProfilesAddedCount = 0;
     for (const actor of allActorsInMovies.values()) {
         const slug = slugify(actor.name);
-        // Also check if the newly found actor is a classic actor before adding
-        if (slug && !existingProfiles[slug] && !classicActorNames.has(actor.name.trim())) {
+        const nameLower = actor.name.trim().toLowerCase();
+        if (slug && !existingProfiles[slug] && !classicActorNames.has(nameLower)) {
             const newProfile: ActorProfile = {
                 name: actor.name,
                 slug: slug,
@@ -90,6 +93,7 @@ export async function GET(request: Request) {
                 photo: actor.photo,
                 highResPhoto: actor.highResPhoto || actor.photo,
                 imdbUrl: '',
+                email: userEmailMap.get(nameLower) || '',
             };
             const newProfileRef = db.collection('actor_profiles').doc(slug);
             batch.set(newProfileRef, newProfile);
@@ -100,10 +104,8 @@ export async function GET(request: Request) {
 
     if (newProfilesAddedCount > 0) {
         await batch.commit();
-        console.log(`[get-public-actors] Backfilled ${newProfilesAddedCount} actor profiles.`);
     }
 
-    // 6. Return the filtered list
     const allProfiles = Object.values(existingProfiles).sort((a, b) => a.name.localeCompare(b.name));
 
     return new Response(JSON.stringify({ actors: allProfiles }), {

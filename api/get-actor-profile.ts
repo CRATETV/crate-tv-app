@@ -73,6 +73,7 @@ export async function POST(request: Request) {
         }
         
         const newSlug = slugify(userData.name);
+        // FIX: Added missing 'email' property to newProfileData to satisfy the ActorProfile interface requirement.
         const newProfileData: ActorProfile = {
             name: userData.name,
             slug: newSlug,
@@ -80,6 +81,7 @@ export async function POST(request: Request) {
             photo: bestActorData?.photo || 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
             highResPhoto: bestActorData?.highResPhoto || bestActorData?.photo || 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
             imdbUrl: '',
+            email: userData.email || '',
         };
         
         await db.collection('actor_profiles').doc(newSlug).set(newProfileData, { merge: true });

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
@@ -20,6 +19,8 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
     const [films, setFilms] = useState<Movie[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [isDecrypting, setIsDecrypting] = useState(false);
+    const [decryptedEmail, setDecryptedEmail] = useState('');
 
     const { likedMovies, toggleLikeMovie, watchlist, toggleWatchlist, watchedMovies } = useAuth();
 
@@ -49,19 +50,42 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
-    const handleSearch = (query: string) => {
-        window.history.pushState({}, '', `/?search=${encodeURIComponent(query)}`);
-        window.dispatchEvent(new Event('pushstate'));
-    };
-
     const handleMobileSearch = () => {
         window.history.pushState({}, '', '/?action=search');
         window.dispatchEvent(new Event('pushstate'));
     };
 
-    if (isLoading) {
-        return <LoadingSpinner />;
-    }
+    const runDecryption = () => {
+        if (!profile?.email || isDecrypting || decryptedEmail) return;
+        
+        setIsDecrypting(true);
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@._-';
+        let iterations = 0;
+        const target = profile.email;
+        
+        const interval = setInterval(() => {
+            const current = target.split('').map((char, index) => {
+                if (index < iterations) return char;
+                return chars[Math.floor(Math.random() * chars.length)];
+            }).join('');
+            
+            setDecryptedEmail(current);
+            iterations += 1;
+            
+            if (iterations >= target.length + 1) {
+                clearInterval(interval);
+                setIsDecrypting(false);
+                // Open mailto after short delay
+                setTimeout(() => {
+                    const subject = encodeURIComponent(`Inquiry via Crate TV Directory: ${profile.name}`);
+                    const body = encodeURIComponent(`Hello ${profile.name},\n\nI discovered your profile on Crate TV and would like to discuss a potential opportunity.\n\nRegards,`);
+                    window.location.href = `mailto:${target}?subject=${subject}&body=${body}`;
+                }, 500);
+            }
+        }, 40);
+    };
+
+    if (isLoading) return <LoadingSpinner />;
 
     if (error) {
         return (
@@ -79,7 +103,7 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
 
     return (
         <div className="flex flex-col min-h-screen text-white bg-black">
-            <Header searchQuery="" onSearch={handleSearch} isScrolled={true} onMobileSearchClick={handleMobileSearch} showSearch={false} />
+            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={handleMobileSearch} showSearch={false} />
             <main className="flex-grow">
                 {/* Hero Section */}
                 <div className="relative w-full h-[60vh] bg-black">
@@ -95,28 +119,40 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
                             src={`/api/proxy-image?url=${encodeURIComponent(profile.photo)}`}
                             alt={profile.name}
                             crossOrigin="anonymous"
-                            className="w-48 h-48 rounded-full object-cover border-4 border-purple-500 flex-shrink-0 bg-gray-700 shadow-lg"
+                            className="w-48 h-48 rounded-full object-cover border-4 border-red-600 flex-shrink-0 bg-gray-700 shadow-2xl"
                         />
                         <div>
-                            <h1 className="text-4xl md:text-6xl font-extrabold text-white">{profile.name}</h1>
-                            {profile.imdbUrl && (
-                                <a href={profile.imdbUrl} target="_blank" rel="noopener noreferrer" className="inline-block mt-4 bg-[#f5c518] text-black font-bold text-sm px-4 py-1.5 rounded-md hover:bg-yellow-400 transition-colors shadow-md">
-                                    View on IMDb
-                                </a>
+                            <h1 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter leading-none">{profile.name}</h1>
+                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-6">
+                                <button 
+                                    onClick={runDecryption}
+                                    disabled={isDecrypting}
+                                    className="bg-white text-black font-black text-xs px-8 py-3 rounded-xl hover:bg-gray-200 transition-all transform active:scale-95 shadow-xl uppercase tracking-widest flex items-center gap-3 min-w-[200px] justify-center"
+                                >
+                                    {isDecrypting && <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>}
+                                    {decryptedEmail || (isDecrypting ? 'Decrypting...' : 'Contact Talent')}
+                                </button>
+                                {profile.imdbUrl && (
+                                    <a href={profile.imdbUrl} target="_blank" rel="noopener noreferrer" className="bg-[#f5c518] text-black font-black text-xs px-6 py-3 rounded-xl hover:bg-yellow-400 transition-all shadow-md uppercase tracking-widest">
+                                        Professional Profile
+                                    </a>
+                                )}
+                            </div>
+                            {decryptedEmail && !isDecrypting && (
+                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-3 animate-pulse">Electronic mail session established</p>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Content Section */}
                 <div className="max-w-5xl mx-auto p-4 md:p-8 -mt-24 relative z-20">
-                     <div className="bg-gray-800/80 backdrop-blur-md p-6 rounded-lg shadow-xl mb-12">
-                        <h2 className="text-2xl font-bold text-white mb-3">About</h2>
-                        <p className="text-gray-300 leading-relaxed">{profile.bio}</p>
+                     <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-3xl shadow-2xl mb-12">
+                        <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500 mb-4">The Narrative</h2>
+                        <p className="text-gray-300 text-lg leading-relaxed font-medium">{profile.bio}</p>
                     </div>
 
                     <section>
-                        <h2 className="text-3xl font-bold text-white mb-6">Appearances on Crate TV</h2>
+                        <h2 className="text-3xl font-black text-white mb-8 uppercase tracking-tighter">Crate TV Exhibition History</h2>
                         {films.length > 0 ? (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
                                 {films.map(movie => (
@@ -133,7 +169,7 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
                                 ))}
                             </div>
                         ) : (
-                             <p className="text-gray-500">This actor has not appeared in any films on Crate TV yet.</p>
+                             <p className="text-gray-600 font-bold uppercase tracking-widest text-sm">Catalog record pending update.</p>
                         )}
                     </section>
                 </div>

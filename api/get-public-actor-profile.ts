@@ -28,28 +28,15 @@ export async function GET(request: Request) {
     const profile = actorProfileDoc.data() as ActorProfile;
 
     // 2. Fetch all movies the actor has appeared in
-    const moviesSnapshot = await db.collection('movies').where('cast', 'array-contains', {
-        name: profile.name,
-        bio: profile.bio,
-        photo: profile.photo,
-        highResPhoto: profile.highResPhoto
-    }).get();
-
-    // Alternative slower search if the above exact match fails (e.g. bio was updated separately)
+    const moviesSnapshot = await db.collection('movies').get();
     let films: Movie[] = [];
-    if (moviesSnapshot.empty) {
-        const allMoviesSnapshot = await db.collection('movies').get();
-        allMoviesSnapshot.forEach(doc => {
-            const movie = doc.data() as Movie;
-            if (movie.cast.some(c => c.name === profile.name)) {
-                films.push(movie);
-            }
-        });
-    } else {
-        moviesSnapshot.forEach(doc => {
-            films.push(doc.data() as Movie);
-        });
-    }
+    
+    moviesSnapshot.forEach(doc => {
+        const movie = doc.data() as Movie;
+        if (movie.cast && movie.cast.some(c => c.name.trim().toLowerCase() === profile.name.trim().toLowerCase())) {
+            films.push({ key: doc.id, ...movie });
+        }
+    });
 
     return new Response(JSON.stringify({ profile, films }), {
       status: 200,

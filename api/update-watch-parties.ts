@@ -17,40 +17,13 @@ export async function GET(request: Request) {
         const db = getAdminDb();
         if (!db) throw new Error("Database connection failed.");
 
-        const now = new Date();
-        const moviesSnapshot = await db.collection('movies').get();
-        const partiesRef = db.collection('watch_parties');
+        // NOTE: The automatic transition to 'waiting' has been removed to prevent 
+        // watch parties from "coming on by themselves."
+        // This function now strictly handles clean-up of stale or very old party states if necessary.
         
-        const batch = db.batch();
-        let updatesCount = 0;
+        console.log("Watch Party Monitor: Manual initiation required for live sessions.");
 
-        for (const movieDoc of moviesSnapshot.docs) {
-            const movie = { id: movieDoc.id, ...movieDoc.data() } as Movie & { id: string };
-
-            if (movie.isWatchPartyEnabled && movie.watchPartyStartTime && now >= new Date(movie.watchPartyStartTime)) {
-                const partyDoc = await partiesRef.doc(movie.id).get();
-                const partyState = partyDoc.data() as WatchPartyState | undefined;
-
-                // If party is upcoming (no state yet) or has ended, set it to 'waiting'.
-                if (!partyState || (partyState.status !== 'waiting' && partyState.status !== 'live')) {
-                    console.log(`Cron: Updating ${movie.title} to 'waiting' status.`);
-                    const newState: Partial<WatchPartyState> = {
-                        status: 'waiting',
-                        isPlaying: false,
-                        currentTime: 0,
-                    };
-                    batch.set(partiesRef.doc(movie.id), newState, { merge: true });
-                    updatesCount++;
-                }
-            }
-        }
-
-        if (updatesCount > 0) {
-            await batch.commit();
-            return new Response(JSON.stringify({ success: true, updated: updatesCount }), { status: 200 });
-        }
-
-        return new Response(JSON.stringify({ success: true, updated: 0 }), { status: 200 });
+        return new Response(JSON.stringify({ success: true, message: "Manual host initiation active." }), { status: 200 });
 
     } catch (error) {
         console.error("Error in update-watch-parties cron job:", error);

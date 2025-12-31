@@ -5,7 +5,7 @@ const slugify = (name: string) => name.toLowerCase().trim().replace(/[^\w\s-]/g,
 
 export async function POST(request: Request) {
   try {
-    const { bio, photoUrl, highResPhotoUrl, imdbUrl } = await request.json();
+    const { bio, photoUrl, highResPhotoUrl, imdbUrl, isAvailableForCasting } = await request.json();
     
     const authHeader = request.headers.get('Authorization');
     const token = authHeader?.split('Bearer ')[1];
@@ -44,6 +44,7 @@ export async function POST(request: Request) {
         photo: photoUrl,
         highResPhoto: highResPhotoUrl,
         imdbUrl: imdbUrl || '',
+        isAvailableForCasting: isAvailableForCasting === true,
     };
     batch.set(actorProfileRef, actorProfileUpdate, { merge: true });
 
@@ -60,7 +61,8 @@ export async function POST(request: Request) {
                     ...actor,
                     bio,
                     photo: photoUrl,
-                    highResPhoto: highResPhotoUrl
+                    highResPhoto: highResPhotoUrl,
+                    isAvailableForCasting: isAvailableForCasting === true,
                 };
             }
             return actor;

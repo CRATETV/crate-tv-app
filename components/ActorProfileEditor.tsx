@@ -10,7 +10,7 @@ interface ActorProfileEditorProps {
 
 const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) => {
     const { getUserIdToken } = useAuth();
-    const [profile, setProfile] = useState<Partial<ActorProfile>>({ bio: '', photo: '', highResPhoto: '', imdbUrl: '' });
+    const [profile, setProfile] = useState<Partial<ActorProfile>>({ bio: '', photo: '', highResPhoto: '', imdbUrl: '', isAvailableForCasting: false });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
@@ -34,7 +34,6 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
             const data = await response.json();
             
             if (!response.ok) {
-                // If it's just a temporary AI error, don't break the whole editor
                 if (data.isQuotaError) {
                     setError("AI services are at peak capacity. You can still edit your bio and photos manually.");
                 } else {
@@ -57,8 +56,9 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
     }, [fetchProfile]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setProfile(prev => ({ ...prev, [name]: value }));
+        const { name, value, type } = e.target;
+        const finalValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+        setProfile(prev => ({ ...prev, [name]: finalValue }));
     };
 
     const handleUrlUpdate = (field: keyof ActorProfile, url: string) => {
@@ -86,6 +86,7 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
                     photoUrl: profile.photo,
                     highResPhotoUrl: profile.highResPhoto,
                     imdbUrl: profile.imdbUrl,
+                    isAvailableForCasting: profile.isAvailableForCasting,
                 }),
             });
             const result = await response.json();
@@ -112,9 +113,21 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
 
     return (
         <form onSubmit={handleSubmit} className="bg-[#0f0f0f] border border-white/5 p-8 md:p-12 rounded-[2.5rem] space-y-12 animate-[fadeIn_0.4s_ease-out]">
-            <div className="border-b border-white/5 pb-8">
-                <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Profile Manifest</h2>
-                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-2">Manage your professional digital footprint.</p>
+            <div className="border-b border-white/5 pb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                <div>
+                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Profile Manifest</h2>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-2">Manage your professional digital footprint.</p>
+                </div>
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex items-center gap-4">
+                    <div>
+                        <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Casting Status</p>
+                        <p className="text-[10px] font-bold text-white uppercase">Open to Casting</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="isAvailableForCasting" checked={profile.isAvailableForCasting || false} onChange={handleInputChange} className="sr-only peer" />
+                        <div className="w-12 h-6 bg-gray-700 rounded-full peer peer-checked:bg-green-600 after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+                    </label>
+                </div>
             </div>
             
             <div className="space-y-10">

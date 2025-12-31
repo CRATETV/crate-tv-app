@@ -61,13 +61,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   }, [rentals, movie.key]);
 
   const needsPurchase = movie.isForSale && !isRented;
-  
-  const expiryDate = useMemo(() => {
-    if (!movie.publishedAt) return null;
-    const date = new Date(movie.publishedAt);
-    date.setFullYear(date.getFullYear() + 1);
-    return date;
-  }, [movie.publishedAt]);
 
   const canCollectDonations = useMemo(() => {
     if (!movie) return false;
@@ -79,6 +72,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
   const moreFromDirector = useMemo(() => {
       const directors = movie.director.split(',').map(d => d.trim().toLowerCase());
+      // FIX: Explicitly cast Object.values to Movie[] to resolve 'unknown' property access errors.
       return (Object.values(allMovies) as Movie[]).filter(m => 
           m.key !== movie.key && 
           m.director.split(',').some(d => directors.includes(d.trim().toLowerCase()))
@@ -88,6 +82,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const similarFilms = useMemo(() => {
       // Find films in the same category, excluding those already in moreFromDirector
       const directorKeys = new Set(moreFromDirector.map(m => m.key));
+      // FIX: Explicitly cast Object.values to Category[] to resolve 'unknown' property access errors.
       const movieCategories = (Object.values(allCategories) as Category[]).filter(c => c.movieKeys.includes(movie.key));
       const relatedKeys = new Set<string>();
       
@@ -252,16 +247,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                 </div>
 
                 <div className="space-y-10 border-l border-white/5 pl-0 lg:pl-14">
-                    {expiryDate && (
-                        <div className="bg-red-600/5 border border-red-600/20 p-6 rounded-2xl shadow-inner">
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-red-500 mb-3">Licensing Status</h3>
-                            <div className="space-y-1">
-                                <p className="text-sm font-bold text-white uppercase tracking-tighter">Scheduled Removal:</p>
-                                <p className="text-xs text-gray-500 font-mono">{expiryDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-                            </div>
-                        </div>
-                    )}
-
                     <div>
                         <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4">The Cast</h3>
                         <div className="flex flex-wrap gap-2">

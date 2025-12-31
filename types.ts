@@ -5,6 +5,7 @@ export interface Actor {
   photo: string;
   bio: string;
   highResPhoto: string;
+  isAvailableForCasting?: boolean;
 }
 
 export interface Episode {
@@ -216,6 +217,8 @@ export interface ActorProfile {
     photo: string;
     highResPhoto: string;
     imdbUrl: string;
+    email: string; // Professional contact email
+    isAvailableForCasting?: boolean;
 }
 
 export interface ActorPost {

@@ -85,8 +85,6 @@ const formatISOForInput = (isoString?: string): string => {
     try {
         const date = new Date(isoString);
         if (isNaN(date.getTime())) return '';
-        // getFullYear, getMonth, etc. all return values in the user's local timezone.
-        // This is exactly what we need to format for the datetime-local input.
         const year = date.getFullYear();
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const day = date.getDate().toString().padStart(2, '0');
@@ -200,23 +198,24 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   };
   
   const handleGoLive = () => {
-    if (!window.confirm("This will make the festival live immediately and set it to end in one week. This will overwrite the current start and end dates. Are you sure?")) return;
+    if (!window.confirm("CRITICAL ACTION: This will overwrite your current schedule to start RIGHT NOW and end in 7 days. Continue?")) return;
     
     const now = new Date();
-    const endDate = new Date();
-    endDate.setDate(now.getDate() + 7);
+    const endDate = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
 
-    onConfigChange({ 
+    // Perform an atomic config update
+    const updatedConfig = { 
         ...config, 
         startDate: now.toISOString(),
         endDate: endDate.toISOString(),
-    });
-
-    // INSTANTLY NOTIFY OTHER TABS
-    localStorage.setItem('crate-tv-event', JSON.stringify({
-        type: 'FESTIVAL_LIVE',
-        timestamp: Date.now()
-    }));
+    };
+    
+    onConfigChange(updatedConfig);
+    
+    // Explicitly trigger a manifest save to ensure the change is felt instantly
+    setTimeout(() => {
+        onSave();
+    }, 100);
   };
 
   if (!config) {
@@ -268,9 +267,9 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                     onClick={handleGoLive} 
                     className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors"
                 >
-                    Go Live Now
+                    Push Live Now
                 </button>
-                <p className="text-xs text-gray-500 mt-1">Sets start date to now and end date 7 days from now.</p>
+                <p className="text-xs text-gray-500 mt-1">Force-starts the festival for a 7-day duration immediately.</p>
             </div>
       </div>
 
