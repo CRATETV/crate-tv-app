@@ -235,17 +235,22 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             <section className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Paywall & License</h4>
                                 <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-6">
-                                    <div>
+                                    <div className="space-y-4">
                                         <label className="flex items-center gap-3 cursor-pointer group">
                                             <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
                                             <span className="text-sm font-bold text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Lock behind Paywall (Rental)</span>
                                         </label>
                                         {formData.isForSale && (
-                                            <div className="pt-4 animate-[fadeIn_0.2s_ease-out]">
+                                            <div className="pt-2 animate-[fadeIn_0.2s_ease-out]">
                                                 <label className="form-label">Rental Price (USD)</label>
                                                 <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} step="0.01" className="form-input bg-black/40" />
                                             </div>
                                         )}
+                                        <label className="flex items-center gap-3 cursor-pointer group pt-4 border-t border-white/5">
+                                            <input type="checkbox" name="isSupportEnabled" checked={formData.isSupportEnabled !== false} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-green-600 focus:ring-green-500" />
+                                            <span className="text-sm font-bold text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Enable Community Support (Donations)</span>
+                                        </label>
+                                        <p className="text-[9px] text-gray-600 font-bold uppercase tracking-wider ml-8">Disable if the film contains licensed music or has restricted royalty terms.</p>
                                     </div>
                                     <div className="pt-4 border-t border-white/5">
                                         <label className="form-label">Exhibition Start (Tracking)</label>

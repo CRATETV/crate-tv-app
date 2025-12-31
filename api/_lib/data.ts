@@ -3,7 +3,6 @@ import { moviesData as fallbackMovies, categoriesData as fallbackCategories, fes
 
 let cachedData: any = null;
 let lastFetchTime = 0;
-// REDUCED: Cache duration lowered to 1 second for standard requests; admin requests bypass this entirely via options.
 const CACHE_DURATION = 1000; 
 
 let s3Client: S3Client | null = null;
@@ -33,7 +32,8 @@ const getFallbackData = () => ({
 
 export const getApiData = async (options: { noCache?: boolean } = {}) => {
     const now = Date.now();
-    // Bypass cache entirely if noCache is requested (usually by admin actions)
+    
+    // STRICT BYPASS: If noCache is requested, always fetch fresh from S3.
     if (!options.noCache && cachedData && (now - lastFetchTime < CACHE_DURATION)) {
         return cachedData;
     }
@@ -44,13 +44,24 @@ export const getApiData = async (options: { noCache?: boolean } = {}) => {
     if (!client || !bucketName) return getFallbackData();
     
     try {
-        const command = new GetObjectCommand({ Bucket: bucketName, Key: 'live-data.json' });
+        const command = new GetObjectCommand({ 
+            Bucket: bucketName, 
+            Key: 'live-data.json',
+            // Bust intermediate S3/CloudFront caches if noCache is true
+            ResponseCacheControl: options.noCache ? 'no-store, no-cache, must-revalidate, max-age=0' : undefined
+        });
+        
         const response = await client.send(command);
         if (!response.Body) throw new Error("S3 Body Empty");
         const bodyString = await response.Body.transformToString("utf8");
         const data = JSON.parse(bodyString);
-        cachedData = data;
-        lastFetchTime = now;
+        
+        // Update local cache if not bypassing
+        if (!options.noCache) {
+            cachedData = data;
+            lastFetchTime = now;
+        }
+        
         return data;
     } catch (err) {
         console.error("[Data API] S3 Fetch Failure, reverting to fallback.", err);

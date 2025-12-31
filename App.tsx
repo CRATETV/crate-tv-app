@@ -6,6 +6,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import MovieDetailsModal from './components/MovieDetailsModal';
 import ActorBioModal from './components/ActorBioModal';
 import SearchOverlay from './components/SearchOverlay';
+import SmartInstallPrompt from './components/SmartInstallPrompt';
 import { Movie, Actor, Category, WatchPartyState } from './types';
 import { isMovieReleased } from './constants';
 import { useAuth } from './contexts/AuthContext';
@@ -68,7 +69,6 @@ const App: React.FC = () => {
         return movies[keys[0]] || null;
     }, [movies, categories.nowStreaming]);
 
-    // SECURE CHECK: Must be 'live' in DB AND enabled in movie metadata to show the Live button
     const isNowStreamingLive = useMemo(() => {
         if (!nowStreamingMovie) return false;
         const partyState = activeParties[nowStreamingMovie.key];
@@ -117,12 +117,12 @@ const App: React.FC = () => {
 
     if (isLoading) return <LoadingSpinner />;
 
-    // Detect ANY live party that is also enabled in catalog
     const livePartyKey = Object.keys(activeParties).find(key => movies[key]?.isWatchPartyEnabled);
     const livePartyMovie = livePartyKey ? movies[livePartyKey] : null;
 
     return (
         <div className="flex flex-col min-h-screen text-white overflow-x-hidden w-full relative">
+            <SmartInstallPrompt />
             {livePartyMovie && <LiveWatchPartyBanner movie={livePartyMovie} onClose={() => setActiveParties({})} />}
             <Header 
                 searchQuery={searchQuery} 

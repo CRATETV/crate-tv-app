@@ -62,6 +62,10 @@ const AppRouter: React.FC = () => {
     const onNavigate = () => {
       setRoute(window.location.pathname);
       window.scrollTo(0, 0);
+      
+      // Track engagement for smart install prompt
+      const views = parseInt(localStorage.getItem('crate_tv_engagement_views') || '0', 10);
+      localStorage.setItem('crate_tv_engagement_views', (views + 1).toString());
     };
     
     window.addEventListener('popstate', onNavigate);
@@ -73,28 +77,19 @@ const AppRouter: React.FC = () => {
     };
   }, []);
   
-  // A simple component to handle redirects for protected routes.
   const RedirectToLogin: React.FC = () => {
     useEffect(() => {
       const currentPath = window.location.pathname + window.location.search;
       const loginUrl = new URL('/login', window.location.origin);
-      
-      // Don't set a redirect for the root path
       if (currentPath !== '/' && currentPath !== '/login') {
           loginUrl.searchParams.set('redirect', currentPath);
-          
-          // CRITICAL: If the user is coming from a shared Watch Party link,
-          // we want to show the Signup view by default so they can "Join" the party.
           if (currentPath.startsWith('/watchparty')) {
               loginUrl.searchParams.set('view', 'signup');
           }
       }
-      // Use replaceState to not add a bad entry to the browser's history
       window.history.replaceState({}, '', loginUrl.toString());
       window.dispatchEvent(new Event('pushstate'));
     }, []);
-    
-    // Render the login page immediately to avoid a flash of other content.
     return <LoginPage />;
   };
 
@@ -114,7 +109,6 @@ const AppRouter: React.FC = () => {
   }
 
 
-  // Handle static routes with authentication checks
   switch (route) {
     case '/':
       return user ? <App /> : <LandingPage />;
@@ -130,27 +124,20 @@ const AppRouter: React.FC = () => {
       return user ? <ClassicsPage /> : <RedirectToLogin />;
     case '/cratemas':
       return user ? <CratemasPage /> : <RedirectToLogin />;
-    case '/top-ten': // Made public per user request
+    case '/top-ten':
       return <TopTenPage />;
     case '/submission-terms':
       return <SubmissionTermsPage />;
     case '/pitchdeck':
       return <PitchDeckPage />;
-    
-    // Unified Portal Route
     case '/portal': {
       if (!authInitialized || (user && !claimsLoaded)) return <LoadingSpinner />;
-      // REDIRECT verified roles to the private dashboard
       if (user && (user.isActor || user.isFilmmaker || user.isIndustryPro)) {
         return <CreatorDashboardPage />;
       }
-      return <CreatorPortalPage />; // Public-facing portal page for everyone else
+      return <CreatorPortalPage />;
     }
-
-    // Public Routes
     case '/login': {
-        // If the user is authenticated, redirect them away from the login page.
-        // This prevents the "login twice" bug by handling the redirect after the user state is fully updated.
         if (authInitialized && user) {
             const RedirectAfterLogin: React.FC = () => {
                 useEffect(() => {
@@ -159,7 +146,7 @@ const AppRouter: React.FC = () => {
                     window.history.replaceState({}, '', redirect);
                     window.dispatchEvent(new Event('pushstate'));
                 }, []);
-                return <LoadingSpinner />; // Show a spinner during the brief transition
+                return <LoadingSpinner />;
             };
             return <RedirectAfterLogin />;
         }
@@ -183,22 +170,16 @@ const AppRouter: React.FC = () => {
       return <RokuGuidePage />;
     case '/talent':
       return <TalentPage />;
-      
-    // Legacy Protected Actor Route (now redirects to unified portal)
     case '/actor-portal': {
       if (!authInitialized) return <LoadingSpinner />;
       if (!user) return <RedirectToLogin />;
-      return <ActorPortalPage />; // This component now just redirects
+      return <ActorPortalPage />;
     }
-
-    // Legacy Protected Filmmaker Route (now redirects to unified portal)
     case '/filmmaker-dashboard': {
         if (!authInitialized) return <LoadingSpinner />;
         if (!user) return <RedirectToLogin />;
-        return <FilmmakerPortalPage />; // This component now just redirects
+        return <FilmmakerPortalPage />;
     }
-
-    // Admin & Dev routes
     case '/admin':
       return <AdminPage />;
     case '/filmfestivalmodule':
@@ -206,7 +187,6 @@ const AppRouter: React.FC = () => {
     case '/developer-guide':
       return <DeveloperGuidePage />;
     default:
-      // Fallback to the appropriate homepage for any unknown routes
       return user ? <App /> : <LandingPage />;
   }
 };
@@ -263,10 +243,9 @@ const MainApp: React.FC = () => {
   const [showIntro, setShowIntro] = useState(() => {
     const lastSeen = localStorage.getItem('introSeenTimestamp');
     if (!lastSeen) {
-      return true; // Never seen before
+      return true;
     }
     const oneDay = 24 * 60 * 60 * 1000;
-    // Show if more than 24 hours have passed
     return (Date.now() - parseInt(lastSeen, 10)) > oneDay;
   });
 
@@ -285,8 +264,6 @@ const MainApp: React.FC = () => {
 
   useEffect(() => {
     serviceWorkerRegistration.register({ onUpdate });
-
-    // This listener waits for the new service worker to take control and then reloads the page.
     let refreshing = false;
     navigator.serviceWorker?.addEventListener('controllerchange', () => {
         if (refreshing) return;

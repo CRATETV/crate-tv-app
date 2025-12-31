@@ -77,6 +77,29 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     return !isVintage && !isCopyrightRestricted && !isManualDisabled && !movie.isForSale;
   }, [movie, allCategories]);
 
+  const moreFromDirector = useMemo(() => {
+      const directors = movie.director.split(',').map(d => d.trim().toLowerCase());
+      return (Object.values(allMovies) as Movie[]).filter(m => 
+          m.key !== movie.key && 
+          m.director.split(',').some(d => directors.includes(d.trim().toLowerCase()))
+      ).slice(0, 4);
+  }, [movie, allMovies]);
+
+  const similarFilms = useMemo(() => {
+      // Find films in the same category, excluding those already in moreFromDirector
+      const directorKeys = new Set(moreFromDirector.map(m => m.key));
+      const movieCategories = (Object.values(allCategories) as Category[]).filter(c => c.movieKeys.includes(movie.key));
+      const relatedKeys = new Set<string>();
+      
+      movieCategories.forEach(c => {
+          c.movieKeys.forEach(k => {
+              if (k !== movie.key && !directorKeys.has(k)) relatedKeys.add(k);
+          });
+      });
+      
+      return Array.from(relatedKeys).map(k => allMovies[k]).filter(Boolean).slice(0, 4);
+  }, [movie, allMovies, allCategories, moreFromDirector]);
+
   useEffect(() => {
     if (released) return;
     const interval = setInterval(() => {
@@ -111,7 +134,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
   const handlePlayButtonClick = (url?: string) => {
       if (!released) {
-          // Tease with trailer if not released
           if (movie.trailer) {
               window.history.pushState({}, '', `/movie/${movie.key}?play=true&teaser=true`);
               window.dispatchEvent(new Event('pushstate'));
@@ -212,53 +234,92 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
             </div>
         </div>
         
-        <div className="p-10 md:p-14 grid grid-cols-1 lg:grid-cols-3 gap-14">
-            <div className="lg:col-span-2 space-y-10">
-                <div className="text-gray-300 text-xl leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
-                
-                {movie.isSeries && movie.episodes && movie.episodes.length > 0 && (
-                    <div className="space-y-8 pt-6 border-t border-white/5">
-                        <h3 className="text-2xl font-black text-white uppercase tracking-widest border-l-4 border-red-600 pl-4">Episode Browser</h3>
-                        <div className="grid gap-4">
-                            {movie.episodes.map(ep => (
-                                <EpisodeRow key={ep.id} episode={ep} onPlay={() => handlePlayButtonClick(ep.url)} />
+        <div className="p-10 md:p-14 space-y-16">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-14">
+                <div className="lg:col-span-2 space-y-10">
+                    <div className="text-gray-300 text-xl leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
+                    
+                    {movie.isSeries && movie.episodes && movie.episodes.length > 0 && (
+                        <div className="space-y-8 pt-6 border-t border-white/5">
+                            <h3 className="text-2xl font-black text-white uppercase tracking-widest border-l-4 border-red-600 pl-4">Episode Browser</h3>
+                            <div className="grid gap-4">
+                                {movie.episodes.map(ep => (
+                                    <EpisodeRow key={ep.id} episode={ep} onPlay={() => handlePlayButtonClick(ep.url)} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="space-y-10 border-l border-white/5 pl-0 lg:pl-14">
+                    {expiryDate && (
+                        <div className="bg-red-600/5 border border-red-600/20 p-6 rounded-2xl shadow-inner">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-red-500 mb-3">Licensing Status</h3>
+                            <div className="space-y-1">
+                                <p className="text-sm font-bold text-white uppercase tracking-tighter">Scheduled Removal:</p>
+                                <p className="text-xs text-gray-500 font-mono">{expiryDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <div>
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4">The Cast</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {movie.cast.map(actor => (
+                                <button 
+                                    key={actor.name} 
+                                    className="px-4 py-2 bg-white/5 border border-white/5 rounded-full text-white font-bold text-xs hover:bg-red-600 transition-colors" 
+                                    onClick={() => onSelectActor(actor)}
+                                >
+                                    {actor.name}
+                                </button>
                             ))}
                         </div>
                     </div>
-                )}
+
+                    <div>
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Directed By</h3>
+                        <p className="text-white font-black text-xl tracking-tighter uppercase">{movie.director}</p>
+                    </div>
+                </div>
             </div>
 
-            <div className="space-y-10 border-l border-white/5 pl-0 lg:pl-14">
-                {expiryDate && (
-                    <div className="bg-red-600/5 border border-red-600/20 p-6 rounded-2xl shadow-inner">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-red-500 mb-3">Licensing Status</h3>
-                        <div className="space-y-1">
-                            <p className="text-sm font-bold text-white uppercase tracking-tighter">Scheduled Removal:</p>
-                            <p className="text-xs text-gray-500 font-mono">{expiryDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+            {/* Related Content Sections */}
+            {(moreFromDirector.length > 0 || similarFilms.length > 0) && (
+                <div className="space-y-12 border-t border-white/5 pt-12">
+                    {moreFromDirector.length > 0 && (
+                        <div>
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500 mb-6">More from this Director</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {moreFromDirector.map(m => (
+                                    <div key={m.key} onClick={() => onSelectRecommendedMovie(m)} className="group cursor-pointer aspect-[3/4] rounded-xl overflow-hidden border border-white/5 transition-transform hover:scale-105">
+                                        <img src={m.poster} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" alt={m.title} />
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity p-4 text-center">
+                                            <p className="text-xs font-black uppercase tracking-widest text-white">{m.title}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                <div>
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4">The Cast</h3>
-                    <div className="flex flex-wrap gap-2">
-                        {movie.cast.map(actor => (
-                            <button 
-                                key={actor.name} 
-                                className="px-4 py-2 bg-white/5 border border-white/5 rounded-full text-white font-bold text-xs hover:bg-red-600 transition-colors" 
-                                onClick={() => onSelectActor(actor)}
-                            >
-                                {actor.name}
-                            </button>
-                        ))}
-                    </div>
+                    {similarFilms.length > 0 && (
+                        <div>
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 mb-6">Similar Films</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {similarFilms.map(m => (
+                                    <div key={m.key} onClick={() => onSelectRecommendedMovie(m)} className="group cursor-pointer aspect-[3/4] rounded-xl overflow-hidden border border-white/5 transition-transform hover:scale-105">
+                                        <img src={m.poster} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" alt={m.title} />
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity p-4 text-center">
+                                            <p className="text-xs font-black uppercase tracking-widest text-white">{m.title}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
-
-                <div>
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Directed By</h3>
-                    <p className="text-white font-black text-xl tracking-tighter uppercase">{movie.director}</p>
-                </div>
-            </div>
+            )}
         </div>
 
         {selectedDirector && (

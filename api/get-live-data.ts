@@ -15,7 +15,6 @@ export async function GET(request: Request) {
             
             const movieArray = Object.values(data.movies) as Movie[];
             
-            // PRIORITY SORT: Movies with video files and posters always take precedence
             movieArray.sort((a, b) => {
                 const aScore = (a.fullMovie ? 100 : 0) + (a.poster ? 50 : 0) + (a.synopsis?.length > 10 ? 10 : 0);
                 const bScore = (b.fullMovie ? 100 : 0) + (b.poster ? 50 : 0) + (b.synopsis?.length > 10 ? 10 : 0);
@@ -25,17 +24,13 @@ export async function GET(request: Request) {
             movieArray.forEach((m: Movie) => {
                 if (!m || !m.title || !m.key) return;
                 
-                // NORMALIZATION: Handle "Gemeni" vs "Gemini" and spacing issues
                 const fingerprint = m.title
                     .toLowerCase()
-                    .replace(/gemeni/g, 'gemini') // Automatic correction for common typo
-                    .replace(/[^a-z0-9]/g, '')    // Strip all special chars and spaces
+                    .replace(/gemeni/g, 'gemini')
+                    .replace(/[^a-z0-9]/g, '')
                     .trim();
                 
-                // Block placeholders
                 if (fingerprint.includes('untitled') || fingerprint === 'draftmaster') return;
-                
-                // Enforce Single-Entry per normalized fingerprint
                 if (processedFingerprints.has(fingerprint)) return;
                 
                 processedFingerprints.add(fingerprint);
@@ -81,7 +76,7 @@ export async function GET(request: Request) {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
-                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+                'Cache-Control': noCache ? 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0' : 'public, s-maxage=1, stale-while-revalidate=5',
                 'Pragma': 'no-cache',
                 'Expires': '0'
             },
