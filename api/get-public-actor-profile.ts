@@ -34,7 +34,8 @@ export async function GET(request: Request) {
     moviesSnapshot.forEach(doc => {
         const movie = doc.data() as Movie;
         if (movie.cast && movie.cast.some(c => c.name.trim().toLowerCase() === profile.name.trim().toLowerCase())) {
-            films.push({ key: doc.id, ...movie });
+            // FIX: Spread movie first, then set key to doc.id to avoid TS2783 error
+            films.push({ ...movie, key: doc.id });
         }
     });
 
