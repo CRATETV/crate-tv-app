@@ -219,6 +219,7 @@ export interface ActorProfile {
     imdbUrl: string;
     email: string; // Professional contact email
     isAvailableForCasting?: boolean;
+    isContactable?: boolean; // Controls whether the "Contact Talent" button is shown
 }
 
 export interface ActorPost {

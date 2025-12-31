@@ -7,6 +7,7 @@ import MovieDetailsModal from './components/MovieDetailsModal';
 import ActorBioModal from './components/ActorBioModal';
 import SearchOverlay from './components/SearchOverlay';
 import SmartInstallPrompt from './components/SmartInstallPrompt';
+import SEO from './components/SEO';
 import { Movie, Actor, Category, WatchPartyState } from './types';
 import { isMovieReleased } from './constants';
 import { useAuth } from './contexts/AuthContext';
@@ -96,7 +97,6 @@ const App: React.FC = () => {
     const livePartyMovie = useMemo(() => {
         const liveKey = Object.keys(activeParties).find(key => {
             const m = movies[key];
-            // If it's live in Firestore, we show the banner unless it's strictly private/unlisted
             return m && m.isWatchPartyEnabled && !m.isUnlisted;
         });
         return liveKey ? movies[liveKey] : null;
@@ -162,11 +162,15 @@ const App: React.FC = () => {
     const showFestival = isFestivalLive && !isFestivalBannerDismissed;
     
     let headerTop = '0px';
-    if (showWatchParty && showFestival) headerTop = '6rem'; // Both stacked
-    else if (showWatchParty || showFestival) headerTop = '3rem'; // One active
+    if (showWatchParty && showFestival) headerTop = '6rem';
+    else if (showWatchParty || showFestival) headerTop = '3rem';
 
     return (
         <div className="flex flex-col min-h-screen text-white overflow-x-hidden w-full relative">
+            <SEO 
+                title="Home"
+                description="Stream the best independent short films, features, and documentaries. Crate TV is the home of the unseen, curated by artists for visionaries."
+            />
             <SmartInstallPrompt />
             
             {showWatchParty && (

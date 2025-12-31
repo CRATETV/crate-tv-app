@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';
+import SEO from './SEO';
 import { ActorProfile, Movie } from '../types';
 import BottomNavBar from './BottomNavBar';
 import { useFestival } from '../contexts/FestivalContext';
@@ -67,6 +67,10 @@ const ActorsDirectoryPage: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen text-white">
+            <SEO 
+                title="Actors Directory"
+                description="Discover the talented independent actors featured on Crate TV. Browse professional profiles and explore the performances that bring our films to life."
+            />
             <Header searchQuery="" onSearch={handleSearch} isScrolled={true} onMobileSearchClick={handleMobileSearch} showSearch={true} showNavLinks={false} />
             <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
                 <div className="max-w-6xl mx-auto">

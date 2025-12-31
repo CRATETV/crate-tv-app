@@ -3,6 +3,7 @@ import Header from './Header';
 import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';
+import SEO from './SEO';
 import { ActorProfile, Movie } from '../types';
 import { MovieCard } from './MovieCard';
 import { useAuth } from '../contexts/AuthContext';
@@ -126,9 +127,26 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
     if (!profile) return null;
 
     const firstName = profile.name.split(' ')[0];
+    const canReach = profile.isContactable !== false; // Default to true unless explicitly disabled
 
     return (
         <div className="flex flex-col min-h-screen text-white bg-black">
+            <SEO 
+                title={profile.name}
+                description={profile.bio}
+                image={profile.photo}
+                type="profile"
+                schemaData={{
+                    "@type": "ProfilePage",
+                    "mainEntity": {
+                        "@type": "Person",
+                        "name": profile.name,
+                        "description": profile.bio,
+                        "image": profile.photo,
+                        "sameAs": [profile.imdbUrl].filter(Boolean)
+                    }
+                }}
+            />
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={handleMobileSearch} showSearch={false} />
             <main className="flex-grow">
                 <div className="relative w-full h-[60vh] bg-black">
@@ -149,12 +167,18 @@ const ActorProfilePage: React.FC<ActorProfilePageProps> = ({ slug }) => {
                         <div>
                             <h1 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter leading-none">{profile.name}</h1>
                             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-6">
-                                <button 
-                                    onClick={() => setShowInquiryModal(true)}
-                                    className="bg-white text-black font-black text-xs px-8 py-3 rounded-xl hover:bg-gray-200 transition-all transform active:scale-95 shadow-xl uppercase tracking-widest flex items-center gap-3 min-w-[200px] justify-center"
-                                >
-                                    Contact Talent
-                                </button>
+                                {canReach ? (
+                                    <button 
+                                        onClick={() => setShowInquiryModal(true)}
+                                        className="bg-white text-black font-black text-xs px-8 py-3 rounded-xl hover:bg-gray-200 transition-all transform active:scale-95 shadow-xl uppercase tracking-widest flex items-center gap-3 min-w-[200px] justify-center"
+                                    >
+                                        Contact Talent
+                                    </button>
+                                ) : (
+                                    <div className="bg-white/5 border border-white/10 text-gray-500 font-black text-[9px] px-6 py-3 rounded-xl uppercase tracking-widest">
+                                        Direct Contact Locked
+                                    </div>
+                                )}
                                 {profile.imdbUrl && (
                                     <a href={profile.imdbUrl} target="_blank" rel="noopener noreferrer" className="bg-[#f5c518] text-black font-black text-xs px-6 py-3 rounded-xl hover:bg-yellow-400 transition-all shadow-md uppercase tracking-widest">
                                         Professional Profile

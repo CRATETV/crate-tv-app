@@ -7,6 +7,7 @@ import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';
 import RokuBanner from './RokuBanner';
 import SquarePaymentModal from './SquarePaymentModal';
+import SEO from './SEO';
 import { isMovieReleased } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
@@ -71,9 +72,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         try {
             if (containerRef.current?.requestFullscreen) {
                 await containerRef.current.requestFullscreen();
-                if ('orientation' in screen && (screen.orientation as any).lock) {
-                    await (screen.orientation as any).lock('landscape').catch(() => {});
-                }
             }
         } catch (e) {
             console.warn("Secure orientation lock skipped:", e);
@@ -100,9 +98,32 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   if (!movie) return <div className="h-screen flex items-center justify-center font-black uppercase tracking-widest text-gray-800 bg-black">Content Restricted</div>;
 
   const embedUrl = getEmbedUrl(movie.fullMovie);
+  
+  // Cleanup HTML from synopsis for SEO description
+  const seoDescription = (movie.synopsis || '').replace(/<[^>]+>/g, '').trim();
 
   return (
     <div ref={containerRef} className="flex flex-col min-h-screen bg-[#050505] text-white">
+        <SEO 
+            title={movie.title}
+            description={seoDescription}
+            image={movie.poster}
+            type="video.movie"
+            schemaData={{
+                "@type": "Movie",
+                "name": movie.title,
+                "description": seoDescription,
+                "image": movie.poster,
+                "director": {
+                    "@type": "Person",
+                    "name": movie.director
+                },
+                "actor": movie.cast.map(actor => ({
+                    "@type": "Person",
+                    "name": actor.name
+                }))
+            }}
+        />
         {playerMode !== 'full' && <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} />}
         
         <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
@@ -137,8 +158,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     )
                 ) : (
                     <div className="relative w-full h-full flex items-center justify-center">
-                         <img src={movie.poster} className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-20" />
-                         <img src={movie.poster} className="relative w-full h-full object-contain max-w-2xl rounded-lg shadow-2xl border border-white/5" />
+                         <img src={movie.poster} className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-20" alt="" />
+                         <img src={movie.poster} className="relative w-full h-full object-contain max-w-2xl rounded-lg shadow-2xl border border-white/5" alt={movie.title} />
                          <button onClick={() => hasAccess ? setPlayerMode('full') : setIsPurchaseModalOpen(true)} className="absolute bg-white/10 backdrop-blur-md rounded-full p-8 border-4 border-white/20 hover:scale-110 transition-all shadow-2xl group">
                             <svg className="w-16 h-16 text-white group-hover:text-red-500 transition-colors" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
                          </button>
