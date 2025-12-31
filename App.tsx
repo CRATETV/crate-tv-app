@@ -19,6 +19,29 @@ import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import NowStreamingBanner from './components/NowPlayingBanner';
 
+const FestivalActiveBanner: React.FC<{ onClose: () => void }> = ({ onClose }) => (
+    <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-3 flex items-center justify-center gap-4 shadow-lg h-12">
+        <div className="flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+            </span>
+            <span className="font-black uppercase text-[10px] tracking-widest">Festival Active</span>
+        </div>
+        <p className="text-xs font-bold hidden sm:block">Explore the Official Selections in the Festival Portal</p>
+        <button 
+            onClick={() => {
+                window.history.pushState({}, '', '/festival');
+                window.dispatchEvent(new Event('pushstate'));
+            }}
+            className="bg-white text-indigo-600 font-black px-4 py-1 rounded-full text-[10px] uppercase tracking-widest hover:bg-gray-100 transition-colors"
+        >
+            Enter Portal
+        </button>
+        <button onClick={onClose} className="text-white/50 hover:text-white">&times;</button>
+    </div>
+);
+
 const App: React.FC = () => {
     const { likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
     const { isLoading, movies, categories, isFestivalLive, festivalConfig, settings } = useFestival();
@@ -29,6 +52,7 @@ const App: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [activeParties, setActiveParties] = useState<Record<string, WatchPartyState>>({});
+    const [isFestivalBannerDismissed, setIsFestivalBannerDismissed] = useState(false);
     
     useEffect(() => {
         const db = getDbInstance();
@@ -68,6 +92,15 @@ const App: React.FC = () => {
             .filter(m => !!m && !isMovieReleased(m) && !m.isUnlisted)
             .sort((a, b) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
     }, [movies]);
+
+    const livePartyMovie = useMemo(() => {
+        const liveKey = Object.keys(activeParties).find(key => {
+            const m = movies[key];
+            // If it's live in Firestore, we show the banner unless it's strictly private/unlisted
+            return m && m.isWatchPartyEnabled && !m.isUnlisted;
+        });
+        return liveKey ? movies[liveKey] : null;
+    }, [activeParties, movies]);
 
     const nowStreamingMovie = useMemo(() => {
         const keys = categories.nowStreaming?.movieKeys || [];
@@ -124,20 +157,43 @@ const App: React.FC = () => {
 
     if (isLoading) return <LoadingSpinner />;
 
-    const livePartyKey = Object.keys(activeParties).find(key => movies[key]?.isWatchPartyEnabled);
-    const livePartyMovie = livePartyKey ? movies[livePartyKey] : null;
+    // Calculate dynamic header offset based on active banners
+    const showWatchParty = !!livePartyMovie;
+    const showFestival = isFestivalLive && !isFestivalBannerDismissed;
+    
+    let headerTop = '0px';
+    if (showWatchParty && showFestival) headerTop = '6rem'; // Both stacked
+    else if (showWatchParty || showFestival) headerTop = '3rem'; // One active
 
     return (
         <div className="flex flex-col min-h-screen text-white overflow-x-hidden w-full relative">
             <SmartInstallPrompt />
-            {livePartyMovie && <LiveWatchPartyBanner movie={livePartyMovie} onClose={() => setActiveParties({})} />}
+            
+            {showWatchParty && (
+                <LiveWatchPartyBanner 
+                    movie={livePartyMovie!} 
+                    onClose={() => setActiveParties(prev => {
+                        const next = { ...prev };
+                        delete next[livePartyMovie!.key];
+                        return next;
+                    })} 
+                />
+            )}
+
+            {showFestival && (
+                <div style={{ top: showWatchParty ? '3rem' : '0px' }} className="fixed left-0 right-0 z-50">
+                    <FestivalActiveBanner onClose={() => setIsFestivalBannerDismissed(true)} />
+                </div>
+            )}
+
             <Header 
                 searchQuery={searchQuery} 
                 onSearch={setSearchQuery} 
                 onMobileSearchClick={handleSearchClick}
-                topOffset={livePartyMovie ? '3rem' : '0px'}
+                topOffset={headerTop}
                 isLiveSpotlight={isNowStreamingLive}
             />
+
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden">
                 {isFestivalLive ? (
                     <FestivalHero festivalConfig={festivalConfig} />
@@ -170,7 +226,6 @@ const App: React.FC = () => {
                             />
                         ) : (
                           <>
-                            {/* PRIORITY 1: COMING SOON - Always show first to build hype */}
                             {comingSoonMovies.length > 0 && (
                                 <MovieCarousel
                                     key="coming-soon"

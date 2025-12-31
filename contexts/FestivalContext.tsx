@@ -40,13 +40,14 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     const isFestivalLive = useMemo(() => {
         if (!festivalConfig?.startDate || !festivalConfig?.endDate) return false;
-        const now = new Date();
-        return now >= new Date(festivalConfig.startDate) && now < new Date(festivalConfig.endDate);
+        const now = new Date().getTime();
+        const start = new Date(festivalConfig.startDate).getTime();
+        const end = new Date(festivalConfig.endDate).getTime();
+        return now >= start && now < end;
     }, [festivalConfig]);
 
     const fetchData = async (forceNoCache = false) => {
         try {
-            // Using a dynamic timestamp to bust edge caches immediately
             const res = await fetch(`/api/get-live-data?t=${Date.now()}&noCache=${forceNoCache}`);
             if (res.ok) {
                 const data = await res.json();
@@ -69,22 +70,36 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     useEffect(() => {
         fetchData();
         
-        // Setup real-time listener for settings which control visibility toggles
         const init = async () => {
             await initializeFirebaseAuth();
             const db = getDbInstance();
             if (db) {
-                // INSTANT SYNC: Listen for changes to the settings doc and re-fetch if anyone publishes
-                return db.collection('content').doc('settings').onSnapshot(doc => {
+                // Listener 1: Site Settings
+                const unsubSettings = db.collection('content').doc('settings').onSnapshot(doc => {
                     if (doc.exists) {
                         setSettings(doc.data() as SiteSettings);
-                        fetchData(true); // Always force re-fetch when settings update
+                        fetchData(true);
                     }
                 });
+
+                // Listener 2: Festival Config (CRITICAL for 'Push Live Now' reactivity)
+                const unsubFestival = db.collection('festival').doc('config').onSnapshot(doc => {
+                    if (doc.exists) {
+                        const newConfig = doc.data() as FestivalConfig;
+                        setFestivalConfig(newConfig);
+                        // If the config changed, we should refresh the full manifest to get the correct schedule
+                        fetchData(true);
+                    }
+                });
+
+                return () => {
+                    unsubSettings();
+                    unsubFestival();
+                };
             }
         };
-        const unsubPromise = init();
-        return () => { unsubPromise.then(unsub => unsub?.()); };
+        const cleanupPromise = init();
+        return () => { cleanupPromise.then(unsub => unsub?.()); };
     }, []);
 
     const value: FestivalContextType = {
