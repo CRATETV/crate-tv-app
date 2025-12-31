@@ -15,7 +15,7 @@ const checkAuth = (password: string | null) => {
 };
 
 const assembleAndSyncMasterData = async (db: Firestore) => {
-    // Collect all fragments from Firestore
+    // Collect all fragments from Firestore with zero-latency snapshot retrieval
     const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap, settingsSnap] = await Promise.all([
         db.collection('movies').get(),
         db.collection('categories').get(),
@@ -40,7 +40,8 @@ const assembleAndSyncMasterData = async (db: Firestore) => {
         festivalConfig: festivalConfigSnap.exists ? festivalConfigSnap.data() : null,
         festivalData: festivalDaysSnap.docs.map(d => d.data()).sort((a, b) => a.day - b.day),
         settings: settingsSnap.exists ? settingsSnap.data() : { isHolidayModeActive: false },
-        lastPublished: new Date().toISOString()
+        lastPublished: new Date().toISOString(),
+        version: Date.now() // Forced manifest versioning
     };
 
     // SYNC TO S3 (The Source of Truth for the public frontend)
@@ -57,17 +58,18 @@ const assembleAndSyncMasterData = async (db: Firestore) => {
             },
         });
 
+        // FORCE S3 NO-CACHE ON WRITE
         await s3Client.send(new PutObjectCommand({
             Bucket: bucketName,
             Key: 'live-data.json',
             Body: JSON.stringify(liveData, null, 2),
             ContentType: 'application/json',
-            CacheControl: 'no-store, max-age=0'
+            CacheControl: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'
         }));
-        console.log("[Studio Sync] S3 Master Manifest re-built and synchronized.");
+        console.log(`[Studio Sync] Master Manifest V${liveData.version} synchronized.`);
     } catch (err) {
         console.error("[Studio Sync Error] S3 write failed:", err);
-        throw new Error("Database updated, but S3 synchronization failed. Home page may lag.");
+        throw new Error("Critical: S3 Sync Failure. Check AWS Credentials.");
     }
 
     return liveData;
@@ -82,27 +84,21 @@ export async function POST(request: Request) {
         }
         
         const initError = getInitializationError();
-        if (initError) throw new Error(initError);
+        if (initError) throw new Error(`Cloud DB Config Error: ${initError}`);
         const db = getAdminDb();
-        if (!db) throw new Error("Cloud Database Unreachable.");
+        if (!db) throw new Error("Cloud Database Cluster Unreachable.");
 
         const batch = db.batch();
 
         if (type === 'delete_movie') {
             const { key } = data;
             if (!key) throw new Error("Target Movie Key required for purge.");
-            
-            // 1. Delete Primary Record
             batch.delete(db.collection('movies').doc(key));
-            
-            // 2. Scrub from all categories
             const categoriesSnap = await db.collection('categories').get();
             categoriesSnap.forEach(doc => {
                 const c = doc.data();
                 if (c.movieKeys?.includes(key)) {
-                    batch.update(doc.ref, { 
-                        movieKeys: FieldValue.arrayRemove(key) 
-                    });
+                    batch.update(doc.ref, { movieKeys: FieldValue.arrayRemove(key) });
                 }
             });
         } 
@@ -118,11 +114,10 @@ export async function POST(request: Request) {
             }
         }
         else if (type === 'categories') {
-            // Full Overwrite Logic
             const currentCatsSnap = await db.collection('categories').get();
             const incomingKeys = Object.keys(data);
             currentCatsSnap.forEach(doc => {
-                if (doc.id === 'nowStreaming' || doc.id === 'featured') return;
+                if (doc.id === 'nowStreaming' || doc.id === 'featured' || doc.id === 'publicDomainIndie') return;
                 if (!incomingKeys.includes(doc.id)) batch.delete(doc.ref);
             });
             for (const [id, docData] of Object.entries(data)) {
@@ -145,13 +140,22 @@ export async function POST(request: Request) {
             }
         }
 
-        // Commit DB changes
+        // 1. Commit DB changes
         await batch.commit();
 
-        // Critical: Re-assemble everything and push to S3 for instant site-wide update
-        await assembleAndSyncMasterData(db);
+        // 2. Critical: Wait for cloud assembly and S3 write to complete before returning success
+        const finalManifest = await assembleAndSyncMasterData(db);
 
-        return new Response(JSON.stringify({ success: true }), { status: 200 });
+        return new Response(JSON.stringify({ 
+            success: true, 
+            version: finalManifest.version 
+        }), { 
+            status: 200,
+            headers: {
+                'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+                'X-Sync-Version': finalManifest.version.toString()
+            }
+        });
 
     } catch (error) {
         console.error("Critical Admin Sync Failure:", error);

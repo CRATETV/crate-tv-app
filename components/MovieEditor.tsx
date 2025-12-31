@@ -111,10 +111,10 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         setNewActorBio('');
     };
 
-    const handleUpdateActorBio = (index: number, newBio: string) => {
+    const handleUpdateActorField = (index: number, field: keyof Actor, value: string) => {
         if (!formData) return;
         const updatedCast = [...formData.cast];
-        updatedCast[index] = { ...updatedCast[index], bio: newBio };
+        updatedCast[index] = { ...updatedCast[index], [field]: value };
         setFormData({ ...formData, cast: updatedCast });
     };
 
@@ -125,7 +125,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             await onSave({ [formData.key]: formData });
             setSelectedMovieKey('');
         } catch (err) {
-            alert("Save failed. Check uplink.");
+            alert("Save failed. Connection error.");
         } finally {
             setIsSaving(false);
         }
@@ -133,13 +133,13 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
 
     const handleDelete = async () => {
         if (!formData) return;
-        if (!window.confirm(`PERMANENT ACTION: Purge "${formData.title}" from global database? This scrub is final.`)) return;
+        if (!window.confirm(`PERMANENT ACTION: Purge "${formData.title}"? This cannot be reversed.`)) return;
         setIsPurging(true);
         try {
             await onDeleteMovie(formData.key);
             setSelectedMovieKey('');
         } catch (err) {
-            alert("Purge failed. Cluster may be busy.");
+            alert("Purge failed. Cloud cluster busy.");
         } finally {
             setIsPurging(false);
         }
@@ -162,20 +162,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
-    const getLicensingStatus = (publishedAt?: string) => {
-        if (!publishedAt) return null;
-        const pub = new Date(publishedAt);
-        const exp = new Date(pub);
-        exp.setFullYear(exp.getFullYear() + 1);
-        const diff = exp.getTime() - new Date().getTime();
-        const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
-        return { 
-            expiry: exp.toLocaleDateString(), 
-            daysLeft, 
-            isUrgent: daysLeft < 30 && daysLeft > 0 
-        };
-    };
-
     return (
         <div className="space-y-6 pb-20">
             {!formData ? (
@@ -190,37 +176,27 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <tbody className="divide-y divide-white/5">
-                                {filteredMovies.map(movie => {
-                                    const status = getLicensingStatus(movie.publishedAt);
-                                    return (
-                                        <tr key={movie.key} className="hover:bg-white/[0.01] group transition-colors">
-                                            <td className="px-8 py-6">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-14 bg-black rounded border border-white/10 overflow-hidden shadow-inner">
-                                                        {movie.poster && <img src={movie.poster} className="w-full h-full object-cover" />}
-                                                    </div>
-                                                    <div>
-                                                        <span className="font-bold text-white uppercase text-sm tracking-tight">{movie.title || 'Untitled'}</span>
-                                                        <p className="text-[9px] text-gray-600 font-black uppercase mt-1 tracking-widest">
-                                                            Ingested: {movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'N/A'}
-                                                            {movie.isForSale && <span className="ml-2 text-green-600">$ Paywall</span>}
-                                                        </p>
-                                                    </div>
+                                {filteredMovies.map(movie => (
+                                    <tr key={movie.key} className="hover:bg-white/[0.01] group transition-colors">
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-14 bg-black rounded border border-white/10 overflow-hidden shadow-inner">
+                                                    {movie.poster && <img src={movie.poster} className="w-full h-full object-cover" />}
                                                 </div>
-                                            </td>
-                                            <td className="px-8 py-6 hidden md:table-cell">
-                                                {status && (
-                                                    <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-full border ${status.isUrgent ? 'border-red-600/50 text-red-500 bg-red-600/5' : 'border-white/5 text-gray-500'}`}>
-                                                        {status.daysLeft > 0 ? `${status.daysLeft}d left` : 'Expired'}
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-8 py-6 text-right">
-                                                <button onClick={() => setSelectedMovieKey(movie.key)} className="text-white bg-white/5 hover:bg-white/10 font-black text-[9px] uppercase px-4 py-2 rounded-lg border border-white/5 transition-all">Edit Manifest</button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                                <div>
+                                                    <span className="font-bold text-white uppercase text-sm tracking-tight">{movie.title || 'Untitled'}</span>
+                                                    <p className="text-[9px] text-gray-600 font-black uppercase mt-1 tracking-widest">
+                                                        Ingested: {movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'N/A'}
+                                                        {movie.isForSale && <span className="ml-2 text-green-600">$ Paywall</span>}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <button onClick={() => setSelectedMovieKey(movie.key)} className="text-white bg-white/5 hover:bg-white/10 font-black text-[9px] uppercase px-4 py-2 rounded-lg border border-white/5 transition-all">Edit Manifest</button>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
@@ -238,7 +214,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 disabled={isSpotlighting}
                                 className="bg-red-600/10 border border-red-500/30 text-red-500 px-6 py-3 rounded-xl uppercase text-[10px] font-black hover:bg-red-600 hover:text-white transition-all shadow-lg disabled:opacity-50"
                             >
-                                {isSpotlighting ? 'Syncing Spotlight...' : 'Set as Spotlight'}
+                                {isSpotlighting ? 'Syncing...' : 'Set as Spotlight'}
                             </button>
                             <button onClick={() => setSelectedMovieKey('')} className="bg-white/5 text-gray-400 px-6 py-3 rounded-xl uppercase text-[10px] font-black">Catalog Root</button>
                         </div>
@@ -251,8 +227,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={6} placeholder="Synopsis" className="form-input bg-black/40" />
                                 <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Director" className="form-input bg-black/40" />
                                 <div className="pt-4">
-                                     <label className="form-label">Premiere Release Date (Sets 'Coming Soon' if future)</label>
-                                     <input type="datetime-local" name="releaseDateTime" value={formData.releaseDateTime ? new Date(new Date(formData.releaseDateTime).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''} onChange={(e) => setFormData({...formData, releaseDateTime: e.target.value ? new Date(e.target.value).toISOString() : ''})} className="form-input bg-black/40" />
+                                     <label className="form-label">Premiere Release Date</label>
+                                     <input type="datetime-local" name="releaseDateTime" value={formData.releaseDateTime ? new Date(new Date(formData.releaseDateTime).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''} onChange={(e) => setFormData({...formData, releaseDateTime: e.target.value ? new Date(e.target.value).toISOString() : ''})} className="form-input bg-white/20 text-white font-black" />
                                 </div>
                             </section>
 
@@ -273,13 +249,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     </div>
                                     <div className="pt-4 border-t border-white/5">
                                         <label className="form-label">Exhibition Start (Tracking)</label>
-                                        <input type="date" value={formData.publishedAt?.split('T')[0] || ''} onChange={(e) => setFormData({...formData, publishedAt: e.target.value ? new Date(e.target.value).toISOString() : ''})} className="form-input bg-black/40" />
-                                        {formData.publishedAt && (
-                                            <div className="mt-4 p-4 rounded-xl bg-black/60 border border-white/5">
-                                                <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">12-Month Non-Exclusive Window</p>
-                                                <p className="text-sm font-bold text-white mt-1">Expires: {getLicensingStatus(formData.publishedAt)?.expiry}</p>
-                                            </div>
-                                        )}
+                                        <input type="date" value={formData.publishedAt?.split('T')[0] || ''} onChange={(e) => setFormData({...formData, publishedAt: e.target.value ? new Date(e.target.value).toISOString() : ''})} className="form-input bg-white/20 text-white font-black" />
                                     </div>
                                 </div>
                             </section>
@@ -288,10 +258,10 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                              <section className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">03. Master Files</h4>
                                 <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-4">
-                                    <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} placeholder="High-Bitrate Film URL" className="form-input bg-black/40" />
+                                    <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} placeholder="Film URL" className="form-input bg-black/40" />
                                     <S3Uploader label="Ingest Film Master" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
-                                    <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} placeholder="Trailer URL (Required for 'Coming Soon' Tease)" className="form-input bg-black/40" />
-                                    <S3Uploader label="Ingest Teaser/Trailer" onUploadSuccess={(url) => setFormData({...formData, trailer: url})} />
+                                    <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} placeholder="Trailer URL" className="form-input bg-black/40" />
+                                    <S3Uploader label="Ingest Trailer" onUploadSuccess={(url) => setFormData({...formData, trailer: url})} />
                                     <input type="text" name="poster" value={formData.poster} onChange={handleChange} placeholder="Poster URL" className="form-input bg-black/40" />
                                     <S3Uploader label="Ingest Poster" onUploadSuccess={(url) => setFormData({...formData, poster: url})} />
                                 </div>
@@ -299,25 +269,42 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                              <section className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">04. Cast Manifest</h4>
                                 <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-6">
-                                    <div className="grid grid-cols-1 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 border-b border-white/5 pb-6">
                                         <input type="text" value={newActorName} onChange={e => setNewActorName(e.target.value)} placeholder="Performer Name" className="form-input bg-black/40" />
                                         <textarea value={newActorBio} onChange={e => setNewActorBio(e.target.value)} placeholder="Biography" className="form-input bg-black/40" rows={2} />
-                                        <button onClick={handleAddActor} className="bg-white/10 w-full py-4 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-all">Add Performer to Credits</button>
+                                        <button onClick={handleAddActor} className="bg-white/10 w-full py-4 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-all">Add Performer</button>
                                     </div>
                                     
-                                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                                         {formData.cast.map((actor, idx) => (
-                                            <div key={idx} className="bg-black/60 p-5 rounded-2xl border border-white/5 space-y-3 relative group">
+                                            <div key={idx} className="bg-black/60 p-5 rounded-2xl border border-white/5 space-y-4 relative group">
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-sm font-black text-white uppercase tracking-tight">{actor.name}</span>
                                                     <button onClick={() => { const c = [...formData.cast]; c.splice(idx, 1); setFormData({...formData, cast: c}); }} className="text-gray-600 hover:text-red-500 font-black text-[10px] uppercase">Remove</button>
                                                 </div>
-                                                <textarea 
-                                                    value={actor.bio} 
-                                                    onChange={(e) => handleUpdateActorBio(idx, e.target.value)}
-                                                    className="w-full bg-white/5 border-none rounded-lg p-3 text-xs text-gray-400 focus:ring-1 focus:ring-red-500/50 resize-none h-20"
-                                                    placeholder="Edit bio..."
-                                                />
+                                                <div className="grid grid-cols-1 gap-3">
+                                                    <textarea 
+                                                        value={actor.bio} 
+                                                        onChange={(e) => handleUpdateActorField(idx, 'bio', e.target.value)}
+                                                        className="w-full bg-white/5 border-none rounded-lg p-3 text-xs text-gray-400 focus:ring-1 focus:ring-red-500/50 resize-none h-20"
+                                                        placeholder="Biography..."
+                                                    />
+                                                    <div>
+                                                        <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1 block">Photo URL (High Resolution)</label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={actor.photo} 
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                const updatedCast = [...formData.cast];
+                                                                updatedCast[idx] = { ...updatedCast[idx], photo: val, highResPhoto: val };
+                                                                setFormData({ ...formData, cast: updatedCast });
+                                                            }}
+                                                            className="w-full bg-white/5 border-none rounded-lg p-2 text-[10px] text-gray-300"
+                                                            placeholder="Enter high-res image link..."
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

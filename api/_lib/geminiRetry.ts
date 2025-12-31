@@ -1,17 +1,17 @@
 import { GoogleGenAI, GenerateContentParameters, GenerateContentResponse } from '@google/genai';
 
 /**
- * ELITE RETRY ENGINE V5.2
- * Hardened for Paid Tiers. 10 Retry Cycle.
+ * ELITE RETRY ENGINE V5.3
+ * Hardened for Paid Tiers and Free Quotas. 15 Retry Cycle.
  */
 export async function generateContentWithRetry(
   params: GenerateContentParameters,
-  maxRetries: number = 10
+  maxRetries: number = 15
 ): Promise<GenerateContentResponse> {
   let lastError: any;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    // Fresh client instance per call
+    // Fresh client instance per call to ensure API key propagation
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     try {
@@ -31,24 +31,24 @@ export async function generateContentWithRetry(
 
       if (isTransientLimit) {
           if (attempt < maxRetries) {
-              // Linear-Exponential Hybrid Backoff
-              const baseDelay = (attempt < 3) ? 1000 : Math.pow(2, attempt) * 1000;
-              const jitter = Math.random() * 1000; 
+              // Quadratic Backoff with Jitter
+              const baseDelay = Math.pow(attempt + 1, 2) * 1000;
+              const jitter = Math.random() * 2000; 
               const totalDelay = baseDelay + jitter;
               
-              console.warn(`[Crate AI] Paid Tier Throttled (Attempt ${attempt + 1}/${maxRetries}). Backing off ${totalDelay.toFixed(0)}ms...`);
+              console.warn(`[Crate AI] Resource Exceeded (Error 8). Retrying ${attempt + 1}/${maxRetries} in ${totalDelay.toFixed(0)}ms...`);
               await new Promise(resolve => setTimeout(resolve, totalDelay));
               continue;
           }
           
-          const finalError = new Error("AI nodes are at peak capacity. Please retry the operation in 30 seconds.");
+          const finalError = new Error("AI services are at peak capacity. Database update was successful, but AI generation is deferred.");
           (finalError as any).isQuotaError = true;
           (finalError as any).code = 8;
           throw finalError;
       }
 
-      if (errorMessage.includes("503") && attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1)));
+      if ((errorMessage.includes("503") || errorMessage.includes("overloaded")) && attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 3000 * (attempt + 1)));
         continue;
       }
       

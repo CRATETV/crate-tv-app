@@ -162,14 +162,14 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
 
                 <div className="bg-gray-900/50 p-6 rounded-b-2xl mt-auto border-t border-white/5">
                     {status === 'success' ? (
-                        <div className="text-center text-green-400 font-bold uppercase tracking-widest">Access Granted! Enjoy the film.</div>
+                        <div className="text-center text-green-400 font-bold uppercase tracking-widest">Transaction Successful</div>
                     ) : (
                         <button
                             onClick={handlePayment}
                             disabled={status === 'loading' || status === 'processing'}
                             className="w-full submit-btn !bg-white !text-black disabled:opacity-50"
                         >
-                            {status === 'loading' ? 'Securing Gateway...' : status === 'processing' ? 'Authorizing...' : `Authorize Rental`}
+                            {status === 'loading' ? 'Securing Gateway...' : status === 'processing' ? 'Authorizing...' : `Authorize`}
                         </button>
                     )}
                 </div>
