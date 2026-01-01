@@ -3,7 +3,7 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { AnalyticsData, Movie, PayoutRequest, AdminPayout, BillSavingsTransaction, User, FilmmakerPayout } from '../types.js';
 
-// EPOCH RESET: Finalized to May 24, 2025. All prior Square data ignored.
+// EPOCH RESET: All financial data before this date is completely ignored for the dashboard.
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z'; 
 
 interface SquarePayment {
@@ -16,7 +16,7 @@ interface SquarePayment {
   note?: string;
 }
 
-// ADS DISABLED: Revenue logic zeroed to align with Square Card balance.
+// AD REVENUE SUNSET: Platform ads are currently disabled to prioritize user experience.
 const DONATION_PLATFORM_CUT = 0.30;
 const FESTIVAL_PLATFORM_CUT = 0.30;
 
@@ -72,13 +72,11 @@ export async function POST(request: Request) {
         const initError = getInitializationError();
         if (initError) errors.firebase = initError;
         const db = getAdminDb();
-        const auth = getAdminAuth();
 
         const isProduction = process.env.VERCEL_ENV === 'production';
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
         const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
-        if (!accessToken) errors.square = 'Square Access Token missing.';
-
+        
         const resetTimestamp = new Date(SYSTEM_RESET_DATE);
 
         const squarePromise = accessToken ? fetchAllSquarePayments(accessToken, locationId) : Promise.resolve([]);
@@ -143,6 +141,7 @@ export async function POST(request: Request) {
             }
         });
 
+        // AD REVENUE DISABLED: Logic explicitly zeroed to maintain parity with bank card records.
         const totalAdRevenue = 0; 
         const totalRevenue = totalDonations + totalSales + festivalRevenue + crateFestRevenue;
         const totalCrateTvRevenue = (totalDonations * DONATION_PLATFORM_CUT) + (festivalRevenue * FESTIVAL_PLATFORM_CUT) + totalSales + crateFestRevenue;

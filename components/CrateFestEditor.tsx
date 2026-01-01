@@ -122,14 +122,14 @@ const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig
     const addBlock = () => {
         setConfig(prev => ({
             ...prev,
-            movieBlocks: [...prev.movieBlocks, { title: 'New Category', movieKeys: [] }]
+            movieBlocks: [...prev.movieBlocks, { id: 'block_' + Date.now(), title: 'New Category', movieKeys: [] }]
         }));
     };
 
     const updateBlock = (idx: number, updates: any) => {
         const newBlocks = [...config.movieBlocks];
         newBlocks[idx] = { ...newBlocks[idx], ...updates };
-        setConfig({ ...config, movieBlocks: newBlocks });
+        setConfig(prev => ({ ...prev, movieBlocks: newBlocks }));
     };
 
     const handleBlockMovieSave = (keys: string[]) => {
@@ -139,7 +139,6 @@ const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig
         }
     };
 
-    // Helper to find title for keys that might be in catalog OR pipeline
     const resolveTitle = (key: string) => {
         const fromCatalog = allMovies[key]?.title;
         if (fromCatalog) return fromCatalog;

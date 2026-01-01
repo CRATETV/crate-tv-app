@@ -10,8 +10,8 @@ const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
 const priceMap: Record<string, number> = {
   subscription: 499,
   pass: 5000,
-  block: 1000,
-  movie: 500,
+  block: 1000, // Crate Fest Block Unlock: $10.00
+  movie: 500,  // Crate Fest Single Film Rental: $5.00
 };
 
 export async function POST(request: Request) {
@@ -52,13 +52,15 @@ export async function POST(request: Request) {
     let note: string;
 
     // Determine amount and note based on payment type, using server-side pricing.
-    if (paymentType === 'donation' || paymentType === 'billSavingsDeposit') {
+    if (paymentType === 'donation' || paymentType === 'billSavingsDeposit' || paymentType === 'crateFestPass') {
         amountInCents = Math.round(Number(amount) * 100);
         if (amountInCents < 100) { // Minimum $1.00
             throw new Error("Amount must be at least $1.00.");
         }
         if (paymentType === 'donation') {
             note = `Support for film: "${movieTitle}" by ${directorName}`;
+        } else if (paymentType === 'crateFestPass') {
+            note = `Crate Fest All-Access Pass Activation`;
         } else {
             note = 'Deposit to Crate TV Bill Savings Pot';
         }
@@ -102,7 +104,7 @@ export async function POST(request: Request) {
     const response = await fetch(squareUrl, {
       method: 'POST',
       headers: {
-        'Square-Version': '2023-10-18',
+        'Square-Version': '2024-05-15',
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
@@ -116,36 +118,33 @@ export async function POST(request: Request) {
         throw new Error(errorMessage);
     }
     
-    // If it was a successful donation and an email was provided, send a thank you email.
-    if (response.ok && paymentType === 'donation' && email) {
+    // Receipt and Notification System
+    if (response.ok && email) {
         try {
             const amountFormatted = (amountInCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
             const emailHtml = `
-                <div style="font-family: sans-serif; line-height: 1.6;">
-                    <h1 style="color: #c084fc;">Thank You for Your Donation!</h1>
-                    <p>Dear Supporter,</p>
-                    <p>Thank you for your generous donation of <strong>${amountFormatted}</strong> to support the film <strong>"${movieTitle}"</strong> by ${directorName}.</p>
-                    <p>Your contribution directly helps independent filmmakers and allows us to continue showcasing unique and powerful stories on Crate TV.</p>
-                    <p>We couldn't do this without you.</p>
-                    <p>Sincerely,</p>
-                    <p>The Crate TV Team</p>
+                <div style="font-family: sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+                    <h1 style="color: #ef4444; text-transform: uppercase; letter-spacing: 2px;">Payment Successful</h1>
+                    <p>Thank you for your contribution to independent cinema.</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                    <p><strong>Item:</strong> ${note}</p>
+                    <p><strong>Amount:</strong> ${amountFormatted}</p>
+                    <p><strong>Status:</strong> Securely Authorized</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                    <p style="font-size: 11px; color: #999;">Access is now unlocked on your Crate TV account across all devices, including Roku. You can close any open payment modals.</p>
                 </div>
             `;
             
             await resend.emails.send({
-                from: `Crate TV <${fromEmail}>`,
+                from: `Crate TV Secure <${fromEmail}>`,
                 to: email,
-                subject: 'Thank You for Your Donation to Crate TV!',
+                subject: `Secure Payment Confirmed: ${amountFormatted}`,
                 html: emailHtml,
             });
-            console.log(`[Payment API] Donation thank you email sent to ${email}`);
-
         } catch (emailError) {
-            // Log the error but don't fail the overall request. The payment succeeded.
-            console.error("[Payment API] Failed to send thank you email:", emailError);
+            console.error("[Payment API] Receipt failure:", emailError);
         }
     }
-
 
     return new Response(JSON.stringify({ success: true, payment: data.payment }), {
       status: 200,

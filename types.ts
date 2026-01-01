@@ -88,7 +88,7 @@ export interface CrateFestConfig {
   passPrice: number;
   featuredWatchPartyKey?: string;
   movieBlocks: {
-    id: string; // Unique block ID for purchasing
+    id: string; 
     title: string;
     movieKeys: string[];
   }[];
@@ -128,6 +128,7 @@ export interface SiteSettings {
   holidayTheme?: 'christmas' | 'valentines' | 'gold' | 'generic';
   maintenanceMode?: boolean;
   pitchTargetCompany?: string;
+  pitchDeckCustomMessage?: string;
   crateFestConfig?: CrateFestConfig;
 }
 

@@ -125,6 +125,11 @@ const PitchDeckPage: React.FC = () => {
                     <p className="text-4xl md:text-7xl text-gray-200 font-black leading-[0.95] tracking-tight uppercase">
                         Architecting the <span className="text-white italic underline decoration-red-600 underline-offset-[12px]">High-Density</span> distribution bridge for world-class independent cinema.
                     </p>
+                    {settings.pitchDeckCustomMessage && (
+                        <div className="bg-white/5 p-8 rounded-3xl border border-white/10 italic text-2xl text-red-500 font-bold">
+                            "{settings.pitchDeckCustomMessage}"
+                        </div>
+                    )}
                     <div className="flex items-center gap-16 pt-16 border-t border-white/5">
                         <div className="space-y-2">
                             <p className="text-[10px] font-black text-red-500 uppercase tracking-[0.4em]">Strategic Context</p>

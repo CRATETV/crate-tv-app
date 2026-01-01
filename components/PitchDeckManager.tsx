@@ -9,10 +9,15 @@ interface PitchDeckManagerProps {
 const PitchDeckManager: React.FC<PitchDeckManagerProps> = ({ onSave, isSaving }) => {
     const { settings } = useFestival();
     const [targetCompany, setTargetCompany] = useState(settings.pitchTargetCompany || 'LIFT LABS');
+    const [customMessage, setCustomMessage] = useState(settings.pitchDeckCustomMessage || '');
     const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
 
     const handleSaveDefault = async () => {
-        await onSave({ ...settings, pitchTargetCompany: targetCompany.trim() });
+        await onSave({ 
+            ...settings, 
+            pitchTargetCompany: targetCompany.trim(),
+            pitchDeckCustomMessage: customMessage.trim()
+        });
     };
 
     const tailoredLink = useMemo(() => {
@@ -54,14 +59,25 @@ const PitchDeckManager: React.FC<PitchDeckManagerProps> = ({ onSave, isSaving })
                         placeholder="Company Name (e.g. Netflix)"
                         className="w-full bg-white/5 border border-white/10 text-white p-6 rounded-2xl font-black text-center text-3xl tracking-tighter focus:outline-none focus:border-red-600 transition-all placeholder:text-gray-800"
                     />
+                </div>
+
+                <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 block">02. Strategic Narrative Edit</label>
+                    <textarea 
+                        value={customMessage}
+                        onChange={(e) => setCustomMessage(e.target.value)}
+                        placeholder="Add a personalized strategic message for this stakeholder..."
+                        className="w-full bg-white/5 border border-white/10 text-white p-6 rounded-2xl font-medium text-lg focus:outline-none focus:border-red-600 transition-all placeholder:text-gray-800"
+                        rows={3}
+                    />
                     <div className="flex justify-between items-center px-2">
-                        <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Global Default: "{settings.pitchTargetCompany || 'None'}"</p>
+                        <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Live Updates to Slide 01</p>
                         <button onClick={handleSaveDefault} disabled={isSaving} className="text-[10px] text-red-500 font-black uppercase tracking-widest hover:underline disabled:opacity-20">Set as Global Default</button>
                     </div>
                 </div>
 
                 <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 block">02. Tailored Share Link</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 block">03. Tailored Share Link</label>
                     <div className="bg-black/40 border border-white/10 p-4 rounded-xl flex items-center justify-between gap-4">
                         <code className="text-xs text-gray-400 truncate font-mono">{tailoredLink}</code>
                         <button 
