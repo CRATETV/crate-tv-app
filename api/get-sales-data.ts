@@ -36,6 +36,8 @@ const parseNote = (note: string | undefined): { type: string, title?: string, di
     if (blockMatch) return { type: 'block', blockTitle: blockMatch[1].trim() };
     if (note.includes('Purchase Film:')) return { type: 'movie' };
     if (note.includes('Crate TV Premium Subscription')) return { type: 'subscription' };
+    // FIX: Recognize Crate Fest 2026 passes in the payment note for revenue tracking.
+    if (note.includes('Crate Fest 2026 Pass')) return { type: 'crateFestPass' };
     return { type: 'other' };
 };
 
@@ -224,6 +226,8 @@ export async function POST(request: Request) {
         let festivalPassSales = { units: 0, revenue: 0 };
         let festivalBlockSales = { units: 0, revenue: 0 };
         const salesByBlock: Record<string, { units: number, revenue: number }> = {};
+        // FIX: Added crateFestRevenue to track revenue specifically from Crate Fest $15 passes.
+        let crateFestRevenue = 0;
 
         allPayments.forEach(p => {
             const details = parseNote(p.note);
@@ -235,6 +239,9 @@ export async function POST(request: Request) {
             } else if (details.type === 'pass') {
                 festivalPassSales.units++;
                 festivalPassSales.revenue += p.amount_money.amount;
+            } else if (details.type === 'crateFestPass') {
+                // FIX: Aggregate revenue from Crate Fest passes.
+                crateFestRevenue += p.amount_money.amount;
             } else if (details.type === 'block' && details.blockTitle) {
                 festivalBlockSales.units++;
                 festivalBlockSales.revenue += p.amount_money.amount;
@@ -246,15 +253,17 @@ export async function POST(request: Request) {
             }
         });
 
+        // FIX: Updated totalRevenue calculation to include crateFestRevenue.
         const totalAdRevenue = (Object.values(viewCounts).reduce((s, c) => s + Number(c || 0), 0) / 1000) * AD_CPM_IN_CENTS;
         const totalFestivalRevenue = Number(festivalPassSales.revenue || 0) + Number(festivalBlockSales.revenue || 0);
-        const totalRevenue = totalDonations + totalSales + totalMerchRevenue + totalAdRevenue + totalFestivalRevenue;
+        const totalRevenue = totalDonations + totalSales + totalMerchRevenue + totalAdRevenue + totalFestivalRevenue + crateFestRevenue;
 
         const crateTvDonationShare = totalDonations * DONATION_PLATFORM_CUT;
         const crateTvAdShare = totalAdRevenue * (1 - AD_REVENUE_FILMMAKER_SHARE);
         const crateTvMerchCut = totalMerchRevenue * MERCH_PLATFORM_CUT;
         const crateTvFestivalShare = totalFestivalRevenue * FESTIVAL_PLATFORM_CUT;
-        const totalCrateTvRevenue = crateTvDonationShare + crateTvAdShare + crateTvMerchCut + crateTvFestivalShare + totalSales;
+        // FIX: Include crateFestRevenue in the platform's total earnings.
+        const totalCrateTvRevenue = crateTvDonationShare + crateTvAdShare + crateTvMerchCut + crateTvFestivalShare + totalSales + crateFestRevenue;
 
         const filmmakerPayouts: FilmmakerPayout[] = Object.values(allMovies).map(movie => {
             const filmDonations = donationsByFilm[movie.title] || 0;
@@ -272,10 +281,12 @@ export async function POST(request: Request) {
             };
         });
 
+        // FIX: Added missing 'crateFestRevenue' property to the analyticsData return object to resolve required property error.
         const analyticsData: AnalyticsData = {
             totalRevenue, totalCrateTvRevenue, totalAdminPayouts, pastAdminPayouts, billSavingsPotTotal, billSavingsTransactions, totalUsers, viewCounts, movieLikes, watchlistCounts, filmmakerPayouts, viewLocations, allUsers: allUsersList, actorUsers, filmmakerUsers,
             totalDonations, totalSales, totalMerchRevenue, totalAdRevenue, crateTvMerchCut, merchSales,
             totalFestivalRevenue, festivalPassSales, festivalBlockSales, salesByBlock, festivalUsers,
+            crateFestRevenue, 
         };
 
         return new Response(JSON.stringify({ analyticsData, errors }), { status: 200, headers: { 'Content-Type': 'application/json' } });

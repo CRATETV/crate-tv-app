@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { 
     initializeFirebaseAuth, 
@@ -29,15 +28,17 @@ interface AuthContextType {
     toggleLikeMovie: (movieKey: string) => Promise<void>;
     // Festival & Purchase related
     hasFestivalAllAccess: boolean;
+    hasCrateFestPass: boolean;
     unlockedFestivalBlockIds: Set<string>;
-    purchasedMovieKeys: Set<string>; // Legacy
-    rentals: Record<string, string>; // Maps movieKey to ISO expiration
+    purchasedMovieKeys: Set<string>; 
+    rentals: Record<string, string>; 
     unlockedWatchPartyKeys: Set<string>;
     unlockFestivalBlock: (blockId: string) => Promise<void>;
     grantFestivalAllAccess: () => Promise<void>;
+    grantCrateFestPass: () => Promise<void>;
     purchaseMovie: (movieKey: string) => Promise<void>;
     unlockWatchParty: (movieKey: string) => Promise<void>;
-    subscribe: () => Promise<void>; // For premium
+    subscribe: () => Promise<void>; 
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,7 +56,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [authInitialized, setAuthInitialized] = useState(false);
     const [claimsLoaded, setClaimsLoaded] = useState(false);
 
-    // This effect runs once on mount to initialize Firebase and set up the auth state listener.
     useEffect(() => {
         let unsubscribe: firebase.Unsubscribe = () => {};
 
@@ -64,16 +64,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (auth) {
                 unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
                     if (firebaseUser) {
-                        // User is signed in.
                         let userProfile = await getUserProfile(firebaseUser.uid);
                         if (!userProfile) {
-                            // If user exists in Auth but not in Firestore, create a profile.
                             userProfile = await createUserProfile(firebaseUser.uid, firebaseUser.email!);
                         }
                         setUser(userProfile);
                         
-                        // Check for custom claims
-                        const idTokenResult = await firebaseUser.getIdTokenResult(true); // Force refresh
+                        const idTokenResult = await firebaseUser.getIdTokenResult(true); 
                         const claims = idTokenResult.claims;
                         setUser(currentProfile => {
                             if (!currentProfile) return null;
@@ -97,25 +94,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         setClaimsLoaded(true);
 
                     } else {
-                        // User is signed out.
                         setUser(null);
                         setClaimsLoaded(false);
                     }
                     setAuthInitialized(true);
                 });
             } else {
-                // Firebase initialization failed.
                 setAuthInitialized(true);
             }
         };
 
         initAuth();
-
-        // Cleanup subscription on unmount
         return () => unsubscribe();
     }, []);
     
-    // --- Auth Actions ---
     const signIn = async (email: string, password: string) => {
         const auth = getAuthInstance();
         if (!auth) throw new Error("Authentication service is not available.");
@@ -127,7 +119,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!auth) throw new Error("Authentication service is not available.");
         const result = await auth.createUserWithEmailAndPassword(email, password);
         if (result.user) {
-            // Immediately create the profile with the provided name
             await createUserProfile(result.user.uid, email, name);
         }
     };
@@ -147,7 +138,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const auth = getAuthInstance();
         if (auth?.currentUser) {
             try {
-                // Force refresh to get a fresh token. Important for security.
                 return await auth.currentUser.getIdToken(true);
             } catch (error) {
                 console.error("Error getting user ID token:", error);
@@ -157,7 +147,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return null;
     }, []);
 
-    // --- Profile Actions ---
     const setAvatar = async (avatarId: string) => {
         if (!user) return;
         await updateUserProfile(user.uid, { avatar: avatarId });
@@ -170,7 +159,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(currentUser => currentUser ? ({ ...currentUser, name }) : null);
     }, [user]);
 
-    // --- Watchlist, Watched History, and Liked Movies ---
     const watchlist = user?.watchlist || [];
     const watchedMovies = user?.watchedMovies || [];
     const likedMovies = user?.likedMovies || [];
@@ -186,7 +174,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [user, watchlist]);
 
     const markAsWatched = useCallback(async (movieKey: string) => {
-        if (!user || watchedMovies.includes(movieKey)) return; // Don't do anything if not logged in or already watched
+        if (!user || watchedMovies.includes(movieKey)) return; 
         const newWatchedMovies = [...watchedMovies, movieKey];
 
         await updateUserProfile(user.uid, { watchedMovies: newWatchedMovies });
@@ -194,10 +182,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [user, watchedMovies]);
 
     const toggleLikeMovie = useCallback(async (movieKey: string) => {
-        if (!user) {
-            console.log("User must be logged in to like movies.");
-            return;
-        }
+        if (!user) return;
 
         const newLikedMovies = likedMovies.includes(movieKey)
             ? likedMovies.filter(key => key !== movieKey)
@@ -205,25 +190,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         const action = likedMovies.includes(movieKey) ? 'unlike' : 'like';
 
-        // Optimistically update the local user state for immediate UI feedback
         setUser(currentUser => currentUser ? ({ ...currentUser, likedMovies: newLikedMovies }) : null);
 
-        // Update Firestore for persistence and the public counter API in parallel
         await Promise.all([
             updateUserProfile(user.uid, { likedMovies: newLikedMovies }),
             fetch('/api/toggle-like', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ movieKey, action }),
-            }).catch(err => {
-                console.error("Failed to sync public like count:", err);
-            })
+            }).catch(err => console.error("Sync failed:", err))
         ]);
     }, [user, likedMovies]);
 
-
-    // --- Purchases & Subscriptions ---
     const hasFestivalAllAccess = user?.hasFestivalAllAccess || false;
+    const hasCrateFestPass = user?.hasCrateFestPass || false;
     const unlockedFestivalBlockIds = useMemo(() => new Set(user?.unlockedBlockIds || []), [user]);
     const purchasedMovieKeys = useMemo(() => new Set(user?.purchasedMovieKeys || []), [user]);
     const rentals = user?.rentals || {};
@@ -242,18 +222,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(currentUser => currentUser ? ({ ...currentUser, hasFestivalAllAccess: true }) : null);
     };
 
+    const grantCrateFestPass = async () => {
+        if (!user || user.hasCrateFestPass) return;
+        await updateUserProfile(user.uid, { hasCrateFestPass: true });
+        setUser(currentUser => currentUser ? ({ ...currentUser, hasCrateFestPass: true }) : null);
+    };
+
     const purchaseMovie = async (movieKey: string) => {
         if (!user) return;
-        
-        // Calculate expiration date: Now + 24 Hours
         const expirationDate = new Date();
         expirationDate.setHours(expirationDate.getHours() + 24);
-        
-        const newRentals = {
-            ...(user.rentals || {}),
-            [movieKey]: expirationDate.toISOString()
-        };
-        
+        const newRentals = { ...(user.rentals || {}), [movieKey]: expirationDate.toISOString() };
         await updateUserProfile(user.uid, { rentals: newRentals });
         setUser(currentUser => currentUser ? ({ ...currentUser, rentals: newRentals }) : null);
     };
@@ -269,8 +248,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!user || user.isPremiumSubscriber) return;
         await updateUserProfile(user.uid, { isPremiumSubscriber: true });
         setUser(currentUser => currentUser ? ({ ...currentUser, isPremiumSubscriber: true }) : null);
-
-        // Fire-and-forget tracking
         fetch('/api/track-subscription', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -278,34 +255,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }).catch(err => console.warn('Subscription tracking failed', err));
     };
 
-
     const value = {
-        user,
-        authInitialized,
-        claimsLoaded,
-        signIn,
-        signUp,
-        logout,
-        sendPasswordReset,
-        getUserIdToken,
-        setAvatar,
-        updateName,
-        watchlist,
-        toggleWatchlist,
-        watchedMovies,
-        markAsWatched,
-        likedMovies,
-        toggleLikeMovie,
-        hasFestivalAllAccess,
-        unlockedFestivalBlockIds,
-        purchasedMovieKeys,
-        rentals,
-        unlockedWatchPartyKeys,
-        unlockFestivalBlock,
-        grantFestivalAllAccess,
-        purchaseMovie,
-        unlockWatchParty,
-        subscribe
+        user, authInitialized, claimsLoaded, signIn, signUp, logout, sendPasswordReset, getUserIdToken, setAvatar, updateName,
+        watchlist, toggleWatchlist, watchedMovies, markAsWatched, likedMovies, toggleLikeMovie,
+        hasFestivalAllAccess, hasCrateFestPass, unlockedFestivalBlockIds, purchasedMovieKeys, rentals, unlockedWatchPartyKeys,
+        unlockFestivalBlock, grantFestivalAllAccess, grantCrateFestPass, purchaseMovie, unlockWatchParty, subscribe
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

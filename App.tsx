@@ -88,6 +88,13 @@ const App: React.FC = () => {
         return spotlightMovies;
     }, [movies, categories.featured]);
 
+    const crateFestMovies = useMemo(() => {
+        const config = settings.crateFestConfig;
+        if (!config?.isActive) return [];
+        const keys = config.movieBlocks.flatMap(b => b.movieKeys);
+        return keys.map(k => movies[k]).filter((m): m is Movie => !!m);
+    }, [movies, settings.crateFestConfig]);
+
     const comingSoonMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
             .filter(m => !!m && !isMovieReleased(m) && !m.isUnlisted)
@@ -157,7 +164,6 @@ const App: React.FC = () => {
 
     if (isLoading) return <LoadingSpinner />;
 
-    // Calculate dynamic header offset based on active banners
     const showWatchParty = !!livePartyMovie;
     const showFestival = isFestivalLive && !isFestivalBannerDismissed;
     
@@ -230,6 +236,26 @@ const App: React.FC = () => {
                             />
                         ) : (
                           <>
+                            {crateFestMovies.length > 0 && (
+                                <MovieCarousel
+                                    key="crate-fest"
+                                    title={
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase">{settings.crateFestConfig?.title}</span>
+                                            <button onClick={() => window.location.href='/cratefest'} className="bg-red-600 px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest animate-pulse">Enter Hub</button>
+                                        </div>
+                                    }
+                                    movies={crateFestMovies}
+                                    onSelectMovie={(m) => window.location.href='/cratefest'}
+                                    watchedMovies={watchedMovies}
+                                    watchlist={watchlist}
+                                    likedMovies={likedMovies}
+                                    onToggleLike={toggleLikeMovie}
+                                    onToggleWatchlist={toggleWatchlist}
+                                    onSupportMovie={() => {}}
+                                />
+                            )}
+
                             {comingSoonMovies.length > 0 && (
                                 <MovieCarousel
                                     key="coming-soon"

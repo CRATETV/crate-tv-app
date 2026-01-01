@@ -23,6 +23,7 @@ import AboutPage from './components/AboutPage';
 import LoginPage from './components/LoginPage';
 import AccountPage from './components/AccountPage';
 import FestivalPage from './components/FestivalPage';
+import CrateFestPage from './components/CrateFestPage';
 import FilmFestivalModule from './FilmFestivalModule';
 import DeveloperGuidePage from './components/DeveloperGuidePage';
 import ThankYouPage from './ThankYouPage';
@@ -118,6 +119,8 @@ const AppRouter: React.FC = () => {
       return user ? <LinkRokuPage /> : <RedirectToLogin />;
     case '/festival':
        return user ? <FestivalPage /> : <RedirectToLogin />;
+    case '/cratefest':
+       return user ? <CrateFestPage /> : <RedirectToLogin />;
     case '/watchlist':
       return user ? <WatchlistPage /> : <RedirectToLogin />;
     case '/classics':

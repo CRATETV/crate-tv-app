@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry } from './types';
+import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
 import MovieEditor from './components/MovieEditor';
 import CategoryEditor from './components/CategoryEditor';
@@ -18,6 +18,7 @@ import PitchDeckManager from './components/PitchDeckManager';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
 import JuryPortal from './components/JuryPortal';
 import TalentInquiriesTab from './components/TalentInquiriesTab';
+import CrateFestEditor from './components/CrateFestEditor';
 
 const ALL_TABS: Record<string, string> = {
     movies: '🎞️ Catalog',
@@ -27,15 +28,26 @@ const ALL_TABS: Record<string, string> = {
     analytics: '📊 Analytics',
     hero: '🎬 Hero',
     laurels: '🏆 Laurels',
+    cratefest: '🎪 Crate Fest',
     pitch: '📽️ Pitch Deck',
     categories: '📂 Categories',
-    festival: '🎪 Festival',
+    festival: '🍿 Film Festival',
     watchParty: '🍿 Watch Party',
     about: '📄 About',
     email: '✉️ Email',
     monetization: '💰 Revenue',
     security: '🛡️ Security',
     fallback: '💾 Fallback'
+};
+
+const defaultCrateFest: CrateFestConfig = {
+    isActive: false,
+    title: 'Crate Fest 2026',
+    tagline: 'The Pop-Up Festival for Global Visionaries.',
+    startDate: new Date().toISOString(),
+    endDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+    passPrice: 15,
+    movieBlocks: []
 };
 
 const AdminPage: React.FC = () => {
@@ -49,6 +61,7 @@ const AdminPage: React.FC = () => {
     const [aboutData, setAboutData] = useState<AboutData | null>(null);
     const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
+    const [crateFestConfig, setCrateFestConfig] = useState<CrateFestConfig>(defaultCrateFest);
     const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
     const [activeTab, setActiveTab] = useState('movies');
     const [isSaving, setIsSaving] = useState(false);
@@ -75,6 +88,9 @@ const AdminPage: React.FC = () => {
                 setAboutData(data.aboutData || null);
                 setFestivalData(data.festivalData || []);
                 setFestivalConfig(data.festivalConfig || null);
+                if (data.settings?.crateFestConfig) {
+                    setCrateFestConfig(data.settings.crateFestConfig);
+                }
             }
 
             if (pipelineRes && pipelineRes.ok) {
@@ -239,6 +255,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}
+                    {activeTab === 'cratefest' && <CrateFestEditor config={crateFestConfig} allMovies={movies} onSave={(newConfig) => handleSaveData('settings', { crateFestConfig: newConfig })} isSaving={isSaving} />}
                     {activeTab === 'pitch' && <PitchDeckManager onSave={(settings) => handleSaveData('settings', settings)} isSaving={isSaving} />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={(d) => setFestivalData(d)} onConfigChange={(c) => setFestivalConfig(c)} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}

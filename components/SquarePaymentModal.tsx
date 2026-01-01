@@ -7,9 +7,10 @@ declare const Square: any;
 interface SquarePaymentModalProps {
     movie?: Movie;
     block?: FilmBlock;
-    paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'movie' | 'billSavingsDeposit' | 'watchPartyTicket';
+    paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'movie' | 'billSavingsDeposit' | 'watchPartyTicket' | 'crateFestPass';
     onClose: () => void;
     onPaymentSuccess: (details: { paymentType: SquarePaymentModalProps['paymentType'], itemId?: string, amount: number, email?: string }) => void;
+    priceOverride?: number; // New prop to handle dynamic pricing from Admin settings
 }
 
 const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type }) => (
@@ -27,7 +28,9 @@ const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type
             </div>
             
             <div className="flex-grow flex flex-col justify-center">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{type === 'movie' ? 'Authorized Rental' : 'Official Selection Access'}</p>
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">
+                    {type === 'crateFestPass' ? 'Crate Fest All-Access' : type === 'movie' ? 'Authorized Rental' : 'Official Selection Access'}
+                </p>
                 <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-tight line-clamp-1">{details.title}</h3>
                 <p className="text-xs text-gray-400 mt-2 font-mono">Issued to: {details.email || 'Verified Supporter'}</p>
             </div>
@@ -40,12 +43,12 @@ const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type
                     </div>
                     <div>
                         <p className="text-[7px] text-gray-500 uppercase font-black">Expiry</p>
-                        <p className="text-[10px] text-white font-bold uppercase tracking-widest">24 Hours</p>
+                        <p className="text-[10px] text-white font-bold uppercase tracking-widest">Event End</p>
                     </div>
                 </div>
                 <div className="bg-white p-1 rounded">
                     <div className="w-10 h-10 bg-black flex items-center justify-center">
-                        <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M3 4h14v2H3V4zm0 4h14v2H3V8zm0 4h14v2H3v-2zm0 4h14v2H3v-2z" /></svg>
+                        <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M3 4h14v2H3V4zm0 4h14v2H3V8zm0 4h14v2H3v-2zm0 4h14v2H3v-2z" /></svg>
                     </div>
                 </div>
             </div>
@@ -54,7 +57,7 @@ const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type
     </div>
 );
 
-const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, paymentType, onClose, onPaymentSuccess }) => {
+const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, paymentType, onClose, onPaymentSuccess, priceOverride }) => {
     const { user } = useAuth();
     const [status, setStatus] = useState<'idle' | 'loading' | 'processing' | 'success' | 'error'>('loading');
     const [errorMessage, setErrorMessage] = useState('');
@@ -66,13 +69,14 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
     const paymentDetails = useMemo(() => {
         const amount = parseFloat(customAmount) || 0;
         switch (paymentType) {
+            case 'crateFestPass': return { amount: priceOverride || 15.00, title: 'Crate Fest Pass', description: 'Unlock the pop-up festival collection.', email };
             case 'pass': return { amount: 50.00, title: 'All-Access Festival Pass', description: 'Unlock every film block for the entire festival.', email };
             case 'block': return { amount: 10.00, title: `${block?.title}`, description: `Access all films in this block.`, email };
             case 'movie': return { amount: movie?.salePrice || 5.00, title: `${movie?.title}`, description: '24-hour access to stream this film.', email };
             case 'donation': return { amount, title: `Support: ${movie?.title}`, description: `Directed by ${movie?.director}`, email };
             default: return { amount: 0, title: 'Purchase', description: '', email };
         }
-    }, [paymentType, movie, block, customAmount, email]);
+    }, [paymentType, movie, block, customAmount, email, priceOverride]);
 
     useEffect(() => {
         let isMounted = true;
@@ -170,12 +174,6 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                     )}
                 </div>
             </div>
-            <style>{`
-                @keyframes ticketEntry {
-                    from { transform: translateY(30px) scale(0.9); opacity: 0; }
-                    to { transform: translateY(0) scale(1); opacity: 1; }
-                }
-            `}</style>
         </div>
     );
 };

@@ -69,12 +69,27 @@ export interface User {
   watchedMovies?: string[];
   likedMovies?: string[];
   hasFestivalAllAccess?: boolean;
+  hasCrateFestPass?: boolean; // New: Specific for Crate Fest $15 pass
   unlockedBlockIds?: string[];
-  purchasedMovieKeys?: string[]; // Legacy - now rentals handles time-limited
+  purchasedMovieKeys?: string[]; 
   rentals?: Record<string, string>; // Maps movieKey to ISO expiration date
   unlockedWatchPartyKeys?: string[];
   rokuDeviceId?: string;
   actorProfileSlug?: string;
+}
+
+export interface CrateFestConfig {
+  isActive: boolean;
+  title: string;
+  tagline: string;
+  startDate: string;
+  endDate: string;
+  passPrice: number;
+  featuredWatchPartyKey?: string;
+  movieBlocks: {
+    title: string;
+    movieKeys: string[];
+  }[];
 }
 
 export interface FilmmakerFilmPerformance {
@@ -111,6 +126,7 @@ export interface SiteSettings {
   holidayTheme?: 'christmas' | 'valentines' | 'gold' | 'generic';
   maintenanceMode?: boolean;
   pitchTargetCompany?: string;
+  crateFestConfig?: CrateFestConfig;
 }
 
 export interface AnalyticsData {
@@ -140,6 +156,7 @@ export interface AnalyticsData {
     festivalBlockSales: { units: number, revenue: number };
     salesByBlock: Record<string, { units: number, revenue: number }>;
     festivalUsers: string[];
+    crateFestRevenue: number; // New: Tracking $15 passes
 }
 
 export interface AdminPayout {
@@ -192,6 +209,7 @@ export interface MoviePipelineEntry {
   posterUrl: string;
   movieUrl: string;
   submitterEmail: string;
+  submitterName?: string;
   synopsis: string;
   submissionDate: any;
   status: 'pending' | 'approved' | 'rejected';
