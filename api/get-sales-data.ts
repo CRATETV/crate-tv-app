@@ -3,7 +3,7 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { AnalyticsData, Movie, PayoutRequest, AdminPayout, BillSavingsTransaction, User, FilmmakerPayout } from '../types.js';
 
-// EPOCH RESET: Moved to May 24, 2025 to ignore all legacy financial noise.
+// EPOCH RESET: Finalized to May 24, 2025. All prior Square data ignored.
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z'; 
 
 interface SquarePayment {
@@ -16,7 +16,7 @@ interface SquarePayment {
   note?: string;
 }
 
-// ADS DISABLED: Revenue logic strictly zeroed for 2025 strategy.
+// ADS DISABLED: Revenue logic zeroed to align with Square Card balance.
 const DONATION_PLATFORM_CUT = 0.30;
 const FESTIVAL_PLATFORM_CUT = 0.30;
 
@@ -76,7 +76,8 @@ export async function POST(request: Request) {
         const isProduction = process.env.VERCEL_ENV === 'production';
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
         const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
-        
+        if (!accessToken) errors.square = 'Square Access Token missing.';
+
         const resetTimestamp = new Date(SYSTEM_RESET_DATE);
 
         const squarePromise = accessToken ? fetchAllSquarePayments(accessToken, locationId) : Promise.resolve([]);
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
         const adminPayoutsPromise = db ? db.collection('admin_payouts').where('payoutDate', '>=', resetTimestamp).get() : Promise.resolve(null);
         const billSavingsPromise = db ? db.collection('bill_savings_transactions').where('transactionDate', '>=', resetTimestamp).get() : Promise.resolve(null);
 
+        // FIX: Replaced 'adminPayoutsSnapshot' and 'billSavingsSnapshot' with their respective promise variables inside Promise.all
         const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, adminPayoutsSnapshot, billSavingsSnapshot] = await Promise.all([
             squarePromise.catch(e => { errors.square = e.message; return []; }), 
             moviesPromise, 
@@ -112,10 +114,10 @@ export async function POST(request: Request) {
         });
 
         const totalUsers = usersSnapshot?.size || 0;
-        const totalAdminPayouts = adminPayoutsSnapshot?.docs.reduce((sum, d) => sum + d.data().amount, 0) || 0;
+        const totalAdminPayouts = adminPayoutsSnapshot?.docs.reduce((sum: number, d: any) => sum + d.data().amount, 0) || 0;
 
         let billSavingsPotTotal = 0;
-        billSavingsSnapshot?.forEach(doc => {
+        billSavingsSnapshot?.forEach((doc: any) => {
             const t = doc.data();
             if (t.type === 'deposit') billSavingsPotTotal += t.amount;
             else if (t.type === 'withdrawal') billSavingsPotTotal -= t.amount;
@@ -141,7 +143,7 @@ export async function POST(request: Request) {
             }
         });
 
-        const totalAdRevenue = 0; // SYSTEM HARD-ZERO
+        const totalAdRevenue = 0; 
         const totalRevenue = totalDonations + totalSales + festivalRevenue + crateFestRevenue;
         const totalCrateTvRevenue = (totalDonations * DONATION_PLATFORM_CUT) + (festivalRevenue * FESTIVAL_PLATFORM_CUT) + totalSales + crateFestRevenue;
 

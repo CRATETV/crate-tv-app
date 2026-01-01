@@ -88,7 +88,7 @@ export interface CrateFestConfig {
   passPrice: number;
   featuredWatchPartyKey?: string;
   movieBlocks: {
-    id: string; // Unique block ID for targeted purchasing
+    id: string; 
     title: string;
     movieKeys: string[];
   }[];
@@ -342,13 +342,6 @@ export interface GrowthAnalyticsData {
   avgMoMUserGrowth: number;
 }
 
-export interface AiGrowthAdvice {
-  userGrowth: string[];
-  revenueGrowth: string[];
-  communityEngagement: string[];
-  advertisingSuggestions?: string[];
-}
-
 export interface SecurityEvent {
   id: string;
   type: string;
@@ -368,6 +361,14 @@ export interface SecurityReport {
 export interface AiSecurityAdvice {
   summary: string;
   recommendations: string[];
+}
+
+// FIX: Added missing AiGrowthAdvice interface export.
+export interface AiGrowthAdvice {
+  userGrowth: string[];
+  revenueGrowth: string[];
+  communityEngagement: string[];
+  advertisingSuggestions?: string[];
 }
 
 /**

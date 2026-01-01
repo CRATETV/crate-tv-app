@@ -120,11 +120,16 @@ const PitchDeckPage: React.FC = () => {
             </div>
 
             {/* SLIDE 1: PRESTIGE COVER */}
-            <Slide slideNumber="01" targetCompany={target} title="Home of the Unseen." subtitle="Crate TV: Strategic Yield 2025" gradient="bg-gradient-to-br from-[#0a0a0a] via-[#050505] to-red-950/20">
+            <Slide slideNumber="01" targetCompany={target} title="The Afterlife." subtitle="Crate TV: Strategic Yield 2025" gradient="bg-gradient-to-br from-[#0a0a0a] via-[#050505] to-red-950/20">
                 <div className="max-w-5xl space-y-16">
                     <p className="text-4xl md:text-7xl text-gray-200 font-black leading-[0.95] tracking-tight uppercase">
-                        Architecting the <span className="text-white italic underline decoration-red-600 underline-offset-[12px]">High-Density</span> distribution bridge for world-class independent cinema.
+                        The ultimate <span className="text-white italic underline decoration-red-600 underline-offset-[12px]">permanent home</span> for world-class cinema after the festival circuit.
                     </p>
+                    {settings.pitchDeckCustomMessage && (
+                        <div className="bg-white/5 p-8 rounded-3xl border border-white/10 italic text-2xl text-red-500 font-bold">
+                            "{settings.pitchDeckCustomMessage}"
+                        </div>
+                    )}
                     <div className="flex items-center gap-16 pt-16 border-t border-white/5">
                         <div className="space-y-2">
                             <p className="text-[10px] font-black text-red-500 uppercase tracking-[0.4em]">Strategic Context</p>
@@ -139,37 +144,37 @@ const PitchDeckPage: React.FC = () => {
             </Slide>
 
             {/* SLIDE 2: THE PROBLEM */}
-            <Slide slideNumber="02" targetCompany={target} title="The Distribution Gap." subtitle="The Market Problem">
+            <Slide slideNumber="02" targetCompany={target} title="The Festival Void." subtitle="The Market Problem">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-24 items-center">
                     <div className="space-y-12">
-                        <p className="text-5xl font-black leading-[1.1] text-white uppercase italic">Algorithmic safety is the <span className="text-red-600">death</span> of authentic discovery.</p>
+                        <p className="text-5xl font-black leading-[1.1] text-white uppercase italic">Independent films deserve to be <span className="text-red-600">seen</span>, not just selected.</p>
                         <ul className="space-y-8 text-gray-400 font-medium">
-                            <li className="flex gap-6 border-b border-white/5 pb-8"><span className="text-red-500 font-black text-xl italic">/ 01</span> <p className="text-xl">Elite independent films are buried by "Safe Harbor" recommendation bots.</p></li>
-                            <li className="flex gap-6 border-b border-white/5 pb-8"><span className="text-red-500 font-black text-xl italic">/ 02</span> <p className="text-xl">The "Post-Festival Void" consumes award-winning IPs before they find an audience.</p></li>
-                            <li className="flex gap-6 border-b border-white/5 pb-8"><span className="text-red-500 font-black text-xl italic">/ 03</span> <p className="text-xl">Audiences crave authenticity—The 'Crate' represents the filter of the elite.</p></li>
+                            <li className="flex gap-6 border-b border-white/5 pb-8"><span className="text-red-500 font-black text-xl italic">/ 01</span> <p className="text-xl">Brilliant films often "die" after their 12-month festival run.</p></li>
+                            <li className="flex gap-6 border-b border-white/5 pb-8"><span className="text-red-500 font-black text-xl italic">/ 02</span> <p className="text-xl">Audiences are exhausted by over-produced algorithmic generic content.</p></li>
+                            <li className="flex gap-6 border-b border-white/5 pb-8"><span className="text-red-500 font-black text-xl italic">/ 03</span> <p className="text-xl">Authentic stories require an authentic, hand-picked platform.</p></li>
                         </ul>
                     </div>
                     <div className="relative group">
                          <div className="absolute -inset-10 bg-red-600/10 blur-[100px] opacity-50"></div>
-                         <MetricCard label="Market Failure" value="92%" sub="of official festival selections never secure a professional monetization path post-screening." />
+                         <MetricCard label="Market Failure" value="92%" sub="of award-winning indie films have no professional streaming home 12 months after premiere." />
                     </div>
                 </div>
             </Slide>
 
-            {/* SLIDE 3: THE CHAMPION NARRATIVE */}
-            <Slide slideNumber="03" targetCompany={target} title="The Champion." subtitle="The Afterlife of Independent Cinema" gradient="bg-gradient-to-tr from-[#050505] to-red-950/30">
+            {/* SLIDE 3: THE CHAMPION */}
+            <Slide slideNumber="03" targetCompany={target} title="The Champion." subtitle="Curation &gt; Logic" gradient="bg-gradient-to-tr from-[#050505] to-red-950/30">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mt-16">
                     <div className="p-12 bg-white/[0.02] border border-white/5 rounded-[4rem] space-y-6">
-                        <h4 className="text-3xl font-black uppercase tracking-tighter text-white italic">Curation > Logic</h4>
-                        <p className="text-gray-400 leading-relaxed text-base font-medium">We don't trust bots to recommend art. Every film on Crate is hand-vetted by our Grand Jury. We are the filter for the visionaries.</p>
+                        <h4 className="text-3xl font-black uppercase tracking-tighter text-white italic">Elite Filter</h4>
+                        <p className="text-gray-400 leading-relaxed text-base font-medium">Crate TV acts as a high-density lifeboat for elite short films. We curate the champions so the audience never has to gamble on quality.</p>
                     </div>
                     <div className="p-12 bg-red-600/10 border border-red-500/20 rounded-[4rem] space-y-6 shadow-2xl">
-                        <h4 className="text-3xl font-black uppercase tracking-tighter text-white italic">Authentic brevity</h4>
-                        <p className="text-gray-400 leading-relaxed text-base font-medium">Brevity is a strength. Short-form allows users to support 5 artists in the time it takes to watch one Hollywood blockbuster. High velocity support.</p>
+                        <h4 className="text-3xl font-black uppercase tracking-tighter text-white italic">Brevity = Weapon</h4>
+                        <p className="text-gray-400 leading-relaxed text-base font-medium">Short stories provide the highest emotional return on time. Users can support five unique artists in the time it takes to watch one Hollywood filler.</p>
                     </div>
                     <div className="p-12 bg-white/[0.02] border border-white/5 rounded-[4rem] space-y-6">
-                        <h4 className="text-3xl font-black uppercase tracking-tighter text-white italic">Direct Yield</h4>
-                        <p className="text-gray-400 leading-relaxed text-base font-medium">By connecting audiences directly to filmmaker wallets, we foster a culture of patronage that builds careers, not just view counts.</p>
+                        <h4 className="text-3xl font-black uppercase tracking-tighter text-white italic">Artist Yield</h4>
+                        <p className="text-gray-400 leading-relaxed text-base font-medium">A transparent 70/30 model. By providing a professional afterlife for films, we turn festival credits into sustainable income.</p>
                     </div>
                 </div>
             </Slide>
@@ -180,20 +185,20 @@ const PitchDeckPage: React.FC = () => {
                     <div className="relative rounded-[5rem] overflow-hidden border border-white/10 shadow-[0_50px_100px_rgba(0,0,0,1)]">
                         <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/ruko+logo+.webp" className="w-full h-full object-cover opacity-30 blur-sm scale-110" alt="Roku" />
                         <div className="absolute inset-0 flex flex-col items-center justify-center p-16 text-center bg-black/40">
-                            <h3 className="text-6xl font-black uppercase tracking-tighter text-white mb-6 italic">Big Screen Authority</h3>
-                            <p className="text-gray-300 max-w-sm font-bold text-lg">We own our Roku SDK codebase. We provide high-bitrate master exhibition directly in the living room, bypasssing browser limits.</p>
+                            <h3 className="text-6xl font-black uppercase tracking-tighter text-white mb-6 italic">Big Screen Hub</h3>
+                            <p className="text-gray-300 max-w-sm font-bold text-lg">We own our Roku SDK codebase. No wrappers. No compromises. High-bitrate master exhibition directly in the living room.</p>
                         </div>
                     </div>
                     <div className="space-y-8">
                         <div className="p-10 bg-white/5 rounded-[3rem] border border-white/10 group hover:border-red-600/50 transition-all">
                             <p className="text-red-500 font-black uppercase text-[10px] tracking-[0.5em] mb-3">Operational Velocity</p>
-                            <h4 className="text-2xl font-black text-white uppercase italic">Zero Latency Sync</h4>
-                            <p className="text-gray-400 mt-4 text-base font-medium leading-relaxed">Our V4 interface updates permissions and content globally in sub-100ms. If you rent a film on mobile, it's live on your TV instantly.</p>
+                            <h4 className="text-2xl font-black text-white uppercase italic">Zero Latency Permits</h4>
+                            <p className="text-gray-400 mt-4 text-base font-medium leading-relaxed">Our V4 interface publishes content and re-routes monetization rules globally in sub-100ms cycles. Rental sync is instant across all devices.</p>
                         </div>
                         <div className="p-10 bg-white/5 rounded-[3rem] border border-white/10 group hover:border-red-600/50 transition-all">
-                            <p className="text-red-500 font-black uppercase text-[10px] tracking-[0.5em] mb-3">AI Discovery</p>
-                            <h4 className="text-2xl font-black text-white uppercase italic">Hype Map Telemetry</h4>
-                            <p className="text-gray-400 mt-4 text-base font-medium leading-relaxed">Gemini 3 Pro analyzes real-time sentiment "Hype Maps" to predict which films are ready for major IP acquisition.</p>
+                            <p className="text-red-500 font-black uppercase text-[10px] tracking-[0.5em] mb-3">AI Intelligence</p>
+                            <h4 className="text-2xl font-black text-white uppercase italic">Predictive Analytics</h4>
+                            <p className="text-gray-400 mt-4 text-base font-medium leading-relaxed">Integrated Gemini 3 Pro analyzes audience Hype Maps to predict which talent is ready for major IP acquisition.</p>
                         </div>
                     </div>
                 </div>
@@ -204,19 +209,19 @@ const PitchDeckPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-24">
                     <div className="space-y-10">
                         <h4 className="text-5xl font-black text-white uppercase tracking-tighter italic leading-none">Why Crate TV x {target}?</h4>
-                        <p className="text-2xl text-gray-400 leading-relaxed font-medium">We serve as the ultimate <span className="text-white italic">R&D Funnel</span>. We identify talent at the source of origin, reducing IP acquisition costs for major partners.</p>
+                        <p className="text-2xl text-gray-400 leading-relaxed font-medium">We serve as the ultimate <span className="text-white italic">Authenticity Funnel</span>. We identify high-impact talent at the point of origin, reducing IP acquisition costs for our partners.</p>
                     </div>
                     <div className="grid grid-cols-2 gap-6">
                         <div className="bg-green-600/10 border border-green-500/20 p-10 rounded-[3rem] text-center shadow-2xl">
-                            <p className="text-5xl font-black text-white italic">70%</p>
-                            <p className="text-[11px] font-black text-green-500 uppercase tracking-[0.5em] mt-2">To Creator</p>
+                            <p className="text-5xl font-black text-white italic">82%</p>
+                            <p className="text-[11px] font-black text-green-500 uppercase tracking-[0.5em] mt-2">Retention</p>
                         </div>
                         <div className="bg-blue-600/10 border border-blue-500/20 p-10 rounded-[3rem] text-center shadow-2xl">
-                            <p className="text-5xl font-black text-white italic">Secure</p>
-                            <p className="text-[11px] font-black text-blue-500 uppercase tracking-[0.5em] mt-2">Architecture</p>
+                            <p className="text-5xl font-black text-white italic">2.4x</p>
+                            <p className="text-[11px] font-black text-blue-500 uppercase tracking-[0.5em] mt-2">Velocity</p>
                         </div>
                         <div className="col-span-2 bg-red-600/10 border border-red-500/20 p-12 rounded-[3.5rem] text-center shadow-2xl">
-                            <p className="text-5xl font-black text-white italic tracking-tighter uppercase">Authenticity at Scale</p>
+                            <p className="text-5xl font-black text-white italic tracking-tighter uppercase">Professional Infrastructure</p>
                         </div>
                     </div>
                 </div>
