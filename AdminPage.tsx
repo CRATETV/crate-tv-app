@@ -7,7 +7,7 @@ import AboutEditor from './components/AboutEditor';
 import FestivalEditor from './components/FestivalEditor';
 import AnalyticsPage from './components/AnalyticsPage';
 import WatchPartyManager from './components/WatchPartyManager';
-import SecurityTab from './components/SecurityTab';
+import SecurityTerminal from './components/SecurityTerminal';
 import FallbackGenerator from './components/FallbackGenerator';
 import EmailSender from './components/EmailSender';
 import SaveStatusToast from './components/SaveStatusToast';
@@ -263,7 +263,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'about' && aboutData && <AboutEditor initialData={aboutData} onSave={(newData) => handleSaveData('about', newData)} isSaving={isSaving} />}
                     {activeTab === 'email' && <EmailSender />}
                     {activeTab === 'monetization' && <MonetizationTab />}
-                    {activeTab === 'security' && <SecurityTab />}
+                    {activeTab === 'security' && <SecurityTerminal />}
                     {activeTab === 'fallback' && <FallbackGenerator movies={movies} categories={categories} festivalData={festivalData} festivalConfig={festivalConfig} aboutData={aboutData} />}
                 </div>
             </div>

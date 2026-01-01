@@ -3,7 +3,7 @@
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { AnalyticsData, Movie, PayoutRequest, AdminPayout, BillSavingsTransaction, User, FilmmakerPayout } from '../types.js';
 
-// EPOCH RESET: All financial data before this date is completely ignored for the dashboard.
+// EPOCH RESET: Moved to May 24, 2025 to ignore all legacy financial noise.
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z'; 
 
 interface SquarePayment {
@@ -16,7 +16,7 @@ interface SquarePayment {
   note?: string;
 }
 
-// AD REVENUE SUNSET: Platform ads are currently disabled to prioritize user experience.
+// ADS DISABLED: Revenue logic strictly zeroed for 2025 strategy.
 const DONATION_PLATFORM_CUT = 0.30;
 const FESTIVAL_PLATFORM_CUT = 0.30;
 
@@ -141,8 +141,7 @@ export async function POST(request: Request) {
             }
         });
 
-        // AD REVENUE DISABLED: Logic explicitly zeroed to maintain parity with bank card records.
-        const totalAdRevenue = 0; 
+        const totalAdRevenue = 0; // SYSTEM HARD-ZERO
         const totalRevenue = totalDonations + totalSales + festivalRevenue + crateFestRevenue;
         const totalCrateTvRevenue = (totalDonations * DONATION_PLATFORM_CUT) + (festivalRevenue * FESTIVAL_PLATFORM_CUT) + totalSales + crateFestRevenue;
 

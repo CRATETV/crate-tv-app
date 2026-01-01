@@ -88,7 +88,7 @@ export interface CrateFestConfig {
   passPrice: number;
   featuredWatchPartyKey?: string;
   movieBlocks: {
-    id: string; 
+    id: string; // Unique block ID for targeted purchasing
     title: string;
     movieKeys: string[];
   }[];

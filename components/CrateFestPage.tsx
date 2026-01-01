@@ -80,7 +80,7 @@ const CrateFestPage: React.FC = () => {
 
     const checkAccess = (movieKey: string, blockId: string) => {
         if (hasCrateFestPass) return true;
-        if (unlockedFestivalBlockIds.has(blockId)) return true;
+        if (unlockedFestivalBlockIds.includes(blockId)) return true;
         const exp = rentals[movieKey];
         if (exp && new Date(exp) > new Date()) return true;
         return false;
@@ -125,7 +125,7 @@ const CrateFestPage: React.FC = () => {
                         <p className="text-xl md:text-3xl text-gray-300 font-medium max-w-3xl mx-auto leading-tight">{config.tagline}</p>
                         {!hasCrateFestPass && (
                             <button onClick={() => setPaymentItem({ type: 'crateFestPass' })} className="bg-white text-black font-black px-12 py-6 rounded-2xl text-2xl uppercase tracking-tighter hover:scale-105 transition-all shadow-2xl">
-                                Full Digital Pass - ${config.passPrice}
+                                Full Session Pass - ${config.passPrice}
                             </button>
                         )}
                     </div>
@@ -133,7 +133,7 @@ const CrateFestPage: React.FC = () => {
 
                 <div className="max-w-[1600px] mx-auto p-6 md:p-16 space-y-32 pb-48">
                     {config.movieBlocks.map((block, idx) => {
-                        const isBlockUnlocked = hasCrateFestPass || unlockedFestivalBlockIds.has(block.id);
+                        const isBlockUnlocked = hasCrateFestPass || (unlockedFestivalBlockIds || []).includes(block.id);
                         return (
                             <section key={block.id} className="space-y-12">
                                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-8">
@@ -143,7 +143,7 @@ const CrateFestPage: React.FC = () => {
                                     </div>
                                     {!isBlockUnlocked && (
                                         <button onClick={() => setPaymentItem({ type: 'block', block: block as any })} className="bg-white/5 hover:bg-white/10 text-white font-black px-6 py-3 rounded-xl border border-white/10 transition-all uppercase text-[10px] tracking-widest">
-                                            Unlock Block - $10.00
+                                            Unlock Entire Block - $10.00
                                         </button>
                                     )}
                                 </div>
@@ -161,7 +161,7 @@ const CrateFestPage: React.FC = () => {
                                                     />
                                                 </div>
                                                 {!access && (
-                                                    <button onClick={() => setPaymentItem({ type: 'movie', movie })} className="w-full bg-white/5 hover:bg-red-600 text-gray-500 hover:text-white font-black py-2 rounded-lg text-[9px] uppercase tracking-widest transition-all">Rent Film $5</button>
+                                                    <button onClick={() => setPaymentItem({ type: 'movie', movie })} className="w-full bg-white/5 hover:bg-red-600 text-gray-500 hover:text-white font-black py-2 rounded-lg text-[9px] uppercase tracking-widest transition-all">Rent Master File $5</button>
                                                 )}
                                             </div>
                                         );
