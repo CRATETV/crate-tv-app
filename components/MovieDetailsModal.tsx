@@ -27,7 +27,7 @@ const EpisodeRow: React.FC<{ episode: Episode; onPlay: () => void }> = ({ episod
         <div className="flex-shrink-0 w-10 h-10 bg-red-600/20 text-red-500 rounded-full flex items-center justify-center font-black group-hover:bg-red-600 group-hover:text-white transition-colors cursor-pointer" onClick={onPlay}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
         </div>
-        <div className="flex-grow min-w-0">
+        <div className="flex-grow min-0">
             <h4 className="text-sm font-bold text-white uppercase tracking-tight">{episode.title}</h4>
             <p className="text-xs text-gray-400 line-clamp-1">{episode.synopsis}</p>
         </div>
@@ -60,7 +60,13 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     return new Date(expiration) > new Date();
   }, [rentals, movie.key]);
 
-  const needsPurchase = movie.isForSale && !isRented;
+  // PROTECTION BYPASS LOGIC
+  const isAutoReleased = useMemo(() => {
+      if (!movie.autoReleaseDate) return false;
+      return new Date() >= new Date(movie.autoReleaseDate);
+  }, [movie.autoReleaseDate]);
+
+  const needsPurchase = movie.isForSale && !isRented && !isAutoReleased;
 
   const canCollectDonations = useMemo(() => {
     if (!movie) return false;
@@ -72,7 +78,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
   const moreFromDirector = useMemo(() => {
       const directors = movie.director.split(',').map(d => d.trim().toLowerCase());
-      // FIX: Explicitly cast Object.values to Movie[] to resolve 'unknown' property access errors.
       return (Object.values(allMovies) as Movie[]).filter(m => 
           m.key !== movie.key && 
           m.director.split(',').some(d => directors.includes(d.trim().toLowerCase()))
@@ -80,9 +85,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   }, [movie, allMovies]);
 
   const similarFilms = useMemo(() => {
-      // Find films in the same category, excluding those already in moreFromDirector
       const directorKeys = new Set(moreFromDirector.map(m => m.key));
-      // FIX: Explicitly cast Object.values to Category[] to resolve 'unknown' property access errors.
       const movieCategories = (Object.values(allCategories) as Category[]).filter(c => c.movieKeys.includes(movie.key));
       const relatedKeys = new Set<string>();
       
@@ -178,6 +181,11 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                             {timeRemaining}
                         </div>
                    )}
+                   {isAutoReleased && (
+                       <div className="bg-green-600 text-white px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg">
+                            Public Access
+                       </div>
+                   )}
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-4">
@@ -186,12 +194,12 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                             {!movie.isSeries && (
                                 <button 
                                     onClick={() => handlePlayButtonClick()} 
-                                    className={`flex items-center justify-center px-10 py-4 ${needsPurchase ? 'bg-green-600 text-white' : 'bg-white text-black'} font-black rounded-xl hover:opacity-90 transition-all transform hover:scale-105 active:scale-95 shadow-2xl`}
+                                    className={`flex items-center justify-center px-10 py-4 ${needsPurchase ? 'bg-indigo-600 text-white' : 'bg-white text-black'} font-black rounded-xl hover:opacity-90 transition-all transform hover:scale-105 active:scale-95 shadow-2xl`}
                                 >
                                     {needsPurchase ? (
                                         <>
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                            Authorize
+                                            Premium Rental
                                         </>
                                     ) : (
                                         <>
@@ -211,14 +219,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                         <div className="bg-blue-600 text-white font-black px-8 py-4 rounded-xl shadow-lg flex flex-col sm:flex-row items-center gap-4">
                             <span className="uppercase text-xs tracking-widest bg-white/20 px-2 py-0.5 rounded">Premieres Soon</span>
                             <Countdown targetDate={movie.releaseDateTime!} onEnd={() => setReleased(true)} className="text-lg font-mono" />
-                            {movie.trailer && (
-                                <button 
-                                    onClick={() => handlePlayButtonClick()}
-                                    className="ml-4 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-xs uppercase tracking-widest transition-colors"
-                                >
-                                    Watch Trailer
-                                </button>
-                            )}
                         </div>
                     )}
                     
@@ -232,6 +232,16 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
         <div className="p-10 md:p-14 space-y-16">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-14">
                 <div className="lg:col-span-2 space-y-10">
+                    {needsPurchase && movie.autoReleaseDate && (
+                        <div className="bg-indigo-600/10 border border-indigo-500/20 p-6 rounded-2xl flex items-center gap-6">
+                            <div className="w-12 h-12 bg-indigo-600/20 text-indigo-500 rounded-full flex items-center justify-center text-xl">⏳</div>
+                            <div>
+                                <p className="text-sm font-black text-white uppercase tracking-widest">Protection Period Active</p>
+                                <p className="text-xs text-gray-400 mt-1">This film is currently in its exclusive festival circuit. It will automatically join the public Crate TV catalog on <strong className="text-indigo-400">{new Date(movie.autoReleaseDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>.</p>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="text-gray-300 text-xl leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
                     
                     {movie.isSeries && movie.episodes && movie.episodes.length > 0 && (
@@ -268,43 +278,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                     </div>
                 </div>
             </div>
-
-            {/* Related Content Sections */}
-            {(moreFromDirector.length > 0 || similarFilms.length > 0) && (
-                <div className="space-y-12 border-t border-white/5 pt-12">
-                    {moreFromDirector.length > 0 && (
-                        <div>
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500 mb-6">More from this Director</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {moreFromDirector.map(m => (
-                                    <div key={m.key} onClick={() => onSelectRecommendedMovie(m)} className="group cursor-pointer aspect-[3/4] rounded-xl overflow-hidden border border-white/5 transition-transform hover:scale-105">
-                                        <img src={m.poster} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" alt={m.title} />
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity p-4 text-center">
-                                            <p className="text-xs font-black uppercase tracking-widest text-white">{m.title}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {similarFilms.length > 0 && (
-                        <div>
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 mb-6">Similar Films</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {similarFilms.map(m => (
-                                    <div key={m.key} onClick={() => onSelectRecommendedMovie(m)} className="group cursor-pointer aspect-[3/4] rounded-xl overflow-hidden border border-white/5 transition-transform hover:scale-105">
-                                        <img src={m.poster} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" alt={m.title} />
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity p-4 text-center">
-                                            <p className="text-xs font-black uppercase tracking-widest text-white">{m.title}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
         </div>
 
         {selectedDirector && (

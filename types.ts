@@ -31,8 +31,9 @@ export interface Movie {
   likes?: number;
   rating?: number;
   releaseDateTime?: string;
-  publishedAt?: string; // Date the movie was first made live (for 12-month timer)
-  isUnlisted?: boolean; // Hidden from catalog/search, only for Watch Parties
+  publishedAt?: string; 
+  autoReleaseDate?: string; // New: Date when the paywall automatically drops
+  isUnlisted?: boolean; 
   isSeries?: boolean;
   episodes?: Episode[];
   durationInMinutes?: number;
@@ -69,10 +70,10 @@ export interface User {
   watchedMovies?: string[];
   likedMovies?: string[];
   hasFestivalAllAccess?: boolean;
-  hasCrateFestPass?: boolean; // New: Specific for Crate Fest $15 pass
+  hasCrateFestPass?: boolean; 
   unlockedBlockIds?: string[];
   purchasedMovieKeys?: string[]; 
-  rentals?: Record<string, string>; // Maps movieKey to ISO expiration date
+  rentals?: Record<string, string>; 
   unlockedWatchPartyKeys?: string[];
   rokuDeviceId?: string;
   actorProfileSlug?: string;
@@ -156,7 +157,7 @@ export interface AnalyticsData {
     festivalBlockSales: { units: number, revenue: number };
     salesByBlock: Record<string, { units: number, revenue: number }>;
     festivalUsers: string[];
-    crateFestRevenue: number; // New: Tracking $15 passes
+    crateFestRevenue: number; 
 }
 
 export interface AdminPayout {
@@ -235,9 +236,9 @@ export interface ActorProfile {
     photo: string;
     highResPhoto: string;
     imdbUrl: string;
-    email: string; // Professional contact email
+    email: string; 
     isAvailableForCasting?: boolean;
-    isContactable?: boolean; // Controls whether the "Contact Talent" button is shown
+    isContactable?: boolean; 
 }
 
 export interface ActorPost {
@@ -369,10 +370,6 @@ export interface AiSecurityAdvice {
 
 /**
  * Global interface augmentation for window.aistudio
- * This resolves TS2339 build errors during production builds.
- * FIX: Moved AIStudio interface inside declare global and made it optional 
- * to ensure identical modifiers and consistent typing across declarations 
- * where the property might already be defined by the environment.
  */
 declare global {
   interface AIStudio {

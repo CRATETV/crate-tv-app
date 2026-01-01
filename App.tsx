@@ -10,8 +10,8 @@ import SmartInstallPrompt from './components/SmartInstallPrompt';
 import SEO from './components/SEO';
 import { Movie, Actor, Category, WatchPartyState } from './types';
 import { isMovieReleased } from './constants';
-import { useAuth } from './contexts/AuthContext';
-import { useFestival } from './contexts/FestivalContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useFestival } from '../contexts/FestivalContext';
 import FestivalHero from './components/FestivalHero';
 import BackToTopButton from './components/BackToTopButton';
 import CollapsibleFooter from './components/CollapsibleFooter';
@@ -19,6 +19,7 @@ import BottomNavBar from './components/BottomNavBar';
 import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import NowStreamingBanner from './components/NowPlayingBanner';
+import CrateFestBanner from './components/CrateFestBanner';
 
 const FestivalActiveBanner: React.FC<{ onClose: () => void }> = ({ onClose }) => (
     <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-3 flex items-center justify-center gap-4 shadow-lg h-12">
@@ -44,7 +45,7 @@ const FestivalActiveBanner: React.FC<{ onClose: () => void }> = ({ onClose }) =>
 );
 
 const App: React.FC = () => {
-    const { likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
+    const { hasCrateFestPass, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
     const { isLoading, movies, categories, isFestivalLive, festivalConfig, settings } = useFestival();
     
     const [heroIndex, setHeroIndex] = useState(0);
@@ -88,9 +89,16 @@ const App: React.FC = () => {
         return spotlightMovies;
     }, [movies, categories.featured]);
 
+    const isCrateFestLive = useMemo(() => {
+        const config = settings.crateFestConfig;
+        if (!config?.isActive || !config?.startDate || !config?.endDate) return false;
+        const now = new Date();
+        return now >= new Date(config.startDate) && now <= new Date(config.endDate);
+    }, [settings.crateFestConfig]);
+
     const crateFestMovies = useMemo(() => {
         const config = settings.crateFestConfig;
-        if (!config?.isActive) return [];
+        if (!config) return [];
         const keys = config.movieBlocks.flatMap(b => b.movieKeys);
         return keys.map(k => movies[k]).filter((m): m is Movie => !!m);
     }, [movies, settings.crateFestConfig]);
@@ -168,7 +176,8 @@ const App: React.FC = () => {
     const showFestival = isFestivalLive && !isFestivalBannerDismissed;
     
     let headerTop = '0px';
-    if (showWatchParty && showFestival) headerTop = '6rem';
+    if (isCrateFestLive) headerTop = '3rem';
+    else if (showWatchParty && showFestival) headerTop = '6rem';
     else if (showWatchParty || showFestival) headerTop = '3rem';
 
     return (
@@ -179,7 +188,11 @@ const App: React.FC = () => {
             />
             <SmartInstallPrompt />
             
-            {showWatchParty && (
+            {isCrateFestLive && settings.crateFestConfig && (
+                <CrateFestBanner config={settings.crateFestConfig} hasPass={hasCrateFestPass} />
+            )}
+
+            {showWatchParty && !isCrateFestLive && (
                 <LiveWatchPartyBanner 
                     movie={livePartyMovie!} 
                     onClose={() => setActiveParties(prev => {
@@ -190,7 +203,7 @@ const App: React.FC = () => {
                 />
             )}
 
-            {showFestival && (
+            {showFestival && !isCrateFestLive && (
                 <div style={{ top: showWatchParty ? '3rem' : '0px' }} className="fixed left-0 right-0 z-50">
                     <FestivalActiveBanner onClose={() => setIsFestivalBannerDismissed(true)} />
                 </div>
@@ -205,7 +218,7 @@ const App: React.FC = () => {
             />
 
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden">
-                {isFestivalLive ? (
+                {isFestivalLive && !isCrateFestLive ? (
                     <FestivalHero festivalConfig={festivalConfig} />
                 ) : (
                     heroMovies.length > 0 && (
@@ -241,8 +254,8 @@ const App: React.FC = () => {
                                     key="crate-fest"
                                     title={
                                         <div className="flex items-center gap-4">
-                                            <span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase">{settings.crateFestConfig?.title}</span>
-                                            <button onClick={() => window.location.href='/cratefest'} className="bg-red-600 px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest animate-pulse">Enter Hub</button>
+                                            <span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>
+                                            <button onClick={() => window.location.href='/cratefest'} className="bg-white text-black px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-gray-200 transition-all">Enter Collection</button>
                                         </div>
                                     }
                                     movies={crateFestMovies}

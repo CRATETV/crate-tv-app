@@ -27,6 +27,7 @@ const emptyMovie: Movie = {
     rating: 0,
     releaseDateTime: '',
     publishedAt: new Date().toISOString(),
+    autoReleaseDate: '',
     isUnlisted: false,
     isSeries: false,
     episodes: [],
@@ -118,6 +119,13 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         setFormData({ ...formData, cast: updatedCast });
     };
 
+    const handleSetSixMonthPreset = () => {
+        if (!formData) return;
+        const date = new Date();
+        date.setMonth(date.getMonth() + 6);
+        setFormData({ ...formData, autoReleaseDate: date.toISOString().split('T')[0] });
+    };
+
     const handleSave = async () => {
         if (!formData) return;
         setIsSaving(true);
@@ -133,13 +141,13 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
 
     const handleDelete = async () => {
         if (!formData) return;
-        if (!window.confirm(`PERMANENT ACTION: Purge "${formData.title}"? This cannot be reversed.`)) return;
+        if (!window.confirm(`PERMANENT ACTION: Purge "${formData.title}"? This cannot be undone.`)) return;
         setIsPurging(true);
         try {
             await onDeleteMovie(formData.key);
             setSelectedMovieKey('');
         } catch (err) {
-            alert("Purge failed. Cloud cluster busy.");
+            alert("Purge failed.");
         } finally {
             setIsPurging(false);
         }
@@ -188,7 +196,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                     <p className="text-[9px] text-gray-600 font-black uppercase mt-1 tracking-widest">
                                                         Ingested: {movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'N/A'}
                                                         {movie.isForSale && <span className="ml-2 text-green-600">$ Paywall</span>}
-                                                        {movie.isUnlisted && <span className="ml-2 text-amber-500">🔒 Watch Party Only</span>}
+                                                        {movie.autoReleaseDate && <span className="ml-2 text-blue-500">⏳ Auto-Unlock: {new Date(movie.autoReleaseDate).toLocaleDateString()}</span>}
                                                     </p>
                                                 </div>
                                             </div>
@@ -234,35 +242,49 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             </section>
 
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Visibility & License</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Visibility & Exclusivity</h4>
                                 <div className="bg-white/[0.02] p-6 rounded-2xl border border-white/5 space-y-6">
                                     <div className="space-y-4">
                                         <label className="flex items-center gap-3 cursor-pointer group border-b border-white/5 pb-4">
                                             <input type="checkbox" name="isUnlisted" checked={formData.isUnlisted} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-amber-500 focus:ring-amber-500" />
                                             <div>
                                                 <span className="text-sm font-bold text-amber-500 uppercase tracking-widest group-hover:text-amber-400 transition-colors">Watch Party Only (Unlisted)</span>
-                                                <p className="text-[8px] text-gray-600 font-bold uppercase tracking-wider mt-1">Film will be hidden from catalog and search. Available only via direct link.</p>
                                             </div>
                                         </label>
                                         <label className="flex items-center gap-3 cursor-pointer group">
                                             <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
                                             <span className="text-sm font-bold text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Lock behind Paywall (Rental)</span>
                                         </label>
+                                        
+                                        <div className="pt-4 border-t border-white/5 space-y-4">
+                                            <div>
+                                                <label className="form-label !text-blue-500">Post-Festival Public Release Date</label>
+                                                <div className="flex gap-2">
+                                                    <input 
+                                                        type="date" 
+                                                        name="autoReleaseDate" 
+                                                        value={formData.autoReleaseDate || ''} 
+                                                        onChange={handleChange} 
+                                                        className="form-input !bg-blue-600/10 !border-blue-500/30" 
+                                                    />
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={handleSetSixMonthPreset}
+                                                        className="bg-blue-600 text-white font-black px-4 rounded-xl text-[8px] uppercase tracking-widest hover:bg-blue-500 transition-all whitespace-nowrap"
+                                                    >
+                                                        6 Month Preset
+                                                    </button>
+                                                </div>
+                                                <p className="text-[8px] text-gray-600 font-bold uppercase mt-2">The film will automatically become free for all users on this date.</p>
+                                            </div>
+                                        </div>
+
                                         {formData.isForSale && (
                                             <div className="pt-2 animate-[fadeIn_0.2s_ease-out]">
                                                 <label className="form-label">Rental Price (USD)</label>
                                                 <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} step="0.01" className="form-input bg-black/40" />
                                             </div>
                                         )}
-                                        <label className="flex items-center gap-3 cursor-pointer group pt-4 border-t border-white/5">
-                                            <input type="checkbox" name="isSupportEnabled" checked={formData.isSupportEnabled !== false} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-green-600 focus:ring-green-500" />
-                                            <span className="text-sm font-bold text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Enable Community Support (Donations)</span>
-                                        </label>
-                                        <p className="text-[9px] text-gray-600 font-bold uppercase tracking-wider ml-8">Disable if the film contains licensed music or has restricted royalty terms.</p>
-                                    </div>
-                                    <div className="pt-4 border-t border-white/5">
-                                        <label className="form-label">Exhibition Start (Tracking)</label>
-                                        <input type="date" value={formData.publishedAt?.split('T')[0] || ''} onChange={(e) => setFormData({...formData, publishedAt: e.target.value ? new Date(e.target.value).toISOString() : ''})} className="form-input bg-white/20 text-white font-black" />
                                     </div>
                                 </div>
                             </section>
@@ -303,7 +325,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                         placeholder="Biography..."
                                                     />
                                                     <div>
-                                                        <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1 block">Photo URL (High Resolution)</label>
+                                                        <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1 block">Photo URL</label>
                                                         <input 
                                                             type="text" 
                                                             value={actor.photo} 

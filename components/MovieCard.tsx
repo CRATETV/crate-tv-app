@@ -48,6 +48,12 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
     return release > fourteenDaysAgo && release <= now;
   }, [movie.releaseDateTime]);
 
+  const willBeFreeSoon = React.useMemo(() => {
+      if (!movie.autoReleaseDate) return false;
+      const release = new Date(movie.autoReleaseDate);
+      return release > now && (movie.isForSale || movie.isWatchPartyPaid);
+  }, [movie.autoReleaseDate, movie.isForSale, movie.isWatchPartyPaid]);
+
   const handleToggleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsAnimatingLike(true);
@@ -70,7 +76,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
   };
 
   const handleMouseEnter = () => {
-    // Tease the trailer for coming soon, but never the full movie
     if (isActuallyComingSoon && !movie.trailer) return;
     
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
@@ -136,6 +141,9 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
       <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
           {isActuallyComingSoon && (
               <span className="bg-blue-600 text-[8px] font-black px-2 py-1 rounded shadow-lg text-white uppercase tracking-widest">Coming Soon</span>
+          )}
+          {willBeFreeSoon && !isActuallyComingSoon && (
+              <span className="bg-indigo-600 text-[8px] font-black px-2 py-1 rounded shadow-lg text-white uppercase tracking-widest">To Catalog</span>
           )}
           {isLeavingSoon && !isActuallyComingSoon && (
               <span className="bg-amber-600 text-[8px] font-black px-2 py-1 rounded shadow-lg text-white uppercase tracking-widest">Leaving Soon</span>
