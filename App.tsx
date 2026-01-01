@@ -89,12 +89,27 @@ const App: React.FC = () => {
         return spotlightMovies;
     }, [movies, categories.featured]);
 
-    const isCrateFestLive = useMemo(() => {
+    const livePartyMovie = useMemo(() => {
+        const liveKey = Object.keys(activeParties).find(key => {
+            const m = movies[key];
+            return m && m.isWatchPartyEnabled && !m.isUnlisted;
+        });
+        return liveKey ? movies[liveKey] : null;
+    }, [activeParties, movies]);
+
+    // EXCLUSION LOGIC: Determine which single banner wins
+    const activeBannerType = useMemo(() => {
+        if (livePartyMovie) return 'WATCH_PARTY';
+        
         const config = settings.crateFestConfig;
-        if (!config?.isActive || !config?.startDate || !config?.endDate) return false;
-        const now = new Date();
-        return now >= new Date(config.startDate) && now <= new Date(config.endDate);
-    }, [settings.crateFestConfig]);
+        const isCrateFestWindow = config?.isActive && config?.startDate && config?.endDate && 
+                                (new Date() >= new Date(config.startDate) && new Date() <= new Date(config.endDate));
+        if (isCrateFestWindow) return 'CRATE_FEST';
+        
+        if (isFestivalLive && !isFestivalBannerDismissed) return 'GENERAL_FESTIVAL';
+        
+        return 'NONE';
+    }, [livePartyMovie, settings.crateFestConfig, isFestivalLive, isFestivalBannerDismissed]);
 
     const crateFestMovies = useMemo(() => {
         const config = settings.crateFestConfig;
@@ -108,14 +123,6 @@ const App: React.FC = () => {
             .filter((m: Movie) => !!m && !isMovieReleased(m) && !m.isUnlisted)
             .sort((a, b) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
     }, [movies]);
-
-    const livePartyMovie = useMemo(() => {
-        const liveKey = Object.keys(activeParties).find(key => {
-            const m = movies[key];
-            return m && m.isWatchPartyEnabled && !m.isUnlisted;
-        });
-        return liveKey ? movies[liveKey] : null;
-    }, [activeParties, movies]);
 
     const nowStreamingMovie = useMemo(() => {
         const keys = categories.nowStreaming?.movieKeys || [];
@@ -172,15 +179,7 @@ const App: React.FC = () => {
 
     if (isLoading) return <LoadingSpinner />;
 
-    const showWatchParty = !!livePartyMovie;
-    const showFestival = isFestivalLive && !isFestivalBannerDismissed;
-    
-    let headerTop = '0px';
-    const isAnyBannerVisible = isCrateFestLive || showWatchParty || showFestival;
-    
-    if (isCrateFestLive) headerTop = '3rem';
-    else if (showWatchParty && showFestival) headerTop = '6rem';
-    else if (showWatchParty || showFestival) headerTop = '3rem';
+    const headerTop = activeBannerType !== 'NONE' ? '3rem' : '0px';
 
     return (
         <div className="flex flex-col min-h-screen text-white overflow-x-hidden w-full relative">
@@ -190,11 +189,8 @@ const App: React.FC = () => {
             />
             <SmartInstallPrompt />
             
-            {isCrateFestLive && settings.crateFestConfig && (
-                <CrateFestBanner config={settings.crateFestConfig} hasPass={hasCrateFestPass} />
-            )}
-
-            {showWatchParty && !isCrateFestLive && (
+            {/* Banner Rendering with Priority Exclusion */}
+            {activeBannerType === 'WATCH_PARTY' && (
                 <LiveWatchPartyBanner 
                     movie={livePartyMovie!} 
                     onClose={() => setActiveParties(prev => {
@@ -205,10 +201,12 @@ const App: React.FC = () => {
                 />
             )}
 
-            {showFestival && !isCrateFestLive && (
-                <div style={{ top: showWatchParty ? '3rem' : '0px' }} className="fixed left-0 right-0 z-50">
-                    <FestivalActiveBanner onClose={() => setIsFestivalBannerDismissed(true)} />
-                </div>
+            {activeBannerType === 'CRATE_FEST' && settings.crateFestConfig && (
+                <CrateFestBanner config={settings.crateFestConfig} hasPass={hasCrateFestPass} />
+            )}
+
+            {activeBannerType === 'GENERAL_FESTIVAL' && (
+                <FestivalActiveBanner onClose={() => setIsFestivalBannerDismissed(true)} />
             )}
 
             <Header 
@@ -221,9 +219,9 @@ const App: React.FC = () => {
 
             <main 
                 className={`flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500`}
-                style={{ paddingTop: isAnyBannerVisible ? '3rem' : '0px' }}
+                style={{ paddingTop: activeBannerType !== 'NONE' ? '3rem' : '0px' }}
             >
-                {isFestivalLive && !isCrateFestLive ? (
+                {isFestivalLive && activeBannerType !== 'CRATE_FEST' ? (
                     <FestivalHero festivalConfig={festivalConfig} />
                 ) : (
                     heroMovies.length > 0 && (

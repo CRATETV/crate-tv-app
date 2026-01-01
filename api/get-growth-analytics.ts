@@ -1,7 +1,8 @@
 import { getAdminAuth, getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { GrowthAnalyticsData, MonthlyDataPoint, User, Movie, AboutData } from '../types.js';
 
-const SYSTEM_RESET_DATE = '2025-05-23T00:00:00Z';
+// EPOCH RESET: Moved to May 24, 2025
+const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z';
 
 interface SquarePayment {
   created_at: string;
@@ -102,7 +103,6 @@ export async function POST(request: Request) {
             usersDocs,
             moviesDocs,
             viewsDocs,
-            locationsDocs,
             aboutDoc
         ] = await Promise.all([
             listAllAuthUsers(),
@@ -110,7 +110,6 @@ export async function POST(request: Request) {
             db.collection('users').get(),
             db.collection('movies').get(),
             db.collection('view_counts').get(),
-            db.collection('view_locations').get(),
             db.collection('content').doc('about').get(),
         ]);
 
@@ -154,8 +153,6 @@ export async function POST(request: Request) {
 
         const allMovies: Record<string, Movie> = {};
         moviesDocs.forEach(doc => { allMovies[doc.id] = doc.data() as Movie; });
-        const viewCounts: Record<string, number> = {};
-        viewsDocs.forEach(doc => { viewCounts[doc.id] = doc.data().count || 0; });
         
         const donationsByFilmTitle: Record<string, number> = {};
         allPayments.forEach(p => {

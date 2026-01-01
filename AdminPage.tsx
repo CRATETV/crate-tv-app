@@ -16,7 +16,7 @@ import HeroManager from './components/HeroManager';
 import LaurelManager from './components/LaurelManager';
 import PitchDeckManager from './components/PitchDeckManager';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
-import JuryPortal from './components/JuryPortal';
+import JuryRoomTab from './components/JuryRoomTab';
 import TalentInquiriesTab from './components/TalentInquiriesTab';
 import CrateFestEditor from './components/CrateFestEditor';
 
@@ -251,7 +251,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={handleSetNowStreaming} movieToCreate={pendingPromotion} onCreationDone={() => setPendingPromotion(null)} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={handlePromoteToCatalog} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'inquiries' && <TalentInquiriesTab />}
-                    {activeTab === 'jury' && <JuryPortal pipeline={pipeline} />}
+                    {activeTab === 'jury' && <JuryRoomTab pipeline={pipeline} />}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}

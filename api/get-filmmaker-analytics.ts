@@ -1,9 +1,10 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, PayoutRequest, User, SentimentPoint } from '../types.js';
 
-const SYSTEM_RESET_DATE = '2025-05-23T00:00:00Z';
-const AD_CPM_IN_CENTS = 500;
-const AD_REVENUE_FILMMAKER_SHARE = 0.50;
+// EPOCH RESET: Moved to May 24, 2025
+const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z';
+const AD_CPM_IN_CENTS = 0; // ADS DISABLED
+const AD_REVENUE_FILMMAKER_SHARE = 0.00;
 const DONATION_PLATFORM_CUT = 0.30;
 
 export async function POST(request: Request) {
@@ -19,7 +20,6 @@ export async function POST(request: Request) {
 
         const resetTimestamp = new Date(SYSTEM_RESET_DATE);
 
-        // Filter donations and payouts by reset date
         const donationsSnapshot = await db.collection('donations')
             .where('directorName', '==', directorName)
             .where('timestamp', '>=', resetTimestamp)
@@ -62,7 +62,6 @@ export async function POST(request: Request) {
 
         const filmPerformances: FilmmakerFilmPerformance[] = await Promise.all(filmmakerFilms.map(async film => {
             const grossDonations = donationsByFilm[film.key] || 0;
-            const grossAdRevenue = ((viewCounts[film.key] || 0) / 1000) * AD_CPM_IN_CENTS;
             
             const sentimentSnap = await db.collection('movies').doc(film.key).collection('sentiment').orderBy('timestamp', 'asc').get();
             const sentimentData: SentimentPoint[] = sentimentSnap.docs.map(d => d.data() as SentimentPoint);
@@ -74,10 +73,10 @@ export async function POST(request: Request) {
                 likes: film.likes || 0,
                 watchlistAdds: watchlistCounts[film.key] || 0,
                 grossDonations,
-                grossAdRevenue,
+                grossAdRevenue: 0,
                 netDonationEarnings: grossDonations * (1 - DONATION_PLATFORM_CUT),
-                netAdEarnings: grossAdRevenue * AD_REVENUE_FILMMAKER_SHARE,
-                totalEarnings: (grossDonations * (1 - DONATION_PLATFORM_CUT)) + (grossAdRevenue * AD_REVENUE_FILMMAKER_SHARE),
+                netAdEarnings: 0,
+                totalEarnings: (grossDonations * (1 - DONATION_PLATFORM_CUT)),
                 sentimentData
             };
         }));
@@ -87,9 +86,9 @@ export async function POST(request: Request) {
 
         const analytics: FilmmakerAnalytics = {
             totalDonations: filmPerformances.reduce((s, f) => s + f.netDonationEarnings, 0),
-            totalAdRevenue: filmPerformances.reduce((s, f) => s + f.netAdEarnings, 0),
+            totalAdRevenue: 0,
             totalPaidOut,
-            balance: Math.max(0, totalEarnings - totalPaidOut), // Starting at zero for new system
+            balance: Math.max(0, totalEarnings - totalPaidOut),
             films: filmPerformances.sort((a,b) => b.views - a.views),
         };
 

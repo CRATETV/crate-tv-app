@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo } from 'react';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
-import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings } from '../types';
+import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry } from '../types';
 import { moviesData, categoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
 
 interface FestivalContextType {
@@ -14,6 +14,7 @@ interface FestivalContextType {
     dataSource: 'live' | 'fallback' | null;
     adConfig: AdConfig | null;
     settings: SiteSettings;
+    pipeline: MoviePipelineEntry[];
     refreshData: () => Promise<void>;
 }
 
@@ -36,6 +37,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [aboutData, setAboutData] = useState<AboutData | null>(initialAboutData);
     const [adConfig, setAdConfig] = useState<AdConfig | null>(null);
     const [settings, setSettings] = useState<SiteSettings>({ isHolidayModeActive: false });
+    const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
 
     const isFestivalLive = useMemo(() => {
@@ -74,32 +76,26 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             await initializeFirebaseAuth();
             const db = getDbInstance();
             if (db) {
-                // Listener 1: Site Settings
-                const unsubSettings = db.collection('content').doc('settings').onSnapshot(doc => {
-                    if (doc.exists) {
-                        setSettings(doc.data() as SiteSettings);
-                        fetchData(true);
-                    }
+                // Settings & Festival listeners
+                db.collection('content').doc('settings').onSnapshot(doc => {
+                    if (doc.exists) setSettings(doc.data() as SiteSettings);
                 });
 
-                // Listener 2: Festival Config (CRITICAL for 'Push Live Now' reactivity)
-                const unsubFestival = db.collection('festival').doc('config').onSnapshot(doc => {
-                    if (doc.exists) {
-                        const newConfig = doc.data() as FestivalConfig;
-                        setFestivalConfig(newConfig);
-                        // If the config changed, we should refresh the full manifest to get the correct schedule
-                        fetchData(true);
-                    }
+                db.collection('festival').doc('config').onSnapshot(doc => {
+                    if (doc.exists) setFestivalConfig(doc.data() as FestivalConfig);
                 });
 
-                return () => {
-                    unsubSettings();
-                    unsubFestival();
-                };
+                // Pipeline listener for Crate Fest submissions
+                db.collection('movie_pipeline').onSnapshot(snapshot => {
+                    const entries: MoviePipelineEntry[] = [];
+                    snapshot.forEach(doc => {
+                        entries.push({ id: doc.id, ...doc.data() } as MoviePipelineEntry);
+                    });
+                    setPipeline(entries);
+                });
             }
         };
-        const cleanupPromise = init();
-        return () => { cleanupPromise.then(unsub => unsub?.()); };
+        init();
     }, []);
 
     const value: FestivalContextType = {
@@ -113,6 +109,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         dataSource,
         adConfig,
         settings,
+        pipeline,
         refreshData: () => fetchData(true)
     };
 

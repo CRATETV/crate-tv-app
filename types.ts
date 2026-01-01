@@ -32,7 +32,7 @@ export interface Movie {
   rating?: number;
   releaseDateTime?: string;
   publishedAt?: string; 
-  autoReleaseDate?: string; // New: Date when the paywall automatically drops
+  autoReleaseDate?: string; // Date when the paywall automatically drops
   isUnlisted?: boolean; 
   isSeries?: boolean;
   episodes?: Episode[];
@@ -88,9 +88,18 @@ export interface CrateFestConfig {
   passPrice: number;
   featuredWatchPartyKey?: string;
   movieBlocks: {
+    id: string; // Unique block ID for purchasing
     title: string;
     movieKeys: string[];
   }[];
+}
+
+export interface FilmmakerAnalytics {
+    totalDonations: number;
+    totalAdRevenue: number;
+    totalPaidOut: number;
+    balance: number;
+    films: FilmmakerFilmPerformance[];
 }
 
 export interface FilmmakerFilmPerformance {
@@ -105,14 +114,6 @@ export interface FilmmakerFilmPerformance {
     netAdEarnings: number;
     totalEarnings: number;
     sentimentData?: SentimentPoint[];
-}
-
-export interface FilmmakerAnalytics {
-    totalDonations: number;
-    totalAdRevenue: number;
-    totalPaidOut: number;
-    balance: number;
-    films: FilmmakerFilmPerformance[];
 }
 
 export interface Category {

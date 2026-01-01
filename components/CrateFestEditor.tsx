@@ -1,14 +1,23 @@
 import React, { useState, useMemo } from 'react';
-import { CrateFestConfig, Movie } from '../types';
+import { CrateFestConfig, Movie, MoviePipelineEntry } from '../types';
+
+interface UnifiedSelectionItem {
+    key: string;
+    title: string;
+    director: string;
+    poster: string;
+    isSubmission: boolean;
+}
 
 interface MovieSelectorModalProps {
-  allMovies: Movie[];
+  catalog: Movie[];
+  submissions: MoviePipelineEntry[];
   initialSelectedKeys: string[];
   onSave: (newMovieKeys: string[]) => void;
   onClose: () => void;
 }
 
-const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, initialSelectedKeys, onSave, onClose }) => {
+const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ catalog, submissions, initialSelectedKeys, onSave, onClose }) => {
   const [selectedKeys, setSelectedKeys] = useState<string[]>(initialSelectedKeys);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -18,44 +27,63 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
     );
   };
 
-  const filteredMovies = useMemo(() => {
-    return allMovies
-      .filter(movie => (movie.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
-      .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-  }, [allMovies, searchTerm]);
+  const allItems = useMemo(() => {
+    const items: UnifiedSelectionItem[] = [
+        ...submissions.map(s => ({
+            key: s.id,
+            title: s.title,
+            director: s.director,
+            poster: s.posterUrl,
+            isSubmission: true
+        })),
+        ...catalog.map(m => ({
+            key: m.key,
+            title: m.title,
+            director: m.director,
+            poster: m.poster,
+            isSubmission: false
+        }))
+    ];
+    return items
+        .filter(item => (item.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
+        .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+  }, [catalog, submissions, searchTerm]);
 
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[200] p-4" onClick={onClose}>
       <div className="bg-[#111] rounded-[2.5rem] border border-white/10 shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="p-8 border-b border-white/5">
           <div className="flex justify-between items-start mb-6">
-            <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Select Films</h3>
-            <span className="bg-red-600/20 text-red-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{selectedKeys.length} Selected</span>
+            <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Festival Selection</h3>
+            <span className="bg-red-600/20 text-red-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{selectedKeys.length} Selections</span>
           </div>
           <input
             type="text"
-            placeholder="Filter catalog..."
+            placeholder="Filter catalog or submissions..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="w-full form-input !bg-white/5 border-white/10"
           />
         </div>
         <div className="flex-grow overflow-y-auto p-4 space-y-2 custom-scrollbar">
-          {filteredMovies.map(movie => {
-            const isSelected = selectedKeys.includes(movie.key);
+          {allItems.map(item => {
+            const isSelected = selectedKeys.includes(item.key);
             return (
-                <label key={movie.key} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all border ${isSelected ? 'bg-red-600/10 border-red-500/30' : 'hover:bg-white/5 border-transparent'}`}>
+                <label key={item.key} className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all border ${isSelected ? 'bg-red-600/10 border-red-500/30' : 'hover:bg-white/5 border-transparent'}`}>
                 <input
                     type="checkbox"
                     checked={isSelected}
-                    onChange={() => toggleSelection(movie.key)}
+                    onChange={() => toggleSelection(item.key)}
                     className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500"
                 />
                 <div className="flex items-center gap-3">
-                    <img src={movie.poster} className="w-10 h-14 object-cover rounded shadow-lg" alt="" />
+                    <img src={item.poster} className="w-10 h-14 object-cover rounded shadow-lg" alt="" />
                     <div>
-                        <p className="text-sm font-black text-white uppercase tracking-tight">{movie.title}</p>
-                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{movie.director}</p>
+                        <div className="flex items-center gap-2">
+                             <p className="text-sm font-black text-white uppercase tracking-tight">{item.title}</p>
+                             {item.isSubmission && <span className="bg-blue-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded tracking-widest">NEW</span>}
+                        </div>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{item.director}</p>
                     </div>
                 </div>
                 </label>
@@ -64,7 +92,7 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
         </div>
         <div className="p-8 border-t border-white/5 flex gap-4">
           <button onClick={onClose} className="flex-1 text-gray-500 font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors">Cancel</button>
-          <button onClick={() => onSave(selectedKeys)} className="flex-[2] bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest hover:bg-gray-200 transition-all shadow-xl">Apply Selection</button>
+          <button onClick={() => onSave(selectedKeys)} className="flex-[2] bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest hover:bg-gray-200 transition-all shadow-xl">Apply to Block</button>
         </div>
       </div>
     </div>
@@ -74,11 +102,12 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
 interface CrateFestEditorProps {
     config: CrateFestConfig;
     allMovies: Record<string, Movie>;
+    pipeline: MoviePipelineEntry[];
     onSave: (config: CrateFestConfig) => Promise<void>;
     isSaving: boolean;
 }
 
-const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig, allMovies, onSave, isSaving }) => {
+const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig, allMovies, pipeline, onSave, isSaving }) => {
     const [config, setConfig] = useState<CrateFestConfig>(initialConfig);
     const [editingBlockIdx, setEditingBlockIdx] = useState<number | null>(null);
 
@@ -108,6 +137,14 @@ const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig
             updateBlock(editingBlockIdx, { movieKeys: keys });
             setEditingBlockIdx(null);
         }
+    };
+
+    // Helper to find title for keys that might be in catalog OR pipeline
+    const resolveTitle = (key: string) => {
+        const fromCatalog = allMovies[key]?.title;
+        if (fromCatalog) return fromCatalog;
+        const fromPipeline = pipeline.find(p => p.id === key)?.title;
+        return fromPipeline || 'Unknown Work';
     };
 
     return (
@@ -186,12 +223,10 @@ const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig
                             className="w-full bg-black/40 border border-white/10 text-white p-3 rounded-xl text-sm focus:outline-none focus:border-purple-500"
                         >
                             <option value="">None / Hide Banner</option>
-                            {/* FIX: Cast Object.values(allMovies) to Movie[] to resolve property access errors on type unknown. */}
                             {(Object.values(allMovies) as Movie[]).sort((a,b) => a.title.localeCompare(b.title)).map(m => (
                                 <option key={m.key} value={m.key}>{m.title}</option>
                             ))}
                         </select>
-                        <p className="text-[9px] text-gray-600 font-bold uppercase mt-3 tracking-widest">This film will be spotlighted as the "Live Now" event on the Crate Fest Hub.</p>
                     </div>
                     
                     <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
@@ -214,7 +249,7 @@ const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig
                                 <div className="flex flex-wrap gap-2">
                                     {block.movieKeys.length > 0 ? block.movieKeys.map(k => (
                                         <div key={k} className="bg-white/5 border border-white/10 text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-2">
-                                            {allMovies[k]?.title || 'Unknown Film'}
+                                            {resolveTitle(k)}
                                             <button onClick={() => {
                                                 const nextKeys = block.movieKeys.filter(key => key !== k);
                                                 updateBlock(bIdx, { movieKeys: nextKeys });
@@ -249,7 +284,8 @@ const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig
 
             {editingBlockIdx !== null && (
                 <MovieSelectorModal 
-                    allMovies={Object.values(allMovies)} 
+                    catalog={Object.values(allMovies)} 
+                    submissions={pipeline}
                     initialSelectedKeys={config.movieBlocks[editingBlockIdx].movieKeys} 
                     onSave={handleBlockMovieSave} 
                     onClose={() => setEditingBlockIdx(null)} 
