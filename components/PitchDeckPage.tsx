@@ -161,20 +161,20 @@ const PitchDeckPage: React.FC = () => {
                 </div>
             </Slide>
 
-            {/* SLIDE 3: THE CHAMPION */}
-            <Slide slideNumber="03" targetCompany={target} title="The Champion." subtitle="Curation &gt; Logic" gradient="bg-gradient-to-tr from-[#050505] to-red-950/30">
+            {/* SLIDE 3: THE AUTHENTICITY ENGINE */}
+            <Slide slideNumber="03" targetCompany={target} title="The Champion." subtitle="Brevity as a Strategic Weapon" gradient="bg-gradient-to-tr from-[#050505] to-red-950/30">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mt-16">
                     <div className="p-12 bg-white/[0.02] border border-white/5 rounded-[4rem] space-y-6">
                         <h4 className="text-3xl font-black uppercase tracking-tighter text-white italic">Elite Filter</h4>
-                        <p className="text-gray-400 leading-relaxed text-base font-medium">Crate TV acts as a high-density lifeboat for elite short films. We curate the champions so the audience never has to gamble on quality.</p>
+                        <p className="text-gray-400 leading-relaxed text-base font-medium">Crate TV acts as a high-density lifeboat for elite short films. We curate the champions so the audience never has to gamble on quality or authenticity.</p>
                     </div>
                     <div className="p-12 bg-red-600/10 border border-red-500/20 rounded-[4rem] space-y-6 shadow-2xl">
-                        <h4 className="text-3xl font-black uppercase tracking-tighter text-white italic">Brevity = Weapon</h4>
-                        <p className="text-gray-400 leading-relaxed text-base font-medium">Short stories provide the highest emotional return on time. Users can support five unique artists in the time it takes to watch one Hollywood filler.</p>
+                        <h4 className="text-3xl font-black uppercase tracking-tighter text-white italic">High-Yield Brevity</h4>
+                        <p className="text-gray-400 leading-relaxed text-base font-medium">Short stories provide the highest emotional ROI. Users support five unique artists in the time it takes to watch one Hollywood filler—maximizing patronage velocity.</p>
                     </div>
                     <div className="p-12 bg-white/[0.02] border border-white/5 rounded-[4rem] space-y-6">
                         <h4 className="text-3xl font-black uppercase tracking-tighter text-white italic">Artist Yield</h4>
-                        <p className="text-gray-400 leading-relaxed text-base font-medium">A transparent 70/30 model. By providing a professional afterlife for films, we turn festival credits into sustainable income.</p>
+                        <p className="text-gray-400 leading-relaxed text-base font-medium">A transparent 70/30 model. By providing a professional afterlife for films, we turn festival credits into sustainable income for the visionary creator.</p>
                     </div>
                 </div>
             </Slide>
