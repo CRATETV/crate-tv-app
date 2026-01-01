@@ -176,6 +176,8 @@ const App: React.FC = () => {
     const showFestival = isFestivalLive && !isFestivalBannerDismissed;
     
     let headerTop = '0px';
+    const isAnyBannerVisible = isCrateFestLive || showWatchParty || showFestival;
+    
     if (isCrateFestLive) headerTop = '3rem';
     else if (showWatchParty && showFestival) headerTop = '6rem';
     else if (showWatchParty || showFestival) headerTop = '3rem';
@@ -217,7 +219,10 @@ const App: React.FC = () => {
                 isLiveSpotlight={isNowStreamingLive}
             />
 
-            <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden">
+            <main 
+                className={`flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500`}
+                style={{ paddingTop: isAnyBannerVisible ? '3rem' : '0px' }}
+            >
                 {isFestivalLive && !isCrateFestLive ? (
                     <FestivalHero festivalConfig={festivalConfig} />
                 ) : (

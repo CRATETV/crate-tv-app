@@ -1,28 +1,55 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';
 import SEO from './SEO';
-import { Movie } from '../types';
+import { Movie, WatchPartyState } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import BottomNavBar from './BottomNavBar';
 import { MovieCard } from './MovieCard';
 import SquarePaymentModal from './SquarePaymentModal';
+import CrateFestBanner from './CrateFestBanner';
+import { getDbInstance } from '../services/firebaseClient';
 
 const CrateFestPage: React.FC = () => {
     const { hasCrateFestPass, grantCrateFestPass } = useAuth();
     const { isLoading, movies, settings } = useFestival();
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [activeParties, setActiveParties] = useState<Record<string, WatchPartyState>>({});
 
     const config = settings.crateFestConfig;
     
+    useEffect(() => {
+        const db = getDbInstance();
+        if (!db) return;
+        const unsubscribe = db.collection('watch_parties').onSnapshot(snapshot => {
+            const states: Record<string, WatchPartyState> = {};
+            snapshot.forEach(doc => {
+                const data = doc.data() as WatchPartyState;
+                if (data.status === 'live') {
+                    states[doc.id] = data;
+                }
+            });
+            setActiveParties(states);
+        });
+        return () => unsubscribe();
+    }, []);
+
     const isLive = useMemo(() => {
         if (!config?.isActive || !config?.startDate || !config?.endDate) return false;
         const now = new Date();
         return now >= new Date(config.startDate) && now <= new Date(config.endDate);
     }, [config]);
+
+    const featuredLiveMovie = useMemo(() => {
+        if (!config?.featuredWatchPartyKey) return null;
+        const movie = movies[config.featuredWatchPartyKey];
+        if (!movie) return null;
+        const partyState = activeParties[movie.key];
+        return partyState ? movie : null;
+    }, [config, movies, activeParties]);
 
     const handlePurchaseSuccess = async () => {
         await grantCrateFestPass();
@@ -38,6 +65,15 @@ const CrateFestPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    const handleJoinParty = (movie: Movie) => {
+        if (!hasCrateFestPass) {
+            setIsPaymentModalOpen(true);
+            return;
+        }
+        window.history.pushState({}, '', `/watchparty/${movie.key}`);
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
     if (isLoading) return <LoadingSpinner />;
     if (!config) return (
         <div className="h-screen bg-black flex items-center justify-center flex-col gap-6 p-10 text-center">
@@ -48,11 +84,24 @@ const CrateFestPage: React.FC = () => {
     );
 
     return (
-        <div className="flex flex-col min-h-screen text-white bg-black selection:bg-red-600 selection:text-white">
+        <div className="flex flex-col min-h-screen text-white bg-black selection:bg-red-600 selection:text-white relative">
             <SEO title={config.title} description={config.tagline} />
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
             
-            <main className="flex-grow">
+            {isLive && <CrateFestBanner config={config} hasPass={hasCrateFestPass} />}
+            
+            <Header 
+                searchQuery="" 
+                onSearch={() => {}} 
+                isScrolled={true} 
+                onMobileSearchClick={() => {}} 
+                showSearch={false} 
+                topOffset={isLive ? '3rem' : '0px'}
+            />
+            
+            <main 
+                className="flex-grow transition-all duration-500"
+                style={{ paddingTop: isLive ? '3rem' : '0px' }}
+            >
                 {/* Massive Cinematic Hero */}
                 <div className="relative h-[85vh] flex flex-col items-center justify-center text-center px-4 overflow-hidden border-b border-white/5">
                     <div className="absolute inset-0 bg-black">
@@ -95,17 +144,38 @@ const CrateFestPage: React.FC = () => {
                                 </div>
                             )}
                         </div>
-
-                        <div className="pt-20 flex justify-center gap-16 opacity-40 text-[10px] font-black uppercase tracking-[0.6em] text-gray-500">
-                             <div className="flex flex-col gap-2"><span>Resolution</span><span className="text-white">4K Native</span></div>
-                             <div className="flex flex-col gap-2"><span>Stream</span><span className="text-white">Non-Linear</span></div>
-                             <div className="flex flex-col gap-2"><span>Status</span><span className="text-white">Sync Stable</span></div>
-                        </div>
                     </div>
                 </div>
 
+                {/* Live Spotlight Area */}
+                {featuredLiveMovie && (
+                    <div className="max-w-7xl mx-auto px-4 -mt-20 relative z-20 animate-[fadeIn_1.5s_ease-out]">
+                        <div className="bg-gradient-to-r from-red-600 to-purple-700 p-1 rounded-3xl shadow-[0_0_80px_rgba(239,68,68,0.3)]">
+                            <div className="bg-black/90 backdrop-blur-xl rounded-[1.4rem] p-8 flex flex-col md:flex-row items-center justify-between gap-10 border border-white/10">
+                                <div className="flex items-center gap-8">
+                                    <img src={featuredLiveMovie.poster} className="w-24 h-36 object-cover rounded-xl shadow-2xl border border-white/5" alt="" />
+                                    <div>
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></span>
+                                            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">Live Global Screening</span>
+                                        </div>
+                                        <h3 className="text-4xl font-black uppercase tracking-tighter italic">{featuredLiveMovie.title}</h3>
+                                        <p className="text-gray-500 text-sm font-medium mt-1 uppercase tracking-widest">Join {Object.keys(activeParties).length * 12 + 24} Visionaries currently watching</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => handleJoinParty(featuredLiveMovie)}
+                                    className="w-full md:w-auto bg-red-600 hover:bg-white hover:text-black text-white font-black px-12 py-5 rounded-2xl uppercase tracking-widest text-xs transition-all transform active:scale-95 shadow-xl"
+                                >
+                                    Join Party Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Festival Grid Area */}
-                <div className="max-w-[1920px] mx-auto p-8 md:p-24 space-y-48 pb-64">
+                <div className={`max-w-[1920px] mx-auto p-8 md:p-24 space-y-48 pb-64 ${!featuredLiveMovie && 'mt-12'}`}>
                     {config.movieBlocks.map((block, idx) => (
                         <section key={idx} className="space-y-16">
                             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/5 pb-12">
