@@ -10,8 +10,8 @@ import SmartInstallPrompt from './components/SmartInstallPrompt';
 import SEO from './components/SEO';
 import { Movie, Actor, Category, WatchPartyState } from './types';
 import { isMovieReleased } from './constants';
-import { useAuth } from '../contexts/AuthContext';
-import { useFestival } from '../contexts/FestivalContext';
+import { useAuth } from './contexts/AuthContext';
+import { useFestival } from './contexts/FestivalContext';
 import FestivalHero from './components/FestivalHero';
 import BackToTopButton from './components/BackToTopButton';
 import CollapsibleFooter from './components/CollapsibleFooter';
@@ -99,13 +99,13 @@ const App: React.FC = () => {
     const crateFestMovies = useMemo(() => {
         const config = settings.crateFestConfig;
         if (!config) return [];
-        const keys = config.movieBlocks.flatMap(b => b.movieKeys);
-        return keys.map(k => movies[k]).filter((m): m is Movie => !!m);
+        const keys = config.movieBlocks.flatMap((b: any) => b.movieKeys);
+        return keys.map((k: string) => movies[k]).filter((m: Movie | undefined): m is Movie => !!m);
     }, [movies, settings.crateFestConfig]);
 
     const comingSoonMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
-            .filter(m => !!m && !isMovieReleased(m) && !m.isUnlisted)
+            .filter((m: Movie) => !!m && !isMovieReleased(m) && !m.isUnlisted)
             .sort((a, b) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
     }, [movies]);
 
