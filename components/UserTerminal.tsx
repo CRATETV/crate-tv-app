@@ -103,7 +103,6 @@ const UserTerminal: React.FC = () => {
                                 <div key={role.id} className="bg-white/5 p-5 rounded-2xl border border-white/5 flex items-center justify-between group">
                                     <div>
                                         <p className="text-sm font-bold text-white uppercase tracking-tight">{role.label}</p>
-                                        {/* FIX: Corrected object access by using role.id instead of role object */}
                                         <p className={`text-[9px] font-black uppercase mt-1 tracking-widest ${foundUser[role.id] ? 'text-green-500' : 'text-gray-600'}`}>
                                             {foundUser[role.id] ? 'PROTOCOL_AUTHORIZED' : 'ACCESS_RESTRICTED'}
                                         </p>
@@ -111,8 +110,7 @@ const UserTerminal: React.FC = () => {
                                     <button 
                                         onClick={() => toggleRole(role.id)} 
                                         disabled={isUpdating}
-                                        {/* FIX: Corrected object access by using role.id instead of role object */}
-                                        className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${foundUser[role.id] ? 'bg-red-600/10 border border-red-500/30 text-red-500 hover:bg-red-600 hover:text-white' : 'bg-white/10 border border-white/20 text-gray-400 hover:bg-white hover:text-black'}`}
+                                        className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${foundUser[role.id] ? 'bg-red-600/10 border-red-500/30 text-red-500 hover:bg-red-600 hover:text-white' : 'bg-white/10 border border-white/20 text-gray-400 hover:bg-white hover:text-black'}`}
                                     >
                                         {foundUser[role.id] ? 'Revoke' : 'Authorize'}
                                     </button>
