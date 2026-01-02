@@ -103,8 +103,17 @@ export async function POST(request: Request) {
         viewsSnapshot?.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count) || 0; });
         
         const watchlistCounts: Record<string, number> = {};
+        const allUsers: { email: string }[] = [];
+        const actorUsers: { email: string }[] = [];
+        const filmmakerUsers: { email: string }[] = [];
+
         usersSnapshot?.forEach(doc => {
             const userData = doc.data() as User;
+            const emailObj = { email: userData.email || 'Anonymous' };
+            allUsers.push(emailObj);
+            if (userData.isActor) actorUsers.push(emailObj);
+            if (userData.isFilmmaker) filmmakerUsers.push(emailObj);
+
             if (userData.watchlist) {
                 userData.watchlist.forEach(movieKey => {
                     watchlistCounts[movieKey] = (watchlistCounts[movieKey] || 0) + 1;
@@ -161,7 +170,7 @@ export async function POST(request: Request) {
         });
 
         const analyticsData: AnalyticsData = {
-            totalRevenue, totalCrateTvRevenue, totalAdminPayouts, pastAdminPayouts: [], billSavingsPotTotal, billSavingsTransactions: [], totalUsers, viewCounts, movieLikes: {}, watchlistCounts, filmmakerPayouts, viewLocations: {}, allUsers: [], actorUsers: [], filmmakerUsers: [],
+            totalRevenue, totalCrateTvRevenue, totalAdminPayouts, pastAdminPayouts: [], billSavingsPotTotal, billSavingsTransactions: [], totalUsers, viewCounts, movieLikes: {}, watchlistCounts, filmmakerPayouts, viewLocations: {}, allUsers, actorUsers, filmmakerUsers,
             totalDonations, totalSales, totalMerchRevenue: 0, totalAdRevenue: 0, crateTvMerchCut: 0, merchSales: {},
             totalFestivalRevenue: festivalRevenue, festivalPassSales: { units: 0, revenue: 0 }, festivalBlockSales: { units: 0, revenue: 0 }, salesByBlock: {}, festivalUsers: [],
             crateFestRevenue, 

@@ -153,18 +153,21 @@ const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig
                     <h3 className="text-3xl font-black text-white uppercase tracking-tighter">Crate Fest Control</h3>
                     <p className="text-gray-400 mt-2 font-medium">Coordinate the dynamic paywall and curate the discovery experience.</p>
                 </div>
-                <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
-                    <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">LIVE STATUS</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input 
-                            type="checkbox" 
-                            name="isActive" 
-                            checked={config.isActive} 
-                            onChange={(e) => setConfig({...config, isActive: e.target.checked})} 
-                            className="sr-only peer" 
-                        />
-                        <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
-                    </label>
+                <div className="flex items-center gap-4">
+                     <button onClick={() => window.location.hash = 'comms'} className="bg-white text-black px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:scale-105 transition-all">Broadcast Event Email</button>
+                    <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
+                        <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">LIVE STATUS</span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                name="isActive" 
+                                checked={config.isActive} 
+                                onChange={(e) => setConfig({...config, isActive: e.target.checked})} 
+                                className="sr-only peer" 
+                            />
+                            <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -261,7 +264,7 @@ const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig
 
                                 <button 
                                     onClick={() => setEditingBlockIdx(bIdx)}
-                                    className="w-full bg-white/5 hover:bg-white/10 text-white font-black py-3 rounded-xl border border-white/10 transition-all uppercase text-[10px] tracking-widest"
+                                    className="w-full bg-white/5 hover:bg-white text-white font-black py-3 rounded-xl border border-white/10 transition-all uppercase text-[10px] tracking-widest"
                                 >
                                     Manage Selection
                                 </button>

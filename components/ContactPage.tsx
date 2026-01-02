@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Header from './Header';
-// FIX: Corrected import path
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import CollapsibleFooter from './CollapsibleFooter';
@@ -49,10 +48,15 @@ const ContactPage: React.FC = () => {
         }
     };
     
+    const handleGoHome = () => {
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
     const formInputClasses = "form-input";
 
     return (
-        <div className="flex flex-col min-h-screen text-white">
+        <div className="flex flex-col min-h-screen text-white bg-[#050505]">
             <Header 
                 searchQuery="" 
                 onSearch={() => {}} 
@@ -63,37 +67,46 @@ const ContactPage: React.FC = () => {
 
             <main className="flex-grow pt-24 pb-24 md:pb-0 px-4 md:px-12">
                 <div className="max-w-3xl mx-auto">
-                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 text-center">Contact Us</h1>
-                    <p className="text-lg text-gray-400 mb-10 text-center">
+                    <button onClick={handleGoHome} className="mb-8 inline-flex items-center gap-2 text-gray-500 hover:text-white transition-colors uppercase font-black text-[10px] tracking-[0.3em]">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                        Home
+                    </button>
+
+                    <h1 className="text-4xl md:text-7xl font-black text-white mb-4 text-center uppercase tracking-tighter">Contact Us</h1>
+                    <p className="text-lg text-gray-400 mb-10 text-center font-medium">
                         Have a question, feedback, or a collaboration idea? We'd love to hear from you.
                     </p>
 
-                    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-8">
+                    <div className="bg-white/5 border border-white/5 p-8 sm:p-12 rounded-[2.5rem] shadow-2xl">
                         {submissionStatus === 'success' ? (
-                            <div className="text-center p-8">
-                                <h2 className="text-3xl font-bold text-green-500 mb-4">Message Sent!</h2>
-                                <p className="text-gray-300">Thank you for reaching out. We'll get back to you as soon as possible.</p>
+                            <div className="text-center p-8 space-y-4">
+                                <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto">
+                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                </div>
+                                <h2 className="text-2xl font-black uppercase tracking-tighter">Message Routed</h2>
+                                <p className="text-gray-400">Our coordination core has received your transmission.</p>
+                                <button onClick={handleGoHome} className="mt-4 bg-white text-black font-black px-8 py-3 rounded-xl uppercase text-xs tracking-widest shadow-xl">Return Home</button>
                             </div>
                         ) : (
                             <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
                                 <div>
-                                    <label htmlFor="name" className="block text-sm font-medium text-gray-400 mb-2">Your Name</label>
+                                    <label htmlFor="name" className="form-label">Full Name</label>
                                     <input type="text" id="name" name="name" className={formInputClasses} required />
                                 </div>
                                 <div>
-                                    <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-2">Your Email</label>
+                                    <label htmlFor="email" className="form-label">Email Address</label>
                                     <input type="email" id="email" name="email" className={formInputClasses} required />
                                 </div>
                                 <div>
-                                    <label htmlFor="message" className="block text-sm font-medium text-gray-400 mb-2">Message</label>
+                                    <label htmlFor="message" className="form-label">Message Content</label>
                                     <textarea id="message" name="message" rows={5} className={formInputClasses} required></textarea>
                                 </div>
                                 <button type="submit" className="submit-btn w-full mt-8" disabled={isSubmitting}>
-                                    {isSubmitting ? 'Sending...' : 'Send Message'}
+                                    {isSubmitting ? 'Transmitting...' : 'Send Message'}
                                 </button>
                                 
                                 {submissionStatus === 'error' && (
-                                    <div className="mt-4 text-center text-red-500">
+                                    <div className="mt-4 text-center text-red-500 text-xs font-black uppercase tracking-widest">
                                         <p>{errorMessage}</p>
                                     </div>
                                 )}
@@ -105,12 +118,7 @@ const ContactPage: React.FC = () => {
 
             <CollapsibleFooter />
             <BackToTopButton />
-            <BottomNavBar 
-                onSearchClick={() => {
-                    window.history.pushState({}, '', '/');
-                    window.dispatchEvent(new Event('pushstate'));
-                }}
-            />
+            <BottomNavBar onSearchClick={() => {}} />
         </div>
     );
 };

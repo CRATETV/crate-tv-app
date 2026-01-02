@@ -10,20 +10,20 @@ import PromoCodeManager from './PromoCodeManager';
 
 const getPartyStatusText = (movie: Movie, partyState?: WatchPartyState) => {
     if (!movie.isWatchPartyEnabled || !movie.watchPartyStartTime) {
-        return { text: 'Disabled', color: 'bg-gray-500' };
+        return { text: 'OFFLINE', color: 'text-gray-500', bg: 'bg-gray-500/10' };
     }
     const now = new Date();
     const startTime = new Date(movie.watchPartyStartTime);
     if (now < startTime) {
-        return { text: 'Upcoming', color: 'bg-blue-500' };
+        return { text: 'SCHEDULED', color: 'text-blue-400', bg: 'bg-blue-400/10' };
     }
     if (partyState?.status === 'live') {
-        return { text: 'Live', color: 'bg-red-500 animate-pulse' };
+        return { text: 'ON AIR', color: 'text-red-500', bg: 'bg-red-500/10' };
     }
     if (partyState?.status === 'waiting') {
-        return { text: 'Waiting for Host', color: 'bg-yellow-500' };
+        return { text: 'READY', color: 'text-yellow-500', bg: 'bg-yellow-500/10' };
     }
-    return { text: 'Ended', color: 'bg-gray-700' };
+    return { text: 'ARCHIVED', color: 'text-gray-600', bg: 'bg-gray-800' };
 };
 
 
@@ -70,26 +70,29 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
     };
 
     return (
-        <div className="w-full h-full flex flex-col bg-gray-900 border-l-2 border-gray-700">
-            <div className="p-4 text-lg font-bold border-b border-gray-700 flex-shrink-0">
-                <h2 className="text-base font-black uppercase tracking-widest text-gray-500">Event Audio/Text Feed</h2>
+        <div className="w-full h-full flex flex-col bg-black/40 border border-white/5 rounded-3xl overflow-hidden shadow-inner">
+            <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">Live Pulse Monitor</h2>
+                <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
             </div>
             <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide">
                 {messages.map(msg => (
                     <div key={msg.id} className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 p-1" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
+                        <div className="w-7 h-7 rounded-full bg-gray-800 flex-shrink-0 p-1 border border-white/5" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
                         <div>
-                            <p className="font-bold text-[10px] text-red-500 uppercase tracking-tighter">{msg.userName}</p>
-                            <p className="text-sm text-gray-300 break-words">{msg.text}</p>
+                            <p className="font-bold text-[9px] text-red-500 uppercase tracking-tighter">{msg.userName}</p>
+                            <p className="text-xs text-gray-300 break-words leading-snug">{msg.text}</p>
                         </div>
                     </div>
                 ))}
                 <div ref={messagesEndRef} />
             </div>
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-700 flex-shrink-0 bg-black/20">
+            <form onSubmit={handleSendMessage} className="p-3 border-t border-white/5 bg-black/40">
                 <div className="flex items-center gap-2">
-                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Host message..." className="form-input flex-grow !bg-black/40 border-white/10" disabled={!user || isSending} />
-                    <button type="submit" className="submit-btn !px-6 !py-2.5 text-xs" disabled={!user || isSending || !newMessage.trim()}>Send</button>
+                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Send as Admin..." className="bg-transparent border-none text-xs w-full focus:ring-0 placeholder-gray-700" disabled={!user || isSending} />
+                    <button type="submit" className="text-red-500 hover:text-red-400 p-1" disabled={!user || isSending || !newMessage.trim()}>
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+                    </button>
                 </div>
             </form>
         </div>
@@ -134,7 +137,7 @@ const WatchPartyControlRoom: React.FC<{
         if (!video || !partyState) return;
         
         if (partyState.isPlaying && video.paused) {
-            video.play().catch(e => console.warn("Admin autoplay was prevented", e));
+            video.play().catch(e => console.warn("Admin autoplay prevented", e));
         } else if (!partyState.isPlaying && !video.paused) {
             video.pause();
         }
@@ -148,129 +151,106 @@ const WatchPartyControlRoom: React.FC<{
 
     const handleUpdateBackstageKey = () => {
         onSyncState({ backstageKey: backstageKey.trim().toUpperCase() });
-        alert(`Backstage Key updated to: ${backstageKey.trim().toUpperCase()}`);
+        alert(`Backstage Key synced.`);
     };
     
     const status = getPartyStatusText(movie, partyState);
     const canStart = movie.isWatchPartyEnabled && movie.watchPartyStartTime && new Date() >= new Date(movie.watchPartyStartTime) && (partyState?.status === 'waiting' || !partyState);
 
     return (
-        <div className="mb-12 bg-black/60 p-8 rounded-[2.5rem] border border-red-600/30 shadow-[0_50px_100px_rgba(0,0,0,1)]">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
-                <div>
-                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic">Event Control Station</h2>
-                    <div className="flex items-center gap-3 mt-2">
-                        <span className={`px-3 py-1 text-[10px] font-black text-white rounded-full uppercase tracking-widest ${status.color}`}>
-                            {status.text}
-                        </span>
-                        <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Active ID: {movie.key}</p>
+        <div className="mb-12 bg-gray-900/60 p-4 md:p-8 rounded-[3rem] border border-white/5 shadow-2xl relative overflow-hidden">
+            {/* Background Accent */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 blur-[100px] pointer-events-none"></div>
+            
+            {/* TOP COMMAND STRIP */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 bg-white/[0.03] p-4 rounded-2xl border border-white/5">
+                <div className="flex items-center gap-6">
+                    <div>
+                        <p className="text-[9px] font-black uppercase text-gray-500 tracking-[0.2em] mb-1">Active Manifest</p>
+                        <h2 className="text-xl font-black text-white uppercase tracking-tighter italic">{movie.title}</h2>
+                    </div>
+                    <div className={`${status.bg} px-3 py-1 rounded-full border border-white/5`}>
+                         <span className={`text-[9px] font-black uppercase tracking-widest ${status.color}`}>● {status.text}</span>
                     </div>
                 </div>
-                <div className="flex gap-3">
-                    <button onClick={handleShare} className="bg-white/5 hover:bg-white text-gray-400 hover:text-black font-black px-6 py-3 rounded-xl border border-white/10 transition-all uppercase text-[10px] tracking-widest">
-                        {copyStatus === 'copied' ? 'Link Copied!' : 'Share Broadcast Link'}
+                
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                    <button onClick={handleShare} className="flex-1 md:flex-none bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white px-5 py-2.5 rounded-xl border border-blue-500/20 text-[10px] font-black uppercase tracking-widest transition-all">
+                        {copyStatus === 'copied' ? 'Copied Link' : 'Copy Broadcast'}
                     </button>
-                    <a href={shareUrl} target="_blank" className="bg-blue-600 hover:bg-blue-500 text-white font-black px-6 py-3 rounded-xl uppercase text-[10px] tracking-widest shadow-lg">
-                        Go to Live View
+                    <a href={shareUrl} target="_blank" className="flex-1 md:flex-none bg-white text-black px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all text-center">
+                        Launch View
                     </a>
                     {partyState?.status === 'live' && (
-                        <button onClick={onEndParty} className="bg-red-600 hover:bg-red-700 text-white font-black px-6 py-3 rounded-xl uppercase text-[10px] tracking-widest shadow-xl">
-                            End Session
+                        <button onClick={onEndParty} className="bg-red-600 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all">
+                            Kill Session
                         </button>
                     )}
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="relative aspect-video bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
+            {/* DASHBOARD GRID */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                {/* PREVIEW MONITOR */}
+                <div className="lg:col-span-5 space-y-6">
+                    <div className="relative aspect-video bg-black rounded-3xl overflow-hidden border border-white/10 shadow-2xl group">
                         {partyState?.isQALive ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center text-center bg-gray-950 p-8 space-y-6">
-                                <div className="bg-red-600 p-4 rounded-full animate-pulse shadow-[0_0_40px_rgba(239,68,68,0.4)]">
-                                    <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                            <div className="w-full h-full flex flex-col items-center justify-center text-center bg-gray-950 p-6 space-y-4">
+                                <div className="bg-indigo-600 p-3 rounded-full animate-pulse shadow-lg">
+                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                 </div>
-                                <h4 className="text-xl font-black uppercase text-white tracking-tighter italic">Live Q&A Mode Active</h4>
-                                <p className="text-gray-400 text-sm font-medium">Participants are now connecting to the Talkback Terminal.</p>
-                                <button 
-                                    onClick={() => onSyncState({ isQALive: false })}
-                                    className="px-6 py-2 bg-white/5 hover:bg-red-600 text-gray-500 hover:text-white border border-white/10 rounded-xl text-[10px] font-black uppercase transition-all"
-                                >
-                                    Cancel Talkback & Return to Film
-                                </button>
+                                <h4 className="text-sm font-black uppercase text-indigo-400 tracking-widest">Talkback Active</h4>
+                                <button onClick={() => onSyncState({ isQALive: false })} className="text-[8px] font-black uppercase text-gray-500 hover:text-white underline">End Stage Session</button>
                             </div>
                         ) : (
-                            <video
-                                ref={videoRef}
-                                src={movie.fullMovie}
-                                onPlay={handlePlay}
-                                onPause={handlePause}
-                                onSeeked={handleSeeked}
-                                onTimeUpdate={handleTimeUpdate}
-                                controls
-                                className="w-full h-full"
-                            />
+                            <video ref={videoRef} src={movie.fullMovie} onPlay={handlePlay} onPause={handlePause} onSeeked={handleSeeked} onTimeUpdate={handleTimeUpdate} controls className="w-full h-full" />
                         )}
-                        <div className="absolute top-4 right-4 z-10">
-                            <span className="bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-widest">Master Feed</span>
+                        <div className="absolute top-4 left-4 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="bg-black/60 backdrop-blur-md text-white text-[8px] font-black px-2 py-1 rounded uppercase tracking-[0.2em] border border-white/10">Master Feed Monitor</span>
                         </div>
                     </div>
-                    <div className="bg-white/5 p-6 rounded-3xl border border-white/5">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <h3 className="text-xl font-black text-white tracking-tight uppercase mb-1">{movie.title}</h3>
-                                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">
-                                    {movie.watchPartyStartTime ? `Synchronized Start: ${new Date(movie.watchPartyStartTime).toLocaleString()}` : 'No schedule set.'}
-                                </p>
-                            </div>
-                            {partyState?.status === 'live' && !partyState.isQALive && (
-                                <button 
-                                    onClick={() => onSyncState({ isQALive: true, isPlaying: false })}
-                                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-6 py-3 rounded-xl uppercase text-[10px] tracking-widest shadow-xl transition-all"
-                                >
-                                    Initiate Live Q&A
-                                </button>
-                            )}
-                        </div>
+
+                    <div className="flex flex-col gap-4">
                         {canStart && (
-                            <button onClick={onStartParty} className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl uppercase tracking-widest shadow-xl active:scale-95 transition-all">
-                                Establish Live Handshake (Start Party)
+                            <button onClick={onStartParty} className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-4 rounded-2xl uppercase tracking-[0.2em] shadow-xl shadow-green-900/20 active:scale-95 transition-all">
+                                Establish Handshake (Go Live)
+                            </button>
+                        )}
+                        {partyState?.status === 'live' && !partyState.isQALive && (
+                            <button onClick={() => onSyncState({ isQALive: true, isPlaying: false })} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl uppercase tracking-[0.2em] shadow-xl shadow-indigo-900/20 transition-all">
+                                Initiate Live Q&A Stage
                             </button>
                         )}
                     </div>
                 </div>
 
-                <div className="lg:col-span-1 h-full min-h-[400px]">
-                     <EmbeddedChat movieKey={movie.key} user={user} />
+                {/* CHAT PULSE */}
+                <div className="lg:col-span-3 h-[300px] lg:h-auto">
+                    <EmbeddedChat movieKey={movie.key} user={user} />
                 </div>
 
-                <div className="lg:col-span-1 space-y-6">
-                    <div className="bg-indigo-900/10 border border-indigo-500/20 p-6 rounded-[2rem] space-y-6">
-                        <div>
-                            <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-4">Manual Guest Authorization</h4>
-                            <div className="flex gap-2">
-                                <input 
-                                    type="text" 
-                                    value={backstageKey} 
-                                    onChange={e => setBackstageKey(e.target.value)} 
-                                    placeholder="Set Access Key" 
-                                    className="form-input !bg-black/40 border-white/10 uppercase font-mono text-xs"
-                                />
-                                <button onClick={handleUpdateBackstageKey} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase">Sync</button>
+                {/* ACCESS LOGISTICS */}
+                <div className="lg:col-span-4 space-y-6">
+                    <div className="bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] h-full flex flex-col justify-between">
+                        <div className="space-y-6">
+                            <div>
+                                <h4 className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-4">Guest Uplink Protocol</h4>
+                                <div className="flex gap-2">
+                                    <input type="text" value={backstageKey} onChange={e => setBackstageKey(e.target.value)} placeholder="Access Key" className="form-input !bg-black/40 border-white/5 uppercase font-mono text-xs py-2" />
+                                    <button onClick={handleUpdateBackstageKey} className="bg-white/10 hover:bg-white text-gray-500 hover:text-black px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-colors">Sync</button>
+                                </div>
+                                <p className="text-[8px] text-gray-600 mt-3 italic leading-snug">Grant camera permissions to guests without profiles using this one-time session key.</p>
                             </div>
-                            <p className="text-[9px] text-gray-600 mt-2 italic">Give this key to guests who don't have a creator profile to grant them camera access.</p>
-                        </div>
 
-                        <div className="pt-6 border-t border-white/5">
-                            <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-4">Event Vouchers</h4>
-                            <p className="text-xs text-gray-400 leading-relaxed font-medium mb-4">Generate VIP invitations for stakeholders to bypass the paywall during this live event.</p>
-                            <PromoCodeManager 
-                                isAdmin={true} 
-                                defaultItemId={movie.key}
-                                targetFilms={[movie]}
-                            />
+                            <div className="pt-6 border-t border-white/5">
+                                <h4 className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-4">Digital Invitations</h4>
+                                <PromoCodeManager isAdmin={true} defaultItemId={movie.key} targetFilms={[movie]} />
+                            </div>
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     );
@@ -306,25 +286,27 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
     const status = getPartyStatusText(movie, partyState);
 
     return (
-        <tr className="border-b border-gray-700">
-            <td className="p-3 font-medium text-white">{movie.title}</td>
-            <td className="p-3">
-                <span className={`px-2 py-1 text-[10px] font-black text-white rounded-full uppercase tracking-widest ${status.color}`}>
-                    {status.text}
-                </span>
+        <tr className="border-b border-white/5 hover:bg-white/[0.01] transition-colors group">
+            <td className="p-4">
+                <span className="font-bold text-white uppercase text-xs tracking-tight group-hover:text-red-500 transition-colors">{movie.title}</span>
             </td>
-            <td className="p-3">
+            <td className="p-4">
+                <div className={`${status.bg} px-2 py-0.5 rounded-full inline-block border border-white/5`}>
+                     <span className={`text-[8px] font-black uppercase tracking-widest ${status.color}`}>{status.text}</span>
+                </div>
+            </td>
+            <td className="p-4">
                 <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" checked={movie.isWatchPartyEnabled || false} onChange={handleToggle} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-pink-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                    <div className="w-10 h-5 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
                 </label>
             </td>
-            <td className="p-3">
+            <td className="p-4">
                 <input
                     type="datetime-local"
                     value={formatISOForInput(movie.watchPartyStartTime)}
                     onChange={handleTimeChange}
-                    className="form-input !py-1 text-sm bg-black/40 border-white/10"
+                    className="bg-white/5 border border-white/5 rounded-lg py-1 px-3 text-[10px] font-black text-gray-400 focus:outline-none focus:border-red-600"
                     disabled={!movie.isWatchPartyEnabled}
                 />
             </td>
@@ -427,7 +409,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
     };
 
     const handleEndParty = async () => {
-        if (!currentPartyMovie || !window.confirm("This will kill the live session for everyone. Are you sure?")) return;
+        if (!currentPartyMovie || !window.confirm("End session for all users?")) return;
         const db = getDbInstance();
         if (!db) return;
         await db.collection('watch_parties').doc(currentPartyMovie.key).set({ status: 'ended', isPlaying: false, isQALive: false }, { merge: true });
@@ -453,16 +435,16 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
             <div className="bg-[#0f0f0f] p-10 rounded-[2.5rem] border border-white/5 shadow-2xl">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
                     <div>
-                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Event Scheduler</h2>
-                        <p className="text-sm text-gray-500 mt-1">Map films to live synchronized sessions.</p>
+                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">Event Scheduler</h2>
+                        <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest mt-1">Map manifest records to synchronized sessions.</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                         <input
                             type="text"
-                            placeholder="Filter manifest..."
+                            placeholder="Filter Manifest..."
                             value={filter}
                             onChange={e => setFilter(e.target.value)}
-                            className="form-input !bg-white/5 border-white/10 flex-grow text-xs"
+                            className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-gray-400 focus:outline-none focus:border-red-600 transition-all"
                         />
                         <button
                             onClick={handleSaveAll}
@@ -475,13 +457,13 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                 </div>
                 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                        <thead className="text-gray-500 font-black uppercase tracking-widest bg-black/40">
+                    <table className="w-full text-left text-[10px]">
+                        <thead className="text-gray-500 font-black uppercase tracking-widest bg-white/[0.02]">
                             <tr>
-                                <th className="p-4">Manifest Record</th>
-                                <th className="p-4">Logic State</th>
-                                <th className="p-4">Active</th>
-                                <th className="p-4">Start Time (Local)</th>
+                                <th className="p-4">Record Identity</th>
+                                <th className="p-4">Sync Logic</th>
+                                <th className="p-4">Enabled</th>
+                                <th className="p-4">Session Window (Local)</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">

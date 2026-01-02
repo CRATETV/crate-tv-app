@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import BackToTopButton from './BackToTopButton';
@@ -37,6 +36,12 @@ const ClassicsPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    const handleGoHome = (e: React.MouseEvent) => {
+        e.preventDefault();
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
     if (isFestivalLoading) {
         return <LoadingSpinner />;
     }
@@ -60,6 +65,10 @@ const ClassicsPage: React.FC = () => {
                 >
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
                     <div className="relative z-10 max-w-4xl mx-auto text-center px-4 animate-fadeInHeroContent">
+                        <button onClick={handleGoHome} className="mb-6 inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors uppercase font-black text-[10px] tracking-[0.3em] bg-black/40 px-4 py-2 rounded-full border border-white/10">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                            Home
+                        </button>
                         <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.7)' }}>Vintage Visions</h1>
                         <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
                            Journey back to the beginning of film with our curated collection of silent masterpieces and avant-garde classics from the public domain.

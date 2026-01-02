@@ -10,9 +10,26 @@ interface SecurityEvent {
     details?: any;
 }
 
+const HealthCheck: React.FC<{ label: string; status: 'online' | 'error' | 'checking' }> = ({ label, status }) => (
+    <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex items-center justify-between">
+        <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{label}</span>
+        <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : status === 'error' ? 'bg-red-500 animate-pulse' : 'bg-yellow-500 animate-pulse'}`}></span>
+            <span className={`text-[10px] font-bold uppercase ${status === 'online' ? 'text-green-500' : status === 'error' ? 'text-red-500' : 'text-yellow-500'}`}>
+                {status === 'online' ? 'Online' : status === 'error' ? 'Failure' : 'Syncing'}
+            </span>
+        </div>
+    </div>
+);
+
 const SecurityTerminal: React.FC = () => {
     const [events, setEvents] = useState<SecurityEvent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [health, setHealth] = useState<Record<string, 'online' | 'error' | 'checking'>>({
+        s3: 'checking',
+        api: 'checking',
+        db: 'checking'
+    });
 
     useEffect(() => {
         const db = getDbInstance();
@@ -25,7 +42,12 @@ const SecurityTerminal: React.FC = () => {
                 snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as SecurityEvent));
                 setEvents(fetched);
                 setIsLoading(false);
+                setHealth(h => ({ ...h, db: 'online' }));
             });
+            
+        // Quick Health Ping
+        fetch('/api/get-live-data?t=' + Date.now()).then(r => setHealth(h => ({ ...h, s3: r.ok ? 'online' : 'error', api: r.ok ? 'online' : 'error' })));
+
         return () => unsubscribe();
     }, []);
 
@@ -42,29 +64,26 @@ const SecurityTerminal: React.FC = () => {
                     <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Security Perimeter</h2>
                     <p className="text-gray-500 text-xs font-bold uppercase tracking-[0.3em] mt-1">Real-time infrastructure integrity monitoring</p>
                 </div>
-                <div className="flex items-center gap-6">
-                    <div className="bg-green-500/10 border border-green-500/20 px-4 py-2 rounded-xl flex items-center gap-3">
-                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                        <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">Master Firewall Active</span>
-                    </div>
-                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <HealthCheck label="S3 Content Uplink" status={health.s3} />
+                <HealthCheck label="Studio API Gateway" status={health.api} />
+                <HealthCheck label="Cloud DB Integrity" status={health.db} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Financial Epoch</p>
                     <p className="text-xl font-bold text-white">MAY 24, 2025</p>
-                    <p className="text-[9px] text-green-600 font-black uppercase mt-2">Verified Hard Reset</p>
                 </div>
                 <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Payment Guard</p>
-                    <p className="text-xl font-bold text-white">ENFORCED</p>
-                    <p className="text-[9px] text-blue-600 font-black uppercase mt-2">Server-Side Price Validation</p>
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Deterrent Protocol</p>
+                    <p className="text-xl font-bold text-white">GHOST_WATERMARK</p>
                 </div>
                 <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Ad Revenue</p>
-                    <p className="text-xl font-bold text-white">$0.00</p>
-                    <p className="text-[9px] text-red-600 font-black uppercase mt-2">Explicitly Sunsetting</p>
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Ad Engine</p>
+                    <p className="text-xl font-bold text-red-600">SUNSETTING</p>
                 </div>
             </div>
 
@@ -96,16 +115,6 @@ const SecurityTerminal: React.FC = () => {
                                 ))}
                             </tbody>
                         </table>
-                    </div>
-                </div>
-            </div>
-            
-            <div className="bg-blue-600/5 p-6 rounded-2xl border border-blue-500/20">
-                <div className="flex gap-4">
-                    <div className="text-blue-500">🛡️</div>
-                    <div>
-                        <h4 className="text-xs font-black text-white uppercase mb-1">Front-End Integrity Note</h4>
-                        <p className="text-[11px] text-gray-500 leading-relaxed">Crate TV utilizes strict CSRF protection and server-side authorization for all sensitive data mutations. Your financial ledger is anchored to the May 24 epoch to ensure absolute parity with your Square Card records.</p>
                     </div>
                 </div>
             </div>
