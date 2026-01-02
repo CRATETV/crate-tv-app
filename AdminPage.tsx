@@ -39,6 +39,7 @@ const ALL_TABS: Record<string, string> = {
     cratefest: '🎪 Crate Fest',
     vouchers: '🎫 Promo Codes',
     pitch: '📽️ Pitch Deck',
+    partners: '🤝 Partners',
     categories: '📂 Categories',
     festival: '🍿 Film Festival',
     watchParty: '🍿 Watch Party',
@@ -47,6 +48,56 @@ const ALL_TABS: Record<string, string> = {
     security: '🛡️ Security',
     fallback: '💾 Fallback'
 };
+
+const PartnersTab: React.FC = () => (
+    <div className="space-y-10 animate-[fadeIn_0.4s_ease-out]">
+        <div className="bg-gray-900 border border-white/5 p-10 rounded-[3rem] shadow-2xl">
+            <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-6">Marketplace Connectivity</h2>
+            <p className="text-gray-400 mb-10 max-w-2xl">Use these technical details when applying to be a "Buyer" or "Channel Partner" on major film aggregators.</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="p-8 bg-white/5 rounded-3xl border border-white/5 space-y-4">
+                    <h3 className="text-xl font-bold text-white uppercase tracking-tight">Filmhub</h3>
+                    <p className="text-sm text-gray-500">Apply as a "Streaming Channel". Once approved, filmmakers can opt-in to Crate TV via their dashboard.</p>
+                    <div className="pt-4 border-t border-white/5">
+                        <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">Status</p>
+                        <p className="text-sm font-bold text-gray-300">Ready for Application</p>
+                    </div>
+                </div>
+                <div className="p-8 bg-white/5 rounded-3xl border border-white/5 space-y-4">
+                    <h3 className="text-xl font-bold text-white uppercase tracking-tight">Bitmax / Quiver</h3>
+                    <p className="text-sm text-gray-500">Traditional delivery partners. Provide them with our Roku SDK Spec to receive broadcast-ready masters.</p>
+                    <div className="pt-4 border-t border-white/5">
+                        <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">Status</p>
+                        <p className="text-sm font-bold text-gray-300">Spec Active</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div className="mt-12 bg-black/40 p-8 rounded-[2rem] border border-white/5">
+                <h3 className="text-lg font-black text-white uppercase tracking-tighter mb-4">Crate TV Channel Spec</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 font-mono text-[11px]">
+                    <div className="space-y-1">
+                        <p className="text-gray-600 uppercase font-black">Video Bitrate</p>
+                        <p className="text-gray-300">10Mbps+ Recommended</p>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-gray-600 uppercase font-black">Format</p>
+                        <p className="text-gray-300">MP4 / H.264 (AAC Audio)</p>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-gray-600 uppercase font-black">Native Resolution</p>
+                        <p className="text-gray-300">1080p / 4K Ready</p>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-gray-600 uppercase font-black">Feed Endpoint</p>
+                        <p className="text-gray-300">/api/roku-feed</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+);
 
 const AdminPage: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -233,6 +284,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'cratefest' && <CrateFestEditor config={crateFestConfig!} allMovies={movies} pipeline={pipeline} onSave={(newConfig) => handleSaveData('settings', { crateFestConfig: newConfig })} isSaving={isSaving} />}
                     {activeTab === 'vouchers' && <PromoCodeManager isAdmin={true} targetFilms={Object.values(movies)} targetBlocks={[]} />}
                     {activeTab === 'pitch' && <PitchDeckManager onSave={(settings) => handleSaveData('settings', settings)} isSaving={isSaving} />}
+                    {activeTab === 'partners' && <PartnersTab />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={(d) => setFestivalData(d)} onConfigChange={(c) => setFestivalConfig(c)} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}
                     {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}

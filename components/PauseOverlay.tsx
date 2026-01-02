@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Movie, Actor } from '../types';
 
@@ -11,7 +10,7 @@ interface ActionButtonProps {
 const ActionButton: React.FC<ActionButtonProps> = ({ onClick, title, children }) => (
     <button
         type="button"
-        onClick={onClick}
+        onClick={(e) => { e.stopPropagation(); onClick(e); }}
         title={title}
         className="flex flex-col items-center text-gray-300 hover:text-white transition-colors group"
     >
@@ -23,7 +22,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({ onClick, title, children })
 );
 
 const MobileActionButton: React.FC<{ onClick: (e: React.MouseEvent) => void; title: string; children: React.ReactNode; }> = ({ onClick, title, children }) => (
-    <button type="button" onClick={onClick} title={title} className="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors">
+    <button type="button" onClick={(e) => { e.stopPropagation(); onClick(e); }} title={title} className="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors">
         {children}
     </button>
 );
@@ -85,15 +84,14 @@ const PauseOverlay: React.FC<PauseOverlayProps> = ({
     onHome
 }) => {
     const isMobile = useMemo(() => typeof window !== 'undefined' && window.matchMedia("(max-width: 768px)").matches, []);
-    const stopPropagation = (e: React.MouseEvent) => e.stopPropagation();
-
+    
     return (
         <div 
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col justify-between items-center z-40 p-4 animate-controls-fade-in"
-            onClick={onResume}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col justify-between items-center z-[50] p-4 animate-controls-fade-in"
+            onClick={(e) => { e.stopPropagation(); onResume(); }}
         >
             {/* Top Section: Navigation and Info */}
-            <div className="w-full flex justify-between items-start" onClick={stopPropagation}>
+            <div className="w-full flex justify-between items-start" onClick={(e) => e.stopPropagation()}>
                  <button 
                     onClick={onHome} 
                     className="flex items-center gap-2 text-white bg-black/60 hover:bg-black/80 px-4 py-2 rounded-full backdrop-blur-md transition-colors border border-white/20 z-50 shadow-xl"
@@ -112,14 +110,14 @@ const PauseOverlay: React.FC<PauseOverlayProps> = ({
             </div>
 
             {/* Center Section: Playback Controls */}
-            <div className="flex flex-col items-center justify-center w-full" onClick={stopPropagation}>
+            <div className="flex flex-col items-center justify-center w-full" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-center gap-8 md:gap-16">
                     <button onClick={onRewind} className="p-3 hover:scale-110 transition-transform text-white/80 hover:text-white" aria-label="Rewind 10 seconds">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 md:h-14 md:w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
                     </button>
 
                     <button onClick={onResume} className="transform hover:scale-110 transition-transform" aria-label="Resume playback">
-                        <div className="bg-white/10 hover:bg-white/20 rounded-full p-5 md:p-8 border-2 border-white/30 shadow-2xl">
+                        <div className="bg-white/20 hover:bg-white/30 rounded-full p-5 md:p-8 border-2 border-white/30 shadow-2xl">
                            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 md:h-20 md:w-20 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                         </div>
                     </button>
@@ -131,11 +129,11 @@ const PauseOverlay: React.FC<PauseOverlayProps> = ({
             </div>
             
             {/* Bottom Section: Interaction and Cast */}
-            <div className="w-full flex flex-col items-center gap-6" onClick={stopPropagation}>
+            <div className="w-full flex flex-col items-center gap-6" onClick={(e) => e.stopPropagation()}>
                 
                 {/* Cast Bar (X-Ray Feature) */}
                 {movie.cast && movie.cast.length > 0 && (
-                    <div className="w-full max-w-4xl animate-[fadeIn_0.6s_ease-out]" onClick={stopPropagation}>
+                    <div className="w-full max-w-4xl animate-[fadeIn_0.6s_ease-out]" onClick={(e) => e.stopPropagation()}>
                         <p className="text-[10px] uppercase tracking-widest font-black text-gray-500 mb-3 ml-4">Featured Cast</p>
                         <div className="flex items-start gap-6 overflow-x-auto scrollbar-hide px-4 pb-2">
                             {movie.cast.map((actor, idx) => (

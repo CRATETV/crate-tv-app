@@ -10,9 +10,9 @@ interface CommunicationsTerminalProps {
 
 const TEMPLATES = [
     { id: 'festival_launch', label: '🎡 Festival Launch', prompt: 'Announcing the launch of Crate Fest! Focus on excitement, exclusive blocks, and the value of the all-access pass.' },
+    { id: 'marketplace_outreach', label: '🤝 Partner Outreach', prompt: 'Inviting a filmmaker from a marketplace like Filmhub. Highlight our 70/30 revenue split, our Roku presence, and the fact that we are filmmaker-owned. Be professional and elite.' },
     { id: 'daily_reminder', label: '⏰ Daily Schedule', prompt: 'Sending a daily lineup update. Highlight the specific films playing today and encourage users to join the watch parties.' },
-    { id: 'filmmaker_spotlight', label: '🎬 Creator Shoutout', prompt: 'Highlighting our independent filmmakers. Focus on the community aspect and the 70/30 support model.' },
-    { id: 'custom_promo', label: '🎫 Voucher Release', prompt: 'Announcing a special discount or VIP access code for the community.' }
+    { id: 'filmmaker_spotlight', label: '🎬 Creator Shoutout', prompt: 'Highlighting our independent filmmakers. Focus on the community aspect and the 70/30 support model.' }
 ];
 
 const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analytics, festivalConfig, movies }) => {
@@ -169,7 +169,7 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
                         <button 
                             type="submit" 
                             disabled={status === 'sending' || status === 'drafting' || !subject || !htmlBody}
-                            className="w-full bg-red-600 hover:bg-red-500 text-white font-black py-6 rounded-2xl uppercase tracking-[0.3em] text-sm shadow-2xl shadow-red-900/20 transition-all active:scale-95 disabled:opacity-30"
+                            className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-6 rounded-2xl uppercase tracking-[0.3em] text-sm shadow-2xl shadow-red-900/20 transition-all active:scale-95 disabled:opacity-30"
                         >
                             {status === 'sending' ? 'Dispatching Transmission...' : 'Initialize Global Broadcast'}
                         </button>

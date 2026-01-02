@@ -94,9 +94,9 @@
       ::-webkit-scrollbar { display: none; }
       * { -ms-overflow-style: none; scrollbar-width: none; }
 
-      /* Video Guard Specifics */
+      /* Video Guard Specifics - Fixed to allow native interaction */
       video {
-        pointer-events: none;
+        pointer-events: auto;
       }
       .secure-video-container {
         position: relative;

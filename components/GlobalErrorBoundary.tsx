@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children?: ReactNode;
@@ -11,9 +11,9 @@ interface State {
 /**
  * Global Error Boundary component to catch rendering errors and show a fallback UI.
  */
-// Fix: Explicitly extend React.Component and declare state as a class property to resolve TypeScript errors regarding missing 'state' and 'props'.
-class GlobalErrorBoundary extends React.Component<Props, State> {
-  // Fix: Move state initialization to a class property instead of the constructor to ensure 'state' is recognized as a member.
+// Fix: Inheriting directly from 'Component' and adding it to named imports ensures that TypeScript correctly identifies 'props' as an inherited property from the base class.
+class GlobalErrorBoundary extends Component<Props, State> {
+  // Fix: Explicitly declaring the state property as a class member with the State interface.
   public state: State = {
     hasError: false
   };
@@ -27,7 +27,7 @@ class GlobalErrorBoundary extends React.Component<Props, State> {
   }
 
   public render() {
-    // Fix: Access typed props and state inherited from React.Component instance members.
+    // Fix: Accessing 'children' from 'this.props', which is correctly inherited from the base React.Component class.
     const { children } = this.props;
     
     if (this.state.hasError) {

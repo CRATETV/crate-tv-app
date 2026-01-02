@@ -24,11 +24,11 @@ const getEmbedUrl = (url: string): string | null => {
     return null;
 };
 
-// Security Component: The Traceable Identity Overlay
-const SecureWatermark: React.FC<{ email: string }> = ({ email }) => (
-    <div className="absolute inset-0 pointer-events-none z-[45] overflow-hidden opacity-[0.08] select-none">
-        <div className="dynamic-watermark absolute whitespace-nowrap bg-white/10 px-2 py-1 rounded text-[10px] font-black text-white uppercase tracking-widest">
-            AUTHENTICATED EXHIBITION // {email.toUpperCase()} // 0X{Math.random().toString(16).slice(2, 8).toUpperCase()}
+// Security Component: The reactive watermark
+const SecureWatermark: React.FC<{ email: string; isTriggered: boolean }> = ({ email, isTriggered }) => (
+    <div className={`absolute inset-0 pointer-events-none z-[45] overflow-hidden select-none transition-opacity duration-1000 ${isTriggered ? 'opacity-20' : 'opacity-0'}`}>
+        <div className="dynamic-watermark absolute whitespace-nowrap bg-white/20 px-3 py-1 rounded-full text-[10px] font-black text-white uppercase tracking-[0.3em] border border-white/10 backdrop-blur-md shadow-2xl">
+            SECURITY TRACE // {email.toUpperCase()} // AUTH_ENFORCED
         </div>
     </div>
 );
@@ -106,7 +106,6 @@ const LiveTalkbackTerminal: React.FC<{
                 <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-12">Moderating: Crate TV Studio // Guest: {movie.director}</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                    {/* The Panel Grid */}
                     <div className="aspect-video bg-gray-900 rounded-3xl border border-white/10 relative overflow-hidden flex items-center justify-center group">
                         <div className="absolute top-4 left-4 z-20 bg-black/60 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest text-red-500 border border-red-500/30">Host // Studio</div>
                         <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-24 opacity-10 group-hover:opacity-20 transition-opacity" alt="" />
@@ -130,7 +129,6 @@ const LiveTalkbackTerminal: React.FC<{
                     </div>
                 </div>
 
-                {/* Speaker Control Area */}
                 {isSpeaker ? (
                     !cameraActive && (
                         <button 
@@ -272,18 +270,49 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [isVideoReady, setIsVideoReady] = useState(false);
     const [manualSpeakerKey, setManualSpeakerKey] = useState<string | null>(null);
+    const [isSecurityTriggered, setIsSecurityTriggered] = useState(false);
+    const securityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
 
     const hasAccess = !movie?.isWatchPartyPaid || unlockedWatchPartyKeys.has(movieKey);
     const embedUrl = useMemo(() => movie ? getEmbedUrl(movie.fullMovie) : null, [movie]);
 
-    // SPEAKER VALIDATION: Check if current user is the official filmmaker OR has used a backstage key
-    const isSpeakerCandidate = useMemo(() => {
-        // 1. Check manual authorization
-        if (manualSpeakerKey && manualSpeakerKey === partyState?.backstageKey) return true;
+    // SECURITY: Detect recording behavior
+    useEffect(() => {
+        const triggerSecurity = () => {
+            setIsSecurityTriggered(true);
+            if (securityTimeoutRef.current) clearTimeout(securityTimeoutRef.current);
+            securityTimeoutRef.current = setTimeout(() => setIsSecurityTriggered(false), 8000);
+        };
 
-        // 2. Check name-matching authorization
+        const handleKeydown = (e: KeyboardEvent) => {
+            const blockedKeys = ['PrintScreen', 'F12', 'F11'];
+            const blockedCombos = (e.ctrlKey || e.metaKey) && ['s', 'u', 'i', 'j', 'c'].includes(e.key.toLowerCase());
+            if (blockedKeys.includes(e.key) || blockedCombos) {
+                triggerSecurity();
+            }
+        };
+
+        const handleFocusOut = () => triggerSecurity();
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') triggerSecurity();
+        };
+
+        window.addEventListener('keydown', handleKeydown, true);
+        window.addEventListener('blur', handleFocusOut);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        
+        return () => {
+            window.removeEventListener('keydown', handleKeydown, true);
+            window.removeEventListener('blur', handleFocusOut);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            if (securityTimeoutRef.current) clearTimeout(securityTimeoutRef.current);
+        };
+    }, []);
+
+    const isSpeakerCandidate = useMemo(() => {
+        if (manualSpeakerKey && manualSpeakerKey === partyState?.backstageKey) return true;
         if (!user?.name || !movie) return false;
         const normalized = user.name.toLowerCase().trim();
         const directors = movie.director.toLowerCase().split(',').map(d => d.trim());
@@ -408,9 +437,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             ))}
                         </div>
 
-                        {user?.email && <SecureWatermark email={user.email} />}
+                        {user?.email && <SecureWatermark email={user.email} isTriggered={isSecurityTriggered} />}
                         
-                        {/* THE SWITCH: Check if Q&A is live */}
                         {partyState?.isQALive ? (
                             <LiveTalkbackTerminal 
                                 movie={movie} 

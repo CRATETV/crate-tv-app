@@ -29,7 +29,7 @@ const getEmbedUrl = (url: string): string | null => {
     return null;
 };
 
-// Security Component: The "Ghost" Identity Overlay
+// Security Component: The reactive watermark
 const SecureWatermark: React.FC<{ email: string; isTriggered: boolean }> = ({ email, isTriggered }) => (
     <div className={`absolute inset-0 pointer-events-none z-[45] overflow-hidden select-none transition-opacity duration-1000 ${isTriggered ? 'opacity-20' : 'opacity-0'}`}>
         <div className="dynamic-watermark absolute whitespace-nowrap bg-white/20 px-3 py-1 rounded-full text-[10px] font-black text-white uppercase tracking-[0.3em] border border-white/10 backdrop-blur-md shadow-2xl">
@@ -50,7 +50,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isSecurityTriggered, setIsSecurityTriggered] = useState(false);
-  const [videoError, setVideoError] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -74,6 +73,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         }
     };
 
+    const handleFocusOut = () => {
+        if (playerMode === 'full') triggerSecurity();
+    };
+
     const handleVisibilityChange = () => {
         if (document.visibilityState === 'hidden' && playerMode === 'full') {
             triggerSecurity();
@@ -81,10 +84,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     };
 
     window.addEventListener('keydown', handleKeydown, true);
+    window.addEventListener('blur', handleFocusOut);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
         window.removeEventListener('keydown', handleKeydown, true);
+        window.removeEventListener('blur', handleFocusOut);
         document.removeEventListener('visibilitychange', handleVisibilityChange);
         if (securityTimeoutRef.current) clearTimeout(securityTimeoutRef.current);
     };
@@ -129,9 +134,21 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 body: JSON.stringify({ movieKey: movie.key }),
             }).catch(e => {});
         }
-        videoRef.current.play().catch(e => {});
+        videoRef.current.play().catch(e => {
+            console.error("Autoplay/Play failed:", e);
+        });
     }
   }, [movie, getUserIdToken]);
+
+  const toggleManualPause = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!videoRef.current) return;
+      if (videoRef.current.paused) {
+          videoRef.current.play();
+      } else {
+          videoRef.current.pause();
+      }
+  };
 
   useEffect(() => {
       if (playerMode === 'full' && videoRef.current && hasAccess) playContent();
@@ -149,20 +166,23 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         {playerMode !== 'full' && <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} />}
         
         <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
-            <div className={`relative w-full ${playerMode === 'full' ? 'h-screen' : 'aspect-video'} bg-black shadow-2xl overflow-hidden secure-video-container`} onContextMenu={(e) => e.preventDefault()}>
+            <div 
+                className={`relative w-full ${playerMode === 'full' ? 'h-screen' : 'aspect-video'} bg-black shadow-2xl overflow-hidden secure-video-container`} 
+                onContextMenu={(e) => e.preventDefault()}
+            >
                 {playerMode === 'full' ? (
                     hasAccess ? (
                         embedUrl ? (
                             <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen></iframe>
                         ) : (
-                            <div className="relative w-full h-full">
+                            <div className="relative w-full h-full" onClick={toggleManualPause}>
                                 {user?.email && <SecureWatermark email={user.email} isTriggered={isSecurityTriggered} />}
 
                                 <video 
                                     ref={videoRef} 
                                     src={movie.fullMovie} 
-                                    className="w-full h-full object-contain" 
-                                    controls={!isPaused} 
+                                    className="w-full h-full object-contain block opacity-100" 
+                                    controls={true} 
                                     playsInline 
                                     autoPlay 
                                     onPause={() => setIsPaused(true)} 
