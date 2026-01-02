@@ -1,4 +1,3 @@
-
 import React, { ErrorInfo, ReactNode } from 'react';
 
 interface Props {
@@ -13,6 +12,9 @@ interface State {
  * Global Error Boundary component to catch rendering errors and show a fallback UI.
  */
 class GlobalErrorBoundary extends React.Component<Props, State> {
+  // FIX: Explicitly declared props member to resolve the TypeScript error where the inherited 'props' from React.Component was not being recognized on the class instance.
+  public props: Props;
+
   // Initialize state with default values using property initializer
   public state: State = {
     hasError: false

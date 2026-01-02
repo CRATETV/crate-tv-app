@@ -216,7 +216,8 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
         return { used: usedCount, max: FILMMAKER_QUOTA };
     }, [codes, selectedItemId, isAdmin]);
 
-    const isQuotaExceeded = quotaStatus && quotaStatus.used >= quotaStatus.max;
+    // FIX: Explicitly cast to boolean to avoid 'null' type error in JSX attributes
+    const isQuotaExceeded = !!(quotaStatus && quotaStatus.used >= quotaStatus.max);
 
     const handleCreateCode = async (e: React.FormEvent) => {
         e.preventDefault();
