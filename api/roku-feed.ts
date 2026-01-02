@@ -1,7 +1,3 @@
-
-// This is a Vercel Serverless Function that generates a feed for the custom Roku channel.
-// It will be accessible at the path /api/roku-feed
-
 import { getApiData } from './_lib/data.js';
 import { Movie, Category, User } from '../types.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -38,7 +34,7 @@ const getVisibleMovies = (moviesData: Record<string, any>): Record<string, Movie
 
     Object.values(moviesData).forEach((data: any) => {
       const movie = data as Movie;
-      if (!movie) return; 
+      if (!movie || movie.isUnlisted) return; 
       const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
       const isReleased = !releaseDate || releaseDate <= now;
       if (isReleased) {
@@ -48,8 +44,7 @@ const getVisibleMovies = (moviesData: Record<string, any>): Record<string, Movie
     return visibleMovies;
 };
 
-const formatMovieForRoku = (movie: Movie, movieGenreMap: Map<string, string[]>, user: User | null): RokuMovie | null => {
-    if (!movie) return null;
+const formatMovieForRoku = (movie: Movie, movieGenreMap: Map<string, string[]>, user: User | null): RokuMovie => {
     return {
         id: movie.key || '',
         title: movie.title || 'Untitled Film',
@@ -110,54 +105,40 @@ export async function GET(request: Request) {
     
     const finalCategories: RokuCategory[] = [];
 
-    // 1. HOLIDAY MODE: CRATEMAS (Highest Priority if active)
-    if (settings.isHolidayModeActive) {
-        const cratemasMovies = (Object.values(visibleMovies) as Movie[])
-            .filter((m: Movie) => m.isCratemas)
-            .map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user));
-        
-        if (cratemasMovies.length > 0) {
-            finalCategories.push({
-                title: settings.holidayName || "Holiday Collection",
-                children: cratemasMovies,
-                itemComponentName: "MoviePoster"
-            });
-        }
-    }
-
-    // 2. TOP 10 RANKINGS (Ranked Component)
+    // 1. TOP 10 RANKINGS (The signature "Web App" feature)
     const topTenMovies = (Object.values(visibleMovies) as Movie[])
         .sort((a, b) => (b.likes || 0) - (a.likes || 0))
         .slice(0, 10);
 
     if (topTenMovies.length > 0) {
         finalCategories.push({
-            title: "Top 10 on Crate TV Today",
-            children: topTenMovies.map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user)),
-            itemComponentName: "RankedMoviePoster"
+            title: "Top 10 Today",
+            children: topTenMovies.map((m: Movie) => ({
+                ...formatMovieForRoku(m, movieGenreMap, user),
+                itemComponentName: "RankedMoviePoster"
+            })),
         });
     }
 
-    // 3. MY LIST (User Specific)
-    if (user && user.watchlist && user.watchlist.length > 0) {
-        const myList = user.watchlist
-            .map(key => visibleMovies[key])
-            .filter((m): m is Movie => !!m)
-            .map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user))
-            .reverse();
+    // 2. HOLIDAY MODE (If active)
+    if (settings.isHolidayModeActive) {
+        const holidayMovies = (Object.values(visibleMovies) as Movie[])
+            .filter((m: Movie) => m.isCratemas)
+            .map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user));
         
-        finalCategories.push({
-            title: "My List",
-            children: myList,
-            itemComponentName: "MoviePoster"
-        });
+        if (holidayMovies.length > 0) {
+            finalCategories.push({
+                title: settings.holidayName || "Holiday Collection",
+                children: holidayMovies,
+            });
+        }
     }
 
-    // 4. GENERAL CATEGORIES
-    const categoryOrder = ["newReleases", "awardWinners", "comedy", "drama", "documentary"];
-    categoryOrder.forEach(key => {
+    // 3. CATALOG CATEGORIES
+    const catalogOrder = ["newReleases", "awardWinners", "comedy", "drama", "documentary"];
+    catalogOrder.forEach(key => {
         const cat = categoriesData[key];
-        if (cat && Array.isArray(cat.movieKeys)) {
+        if (cat && cat.movieKeys?.length > 0) {
             const children = cat.movieKeys
                 .map((k: string) => visibleMovies[k])
                 .filter((m: Movie | undefined): m is Movie => !!m)
@@ -167,26 +148,22 @@ export async function GET(request: Request) {
                 finalCategories.push({
                     title: cat.title,
                     children,
-                    itemComponentName: "MoviePoster"
                 });
             }
         }
     });
 
-    // 5. ACCOUNT SECTION
-    finalCategories.push({
-        title: "My Account",
-        children: [{
-            id: user ? "account_linked" : "link_account_action",
-            title: user ? "Account Connected" : "Connect Account",
-            description: user ? `Linked to ${user.email}` : "Sync your Watchlist and Likes from your phone to your TV.",
-            SDPosterUrl: "pkg:/images/logo_hd.png",
-            HDPosterUrl: "pkg:/images/logo_hd.png",
-            heroImage: "", streamUrl: "", director: "", actors: [], genres: [], rating: "", duration: "",
-            isLiked: false, isOnWatchlist: false, isWatched: false
-        }],
-        itemComponentName: "ActionItem"
-    });
+    // 4. VINTAGE VISIONS
+    const vintageCat = categoriesData["publicDomainIndie"];
+    if (vintageCat && vintageCat.movieKeys?.length > 0) {
+        finalCategories.push({
+            title: "Vintage Visions",
+            children: vintageCat.movieKeys
+                .map((k: string) => visibleMovies[k])
+                .filter((m: Movie | undefined): m is Movie => !!m)
+                .map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user))
+        });
+    }
 
     return new Response(JSON.stringify({
         heroItems: (categoriesData['featured']?.movieKeys || [])
@@ -199,10 +176,10 @@ export async function GET(request: Request) {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 's-maxage=60, stale-while-revalidate'
+        'Cache-Control': 's-maxage=60'
       },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Failed to generate feed.' }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Feed generation failed.' }), { status: 500 });
   }
 }

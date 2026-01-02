@@ -8,70 +8,36 @@
         <field id="focusPercent" type="float" onChange="onFocusChange" />
         <field id="rowItemIndex" type="integer" />
     </interface>
-    <children>
-        <Rectangle 
-            id="focusRing"
-            color="0xFFFFFFFF" 
-            width="462" 
-            height="265"
-            translation="[-6, -6]"
-            visible="false"
-        />
-        <Group id="contentGroup">
-            <!-- Background and gradient -->
-            <Rectangle id="background" color="0x000000FF" width="450" height="253" />
-            <Rectangle
-                id="gradient"
-                color="0x000000FF"
-                endColor="0x00000000"
-                gradient="linear"
-                gradientDirection="left-right"
-                width="300"
-                height="253"
-            />
 
-            <!-- Large rank number on the left -->
+    <children>
+        <Group id="contentGroup">
             <Label
                 id="rankLabel"
                 horizAlign="left"
                 vertAlign="center"
-                height="253"
+                height="360"
                 width="200"
-                translation="[10, 0]"
+                color="0x222222FF"
             >
                 <font role="sans" size="180" weight="bold" />
             </Label>
             
-            <!-- Poster snippet on the right -->
             <Poster
                 id="tilePoster"
-                width="250"
-                height="253"
-                translation="[200, 0]"
+                width="240"
+                height="360"
+                translation="[100, 0]"
             />
-            
-            <!-- Film title and "Start Watching" text -->
-            <Group translation="[15, 180]">
-                <Label
-                    text="Start Watching"
-                    color="0xAAAAAAFF"
-                    font="font:ExtraSmallSystemFont"
-                />
-                <Label
-                    id="titleLabel"
-                    width="180"
-                    translation="[0, 20]"
-                    font="font:SmallBoldSystemFont"
-                />
-            </Group>
+
+            <Rectangle 
+                id="focusRing"
+                color="0xEF4444FF"
+                width="252"
+                height="372"
+                translation="[94, -6]"
+                visible="false"
+            />
         </Group>
-
-        <Animation 
-            id="scaleAnimation"
-            duration="0.2"
-            easeFunction="linear"
-        />
-
     </children>
 
 </component>

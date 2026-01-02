@@ -63,20 +63,35 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
     const [errorMessage, setErrorMessage] = useState('');
     const [customAmount, setCustomAmount] = useState('10.00');
     const [email, setEmail] = useState(user?.email || '');
+    
+    // Promo Code State
+    const [promoCode, setPromoCode] = useState('');
+    const [isPromoValidating, setIsPromoValidating] = useState(false);
+    const [appliedPromo, setAppliedPromo] = useState<{ code: string, isFree: boolean, finalPriceInCents: number } | null>(null);
 
     const cardInstance = useRef<any>(null);
 
-    const paymentDetails = useMemo(() => {
-        const amount = parseFloat(customAmount) || 0;
+    const basePrice = useMemo(() => {
         switch (paymentType) {
-            case 'crateFestPass': return { amount: priceOverride || 15.00, title: 'Crate Fest Pass', description: 'Unlock the pop-up festival collection.', email };
-            case 'pass': return { amount: 50.00, title: 'All-Access Festival Pass', description: 'Unlock every film block for the entire festival.', email };
-            case 'block': return { amount: 10.00, title: `${block?.title}`, description: `Access all films in this block.`, email };
-            case 'movie': return { amount: movie?.salePrice || 5.00, title: `${movie?.title}`, description: '24-hour access to stream this film.', email };
-            case 'donation': return { amount, title: `Support: ${movie?.title}`, description: `Directed by ${movie?.director}`, email };
-            default: return { amount: 0, title: 'Purchase', description: '', email };
+            case 'crateFestPass': return priceOverride || 15.00;
+            case 'pass': return 50.00;
+            case 'block': return 10.00;
+            case 'movie': return movie?.salePrice || 5.00;
+            case 'watchPartyTicket': return movie?.watchPartyPrice || 5.00;
+            case 'donation': return parseFloat(customAmount) || 0;
+            default: return 0;
         }
-    }, [paymentType, movie, block, customAmount, email, priceOverride]);
+    }, [paymentType, movie, customAmount, priceOverride]);
+
+    const finalAmount = appliedPromo ? appliedPromo.finalPriceInCents / 100 : basePrice;
+
+    const paymentDetails = useMemo(() => {
+        return { 
+            amount: finalAmount, 
+            title: block?.title || movie?.title || (paymentType === 'crateFestPass' ? 'Crate Fest Pass' : 'Crate TV Access'), 
+            email 
+        };
+    }, [finalAmount, block, movie, paymentType, email]);
 
     useEffect(() => {
         let isMounted = true;
@@ -106,20 +121,62 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
         return () => { isMounted = false; if (cardInstance.current) cardInstance.current.destroy(); };
     }, []);
 
+    const handleApplyPromo = async () => {
+        if (!promoCode.trim()) return;
+        setIsPromoValidating(true);
+        setErrorMessage('');
+        try {
+            const res = await fetch('/api/validate-promo-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    code: promoCode, 
+                    itemId: block?.id || movie?.key,
+                    originalPriceInCents: Math.round(basePrice * 100)
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Voucher invalid.");
+            setAppliedPromo({
+                code: promoCode.toUpperCase().trim(),
+                isFree: data.isFree,
+                finalPriceInCents: data.finalPriceInCents
+            });
+        } catch (err) {
+            setErrorMessage(err instanceof Error ? err.message : 'Invalid Voucher');
+        } finally {
+            setIsPromoValidating(false);
+        }
+    };
+
     const handlePayment = async () => {
-        if (!cardInstance.current) return;
         setStatus('processing');
         try {
-            const result = await cardInstance.current.tokenize();
-            if (result.status !== 'OK') throw new Error(result.errors?.[0]?.message);
+            let token = 'PROMO_VOUCHER';
+            
+            if (!appliedPromo?.isFree) {
+                if (!cardInstance.current) throw new Error("Payment node disconnected.");
+                const result = await cardInstance.current.tokenize();
+                if (result.status !== 'OK') throw new Error(result.errors?.[0]?.message);
+                token = result.token;
+            }
+
             const response = await fetch('/api/process-square-payment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sourceId: result.token, paymentType, amount: paymentDetails.amount, itemId: paymentType === 'block' ? block?.id : movie?.key, movieTitle: movie?.title, email }),
+                body: JSON.stringify({ 
+                    sourceId: token, 
+                    paymentType, 
+                    amount: finalAmount, 
+                    itemId: block?.id || movie?.key, 
+                    movieTitle: movie?.title, 
+                    email,
+                    promoCode: appliedPromo?.code 
+                }),
             });
             if (!response.ok) throw new Error('Transaction rejected.');
             setStatus('success');
-            setTimeout(() => onPaymentSuccess({ paymentType, itemId: paymentType === 'block' ? block?.id : movie?.key, amount: paymentDetails.amount, email }), 2500);
+            setTimeout(() => onPaymentSuccess({ paymentType, itemId: block?.id || movie?.key, amount: finalAmount, email }), 2500);
         } catch (error) {
             setErrorMessage(error instanceof Error ? error.message : 'Unknown Error');
             setStatus('error');
@@ -136,25 +193,55 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                             <div className="text-center">
                                 <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/30 px-4 py-1 rounded-full mb-4">
                                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                    <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">Transaction Authenticated</span>
+                                    <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">Access Authenticated</span>
                                 </div>
                                 <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Security Cleared</h2>
                             </div>
                             <DigitalTicket details={paymentDetails} type={paymentType} />
-                            <p className="text-center text-[10px] font-bold text-gray-600 uppercase tracking-widest animate-pulse">Syncing permissions with your profile...</p>
+                            <p className="text-center text-[10px] font-bold text-gray-600 uppercase tracking-widest animate-pulse">Synchronizing cloud permissions...</p>
                         </div>
                     ) : (
                         <>
                             <div className="flex justify-between items-start mb-6">
                                 <div>
-                                    <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">{paymentDetails.title}</h2>
-                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-2">Secure Payment Terminal</p>
+                                    <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none line-clamp-1">{paymentDetails.title}</h2>
+                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-2">Secure Access Terminal</p>
                                 </div>
-                                <span className="text-xl font-black text-green-500">${paymentDetails.amount.toFixed(2)}</span>
+                                <span className={`text-xl font-black ${finalAmount === 0 ? 'text-green-500' : 'text-white'}`}>
+                                    {finalAmount === 0 ? 'FREE' : `$${finalAmount.toFixed(2)}`}
+                                </span>
                             </div>
 
                             <div className="space-y-6">
-                                <div id="card-container" className="bg-white/5 border border-white/10 rounded-2xl p-4 min-h-[120px]"></div>
+                                {/* Voucher Entry */}
+                                {!appliedPromo ? (
+                                    <div className="flex gap-2">
+                                        <input 
+                                            type="text" 
+                                            value={promoCode} 
+                                            onChange={e => setPromoCode(e.target.value)} 
+                                            placeholder="Voucher/Promo Code" 
+                                            className="form-input !bg-white/5 !border-white/10 !py-3 text-xs uppercase tracking-widest font-black" 
+                                        />
+                                        <button 
+                                            onClick={handleApplyPromo}
+                                            disabled={isPromoValidating || !promoCode.trim()}
+                                            className="bg-white/10 hover:bg-white/20 text-white px-4 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-30 transition-all"
+                                        >
+                                            {isPromoValidating ? '...' : 'Apply'}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="bg-green-600/10 border border-green-500/30 p-3 rounded-xl flex justify-between items-center animate-[fadeIn_0.3s_ease-out]">
+                                        <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">✓ Voucher "{appliedPromo.code}" Active</p>
+                                        <button onClick={() => setAppliedPromo(null)} className="text-[8px] font-black text-red-500 uppercase">Remove</button>
+                                    </div>
+                                )}
+
+                                {!appliedPromo?.isFree && (
+                                    <div id="card-container" className="bg-white/5 border border-white/10 rounded-2xl p-4 min-h-[120px]"></div>
+                                )}
+                                
                                 <div>
                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Delivery Address</label>
                                     <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="form-input !bg-white/5 !border-white/10 !py-3 text-sm" placeholder="Receipt email" />
@@ -166,9 +253,9 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, p
                             <button
                                 onClick={handlePayment}
                                 disabled={status === 'loading' || status === 'processing'}
-                                className="w-full mt-8 bg-white text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs hover:bg-gray-200 transition-all active:scale-95 disabled:opacity-30 shadow-2xl"
+                                className={`w-full mt-8 ${finalAmount === 0 ? 'bg-green-600 hover:bg-green-700' : 'bg-white text-black hover:bg-gray-200'} font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all active:scale-95 disabled:opacity-30 shadow-2xl`}
                             >
-                                {status === 'loading' ? 'Initializing...' : status === 'processing' ? 'Authorizing Session...' : 'Secure Access'}
+                                {status === 'loading' ? 'Initializing...' : status === 'processing' ? 'Authorizing Session...' : (finalAmount === 0 ? 'Claim Access' : 'Secure Access')}
                             </button>
                         </>
                     )}

@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import PayoutExplanationModal from './PayoutExplanationModal';
 import HypeMap from './HypeMap';
+import PromoCodeManager from './PromoCodeManager';
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
 
@@ -111,7 +112,7 @@ const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; movie: Mov
 
 const FilmmakerDashboardView: React.FC = () => {
     const { user } = useAuth();
-    const { movies: allMovies, isLoading: isFestivalLoading } = useFestival();
+    const { movies: allMovies, isLoading: isFestivalLoading, settings, festivalData } = useFestival();
     const [analytics, setAnalytics] = useState<FilmmakerAnalytics | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -148,6 +149,26 @@ const FilmmakerDashboardView: React.FC = () => {
     if (error) return <div className="text-red-500 p-8 text-center">{error}</div>;
     if (!user || !analytics) return <LoadingSpinner />;
 
+    // Content for Promo Manager
+    const filmmakerFilms = analytics.films.map(f => allMovies[f.key]).filter(Boolean);
+    
+    // Find blocks from BOTH regular festival and Crate Fest
+    const relatedBlocks = useMemo(() => {
+        const filmKeys = new Set(filmmakerFilms.map(f => f.key));
+        
+        const crateFestBlocks = (settings.crateFestConfig?.movieBlocks || [])
+            .filter(b => b.movieKeys.some(k => filmKeys.has(k)))
+            .map(b => ({ ...b, title: `[Crate Fest] ${b.title}` }));
+
+        const regularFestBlocks = (festivalData || []).flatMap(day => 
+            (day.blocks || [])
+                .filter(b => b.movieKeys.some(k => filmKeys.has(k)))
+                .map(b => ({ ...b, title: `[Festival] ${b.title}` }))
+        );
+
+        return [...crateFestBlocks, ...regularFestBlocks];
+    }, [filmmakerFilms, settings.crateFestConfig, festivalData]);
+
     return (
         <div className="space-y-12">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -157,30 +178,43 @@ const FilmmakerDashboardView: React.FC = () => {
                 <StatCard title="Tips Received" value={formatCurrency(analytics.totalDonations)} />
             </div>
 
-            <div className="bg-gradient-to-br from-pink-600/10 to-transparent border border-pink-500/20 p-8 rounded-[2rem] shadow-2xl relative overflow-hidden">
-                <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-4">
-                        <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Earnings & Payouts</h2>
-                        <button onClick={() => setIsExplanationModalOpen(true)} className="text-gray-500 hover:text-white transition-colors">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        </button>
-                    </div>
-                    {payoutStatus === 'requested' ? (
-                        <div className="bg-green-500/20 text-green-400 p-4 rounded-xl border border-green-500/30 font-bold">Payout request sent! Please allow 3-5 business days.</div>
-                    ) : (
-                        <div className="flex flex-col sm:flex-row items-center gap-6">
-                            <div className="flex-grow">
-                                <p className="text-gray-400 leading-relaxed">Your balance updates in real-time as viewers donate and stream your work. We process payouts via PayPal or Venmo.</p>
-                            </div>
-                            <button 
-                                onClick={() => setIsPayoutModalOpen(true)} 
-                                disabled={analytics.balance < 100}
-                                className="w-full sm:w-auto bg-white text-black font-black py-4 px-10 rounded-2xl uppercase tracking-widest text-sm hover:bg-gray-200 transition-all disabled:opacity-20"
-                            >
-                                Withdraw {formatCurrency(analytics.balance)}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="bg-gradient-to-br from-pink-600/10 to-transparent border border-pink-500/20 p-8 rounded-[2rem] shadow-2xl relative overflow-hidden h-full flex flex-col">
+                    <div className="relative z-10 flex-grow">
+                        <div className="flex items-center gap-3 mb-4">
+                            <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Earnings & Payouts</h2>
+                            <button onClick={() => setIsExplanationModalOpen(true)} className="text-gray-500 hover:text-white transition-colors">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             </button>
                         </div>
-                    )}
+                        {payoutStatus === 'requested' ? (
+                            <div className="bg-green-500/20 text-green-400 p-4 rounded-xl border border-green-500/30 font-bold">Payout request sent! Please allow 3-5 business days.</div>
+                        ) : (
+                            <div className="space-y-6">
+                                <p className="text-gray-400 leading-relaxed">Your balance updates in real-time as viewers donate and stream your work. We process payouts via PayPal or Venmo.</p>
+                                <button 
+                                    onClick={() => setIsPayoutModalOpen(true)} 
+                                    disabled={analytics.balance < 100}
+                                    className="w-full bg-white text-black font-black py-4 px-10 rounded-2xl uppercase tracking-widest text-sm hover:bg-gray-200 transition-all disabled:opacity-20 shadow-xl"
+                                >
+                                    Withdraw {formatCurrency(analytics.balance)}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-red-600/10 to-transparent border border-red-500/20 p-8 rounded-[2rem] shadow-2xl h-full">
+                    <div className="mb-6">
+                         <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Promo Laboratory</h2>
+                         <p className="text-gray-400 text-sm mt-1">Generate access vouchers for VIPs or community discounts.</p>
+                    </div>
+                    <PromoCodeManager 
+                        isAdmin={false} 
+                        filmmakerName={user.name} 
+                        targetFilms={filmmakerFilms}
+                        targetBlocks={relatedBlocks as any}
+                    />
                 </div>
             </div>
 

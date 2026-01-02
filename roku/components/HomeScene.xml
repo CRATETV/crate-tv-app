@@ -5,67 +5,58 @@
 
     <interface>
         <field id="content" type="node" onChange="onContentChange" />
-        <field id="command" type="assocarray" />
     </interface>
 
     <children>
-        <Poster 
-            id="background"
-            uri="pkg:/images/splash_hd.png" 
-            width="1920" 
-            height="1080"
-        />
+        <Rectangle id="background" color="0x050505FF" width="1920" height="1080" />
         
-        <!-- HERO SECTION -->
+        <!-- HERO SECTION (Spotlight) -->
         <Group id="heroGroup" visible="false">
-            <Poster id="heroBackground" width="1920" height="700" />
-            <Rectangle id="heroGradient" color="0x000000FF" endColor="0x00000000" gradient="linear" gradientDirection="down" width="1920" height="400" translation="[0, 300]" />
-            <Rectangle id="heroGradientLeft" color="0x000000D0" endColor="0x00000000" gradient="linear" gradientDirection="left-right" width="1000" height="700" />
-            <Group translation="[80, 250]">
-                <Label id="heroTitle" width="800" wrap="true" font="font:LargeBoldSystemFont" />
-                <Label id="heroSynopsis" width="700" wrap="true" maxLines="3" translation="[0, 80]" font="font:SmallSystemFont" />
-                <ButtonGroup 
-                    id="heroButtons" 
-                    translation="[0, 200]" 
-                    layoutDirection="horiz" 
-                    itemSpacing="[20, 0]" 
-                    buttons='["Play", "More Info"]'
-                />
+            <Poster id="heroImage" width="1920" height="1080" loadDisplayMode="scaleToFill" opacity="0.4" />
+            <Rectangle id="heroGradient" color="0x050505FF" endColor="0x05050500" gradient="linear" gradientDirection="down" width="1920" height="600" translation="[0, 480]" />
+            <Rectangle id="heroGradientSide" color="0x050505E0" endColor="0x05050500" gradient="linear" gradientDirection="left-right" width="1200" height="1080" />
+            
+            <Group id="heroText" translation="[100, 350]">
+                <Label id="heroTitle" width="1000" wrap="true" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+                <Label id="heroSynopsis" width="800" wrap="true" maxLines="4" translation="[0, 100]" font="font:SmallSystemFont" color="0xCCCCCCFF" />
+                
+                <Group id="heroButtons" translation="[0, 280]">
+                    <Rectangle id="playBtn" width="240" height="70" color="0xFFFFFFFF" radius="8">
+                        <Label text="PLAY" width="240" height="70" horizAlign="center" vertAlign="center" color="0x000000FF" font="font:SmallBoldSystemFont" />
+                    </Rectangle>
+                    <Rectangle id="infoBtn" width="240" height="70" color="0x333333FF" translation="[260, 0]" radius="8">
+                        <Label text="DETAILS" width="240" height="70" horizAlign="center" vertAlign="center" color="0xFFFFFFFF" font="font:SmallBoldSystemFont" />
+                    </Rectangle>
+                </Group>
             </Group>
         </Group>
 
-        <Poster
-            id="logo"
-            uri="pkg:/images/logo_hd.png"
-            width="200"
-            height="50"
-            translation="[80, 30]"
-        />
-        
-        <Label 
-            id="loadingLabel"
-            text="Loading Crate TV..."
-            translation="[960, 540]"
-            horizAlign="center"
-            vertAlign="center"
-            color="0xFFFFFFFF"
-        >
-            <font role="sans" size="30"/>
-        </Label>
-        
+        <!-- ROW LIST -->
         <RowList
             id="categoryRowList"
-            translation="[80, 700]"
+            translation="[100, 750]"
             itemComponentName="MoviePoster"
             itemSize="[240, 360]"
-            rowItemSpacing="[ [30, 0] ]"
-            numRows="1"
-            rowHeights="[360]"
+            rowItemSpacing="[ [40, 0] ]"
+            numRows="5"
+            rowHeights="[360, 360, 360, 360, 360]"
             rowLabelOffset="[ [0, -50] ]"
             rowFocusAnimationStyle="floatingFocus"
+            showRowLabel="[true]"
             visible="false"
         />
 
-    </children>
+        <Poster id="logo" uri="pkg:/images/logo_hd.png" width="160" height="40" translation="[100, 40]" />
+        
+        <Label 
+            id="loadingLabel"
+            text="ESTABLISHING UPLINK..."
+            translation="[960, 540]"
+            horizAlign="center"
+            vertAlign="center"
+            font="font:SmallBoldSystemFont"
+            color="0x444444FF"
+        />
 
+    </children>
 </component>

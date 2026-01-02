@@ -87,7 +87,6 @@ export async function POST(request: Request) {
         const adminPayoutsPromise = db ? db.collection('admin_payouts').where('payoutDate', '>=', resetTimestamp).get() : Promise.resolve(null);
         const billSavingsPromise = db ? db.collection('bill_savings_transactions').where('transactionDate', '>=', resetTimestamp).get() : Promise.resolve(null);
 
-        // FIX: Replaced 'adminPayoutsSnapshot' and 'billSavingsSnapshot' with their respective promise variables inside Promise.all
         const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, adminPayoutsSnapshot, billSavingsSnapshot] = await Promise.all([
             squarePromise.catch(e => { errors.square = e.message; return []; }), 
             moviesPromise, 

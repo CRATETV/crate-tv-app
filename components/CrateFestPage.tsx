@@ -80,6 +80,7 @@ const CrateFestPage: React.FC = () => {
 
     const checkAccess = (movieKey: string, blockId: string) => {
         if (hasCrateFestPass) return true;
+        // FIX: Use .has() for Set compatibility
         if (unlockedFestivalBlockIds.has(blockId)) return true;
         const exp = rentals[movieKey];
         if (exp && new Date(exp) > new Date()) return true;
@@ -133,7 +134,8 @@ const CrateFestPage: React.FC = () => {
 
                 <div className="max-w-[1600px] mx-auto p-6 md:p-16 space-y-32 pb-48">
                     {config.movieBlocks.map((block, idx) => {
-                        const isBlockUnlocked = hasCrateFestPass || unlockedFestivalBlockIds.has(block.id);
+                        // FIX: Use .has() for Set compatibility
+                        const isBlockUnlocked = hasCrateFestPass || (unlockedFestivalBlockIds && unlockedFestivalBlockIds.has(block.id));
                         return (
                             <section key={block.id} className="space-y-12">
                                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-8">
@@ -179,7 +181,7 @@ const CrateFestPage: React.FC = () => {
             {paymentItem && (
                 <SquarePaymentModal 
                     paymentType={paymentItem.type} 
-                    priceOverride={paymentItem.type === 'crateFestPass' ? config.passPrice : paymentItem.type === 'block' ? 10.00 : 5.00}
+                    priceOverride={paymentItem.type === 'crateFestPass' ? config.passPrice : (paymentItem.type === 'block' ? 10.00 : 5.00)}
                     block={paymentItem.block}
                     movie={paymentItem.movie}
                     onClose={() => setPaymentItem(null)} 

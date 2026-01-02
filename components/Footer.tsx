@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 
 interface FooterProps {
@@ -23,6 +21,7 @@ const Footer: React.FC<FooterProps> = ({ showPortalNotice = false, showActorLink
             <ul className="space-y-2">
               <li><a href="/about" onClick={(e) => handleNavigate(e, '/about')} className="hover:text-white transition">About Us</a></li>
               <li><a href="/contact" onClick={(e) => handleNavigate(e, '/contact')} className="hover:text-white transition">Contact</a></li>
+              <li><a href="https://www.instagram.com/cratetv.philly/?hl=en" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Instagram</a></li>
             </ul>
           </div>
           <div>

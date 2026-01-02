@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
 import MovieEditor from './components/MovieEditor';
@@ -19,6 +19,7 @@ import { MoviePipelineTab } from './components/MoviePipelineTab';
 import JuryRoomTab from './components/JuryRoomTab';
 import TalentInquiriesTab from './components/TalentInquiriesTab';
 import CrateFestEditor from './components/CrateFestEditor';
+import PromoCodeManager from './components/PromoCodeManager';
 
 const ALL_TABS: Record<string, string> = {
     movies: '🎞️ Catalog',
@@ -29,6 +30,7 @@ const ALL_TABS: Record<string, string> = {
     hero: '🎬 Hero',
     laurels: '🏆 Laurels',
     cratefest: '🎪 Crate Fest',
+    vouchers: '🎫 Promo Codes',
     pitch: '📽️ Pitch Deck',
     categories: '📂 Categories',
     festival: '🍿 Film Festival',
@@ -162,6 +164,13 @@ const AdminPage: React.FC = () => {
         setActiveTab('movies');
     };
 
+    // Aggregate all possible target blocks for promo codes
+    const allPromoTargetBlocks = useMemo(() => {
+        const crateFestBlocks = (crateFestConfig.movieBlocks || []).map(b => ({ ...b, source: 'Crate Fest' }));
+        const regularFestBlocks = (festivalData || []).flatMap(day => (day.blocks || []).map(b => ({ ...b, source: 'Film Festival' })));
+        return [...crateFestBlocks, ...regularFestBlocks];
+    }, [crateFestConfig, festivalData]);
+
     if (!isAuthenticated) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-[#050505] text-white p-4">
@@ -256,6 +265,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}
                     {activeTab === 'cratefest' && <CrateFestEditor config={crateFestConfig} allMovies={movies} pipeline={pipeline} onSave={(newConfig) => handleSaveData('settings', { crateFestConfig: newConfig })} isSaving={isSaving} />}
+                    {activeTab === 'vouchers' && <PromoCodeManager isAdmin={true} targetFilms={Object.values(movies)} targetBlocks={allPromoTargetBlocks as any} />}
                     {activeTab === 'pitch' && <PitchDeckManager onSave={(settings) => handleSaveData('settings', settings)} isSaving={isSaving} />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={(d) => setFestivalData(d)} onConfigChange={(c) => setFestivalConfig(c)} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}

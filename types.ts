@@ -52,6 +52,19 @@ export interface Movie {
   customLaurelUrl?: string;
 }
 
+export interface PromoCode {
+    id: string;
+    code: string;
+    type: 'one_time_access' | 'discount';
+    discountValue: number; // 0-100 percentage
+    maxUses: number;
+    usedCount: number;
+    itemId?: string; // Specific movie key or block ID
+    createdBy: string; // 'admin' or filmmaker name
+    createdAt: any;
+    expiresAt?: string;
+}
+
 export interface SentimentPoint {
     timestamp: number; // in seconds
     type: '🔥' | '😲' | '❤️' | '👏' | '😢';
