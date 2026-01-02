@@ -34,7 +34,10 @@ export async function POST(request: Request) {
              return new Response(JSON.stringify({ error: "This code has expired." }), { status: 403 });
         }
 
-        if (promo.itemId && promo.itemId !== itemId) {
+        // Broad matching: If the promo itemId matches the request itemId, or if the promo is global (empty itemId)
+        const isMatch = !promo.itemId || promo.itemId === itemId;
+        
+        if (!isMatch) {
              return new Response(JSON.stringify({ error: "This code is not valid for this specific content." }), { status: 403 });
         }
 

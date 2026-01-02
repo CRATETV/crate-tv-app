@@ -1,6 +1,8 @@
 // This is a Vercel Serverless Function to process payments with Square.
 import { randomUUID } from 'crypto';
 import { Resend } from 'resend';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
@@ -15,7 +17,7 @@ const priceMap: Record<string, number> = {
 
 export async function POST(request: Request) {
   try {
-    const { sourceId, amount, movieTitle, directorName, paymentType, itemId, blockTitle, email } = await request.json();
+    const { sourceId, amount, movieTitle, directorName, paymentType, itemId, blockTitle, email, promoCode } = await request.json();
     
     const isProduction = process.env.VERCEL_ENV === 'production';
     const accessToken = isProduction
@@ -37,22 +39,35 @@ export async function POST(request: Request) {
       });
     }
 
+    // --- PROMO CODE INTEGRITY CHECK ---
+    const initError = getInitializationError();
+    const db = !initError ? getAdminDb() : null;
+
+    if (promoCode && db) {
+        const promoRef = db.collection('promo_codes').doc(promoCode.toUpperCase().trim());
+        const promoDoc = await promoRef.get();
+        if (promoDoc.exists) {
+            const promoData = promoDoc.data();
+            if (promoData && promoData.usedCount >= promoData.maxUses) {
+                return new Response(JSON.stringify({ error: "This promo code has reached its maximum usage limit." }), { status: 403 });
+            }
+        }
+    }
+
     const idempotencyKey = randomUUID();
     let amountInCents: number;
     let note: string;
 
     // Determine amount and note based on payment type.
-    // 'crateFestPass' is added to the dynamic pricing group so the Admin-set price is honored.
     if (['donation', 'billSavingsDeposit', 'watchPartyTicket', 'crateFestPass'].includes(paymentType)) {
         amountInCents = Math.round(Number(amount) * 100);
-        if (amountInCents < 100) { // Minimum $1.00
+        if (amountInCents < 100 && sourceId !== 'PROMO_VOUCHER') { // Minimum $1.00 unless free
             throw new Error("Amount must be at least $1.00.");
         }
         
         if (paymentType === 'donation') {
             note = `Support for film: "${movieTitle}" by ${directorName}`;
         } else if (paymentType === 'crateFestPass') {
-            // Note must match the pattern in get-sales-data.ts for revenue tracking
             note = 'Crate Fest 2026 Pass Access';
         } else {
             note = 'Deposit to Crate TV Bill Savings Pot';
@@ -79,34 +94,43 @@ export async function POST(request: Request) {
         throw new Error("Invalid payment type specified.");
     }
 
-    const squareUrl = isProduction 
-      ? 'https://connect.squareup.com/v2/payments' 
-      : 'https://connect.squareupsandbox.com/v2/payments';
+    // --- PROCESS TRANSACTION ---
+    if (sourceId !== 'PROMO_VOUCHER') {
+        const squareUrl = isProduction 
+          ? 'https://connect.squareup.com/v2/payments' 
+          : 'https://connect.squareupsandbox.com/v2/payments';
 
-    const response = await fetch(squareUrl, {
-      method: 'POST',
-      headers: {
-        'Square-Version': '2024-05-15',
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        source_id: sourceId,
-        idempotency_key: idempotencyKey,
-        location_id: locationId,
-        amount_money: {
-          amount: amountInCents,
-          currency: 'USD',
-        },
-        note: note,
-      }),
-    });
+        const response = await fetch(squareUrl, {
+          method: 'POST',
+          headers: {
+            'Square-Version': '2024-05-15',
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            source_id: sourceId,
+            idempotency_key: idempotencyKey,
+            location_id: locationId,
+            amount_money: {
+              amount: amountInCents,
+              currency: 'USD',
+            },
+            note: note,
+          }),
+        });
 
-    const data = await response.json();
+        const data = await response.json();
+        if (!response.ok) {
+            const errorMessage = data.errors?.[0]?.detail || 'Payment failed.';
+            throw new Error(errorMessage);
+        }
+    }
 
-    if (!response.ok) {
-        const errorMessage = data.errors?.[0]?.detail || 'Payment failed.';
-        throw new Error(errorMessage);
+    // --- FINALIZE PROMO CODE USAGE ---
+    if (promoCode && db) {
+        await db.collection('promo_codes').doc(promoCode.toUpperCase().trim()).update({
+            usedCount: FieldValue.increment(1)
+        });
     }
     
     // Receipt notification
@@ -122,6 +146,7 @@ export async function POST(request: Request) {
                         <h1 style="color: #ef4444;">Thank You!</h1>
                         <p>Your payment of <strong>${amountFormatted}</strong> for your <strong>${paymentType === 'crateFestPass' ? 'Crate Fest Digital Pass' : 'Crate TV content'}</strong> has been processed successfully.</p>
                         <p>Access is now unlocked on your account.</p>
+                        ${promoCode ? `<p style="font-size: 11px; color: #999;">Voucher Applied: ${promoCode}</p>` : ''}
                         <p>Sincerely,<br/>The Crate TV Team</p>
                     </div>
                 `,
@@ -131,7 +156,7 @@ export async function POST(request: Request) {
         }
     }
 
-    return new Response(JSON.stringify({ success: true, payment: data.payment }), {
+    return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

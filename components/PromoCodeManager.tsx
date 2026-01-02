@@ -8,8 +8,10 @@ interface PromoCodeManagerProps {
     filmmakerName?: string;
     targetFilms?: Movie[];
     targetBlocks?: FilmBlock[];
-    defaultItemId?: string; // New prop for context-aware initialization
+    defaultItemId?: string; 
 }
+
+const FILMMAKER_QUOTA = 5;
 
 const DistributeModal: React.FC<{
     code: PromoCode;
@@ -207,9 +209,18 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
         fetchFilmmakers();
     }, [isAdmin, filmmakerName]);
 
+    const quotaStatus = useMemo(() => {
+        if (isAdmin) return null;
+        if (!selectedItemId) return null;
+        const usedCount = codes.filter(c => c.itemId === selectedItemId).length;
+        return { used: usedCount, max: FILMMAKER_QUOTA };
+    }, [codes, selectedItemId, isAdmin]);
+
+    const isQuotaExceeded = quotaStatus && quotaStatus.used >= quotaStatus.max;
+
     const handleCreateCode = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newCode.trim()) return;
+        if (!newCode.trim() || isQuotaExceeded) return;
         
         setIsGenerating(true);
         const db = getDbInstance();
@@ -219,7 +230,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
             code: newCode.toUpperCase().trim().replace(/\s/g, ''),
             type,
             discountValue: type === 'one_time_access' ? 100 : discountValue,
-            maxUses: type === 'one_time_access' ? maxUses : (maxUses > 1 ? maxUses : 1000), 
+            maxUses: type === 'one_time_access' ? 1 : (maxUses > 1 ? maxUses : 1000), 
             usedCount: 0,
             itemId: selectedItemId || undefined,
             createdBy: isAdmin ? 'admin' : (filmmakerName || 'unknown'),
@@ -229,7 +240,6 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
         try {
             await db.collection('promo_codes').doc(codeData.code).set(codeData);
             setNewCode('');
-            // Only reset item if no default was provided
             if (!defaultItemId) setSelectedItemId('');
             await fetchCodes();
         } catch (err) {
@@ -249,7 +259,8 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
     };
 
     const resolveItemName = (itemId?: string) => {
-        if (!itemId) return "All Platform Access";
+        if (!itemId) return "Full Platform Access";
+        if (itemId === 'crateFestPass') return "Crate Fest: All-Access Pass";
         const film = targetFilms.find(f => f.key === itemId);
         if (film) return film.title;
         const block = targetBlocks.find(b => b.id === itemId);
@@ -262,7 +273,6 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
     return (
         <div className="space-y-10 animate-[fadeIn_0.5s_ease-out]">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                {/* Form */}
                 <div className="lg:col-span-1">
                     <form onSubmit={handleCreateCode} className="bg-gray-900 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl space-y-6">
                         <div>
@@ -280,66 +290,75 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                                     placeholder="e.g. VIPPASS" 
                                     className="form-input !bg-black/40 border-white/10 uppercase tracking-widest font-black" 
                                     required 
+                                    disabled={isQuotaExceeded}
                                 />
                             </div>
 
                             <div>
                                 <label className="form-label">Voucher Class</label>
-                                <select value={type} onChange={e => setType(e.target.value as any)} className="form-input !bg-black/40 border-white/10">
-                                    <option value="one_time_access">VIP Invitation (100% OFF)</option>
-                                    <option value="discount">Platform Discount</option>
+                                <select value={type} onChange={e => setType(e.target.value as any)} className="form-input !bg-black/40 border-white/10" disabled={isQuotaExceeded}>
+                                    <option value="one_time_access">VIP Invitation (Single Use - 100% OFF)</option>
+                                    <option value="discount">Platform Discount (Campaign)</option>
                                 </select>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4 animate-[fadeIn_0.3s_ease-out]">
-                                {type === 'discount' && (
+                            {type === 'discount' && (
+                                <div className="grid grid-cols-2 gap-4 animate-[fadeIn_0.3s_ease-out]">
                                     <div>
                                         <label className="form-label">Discount %</label>
                                         <input type="number" value={discountValue} onChange={e => setDiscountValue(parseInt(e.target.value))} className="form-input !bg-black/40" />
                                     </div>
-                                )}
-                                <div className={type !== 'discount' ? 'col-span-2' : ''}>
-                                    <label className="form-label">Total Redeemable</label>
-                                    <input type="number" value={maxUses} onChange={e => setMaxUses(parseInt(e.target.value))} className="form-input !bg-black/40" />
+                                    <div>
+                                        <label className="form-label">Total Redeemable</label>
+                                        <input type="number" value={maxUses} onChange={e => setMaxUses(parseInt(e.target.value))} className="form-input !bg-black/40" />
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             {!defaultItemId && (
                                 <div>
-                                    <label className="form-label">Target Content (Optional)</label>
+                                    <label className="form-label">Target Content</label>
                                     <select 
                                         value={selectedItemId} 
                                         onChange={e => setSelectedItemId(e.target.value)} 
                                         className="form-input !bg-black/40 border-white/10"
                                     >
                                         <option value="">Full Catalog Access</option>
+                                        {isAdmin && <option value="crateFestPass">🎟️ Crate Fest: All-Access Pass</option>}
                                         {targetBlocks.length > 0 && <optgroup label="Festival Blocks">
                                             {targetBlocks.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
                                         </optgroup>}
-                                        {targetFilms.length > 0 && <optgroup label="Individual Films">
+                                        {targetFilms.length > 0 && <optgroup label="Individual Films / Parties">
                                             {targetFilms.map(f => <option key={f.key} value={f.key}>{f.title}</option>)}
                                         </optgroup>}
                                     </select>
+                                </div>
+                            )}
+
+                            {quotaStatus && (
+                                <div className={`p-4 rounded-xl border flex justify-between items-center ${isQuotaExceeded ? 'bg-red-600/10 border-red-500/20' : 'bg-white/5 border-white/10'}`}>
+                                    <span className="text-[10px] font-black uppercase text-gray-500">Filmmaker Quota</span>
+                                    <span className={`text-[10px] font-black ${isQuotaExceeded ? 'text-red-500' : 'text-white'}`}>{quotaStatus.used} / {quotaStatus.max}</span>
                                 </div>
                             )}
                         </div>
 
                         <button 
                             type="submit" 
-                            disabled={isGenerating}
+                            disabled={isGenerating || isQuotaExceeded}
                             className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl uppercase tracking-widest text-xs transition-all active:scale-95 disabled:opacity-30 shadow-xl"
                         >
-                            {isGenerating ? 'Forging Code...' : 'Initialize Code'}
+                            {isGenerating ? 'Forging Code...' : isQuotaExceeded ? 'Quota Exceeded' : 'Initialize Code'}
                         </button>
+                        {isQuotaExceeded && <p className="text-[8px] text-red-500 font-bold uppercase text-center tracking-widest">You have reached the limit for this item.</p>}
                     </form>
                 </div>
 
-                {/* List */}
                 <div className="lg:col-span-2">
                     <div className="bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] overflow-hidden h-full">
                         <div className="p-6 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
                              <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">Access Perimeter Manifest</h4>
-                             <span className="text-[10px] text-gray-700 font-bold uppercase tracking-widest">Ready for Distribution</span>
+                             <span className="text-[10px] text-gray-700 font-bold uppercase tracking-widest">Live Monitoring</span>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-xs">
@@ -354,39 +373,45 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                                 <tbody className="divide-y divide-white/5">
                                     {codes.length === 0 ? (
                                         <tr><td colSpan={4} className="p-10 text-center text-gray-600 uppercase font-black tracking-widest">No active access vectors</td></tr>
-                                    ) : codes.map(c => (
-                                        <tr key={c.id} className="hover:bg-white/[0.01] transition-colors group">
-                                            <td className="p-5">
-                                                <div className="space-y-1">
-                                                    <p className="font-black text-white tracking-[0.2em] group-hover:text-red-500 transition-colors">{c.code}</p>
-                                                    <p className="text-[9px] text-gray-600 uppercase font-bold tracking-tighter">{resolveItemName(c.itemId)}</p>
-                                                </div>
-                                            </td>
-                                            <td className="p-5">
-                                                <span className={`px-2 py-1 rounded text-[9px] font-black uppercase ${c.type === 'one_time_access' ? 'bg-purple-600/20 text-purple-400 border border-purple-500/20' : 'bg-blue-600/20 text-blue-400 border border-blue-500/20'}`}>
-                                                    {c.type === 'one_time_access' ? 'VIP INVITE' : `${c.discountValue}% PLATFORM`}
-                                                </span>
-                                            </td>
-                                            <td className="p-5 text-center font-mono">
-                                                <span className={c.usedCount >= c.maxUses ? 'text-red-500' : 'text-green-500 font-bold'}>
-                                                    {c.usedCount} / {c.maxUses}
-                                                </span>
-                                            </td>
-                                            <td className="p-5 text-right">
-                                                <div className="flex justify-end items-center gap-4">
-                                                    {isAdmin && (
-                                                        <button 
-                                                            onClick={() => setDistributingCode(c)}
-                                                            className="bg-white/5 hover:bg-white text-gray-400 hover:text-black font-black px-4 py-1.5 rounded-lg border border-white/10 transition-all uppercase text-[9px] tracking-widest"
-                                                        >
-                                                            Distribute
-                                                        </button>
-                                                    )}
-                                                    <button onClick={() => handleDelete(c.id)} className="text-[9px] font-black uppercase text-gray-600 hover:text-red-500 transition-colors">Kill</button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    ) : codes.map(c => {
+                                        const isDepleted = c.usedCount >= c.maxUses;
+                                        return (
+                                            <tr key={c.id} className={`hover:bg-white/[0.01] transition-colors group ${isDepleted ? 'opacity-40' : ''}`}>
+                                                <td className="p-5">
+                                                    <div className="space-y-1">
+                                                        <p className="font-black text-white tracking-[0.2em] group-hover:text-red-500 transition-colors">{c.code}</p>
+                                                        <p className="text-[9px] text-gray-600 uppercase font-bold tracking-tighter">{resolveItemName(c.itemId)}</p>
+                                                    </div>
+                                                </td>
+                                                <td className="p-5">
+                                                    <span className={`px-2 py-1 rounded text-[9px] font-black uppercase ${c.type === 'one_time_access' ? 'bg-purple-600/20 text-purple-400 border border-purple-500/20' : 'bg-blue-600/20 text-blue-400 border border-blue-500/20'}`}>
+                                                        {c.type === 'one_time_access' ? 'VIP INVITE' : `${c.discountValue}% PLATFORM`}
+                                                    </span>
+                                                </td>
+                                                <td className="p-5 text-center font-mono">
+                                                    <div className="flex flex-col items-center">
+                                                        <span className={`text-[10px] font-bold ${isDepleted ? 'text-red-500' : 'text-green-500'}`}>
+                                                            {c.usedCount} / {c.maxUses}
+                                                        </span>
+                                                        <span className="text-[7px] text-gray-700 uppercase font-black">REDEEMED</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-5 text-right">
+                                                    <div className="flex justify-end items-center gap-4">
+                                                        {isAdmin && (
+                                                            <button 
+                                                                onClick={() => setDistributingCode(c)}
+                                                                className="bg-white/5 hover:bg-white text-gray-400 hover:text-black font-black px-4 py-1.5 rounded-lg border border-white/10 transition-all uppercase text-[9px] tracking-widest"
+                                                            >
+                                                                Distribute
+                                                            </button>
+                                                        )}
+                                                        <button onClick={() => handleDelete(c.id)} className="text-[9px] font-black uppercase text-gray-600 hover:text-red-500 transition-colors">Kill</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>

@@ -24,6 +24,7 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
     const [broadcastMsg, setBroadcastMsg] = useState('');
     const [isBroadcasting, setIsBroadcasting] = useState(false);
 
+    const totalMoviesCount = useMemo(() => Object.keys(movies).length, [movies]);
     const activePartiesCount = useMemo(() => {
         return (Object.values(movies) as Movie[]).filter(m => m.isWatchPartyEnabled && m.watchPartyStartTime && new Date(m.watchPartyStartTime) > new Date()).length;
     }, [movies]);
@@ -32,9 +33,9 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
         e.preventDefault();
         if (!broadcastMsg.trim()) return;
         setIsBroadcasting(true);
-        // This would sync to a 'global_alerts' collection in Firestore
+        // Simulated broadcast logic
         await new Promise(r => setTimeout(r, 1000));
-        alert(`Broadcast pushed to all active user sessions: "${broadcastMsg}"`);
+        alert(`Broadcast pushed: "${broadcastMsg}"`);
         setBroadcastMsg('');
         setIsBroadcasting(false);
     };
@@ -43,11 +44,12 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
 
     return (
         <div className="space-y-8 animate-[fadeIn_0.6s_ease-out]">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <PulseMetric label="Global Revenue" value={formatCurrency(analytics?.totalRevenue || 0)} sub="Total Flow" />
-                <PulseMetric label="Identified Audience" value={analytics?.totalUsers || 0} sub="Registrations" />
-                <PulseMetric label="Pipeline Load" value={pendingPipeline.length} color="text-red-600" sub="Awaiting Review" />
-                <PulseMetric label="Scheduled Events" value={activePartiesCount} color="text-blue-400" sub="Live Sync" />
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <PulseMetric label="Global Revenue" value={formatCurrency(analytics?.totalRevenue || 0)} sub="Flow" />
+                <PulseMetric label="Users" value={analytics?.totalUsers || 0} sub="Identified" />
+                <PulseMetric label="Catalog Depth" value={totalMoviesCount} color="text-red-500" sub="Database" />
+                <PulseMetric label="Pipeline" value={pendingPipeline.length} color="text-amber-500" sub="Review" />
+                <PulseMetric label="Live Events" value={activePartiesCount} color="text-blue-400" sub="Scheduled" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -67,7 +69,7 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                                     </div>
                                     <div className="text-right">
                                         <p className="text-[8px] font-black text-gray-700 uppercase">Status</p>
-                                        <p className="text-[10px] font-black text-amber-500 uppercase tracking-tighter italic">Pending Review</p>
+                                        <p className="text-[10px] font-black text-amber-500 uppercase tracking-tighter italic">Pending</p>
                                     </div>
                                 </div>
                             ))}
@@ -83,54 +85,32 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                             <input 
                                 value={broadcastMsg}
                                 onChange={e => setBroadcastMsg(e.target.value)}
-                                placeholder="Push high-priority message to all active users..." 
-                                className="form-input !bg-black/40 border-red-500/10 placeholder:text-gray-700" 
+                                placeholder="Push high-priority message..." 
+                                className="form-input !bg-black/40 border-red-500/10" 
                             />
-                            <button disabled={isBroadcasting} className="bg-red-600 text-white font-black px-10 rounded-2xl uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all active:scale-95 shadow-lg shadow-red-900/20">
+                            <button disabled={isBroadcasting} className="bg-red-600 text-white font-black px-10 rounded-2xl uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all active:scale-95 shadow-lg">
                                 {isBroadcasting ? '...' : 'Push'}
                             </button>
                         </form>
-                        <p className="text-[8px] text-gray-600 font-black uppercase mt-4 tracking-widest">Warning: This bypasses normal UI states and appears at the top of the Home feed.</p>
                     </div>
                 </div>
 
                 <div className="space-y-6">
                     <div className="bg-gradient-to-br from-indigo-600/10 to-transparent border border-indigo-500/20 p-8 rounded-[2.5rem] shadow-2xl">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400 mb-6">Live Spotlight Mode</h3>
-                        {Object.keys(categories.nowStreaming?.movieKeys || {}).length > 0 ? (
+                        {categories.nowStreaming?.movieKeys?.length > 0 ? (
                             <div className="space-y-4">
                                 <div className="bg-black/60 rounded-2xl overflow-hidden aspect-video relative group border border-white/10">
                                      <img src={movies[categories.nowStreaming.movieKeys[0]]?.poster} className="w-full h-full object-cover opacity-40 group-hover:scale-110 transition-transform duration-700" alt="" />
                                      <div className="absolute inset-0 flex items-center justify-center">
-                                         <div className="text-center">
-                                             <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Active Now</p>
-                                             <p className="text-sm font-black text-white uppercase tracking-tighter px-4 truncate max-w-[180px]">{movies[categories.nowStreaming.movieKeys[0]]?.title}</p>
-                                         </div>
+                                         <p className="text-sm font-black text-white uppercase tracking-tighter px-4 truncate">{movies[categories.nowStreaming.movieKeys[0]]?.title}</p>
                                      </div>
                                 </div>
-                                <button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl uppercase text-[9px] tracking-widest shadow-xl transition-all active:scale-95">Manage Broadcast</button>
+                                <button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl uppercase text-[9px] tracking-widest shadow-xl transition-all">Manage Spotlight</button>
                             </div>
                         ) : (
-                            <p className="text-gray-600 text-xs italic">No spotlight active. Target a film in the Catalog to engage networking banners.</p>
+                            <p className="text-gray-600 text-xs italic">No spotlight active.</p>
                         )}
-                    </div>
-
-                    <div className="bg-white/5 border border-white/5 p-6 rounded-2xl">
-                        <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-4">Infrastructure Status</h4>
-                        <div className="space-y-3">
-                            <div className="flex justify-between items-center text-[10px] font-black uppercase">
-                                <span className="text-gray-600">S3 Storage Uplink</span>
-                                <span className="text-green-500">STABLE</span>
-                            </div>
-                            <div className="flex justify-between items-center text-[10px] font-black uppercase">
-                                <span className="text-gray-600">Gemini AI Model</span>
-                                <span className="text-green-500">ONLINE</span>
-                            </div>
-                            <div className="flex justify-between items-center text-[10px] font-black uppercase">
-                                <span className="text-gray-600">Square Payment Gate</span>
-                                <span className="text-green-500">VERIFIED</span>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>

@@ -1,3 +1,4 @@
+
 import React, { ErrorInfo, ReactNode } from 'react';
 
 interface Props {
@@ -11,25 +12,29 @@ interface State {
 /**
  * Global Error Boundary component to catch rendering errors and show a fallback UI.
  */
-// Fix: Changed inheritance to React.Component<Props, State> to resolve TypeScript's failure to recognize 'this.props' on the component instance.
 class GlobalErrorBoundary extends React.Component<Props, State> {
-  // Fix: Explicitly initialized the state property with the State interface.
+  // Initialize state with default values using property initializer
   public state: State = {
     hasError: false
   };
 
+  // The static method is called during the "render" phase, so side-effects are not permitted.
   public static getDerivedStateFromError(_: Error): State {
+    // Update state so the next render will show the fallback UI.
     return { hasError: true };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Log the error for infrastructure monitoring
     console.error("CRITICAL_SYSTEM_FAILURE:", error, errorInfo);
   }
 
-  public render() {
-    // Fix: Accessing children via 'this.props', which is inherited from the base React.Component class.
+  public render(): ReactNode {
+    // Access children from this.props which is inherited from React.Component
+    // This fix ensures TypeScript correctly recognizes the props member.
     const { children } = this.props;
     
+    // Check if an error has been caught
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center">

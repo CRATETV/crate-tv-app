@@ -77,14 +77,53 @@ const PayoutModal: React.FC<{ balance: number; directorName: string; onClose: ()
 };
 
 const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; movie: Movie }> = ({ film, movie }) => {
+    const handleShareParty = async () => {
+        const shareData = {
+            title: `Join the Watch Party for ${movie.title}`,
+            text: `Join me and the Crate TV community for a live screening of my film "${movie.title}"!`,
+            url: `${window.location.origin}/watchparty/${movie.key}`
+        };
+
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                await navigator.clipboard.writeText(shareData.url);
+                alert('Watch Party link copied to clipboard!');
+            }
+        } catch (err) {
+            console.error('Share failed', err);
+        }
+    };
+
+    const isPartyEnabled = movie.isWatchPartyEnabled && movie.watchPartyStartTime;
+
     return (
         <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-2xl space-y-6 hover:border-gray-500 transition-colors">
             <div className="flex flex-col md:flex-row gap-6">
-                <img src={movie.poster} alt={film.title} className="w-32 h-48 object-cover rounded-xl shadow-lg border border-white/5" />
+                <div className="relative flex-shrink-0">
+                    <img src={movie.poster} alt={film.title} className="w-32 h-48 object-cover rounded-xl shadow-lg border border-white/5" />
+                    {isPartyEnabled && (
+                        <div className="absolute -top-2 -left-2 bg-red-600 text-white font-black px-2 py-1 rounded text-[8px] uppercase tracking-widest shadow-xl animate-pulse">
+                            Event Enabled
+                        </div>
+                    )}
+                </div>
                 <div className="flex-grow space-y-4">
                     <div className="flex justify-between items-start">
                         <div>
-                            <h3 className="font-black text-2xl text-white uppercase tracking-tighter">{film.title}</h3>
+                            <div className="flex items-center gap-3">
+                                <h3 className="font-black text-2xl text-white uppercase tracking-tighter">{film.title}</h3>
+                                {isPartyEnabled && (
+                                    <button 
+                                        onClick={handleShareParty}
+                                        className="bg-white/5 hover:bg-white text-gray-400 hover:text-black p-1.5 rounded-lg border border-white/10 transition-all"
+                                        title="Share Watch Party Link"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                                    </button>
+                                )}
+                            </div>
                             <div className="flex items-center gap-4 mt-1">
                                 <div className="flex items-center gap-1"><span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Views</span> <span className="text-sm font-bold">{film.views.toLocaleString()}</span></div>
                                 <div className="flex items-center gap-1"><span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Revenue</span> <span className="text-sm font-bold text-green-500">{formatCurrency(film.totalEarnings)}</span></div>

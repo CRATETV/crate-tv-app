@@ -8,12 +8,10 @@ import FestivalEditor from './components/FestivalEditor';
 import AnalyticsPage from './components/AnalyticsPage';
 import WatchPartyManager from './components/WatchPartyManager';
 import SecurityTerminal from './components/SecurityTerminal';
-import UserTerminal from './components/UserTerminal';
 import DailyPulse from './components/DailyPulse';
 import FallbackGenerator from './components/FallbackGenerator';
 import CommunicationsTerminal from './components/CommunicationsTerminal';
 import SaveStatusToast from './components/SaveStatusToast';
-import MonetizationTab from './components/MonetizationTab';
 import HeroManager from './components/HeroManager';
 import LaurelManager from './components/LaurelManager';
 import PitchDeckManager from './components/PitchDeckManager';
@@ -31,7 +29,6 @@ const ALL_TABS: Record<string, string> = {
     movies: '🎞️ Catalog',
     pipeline: '📥 Pipeline',
     inquiries: '🎭 Inquiries',
-    users: '👤 User Terminal',
     jury: '⚖️ Jury Room',
     analytics: '📊 Analytics',
     hero: '🎬 Hero',
@@ -39,65 +36,13 @@ const ALL_TABS: Record<string, string> = {
     cratefest: '🎪 Crate Fest',
     vouchers: '🎫 Promo Codes',
     pitch: '📽️ Pitch Deck',
-    partners: '🤝 Partners',
     categories: '📂 Categories',
     festival: '🍿 Film Festival',
     watchParty: '🍿 Watch Party',
     about: '📄 About',
-    monetization: '💰 Revenue',
     security: '🛡️ Security',
     fallback: '💾 Fallback'
 };
-
-const PartnersTab: React.FC = () => (
-    <div className="space-y-10 animate-[fadeIn_0.4s_ease-out]">
-        <div className="bg-gray-900 border border-white/5 p-10 rounded-[3rem] shadow-2xl">
-            <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-6">Marketplace Connectivity</h2>
-            <p className="text-gray-400 mb-10 max-w-2xl">Use these technical details when applying to be a "Buyer" or "Channel Partner" on major film aggregators.</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="p-8 bg-white/5 rounded-3xl border border-white/5 space-y-4">
-                    <h3 className="text-xl font-bold text-white uppercase tracking-tight">Filmhub</h3>
-                    <p className="text-sm text-gray-500">Apply as a "Streaming Channel". Once approved, filmmakers can opt-in to Crate TV via their dashboard.</p>
-                    <div className="pt-4 border-t border-white/5">
-                        <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">Status</p>
-                        <p className="text-sm font-bold text-gray-300">Ready for Application</p>
-                    </div>
-                </div>
-                <div className="p-8 bg-white/5 rounded-3xl border border-white/5 space-y-4">
-                    <h3 className="text-xl font-bold text-white uppercase tracking-tight">Bitmax / Quiver</h3>
-                    <p className="text-sm text-gray-500">Traditional delivery partners. Provide them with our Roku SDK Spec to receive broadcast-ready masters.</p>
-                    <div className="pt-4 border-t border-white/5">
-                        <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">Status</p>
-                        <p className="text-sm font-bold text-gray-300">Spec Active</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div className="mt-12 bg-black/40 p-8 rounded-[2rem] border border-white/5">
-                <h3 className="text-lg font-black text-white uppercase tracking-tighter mb-4">Crate TV Channel Spec</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 font-mono text-[11px]">
-                    <div className="space-y-1">
-                        <p className="text-gray-600 uppercase font-black">Video Bitrate</p>
-                        <p className="text-gray-300">10Mbps+ Recommended</p>
-                    </div>
-                    <div className="space-y-1">
-                        <p className="text-gray-600 uppercase font-black">Format</p>
-                        <p className="text-gray-300">MP4 / H.264 (AAC Audio)</p>
-                    </div>
-                    <div className="space-y-1">
-                        <p className="text-gray-600 uppercase font-black">Native Resolution</p>
-                        <p className="text-gray-300">1080p / 4K Ready</p>
-                    </div>
-                    <div className="space-y-1">
-                        <p className="text-gray-600 uppercase font-black">Feed Endpoint</p>
-                        <p className="text-gray-300">/api/roku-feed</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-);
 
 const AdminPage: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -112,13 +57,11 @@ const AdminPage: React.FC = () => {
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(null);
     const [crateFestConfig, setCrateFestConfig] = useState<CrateFestConfig | null>(null);
     const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
-    const [partyStates, setPartyStates] = useState<Record<string, WatchPartyState>>({});
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
     const [activeTab, setActiveTab] = useState('pulse');
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
 
-    // Hash-based navigation for deep-links like "Broadcast Update"
     useEffect(() => {
         const handleHash = () => {
             const hash = window.location.hash.replace('#', '');
@@ -234,7 +177,33 @@ const AdminPage: React.FC = () => {
                         </div>
                         <div className="mb-8 relative">
                             <label className="form-label" htmlFor="password">Operator Key</label>
-                            <input id="password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} className="form-input text-center tracking-widest bg-white/5 border-white/10" required />
+                            <div className="relative">
+                                <input 
+                                    id="password" 
+                                    type={showPassword ? "text" : "password"} 
+                                    value={password} 
+                                    onChange={(e) => setPassword(e.target.value)} 
+                                    className="form-input text-center tracking-widest bg-white/5 border-white/10 pr-12" 
+                                    required 
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute inset-y-0 right-0 px-4 flex items-center text-gray-500 hover:text-white transition-colors"
+                                >
+                                    {showPassword ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                                        </svg>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074L3.707 2.293zM10 12a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                            <path d="M2 10s.955-2.263 2.828-4.136A10.046 10.046 0 0110 3c4.478 0 8.268 2.943 9.542 7-.153.483-.32.95-.5 1.401l-1.473-1.473A8.014 8.014 0 0010 8c-2.04 0-3.87.768-5.172 2.035l-1.473-1.473A8.013 8.013 0 002 10z" />
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                         {error && <p className="text-red-500 text-[10px] font-bold mb-6 text-center uppercase tracking-widest">{error}</p>}
                         <button className="submit-btn w-full !rounded-2xl py-4 bg-red-600" type="submit">Establish Uplink</button>
@@ -276,7 +245,6 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => setActiveTab('movies')} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'inquiries' && <TalentInquiriesTab />}
-                    {activeTab === 'users' && <UserTerminal />}
                     {activeTab === 'jury' && <JuryRoomTab pipeline={pipeline} />}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
@@ -284,7 +252,6 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'cratefest' && <CrateFestEditor config={crateFestConfig!} allMovies={movies} pipeline={pipeline} onSave={(newConfig) => handleSaveData('settings', { crateFestConfig: newConfig })} isSaving={isSaving} />}
                     {activeTab === 'vouchers' && <PromoCodeManager isAdmin={true} targetFilms={Object.values(movies)} targetBlocks={[]} />}
                     {activeTab === 'pitch' && <PitchDeckManager onSave={(settings) => handleSaveData('settings', settings)} isSaving={isSaving} />}
-                    {activeTab === 'partners' && <PartnersTab />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={(d) => setFestivalData(d)} onConfigChange={(c) => setFestivalConfig(c)} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}
                     {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}
