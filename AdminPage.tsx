@@ -67,6 +67,19 @@ const AdminPage: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
 
+    // Hash-based navigation for deep-links like "Broadcast Update"
+    useEffect(() => {
+        const handleHash = () => {
+            const hash = window.location.hash.replace('#', '');
+            if (hash && ALL_TABS[hash]) {
+                setActiveTab(hash);
+            }
+        };
+        handleHash();
+        window.addEventListener('hashchange', handleHash);
+        return () => window.removeEventListener('hashchange', handleHash);
+    }, []);
+
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);
         try {
@@ -85,7 +98,7 @@ const AdminPage: React.FC = () => {
             ]);
 
             if (liveDataRes.ok) {
-                const data = await liveDataRes.ok ? await liveDataRes.json() : {};
+                const data = await liveDataRes.json();
                 setMovies(data.movies || {});
                 setCategories(data.categories || {});
                 setAboutData(data.aboutData || null);
@@ -217,7 +230,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}
-                    {activeTab === 'cratefest' && crateFestConfig && <CrateFestEditor config={crateFestConfig} allMovies={movies} pipeline={pipeline} onSave={(newConfig) => handleSaveData('settings', { crateFestConfig: newConfig })} isSaving={isSaving} />}
+                    {activeTab === 'cratefest' && <CrateFestEditor config={crateFestConfig!} allMovies={movies} pipeline={pipeline} onSave={(newConfig) => handleSaveData('settings', { crateFestConfig: newConfig })} isSaving={isSaving} />}
                     {activeTab === 'vouchers' && <PromoCodeManager isAdmin={true} targetFilms={Object.values(movies)} targetBlocks={[]} />}
                     {activeTab === 'pitch' && <PitchDeckManager onSave={(settings) => handleSaveData('settings', settings)} isSaving={isSaving} />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
