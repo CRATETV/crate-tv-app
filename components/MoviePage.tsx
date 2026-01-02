@@ -29,8 +29,17 @@ const getEmbedUrl = (url: string): string | null => {
     return null;
 };
 
+// Security Component: The Traceable Identity Overlay
+const SecureWatermark: React.FC<{ email: string }> = ({ email }) => (
+    <div className="absolute inset-0 pointer-events-none z-[45] overflow-hidden opacity-[0.08] select-none">
+        <div className="dynamic-watermark absolute whitespace-nowrap bg-white/10 px-2 py-1 rounded text-[10px] font-black text-white uppercase tracking-widest">
+            AUTHENTICATED EXHIBITION // {email.toUpperCase()} // 0X{Math.random().toString(16).slice(2, 8).toUpperCase()}
+        </div>
+    </div>
+);
+
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals } = useAuth();
+  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals } = useAuth();
   const { movies: allMovies, categories: allCategories, isLoading: isDataLoading } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
@@ -44,6 +53,26 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hasTrackedViewRef = useRef(false);
+
+  // SECURITY: Prevent standard screen recording and grab shortcuts
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+        if (playerMode !== 'full') return;
+
+        // Block PrintScreen, Ctrl+S, F12, Ctrl+U, etc.
+        const blockedKeys = ['PrintScreen', 'F12', 'F11'];
+        const blockedCombos = (e.ctrlKey || e.metaKey) && ['s', 'u', 'i', 'j', 'c'].includes(e.key.toLowerCase());
+
+        if (blockedKeys.includes(e.key) || blockedCombos) {
+            e.preventDefault();
+            console.warn("Security policy prevented standard command.");
+            return false;
+        }
+    };
+
+    window.addEventListener('keydown', handleKeydown, true);
+    return () => window.removeEventListener('keydown', handleKeydown, true);
+  }, [playerMode]);
 
   const hasAccess = useMemo(() => {
     if (!movie) return false;
@@ -98,8 +127,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   if (!movie) return <div className="h-screen flex items-center justify-center font-black uppercase tracking-widest text-gray-800 bg-black">Content Restricted</div>;
 
   const embedUrl = getEmbedUrl(movie.fullMovie);
-  
-  // Cleanup HTML from synopsis for SEO description
   const seoDescription = (movie.synopsis || '').replace(/<[^>]+>/g, '').trim();
 
   return (
@@ -114,26 +141,23 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 "name": movie.title,
                 "description": seoDescription,
                 "image": movie.poster,
-                "director": {
-                    "@type": "Person",
-                    "name": movie.director
-                },
-                "actor": movie.cast.map(actor => ({
-                    "@type": "Person",
-                    "name": actor.name
-                }))
+                "director": { "@type": "Person", "name": movie.director },
+                "actor": movie.cast.map(actor => ({ "@type": "Person", "name": actor.name }))
             }}
         />
         {playerMode !== 'full' && <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} />}
         
         <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
-            <div className={`relative w-full ${playerMode === 'full' ? 'h-screen' : 'aspect-video'} bg-black shadow-2xl overflow-hidden`}>
+            <div className={`relative w-full ${playerMode === 'full' ? 'h-screen' : 'aspect-video'} bg-black shadow-2xl overflow-hidden secure-video-container`} onContextMenu={(e) => e.preventDefault()}>
                 {playerMode === 'full' ? (
                     hasAccess ? (
                         embedUrl ? (
                             <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen></iframe>
                         ) : (
-                            <div className="relative w-full h-full" onContextMenu={(e) => e.preventDefault()}>
+                            <div className="relative w-full h-full">
+                                {/* Traceable Watermark Overlay */}
+                                {user?.email && <SecureWatermark email={user.email} />}
+
                                 <video 
                                     ref={videoRef} 
                                     src={movie.fullMovie} 
@@ -144,6 +168,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     onPause={() => setIsPaused(true)} 
                                     onPlay={() => setIsPaused(false)}
                                     controlsList="nodownload" 
+                                    onContextMenu={(e) => e.preventDefault()}
                                 />
                                 {isPaused && <PauseOverlay movie={movie} isLiked={likedMoviesArray.includes(movieKey)} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => videoRef.current?.play()} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={() => toggleLikeMovie(movieKey)} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
                             </div>

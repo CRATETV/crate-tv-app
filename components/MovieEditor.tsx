@@ -251,6 +251,10 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                 <span className="text-sm font-bold text-amber-500 uppercase tracking-widest group-hover:text-amber-400 transition-colors">Watch Party Only (Unlisted)</span>
                                             </div>
                                         </label>
+                                        <label className="flex items-center gap-3 cursor-pointer group border-b border-white/5 pb-4">
+                                            <input type="checkbox" name="isSupportEnabled" checked={formData.isSupportEnabled !== false} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-purple-500 focus:ring-purple-500" />
+                                            <span className="text-sm font-bold text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Accept Direct Support / Tips</span>
+                                        </label>
                                         <label className="flex items-center gap-3 cursor-pointer group">
                                             <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
                                             <span className="text-sm font-bold text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Lock behind Paywall (Rental)</span>
