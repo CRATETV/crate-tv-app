@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Movie, WatchPartyState, ChatMessage } from '../types';
+import { Movie, WatchPartyState, ChatMessage, SentimentPoint } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
-import SquarePaymentModal from './SquarePaymentModal';
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -19,6 +18,9 @@ const getEmbedUrl = (url: string): string | null => {
     const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
     const vimeoMatch = url.match(vimeoRegex);
     if (vimeoMatch && vimeoMatch[1]) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&color=ff0000&title=0&byline=0&portrait=0`;
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const ytMatch = url.match(youtubeRegex);
+    if (ytMatch && ytMatch[1]) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1`;
     return null;
 };
 
@@ -26,10 +28,150 @@ const getEmbedUrl = (url: string): string | null => {
 const SecureWatermark: React.FC<{ email: string }> = ({ email }) => (
     <div className="absolute inset-0 pointer-events-none z-[45] overflow-hidden opacity-[0.08] select-none">
         <div className="dynamic-watermark absolute whitespace-nowrap bg-white/10 px-2 py-1 rounded text-[10px] font-black text-white uppercase tracking-widest">
-            AUTHENTICATED EXHIBITION // {email.toUpperCase()} // PARTY_SESSION_{Math.random().toString(36).substring(7).toUpperCase()}
+            AUTHENTICATED EXHIBITION // {email.toUpperCase()} // 0X{Math.random().toString(16).slice(2, 8).toUpperCase()}
         </div>
     </div>
 );
+
+const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({ emoji, onComplete }) => {
+    const randomLeft = useMemo(() => Math.floor(Math.random() * 80) + 10, []); 
+    const randomDuration = useMemo(() => 2 + Math.random() * 2, []); 
+    const randomScale = useMemo(() => 0.8 + Math.random() * 0.7, []); 
+
+    useEffect(() => {
+        const timer = setTimeout(onComplete, randomDuration * 1000);
+        return () => clearTimeout(timer);
+    }, [randomDuration, onComplete]);
+
+    return (
+        <div 
+            className="absolute bottom-0 pointer-events-none text-4xl animate-emoji-float z-[60]"
+            style={{ 
+                left: `${randomLeft}%`, 
+                animationDuration: `${randomDuration}s`,
+                transform: `scale(${randomScale})`
+            }}
+        >
+            {emoji}
+        </div>
+    );
+};
+
+// --- LIVE TALKBACK COMPONENT ---
+const LiveTalkbackTerminal: React.FC<{ 
+    movie: Movie; 
+    isSpeaker: boolean; 
+    userName: string; 
+    backstageKeyMatch?: string;
+    onManualSpeakerUnlock: (key: string) => void;
+}> = ({ movie, isSpeaker, userName, backstageKeyMatch, onManualSpeakerUnlock }) => {
+    const [cameraActive, setCameraActive] = useState(false);
+    const [showKeyInput, setShowKeyInput] = useState(false);
+    const [enteredKey, setEnteredKey] = useState('');
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    const startBroadcast = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                setCameraActive(true);
+            }
+        } catch (e) {
+            alert("Camera access denied. You can still participate via audio or chat.");
+        }
+    };
+
+    const handleKeySubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (backstageKeyMatch && enteredKey.trim().toUpperCase() === backstageKeyMatch.toUpperCase()) {
+            onManualSpeakerUnlock(enteredKey.trim());
+            setShowKeyInput(false);
+        } else {
+            alert("Invalid Backstage Access Key. Access Denied.");
+        }
+    };
+
+    return (
+        <div className="absolute inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-[fadeIn_0.5s_ease-out]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.05)_0%,transparent_70%)]"></div>
+            
+            <div className="relative z-10 w-full max-w-4xl px-6 text-center">
+                <div className="inline-flex items-center gap-2 bg-red-600 px-4 py-1 rounded-full mb-8 shadow-[0_0_20px_rgba(239,68,68,0.4)]">
+                    <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                    <span className="text-[10px] font-black uppercase tracking-widest">Live Talkback Session</span>
+                </div>
+                
+                <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-4 italic">Post-Film Q&A</h2>
+                <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-12">Moderating: Crate TV Studio // Guest: {movie.director}</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    {/* The Panel Grid */}
+                    <div className="aspect-video bg-gray-900 rounded-3xl border border-white/10 relative overflow-hidden flex items-center justify-center group">
+                        <div className="absolute top-4 left-4 z-20 bg-black/60 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest text-red-500 border border-red-500/30">Host // Studio</div>
+                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-24 opacity-10 group-hover:opacity-20 transition-opacity" alt="" />
+                        <div className="text-[10px] font-bold text-gray-700 uppercase">Awaiting Studio Uplink...</div>
+                    </div>
+
+                    <div className="aspect-video bg-gray-900 rounded-3xl border border-red-600/30 relative overflow-hidden flex items-center justify-center shadow-2xl">
+                         {cameraActive ? (
+                            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                         ) : (
+                            <div className="text-center p-8">
+                                <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
+                                    <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                </div>
+                                <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">
+                                    {isSpeaker ? `Ready for Uplink: ${userName}` : `Speaker Slot Reserved: ${movie.director}`}
+                                </p>
+                            </div>
+                         )}
+                         <div className="absolute top-4 left-4 z-20 bg-red-600 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest text-white">Guest // Primary</div>
+                    </div>
+                </div>
+
+                {/* Speaker Control Area */}
+                {isSpeaker ? (
+                    !cameraActive && (
+                        <button 
+                            onClick={startBroadcast}
+                            className="bg-white text-black font-black px-10 py-4 rounded-2xl uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-2xl"
+                        >
+                            Activate Stage Camera
+                        </button>
+                    )
+                ) : (
+                    <div className="space-y-6">
+                        <div className="bg-white/5 border border-white/10 p-6 rounded-2xl inline-block">
+                            <p className="text-sm text-gray-400 font-medium">The audience is now listening. <span className="text-white font-bold">Ask your questions</span> in the chat below!</p>
+                        </div>
+                        
+                        {!showKeyInput ? (
+                            <button 
+                                onClick={() => setShowKeyInput(true)} 
+                                className="block mx-auto text-[10px] font-black uppercase text-gray-700 hover:text-red-500 tracking-widest transition-colors"
+                            >
+                                Have a Backstage Key?
+                            </button>
+                        ) : (
+                            <form onSubmit={handleKeySubmit} className="max-w-xs mx-auto flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value={enteredKey}
+                                    onChange={e => setEnteredKey(e.target.value)}
+                                    placeholder="ACCESS_KEY"
+                                    className="bg-black border border-white/20 rounded-lg px-4 py-2 text-xs font-mono uppercase tracking-widest text-white focus:border-red-600 outline-none w-full"
+                                    autoFocus
+                                />
+                                <button type="submit" className="bg-white text-black px-4 py-2 rounded-lg font-black text-[10px] uppercase">Verify</button>
+                            </form>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
 
 const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: string | null; avatar?: string; } | null }> = ({ movieKey, user }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -80,7 +222,7 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
             <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide min-h-0">
                 {messages.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-center px-8">
-                        <p className="text-gray-600 text-sm italic">The screening has started. Be the first to say hello!</p>
+                        <p className="text-gray-600 text-sm italic">Screening in progress. Join the conversation!</p>
                     </div>
                 ) : (
                     messages.map(msg => (
@@ -122,40 +264,73 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
 };
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user, unlockedWatchPartyKeys, unlockWatchParty } = useAuth();
+    const { user, unlockedWatchPartyKeys } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading } = useFestival();
     const movie = allMovies[movieKey];
     
     const videoRef = useRef<HTMLVideoElement>(null);
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [isVideoReady, setIsVideoReady] = useState(false);
-    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-    const [shareStatus, setShareStatus] = useState<'idle' | 'copied'>('idle');
+    const [manualSpeakerKey, setManualSpeakerKey] = useState<string | null>(null);
+    
+    const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
 
     const hasAccess = !movie?.isWatchPartyPaid || unlockedWatchPartyKeys.has(movieKey);
     const embedUrl = useMemo(() => movie ? getEmbedUrl(movie.fullMovie) : null, [movie]);
 
+    // SPEAKER VALIDATION: Check if current user is the official filmmaker OR has used a backstage key
+    const isSpeakerCandidate = useMemo(() => {
+        // 1. Check manual authorization
+        if (manualSpeakerKey && manualSpeakerKey === partyState?.backstageKey) return true;
+
+        // 2. Check name-matching authorization
+        if (!user?.name || !movie) return false;
+        const normalized = user.name.toLowerCase().trim();
+        const directors = movie.director.toLowerCase().split(',').map(d => d.trim());
+        const producers = (movie.producers || '').toLowerCase().split(',').map(p => p.trim());
+        return directors.includes(normalized) || producers.includes(normalized);
+    }, [user, movie, manualSpeakerKey, partyState?.backstageKey]);
+
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
+
         const partyRef = db.collection('watch_parties').doc(movieKey);
         const unsubscribe = partyRef.onSnapshot(doc => {
             if (doc.exists) setPartyState(doc.data() as WatchPartyState);
         });
-        return () => unsubscribe();
-    }, [movieKey]);
+
+        const fiveSecondsAgo = new Date(Date.now() - 5000);
+        const reactionsRef = partyRef.collection('live_reactions')
+            .where('timestamp', '>=', fiveSecondsAgo)
+            .onSnapshot(snapshot => {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === 'added') {
+                        const data = change.doc.data();
+                        if (data.userId !== user?.uid) {
+                            setLocalReactions(prev => [...prev, { id: change.doc.id, emoji: data.emoji }]);
+                        }
+                    }
+                });
+            });
+
+        return () => {
+            unsubscribe();
+            reactionsRef();
+        };
+    }, [movieKey, user?.uid]);
 
     useEffect(() => {
-        if (!hasAccess || embedUrl) return; 
+        if (!hasAccess || embedUrl || partyState?.isQALive) return; 
         const video = videoRef.current;
         if (!video) return;
         const handleCanPlay = () => setIsVideoReady(true);
         video.addEventListener('canplay', handleCanPlay);
         return () => { if (video) video.removeEventListener('canplay', handleCanPlay); };
-    }, [hasAccess, embedUrl]);
+    }, [hasAccess, embedUrl, partyState?.isQALive]);
 
     useEffect(() => {
-        if (!hasAccess || embedUrl) return; 
+        if (!hasAccess || embedUrl || partyState?.isQALive) return; 
         const video = videoRef.current;
         if (!video || !partyState) return;
 
@@ -170,15 +345,18 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         }
     }, [partyState, hasAccess, embedUrl]);
 
-    const logSentiment = async (type: string) => {
-        if (!videoRef.current) return;
-        try {
-            await fetch('/api/log-sentiment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ movieKey, type, timestamp: videoRef.current.currentTime })
+    const logSentiment = async (emoji: string) => {
+        const localId = `local_${Date.now()}_${Math.random()}`;
+        setLocalReactions(prev => [...prev, { id: localId, emoji }]);
+
+        const db = getDbInstance();
+        if (db) {
+            db.collection('watch_parties').doc(movieKey).collection('live_reactions').add({
+                emoji,
+                userId: user?.uid,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
-        } catch (e) {}
+        }
     };
 
     const handleGoHome = () => {
@@ -190,6 +368,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     return (
         <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden overscroll-none" onContextMenu={(e) => e.preventDefault()}>
+            <style>{`
+                @keyframes emojiFloat {
+                    0% { transform: translateY(0) rotate(0deg) scale(0.5); opacity: 0; }
+                    10% { opacity: 1; transform: translateY(-20px) rotate(5deg) scale(1.2); }
+                    100% { transform: translateY(-600px) rotate(-15deg) scale(0.8); opacity: 0; }
+                }
+                .animate-emoji-float {
+                    animation: emojiFloat 3s ease-out forwards;
+                }
+            `}</style>
+
             <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full min-h-0">
                 
                 <div className="flex-grow flex flex-col relative h-full min-h-0">
@@ -209,25 +398,54 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
 
                     <div className="flex-none w-full aspect-video bg-black relative shadow-2xl z-30 overflow-hidden">
+                        <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden">
+                            {localReactions.map(r => (
+                                <FloatingReaction 
+                                    key={r.id} 
+                                    emoji={r.emoji} 
+                                    onComplete={() => setLocalReactions(prev => prev.filter(item => item.id !== r.id))} 
+                                />
+                            ))}
+                        </div>
+
                         {user?.email && <SecureWatermark email={user.email} />}
-                        {embedUrl ? (
-                            <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen title={movie.title}></iframe>
+                        
+                        {/* THE SWITCH: Check if Q&A is live */}
+                        {partyState?.isQALive ? (
+                            <LiveTalkbackTerminal 
+                                movie={movie} 
+                                isSpeaker={isSpeakerCandidate} 
+                                userName={user?.name || "Guest Creator"}
+                                backstageKeyMatch={partyState.backstageKey}
+                                onManualSpeakerUnlock={setManualSpeakerKey}
+                            />
                         ) : (
-                            <>
-                                {!isVideoReady && (
-                                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
-                                        <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="w-full h-full object-cover blur-sm opacity-50" crossOrigin="anonymous" />
-                                        <div className="absolute"><LoadingSpinner /></div>
-                                    </div>
-                                )}
-                                <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full transition-opacity duration-500 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`} playsInline autoPlay onContextMenu={(e) => e.preventDefault()} />
-                            </>
+                            embedUrl ? (
+                                <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen title={movie.title}></iframe>
+                            ) : (
+                                <>
+                                    {!isVideoReady && (
+                                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
+                                            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="w-full h-full object-cover blur-sm opacity-50" crossOrigin="anonymous" />
+                                            <div className="absolute"><LoadingSpinner /></div>
+                                        </div>
+                                    )}
+                                    <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full transition-opacity duration-500 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`} playsInline autoPlay onContextMenu={(e) => e.preventDefault()} />
+                                </>
+                            )
                         )}
                     </div>
 
                     <div className="flex-none bg-black/40 border-b border-white/5 py-2 px-4 flex justify-around items-center z-40">
                          {REACTION_TYPES.map(emoji => (
-                            <button key={emoji} onClick={() => logSentiment(emoji)} className="text-xl md:text-2xl hover:scale-125 transition-transform active:scale-95 drop-shadow-xl p-2 rounded-full">{emoji}</button>
+                            <button 
+                                key={emoji} 
+                                onClick={() => logSentiment(emoji)} 
+                                className="text-xl md:text-3xl hover:scale-150 active:scale-125 transition-transform drop-shadow-xl p-2 rounded-full transform"
+                                aria-label={`React with ${emoji}`}
+                            >
+                                {emoji}
+                            </button>
                         ))}
                     </div>
                     

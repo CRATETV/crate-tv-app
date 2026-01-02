@@ -8,6 +8,7 @@ interface PromoCodeManagerProps {
     filmmakerName?: string;
     targetFilms?: Movie[];
     targetBlocks?: FilmBlock[];
+    defaultItemId?: string; // New prop for context-aware initialization
 }
 
 const DistributeModal: React.FC<{
@@ -37,7 +38,6 @@ const DistributeModal: React.FC<{
         const recipients = bulkDispatch ? filmmakers.map(f => f.email).filter(Boolean) as string[] : [email];
         
         try {
-            // Process in small batches if bulk to avoid timeouts
             const batchSize = 10;
             for (let i = 0; i < recipients.length; i += batchSize) {
                 const batch = recipients.slice(i, i + batchSize);
@@ -162,7 +162,7 @@ const DistributeModal: React.FC<{
     );
 };
 
-const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerName, targetFilms = [], targetBlocks = [] }) => {
+const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerName, targetFilms = [], targetBlocks = [], defaultItemId = '' }) => {
     const [codes, setCodes] = useState<PromoCode[]>([]);
     const [filmmakers, setFilmmakers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -176,7 +176,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
     const [type, setType] = useState<'one_time_access' | 'discount'>('one_time_access');
     const [discountValue, setDiscountValue] = useState(100);
     const [maxUses, setMaxUses] = useState(1);
-    const [selectedItemId, setSelectedItemId] = useState('');
+    const [selectedItemId, setSelectedItemId] = useState(defaultItemId);
 
     const fetchCodes = async () => {
         const db = getDbInstance();
@@ -215,7 +215,6 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
         const db = getDbInstance();
         if (!db) return;
 
-        // Auto-set maxUses to a high number if it's a general discount, or 1 if it's a VIP invite.
         const codeData: Omit<PromoCode, 'id'> = {
             code: newCode.toUpperCase().trim().replace(/\s/g, ''),
             type,
@@ -230,7 +229,8 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
         try {
             await db.collection('promo_codes').doc(codeData.code).set(codeData);
             setNewCode('');
-            setSelectedItemId('');
+            // Only reset item if no default was provided
+            if (!defaultItemId) setSelectedItemId('');
             await fetchCodes();
         } catch (err) {
             alert("Error generating code. Name may be taken.");
@@ -277,7 +277,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                                     type="text" 
                                     value={newCode} 
                                     onChange={e => setNewCode(e.target.value.toUpperCase())} 
-                                    placeholder="e.g. FILMMAKERINVITE" 
+                                    placeholder="e.g. VIPPASS" 
                                     className="form-input !bg-black/40 border-white/10 uppercase tracking-widest font-black" 
                                     required 
                                 />
@@ -304,28 +304,30 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="form-label">Target Content (Optional)</label>
-                                <select 
-                                    value={selectedItemId} 
-                                    onChange={e => setSelectedItemId(e.target.value)} 
-                                    className="form-input !bg-black/40 border-white/10"
-                                >
-                                    <option value="">Full Catalog Access</option>
-                                    {targetBlocks.length > 0 && <optgroup label="Festival Blocks">
-                                        {targetBlocks.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
-                                    </optgroup>}
-                                    {targetFilms.length > 0 && <optgroup label="Individual Films">
-                                        {targetFilms.map(f => <option key={f.key} value={f.key}>{f.title}</option>)}
-                                    </optgroup>}
-                                </select>
-                            </div>
+                            {!defaultItemId && (
+                                <div>
+                                    <label className="form-label">Target Content (Optional)</label>
+                                    <select 
+                                        value={selectedItemId} 
+                                        onChange={e => setSelectedItemId(e.target.value)} 
+                                        className="form-input !bg-black/40 border-white/10"
+                                    >
+                                        <option value="">Full Catalog Access</option>
+                                        {targetBlocks.length > 0 && <optgroup label="Festival Blocks">
+                                            {targetBlocks.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
+                                        </optgroup>}
+                                        {targetFilms.length > 0 && <optgroup label="Individual Films">
+                                            {targetFilms.map(f => <option key={f.key} value={f.key}>{f.title}</option>)}
+                                        </optgroup>}
+                                    </select>
+                                </div>
+                            )}
                         </div>
 
                         <button 
                             type="submit" 
                             disabled={isGenerating}
-                            className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all active:scale-95 disabled:opacity-30 shadow-xl"
+                            className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl uppercase tracking-widest text-xs transition-all active:scale-95 disabled:opacity-30 shadow-xl"
                         >
                             {isGenerating ? 'Forging Code...' : 'Initialize Code'}
                         </button>
@@ -334,7 +336,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
 
                 {/* List */}
                 <div className="lg:col-span-2">
-                    <div className="bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] overflow-hidden">
+                    <div className="bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] overflow-hidden h-full">
                         <div className="p-6 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
                              <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">Access Perimeter Manifest</h4>
                              <span className="text-[10px] text-gray-700 font-bold uppercase tracking-widest">Ready for Distribution</span>

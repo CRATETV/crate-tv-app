@@ -213,6 +213,9 @@ export interface WatchPartyState {
     isPlaying: boolean;
     currentTime: number;
     status: 'waiting' | 'live' | 'ended';
+    isQALive?: boolean;
+    qaRoomUrl?: string;
+    backstageKey?: string;
     lastUpdatedBy: string;
     lastUpdated?: any;
 }

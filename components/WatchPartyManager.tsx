@@ -4,6 +4,7 @@ import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import { useAuth } from '../contexts/AuthContext';
 import { avatars } from './avatars';
+import PromoCodeManager from './PromoCodeManager';
 
 // --- HELPER FUNCTIONS ---
 
@@ -71,24 +72,24 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
     return (
         <div className="w-full h-full flex flex-col bg-gray-900 border-l-2 border-gray-700">
             <div className="p-4 text-lg font-bold border-b border-gray-700 flex-shrink-0">
-                <h2 className="text-base">Live Chat</h2>
+                <h2 className="text-base font-black uppercase tracking-widest text-gray-500">Event Audio/Text Feed</h2>
             </div>
-            <div className="flex-grow p-4 overflow-y-auto space-y-4">
+            <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide">
                 {messages.map(msg => (
                     <div key={msg.id} className="flex items-start gap-3">
                         <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 p-1" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
                         <div>
-                            <p className="font-bold text-sm text-white">{msg.userName}</p>
+                            <p className="font-bold text-[10px] text-red-500 uppercase tracking-tighter">{msg.userName}</p>
                             <p className="text-sm text-gray-300 break-words">{msg.text}</p>
                         </div>
                     </div>
                 ))}
                 <div ref={messagesEndRef} />
             </div>
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-700 flex-shrink-0">
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-700 flex-shrink-0 bg-black/20">
                 <div className="flex items-center gap-2">
-                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Say something..." className="form-input flex-grow" disabled={!user || isSending} />
-                    <button type="submit" className="submit-btn !px-4" disabled={!user || isSending || !newMessage.trim()}>Send</button>
+                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Host message..." className="form-input flex-grow !bg-black/40 border-white/10" disabled={!user || isSending} />
+                    <button type="submit" className="submit-btn !px-6 !py-2.5 text-xs" disabled={!user || isSending || !newMessage.trim()}>Send</button>
                 </div>
             </form>
         </div>
@@ -104,7 +105,17 @@ const WatchPartyControlRoom: React.FC<{
 }> = ({ movie, partyState, onStartParty, onEndParty, onSyncState }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const { user } = useAuth();
+    const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
+    const [backstageKey, setBackstageKey] = useState(partyState?.backstageKey || '');
     const lastSyncTime = useRef(0);
+
+    const shareUrl = `${window.location.origin}/watchparty/${movie.key}`;
+
+    const handleShare = () => {
+        navigator.clipboard.writeText(shareUrl);
+        setCopyStatus('copied');
+        setTimeout(() => setCopyStatus('idle'), 2000);
+    };
 
     const handlePlay = () => onSyncState({ isPlaying: true });
     const handlePause = () => videoRef.current && onSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime });
@@ -131,56 +142,134 @@ const WatchPartyControlRoom: React.FC<{
         if (Math.abs(video.currentTime - partyState.currentTime) > 3) {
             video.currentTime = partyState.currentTime;
         }
+        
+        if (partyState.backstageKey) setBackstageKey(partyState.backstageKey);
     }, [partyState]);
+
+    const handleUpdateBackstageKey = () => {
+        onSyncState({ backstageKey: backstageKey.trim().toUpperCase() });
+        alert(`Backstage Key updated to: ${backstageKey.trim().toUpperCase()}`);
+    };
     
     const status = getPartyStatusText(movie, partyState);
     const canStart = movie.isWatchPartyEnabled && movie.watchPartyStartTime && new Date() >= new Date(movie.watchPartyStartTime) && (partyState?.status === 'waiting' || !partyState);
 
     return (
-        <div className="mb-8 bg-black/50 p-6 rounded-lg border-2 border-pink-500">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-white">Current Watch Party Control Room</h2>
-                {partyState?.status === 'live' && (
-                    <button onClick={onEndParty} className="bg-red-600/10 text-red-500 border border-red-500/30 px-4 py-2 rounded-lg font-black text-xs uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all">
-                        Kill Session (End Party)
-                    </button>
-                )}
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-4">
-                    <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-                        <video
-                            ref={videoRef}
-                            src={movie.fullMovie}
-                            onPlay={handlePlay}
-                            onPause={handlePause}
-                            onSeeked={handleSeeked}
-                            onTimeUpdate={handleTimeUpdate}
-                            controls
-                            className="w-full h-full"
-                        />
+        <div className="mb-12 bg-black/60 p-8 rounded-[2.5rem] border border-red-600/30 shadow-[0_50px_100px_rgba(0,0,0,1)]">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
+                <div>
+                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic">Event Control Station</h2>
+                    <div className="flex items-center gap-3 mt-2">
+                        <span className={`px-3 py-1 text-[10px] font-black text-white rounded-full uppercase tracking-widest ${status.color}`}>
+                            {status.text}
+                        </span>
+                        <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Active ID: {movie.key}</p>
                     </div>
-                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-800/50 p-4 rounded-lg">
-                        <div>
-                            <h3 className="text-xl font-bold">{movie.title}</h3>
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className={`px-2 py-1 text-xs font-bold text-white rounded-full ${status.color}`}>
-                                    {status.text}
-                                </span>
-                                <span className="text-sm text-gray-400">
-                                    {movie.watchPartyStartTime && `Scheduled for: ${new Date(movie.watchPartyStartTime).toLocaleString()}`}
-                                </span>
+                </div>
+                <div className="flex gap-3">
+                    <button onClick={handleShare} className="bg-white/5 hover:bg-white text-gray-400 hover:text-black font-black px-6 py-3 rounded-xl border border-white/10 transition-all uppercase text-[10px] tracking-widest">
+                        {copyStatus === 'copied' ? 'Link Copied!' : 'Share Broadcast Link'}
+                    </button>
+                    <a href={shareUrl} target="_blank" className="bg-blue-600 hover:bg-blue-500 text-white font-black px-6 py-3 rounded-xl uppercase text-[10px] tracking-widest shadow-lg">
+                        Go to Live View
+                    </a>
+                    {partyState?.status === 'live' && (
+                        <button onClick={onEndParty} className="bg-red-600 hover:bg-red-700 text-white font-black px-6 py-3 rounded-xl uppercase text-[10px] tracking-widest shadow-xl">
+                            End Session
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="relative aspect-video bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
+                        {partyState?.isQALive ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-center bg-gray-950 p-8 space-y-6">
+                                <div className="bg-red-600 p-4 rounded-full animate-pulse shadow-[0_0_40px_rgba(239,68,68,0.4)]">
+                                    <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                </div>
+                                <h4 className="text-xl font-black uppercase text-white tracking-tighter italic">Live Q&A Mode Active</h4>
+                                <p className="text-gray-400 text-sm font-medium">Participants are now connecting to the Talkback Terminal.</p>
+                                <button 
+                                    onClick={() => onSyncState({ isQALive: false })}
+                                    className="px-6 py-2 bg-white/5 hover:bg-red-600 text-gray-500 hover:text-white border border-white/10 rounded-xl text-[10px] font-black uppercase transition-all"
+                                >
+                                    Cancel Talkback & Return to Film
+                                </button>
                             </div>
+                        ) : (
+                            <video
+                                ref={videoRef}
+                                src={movie.fullMovie}
+                                onPlay={handlePlay}
+                                onPause={handlePause}
+                                onSeeked={handleSeeked}
+                                onTimeUpdate={handleTimeUpdate}
+                                controls
+                                className="w-full h-full"
+                            />
+                        )}
+                        <div className="absolute top-4 right-4 z-10">
+                            <span className="bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-widest">Master Feed</span>
+                        </div>
+                    </div>
+                    <div className="bg-white/5 p-6 rounded-3xl border border-white/5">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <h3 className="text-xl font-black text-white tracking-tight uppercase mb-1">{movie.title}</h3>
+                                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">
+                                    {movie.watchPartyStartTime ? `Synchronized Start: ${new Date(movie.watchPartyStartTime).toLocaleString()}` : 'No schedule set.'}
+                                </p>
+                            </div>
+                            {partyState?.status === 'live' && !partyState.isQALive && (
+                                <button 
+                                    onClick={() => onSyncState({ isQALive: true, isPlaying: false })}
+                                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-6 py-3 rounded-xl uppercase text-[10px] tracking-widest shadow-xl transition-all"
+                                >
+                                    Initiate Live Q&A
+                                </button>
+                            )}
                         </div>
                         {canStart && (
-                            <button onClick={onStartParty} className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-md w-full sm:w-auto">
-                                Start Party For Everyone
+                            <button onClick={onStartParty} className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl uppercase tracking-widest shadow-xl active:scale-95 transition-all">
+                                Establish Live Handshake (Start Party)
                             </button>
                         )}
                     </div>
                 </div>
-                <div className="lg:col-span-1 h-[60vh] md:h-auto min-h-[500px]">
+
+                <div className="lg:col-span-1 h-full min-h-[400px]">
                      <EmbeddedChat movieKey={movie.key} user={user} />
+                </div>
+
+                <div className="lg:col-span-1 space-y-6">
+                    <div className="bg-indigo-900/10 border border-indigo-500/20 p-6 rounded-[2rem] space-y-6">
+                        <div>
+                            <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-4">Manual Guest Authorization</h4>
+                            <div className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value={backstageKey} 
+                                    onChange={e => setBackstageKey(e.target.value)} 
+                                    placeholder="Set Access Key" 
+                                    className="form-input !bg-black/40 border-white/10 uppercase font-mono text-xs"
+                                />
+                                <button onClick={handleUpdateBackstageKey} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase">Sync</button>
+                            </div>
+                            <p className="text-[9px] text-gray-600 mt-2 italic">Give this key to guests who don't have a creator profile to grant them camera access.</p>
+                        </div>
+
+                        <div className="pt-6 border-t border-white/5">
+                            <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-4">Event Vouchers</h4>
+                            <p className="text-xs text-gray-400 leading-relaxed font-medium mb-4">Generate VIP invitations for stakeholders to bypass the paywall during this live event.</p>
+                            <PromoCodeManager 
+                                isAdmin={true} 
+                                defaultItemId={movie.key}
+                                targetFilms={[movie]}
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -220,7 +309,7 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
         <tr className="border-b border-gray-700">
             <td className="p-3 font-medium text-white">{movie.title}</td>
             <td className="p-3">
-                <span className={`px-2 py-1 text-xs font-bold text-white rounded-full ${status.color}`}>
+                <span className={`px-2 py-1 text-[10px] font-black text-white rounded-full uppercase tracking-widest ${status.color}`}>
                     {status.text}
                 </span>
             </td>
@@ -235,7 +324,7 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
                     type="datetime-local"
                     value={formatISOForInput(movie.watchPartyStartTime)}
                     onChange={handleTimeChange}
-                    className="form-input !py-1 text-sm"
+                    className="form-input !py-1 text-sm bg-black/40 border-white/10"
                     disabled={!movie.isWatchPartyEnabled}
                 />
             </td>
@@ -341,16 +430,16 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         if (!currentPartyMovie || !window.confirm("This will kill the live session for everyone. Are you sure?")) return;
         const db = getDbInstance();
         if (!db) return;
-        await db.collection('watch_parties').doc(currentPartyMovie.key).set({ status: 'ended', isPlaying: false }, { merge: true });
+        await db.collection('watch_parties').doc(currentPartyMovie.key).set({ status: 'ended', isPlaying: false, isQALive: false }, { merge: true });
     };
 
     const filteredMovies = (Object.values(allMovies) as Movie[])
-        .filter(movie => movie.title.toLowerCase().includes(filter.toLowerCase()))
+        .filter(movie => (movie.title || '').toLowerCase().includes(filter.toLowerCase()))
         .filter(movie => !showOnlyEnabled || movieSettings[movie.key]?.isWatchPartyEnabled)
-        .sort((a, b) => a.title.localeCompare(b.title));
+        .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
     return (
-        <>
+        <div className="space-y-12">
             {currentPartyMovie && (
                 <WatchPartyControlRoom
                     movie={currentPartyMovie}
@@ -361,40 +450,41 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                 />
             )}
 
-            <div className="bg-gray-950 p-6 rounded-lg text-gray-200">
-                <h2 className="text-xl sm:text-2xl font-bold mb-4 text-pink-400">Schedule a Watch Party</h2>
-                <p className="text-sm text-gray-400 mb-6">Enable a party and set a future start time. Only one party can be active or upcoming at a time. Click "Save All Changes" to publish your schedule.</p>
-                
-                <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                    <input
-                        type="text"
-                        placeholder="Filter movies..."
-                        value={filter}
-                        onChange={e => setFilter(e.target.value)}
-                        className="form-input flex-grow"
-                    />
-                    <label className="flex items-center gap-2 text-sm text-gray-300">
+            <div className="bg-[#0f0f0f] p-10 rounded-[2.5rem] border border-white/5 shadow-2xl">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
+                    <div>
+                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Event Scheduler</h2>
+                        <p className="text-sm text-gray-500 mt-1">Map films to live synchronized sessions.</p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                         <input
-                            type="checkbox"
-                            checked={showOnlyEnabled}
-                            onChange={e => setShowOnlyEnabled(e.target.checked)}
-                            className="h-4 w-4 bg-gray-700 border-gray-600 text-pink-500 rounded focus:ring-pink-500"
+                            type="text"
+                            placeholder="Filter manifest..."
+                            value={filter}
+                            onChange={e => setFilter(e.target.value)}
+                            className="form-input !bg-white/5 border-white/10 flex-grow text-xs"
                         />
-                        Show only enabled
-                    </label>
+                        <button
+                            onClick={handleSaveAll}
+                            disabled={!hasUnsavedChanges || isSaving}
+                            className="bg-red-600 hover:bg-red-700 disabled:bg-gray-800 text-white font-black py-2.5 px-8 rounded-xl uppercase text-[10px] tracking-widest shadow-xl transition-all"
+                        >
+                            {isSaving ? 'Syncing...' : 'Commit Changes'}
+                        </button>
+                    </div>
                 </div>
                 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
+                    <table className="w-full text-left text-xs">
+                        <thead className="text-gray-500 font-black uppercase tracking-widest bg-black/40">
                             <tr>
-                                <th className="p-3">Film Title</th>
-                                <th className="p-3">Status</th>
-                                <th className="p-3">Enabled</th>
-                                <th className="p-3">Start Time</th>
+                                <th className="p-4">Manifest Record</th>
+                                <th className="p-4">Logic State</th>
+                                <th className="p-4">Active</th>
+                                <th className="p-4">Start Time (Local)</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-white/5">
                             {filteredMovies.map(movie => (
                                 <MovieRow 
                                     key={movie.key} 
@@ -406,20 +496,8 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                         </tbody>
                     </table>
                 </div>
-
-                <div className="mt-6 pt-6 border-t border-gray-700 flex items-center gap-4">
-                    <button
-                        onClick={handleSaveAll}
-                        disabled={!hasUnsavedChanges || isSaving}
-                        className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white font-bold py-2 px-5 rounded-md transition-colors"
-                    >
-                        {isSaving ? 'Saving...' : 'Save All Changes'}
-                    </button>
-                    {saveStatus === 'success' && <span className="text-green-500 text-sm">Changes saved successfully!</span>}
-                    {saveStatus === 'error' && <span className="text-red-500 text-sm">Failed to save changes.</span>}
-                </div>
             </div>
-        </>
+        </div>
     );
 };
 
