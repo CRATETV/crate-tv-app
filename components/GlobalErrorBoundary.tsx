@@ -13,6 +13,9 @@ interface State {
  * Refactored to use standard class properties to ensure TypeScript recognition.
  */
 class GlobalErrorBoundary extends Component<Props, State> {
+  // Fix: Explicitly declare props as a class property to resolve "Property 'props' does not exist on type 'GlobalErrorBoundary'" errors.
+  public props: Props;
+
   // Fix: Explicitly declare state as a class property to resolve "Property 'state' does not exist on type 'GlobalErrorBoundary'" errors.
   public state: State = {
     hasError: false
@@ -20,6 +23,8 @@ class GlobalErrorBoundary extends Component<Props, State> {
 
   constructor(props: Props) {
     super(props);
+    // Fix: Manually assign props to ensure availability in the specific TypeScript execution context.
+    this.props = props;
   }
 
   // The static method is called during the "render" phase, so side-effects are not permitted.
