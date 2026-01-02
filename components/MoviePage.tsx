@@ -29,7 +29,6 @@ const getEmbedUrl = (url: string): string | null => {
     return null;
 };
 
-// Security Component: The reactive watermark
 const SecureWatermark: React.FC<{ email: string; isTriggered: boolean }> = ({ email, isTriggered }) => (
     <div className={`absolute inset-0 pointer-events-none z-[45] overflow-hidden select-none transition-opacity duration-1000 ${isTriggered ? 'opacity-20' : 'opacity-0'}`}>
         <div className="dynamic-watermark absolute whitespace-nowrap bg-white/20 px-3 py-1 rounded-full text-[10px] font-black text-white uppercase tracking-[0.3em] border border-white/10 backdrop-blur-md shadow-2xl">
@@ -43,7 +42,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const { movies: allMovies, categories: allCategories, isLoading: isDataLoading } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
-  const [playerMode, setPlayerMode] = useState<'poster' | 'full'>('poster');
+  
+  // FIX: Initialize state from URL immediately to prevent the "Info Page Glitch" on load
+  const [playerMode, setPlayerMode] = useState<'poster' | 'full'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('play') === 'true' ? 'full' : 'poster';
+  });
+
   const [isPaused, setIsPaused] = useState(false);
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -56,7 +61,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const hasTrackedViewRef = useRef(false);
   const securityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // SECURITY: Deterrant Reveal Protocol
   useEffect(() => {
     const triggerSecurity = () => {
         setIsSecurityTriggered(true);
@@ -102,14 +106,17 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     return expiration ? new Date(expiration) > new Date() : false;
   }, [movie, rentals, movieKey]);
 
+  // Sync state if URL changes after initial load
   useEffect(() => {
     if (movie) {
         const params = new URLSearchParams(window.location.search);
         if (params.get('play') === 'true' && hasAccess && isMovieReleased(movie)) {
             setPlayerMode('full');
+        } else {
+            setPlayerMode('poster');
         }
     }
-  }, [movie, hasAccess]);
+  }, [movie, hasAccess, movieKey]);
 
   const handleGoHome = useCallback(() => {
     if (document.fullscreenElement) document.exitFullscreen();
@@ -118,25 +125,26 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   }, []);
 
   const playContent = useCallback(async () => {
-    if (videoRef.current && !hasTrackedViewRef.current && movie?.key) {
+    if (videoRef.current && movie?.key) {
         try {
-            if (containerRef.current?.requestFullscreen) {
-                await containerRef.current.requestFullscreen();
+            // Attempt to track view only once
+            if (!hasTrackedViewRef.current) {
+                hasTrackedViewRef.current = true;
+                const token = await getUserIdToken();
+                if (token) {
+                    fetch('/api/track-view', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ movieKey: movie.key }),
+                    }).catch(() => {});
+                }
             }
-        } catch (e) {}
-
-        hasTrackedViewRef.current = true;
-        const token = await getUserIdToken();
-        if (token) {
-            fetch('/api/track-view', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ movieKey: movie.key }),
-            }).catch(e => {});
+            // iOS 16+ Playback Force
+            await videoRef.current.play();
+        } catch (e) {
+            console.warn("Playback initialization deferred for user interaction.");
+            setIsPaused(true);
         }
-        videoRef.current.play().catch(e => {
-            console.error("Autoplay/Play failed:", e);
-        });
     }
   }, [movie, getUserIdToken]);
 
@@ -145,13 +153,17 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       if (!videoRef.current) return;
       if (videoRef.current.paused) {
           videoRef.current.play();
+          setIsPaused(false);
       } else {
           videoRef.current.pause();
+          setIsPaused(true);
       }
   };
 
   useEffect(() => {
-      if (playerMode === 'full' && videoRef.current && hasAccess) playContent();
+      if (playerMode === 'full' && videoRef.current && hasAccess) {
+          playContent();
+      }
   }, [playerMode, hasAccess, playContent]);
 
   if (isDataLoading) return <LoadingSpinner />;
@@ -182,8 +194,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     ref={videoRef} 
                                     src={movie.fullMovie} 
                                     className="w-full h-full object-contain block opacity-100" 
-                                    controls={true} 
-                                    playsInline 
+                                    controls={false} // FIX: Removed native controls to eliminate duplicate buttons
+                                    playsInline // FIX: Critical for mobile Safari
+                                    preload="auto" // FIX: Better buffering on iPhone
                                     autoPlay 
                                     onPause={() => setIsPaused(true)} 
                                     onPlay={() => setIsPaused(false)}
@@ -198,7 +211,10 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                         isOnWatchlist={watchlist.includes(movieKey)} 
                                         onMoreDetails={() => setIsDetailsModalOpen(true)} 
                                         onSelectActor={setSelectedActor} 
-                                        onResume={() => videoRef.current?.play()} 
+                                        onResume={() => {
+                                            videoRef.current?.play();
+                                            setIsPaused(false);
+                                        }} 
                                         onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} 
                                         onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} 
                                         onToggleLike={() => toggleLikeMovie(movieKey)} 
@@ -227,7 +243,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 Home
                              </button>
                          </div>
-                         <button onClick={() => hasAccess ? setPlayerMode('full') : setIsPurchaseModalOpen(true)} className="absolute bg-white/10 backdrop-blur-md rounded-full p-8 border-4 border-white/20 hover:scale-110 transition-all shadow-2xl group">
+                         <button onClick={() => {
+                             if (hasAccess) {
+                                 window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+                                 window.dispatchEvent(new Event('pushstate'));
+                             } else {
+                                 setIsPurchaseModalOpen(true);
+                             }
+                         }} className="absolute bg-white/10 backdrop-blur-md rounded-full p-8 border-4 border-white/20 hover:scale-110 transition-all shadow-2xl group">
                             <svg className="w-16 h-16 text-white group-hover:text-red-500 transition-colors" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
                          </button>
                     </div>
