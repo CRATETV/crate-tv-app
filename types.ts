@@ -53,6 +53,20 @@ export interface Movie {
   customLaurelUrl?: string;
 }
 
+export interface AnalyticsEvent {
+    id: string;
+    movieKey: string;
+    timestamp: any;
+    country: string;
+    sessionDuration?: number;
+}
+
+export interface UserPresence {
+    uid: string;
+    lastActive: any;
+    currentPath: string;
+}
+
 export interface PromoCode {
     id: string;
     code: string;
@@ -187,6 +201,8 @@ export interface AnalyticsData {
     salesByBlock: Record<string, { units: number, revenue: number }>;
     festivalUsers: string[];
     crateFestRevenue: number; 
+    liveNodes?: number;
+    recentSpikes?: { movieKey: string, title: string, count: number }[];
 }
 
 export interface FundingProfile {

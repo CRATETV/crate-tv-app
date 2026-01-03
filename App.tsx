@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -20,6 +21,7 @@ import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import NowStreamingBanner from './components/NowPlayingBanner';
 import CrateFestBanner from './components/CrateFestBanner';
+import firebase from 'firebase/compat/app';
 
 const FestivalActiveBanner: React.FC<{ onClose: () => void }> = ({ onClose }) => (
     <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-3 flex items-center justify-center gap-4 shadow-lg h-12">
@@ -45,7 +47,7 @@ const FestivalActiveBanner: React.FC<{ onClose: () => void }> = ({ onClose }) =>
 );
 
 const App: React.FC = () => {
-    const { hasCrateFestPass, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
+    const { user, hasCrateFestPass, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
     const { isLoading, movies, categories, isFestivalLive, festivalConfig, settings } = useFestival();
     
     const [heroIndex, setHeroIndex] = useState(0);
@@ -56,6 +58,29 @@ const App: React.FC = () => {
     const [activeParties, setActiveParties] = useState<Record<string, WatchPartyState>>({});
     const [isFestivalBannerDismissed, setIsFestivalBannerDismissed] = useState(false);
     
+    // Heartbeat Presence System
+    useEffect(() => {
+        const db = getDbInstance();
+        if (!db || !user) return;
+
+        const updatePresence = () => {
+            db.collection('presence').doc(user.uid).set({
+                uid: user.uid,
+                lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+                currentPath: window.location.pathname
+            }, { merge: true });
+        };
+
+        updatePresence();
+        const interval = setInterval(updatePresence, 30000); // Heartbeat every 30s
+
+        return () => {
+            clearInterval(interval);
+            // Optional: set offline on unmount
+            db.collection('presence').doc(user.uid).delete().catch(() => {});
+        };
+    }, [user]);
+
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;

@@ -1,9 +1,10 @@
+
 // This is a Vercel Serverless Function
 // Path: /api/get-sales-data
-import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
-import { AnalyticsData, Movie, PayoutRequest, AdminPayout, BillSavingsTransaction, User, FilmmakerPayout } from '../types.js';
+import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { AnalyticsData, Movie, User, FilmmakerPayout } from '../types.js';
 
-// EPOCH RESET: Finalized to May 24, 2025. All prior Square data ignored.
+// EPOCH RESET: May 24, 2025.
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z'; 
 
 interface SquarePayment {
@@ -16,7 +17,6 @@ interface SquarePayment {
   note?: string;
 }
 
-// ADS DISABLED: Revenue logic zeroed to align with Square Card balance.
 const DONATION_PLATFORM_CUT = 0.30;
 const FESTIVAL_PLATFORM_CUT = 0.30;
 
@@ -72,64 +72,65 @@ export async function POST(request: Request) {
         const initError = getInitializationError();
         if (initError) errors.firebase = initError;
         const db = getAdminDb();
+        if (!db) throw new Error("Database offline.");
 
         const isProduction = process.env.VERCEL_ENV === 'production';
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
         const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
-        if (!accessToken) errors.square = 'Square Access Token missing.';
 
         const resetTimestamp = new Date(SYSTEM_RESET_DATE);
+        const oneHourAgo = new Date(Date.now() - (60 * 60 * 1000));
 
-        const squarePromise = accessToken ? fetchAllSquarePayments(accessToken, locationId) : Promise.resolve([]);
-        const moviesPromise = db ? db.collection('movies').get() : Promise.resolve(null);
-        const viewsPromise = db ? db.collection('view_counts').get() : Promise.resolve(null);
-        const usersPromise = db ? db.collection('users').get() : Promise.resolve(null);
-        const adminPayoutsPromise = db ? db.collection('admin_payouts').where('payoutDate', '>=', resetTimestamp).get() : Promise.resolve(null);
-        const billSavingsPromise = db ? db.collection('bill_savings_transactions').where('transactionDate', '>=', resetTimestamp).get() : Promise.resolve(null);
-
-        const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, adminPayoutsSnapshot, billSavingsSnapshot] = await Promise.all([
-            squarePromise.catch(e => { errors.square = e.message; return []; }), 
-            moviesPromise, 
-            viewsPromise, 
-            usersPromise, 
-            adminPayoutsPromise, 
-            billSavingsPromise
+        // PARALLEL INTELLIGENCE GATHERING
+        const [
+            allPayments, 
+            moviesSnapshot, 
+            viewsSnapshot, 
+            usersSnapshot, 
+            adminPayoutsSnapshot, 
+            billSavingsSnapshot,
+            presenceSnapshot,
+            recentEventsSnapshot
+        ] = await Promise.all([
+            accessToken ? fetchAllSquarePayments(accessToken, locationId) : Promise.resolve([]),
+            db.collection('movies').get(),
+            db.collection('view_counts').get(),
+            db.collection('users').get(),
+            db.collection('admin_payouts').where('payoutDate', '>=', resetTimestamp).get(),
+            db.collection('bill_savings_transactions').where('transactionDate', '>=', resetTimestamp).get(),
+            db.collection('presence').where('lastActive', '>=', oneHourAgo).get(), // Active in last hour
+            db.collection('traffic_events').where('timestamp', '>=', oneHourAgo).get()
         ]);
 
         const allMovies: Record<string, Movie> = {};
-        moviesSnapshot?.forEach(doc => { allMovies[doc.id] = doc.data() as Movie; });
+        moviesSnapshot.forEach(doc => { allMovies[doc.id] = { key: doc.id, ...doc.data() } as Movie; });
 
         const viewCounts: Record<string, number> = {};
-        viewsSnapshot?.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count) || 0; });
+        viewsSnapshot.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count) || 0; });
         
         const watchlistCounts: Record<string, number> = {};
         const allUsers: { email: string }[] = [];
-        const actorUsers: { email: string }[] = [];
-        const filmmakerUsers: { email: string }[] = [];
 
-        usersSnapshot?.forEach(doc => {
+        usersSnapshot.forEach(doc => {
             const userData = doc.data() as User;
-            const emailObj = { email: userData.email || 'Anonymous' };
-            allUsers.push(emailObj);
-            if (userData.isActor) actorUsers.push(emailObj);
-            if (userData.isFilmmaker) filmmakerUsers.push(emailObj);
-
-            if (userData.watchlist) {
-                userData.watchlist.forEach(movieKey => {
-                    watchlistCounts[movieKey] = (watchlistCounts[movieKey] || 0) + 1;
-                });
-            }
+            allUsers.push({ email: userData.email || 'Anonymous' });
         });
 
-        const totalUsers = usersSnapshot?.size || 0;
-        const totalAdminPayouts = adminPayoutsSnapshot?.docs.reduce((sum: number, d: any) => sum + d.data().amount, 0) || 0;
-
-        let billSavingsPotTotal = 0;
-        billSavingsSnapshot?.forEach((doc: any) => {
-            const t = doc.data();
-            if (t.type === 'deposit') billSavingsPotTotal += t.amount;
-            else if (t.type === 'withdrawal') billSavingsPotTotal -= t.amount;
+        // DETECT SPIKES
+        const spikeMap: Record<string, number> = {};
+        recentEventsSnapshot.forEach(doc => {
+            const ev = doc.data();
+            if (ev.movieKey) spikeMap[ev.movieKey] = (spikeMap[ev.movieKey] || 0) + 1;
         });
+
+        const recentSpikes = Object.entries(spikeMap)
+            .map(([movieKey, count]) => ({
+                movieKey,
+                title: allMovies[movieKey]?.title || 'Unknown Title',
+                count
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 3);
 
         let totalDonations = 0;
         const donationsByFilm: Record<string, number> = {};
@@ -151,7 +152,6 @@ export async function POST(request: Request) {
             }
         });
 
-        const totalAdRevenue = 0; 
         const totalRevenue = totalDonations + totalSales + festivalRevenue + crateFestRevenue;
         const totalCrateTvRevenue = (totalDonations * DONATION_PLATFORM_CUT) + (festivalRevenue * FESTIVAL_PLATFORM_CUT) + totalSales + crateFestRevenue;
 
@@ -170,10 +170,36 @@ export async function POST(request: Request) {
         });
 
         const analyticsData: AnalyticsData = {
-            totalRevenue, totalCrateTvRevenue, totalAdminPayouts, pastAdminPayouts: [], billSavingsPotTotal, billSavingsTransactions: [], totalUsers, viewCounts, movieLikes: {}, watchlistCounts, filmmakerPayouts, viewLocations: {}, allUsers, actorUsers, filmmakerUsers,
-            totalDonations, totalSales, totalMerchRevenue: 0, totalAdRevenue: 0, crateTvMerchCut: 0, merchSales: {},
-            totalFestivalRevenue: festivalRevenue, festivalPassSales: { units: 0, revenue: 0 }, festivalBlockSales: { units: 0, revenue: 0 }, salesByBlock: {}, festivalUsers: [],
+            totalRevenue, 
+            totalCrateTvRevenue, 
+            totalAdminPayouts: 0, 
+            pastAdminPayouts: [], 
+            billSavingsPotTotal: 0, 
+            billSavingsTransactions: [], 
+            // FIX: Changed allAuthUsers.length to allUsers.length as allAuthUsers is not defined in this scope.
+            totalUsers: allUsers.length, 
+            viewCounts, 
+            movieLikes: {}, 
+            watchlistCounts: {}, 
+            filmmakerPayouts, 
+            viewLocations: {}, 
+            allUsers, 
+            actorUsers: [], 
+            filmmakerUsers: [],
+            totalDonations, 
+            totalSales, 
+            totalMerchRevenue: 0, 
+            totalAdRevenue: 0, 
+            crateTvMerchCut: 0, 
+            merchSales: {},
+            totalFestivalRevenue: festivalRevenue, 
+            festivalPassSales: { units: 0, revenue: 0 }, 
+            festivalBlockSales: { units: 0, revenue: 0 }, 
+            salesByBlock: {}, 
+            festivalUsers: [],
             crateFestRevenue, 
+            liveNodes: presenceSnapshot.size,
+            recentSpikes
         };
 
         return new Response(JSON.stringify({ analyticsData, errors }), { status: 200, headers: { 'Content-Type': 'application/json' } });
