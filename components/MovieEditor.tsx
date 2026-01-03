@@ -34,7 +34,7 @@ const emptyMovie: Movie = {
     episodes: [],
     durationInMinutes: 0,
     hasCopyrightMusic: false,
-    isSupportEnabled: true,
+    isSupportEnabled: true, // Automatically accept donations by default
     isWatchPartyEnabled: false,
     watchPartyStartTime: '',
     isWatchPartyPaid: false,
@@ -72,6 +72,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                 fullMovie: movieToCreate.movieUrl,
                 poster: movieToCreate.posterUrl,
                 tvPoster: movieToCreate.posterUrl,
+                isSupportEnabled: true, // Enforce default for pipeline ingest
                 publishedAt: new Date().toISOString(),
                 cast: movieToCreate.cast ? movieToCreate.cast.split(',').map(name => ({
                     name: name.trim(),
@@ -162,6 +163,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                         {movie.isSeries && <span className="text-[7px] bg-indigo-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">SERIES</span>}
                                                         {movie.isForSale && <span className="text-[7px] bg-green-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">PAYWALL</span>}
                                                         {movie.isWatchPartyPaid && <span className="text-[7px] bg-pink-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">WP TICKET</span>}
+                                                        {movie.isSupportEnabled && <span className="text-[7px] bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">TIPS ACTIVE</span>}
                                                     </div>
                                                 </div>
                                             </div>
@@ -253,7 +255,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             <input type="checkbox" name="isSupportEnabled" checked={formData.isSupportEnabled} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-green-600 focus:ring-green-500" />
                                             <span className="text-sm font-bold text-white uppercase">Accept Community Donations</span>
                                         </label>
-                                        <p className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Enables "Support Filmmaker" tipping interface.</p>
+                                        <p className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Controls visibility of "Support Filmmaker" tipping interface.</p>
                                     </div>
                                 </div>
                             </section>
