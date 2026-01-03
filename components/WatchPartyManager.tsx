@@ -10,19 +10,24 @@ import { avatars } from './avatars';
 
 const getPartyStatusText = (movie: Movie, partyState?: WatchPartyState) => {
     if (!movie.isWatchPartyEnabled || !movie.watchPartyStartTime) {
-        return { text: 'Disabled', color: 'bg-gray-500' };
+        return { text: 'Not Scheduled', color: 'bg-gray-500' };
     }
+    
+    if (partyState?.status === 'live') {
+        return { text: 'LIVE NOW', color: 'bg-red-600 animate-pulse' };
+    }
+
     const now = new Date();
     const startTime = new Date(movie.watchPartyStartTime);
+    
     if (now < startTime) {
-        return { text: 'Upcoming', color: 'bg-blue-500' };
+        return { text: 'Scheduled', color: 'bg-blue-500' };
     }
-    if (partyState?.status === 'live') {
-        return { text: 'Live', color: 'bg-red-500 animate-pulse' };
-    }
-    if (partyState?.status === 'waiting') {
+    
+    if (partyState?.status === 'waiting' || (!partyState?.status && now >= startTime)) {
         return { text: 'Waiting for Host', color: 'bg-yellow-500' };
     }
+
     return { text: 'Ended', color: 'bg-gray-700' };
 };
 
@@ -100,8 +105,9 @@ const WatchPartyControlRoom: React.FC<{
     movie: Movie;
     partyState: WatchPartyState | undefined;
     onStartParty: () => void;
+    onEndParty: () => void;
     onSyncState: (state: Partial<WatchPartyState>) => void;
-}> = ({ movie, partyState, onStartParty, onSyncState }) => {
+}> = ({ movie, partyState, onStartParty, onEndParty, onSyncState }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const { user } = useAuth();
     const lastSyncTime = useRef(0);
@@ -132,7 +138,8 @@ const WatchPartyControlRoom: React.FC<{
     }, [partyState]);
     
     const status = getPartyStatusText(movie, partyState);
-    const canStart = movie.isWatchPartyEnabled && movie.watchPartyStartTime && new Date() >= new Date(movie.watchPartyStartTime) && partyState?.status === 'waiting';
+    const isLive = partyState?.status === 'live';
+    const canStart = movie.isWatchPartyEnabled && movie.watchPartyStartTime && new Date() >= new Date(movie.watchPartyStartTime) && !isLive;
 
     const toggleQA = () => {
         const nextQA = !partyState?.isQALive;
@@ -152,14 +159,21 @@ const WatchPartyControlRoom: React.FC<{
                          <span className={`px-3 py-1 text-[9px] font-black text-white rounded-full uppercase tracking-widest ${status.color}`}>
                             {status.text}
                         </span>
-                        {movie.isWatchPartyPaid && <span className="text-[9px] font-black uppercase text-pink-500 tracking-widest border border-pink-500/30 px-2 py-1 rounded-full">Secure Ticket Event</span>}
+                        {movie.isWatchPartyPaid && <span className="text-[9px] font-black uppercase text-pink-500 tracking-widest border border-pink-500/30 px-2 py-1 rounded-full">Secure Ticket Required // ${movie.watchPartyPrice}</span>}
                     </div>
                 </div>
-                {canStart && (
-                    <button onClick={onStartParty} className="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-2xl uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all text-xs">
-                        Initialize Session
-                    </button>
-                )}
+                <div className="flex gap-3">
+                    {canStart && (
+                        <button onClick={onStartParty} className="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-2xl uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all text-xs">
+                            Initialize Session
+                        </button>
+                    )}
+                    {isLive && (
+                        <button onClick={onEndParty} className="bg-white/10 hover:bg-red-600 text-gray-400 hover:text-white font-black py-4 px-10 rounded-2xl uppercase tracking-[0.2em] border border-white/10 transition-all text-xs">
+                            Terminate Session
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -260,7 +274,7 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
                                 </button>
                             )}
                         </div>
-                        {movie.isWatchPartyPaid && <p className="text-[8px] font-black text-pink-600 uppercase tracking-widest mt-0.5">Paid Access: ${movie.watchPartyPrice}</p>}
+                        {movie.isWatchPartyPaid && <p className="text-[8px] font-black text-pink-600 uppercase tracking-widest mt-0.5">Ticket Required: ${movie.watchPartyPrice}</p>}
                     </div>
                 </div>
             </td>
@@ -314,21 +328,20 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
     }, []);
 
     const currentPartyMovie = useMemo(() => {
-        const now = new Date();
         const enabledMovies = (Object.values(movieSettings) as Movie[])
             .filter(m => m.isWatchPartyEnabled && m.watchPartyStartTime)
             .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
 
-        const liveOrWaiting = enabledMovies.find(m => {
-            const state = partyStates[m.key];
+        const liveParty = enabledMovies.find(m => partyStates[m.key]?.status === 'live');
+        if (liveParty) return liveParty;
+
+        const now = new Date();
+        const nextWaitingOrUpcoming = enabledMovies.find(m => {
             const startTime = new Date(m.watchPartyStartTime!);
-            return startTime <= now && (now.getTime() - startTime.getTime() < 4 * 60 * 60 * 1000);
+            return startTime <= now || (startTime.getTime() - now.getTime() < 24 * 60 * 60 * 1000);
         });
 
-        if (liveOrWaiting) return liveOrWaiting;
-
-        const nextUpcoming = enabledMovies.find(m => new Date(m.watchPartyStartTime!) > now);
-        return nextUpcoming || null;
+        return nextWaitingOrUpcoming || null;
     }, [movieSettings, partyStates]);
 
     const hasUnsavedChanges = useMemo(() => {
@@ -391,6 +404,11 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         }
     };
 
+    const handleEndParty = async () => {
+        if (!currentPartyMovie || !window.confirm("Terminate this session and remove the banner globally?")) return;
+        await handleSyncState({ status: 'ended', isPlaying: false });
+    };
+
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(movie => (movie.title || '').toLowerCase().includes(filter.toLowerCase()))
         .filter(movie => !showOnlyEnabled || movieSettings[movie.key]?.isWatchPartyEnabled)
@@ -403,6 +421,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                     movie={currentPartyMovie}
                     partyState={partyStates[currentPartyMovie.key]}
                     onStartParty={handleStartParty}
+                    onEndParty={handleEndParty}
                     onSyncState={handleSyncState}
                 />
             )}

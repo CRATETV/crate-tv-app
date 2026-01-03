@@ -1,7 +1,7 @@
+
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/update-watch-parties
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { Movie, WatchPartyState } from '../types.js';
 
 export async function GET(request: Request) {
     // Cron Job Authentication
@@ -17,13 +17,35 @@ export async function GET(request: Request) {
         const db = getAdminDb();
         if (!db) throw new Error("Database connection failed.");
 
-        // NOTE: The automatic transition to 'waiting' has been removed to prevent 
-        // watch parties from "coming on by themselves."
-        // This function now strictly handles clean-up of stale or very old party states if necessary.
+        // SECURITY: We no longer auto-transition parties to 'ended' based on time alone.
+        // This allows the Admin to host long post-film discussions without the system killing the banner.
+        // We only perform a safety cleanup for sessions older than 12 hours.
         
-        console.log("Watch Party Monitor: Manual initiation required for live sessions.");
+        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+        const partiesSnapshot = await db.collection('watch_parties').where('status', '==', 'live').get();
+        
+        let cleanedCount = 0;
+        const batch = db.batch();
+        
+        partiesSnapshot.forEach(doc => {
+            const data = doc.data();
+            const lastUpdated = data.lastUpdated?.toDate();
+            
+            if (lastUpdated && lastUpdated < twelveHoursAgo) {
+                batch.update(doc.ref, { 
+                    status: 'ended', 
+                    isPlaying: false,
+                    lastUpdated: new Date()
+                });
+                cleanedCount++;
+            }
+        });
 
-        return new Response(JSON.stringify({ success: true, message: "Manual host initiation active." }), { status: 200 });
+        if (cleanedCount > 0) {
+            await batch.commit();
+        }
+
+        return new Response(JSON.stringify({ success: true, message: `Active sessions monitored. ${cleanedCount} stale sessions terminated.` }), { status: 200 });
 
     } catch (error) {
         console.error("Error in update-watch-parties cron job:", error);

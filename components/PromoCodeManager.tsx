@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { PromoCode, Movie, FilmBlock, User } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -16,28 +17,37 @@ const FILMMAKER_QUOTA = 5;
 const DistributeModal: React.FC<{
     code: PromoCode;
     itemName: string;
-    filmmakers: User[];
+    users: User[];
     onClose: () => void;
-}> = ({ code, itemName, filmmakers, onClose }) => {
+}> = ({ code, itemName, users, onClose }) => {
     const [email, setEmail] = useState('');
-    const [customMessage, setCustomMessage] = useState('We are excited to have you as part of Crate Fest! Here is your exclusive access code to join the party.');
+    const [customMessage, setCustomMessage] = useState('We are excited to have you as part of Crate TV! Here is your exclusive access code.');
     const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
     const [searchTerm, setSearchTerm] = useState('');
     const [bulkDispatch, setBulkDispatch] = useState(false);
+    const [targetSegment, setTargetSegment] = useState<'all' | 'filmmakers' | 'actors'>('all');
 
-    const filteredFilmmakers = useMemo(() => {
-        if (!searchTerm) return [];
-        return filmmakers.filter(f => 
-            (f.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-            (f.email || '').toLowerCase().includes(searchTerm.toLowerCase())
-        ).slice(0, 5);
-    }, [filmmakers, searchTerm]);
+    const filteredUsers = useMemo(() => {
+        if (!searchTerm || searchTerm.length < 2) return [];
+        return users.filter(u => 
+            (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+            (u.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+        ).slice(0, 8);
+    }, [users, searchTerm]);
+
+    const targetRecipients = useMemo(() => {
+        if (targetSegment === 'filmmakers') return users.filter(u => u.isFilmmaker);
+        if (targetSegment === 'actors') return users.filter(u => u.isActor);
+        return users;
+    }, [users, targetSegment]);
 
     const handleSend = async () => {
         setStatus('sending');
         const password = sessionStorage.getItem('adminPassword');
         
-        const recipients = bulkDispatch ? filmmakers.map(f => f.email).filter(Boolean) as string[] : [email];
+        const recipients = bulkDispatch 
+            ? targetRecipients.map(f => f.email).filter(Boolean) as string[] 
+            : [email];
         
         try {
             const batchSize = 10;
@@ -77,7 +87,7 @@ const DistributeModal: React.FC<{
                                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                             </div>
                             <h3 className="text-2xl font-black uppercase tracking-tighter">Voucher Dispatched</h3>
-                            <p className="text-gray-400 text-sm">Access key has been delivered to {bulkDispatch ? 'all selection' : email}.</p>
+                            <p className="text-gray-400 text-sm">Access key delivered to {bulkDispatch ? `${targetRecipients.length} nodes` : email}.</p>
                         </div>
                     ) : (
                         <div className="space-y-6">
@@ -87,7 +97,7 @@ const DistributeModal: React.FC<{
                                     <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1">CODE: {code.code} // TARGET: {itemName}</p>
                                 </div>
                                 <div className="flex items-center gap-3 bg-white/5 p-2 rounded-xl border border-white/5">
-                                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Bulk Invite</span>
+                                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Bulk Mode</span>
                                     <label className="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" checked={bulkDispatch} onChange={(e) => setBulkDispatch(e.target.checked)} className="sr-only peer" />
                                         <div className="w-10 h-5 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
@@ -98,47 +108,64 @@ const DistributeModal: React.FC<{
                             <div className="space-y-4">
                                 {!bulkDispatch ? (
                                     <div className="relative">
-                                        <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block">Recipient Filmmaker</label>
+                                        <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block">Search User Directory</label>
                                         <input 
                                             type="text" 
-                                            placeholder="Search by name or email..." 
+                                            placeholder="Find user or viewer..." 
                                             value={searchTerm}
                                             onChange={e => setSearchTerm(e.target.value)}
                                             className="form-input !bg-white/5 border-white/10 mb-2"
                                         />
-                                        {filteredFilmmakers.length > 0 && (
+                                        {filteredUsers.length > 0 && (
                                             <div className="absolute top-full left-0 right-0 bg-[#181818] border border-white/10 rounded-xl mt-1 shadow-2xl z-10 overflow-hidden">
-                                                {filteredFilmmakers.map(f => (
+                                                {filteredUsers.map(u => (
                                                     <button 
-                                                        key={f.uid}
-                                                        onClick={() => { setEmail(f.email || ''); setSearchTerm(f.name || ''); }}
-                                                        className="w-full text-left p-3 hover:bg-white/5 text-sm flex justify-between"
+                                                        key={u.uid}
+                                                        onClick={() => { setEmail(u.email || ''); setSearchTerm(u.name || ''); }}
+                                                        className="w-full text-left p-3 hover:bg-white/5 text-sm flex justify-between group"
                                                     >
-                                                        <span className="font-bold">{f.name}</span>
-                                                        <span className="text-gray-500 text-xs">{f.email}</span>
+                                                        <div>
+                                                            <span className="font-bold text-white group-hover:text-red-500">{u.name}</span>
+                                                            <span className="text-gray-500 text-[10px] ml-2 font-mono uppercase">{u.isFilmmaker ? 'Creator' : 'Viewer'}</span>
+                                                        </div>
+                                                        <span className="text-gray-500 text-xs">{u.email}</span>
                                                     </button>
                                                 ))}
                                             </div>
                                         )}
                                         <input 
                                             type="email" 
-                                            placeholder="Or type custom email address..." 
+                                            placeholder="Recipient email address..." 
                                             value={email}
                                             onChange={e => setEmail(e.target.value)}
                                             className="form-input !bg-white/5 border-white/10"
                                         />
                                     </div>
                                 ) : (
-                                    <div className="bg-red-600/10 border border-red-500/20 p-4 rounded-xl">
-                                        <p className="text-xs font-black text-red-500 uppercase tracking-widest">⚠️ Broadcaster Engaged</p>
-                                        <p className="text-[10px] text-gray-400 mt-1">This will send the code to all {filmmakers.length} registered filmmakers in the database. Use for major event invitations.</p>
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black uppercase text-gray-500 block">Dispatch Segment</label>
+                                        <div className="grid grid-cols-3 gap-2 p-1 bg-black rounded-xl border border-white/5">
+                                            {(['all', 'filmmakers', 'actors'] as const).map(seg => (
+                                                <button 
+                                                    key={seg}
+                                                    onClick={() => setTargetSegment(seg)}
+                                                    className={`py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${targetSegment === seg ? 'bg-red-600 text-white' : 'text-gray-600 hover:text-gray-300'}`}
+                                                >
+                                                    {seg}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="bg-red-600/10 border border-red-500/20 p-4 rounded-xl">
+                                            <p className="text-xs font-black text-red-500 uppercase tracking-widest">⚠️ Segment Broadcast</p>
+                                            <p className="text-[10px] text-gray-400 mt-1">This will send the code to all {targetRecipients.length} nodes in the "{targetSegment}" segment.</p>
+                                        </div>
                                     </div>
                                 )}
 
                                 <div>
-                                    <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block">Personal Message (Optional)</label>
+                                    <label className="text-[10px] font-black uppercase text-gray-500 mb-2 block">Custom Note</label>
                                     <textarea 
-                                        placeholder="Include a personal note for the creator..." 
+                                        placeholder="Add a personalized greeting..." 
                                         value={customMessage}
                                         onChange={e => setCustomMessage(e.target.value)}
                                         className="form-input !bg-white/5 border-white/10 h-24"
@@ -153,7 +180,7 @@ const DistributeModal: React.FC<{
                                     disabled={(!email && !bulkDispatch) || status === 'sending'}
                                     className="flex-[2] bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl uppercase text-xs tracking-widest shadow-xl transition-all disabled:opacity-30"
                                 >
-                                    {status === 'sending' ? (bulkDispatch ? 'Broadcasting...' : 'Dispatching...') : (bulkDispatch ? `Invite All (${filmmakers.length})` : 'Send Access Key')}
+                                    {status === 'sending' ? 'Broadcasting...' : (bulkDispatch ? `Send to ${targetRecipients.length}` : 'Dispatch Access')}
                                 </button>
                             </div>
                         </div>
@@ -166,7 +193,7 @@ const DistributeModal: React.FC<{
 
 const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerName, targetFilms = [], targetBlocks = [], defaultItemId = '' }) => {
     const [codes, setCodes] = useState<PromoCode[]>([]);
-    const [filmmakers, setFilmmakers] = useState<User[]>([]);
+    const [allUsers, setAllUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState(false);
     
@@ -195,18 +222,19 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
         setIsLoading(false);
     };
 
-    const fetchFilmmakers = async () => {
+    const fetchUsers = async () => {
         if (!isAdmin) return;
         const db = getDbInstance();
         if (!db) return;
-        const snapshot = await db.collection('users').where('isFilmmaker', '==', true).get();
+        // In Admin mode, we fetch everyone to allow viewer distribution
+        const snapshot = await db.collection('users').get();
         const users = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
-        setFilmmakers(users);
+        setAllUsers(users);
     };
 
     useEffect(() => {
         fetchCodes();
-        fetchFilmmakers();
+        fetchUsers();
     }, [isAdmin, filmmakerName]);
 
     const quotaStatus = useMemo(() => {
@@ -216,7 +244,6 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
         return { used: usedCount, max: FILMMAKER_QUOTA };
     }, [codes, selectedItemId, isAdmin]);
 
-    // FIX: Explicitly cast to boolean to avoid 'null' type error in JSX attributes
     const isQuotaExceeded = !!(quotaStatus && quotaStatus.used >= quotaStatus.max);
 
     const handleCreateCode = async (e: React.FormEvent) => {
@@ -277,18 +304,18 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                 <div className="lg:col-span-1">
                     <form onSubmit={handleCreateCode} className="bg-gray-900 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl space-y-6">
                         <div>
-                            <h3 className="text-xl font-black text-white uppercase tracking-tighter">Code Laboratory</h3>
-                            <p className="text-xs text-gray-500 uppercase font-black tracking-widest mt-1">Forging access vectors</p>
+                            <h3 className="text-xl font-black text-white uppercase tracking-tighter">Voucher Forge</h3>
+                            <p className="text-xs text-gray-500 uppercase font-black tracking-widest mt-1">Generating audience incentives</p>
                         </div>
 
                         <div className="space-y-4">
                             <div>
-                                <label className="form-label">Custom Code Name</label>
+                                <label className="form-label">Promotional Code</label>
                                 <input 
                                     type="text" 
                                     value={newCode} 
                                     onChange={e => setNewCode(e.target.value.toUpperCase())} 
-                                    placeholder="e.g. VIPPASS" 
+                                    placeholder="e.g. SUMMER50" 
                                     className="form-input !bg-black/40 border-white/10 uppercase tracking-widest font-black" 
                                     required 
                                     disabled={isQuotaExceeded}
@@ -296,10 +323,10 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                             </div>
 
                             <div>
-                                <label className="form-label">Voucher Class</label>
+                                <label className="form-label">Logic Model</label>
                                 <select value={type} onChange={e => setType(e.target.value as any)} className="form-input !bg-black/40 border-white/10" disabled={isQuotaExceeded}>
-                                    <option value="one_time_access">VIP Invitation (Single Use - 100% OFF)</option>
-                                    <option value="discount">Platform Discount (Campaign)</option>
+                                    <option value="one_time_access">Gift Access (100% OFF / Single Use)</option>
+                                    <option value="discount">Campaign Discount (Percentage Base)</option>
                                 </select>
                             </div>
 
@@ -310,7 +337,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                                         <input type="number" value={discountValue} onChange={e => setDiscountValue(parseInt(e.target.value))} className="form-input !bg-black/40" />
                                     </div>
                                     <div>
-                                        <label className="form-label">Total Redeemable</label>
+                                        <label className="form-label">Global Limit</label>
                                         <input type="number" value={maxUses} onChange={e => setMaxUses(parseInt(e.target.value))} className="form-input !bg-black/40" />
                                     </div>
                                 </div>
@@ -318,18 +345,18 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
 
                             {!defaultItemId && (
                                 <div>
-                                    <label className="form-label">Target Content</label>
+                                    <label className="form-label">Attachment Scope</label>
                                     <select 
                                         value={selectedItemId} 
                                         onChange={e => setSelectedItemId(e.target.value)} 
                                         className="form-input !bg-black/40 border-white/10"
                                     >
-                                        <option value="">Full Catalog Access</option>
+                                        <option value="">Whole Platform (Global)</option>
                                         {isAdmin && <option value="crateFestPass">🎟️ Crate Fest: All-Access Pass</option>}
                                         {targetBlocks.length > 0 && <optgroup label="Festival Blocks">
                                             {targetBlocks.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
                                         </optgroup>}
-                                        {targetFilms.length > 0 && <optgroup label="Individual Films / Parties">
+                                        {targetFilms.length > 0 && <optgroup label="Individual Films / Screenings">
                                             {targetFilms.map(f => <option key={f.key} value={f.key}>{f.title}</option>)}
                                         </optgroup>}
                                     </select>
@@ -349,52 +376,51 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                             disabled={isGenerating || isQuotaExceeded}
                             className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl uppercase tracking-widest text-xs transition-all active:scale-95 disabled:opacity-30 shadow-xl"
                         >
-                            {isGenerating ? 'Forging Code...' : isQuotaExceeded ? 'Quota Exceeded' : 'Initialize Code'}
+                            {isGenerating ? 'Synthesizing...' : isQuotaExceeded ? 'Quota Reached' : 'Initialize Voucher'}
                         </button>
-                        {isQuotaExceeded && <p className="text-[8px] text-red-500 font-bold uppercase text-center tracking-widest">You have reached the limit for this item.</p>}
                     </form>
                 </div>
 
                 <div className="lg:col-span-2">
-                    <div className="bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] overflow-hidden h-full">
+                    <div className="bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] overflow-hidden h-full flex flex-col shadow-2xl">
                         <div className="p-6 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
-                             <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">Access Perimeter Manifest</h4>
-                             <span className="text-[10px] text-gray-700 font-bold uppercase tracking-widest">Live Monitoring</span>
+                             <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">Active Vouchers</h4>
+                             <span className="text-[9px] text-green-500 font-black uppercase tracking-widest">Global Network Verified</span>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto flex-grow">
                             <table className="w-full text-left text-xs">
                                 <thead className="text-gray-500 font-black uppercase tracking-widest bg-black/40">
                                     <tr>
-                                        <th className="p-5">Vector Code</th>
-                                        <th className="p-5">Logic</th>
+                                        <th className="p-5">Code Identity</th>
+                                        <th className="p-5">Logic Scope</th>
                                         <th className="p-5 text-center">Velocity</th>
-                                        <th className="p-5 text-right">Admin Actions</th>
+                                        <th className="p-5 text-right">Dispatch</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
                                     {codes.length === 0 ? (
-                                        <tr><td colSpan={4} className="p-10 text-center text-gray-600 uppercase font-black tracking-widest">No active access vectors</td></tr>
+                                        <tr><td colSpan={4} className="p-16 text-center text-gray-700 uppercase font-black tracking-widest">No active access vectors in cluster</td></tr>
                                     ) : codes.map(c => {
                                         const isDepleted = c.usedCount >= c.maxUses;
                                         return (
-                                            <tr key={c.id} className={`hover:bg-white/[0.01] transition-colors group ${isDepleted ? 'opacity-40' : ''}`}>
+                                            <tr key={c.id} className={`hover:bg-white/[0.01] transition-colors group ${isDepleted ? 'opacity-40 grayscale' : ''}`}>
                                                 <td className="p-5">
                                                     <div className="space-y-1">
-                                                        <p className="font-black text-white tracking-[0.2em] group-hover:text-red-500 transition-colors">{c.code}</p>
+                                                        <p className="font-black text-white text-base tracking-[0.2em] group-hover:text-red-500 transition-colors">{c.code}</p>
                                                         <p className="text-[9px] text-gray-600 uppercase font-bold tracking-tighter">{resolveItemName(c.itemId)}</p>
                                                     </div>
                                                 </td>
                                                 <td className="p-5">
                                                     <span className={`px-2 py-1 rounded text-[9px] font-black uppercase ${c.type === 'one_time_access' ? 'bg-purple-600/20 text-purple-400 border border-purple-500/20' : 'bg-blue-600/20 text-blue-400 border border-blue-500/20'}`}>
-                                                        {c.type === 'one_time_access' ? 'VIP INVITE' : `${c.discountValue}% PLATFORM`}
+                                                        {c.type === 'one_time_access' ? 'VIP GIFT' : `${c.discountValue}% CAMPAIGN`}
                                                     </span>
                                                 </td>
                                                 <td className="p-5 text-center font-mono">
                                                     <div className="flex flex-col items-center">
-                                                        <span className={`text-[10px] font-bold ${isDepleted ? 'text-red-500' : 'text-green-500'}`}>
+                                                        <span className={`text-[10px] font-black ${isDepleted ? 'text-red-500' : 'text-green-500'}`}>
                                                             {c.usedCount} / {c.maxUses}
                                                         </span>
-                                                        <span className="text-[7px] text-gray-700 uppercase font-black">REDEEMED</span>
+                                                        <span className="text-[7px] text-gray-700 uppercase font-black mt-1">REDEEMED</span>
                                                     </div>
                                                 </td>
                                                 <td className="p-5 text-right">
@@ -402,12 +428,12 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                                                         {isAdmin && (
                                                             <button 
                                                                 onClick={() => setDistributingCode(c)}
-                                                                className="bg-white/5 hover:bg-white text-gray-400 hover:text-black font-black px-4 py-1.5 rounded-lg border border-white/10 transition-all uppercase text-[9px] tracking-widest"
+                                                                className="bg-white text-black font-black px-4 py-2 rounded-lg uppercase text-[9px] tracking-widest hover:bg-gray-200 transition-all shadow-lg"
                                                             >
                                                                 Distribute
                                                             </button>
                                                         )}
-                                                        <button onClick={() => handleDelete(c.id)} className="text-[9px] font-black uppercase text-gray-600 hover:text-red-500 transition-colors">Kill</button>
+                                                        <button onClick={() => handleDelete(c.id)} className="text-[9px] font-black uppercase text-gray-600 hover:text-red-500 transition-colors">Revoke</button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -424,7 +450,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                 <DistributeModal 
                     code={distributingCode} 
                     itemName={resolveItemName(distributingCode.itemId)}
-                    filmmakers={filmmakers}
+                    users={allUsers}
                     onClose={() => setDistributingCode(null)}
                 />
             )}

@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, WatchPartyState, ChatMessage, SentimentPoint } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,6 +7,7 @@ import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
+import SquarePaymentModal from './SquarePaymentModal';
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -57,7 +59,6 @@ const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({
     );
 };
 
-// --- LIVE TALKBACK COMPONENT ---
 const LiveTalkbackTerminal: React.FC<{ 
     movie: Movie; 
     isSpeaker: boolean; 
@@ -262,7 +263,7 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
 };
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user, unlockedWatchPartyKeys } = useAuth();
+    const { user, unlockedWatchPartyKeys, unlockWatchParty } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading } = useFestival();
     const movie = allMovies[movieKey];
     
@@ -271,11 +272,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isVideoReady, setIsVideoReady] = useState(false);
     const [manualSpeakerKey, setManualSpeakerKey] = useState<string | null>(null);
     const [isSecurityTriggered, setIsSecurityTriggered] = useState(false);
+    const [showPaywall, setShowPaywall] = useState(false);
     const securityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
 
-    const hasAccess = !movie?.isWatchPartyPaid || unlockedWatchPartyKeys.has(movieKey);
+    const hasAccess = useMemo(() => {
+        if (!movie?.isWatchPartyPaid) return true;
+        return unlockedWatchPartyKeys.has(movieKey);
+    }, [movie, unlockedWatchPartyKeys, movieKey]);
+
     const embedUrl = useMemo(() => movie ? getEmbedUrl(movie.fullMovie) : null, [movie]);
 
     // SECURITY: Detect recording behavior
@@ -393,7 +399,49 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    const handleTicketSuccess = async () => {
+        await unlockWatchParty(movieKey);
+        setShowPaywall(false);
+    };
+
     if (isFestivalLoading || !movie) return <LoadingSpinner />;
+
+    if (!hasAccess) {
+        return (
+            <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center">
+                <div className="absolute inset-0 bg-black">
+                     <img src={movie.poster} className="w-full h-full object-cover blur-2xl opacity-20" alt="" />
+                </div>
+                <div className="relative z-10 space-y-8 max-w-lg">
+                    <img src={movie.poster} className="w-48 mx-auto rounded-2xl shadow-2xl border border-white/10" alt="" />
+                    <div className="space-y-2">
+                        <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic">Ticket Required</h2>
+                        <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px]">Secure Live Screening Event</p>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 p-6 rounded-3xl">
+                        <p className="text-sm text-gray-400 leading-relaxed font-medium">This screening for <strong className="text-white">"{movie.title}"</strong> is a ticketed community event. Your ticket grants full access to the live stream and interactive Q&A session.</p>
+                    </div>
+                    <div className="flex flex-col gap-4">
+                        <button 
+                            onClick={() => setShowPaywall(true)}
+                            className="bg-white text-black font-black py-5 rounded-2xl uppercase tracking-widest text-xs shadow-2xl hover:scale-105 transition-all active:scale-95"
+                        >
+                            Purchase Event Ticket // ${movie.watchPartyPrice}
+                        </button>
+                        <button onClick={handleGoHome} className="text-[10px] font-black uppercase text-gray-600 hover:text-white transition-colors tracking-widest">Return to Home</button>
+                    </div>
+                </div>
+                {showPaywall && (
+                    <SquarePaymentModal 
+                        movie={movie} 
+                        paymentType="watchPartyTicket" 
+                        onClose={() => setShowPaywall(false)} 
+                        onPaymentSuccess={handleTicketSuccess} 
+                    />
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden overscroll-none" onContextMenu={(e) => e.preventDefault()}>
