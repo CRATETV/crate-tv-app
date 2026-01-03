@@ -356,8 +356,8 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                                         {targetBlocks.length > 0 && <optgroup label="Festival Blocks">
                                             {targetBlocks.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
                                         </optgroup>}
-                                        {targetFilms.length > 0 && <optgroup label="Individual Films / Screenings">
-                                            {targetFilms.map(f => <option key={f.key} value={f.key}>{f.title}</option>)}
+                                        {targetFilms.length > 0 && <optgroup label="Individual Films / Watch Parties">
+                                            {targetFilms.map(f => <option key={f.key} value={f.key}>{f.title} (Live Screening Incl.)</option>)}
                                         </optgroup>}
                                     </select>
                                 </div>

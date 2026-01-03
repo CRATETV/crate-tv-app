@@ -1,6 +1,7 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Movie } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LiveWatchPartyBannerProps {
   movie: Movie;
@@ -8,6 +9,13 @@ interface LiveWatchPartyBannerProps {
 }
 
 const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onClose }) => {
+    const { unlockedWatchPartyKeys } = useAuth();
+
+    const hasAccess = useMemo(() => {
+        if (!movie.isWatchPartyPaid) return true;
+        return unlockedWatchPartyKeys.has(movie.key);
+    }, [movie, unlockedWatchPartyKeys]);
+
     const handleNavigate = (e: React.MouseEvent) => {
         e.preventDefault();
         window.history.pushState({}, '', `/watchparty/${movie.key}`);
@@ -37,14 +45,17 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
             </div>
 
             <div className="flex items-center gap-2 mr-2 md:mr-8">
-                {movie.isWatchPartyPaid && (
+                {movie.isWatchPartyPaid && !hasAccess && (
                     <span className="hidden sm:block text-[8px] font-black uppercase tracking-widest text-white/50 border border-white/20 px-2 py-0.5 rounded-full">Ticketed</span>
+                )}
+                {hasAccess && (
+                    <span className="hidden sm:block text-[8px] font-black uppercase tracking-widest text-green-400 border border-green-400/20 px-2 py-0.5 rounded-full">✓ Authorized</span>
                 )}
                 <button 
                     onClick={handleNavigate}
                     className="bg-white text-black font-black px-5 py-1 rounded-full text-[10px] uppercase tracking-tighter hover:bg-gray-200 transition-all flex-shrink-0"
                 >
-                    {movie.isWatchPartyPaid ? 'Buy Ticket' : 'Join Party'}
+                    {hasAccess ? 'Enter Live Room' : (movie.isWatchPartyPaid ? 'Buy Ticket' : 'Join Party')}
                 </button>
                 <button onClick={onClose} className="text-white/40 hover:text-white transition-colors text-2xl leading-none ml-2" aria-label="Dismiss banner">
                     &times;

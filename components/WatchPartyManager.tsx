@@ -243,6 +243,14 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
         onChange({ isWatchPartyEnabled: e.target.checked });
     };
 
+    const handlePaidToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onChange({ isWatchPartyPaid: e.target.checked });
+    };
+
+    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onChange({ watchPartyPrice: parseFloat(e.target.value) || 5.00 });
+    };
+
     const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.value) {
             const localDate = new Date(e.target.value);
@@ -274,20 +282,38 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
                                 </button>
                             )}
                         </div>
-                        {movie.isWatchPartyPaid && <p className="text-[8px] font-black text-pink-600 uppercase tracking-widest mt-0.5">Ticket Required: ${movie.watchPartyPrice}</p>}
+                        <span className={`px-2 py-0.5 text-[7px] font-black text-white rounded-full uppercase tracking-widest ${status.color} mt-1 inline-block`}>
+                            {status.text}
+                        </span>
                     </div>
                 </div>
-            </td>
-            <td className="p-4">
-                <span className={`px-2 py-0.5 text-[8px] font-black text-white rounded-full uppercase tracking-widest ${status.color}`}>
-                    {status.text}
-                </span>
             </td>
             <td className="p-4">
                 <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" checked={movie.isWatchPartyEnabled || false} onChange={handleToggle} className="sr-only peer" />
                     <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                 </label>
+            </td>
+            <td className="p-4">
+                 <div className="flex flex-col gap-3">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked={movie.isWatchPartyPaid || false} onChange={handlePaidToggle} className="sr-only peer" />
+                        <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-pink-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                        <span className="ml-3 text-[10px] font-black text-gray-500 uppercase tracking-widest">Paywall</span>
+                    </label>
+                    {movie.isWatchPartyPaid && (
+                        <div className="flex items-center gap-2 animate-[fadeIn_0.3s_ease-out]">
+                             <span className="text-pink-500 font-black text-xs">$</span>
+                             <input 
+                                type="number" 
+                                value={movie.watchPartyPrice} 
+                                onChange={handlePriceChange}
+                                className="form-input !py-1 !px-2 !w-20 text-xs bg-black border-white/10 text-pink-500 font-bold" 
+                                step="0.50"
+                             />
+                        </div>
+                    )}
+                 </div>
             </td>
             <td className="p-4">
                 <input
@@ -454,9 +480,9 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                         <table className="w-full text-left">
                             <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
                                 <tr>
-                                    <th className="p-5">Strategic Item</th>
-                                    <th className="p-5">Network Status</th>
-                                    <th className="p-5">State</th>
+                                    <th className="p-5">Film Identity</th>
+                                    <th className="p-5">Scheduling</th>
+                                    <th className="p-5">Entry Logic</th>
                                     <th className="p-5">Sync Window</th>
                                 </tr>
                             </thead>
