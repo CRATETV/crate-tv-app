@@ -1,3 +1,4 @@
+
 // This file contains type definitions for the Crate TV application.
 
 export interface Actor {
@@ -143,6 +144,19 @@ export interface SiteSettings {
   pitchTargetCompany?: string;
   pitchDeckCustomMessage?: string;
   crateFestConfig?: CrateFestConfig;
+  businessEmail?: string;
+}
+
+export interface StudioMessage {
+    id: string;
+    senderName: string;
+    senderEmail: string;
+    subject: string;
+    content: string;
+    timestamp: any;
+    type: 'CONTACT' | 'INQUIRY' | 'SUBMISSION';
+    status: 'OPEN' | 'RESOLVED' | 'ESCALATED';
+    meta?: any;
 }
 
 export interface AnalyticsData {
@@ -173,6 +187,14 @@ export interface AnalyticsData {
     salesByBlock: Record<string, { units: number, revenue: number }>;
     festivalUsers: string[];
     crateFestRevenue: number; 
+}
+
+export interface FundingProfile {
+    round: string;
+    date: string;
+    valuation: string;
+    awsPercentage: string;
+    marketingBudget: string;
 }
 
 export interface AdminPayout {
@@ -356,6 +378,7 @@ export interface GrowthAnalyticsData {
   };
   aboutData?: AboutData;
   avgMoMUserGrowth: number;
+  fundingProfile?: FundingProfile;
 }
 
 export interface SecurityEvent {
@@ -388,7 +411,7 @@ export interface AiGrowthAdvice {
 }
 
 /**
- * Global interface augmentation for window.aistudio
+ * Global interface augmentation for window.aistudio and external SDKs
  */
 declare global {
   interface AIStudio {
@@ -398,5 +421,7 @@ declare global {
 
   interface Window {
     aistudio?: AIStudio;
+    // FIX: Augmented Window interface to include Square property for SDK loading checks in SquarePaymentModal.tsx
+    Square?: any;
   }
 }

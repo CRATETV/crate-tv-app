@@ -408,25 +408,25 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     if (!hasAccess) {
         return (
-            <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center">
+            <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
                 <div className="absolute inset-0 bg-black">
-                     <img src={movie.poster} className="w-full h-full object-cover blur-2xl opacity-20" alt="" />
+                     <img src={movie.poster} className="w-full h-full object-cover blur-3xl opacity-20" alt="" />
                 </div>
                 <div className="relative z-10 space-y-8 max-w-lg">
-                    <img src={movie.poster} className="w-48 mx-auto rounded-2xl shadow-2xl border border-white/10" alt="" />
+                    <img src={movie.poster} className="w-48 mx-auto rounded-3xl shadow-2xl border border-white/10" alt="" />
                     <div className="space-y-2">
                         <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic">Ticket Required</h2>
                         <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px]">Secure Live Screening Event</p>
                     </div>
-                    <div className="bg-white/5 border border-white/10 p-6 rounded-3xl">
-                        <p className="text-sm text-gray-400 leading-relaxed font-medium">This screening for <strong className="text-white">"{movie.title}"</strong> is a ticketed community event. Your ticket grants full access to the live stream and interactive Q&A session.</p>
+                    <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem]">
+                        <p className="text-sm text-gray-400 leading-relaxed font-medium">The live screening for <strong className="text-white">"{movie.title}"</strong> is a ticketed community event. Access includes the master broadcast and interactive Q&A session.</p>
                     </div>
                     <div className="flex flex-col gap-4">
                         <button 
                             onClick={() => setShowPaywall(true)}
                             className="bg-white text-black font-black py-5 rounded-2xl uppercase tracking-widest text-xs shadow-2xl hover:scale-105 transition-all active:scale-95"
                         >
-                            Purchase Event Ticket // ${movie.watchPartyPrice}
+                            Get Event Ticket // ${movie.watchPartyPrice}
                         </button>
                         <button onClick={handleGoHome} className="text-[10px] font-black uppercase text-gray-600 hover:text-white transition-colors tracking-widest">Return to Home</button>
                     </div>

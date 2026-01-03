@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie, FilmBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import LoadingSpinner from './LoadingSpinner';
 
 declare const Square: any;
 
@@ -10,9 +12,10 @@ interface SquarePaymentModalProps {
     paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'movie' | 'billSavingsDeposit' | 'watchPartyTicket' | 'crateFestPass';
     onClose: () => void;
     onPaymentSuccess: (details: { paymentType: SquarePaymentModalProps['paymentType'], itemId?: string, amount: number, email?: string }) => void;
-    priceOverride?: number; // New prop to handle dynamic pricing from Admin settings
+    priceOverride?: number; 
 }
 
+// Sub-component for a visual representation of the purchased access
 const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type }) => (
     <div className="relative w-full aspect-[1.6/1] bg-gradient-to-br from-gray-900 to-black rounded-2xl border border-white/20 overflow-hidden shadow-2xl animate-[ticketEntry_0.8s_cubic-bezier(0.34,1.56,0.64,1)]">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
@@ -29,7 +32,7 @@ const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type
             
             <div className="flex-grow flex flex-col justify-center">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">
-                    {type === 'crateFestPass' ? 'Crate Fest All-Access' : type === 'movie' ? 'Authorized Rental' : 'Official Selection Access'}
+                    {type === 'watchPartyTicket' ? 'Live Screening Pass' : type === 'crateFestPass' ? 'Crate Fest All-Access' : type === 'movie' ? 'Authorized Rental' : 'Official Selection Access'}
                 </p>
                 <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-tight line-clamp-1">{details.title}</h3>
                 <p className="text-xs text-gray-400 mt-2 font-mono">Issued to: {details.email || 'Verified Supporter'}</p>
@@ -53,212 +56,266 @@ const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type
                 </div>
             </div>
         </div>
-        <div className="absolute top-0 right-1/4 bottom-0 w-px bg-white/5 border-l border-dashed border-white/20"></div>
+        <div className="absolute top-0 right-1/4 bottom-0 w-px bg-white/5 border-l border-white/10"></div>
     </div>
 );
 
-const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ movie, block, paymentType, onClose, onPaymentSuccess, priceOverride }) => {
+/**
+ * FIXED: SquarePaymentModal component fully implemented and exported as default.
+ * Handles loading the Square SDK, initializing the payment form, and processing transactions.
+ */
+const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ 
+    movie, 
+    block, 
+    paymentType, 
+    onClose, 
+    onPaymentSuccess, 
+    priceOverride 
+}) => {
     const { user } = useAuth();
-    const [status, setStatus] = useState<'idle' | 'loading' | 'processing' | 'success' | 'error'>('loading');
-    const [errorMessage, setErrorMessage] = useState('');
-    const [customAmount, setCustomAmount] = useState('10.00');
-    const [email, setEmail] = useState(user?.email || '');
+    const [isLoading, setIsLoading] = useState(true);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [error, setError] = useState('');
+    const [paymentSuccess, setPaymentSuccess] = useState(false);
     
-    // Promo Code State
+    // User-defined amount for donations/deposits
+    const [customAmount, setCustomAmount] = useState('5.00');
     const [promoCode, setPromoCode] = useState('');
-    const [isPromoValidating, setIsPromoValidating] = useState(false);
-    const [appliedPromo, setAppliedPromo] = useState<{ code: string, isFree: boolean, finalPriceInCents: number } | null>(null);
+    
+    const cardRef = useRef<any>(null);
+    const paymentFormRef = useRef<HTMLDivElement>(null);
 
-    const cardInstance = useRef<any>(null);
-
+    // Fixed price logic mapping to server-side priceMap
     const basePrice = useMemo(() => {
+        if (priceOverride !== undefined) return priceOverride;
         switch (paymentType) {
-            case 'crateFestPass': return priceOverride || 15.00;
+            case 'subscription': return 4.99;
             case 'pass': return 50.00;
             case 'block': return 10.00;
-            case 'movie': return movie?.salePrice || 5.00;
+            case 'movie': return 5.00;
             case 'watchPartyTicket': return movie?.watchPartyPrice || 5.00;
-            case 'donation': return parseFloat(customAmount) || 0;
+            case 'crateFestPass': return 15.00;
             default: return 0;
         }
-    }, [paymentType, movie, customAmount, priceOverride]);
+    }, [paymentType, priceOverride, movie]);
 
-    const finalAmount = appliedPromo ? appliedPromo.finalPriceInCents / 100 : basePrice;
+    const displayAmount = useMemo(() => {
+        if (['donation', 'billSavingsDeposit'].includes(paymentType)) {
+            return parseFloat(customAmount) || 0;
+        }
+        return basePrice;
+    }, [paymentType, customAmount, basePrice]);
 
-    const paymentDetails = useMemo(() => {
-        return { 
-            amount: finalAmount, 
-            title: block?.title || movie?.title || (paymentType === 'crateFestPass' ? 'Crate Fest Pass' : 'Crate TV Access'), 
-            email 
-        };
-    }, [finalAmount, block, movie, paymentType, email]);
+    const itemTitle = useMemo(() => {
+        if (movie) return movie.title;
+        if (block) return block.title;
+        if (paymentType === 'subscription') return 'Premium Subscription';
+        if (paymentType === 'pass') return 'Festival All-Access Pass';
+        if (paymentType === 'crateFestPass') return 'Crate Fest All-Access';
+        if (paymentType === 'billSavingsDeposit') return 'Savings Pot Deposit';
+        return 'Crate TV Item';
+    }, [movie, block, paymentType]);
 
     useEffect(() => {
-        let isMounted = true;
-        let retryCount = 0;
+        let card: any;
         const initializeSquare = async () => {
             try {
+                // Fetch config
                 const configRes = await fetch('/api/square-config');
+                if (!configRes.ok) throw new Error("Failed to load payment configuration.");
                 const { applicationId, locationId } = await configRes.json();
-                const payments = Square.payments(applicationId, locationId);
-                const card = await payments.card({
-                    style: { 'input': { 'color': '#ffffff', 'fontSize': '16px' } }
-                });
-                if (isMounted) {
-                    await card.attach('#card-container');
-                    cardInstance.current = card;
-                    setStatus('idle');
+
+                // Load Square SDK script
+                if (!window.Square) {
+                    const script = document.createElement('script');
+                    script.src = process.env.NODE_ENV === 'production' 
+                        ? 'https://web.squarecdn.com/v1/square.js' 
+                        : 'https://sandbox.web.squarecdn.com/v1/square.js';
+                    script.async = true;
+                    await new Promise((resolve) => {
+                        script.onload = resolve;
+                        document.head.appendChild(script);
+                    });
                 }
-            } catch (error: any) {
-                if (isMounted) { setErrorMessage('Payment gateway initialization failed.'); setStatus('error'); }
+
+                const payments = Square.payments(applicationId, locationId);
+                card = await payments.card();
+                await card.attach('#card-container');
+                cardRef.current = card;
+                setIsLoading(false);
+            } catch (err) {
+                console.error("Square Init Error:", err);
+                setError("Payment system could not be initialized.");
+                setIsLoading(false);
             }
         };
-        const poll = () => {
-            if (typeof Square !== 'undefined') initializeSquare();
-            else if (retryCount < 50) { retryCount++; setTimeout(poll, 200); }
+
+        initializeSquare();
+
+        return () => {
+            if (card) card.destroy();
         };
-        poll();
-        return () => { isMounted = false; if (cardInstance.current) cardInstance.current.destroy(); };
     }, []);
 
-    const handleApplyPromo = async () => {
-        if (!promoCode.trim()) return;
-        setIsPromoValidating(true);
-        setErrorMessage('');
-        try {
-            const res = await fetch('/api/validate-promo-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    code: promoCode, 
-                    itemId: block?.id || movie?.key,
-                    originalPriceInCents: Math.round(basePrice * 100)
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Voucher invalid.");
-            setAppliedPromo({
-                code: promoCode.toUpperCase().trim(),
-                isFree: data.isFree,
-                finalPriceInCents: data.finalPriceInCents
-            });
-        } catch (err) {
-            setErrorMessage(err instanceof Error ? err.message : 'Invalid Voucher');
-        } finally {
-            setIsPromoValidating(false);
-        }
-    };
+    const handlePayment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!cardRef.current || isProcessing) return;
 
-    const handlePayment = async () => {
-        setStatus('processing');
+        setIsProcessing(true);
+        setError('');
+
         try {
-            let token = 'PROMO_VOUCHER';
-            
-            if (!appliedPromo?.isFree) {
-                if (!cardInstance.current) throw new Error("Payment node disconnected.");
-                const result = await cardInstance.current.tokenize();
-                if (result.status !== 'OK') throw new Error(result.errors?.[0]?.message);
-                token = result.token;
+            const result = await cardRef.current.tokenize();
+            if (result.status === 'OK') {
+                const response = await fetch('/api/process-square-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sourceId: result.token,
+                        amount: displayAmount,
+                        paymentType,
+                        itemId: movie?.key || block?.id || paymentType,
+                        movieTitle: movie?.title,
+                        directorName: movie?.director,
+                        blockTitle: block?.title,
+                        email: user?.email,
+                        promoCode: promoCode.trim() || undefined
+                    }),
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "Payment failed.");
+
+                setPaymentSuccess(true);
+                setTimeout(() => {
+                    onPaymentSuccess({
+                        paymentType,
+                        itemId: movie?.key || block?.id,
+                        amount: displayAmount,
+                        email: user?.email || undefined
+                    });
+                }, 2000);
+            } else {
+                throw new Error(result.errors?.[0]?.message || "Card validation failed.");
             }
-
-            const response = await fetch('/api/process-square-payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    sourceId: token, 
-                    paymentType, 
-                    amount: finalAmount, 
-                    itemId: block?.id || movie?.key, 
-                    movieTitle: movie?.title, 
-                    email,
-                    promoCode: appliedPromo?.code 
-                }),
-            });
-            if (!response.ok) throw new Error('Transaction rejected.');
-            setStatus('success');
-            setTimeout(() => onPaymentSuccess({ paymentType, itemId: block?.id || movie?.key, amount: finalAmount, email }), 2500);
-        } catch (error) {
-            setErrorMessage(error instanceof Error ? error.message : 'Unknown Error');
-            setStatus('error');
-            setTimeout(() => setStatus('idle'), 3000);
+        } catch (err: any) {
+            setError(err.message || "An unexpected error occurred.");
+        } finally {
+            setIsProcessing(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[150] p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
-            <div className="bg-[#0a0a0a] rounded-3xl shadow-2xl w-full max-w-md border border-white/10 flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="p-8">
-                    {status === 'success' ? (
-                        <div className="space-y-8 py-4">
-                            <div className="text-center">
-                                <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/30 px-4 py-1 rounded-full mb-4">
-                                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                    <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">Access Authenticated</span>
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center z-[150] p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
+            <div className="bg-[#111] border border-white/10 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative" onClick={e => e.stopPropagation()}>
+                {/* Header */}
+                <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                    <div>
+                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Secure Checkout</h2>
+                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1">Verified Node Terminal</p>
+                    </div>
+                    {!paymentSuccess && (
+                        <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
+                            <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    )}
+                </div>
+
+                <div className="p-8 space-y-8">
+                    {paymentSuccess ? (
+                        <div className="space-y-8 py-6">
+                            <div className="flex justify-center">
+                                <div className="w-20 h-20 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center animate-bounce shadow-[0_0_40px_rgba(34,197,94,0.2)]">
+                                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                                 </div>
-                                <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Security Cleared</h2>
                             </div>
-                            <DigitalTicket details={paymentDetails} type={paymentType} />
-                            <p className="text-center text-[10px] font-bold text-gray-600 uppercase tracking-widest animate-pulse">Synchronizing cloud permissions...</p>
+                            <div className="text-center">
+                                <h3 className="text-3xl font-black uppercase tracking-tighter text-white italic">Authorization Confirmed</h3>
+                                <p className="text-gray-400 mt-2 font-medium">Access protocols updated. Redirecting to content...</p>
+                            </div>
+                            <DigitalTicket details={{ title: itemTitle, email: user?.email }} type={paymentType} />
                         </div>
                     ) : (
-                        <>
-                            <div className="flex justify-between items-start mb-6">
-                                <div>
-                                    <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none line-clamp-1">{paymentDetails.title}</h2>
-                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-2">Secure Access Terminal</p>
+                        <form onSubmit={handlePayment} className="space-y-8">
+                            {/* Summary Card */}
+                            <div className="bg-white/5 p-6 rounded-3xl border border-white/10 flex justify-between items-center shadow-inner">
+                                <div className="min-w-0">
+                                    <p className="text-[9px] font-black text-red-500 uppercase tracking-widest mb-1">Target Resource</p>
+                                    <h4 className="text-xl font-black text-white uppercase tracking-tight truncate">{itemTitle}</h4>
                                 </div>
-                                <span className={`text-xl font-black ${finalAmount === 0 ? 'text-green-500' : 'text-white'}`}>
-                                    {finalAmount === 0 ? 'FREE' : `$${finalAmount.toFixed(2)}`}
-                                </span>
+                                <div className="text-right">
+                                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Amount</p>
+                                    <p className="text-2xl font-black text-white">${displayAmount.toFixed(2)}</p>
+                                </div>
                             </div>
 
-                            <div className="space-y-6">
-                                {/* Voucher Entry */}
-                                {!appliedPromo ? (
-                                    <div className="flex gap-2">
+                            {/* Inputs for user-defined prices */}
+                            {['donation', 'billSavingsDeposit'].includes(paymentType) && (
+                                <div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Manual Amount Allocation</label>
+                                    <div className="relative">
+                                        <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-gray-700">$</span>
                                         <input 
-                                            type="text" 
-                                            value={promoCode} 
-                                            onChange={e => setPromoCode(e.target.value)} 
-                                            placeholder="Voucher/Promo Code" 
-                                            className="form-input !bg-white/5 !border-white/10 !py-3 text-xs uppercase tracking-widest font-black" 
+                                            type="number" 
+                                            value={customAmount} 
+                                            onChange={e => setCustomAmount(e.target.value)} 
+                                            className="w-full bg-black/40 border-2 border-white/10 rounded-2xl p-6 pl-12 text-3xl font-black text-white focus:border-red-600 transition-all outline-none"
+                                            step="0.50"
+                                            min="1.00"
                                         />
-                                        <button 
-                                            onClick={handleApplyPromo}
-                                            disabled={isPromoValidating || !promoCode.trim()}
-                                            className="bg-white/10 hover:bg-white/20 text-white px-4 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-30 transition-all"
-                                        >
-                                            {isPromoValidating ? '...' : 'Apply'}
-                                        </button>
                                     </div>
-                                ) : (
-                                    <div className="bg-green-600/10 border border-green-500/30 p-3 rounded-xl flex justify-between items-center animate-[fadeIn_0.3s_ease-out]">
-                                        <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">✓ Voucher "{appliedPromo.code}" Active</p>
-                                        <button onClick={() => setAppliedPromo(null)} className="text-[8px] font-black text-red-500 uppercase">Remove</button>
-                                    </div>
-                                )}
+                                </div>
+                            )}
 
-                                {!appliedPromo?.isFree && (
-                                    <div id="card-container" className="bg-white/5 border border-white/10 rounded-2xl p-4 min-h-[120px]"></div>
-                                )}
-                                
-                                <div>
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Delivery Address</label>
-                                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="form-input !bg-white/5 !border-white/10 !py-3 text-sm" placeholder="Receipt email" />
+                            {/* Square Card Input */}
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Secure Payment Channel</label>
+                                <div className="bg-black/40 border-2 border-white/10 rounded-2xl p-6 focus-within:border-red-600 transition-all">
+                                    <div id="card-container"></div>
                                 </div>
                             </div>
-                            
-                            {errorMessage && <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mt-4 text-center">{errorMessage}</p>}
-                            
-                            <button
-                                onClick={handlePayment}
-                                disabled={status === 'loading' || status === 'processing'}
-                                className={`w-full mt-8 ${finalAmount === 0 ? 'bg-green-600 hover:bg-green-700' : 'bg-white text-black hover:bg-gray-200'} font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all active:scale-95 disabled:opacity-30 shadow-2xl`}
+
+                            {/* Voucher Input */}
+                            {!['donation', 'billSavingsDeposit'].includes(paymentType) && (
+                                <div className="space-y-3">
+                                    <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Promotion Logic</p>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Voucher Code" 
+                                        value={promoCode} 
+                                        onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs font-mono tracking-widest text-white outline-none focus:border-red-600"
+                                    />
+                                </div>
+                            )}
+
+                            {error && (
+                                <div className="p-4 bg-red-600/10 border border-red-500/20 rounded-2xl flex items-center gap-4 animate-shake">
+                                    <span className="text-red-500 font-bold">⚠️</span>
+                                    <p className="text-xs font-black uppercase text-red-500 tracking-widest">{error}</p>
+                                </div>
+                            )}
+
+                            <button 
+                                type="submit" 
+                                disabled={isLoading || isProcessing}
+                                className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-800 disabled:text-gray-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-sm shadow-[0_20px_50px_rgba(239,68,68,0.2)] transition-all transform active:scale-[0.98] flex items-center justify-center gap-3"
                             >
-                                {status === 'loading' ? 'Initializing...' : status === 'processing' ? 'Authorizing Session...' : (finalAmount === 0 ? 'Claim Access' : 'Secure Access')}
+                                {isProcessing ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                        Processing...
+                                    </>
+                                ) : (
+                                    `Authorize Transaction: $${displayAmount.toFixed(2)}`
+                                )}
                             </button>
-                        </>
+                        </form>
                     )}
+                </div>
+
+                <div className="p-6 bg-black/40 border-t border-white/5 text-center">
+                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-[0.3em]">AES-256 Cloud Encryption // PII_PROTECTED // NO_STORAGE</p>
                 </div>
             </div>
         </div>

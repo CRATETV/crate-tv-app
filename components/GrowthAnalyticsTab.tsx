@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { GrowthAnalyticsData, AiGrowthAdvice, Movie } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -92,7 +93,7 @@ const GrowthAnalyticsTab: React.FC = () => {
         return <div className="text-gray-400 text-center p-8">No analytics data available.</div>;
     }
 
-    const { keyMetrics, historical, projections, avgMoMUserGrowth } = analytics;
+    const { keyMetrics, historical, projections, avgMoMUserGrowth, fundingProfile } = analytics;
     const isNewPlatform = keyMetrics.totalUsers < 5;
 
     return (
@@ -115,6 +116,38 @@ const GrowthAnalyticsTab: React.FC = () => {
                     <StatCard title="ARPU" value={formatCurrency(keyMetrics.avgRevenuePerUser)} />
                 </div>
             </div>
+
+            {/* AWS/Strategic Profile Card */}
+            {fundingProfile && (
+                <div className="bg-white/5 border border-white/10 rounded-3xl p-8 shadow-2xl">
+                    <div className="flex items-center gap-3 mb-6">
+                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/aws.png" className="w-8 h-8 opacity-50 grayscale" alt="AWS" />
+                        <h3 className="text-sm font-black uppercase tracking-[0.4em] text-gray-500">Strategic Business Profile</h3>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+                        <div>
+                            <p className="text-[10px] font-black text-gray-600 uppercase mb-1">Current Round</p>
+                            <p className="text-white font-bold">{fundingProfile.round}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-gray-600 uppercase mb-1">Round Close</p>
+                            <p className="text-white font-bold">{fundingProfile.date}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-gray-600 uppercase mb-1">Latest Valuation</p>
+                            <p className="text-white font-bold">{fundingProfile.valuation}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-gray-600 uppercase mb-1">AWS Infrastructure %</p>
+                            <p className="text-green-500 font-bold">{fundingProfile.awsPercentage}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-gray-600 uppercase mb-1">Marketing Tier</p>
+                            <p className="text-white font-bold">{fundingProfile.marketingBudget}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* AI Growth Advisor Section */}
             <div className="bg-gradient-to-br from-indigo-900/40 via-gray-900 to-black p-8 rounded-3xl border border-indigo-500/30 shadow-2xl no-print">

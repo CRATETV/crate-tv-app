@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import Header from './components/Header';
 import CollapsibleFooter from './components/CollapsibleFooter';
 import BottomNavBar from './components/BottomNavBar';
 import PublicS3Uploader from './components/PublicS3Uploader';
+import { useFestival } from './contexts/FestivalContext';
 
 const FilmFreewayButton: React.FC<{ className?: string }> = ({ className = "" }) => (
     <a 
@@ -19,6 +21,7 @@ const FilmFreewayButton: React.FC<{ className?: string }> = ({ className = "" })
 );
 
 const SubmitPage: React.FC = () => {
+    const { settings } = useFestival();
     const [posterUrl, setPosterUrl] = useState('');
     const [movieUrl, setMovieUrl] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,6 +29,8 @@ const SubmitPage: React.FC = () => {
     const [showDirectForm, setShowDirectForm] = useState(false);
     const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
     
+    const studioEmail = settings.businessEmail || "cratetiv@gmail.com";
+
     const handleNavigate = (path: string) => {
         window.history.pushState({}, '', path);
         window.dispatchEvent(new Event('pushstate'));
@@ -58,11 +63,11 @@ LEGAL CONFIRMATION:
 Thank you,
 [Your Name]`);
 
-        window.location.href = `mailto:cratetiv@gmail.com?subject=${emailSubject}&body=${emailBody}`;
+        window.location.href = `mailto:${studioEmail}?subject=${emailSubject}&body=${emailBody}`;
     };
 
     const copyEmailToClipboard = () => {
-        navigator.clipboard.writeText("cratetiv@gmail.com");
+        navigator.clipboard.writeText(studioEmail);
         setCopyStatus('copied');
         setTimeout(() => setCopyStatus('idle'), 2000);
     };
@@ -184,7 +189,7 @@ Thank you,
                                         onClick={copyEmailToClipboard}
                                         className="text-[10px] text-gray-500 hover:text-white uppercase font-black tracking-widest text-center"
                                     >
-                                        {copyStatus === 'copied' ? 'Email Address Copied!' : 'Copy Email Address Instead'}
+                                        {copyStatus === 'copied' ? 'Email Address Copied!' : `Copy ${studioEmail}`}
                                     </button>
                                 </div>
                                 <button 

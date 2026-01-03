@@ -1,4 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
+import { useFestival } from '../contexts/FestivalContext';
 
 interface CollapsibleFooterProps {
   showPortalNotice?: boolean;
@@ -6,9 +8,12 @@ interface CollapsibleFooterProps {
 }
 
 const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice = false, showActorLinks = false }) => {
+  const { settings } = useFestival();
   const [isOpen, setIsOpen] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(false);
   const [emailStatus, setEmailStatus] = useState<'idle' | 'opening' | 'copied'>('idle');
+
+  const studioEmail = settings.businessEmail || "cratetiv@gmail.com";
 
   useEffect(() => {
     const handleNavigation = () => {
@@ -39,21 +44,19 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
   };
 
   const handleEmailClick = () => {
-    const emailAddr = "cratetiv@gmail.com";
     const emailSubject = encodeURIComponent("Film Submission inquiry for Crate TV");
     const emailBody = encodeURIComponent("Hello Crate TV Team,\n\nI'm interested in learning more about your catalog.");
     
     setEmailStatus('opening');
-    window.location.href = `mailto:${emailAddr}?subject=${emailSubject}&body=${emailBody}`;
+    window.location.href = `mailto:${studioEmail}?subject=${emailSubject}&body=${emailBody}`;
     
-    // Reset status after a few seconds so the button doesn't stay stuck on "Opening..."
     setTimeout(() => {
         setEmailStatus('idle');
     }, 2000);
   };
 
   const copyEmailToClipboard = () => {
-    navigator.clipboard.writeText("cratetiv@gmail.com");
+    navigator.clipboard.writeText(studioEmail);
     setEmailStatus('copied');
     setTimeout(() => setEmailStatus('idle'), 2000);
   };

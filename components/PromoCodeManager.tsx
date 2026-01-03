@@ -100,7 +100,7 @@ const DistributeModal: React.FC<{
                                     <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Bulk Mode</span>
                                     <label className="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" checked={bulkDispatch} onChange={(e) => setBulkDispatch(e.target.checked)} className="sr-only peer" />
-                                        <div className="w-10 h-5 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+                                        <div className="w-10 h-5 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                                     </label>
                                 </div>
                             </div>
@@ -290,7 +290,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
         if (!itemId) return "Full Platform Access";
         if (itemId === 'crateFestPass') return "Crate Fest: All-Access Pass";
         const film = targetFilms.find(f => f.key === itemId);
-        if (film) return film.title;
+        if (film) return `${film.title} (+ Watch Party)`;
         const block = targetBlocks.find(b => b.id === itemId);
         if (block) return block.title;
         return "Specific Content";
@@ -357,7 +357,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                                             {targetBlocks.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
                                         </optgroup>}
                                         {targetFilms.length > 0 && <optgroup label="Individual Films / Watch Parties">
-                                            {targetFilms.map(f => <option key={f.key} value={f.key}>{f.title} (Live Screening Incl.)</option>)}
+                                            {targetFilms.map(f => <option key={f.key} value={f.key}>{f.title} (Live Event Incl.)</option>)}
                                         </optgroup>}
                                     </select>
                                 </div>

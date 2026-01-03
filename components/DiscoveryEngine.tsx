@@ -1,6 +1,9 @@
+
 import React, { useState, useMemo } from 'react';
 import { Movie, AnalyticsData, Category } from '../types';
 import LoadingSpinner from './LoadingSpinner';
+import PartnershipFinder from './PartnershipFinder';
+import GrantWriter from './GrantWriter';
 
 interface DiscoveryEngineProps {
     analytics: AnalyticsData | null;
@@ -48,18 +51,15 @@ const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({ analytics, movies, ca
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [insights, setInsights] = useState<PlatformInsight[]>([]);
+    const [activeSection, setActiveSection] = useState<'insights' | 'partners' | 'grantwriter'>('insights');
 
     const generateInsights = async () => {
         setIsAnalyzing(true);
-        // In a real implementation, we would call Gemini here with the full analytics payload.
-        // For this elite UI demo, we simulate the logic Gemini would produce.
-        
         await new Promise(r => setTimeout(r, 2000));
 
         const movieArray = Object.values(movies) as Movie[];
         const gems = movieArray.filter(m => {
             const views = analytics?.viewCounts[m.key] || 0;
-            // High like ratio logic
             return views > 10 && (m.likes || 0) / views > 0.2;
         }).slice(0, 3);
 
@@ -117,33 +117,57 @@ const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({ analytics, movies, ca
 
     return (
         <div className="space-y-12 pb-20 animate-[fadeIn_0.4s_ease-out]">
-            <div className="bg-gradient-to-br from-indigo-900/40 via-gray-900 to-black p-10 rounded-[3rem] border border-indigo-500/20 shadow-2xl relative overflow-hidden">
-                 <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
-                    <svg className="w-48 h-48 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-                </div>
-                
-                <div className="relative z-10 max-w-3xl">
-                    <h2 className="text-5xl font-black text-white uppercase tracking-tighter italic mb-4">Platform Intelligence</h2>
-                    <p className="text-xl text-gray-400 font-medium leading-relaxed mb-10">Cross-referencing global telemetry with film metadata to discover strategic growth vectors.</p>
-                    <button 
-                        onClick={generateInsights} 
-                        disabled={isAnalyzing}
-                        className="bg-white text-black font-black px-12 py-5 rounded-2xl uppercase tracking-widest text-xs shadow-2xl hover:bg-indigo-500 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                    >
-                        {isAnalyzing ? 'Scanning Platform Artifacts...' : 'Engage Discovery Engine'}
-                    </button>
-                </div>
+            <div className="flex gap-4 p-1 bg-white/5 rounded-2xl border border-white/5 w-max mx-auto">
+                <button 
+                    onClick={() => setActiveSection('insights')}
+                    className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'insights' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                >
+                    Platform Insights
+                </button>
+                <button 
+                    onClick={() => setActiveSection('partners')}
+                    className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'partners' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                >
+                    Grant Research
+                </button>
+                <button 
+                    onClick={() => setActiveSection('grantwriter')}
+                    className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'grantwriter' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                >
+                    AI Grant Writer
+                </button>
             </div>
 
-            {insights.length > 0 && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-[fadeIn_0.8s_ease-out]">
-                    {insights.map((insight, idx) => (
-                        <InsightCard key={idx} insight={insight} onAction={handleExecuteAction} isProcessing={isProcessing} />
-                    ))}
-                </div>
+            {activeSection === 'insights' && (
+                <>
+                    <div className="bg-gradient-to-br from-indigo-900/40 via-gray-900 to-black p-10 rounded-[3rem] border border-indigo-500/20 shadow-2xl relative overflow-hidden">
+                        <div className="relative z-10 max-w-3xl">
+                            <h2 className="text-5xl font-black text-white uppercase tracking-tighter italic mb-4">Platform Intelligence</h2>
+                            <p className="text-xl text-gray-400 font-medium leading-relaxed mb-10">Cross-referencing global telemetry with film metadata to discover strategic growth vectors.</p>
+                            <button 
+                                onClick={generateInsights} 
+                                disabled={isAnalyzing}
+                                className="bg-white text-black font-black px-12 py-5 rounded-2xl uppercase tracking-widest text-xs shadow-2xl hover:bg-indigo-500 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                            >
+                                {isAnalyzing ? 'Scanning Platform Artifacts...' : 'Engage Discovery Engine'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {insights.length > 0 && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-[fadeIn_0.8s_ease-out]">
+                            {insights.map((insight, idx) => (
+                                <InsightCard key={idx} insight={insight} onAction={handleExecuteAction} isProcessing={isProcessing} />
+                            ))}
+                        </div>
+                    )}
+                </>
             )}
+
+            {activeSection === 'partners' && <PartnershipFinder />}
+            {activeSection === 'grantwriter' && <GrantWriter />}
             
-            {insights.length === 0 && !isAnalyzing && (
+            {activeSection === 'insights' && insights.length === 0 && !isAnalyzing && (
                 <div className="py-32 text-center border-2 border-dashed border-white/5 rounded-[3rem] opacity-30">
                     <p className="text-gray-500 font-black uppercase tracking-[0.5em]">System Idle // Awaiting Analysis Trigger</p>
                 </div>

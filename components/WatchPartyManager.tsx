@@ -159,7 +159,11 @@ const WatchPartyControlRoom: React.FC<{
                          <span className={`px-3 py-1 text-[9px] font-black text-white rounded-full uppercase tracking-widest ${status.color}`}>
                             {status.text}
                         </span>
-                        {movie.isWatchPartyPaid && <span className="text-[9px] font-black uppercase text-pink-500 tracking-widest border border-pink-500/30 px-2 py-1 rounded-full">Secure Ticket Required // ${movie.watchPartyPrice}</span>}
+                        {movie.isWatchPartyPaid && (
+                            <span className="text-[9px] font-black uppercase text-pink-500 tracking-widest border border-pink-500/30 px-2 py-1 rounded-full">
+                                Ticketed Access // ${movie.watchPartyPrice}
+                            </span>
+                        )}
                     </div>
                 </div>
                 <div className="flex gap-3">
@@ -299,7 +303,7 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
                     <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" checked={movie.isWatchPartyPaid || false} onChange={handlePaidToggle} className="sr-only peer" />
                         <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-pink-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
-                        <span className="ml-3 text-[10px] font-black text-gray-500 uppercase tracking-widest">Paywall</span>
+                        <span className="ml-3 text-[10px] font-black text-gray-500 uppercase tracking-widest">Paid Entry</span>
                     </label>
                     {movie.isWatchPartyPaid && (
                         <div className="flex items-center gap-2 animate-[fadeIn_0.3s_ease-out]">

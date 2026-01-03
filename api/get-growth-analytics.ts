@@ -1,3 +1,4 @@
+
 import { getAdminAuth, getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { GrowthAnalyticsData, MonthlyDataPoint, User, Movie, AboutData } from '../types.js';
 
@@ -194,6 +195,13 @@ export async function POST(request: Request) {
             },
             aboutData: aboutData || undefined,
             avgMoMUserGrowth: 0,
+            fundingProfile: {
+                round: 'Pre-Seed',
+                date: 'January 2025',
+                valuation: 'Less than $1 Million',
+                awsPercentage: '75-99%',
+                marketingBudget: '< $250,000'
+            }
         };
 
         return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });

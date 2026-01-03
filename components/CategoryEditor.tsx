@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Category, Movie, SiteSettings } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
@@ -80,7 +81,8 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
       isHolidayModeActive: settings.isHolidayModeActive || false,
       holidayName: settings.holidayName || 'Cratemas',
       holidayTagline: settings.holidayTagline || '',
-      holidayTheme: settings.holidayTheme || 'generic'
+      holidayTheme: settings.holidayTheme || 'generic',
+      businessEmail: settings.businessEmail || 'cratetiv@gmail.com'
   });
 
   useEffect(() => {
@@ -93,7 +95,8 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
             isHolidayModeActive: settings.isHolidayModeActive || false,
             holidayName: settings.holidayName || 'Cratemas',
             holidayTagline: settings.holidayTagline || '',
-            holidayTheme: settings.holidayTheme || 'generic'
+            holidayTheme: settings.holidayTheme || 'generic',
+            businessEmail: settings.businessEmail || 'cratetiv@gmail.com'
         });
     }
   }, [settings, isSaving]);
@@ -112,7 +115,6 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
     const newCats = { ...categories };
     delete newCats[key];
     setCategories(newCats);
-    // CRITICAL: We pass true to indicate a full overwrite in the API
     onSave(newCats);
   };
 
@@ -132,7 +134,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
       }
   };
 
-  const saveHolidayDetails = async () => {
+  const saveIdentityDetails = async () => {
     const password = sessionStorage.getItem('adminPassword');
     try {
         const res = await fetch('/api/publish-data', {
@@ -140,7 +142,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password, type: 'settings', data: holidaySettings }),
         });
-        if (res.ok) alert("Holiday profile updated.");
+        if (res.ok) alert("Identity profile updated.");
     } catch (err) {
         alert("Sync failed.");
     }
@@ -148,34 +150,55 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
 
   return (
     <div className="space-y-10">
-      <div className="bg-gray-900 border border-indigo-500/20 p-8 rounded-[2rem] shadow-xl">
-          <div className="flex flex-col md:flex-row justify-between gap-6 mb-8">
-              <div>
-                  <h3 className="text-2xl font-black text-indigo-400 uppercase tracking-tighter">Holiday Hub</h3>
-                  <p className="text-gray-400 text-sm">Control the seasonal row visibility and metadata.</p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-gray-900 border border-indigo-500/20 p-8 rounded-[2rem] shadow-xl">
+              <div className="flex flex-col md:flex-row justify-between gap-6 mb-8">
+                  <div>
+                      <h3 className="text-2xl font-black text-indigo-400 uppercase tracking-tighter">Holiday Hub</h3>
+                      <p className="text-gray-400 text-sm">Control the seasonal row visibility.</p>
+                  </div>
+                  <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
+                    <span className="text-[10px] font-black uppercase text-gray-500">Live</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked={holidaySettings.isHolidayModeActive} onChange={(e) => handleHolidayToggle(e.target.checked)} className="sr-only peer" />
+                        <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                    </label>
+                  </div>
               </div>
-              <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
-                <span className="text-[10px] font-black uppercase text-gray-500">Live State</span>
-                <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={holidaySettings.isHolidayModeActive} onChange={(e) => handleHolidayToggle(e.target.checked)} className="sr-only peer" />
-                    <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
-                </label>
-              </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                   <input type="text" value={holidaySettings.holidayName} onChange={(e) => setHolidaySettings({...holidaySettings, holidayName: e.target.value})} placeholder="Holiday Name" className="form-input !bg-black/40" />
                   <textarea value={holidaySettings.holidayTagline} onChange={(e) => setHolidaySettings({...holidaySettings, holidayTagline: e.target.value})} placeholder="Tagline" className="form-input !bg-black/40" rows={2} />
-              </div>
-              <div className="space-y-4">
                   <select value={holidaySettings.holidayTheme} onChange={(e) => setHolidaySettings({...holidaySettings, holidayTheme: e.target.value as any})} className="form-input !bg-black/40">
                       <option value="christmas">Christmas</option>
                       <option value="valentines">Valentine's</option>
                       <option value="gold">Anniversary Gold</option>
                       <option value="generic">Neutral Dark</option>
                   </select>
-                  <button onClick={saveHolidayDetails} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl shadow-lg transition-all">Update Holiday Profile</button>
+                  <button onClick={saveIdentityDetails} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl shadow-lg transition-all">Update Holiday Profile</button>
+              </div>
+          </div>
+
+          <div className="bg-gray-900 border border-red-500/20 p-8 rounded-[2rem] shadow-xl">
+              <h3 className="text-2xl font-black text-red-500 uppercase tracking-tighter mb-2">Branding Core</h3>
+              <p className="text-gray-400 text-sm mb-8">Set the official studio contact address used platform-wide.</p>
+              
+              <div className="space-y-6">
+                <div>
+                    <label className="form-label">Official Studio Email</label>
+                    <input 
+                        type="email" 
+                        value={holidaySettings.businessEmail} 
+                        onChange={(e) => setHolidaySettings({...holidaySettings, businessEmail: e.target.value})}
+                        placeholder="e.g. studio@cratetv.net" 
+                        className="form-input !bg-black/40 border-white/10" 
+                    />
+                </div>
+                <div className="bg-red-600/5 p-4 rounded-xl border border-red-500/10">
+                    <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">⚠️ Global Propagation</p>
+                    <p className="text-[9px] text-gray-500 mt-1">Changing this will update the Contact page, Footer, and Submission emails across the entire infrastructure.</p>
+                </div>
+                <button onClick={saveIdentityDetails} className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl shadow-lg transition-all">Publish Branding Updates</button>
               </div>
           </div>
       </div>
@@ -187,7 +210,6 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
 
       <div className="space-y-4">
         {Object.entries(categories).map(([key, category]) => {
-          // FIX: Explicitly cast category to Category to resolve properties on unknown type.
           const cat = category as Category;
           if (key === 'featured' || key === 'nowStreaming') return null;
           return (

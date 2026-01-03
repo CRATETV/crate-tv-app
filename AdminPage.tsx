@@ -11,7 +11,7 @@ import WatchPartyManager from './components/WatchPartyManager';
 import SecurityTerminal from './components/SecurityTerminal';
 import DailyPulse from './components/DailyPulse';
 import FallbackGenerator from './components/FallbackGenerator';
-import CommunicationsTerminal from './components/CommunicationsTerminal';
+import StudioMail from './components/StudioMail';
 import SaveStatusToast from './components/SaveStatusToast';
 import HeroManager from './components/HeroManager';
 import LaurelManager from './components/LaurelManager';
@@ -26,7 +26,7 @@ import DiscoveryEngine from './components/DiscoveryEngine';
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
     intelligence: '🧠 Intelligence',
-    comms: '✉️ Dispatch',
+    mail: '✉️ Studio Mail',
     movies: '🎞️ Catalog',
     pipeline: '📥 Pipeline',
     inquiries: '🎭 Inquiries',
@@ -242,7 +242,7 @@ const AdminPage: React.FC = () => {
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
                     {activeTab === 'intelligence' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(newCats) => handleSaveData('categories', newCats)} />}
-                    {activeTab === 'comms' && <CommunicationsTerminal analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
+                    {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => setActiveTab('movies')} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'inquiries' && <TalentInquiriesTab />}
