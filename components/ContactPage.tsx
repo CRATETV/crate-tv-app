@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
@@ -8,11 +9,14 @@ import { useFestival } from '../contexts/FestivalContext';
 
 
 const ContactPage: React.FC = () => {
+    const { settings } = useFestival();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submissionStatus, setSubmissionStatus] = useState<'success' | 'error' | null>(null);
     const [errorMessage, setErrorMessage] = useState('');
     const formRef = useRef<HTMLFormElement>(null);
     
+    const studioEmail = settings.businessEmail || "studio@cratetv.net";
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -74,7 +78,7 @@ const ContactPage: React.FC = () => {
 
                     <h1 className="text-4xl md:text-7xl font-black text-white mb-4 text-center uppercase tracking-tighter">Contact Us</h1>
                     <p className="text-lg text-gray-400 mb-10 text-center font-medium">
-                        Have a question, feedback, or a collaboration idea? We'd love to hear from you.
+                        Transmissions routed to <span className="text-red-500 font-black">{studioEmail}</span>
                     </p>
 
                     <div className="bg-white/5 border border-white/5 p-8 sm:p-12 rounded-[2.5rem] shadow-2xl">
@@ -94,7 +98,7 @@ const ContactPage: React.FC = () => {
                                     <input type="text" id="name" name="name" className={formInputClasses} required />
                                 </div>
                                 <div>
-                                    <label htmlFor="email" className="form-label">Email Address</label>
+                                    <label htmlFor="email" className="form-label">Your Email Address</label>
                                     <input type="email" id="email" name="email" className={formInputClasses} required />
                                 </div>
                                 <div>

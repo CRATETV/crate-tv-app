@@ -1,5 +1,24 @@
 
-// This file contains type definitions for the Crate TV application.
+export interface User {
+  uid: string;
+  email: string;
+  name: string;
+  isActor?: boolean;
+  isFilmmaker?: boolean;
+  isIndustryPro?: boolean;
+  avatar?: string;
+  isPremiumSubscriber?: boolean;
+  watchlist: string[];
+  watchedMovies: string[];
+  likedMovies: string[];
+  hasFestivalAllAccess?: boolean;
+  hasCrateFestPass?: boolean;
+  unlockedBlockIds: string[];
+  purchasedMovieKeys: string[];
+  rentals: Record<string, string>;
+  unlockedWatchPartyKeys?: string[];
+  rokuDeviceId?: string;
+}
 
 export interface Actor {
   name: string;
@@ -15,7 +34,6 @@ export interface Episode {
   synopsis: string;
   url: string;
   duration?: number;
-  thumbnail?: string;
 }
 
 export interface Movie {
@@ -29,12 +47,13 @@ export interface Movie {
   fullMovie: string;
   poster: string;
   tvPoster: string;
-  likes?: number;
+  likes: number;
   rating?: number;
+  publishedAt?: string;
   releaseDateTime?: string;
-  publishedAt?: string; 
-  autoReleaseDate?: string; // Date when the paywall automatically drops
-  isUnlisted?: boolean; 
+  mainPageExpiry?: string;
+  autoReleaseDate?: string;
+  isUnlisted?: boolean;
   isSeries?: boolean;
   episodes?: Episode[];
   durationInMinutes?: number;
@@ -46,102 +65,10 @@ export interface Movie {
   watchPartyPrice?: number;
   isForSale?: boolean;
   salePrice?: number;
-  mainPageExpiry?: string;
-  isCratemas?: boolean;
+  customLaurelUrl?: string;
   awardName?: string;
   awardYear?: string;
-  customLaurelUrl?: string;
-}
-
-export interface AnalyticsEvent {
-    id: string;
-    movieKey: string;
-    timestamp: any;
-    country: string;
-    sessionDuration?: number;
-}
-
-export interface UserPresence {
-    uid: string;
-    lastActive: any;
-    currentPath: string;
-}
-
-export interface PromoCode {
-    id: string;
-    code: string;
-    type: 'one_time_access' | 'discount';
-    discountValue: number; // 0-100 percentage
-    maxUses: number;
-    usedCount: number;
-    itemId?: string; // Specific movie key or block ID
-    createdBy: string; // 'admin' or filmmaker name
-    createdAt: any;
-    expiresAt?: string;
-}
-
-export interface SentimentPoint {
-    timestamp: number; // in seconds
-    type: '🔥' | '😲' | '❤️' | '👏' | '😢';
-}
-
-export interface User {
-  uid: string;
-  email: string | null;
-  name?: string;
-  avatar?: string;
-  isActor?: boolean;
-  isFilmmaker?: boolean;
-  isIndustryPro?: boolean; 
-  isPremiumSubscriber?: boolean;
-  watchlist?: string[];
-  watchedMovies?: string[];
-  likedMovies?: string[];
-  hasFestivalAllAccess?: boolean;
-  hasCrateFestPass?: boolean; 
-  unlockedBlockIds?: string[];
-  purchasedMovieKeys?: string[]; 
-  rentals?: Record<string, string>; 
-  unlockedWatchPartyKeys?: string[];
-  rokuDeviceId?: string;
-  actorProfileSlug?: string;
-}
-
-export interface CrateFestConfig {
-  isActive: boolean;
-  title: string;
-  tagline: string;
-  startDate: string;
-  endDate: string;
-  passPrice: number;
-  featuredWatchPartyKey?: string;
-  movieBlocks: {
-    id: string; 
-    title: string;
-    movieKeys: string[];
-  }[];
-}
-
-export interface FilmmakerAnalytics {
-    totalDonations: number;
-    totalAdRevenue: number;
-    totalPaidOut: number;
-    balance: number;
-    films: FilmmakerFilmPerformance[];
-}
-
-export interface FilmmakerFilmPerformance {
-    key: string;
-    title: string;
-    views: number;
-    likes: number;
-    watchlistAdds: number;
-    grossDonations: number;
-    grossAdRevenue: number;
-    netDonationEarnings: number;
-    netAdEarnings: number;
-    totalEarnings: number;
-    sentimentData?: SentimentPoint[];
+  isCratemas?: boolean;
 }
 
 export interface Category {
@@ -149,170 +76,11 @@ export interface Category {
   movieKeys: string[];
 }
 
-export interface SiteSettings {
-  isHolidayModeActive?: boolean;
-  holidayName?: string;
-  holidayTagline?: string;
-  holidayTheme?: 'christmas' | 'valentines' | 'gold' | 'generic';
-  maintenanceMode?: boolean;
-  pitchTargetCompany?: string;
-  pitchDeckCustomMessage?: string;
-  crateFestConfig?: CrateFestConfig;
-  businessEmail?: string;
-}
-
-export interface StudioMessage {
-    id: string;
-    senderName: string;
-    senderEmail: string;
-    subject: string;
-    content: string;
-    timestamp: any;
-    type: 'CONTACT' | 'INQUIRY' | 'SUBMISSION';
-    status: 'OPEN' | 'RESOLVED' | 'ESCALATED';
-    meta?: any;
-}
-
-export interface AnalyticsData {
-    totalRevenue: number;
-    totalCrateTvRevenue: number;
-    totalAdminPayouts: number;
-    pastAdminPayouts: AdminPayout[];
-    billSavingsPotTotal: number;
-    billSavingsTransactions: BillSavingsTransaction[];
-    totalUsers: number;
-    viewCounts: Record<string, number>;
-    movieLikes: Record<string, number>;
-    watchlistCounts: Record<string, number>;
-    filmmakerPayouts: FilmmakerPayout[];
-    viewLocations: Record<string, Record<string, number>>;
-    allUsers: { email: string }[];
-    actorUsers: { email: string }[];
-    filmmakerUsers: { email: string }[] ;
-    totalDonations: number;
-    totalSales: number;
-    totalMerchRevenue: number;
-    totalAdRevenue: number;
-    crateTvMerchCut: number;
-    merchSales: Record<string, { name: string; units: number; revenue: number }>;
-    totalFestivalRevenue: number;
-    festivalPassSales: { units: number, revenue: number };
-    festivalBlockSales: { units: number, revenue: number };
-    salesByBlock: Record<string, { units: number, revenue: number }>;
-    festivalUsers: string[];
-    crateFestRevenue: number; 
-    liveNodes?: number;
-    recentSpikes?: { movieKey: string, title: string, count: number }[];
-}
-
-export interface FundingProfile {
-    round: string;
-    date: string;
-    valuation: string;
-    awsPercentage: string;
-    marketingBudget: string;
-}
-
-export interface AdminPayout {
-    id: string;
-    amount: number;
-    reason: string;
-    payoutDate: any;
-}
-
-export interface BillSavingsTransaction {
-    id: string;
-    type: 'deposit' | 'withdrawal';
-    amount: number;
-    reason: string;
-    transactionDate: any;
-}
-
-export interface PayoutRequest {
-  id: string;
-  directorName: string;
-  amount: number;
-  payoutMethod: 'PayPal' | 'Venmo' | 'Other';
-  payoutDetails: string;
-  status: 'pending' | 'completed';
-  requestDate: any;
-  completionDate?: any;
-}
-
-export interface ChatMessage {
-    id: string;
-    userName: string;
-    userAvatar: string;
-    text: string;
-    timestamp: any;
-}
-
-export interface WatchPartyState {
-    isPlaying: boolean;
-    currentTime: number;
-    status: 'waiting' | 'live' | 'ended';
-    isQALive?: boolean;
-    qaRoomUrl?: string;
-    backstageKey?: string;
-    lastUpdatedBy: string;
-    lastUpdated?: any;
-}
-
-export interface MoviePipelineEntry {
+export interface FilmBlock {
   id: string;
   title: string;
-  director: string;
-  cast: string;
-  posterUrl: string;
-  movieUrl: string;
-  submitterEmail: string;
-  submitterName?: string;
-  synopsis: string;
-  submissionDate: any;
-  status: 'pending' | 'approved' | 'rejected';
-  musicRightsConfirmation: boolean;
-}
-
-export interface ActorSubmission {
-    id: string;
-    actorName: string;
-    email: string;
-    bio: string;
-    photoUrl: string;
-    highResPhotoUrl: string;
-    imdbUrl?: string;
-    submissionDate: any;
-    status: 'pending' | 'approved' | 'rejected';
-}
-
-export interface ActorProfile {
-    name: string;
-    slug: string;
-    bio: string;
-    photo: string;
-    highResPhoto: string;
-    imdbUrl: string;
-    email: string; 
-    isAvailableForCasting?: boolean;
-    isContactable?: boolean; 
-}
-
-export interface ActorPost {
-    id: string;
-    actorName: string;
-    actorPhoto: string;
-    content: string;
-    imageUrl?: string;
-    timestamp: any;
-    likes: string[];
-}
-
-export interface FestivalConfig {
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  isFestivalLive?: boolean;
+  time: string;
+  movieKeys: string[];
 }
 
 export interface FestivalDay {
@@ -321,11 +89,12 @@ export interface FestivalDay {
   blocks: FilmBlock[];
 }
 
-export interface FilmBlock {
-  id: string;
+export interface FestivalConfig {
+  isFestivalLive: boolean;
   title: string;
-  time: string;
-  movieKeys: string[];
+  description: string;
+  startDate: string;
+  endDate: string;
 }
 
 export interface AboutData {
@@ -343,17 +112,133 @@ export interface AboutData {
   founderPhoto: string;
 }
 
-export interface FilmmakerPayout {
-    movieTitle: string;
-    totalDonations: number;
-    crateTvCut: number;
-    filmmakerDonationPayout: number;
-    totalAdRevenue: number;
-    filmmakerAdPayout: number;
-    totalFilmmakerPayout: number;
+export interface MoviePipelineEntry {
+  id: string;
+  title: string;
+  director: string;
+  cast: string;
+  synopsis: string;
+  posterUrl: string;
+  movieUrl: string;
+  submitterEmail: string;
+  submissionDate: any;
+  status: 'pending' | 'approved' | 'rejected';
+  source?: string;
+  musicRightsConfirmation?: boolean;
 }
 
-export interface AdConfig {
+export interface WatchPartyState {
+  status: 'waiting' | 'live' | 'ended';
+  isPlaying: boolean;
+  currentTime: number;
+  lastUpdated: any;
+  lastUpdatedBy?: string;
+  backstageKey?: string;
+  isQALive?: boolean;
+}
+
+export interface ChatMessage {
+  id: string;
+  userName: string;
+  userAvatar: string;
+  text: string;
+  timestamp: any;
+}
+
+export interface SentimentPoint {
+  type: string;
+  timestamp: number;
+  serverTimestamp: any;
+}
+
+export interface FilmmakerFilmPerformance {
+  key: string;
+  title: string;
+  views: number;
+  likes: number;
+  watchlistAdds: number;
+  grossDonations: number;
+  grossAdRevenue: number;
+  netDonationEarnings: number;
+  netAdEarnings: number;
+  totalEarnings: number;
+  sentimentData?: SentimentPoint[];
+}
+
+export interface FilmmakerAnalytics {
+  totalDonations: number;
+  totalAdRevenue: number;
+  totalPaidOut: number;
+  balance: number;
+  films: FilmmakerFilmPerformance[];
+}
+
+export interface PayoutRequest {
+  id: string;
+  directorName: string;
+  amount: number;
+  payoutMethod: string;
+  payoutDetails: string;
+  status: 'pending' | 'completed';
+  requestDate: any;
+  completionDate?: any;
+}
+
+export interface AdminPayout {
+  id: string;
+  amount: number;
+  reason: string;
+  payoutDate: any;
+}
+
+export interface FilmmakerPayout {
+  movieTitle: string;
+  totalDonations: number;
+  crateTvCut: number;
+  filmmakerDonationPayout: number;
+  totalAdRevenue: number;
+  filmmakerAdPayout: number;
+  totalFilmmakerPayout: number;
+}
+
+export interface AnalyticsData {
+  totalRevenue: number;
+  totalCrateTvRevenue: number;
+  totalAdminPayouts: number;
+  pastAdminPayouts: AdminPayout[];
+  billSavingsPotTotal: number;
+  billSavingsTransactions: BillSavingsTransaction[];
+  totalUsers: number;
+  viewCounts: Record<string, number>;
+  movieLikes: Record<string, number>;
+  watchlistCounts: Record<string, number>;
+  filmmakerPayouts: FilmmakerPayout[];
+  viewLocations: Record<string, Record<string, number>>;
+  allUsers: { email: string }[];
+  actorUsers: { email: string }[];
+  filmmakerUsers: { email: string }[];
+  totalDonations: number;
+  totalSales: number;
+  totalMerchRevenue: number;
+  totalAdRevenue: number;
+  crateTvMerchCut: number;
+  merchSales: Record<string, number>;
+  totalFestivalRevenue: number;
+  festivalPassSales: { units: number; revenue: number };
+  festivalBlockSales: { units: number; revenue: number };
+  salesByBlock: Record<string, { units: number; revenue: number }>;
+  festivalUsers: string[];
+  crateFestRevenue: number;
+  liveNodes: number;
+  recentSpikes: { movieKey: string; title: string; count: number }[];
+}
+
+export interface BillSavingsTransaction {
+  id: string;
+  type: 'deposit' | 'withdrawal';
+  amount: number;
+  reason: string;
+  transactionDate: any;
 }
 
 export interface MonthlyDataPoint {
@@ -362,46 +247,31 @@ export interface MonthlyDataPoint {
 }
 
 export interface GrowthAnalyticsData {
-  historical: {
-    users: MonthlyDataPoint[];
-    revenue: MonthlyDataPoint[];
-  };
-  projections: {
-    users: MonthlyDataPoint[];
-    revenue: MonthlyDataPoint[];
-  };
-  keyMetrics: {
-    totalVisitors: number;
-    totalUsers: number;
-    conversionRate: number;
-    dailyActiveUsers: number;
-    weeklyActiveUsers: number;
-    totalRevenue: number;
-    projectedUsersYtd: number;
-    projectedRevenueYtd: number;
-    totalViews: number;
-    totalLikes: number;
-    totalWatchlistAdds: number;
-    totalFilms: number;
-    mostViewedFilm: { title: string; views: number };
-    mostLikedFilm: { title: string; likes: number };
-    avgRevenuePerUser: number;
-    totalDonations: number;
-    totalSales: number;
-    audienceBreakdown: { total: number; actors: number; filmmakers: number };
-    topCountries: { country: string; views: number }[];
-    topEarningFilms: { title: string; totalRevenue: number; adRevenue: number; donationRevenue: number }[];
-  };
+  historical: { users: MonthlyDataPoint[]; revenue: MonthlyDataPoint[] };
+  projections: { users: MonthlyDataPoint[]; revenue: MonthlyDataPoint[] };
+  keyMetrics: any;
   aboutData?: AboutData;
   avgMoMUserGrowth: number;
-  fundingProfile?: FundingProfile;
+  fundingProfile: {
+    round: string;
+    date: string;
+    valuation: string;
+    awsPercentage: string;
+    marketingBudget: string;
+  };
+}
+
+export interface AiGrowthAdvice {
+  userGrowth: string[];
+  revenueGrowth: string[];
+  communityEngagement: string[];
 }
 
 export interface SecurityEvent {
   id: string;
   type: string;
-  ip?: string;
   timestamp: any;
+  ip?: string;
   details?: any;
 }
 
@@ -418,26 +288,90 @@ export interface AiSecurityAdvice {
   recommendations: string[];
 }
 
-// FIX: Added missing AiGrowthAdvice interface export.
-export interface AiGrowthAdvice {
-  userGrowth: string[];
-  revenueGrowth: string[];
-  communityEngagement: string[];
-  advertisingSuggestions?: string[];
+export interface ActorSubmission {
+  id: string;
+  actorName: string;
+  email: string;
+  bio: string;
+  photoUrl: string;
+  highResPhotoUrl: string;
+  imdbUrl?: string;
+  submissionDate: any;
+  status: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
 }
 
-/**
- * Global interface augmentation for window.aistudio and external SDKs
- */
-declare global {
-  interface AIStudio {
-    hasSelectedApiKey: () => Promise<boolean>;
-    openSelectKey: () => Promise<void>;
-  }
+export interface ActorProfile {
+  name: string;
+  slug: string;
+  bio: string;
+  photo: string;
+  highResPhoto: string;
+  imdbUrl?: string;
+  email: string;
+  isAvailableForCasting?: boolean;
+  isContactable?: boolean;
+}
 
-  interface Window {
-    aistudio?: AIStudio;
-    // FIX: Augmented Window interface to include Square property for SDK loading checks in SquarePaymentModal.tsx
-    Square?: any;
-  }
+export interface ActorPost {
+  id: string;
+  actorName: string;
+  actorPhoto: string;
+  content: string;
+  imageUrl?: string;
+  timestamp: any;
+  likes: string[];
+}
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  type: 'one_time_access' | 'discount';
+  discountValue: number;
+  maxUses: number;
+  usedCount: number;
+  itemId?: string;
+  createdBy: string;
+  createdAt: any;
+  expiresAt?: any;
+}
+
+export interface StudioMessage {
+  id: string;
+  senderName: string;
+  senderEmail: string;
+  subject: string;
+  content: string;
+  timestamp: any;
+  type: 'CONTACT' | 'INQUIRY' | 'SUBMISSION' | 'GENERAL';
+  status: string;
+}
+
+export interface AdConfig {
+  // Add ad-related config here
+}
+
+export interface CrateFestConfig {
+  isActive: boolean;
+  title: string;
+  tagline: string;
+  startDate: string;
+  endDate: string;
+  passPrice: number;
+  featuredWatchPartyKey?: string;
+  movieBlocks: { id: string; title: string; movieKeys: string[] }[];
+}
+
+export interface SiteSettings {
+  isHolidayModeActive?: boolean;
+  holidayName?: string;
+  holidayTagline?: string;
+  holidayTheme?: 'christmas' | 'valentines' | 'gold' | 'generic';
+  maintenanceMode?: boolean;
+  pitchTargetCompany?: string;
+  pitchDeckCustomMessage?: string;
+  crateFestConfig?: CrateFestConfig;
+  businessEmail?: string;
+  technicalEmail?: string;
+  emailSignature?: string;
 }

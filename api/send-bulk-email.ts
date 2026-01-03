@@ -1,8 +1,9 @@
+
 import { getAdminAuth, getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
+const FALLBACK_FROM = 'studio@cratetv.net';
 
 export async function POST(request: Request) {
     try {
@@ -29,6 +30,17 @@ export async function POST(request: Request) {
         
         const db = getAdminDb();
         if (!db) throw new Error("Firebase DB connection failed.");
+
+        // Fetch dynamic identity and signature
+        const settingsDoc = await db.collection('content').doc('settings').get();
+        const settingsData = settingsDoc.data();
+        const businessEmail = settingsData?.businessEmail || FALLBACK_FROM;
+        const signature = settingsData?.emailSignature || "";
+
+        // Auto-append signature
+        const finalHtmlBody = signature 
+            ? `${htmlBody}<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #f0f0f0; color: #444; font-size: 14px; font-family: sans-serif; white-space: pre-wrap; line-height: 1.5;">${signature}</div>`
+            : htmlBody;
 
         // --- Fetch users based on audience ---
         let usersQuery;
@@ -57,11 +69,16 @@ export async function POST(request: Request) {
         for (let i = 0; i < allEmails.length; i += BATCH_SIZE) {
             const batch = allEmails.slice(i, i + BATCH_SIZE);
             await resend.emails.send({
-                from: `Crate TV <${fromEmail}>`,
-                to: 'delivered@resend.dev', // Required by Resend, but BCC overrides
+                from: `Crate TV <${businessEmail}>`,
+                to: 'delivered@resend.dev', 
                 bcc: batch,
                 subject: subject,
-                html: htmlBody,
+                reply_to: businessEmail,
+                html: `
+                    <div style="font-family: sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto; padding: 30px;">
+                        ${finalHtmlBody}
+                    </div>
+                `,
             });
         }
         

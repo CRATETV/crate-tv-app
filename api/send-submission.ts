@@ -1,14 +1,15 @@
+
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@cratetv.net';
-const ADMIN_EMAIL = 'cratetiv@gmail.com';
+const FROM_EMAIL = 'studio@cratetv.net';
+const FALLBACK_ADMIN = 'studio@cratetv.net';
 
 export async function POST(request: Request) {
     try {
-        const { filmTitle, directorName, cast, email, synopsis, posterUrl, movieUrl, musicRightsConfirmation } = await request.json();
+        const { filmTitle, directorName, cast, email, synopsis, posterUrl, movieUrl } = await request.json();
 
         if (!filmTitle || !directorName || !cast || !synopsis || !posterUrl || !movieUrl) {
             return new Response(JSON.stringify({ error: 'All fields are required.' }), { status: 400 });
@@ -18,6 +19,10 @@ export async function POST(request: Request) {
         if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
         const db = getAdminDb();
         if (!db) throw new Error("Database connection failed.");
+
+        // Fetch Dynamic Business Email from Settings
+        const settingsDoc = await db.collection('content').doc('settings').get();
+        const studioEmail = settingsDoc.data()?.businessEmail || FALLBACK_ADMIN;
 
         const pipelineEntry = {
             title: filmTitle,
@@ -29,34 +34,43 @@ export async function POST(request: Request) {
             synopsis,
             submissionDate: FieldValue.serverTimestamp(),
             status: 'pending',
+            source: 'WEB_FORM_V4', 
             musicRightsConfirmation: true
         };
+        
         await db.collection('movie_pipeline').add(pipelineEntry);
 
-        // --- Email Notification ---
+        await db.collection('security_events').add({
+            type: 'SUBMISSION_RECEIVED',
+            timestamp: FieldValue.serverTimestamp(),
+            details: { name: directorName, email, title: filmTitle, source: 'WEB_FORM' }
+        });
+
         const emailHtml = `
-            <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
-                <h1 style="color: #ef4444;">New Submission Ready</h1>
+            <div style="font-family: sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 30px; border-radius: 20px;">
+                <h1 style="color: #ef4444; text-transform: uppercase; font-size: 18px; letter-spacing: 2px;">Catalog Submission</h1>
+                <p>A new film has been submitted to the Crate TV Infrastructure.</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
                 <p><strong>Film:</strong> ${filmTitle}</p>
                 <p><strong>Director:</strong> ${directorName}</p>
                 <p><strong>Contact:</strong> ${email || 'N/A'}</p>
                 <p><strong>Synopsis:</strong> ${synopsis}</p>
-                <div style="margin-top: 20px; text-align: center;">
-                    <a href="https://cratetv.net/admin" style="background-color: #ef4444; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Review in Dashboard</a>
+                <div style="margin-top: 30px; text-align: center;">
+                    <a href="https://cratetv.net/admin#mail" style="background-color: #000; color: #fff; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: 900; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">Open Studio Mail</a>
                 </div>
             </div>
         `;
         
         try {
             await resend.emails.send({
-                from: `Crate TV Pipeline <${FROM_EMAIL}>`,
-                to: [ADMIN_EMAIL],
-                subject: `🎬 New Submission: ${filmTitle}`,
+                from: `Crate TV Studio <${FROM_EMAIL}>`,
+                to: [studioEmail],
+                subject: `🎬 Submission: ${filmTitle}`,
                 html: emailHtml,
-                reply_to: email || ADMIN_EMAIL
+                reply_to: email || studioEmail
             });
         } catch (e) {
-            console.warn("[Resend Warning] Pipeline notification failed. Check API Key/Domain:", e);
+            console.warn("[Resend Warning] Pipeline notification failed:", e);
         }
         
         return new Response(JSON.stringify({ success: true }), { status: 200 });

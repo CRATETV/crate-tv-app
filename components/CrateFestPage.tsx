@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
@@ -60,6 +61,8 @@ const CrateFestPage: React.FC = () => {
                 cast: [],
                 trailer: '',
                 tvPoster: sub.posterUrl,
+                // Fix: Added missing 'likes' property to ensure compliance with the Movie interface.
+                likes: 0,
             };
         }
         return null;

@@ -1,3 +1,4 @@
+
 // This is a Vercel Serverless Function
 // Path: /api/get-public-actors
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -64,7 +65,8 @@ export async function GET(request: Request) {
     });
 
     const allActorsInMovies = new Map<string, Actor>();
-    Object.entries(allMovies).forEach(([movieKey, movie]) => {
+    // Fix: Explicitly cast Object.entries to provide strong typing for 'movie'
+    (Object.entries(allMovies) as [string, Movie][]).forEach(([movieKey, movie]) => {
         if (classicsMovieKeys.has(movieKey)) return;
         
         if (movie.cast && Array.isArray(movie.cast)) {

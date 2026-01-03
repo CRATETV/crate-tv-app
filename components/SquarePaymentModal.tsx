@@ -126,7 +126,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                 const { applicationId, locationId } = await configRes.json();
 
                 // Load Square SDK script
-                if (!window.Square) {
+                // Fix: Cast window to any to access Square property safely in TypeScript
+                if (!(window as any).Square) {
                     const script = document.createElement('script');
                     script.src = process.env.NODE_ENV === 'production' 
                         ? 'https://web.squarecdn.com/v1/square.js' 

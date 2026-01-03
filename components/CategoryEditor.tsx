@@ -82,7 +82,9 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
       holidayName: settings.holidayName || 'Cratemas',
       holidayTagline: settings.holidayTagline || '',
       holidayTheme: settings.holidayTheme || 'generic',
-      businessEmail: settings.businessEmail || 'cratetiv@gmail.com'
+      businessEmail: settings.businessEmail || 'studio@cratetv.net',
+      technicalEmail: settings.technicalEmail || 'cratetiv@gmail.com',
+      emailSignature: settings.emailSignature || "Best,\nThe Crate TV Studio Team"
   });
 
   useEffect(() => {
@@ -96,7 +98,9 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
             holidayName: settings.holidayName || 'Cratemas',
             holidayTagline: settings.holidayTagline || '',
             holidayTheme: settings.holidayTheme || 'generic',
-            businessEmail: settings.businessEmail || 'cratetiv@gmail.com'
+            businessEmail: settings.businessEmail || 'studio@cratetv.net',
+            technicalEmail: settings.technicalEmail || 'cratetiv@gmail.com',
+            emailSignature: settings.emailSignature || "Best,\nThe Crate TV Studio Team"
         });
     }
   }, [settings, isSaving]);
@@ -180,23 +184,47 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
           </div>
 
           <div className="bg-gray-900 border border-red-500/20 p-8 rounded-[2rem] shadow-xl">
-              <h3 className="text-2xl font-black text-red-500 uppercase tracking-tighter mb-2">Branding Core</h3>
-              <p className="text-gray-400 text-sm mb-8">Set the official studio contact address used platform-wide.</p>
+              <h3 className="text-2xl font-black text-red-500 uppercase tracking-tighter mb-2">Dual Identity Core</h3>
+              <p className="text-gray-400 text-sm mb-8">Maintain separate professional and operational channels.</p>
               
               <div className="space-y-6">
-                <div>
-                    <label className="form-label">Official Studio Email</label>
-                    <input 
-                        type="email" 
-                        value={holidaySettings.businessEmail} 
-                        onChange={(e) => setHolidaySettings({...holidaySettings, businessEmail: e.target.value})}
-                        placeholder="e.g. studio@cratetv.net" 
-                        className="form-input !bg-black/40 border-white/10" 
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="form-label">Public Business Email</label>
+                        <input 
+                            type="email" 
+                            value={holidaySettings.businessEmail} 
+                            onChange={(e) => setHolidaySettings({...holidaySettings, businessEmail: e.target.value})}
+                            placeholder="e.g. studio@cratetv.net" 
+                            className="form-input !bg-black/40 border-white/10" 
+                        />
+                    </div>
+                    <div>
+                        <label className="form-label">Private Technical Email</label>
+                        <input 
+                            type="email" 
+                            value={holidaySettings.technicalEmail} 
+                            onChange={(e) => setHolidaySettings({...holidaySettings, technicalEmail: e.target.value})}
+                            placeholder="e.g. your-private@gmail.com" 
+                            className="form-input !bg-black/40 border-white/10" 
+                        />
+                    </div>
                 </div>
+                
+                <div>
+                    <label className="form-label">Global Email Signature</label>
+                    <textarea 
+                        value={holidaySettings.emailSignature} 
+                        onChange={(e) => setHolidaySettings({...holidaySettings, emailSignature: e.target.value})}
+                        placeholder="Your professional sign-off..." 
+                        className="form-input !bg-black/40 border-white/10 h-32 font-mono text-xs" 
+                    />
+                    <p className="text-[8px] text-gray-600 uppercase font-black mt-2 tracking-widest">Automatically appended to all outbound dispatch and mail replies.</p>
+                </div>
+
                 <div className="bg-red-600/5 p-4 rounded-xl border border-red-500/10">
-                    <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">⚠️ Global Propagation</p>
-                    <p className="text-[9px] text-gray-500 mt-1">Changing this will update the Contact page, Footer, and Submission emails across the entire infrastructure.</p>
+                    <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">⚠️ Multi-Route Verification</p>
+                    <p className="text-[9px] text-gray-500 mt-1">Outbound identity is locked to studio@cratetv.net for all system messages.</p>
                 </div>
                 <button onClick={saveIdentityDetails} className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl shadow-lg transition-all">Publish Branding Updates</button>
               </div>

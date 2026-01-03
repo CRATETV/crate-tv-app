@@ -11,9 +11,6 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
   const { settings } = useFestival();
   const [isOpen, setIsOpen] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(false);
-  const [emailStatus, setEmailStatus] = useState<'idle' | 'opening' | 'copied'>('idle');
-
-  const studioEmail = settings.businessEmail || "cratetiv@gmail.com";
 
   useEffect(() => {
     const handleNavigation = () => {
@@ -43,24 +40,6 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
     window.scrollTo(0, 0);
   };
 
-  const handleEmailClick = () => {
-    const emailSubject = encodeURIComponent("Film Submission inquiry for Crate TV");
-    const emailBody = encodeURIComponent("Hello Crate TV Team,\n\nI'm interested in learning more about your catalog.");
-    
-    setEmailStatus('opening');
-    window.location.href = `mailto:${studioEmail}?subject=${emailSubject}&body=${emailBody}`;
-    
-    setTimeout(() => {
-        setEmailStatus('idle');
-    }, 2000);
-  };
-
-  const copyEmailToClipboard = () => {
-    navigator.clipboard.writeText(studioEmail);
-    setEmailStatus('copied');
-    setTimeout(() => setEmailStatus('idle'), 2000);
-  };
-
   return (
     <div className={`fixed bottom-0 left-0 right-0 z-30 transition-all duration-500 ease-in-out hidden md:block ${isOpen ? 'translate-y-0' : 'translate-y-[calc(100%-2.5rem)]'}`}>
         <div className={`flex justify-center transition-opacity duration-300 ${isNearBottom || isOpen ? 'opacity-100' : 'opacity-0'}`}>
@@ -82,7 +61,7 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                             Ready to start your <span className="text-red-600">next chapter?</span>
                         </h3>
                         <p className="text-xl text-gray-300 max-w-2xl mx-auto font-medium leading-relaxed">
-                            Submit via <strong className="text-white">FilmFreeway</strong> for the festival, or <strong className="text-white">Email us</strong> for catalog consideration.
+                            Join our year-round streaming catalog or submit to the annual festival circuit.
                         </p>
                     </div>
                     <div className="flex-shrink-0 flex flex-col sm:flex-row gap-4">
@@ -90,22 +69,14 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                             onClick={(e) => handleNavigate(e, '/submit')}
                             className="inline-flex items-center justify-center bg-white text-black font-black px-10 py-4 rounded-xl hover:bg-gray-200 transition-all transform hover:scale-105 active:scale-95 shadow-xl text-base uppercase tracking-widest"
                         >
-                            Filmmaker Hub
+                            Submit a Film
                         </button>
-                        <div className="flex flex-col gap-2">
-                             <button 
-                                onClick={handleEmailClick}
-                                className="inline-flex items-center justify-center bg-gray-800 text-white font-black px-10 py-4 rounded-xl hover:bg-gray-700 transition-all border border-white/10 text-base uppercase tracking-widest min-w-[220px]"
-                            >
-                                {emailStatus === 'opening' ? 'Opening Mail...' : 'Email us Directly'}
-                            </button>
-                            <button 
-                                onClick={copyEmailToClipboard}
-                                className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors"
-                            >
-                                {emailStatus === 'copied' ? 'Address Copied!' : 'Copy Email Address'}
-                            </button>
-                        </div>
+                        <button 
+                            onClick={(e) => handleNavigate(e, '/contact')}
+                            className="inline-flex items-center justify-center bg-gray-800 text-white font-black px-10 py-4 rounded-xl hover:bg-gray-700 transition-all border border-white/10 text-base uppercase tracking-widest min-w-[220px]"
+                        >
+                            Email us Directly
+                        </button>
                     </div>
                 </div>
 
