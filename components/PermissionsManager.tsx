@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 
 interface PermissionsManagerProps {
@@ -46,82 +47,79 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
         e.preventDefault();
         const roleKey = newRoleName.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
         if (!roleKey) {
-            setError('Please enter a valid role name (letters, numbers, underscores only).');
+            setError('Invalid identifier.');
             return;
         }
         if (permissions[roleKey]) {
-            setError('A role with this name already exists.');
+            setError('Role already exists.');
             return;
         }
         setPermissions(prev => ({ ...prev, [roleKey]: [] }));
         setNewRoleName('');
     };
     
+    // Tabs that aren't security critical and can be delegated
     const assignableTabs = Object.entries(allTabs).filter(([key]) => key !== 'permissions' && key !== 'security' && key !== 'fallback');
-    const builtInRoles = ['collaborator', 'festival_admin'];
 
     return (
-        <div className="space-y-8">
-            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                <h2 className="text-2xl font-bold text-purple-400 mb-4">Role Permissions Manager</h2>
-                <p className="text-gray-300 mb-4">
-                    Define which tabs each admin role can see. Super Admins and Master Admins see all tabs by default.
-                </p>
-                <div className="bg-yellow-900/30 border border-yellow-800 text-yellow-300 text-sm rounded-lg p-4">
-                    <h3 className="font-bold mb-2">How to Create a New Admin Account:</h3>
-                    <ol className="list-decimal list-inside space-y-1">
-                        <li>Enter a new role name below and click "Add Role".</li>
-                        <li>Select the permissions for the new role and click "Save".</li>
-                        <li>Add an environment variable to your project named <code className="bg-gray-700 p-1 rounded-md text-xs">ADMIN_PASSWORD_yourrolename</code> with the password.</li>
-                        <li>Redeploy the application. The new user can now log in with their password.</li>
-                    </ol>
+        <div className="space-y-10 animate-[fadeIn_0.5s_ease-out]">
+            <div className="bg-[#0f0f0f] border border-white/5 p-8 md:p-12 rounded-[2.5rem] shadow-2xl">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+                    <div>
+                        <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Access Perimeter</h2>
+                        <p className="text-gray-500 text-sm mt-1 uppercase font-bold tracking-widest">Authorized Node Delegation</p>
+                    </div>
+                    
+                    <form onSubmit={handleAddRole} className="flex gap-2">
+                        <input
+                            type="text"
+                            value={newRoleName}
+                            onChange={e => setNewRoleName(e.target.value)}
+                            placeholder="New Role Key..."
+                            className="form-input !py-3 !px-6 text-xs bg-black/40 border-white/10"
+                        />
+                        <button type="submit" className="bg-white text-black font-black px-6 py-3 rounded-xl uppercase text-[10px] tracking-widest shadow-xl transition-all active:scale-95">Add Role</button>
+                    </form>
+                </div>
+
+                <div className="bg-indigo-600/5 border border-indigo-500/20 p-6 rounded-2xl mb-12">
+                    <p className="text-sm text-indigo-400 font-medium leading-relaxed">
+                        To authorize a new node, add an environment variable to Vercel named <code className="bg-indigo-600/20 px-1.5 py-0.5 rounded font-mono">ADMIN_PASSWORD_[ROLE_KEY]</code>. Once the person logs in with that password, they will only see the selected tabs below.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-8">
+                    {Object.keys(permissions).map(role => (
+                        <div key={role} className="bg-black/40 border border-white/5 p-8 rounded-3xl group">
+                            <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-4">
+                                <h3 className="text-xl font-black text-white uppercase tracking-widest italic">{role.replace(/_/g, ' ')}</h3>
+                                <button 
+                                    onClick={() => handleSaveRole(role)}
+                                    disabled={processingRole === role}
+                                    className="bg-red-600 hover:bg-red-700 text-white font-black py-2 px-8 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-20"
+                                >
+                                    {processingRole === role ? 'Syncing...' : 'Update Permissions'}
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                {assignableTabs.map(([tabId, tabLabel]) => (
+                                    <label key={tabId} className={`flex items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer ${permissions[role]?.includes(tabId) ? 'bg-red-600/5 border-red-500/20 text-white' : 'bg-white/5 border-transparent text-gray-500 hover:bg-white/10'}`}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={permissions[role]?.includes(tabId)}
+                                            onChange={() => handleCheckboxChange(role, tabId)}
+                                            className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500"
+                                        />
+                                        {/* FIX: Casting tabLabel to string to allow .split() operation, as it may be inferred as 'unknown'. */}
+                                        <span className="text-[10px] font-black uppercase tracking-widest">{(tabLabel as string).split(' ')[1]}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
-
-            <form onSubmit={handleAddRole} className="flex items-center gap-4">
-                <input
-                    type="text"
-                    value={newRoleName}
-                    onChange={e => setNewRoleName(e.target.value)}
-                    placeholder="New Role Name (e.g., marketing_manager)"
-                    className="form-input"
-                />
-                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">
-                    Add Role
-                </button>
-            </form>
-
-            {error && <p className="text-red-400 text-sm">{error}</p>}
-
-            <div className="space-y-6">
-                {Object.keys(permissions).concat(builtInRoles.filter(r => !permissions[r])).map(role => (
-                    <div key={role} className="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-white capitalize">{role.replace(/_/g, ' ')}</h3>
-                            <button 
-                                onClick={() => handleSaveRole(role)}
-                                disabled={processingRole === role}
-                                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md text-sm disabled:bg-gray-600"
-                            >
-                                {processingRole === role ? 'Saving...' : 'Save'}
-                            </button>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                            {assignableTabs.map(([tabId, tabLabel]) => (
-                                <label key={tabId} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-700 cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={(permissions[role] || []).includes(tabId)}
-                                        onChange={() => handleCheckboxChange(role, tabId)}
-                                        className="h-5 w-5 rounded bg-gray-600 border-gray-500 text-purple-500 focus:ring-purple-500"
-                                    />
-                                    <span className="text-gray-200">{tabLabel}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
+            {error && <p className="text-red-500 text-center font-black uppercase text-[10px] tracking-widest">{error}</p>}
         </div>
     );
 };

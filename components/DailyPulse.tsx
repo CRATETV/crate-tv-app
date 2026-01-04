@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Movie, AnalyticsData, MoviePipelineEntry, Category } from '../types';
+import { Movie, AnalyticsData, MoviePipelineEntry, Category, AuditEntry } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -9,12 +9,6 @@ interface DailyPulseProps {
     analytics: AnalyticsData | null;
     movies: Record<string, Movie>;
     categories: Record<string, Category>;
-}
-
-interface Objective {
-    id: number;
-    label: string;
-    done: boolean;
 }
 
 const formatCurrency = (val: number) => `$${(val / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
@@ -38,40 +32,30 @@ const PulseMetric: React.FC<{ label: string; value: string | number; color?: str
 
 const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, categories }) => {
     const [liveNodes, setLiveNodes] = useState(analytics?.liveNodes || 0);
-    const [objectives, setObjectives] = useState<Objective[]>(() => {
-        const saved = localStorage.getItem('crate_daily_objectives');
-        const today = new Date().toLocaleDateString();
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            if (parsed.date === today) return parsed.tasks;
-        }
-        return [
-            { id: 1, label: 'Apply for 1 Grant', done: false },
-            { id: 2, label: 'Review 1 Submission', done: false },
-            { id: 3, label: 'Audit Roku Channel Health', done: false },
-            { id: 4, label: 'Log Studio Sentiment Point', done: false }
-        ];
-    });
-
-    useEffect(() => {
-        localStorage.setItem('crate_daily_objectives', JSON.stringify({
-            date: new Date().toLocaleDateString(),
-            tasks: objectives
-        }));
-    }, [objectives]);
-
-    const toggleObjective = (id: number) => {
-        setObjectives((prev: Objective[]) => prev.map((t: Objective) => t.id === id ? { ...t, done: !t.done } : t));
-    };
+    const [recentAudits, setRecentAudits] = useState<AuditEntry[]>([]);
 
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
+
         const oneMinAgo = new Date(Date.now() - 60 * 1000);
         const unsubPresence = db.collection('presence')
             .where('lastActive', '>=', oneMinAgo)
             .onSnapshot(snap => setLiveNodes(snap.size));
-        return () => unsubPresence();
+
+        const unsubAudit = db.collection('audit_logs')
+            .orderBy('timestamp', 'desc')
+            .limit(3)
+            .onSnapshot(snap => {
+                const audits: AuditEntry[] = [];
+                snap.forEach(doc => audits.push({ id: doc.id, ...doc.data() } as AuditEntry));
+                setRecentAudits(audits);
+            });
+
+        return () => {
+            unsubPresence();
+            unsubAudit();
+        };
     }, []);
 
     const totalViews = useMemo(() => {
@@ -100,9 +84,6 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                             <div>
                                 <h3 className="text-xl font-black uppercase tracking-tighter italic">Viral Velocity</h3>
                                 <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-1">Real-time content acceleration monitor</p>
-                            </div>
-                            <div className="bg-red-600/10 border border-red-600/30 px-3 py-1 rounded-full">
-                                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Global Discovery High</span>
                             </div>
                         </div>
                         <div className="space-y-6">
@@ -136,31 +117,31 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.08)_0%,transparent_70%)]"></div>
                         <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500 mb-8 flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
-                            Daily Missions
+                            Admin Activity
                         </h3>
                         <div className="space-y-4 relative z-10">
-                            {objectives.map((t: Objective) => (
-                                <button 
-                                    key={t.id} 
-                                    onClick={() => toggleObjective(t.id)}
-                                    className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${t.done ? 'bg-green-600/10 border-green-500/20 opacity-50' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
-                                >
-                                    <span className={`text-xs font-bold uppercase tracking-widest ${t.done ? 'text-green-500 line-through' : 'text-gray-300'}`}>{t.label}</span>
-                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${t.done ? 'bg-green-600 border-green-500' : 'border-gray-700'}`}>
-                                        {t.done && <svg className="w-3.5 h-3.5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                            {recentAudits.map(log => (
+                                <div key={log.id} className="p-4 bg-white/5 rounded-xl border border-white/5">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">{log.role}</span>
+                                        <span className="text-[8px] text-gray-700 font-mono">
+                                            {log.timestamp?.seconds ? new Date(log.timestamp.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
+                                        </span>
                                     </div>
-                                </button>
+                                    <p className="text-[10px] text-gray-300 font-bold uppercase truncate">{log.details}</p>
+                                </div>
                             ))}
+                            {recentAudits.length === 0 && <p className="text-[10px] text-gray-600 text-center py-4">No recent mutations logged.</p>}
                         </div>
                     </div>
                     
                     <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 group hover:border-red-600/20 transition-all">
                         <div className="flex items-center gap-3 mb-4">
-                            <span className="text-xl">📺</span>
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em]">Roku Stabilization</p>
+                            <span className="text-xl">🛡️</span>
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em]">Chronos Security</p>
                         </div>
                         <p className="text-sm text-gray-400 leading-relaxed font-medium group-hover:text-gray-200 transition-colors">
-                            The Roku feed is synced every 60 seconds. Ensure metadata integrity by auditing the "Pipeline" before moving entries to the live catalog.
+                            Every modification to the global manifest is logged in the Chronos Audit terminal for accountability and disaster recovery.
                         </p>
                     </div>
                 </div>

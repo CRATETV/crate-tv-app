@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Movie, Actor, MoviePipelineEntry, Episode } from '../types';
 import S3Uploader from './S3Uploader';
+import SocialKitModal from './SocialKitModal';
 
 interface MovieEditorProps {
     allMovies: Record<string, Movie>;
@@ -34,7 +35,7 @@ const emptyMovie: Movie = {
     episodes: [],
     durationInMinutes: 0,
     hasCopyrightMusic: false,
-    isSupportEnabled: true, // Automatically accept donations by default
+    isSupportEnabled: true,
     isWatchPartyEnabled: false,
     watchPartyStartTime: '',
     isWatchPartyPaid: false,
@@ -55,8 +56,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [formData, setFormData] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [showSocialKit, setShowSocialKit] = useState(false);
     
-    // Cast/Episode Helpers
     const [newActor, setNewActor] = useState<Actor>({ name: '', photo: '', bio: '', highResPhoto: '' });
     const [newEp, setNewEp] = useState<Episode>({ id: '', title: '', synopsis: '', url: '', duration: 0 });
 
@@ -72,7 +73,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                 fullMovie: movieToCreate.movieUrl,
                 poster: movieToCreate.posterUrl,
                 tvPoster: movieToCreate.posterUrl,
-                isSupportEnabled: true, // Enforce default for pipeline ingest
+                isSupportEnabled: true,
                 publishedAt: new Date().toISOString(),
                 cast: movieToCreate.cast ? movieToCreate.cast.split(',').map(name => ({
                     name: name.trim(),
@@ -185,6 +186,11 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             <p className="text-[10px] text-gray-600 font-black uppercase mt-2 tracking-[0.4em]">UUID: {formData.key}</p>
                         </div>
                         <div className="flex gap-4">
+                            {!formData.key.startsWith('movie_') && (
+                                <button onClick={() => setShowSocialKit(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl transition-all flex items-center gap-2">
+                                    <span>✨</span> Synthesize Marketing Kit
+                                </button>
+                            )}
                             <button onClick={() => setSelectedMovieKey('')} className="bg-white/5 text-gray-400 px-6 py-3 rounded-xl uppercase text-[10px] font-black">Close</button>
                             <button onClick={handleSave} disabled={isSaving} className="bg-red-600 text-white px-8 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl hover:bg-red-500 transition-all">{isSaving ? 'Syncing...' : 'Save Manifest'}</button>
                         </div>
@@ -219,52 +225,12 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     <S3Uploader label="Ingest New Key Art" onUploadSuccess={(url) => setFormData({...formData, poster: url})} />
                                 </div>
                             </section>
-
-                            {/* LOGIC & ACCESS SECTION */}
-                            <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">03. Distribution Logic</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="bg-white/[0.02] p-6 rounded-3xl border border-white/5 space-y-4">
-                                        <label className="flex items-center gap-3 cursor-pointer">
-                                            <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-indigo-600 focus:ring-indigo-500" />
-                                            <span className="text-sm font-bold text-white uppercase">Catalog Paywall</span>
-                                        </label>
-                                        {formData.isForSale && (
-                                            <div className="animate-[fadeIn_0.3s_ease-out]">
-                                                <label className="form-label">Rental Price (USD)</label>
-                                                <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} className="form-input bg-black/40" step="0.01" />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="bg-white/[0.02] p-6 rounded-3xl border border-white/5 space-y-4">
-                                        <label className="flex items-center gap-3 cursor-pointer">
-                                            <input type="checkbox" name="isWatchPartyPaid" checked={formData.isWatchPartyPaid} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-pink-600 focus:ring-pink-500" />
-                                            <span className="text-sm font-bold text-white uppercase">WP Event Paywall</span>
-                                        </label>
-                                        {formData.isWatchPartyPaid && (
-                                            <div className="animate-[fadeIn_0.3s_ease-out]">
-                                                <label className="form-label">Event Ticket (USD)</label>
-                                                <input type="number" name="watchPartyPrice" value={formData.watchPartyPrice} onChange={handleChange} className="form-input bg-black/40" step="0.01" />
-                                            </div>
-                                        )}
-                                    </div>
-                                    
-                                    <div className="bg-white/[0.02] p-6 rounded-3xl border border-white/5 space-y-4 md:col-span-2">
-                                        <label className="flex items-center gap-3 cursor-pointer">
-                                            <input type="checkbox" name="isSupportEnabled" checked={formData.isSupportEnabled} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-green-600 focus:ring-green-500" />
-                                            <span className="text-sm font-bold text-white uppercase">Accept Community Donations</span>
-                                        </label>
-                                        <p className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Controls visibility of "Support Filmmaker" tipping interface.</p>
-                                    </div>
-                                </div>
-                            </section>
                         </div>
 
                         <div className="space-y-12">
                             {/* CAST SECTION */}
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">04. Talent Manifest</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">03. Talent Manifest</h4>
                                 <div className="bg-white/[0.02] p-6 rounded-3xl border border-white/5 space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <input value={newActor.name} onChange={e => setNewActor({...newActor, name: e.target.value})} placeholder="Actor Name" className="form-input bg-black/40" />
@@ -294,40 +260,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     </div>
                                 </div>
                             </section>
-
-                            {/* SERIES SECTION */}
-                            <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">05. Modular Architecture</h4>
-                                <div className="bg-white/[0.02] p-6 rounded-3xl border border-white/5 space-y-6">
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <input type="checkbox" name="isSeries" checked={formData.isSeries} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-purple-600 focus:ring-purple-500" />
-                                        <span className="text-sm font-bold text-white uppercase">Enable Series Mode (Episodes)</span>
-                                    </label>
-                                    
-                                    {formData.isSeries && (
-                                        <div className="space-y-6 animate-[fadeIn_0.4s_ease-out]">
-                                            <div className="space-y-4 pt-4 border-t border-white/5">
-                                                <input value={newEp.title} onChange={e => setNewEp({...newEp, title: e.target.value})} placeholder="Episode Title" className="form-input bg-black/40" />
-                                                <input value={newEp.url} onChange={e => setNewEp({...newEp, url: e.target.value})} placeholder="Stream Link" className="form-input bg-black/40" />
-                                                <button onClick={handleAddEpisode} className="w-full bg-indigo-600 text-white font-black py-3 rounded-xl text-[9px] uppercase tracking-widest">Deploy Episode</button>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                {formData.episodes?.map((ep, idx) => (
-                                                    <div key={idx} className="flex justify-between items-center bg-black/40 p-4 rounded-2xl border border-white/5">
-                                                        <span className="text-xs font-bold text-white uppercase">{ep.title}</span>
-                                                        <button onClick={() => {
-                                                            const next = [...(formData.episodes || [])];
-                                                            next.splice(idx, 1);
-                                                            setFormData({...formData, episodes: next});
-                                                        }} className="text-red-500 text-[10px] font-black uppercase">Remove</button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </section>
                         </div>
                     </div>
 
@@ -343,6 +275,15 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                         </button>
                     </div>
                 </div>
+            )}
+            
+            {showSocialKit && formData && (
+                <SocialKitModal 
+                    title={formData.title} 
+                    synopsis={formData.synopsis} 
+                    director={formData.director} 
+                    onClose={() => setShowSocialKit(false)} 
+                />
             )}
         </div>
     );

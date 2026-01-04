@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -35,38 +36,6 @@ interface AnalyticsPageProps {
     viewMode: 'full' | 'festival';
 }
 
-const AudienceEmailList: React.FC<{ title: string; users: { email: string }[] }> = ({ title, users }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
-
-    const handleCopy = () => {
-        const emails = users.map(u => u.email).join(', ');
-        navigator.clipboard.writeText(emails).then(() => {
-            setCopyStatus('copied');
-            setTimeout(() => setCopyStatus('idle'), 2000);
-        });
-    };
-
-    return (
-        <div className="bg-gray-800/50 border border-gray-700 rounded-lg">
-            <div className="p-4 flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-white">{title} ({users.length})</h3>
-                <div className="flex items-center gap-2">
-                    <button onClick={handleCopy} className="text-xs bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md">{copyStatus === 'copied' ? 'Copied!' : 'Copy Emails'}</button>
-                    <button onClick={() => setIsOpen(!isOpen)} className="text-xs bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md">{isOpen ? 'Hide' : 'Show'} List</button>
-                </div>
-            </div>
-            {isOpen && (
-                <div className="border-t border-gray-700 p-4 max-h-60 overflow-y-auto">
-                    <ul className="text-sm text-gray-300">
-                        {users.map(user => <li key={user.email}>{user.email}</li>)}
-                    </ul>
-                </div>
-            )}
-        </div>
-    );
-};
-
 const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const isFestivalView = viewMode === 'festival';
     const [activeTab, setActiveTab] = useState(isFestivalView ? 'festival' : 'overview');
@@ -74,9 +43,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const [allMovies, setAllMovies] = useState<Record<string, Movie>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<{ square: string | null, firebase: string | null, critical: string | null }>({ square: null, firebase: null, critical: null });
-    const [selectedGeoMovie, setSelectedGeoMovie] = useState<string>('');
     const [selectedFilmForReport, setSelectedFilmForReport] = useState<FilmPerformanceData | null>(null);
-    const [expandedPayoutRow, setExpandedPayoutRow] = useState<string | null>(null);
 
     // State for Admin Payout
     const [adminPayoutAmount, setAdminPayoutAmount] = useState('');
@@ -163,7 +130,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
             {!isFestivalView && (
                 <div className="no-print flex flex-wrap items-center gap-2 mb-6 border-b border-gray-600 pb-4">
                     <TabButton tabId="overview" label="Overview" />
-                    <TabButton tabId="audience" label="Audience" />
                     <TabButton tabId="financials" label="Financials" />
                     <TabButton tabId="festival" label="Festival" />
                 </div>
@@ -171,10 +137,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
 
             {error.critical && <div className="p-4 mb-4 text-red-300 bg-red-900/50 border border-red-700 rounded-md">{error.critical}</div>}
             
-            {!analyticsData && !isLoading && !error.critical && (
-                 <div className="p-4 mb-4 text-yellow-300 bg-yellow-900/50 border border-yellow-700 rounded-md">No analytics data could be loaded. Firebase or Square might be misconfigured.</div>
-            )}
-
             {analyticsData && (
                 <div className="printable-area">
                     {/* OVERVIEW TAB */}
@@ -200,16 +162,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                             </div>
                         </div>
                     )}
-                    
-                    {/* AUDIENCE TAB */}
-                    {(activeTab === 'audience' && !isFestivalView) && (
-                        <div className="space-y-6">
-                            <h2 className="text-2xl font-bold text-white">Audience Segments</h2>
-                             <AudienceEmailList title="All Registered Users" users={analyticsData.allUsers} />
-                             <AudienceEmailList title="Actors" users={analyticsData.actorUsers} />
-                             <AudienceEmailList title="Filmmakers" users={analyticsData.filmmakerUsers} />
-                        </div>
-                    )}
 
                     {/* FINANCIALS TAB */}
                     {(activeTab === 'financials' && !isFestivalView) && (
@@ -218,7 +170,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                 <h2 className="text-2xl font-bold text-white mb-4">Revenue Streams</h2>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                                     <StatCard title="Total Donations" value={formatCurrency(Number(analyticsData.totalDonations || 0))} />
-                                    <StatCard title="Total Sales (VOD/Festival)" value={formatCurrency(Number(analyticsData.totalSales || 0) + Number(analyticsData.totalFestivalRevenue || 0))} />
+                                    <StatCard title="Total Sales" value={formatCurrency(Number(analyticsData.totalSales || 0) + Number(analyticsData.totalFestivalRevenue || 0))} />
                                     <StatCard title="Merch Revenue" value={formatCurrency(Number(analyticsData.totalMerchRevenue || 0))} />
                                     <StatCard title="Ad Revenue" value={formatCurrency(Number(analyticsData.totalAdRevenue || 0))} />
                                     <StatCard title="GRAND TOTAL REVENUE" value={formatCurrency(Number(analyticsData.totalRevenue || 0))} className="lg:col-span-4 bg-purple-900/30 border-purple-700" />
@@ -230,43 +182,12 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                     <StatCard title="Total Paid to Admin" value={formatCurrency(Number(analyticsData.totalAdminPayouts || 0))} />
                                     <StatCard title="Current Available Balance" value={formatCurrency(crateTvBalance)} className="bg-green-900/30 border-green-700" />
                                 </div>
-                                
                                 <BillSavingsPot
                                     currentBalance={Number(analyticsData.billSavingsPotTotal || 0)}
                                     availablePlatformBalance={crateTvBalance}
                                     transactions={analyticsData.billSavingsTransactions}
                                     onRefreshData={fetchData}
                                 />
-
-                                <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 mt-6">
-                                    <h3 className="text-lg font-semibold text-white mb-4">Record Admin Payout</h3>
-                                    <form onSubmit={handleAdminPayout} className="space-y-4">
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                            <input type="number" value={adminPayoutAmount} onChange={e => setAdminPayoutAmount(e.target.value)} placeholder="Amount ($)" min="1" step="0.01" className="form-input sm:col-span-1" required />
-                                            <input type="text" value={adminPayoutReason} onChange={e => setAdminPayoutReason(e.target.value)} placeholder="Reason (e.g., Bills, Salary)" className="form-input sm:col-span-2" required />
-                                        </div>
-                                        <button type="submit" disabled={adminPayoutStatus === 'processing'} className="submit-btn bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600">
-                                            {adminPayoutStatus === 'processing' ? 'Recording...' : 'Pay Myself'}
-                                        </button>
-                                        {adminPayoutMessage && <p className={`text-sm ${adminPayoutStatus === 'error' ? 'text-red-400' : 'text-green-400'}`}>{adminPayoutMessage}</p>}
-                                    </form>
-                                    <h4 className="text-md font-semibold text-gray-300 mt-8 mb-4">Payout History</h4>
-                                    <div className="max-h-60 overflow-y-auto">
-                                        {analyticsData.pastAdminPayouts.length > 0 ? (
-                                            <ul className="space-y-2">
-                                                {(analyticsData.pastAdminPayouts as AdminPayout[]).map((p: AdminPayout) => (
-                                                    <li key={p.id} className="flex justify-between items-center text-sm p-2 bg-gray-700/50 rounded-md">
-                                                        <div>
-                                                            <span className="font-semibold text-white">{p.reason}</span>
-                                                            <span className="text-xs text-gray-500 ml-2">{new Date(p.payoutDate.seconds * 1000).toLocaleDateString()}</span>
-                                                        </div>
-                                                        <span className="font-bold text-green-400">{formatCurrency(Number(p.amount || 0))}</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        ) : <p className="text-sm text-gray-500">No admin payouts recorded yet.</p>}
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     )}

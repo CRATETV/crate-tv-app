@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, WatchPartyState, AnalyticsData } from './types';
+import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
 import MovieEditor from './components/MovieEditor';
 import CategoryEditor from './components/CategoryEditor';
@@ -23,9 +23,12 @@ import CrateFestEditor from './components/CrateFestEditor';
 import PromoCodeManager from './components/PromoCodeManager';
 import DiscoveryEngine from './components/DiscoveryEngine';
 import UserIntelligenceTab from './components/UserIntelligenceTab';
+import PermissionsManager from './components/PermissionsManager';
+import AuditTerminal from './components/AuditTerminal';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
+    audit: '📜 Chronos Audit',
     users: '👥 User Intelligence',
     intelligence: '🧠 Intelligence',
     mail: '✉️ Studio Mail',
@@ -43,16 +46,19 @@ const ALL_TABS: Record<string, string> = {
     festival: '🍿 Film Festival',
     watchParty: '🍿 Watch Party',
     about: '📄 About',
+    permissions: '🔑 Permissions',
     security: '🛡️ Security',
     fallback: '💾 Fallback'
 };
 
 const AdminPage: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [role, setRole] = useState('viewer');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    
     const [movies, setMovies] = useState<Record<string, Movie>>({});
     const [categories, setCategories] = useState<Record<string, Category>>({});
     const [aboutData, setAboutData] = useState<AboutData | null>(null);
@@ -61,26 +67,35 @@ const AdminPage: React.FC = () => {
     const [crateFestConfig, setCrateFestConfig] = useState<CrateFestConfig | null>(null);
     const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+    const [permissions, setPermissions] = useState<Record<string, string[]>>({});
+    
     const [activeTab, setActiveTab] = useState('pulse');
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
 
+    const allowedTabs = useMemo(() => {
+        const isMaster = role === 'super_admin' || role === 'master';
+        if (isMaster) return Object.keys(ALL_TABS);
+        // Remove 'audit' from choices for anyone else
+        return (permissions[role] || ['pulse']).filter(t => t !== 'audit');
+    }, [role, permissions]);
+
     useEffect(() => {
         const handleHash = () => {
             const hash = window.location.hash.replace('#', '');
-            if (hash && ALL_TABS[hash]) {
+            if (hash && ALL_TABS[hash] && allowedTabs.includes(hash)) {
                 setActiveTab(hash);
             }
         };
         handleHash();
         window.addEventListener('hashchange', handleHash);
         return () => window.removeEventListener('hashchange', handleHash);
-    }, []);
+    }, [allowedTabs]);
 
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);
         try {
-            const [liveDataRes, pipelineRes, analyticsRes] = await Promise.all([
+            const [liveDataRes, pipelineRes, analyticsRes, permsRes] = await Promise.all([
                 fetch(`/api/get-live-data?noCache=true&t=${Date.now()}`),
                 fetch('/api/get-pipeline-data', {
                     method: 'POST',
@@ -88,6 +103,11 @@ const AdminPage: React.FC = () => {
                     body: JSON.stringify({ password: adminPassword }),
                 }),
                 fetch('/api/get-sales-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: adminPassword }),
+                }),
+                fetch('/api/get-admin-permissions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password: adminPassword }),
@@ -113,6 +133,11 @@ const AdminPage: React.FC = () => {
                 const data = await analyticsRes.json();
                 setAnalytics(data.analyticsData);
             }
+            
+            if (permsRes.ok) {
+                const data = await permsRes.json();
+                setPermissions(data.permissions || {});
+            }
 
         } catch (err) {
             console.warn("Telemetry acquisition error:", err);
@@ -133,6 +158,7 @@ const AdminPage: React.FC = () => {
             const data = await response.json();
             if (data.success) {
                 sessionStorage.setItem('adminPassword', passToTry);
+                setRole(data.role);
                 setIsAuthenticated(true);
                 fetchAllData(passToTry);
             } else {
@@ -170,10 +196,8 @@ const AdminPage: React.FC = () => {
     };
 
     const handlePrepareRecommendation = (email: string, draft: string) => {
-        // Switch to mail tab and pass data via session or some state
-        // For simplicity, we just navigate. In a real app we'd prefill.
+        if (!allowedTabs.includes('mail')) return;
         setActiveTab('mail');
-        // Prefilling technically requires a bit more lift but we can signal it.
         sessionStorage.setItem('crate_mail_prefill_email', email);
         sessionStorage.setItem('crate_mail_prefill_body', draft);
     };
@@ -210,8 +234,7 @@ const AdminPage: React.FC = () => {
                                         </svg>
                                     ) : (
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074L3.707 2.293zM10 12a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                                            <path d="M2 10s.955-2.263 2.828-4.136A10.046 10.046 0 0110 3c4.478 0 8.268 2.943 9.542 7-.153.483-.32.95-.5 1.401l-1.473-1.473A8.014 8.014 0 0010 8c-2.04 0-3.87.768-5.172 2.035l-1.473-1.473A8.013 8.013 0 002 10z" />
+                                            <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074L3.707 2.293zM10 12a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /><path d="M2 10s.955-2.263 2.828-4.136A10.046 10.046 0 0110 3c4.478 0 8.268 2.943 9.542 7-.153.483-.32.95-.5 1.401l-1.473-1.473A8.014 8.014 0 0010 8c-2.04 0-3.87.768-5.172 2.035l-1.473-1.473A8.013 8.013 0 002 10z" />
                                         </svg>
                                     )}
                                 </button>
@@ -237,7 +260,7 @@ const AdminPage: React.FC = () => {
                             <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">Studio <span className="text-red-600">Command</span></h1>
                             <div className="flex items-center gap-2 mt-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-green-500">Global Cluster Stable</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-green-500">Node Role: {role.toUpperCase()}</p>
                             </div>
                          </div>
                     </div>
@@ -245,13 +268,17 @@ const AdminPage: React.FC = () => {
                 </div>
                 
                 <div className="flex overflow-x-auto pb-4 mb-10 gap-2 scrollbar-hide border-b border-white/5">
-                   {Object.entries(ALL_TABS).map(([tabId, label]) => (
-                        <button key={tabId} onClick={() => setActiveTab(tabId)} className={`px-6 py-3 text-[11px] font-black uppercase tracking-[0.15em] rounded-xl transition-all whitespace-nowrap border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-xl' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>{label}</button>
-                   ))}
+                   {Object.entries(ALL_TABS).map(([tabId, label]) => {
+                        if (!allowedTabs.includes(tabId)) return null;
+                        return (
+                            <button key={tabId} onClick={() => setActiveTab(tabId)} className={`px-6 py-3 text-[11px] font-black uppercase tracking-[0.15em] rounded-xl transition-all whitespace-nowrap border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-xl' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>{label}</button>
+                        );
+                   })}
                 </div>
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
+                    {activeTab === 'audit' && <AuditTerminal />}
                     {activeTab === 'users' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={handlePrepareRecommendation} />}
                     {activeTab === 'intelligence' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(newCats) => handleSaveData('categories', newCats)} />}
                     {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
@@ -269,6 +296,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={(d) => setFestivalData(d)} onConfigChange={(c) => setFestivalConfig(c)} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}
                     {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}
                     {activeTab === 'about' && aboutData && <AboutEditor initialData={aboutData} onSave={(newData) => handleSaveData('about', newData)} isSaving={isSaving} />}
+                    {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'security' && <SecurityTerminal />}
                     {activeTab === 'fallback' && <FallbackGenerator movies={movies} categories={categories} festivalData={festivalData} festivalConfig={festivalConfig} aboutData={aboutData} />}
                 </div>

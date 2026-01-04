@@ -25,6 +25,16 @@ export interface UserRecord extends User {
     lastSignIn?: any;
 }
 
+export interface AuditEntry {
+    id: string;
+    role: string;
+    action: string;
+    type: 'LOGIN' | 'MUTATION' | 'PURGE' | 'SECURITY';
+    details: string;
+    timestamp: any;
+    ip?: string;
+}
+
 export interface GrantApplication {
     id: string;
     organization: string;

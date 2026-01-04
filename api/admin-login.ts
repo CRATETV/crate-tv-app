@@ -1,11 +1,10 @@
+
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
-// Helper to get IP address from request headers
 const getIp = (req: Request) => {
     const xff = req.headers.get('x-forwarded-for');
     const ip = xff ? xff.split(',')[0].trim() : null;
-    // Vercel specific IP header
     const vercelIp = req.headers.get('x-vercel-forwarded-for');
     return vercelIp || ip;
 };
@@ -44,26 +43,35 @@ export async function POST(request: Request) {
             }
         }
 
+        const initError = getInitializationError();
+        const db = !initError ? getAdminDb() : null;
+
         if (role) {
+            // Log successful login to audit trail
+            if (db) {
+                await db.collection('audit_logs').add({
+                    role,
+                    action: 'NODE_AUTH_SUCCESS',
+                    type: 'LOGIN',
+                    details: `Successful uplink from IP: ${ip || 'Unknown'}`,
+                    timestamp: FieldValue.serverTimestamp(),
+                    ip
+                });
+            }
+
             return new Response(JSON.stringify({ success: true, role }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
             });
         } else {
              // Log failed attempt
-            const initError = getInitializationError();
-            if (!initError) {
-                const db = getAdminDb();
-                if (db) {
-                    await db.collection('security_events').add({
-                        type: 'FAILED_ADMIN_LOGIN',
-                        ip,
-                        timestamp: FieldValue.serverTimestamp(),
-                        details: {
-                            userAgent: request.headers.get('user-agent'),
-                        }
-                    });
-                }
+            if (db) {
+                await db.collection('security_events').add({
+                    type: 'FAILED_ADMIN_LOGIN',
+                    ip,
+                    timestamp: FieldValue.serverTimestamp(),
+                    details: { userAgent: request.headers.get('user-agent') }
+                });
             }
             return new Response(JSON.stringify({ success: false, error: 'Invalid password' }), {
                 status: 401,
