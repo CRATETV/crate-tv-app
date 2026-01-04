@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category, Episode } from '../types';
 import DirectorCreditsModal from './DirectorCreditsModal';
@@ -60,7 +61,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     return new Date(expiration) > new Date();
   }, [rentals, movie.key]);
 
-  // PROTECTION BYPASS LOGIC
   const isAutoReleased = useMemo(() => {
       if (!movie.autoReleaseDate) return false;
       return new Date() >= new Date(movie.autoReleaseDate);
@@ -111,12 +111,10 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
   useEffect(() => {
     if (!isRented || !rentals[movie.key]) return;
-
     const timer = setInterval(() => {
         const expiration = new Date(rentals[movie.key]);
         const now = new Date();
         const diff = expiration.getTime() - now.getTime();
-
         if (diff <= 0) {
             setTimeRemaining(null);
             clearInterval(timer);
@@ -126,7 +124,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
             setTimeRemaining(`${h}h ${m}m remaining`);
         }
     }, 1000);
-
     return () => clearInterval(timer);
   }, [movie.key, rentals, isRented]);
 
@@ -210,7 +207,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                                 </button>
                             )}
                             {canCollectDonations && (
-                                <button onClick={() => onSupportMovie(movie)} className="flex items-center justify-center px-8 py-4 bg-purple-600 text-white font-black rounded-xl hover:bg-purple-500 transition-all transform hover:scale-105 active:scale-95 shadow-xl">
+                                <button onClick={() => onSupportMovie(movie)} className="flex items-center justify-center px-8 py-4 bg-purple-600 text-white font-black rounded-xl hover:bg-purple-500 transition-all transform hover:scale-105 active:scale-95 shadow-xl animate-[pulse_3s_infinite] shadow-purple-900/40">
                                     Support Creator
                                 </button>
                             )}

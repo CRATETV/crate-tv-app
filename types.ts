@@ -25,6 +25,15 @@ export interface UserRecord extends User {
     lastSignIn?: any;
 }
 
+export interface GrantApplication {
+    id: string;
+    organization: string;
+    amount: number;
+    status: 'pending' | 'submitted' | 'awarded' | 'declined';
+    dateApplied: any;
+    notes: string;
+}
+
 export interface Actor {
   name: string;
   photo: string;

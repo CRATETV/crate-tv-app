@@ -32,18 +32,39 @@ const PulseMetric: React.FC<{ label: string; value: string | number; color?: str
 
 const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, categories }) => {
     const [liveNodes, setLiveNodes] = useState(analytics?.liveNodes || 0);
+    const [objectives, setObjectives] = useState(() => {
+        const saved = localStorage.getItem('crate_daily_objectives');
+        const today = new Date().toLocaleDateString();
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.date === today) return parsed.tasks;
+        }
+        return [
+            { id: 1, label: 'Apply for 1 Grant', done: false },
+            { id: 2, label: 'Review 1 Submission', done: false },
+            { id: 3, label: 'Audit Roku Channel Health', done: false },
+            { id: 4, label: 'Log Studio Sentiment Point', done: false }
+        ];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('crate_daily_objectives', JSON.stringify({
+            date: new Date().toLocaleDateString(),
+            tasks: objectives
+        }));
+    }, [objectives]);
+
+    const toggleObjective = (id: number) => {
+        setObjectives(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    };
 
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
-
-        // REAL-TIME PRESENCE HANDSHAKE
-        // Users who have "pinged" in the last 60 seconds are considered truly active.
         const oneMinAgo = new Date(Date.now() - 60 * 1000);
         const unsubPresence = db.collection('presence')
             .where('lastActive', '>=', oneMinAgo)
             .onSnapshot(snap => setLiveNodes(snap.size));
-
         return () => unsubPresence();
     }, []);
 
@@ -55,7 +76,6 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
 
     return (
         <div className="space-y-8 animate-[fadeIn_0.6s_ease-out]">
-            {/* Mission Control Ribbon */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <PulseMetric label="Nodes Online" value={liveNodes} color="text-red-500" live={true} sub="NOW" />
                 <PulseMetric label="Platform Reach" value={totalViews} sub="Page Views" trend="+196%" />
@@ -65,13 +85,11 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Viral Velocity Tracker */}
                 <div className="lg:col-span-2 space-y-8">
                     <div className="bg-[#0f0f0f] border border-white/5 p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
                             <svg className="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                         </div>
-                        
                         <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-4">
                             <div>
                                 <h3 className="text-xl font-black uppercase tracking-tighter italic">Viral Velocity</h3>
@@ -81,7 +99,6 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                                 <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Global Discovery High</span>
                             </div>
                         </div>
-
                         <div className="space-y-6">
                             {analytics?.recentSpikes && analytics.recentSpikes.length > 0 ? (
                                 analytics.recentSpikes.map((spike, idx) => (
@@ -108,42 +125,36 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                     </div>
                 </div>
 
-                {/* Infrastructure Telemetry */}
                 <div className="space-y-6">
                     <div className="bg-black border border-white/5 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,197,94,0.05)_0%,transparent_70%)]"></div>
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-green-500 mb-8 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                            Cluster Telemetry
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.08)_0%,transparent_70%)]"></div>
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500 mb-8 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                            Daily Missions
                         </h3>
-                        
-                        <div className="space-y-6 relative z-10">
-                            <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Database Uplink</span>
-                                <span className="text-[10px] text-green-500 font-black">STABLE // 12ms</span>
-                            </div>
-                            <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">API Throughput</span>
-                                <span className="text-[10px] text-white font-black">OPTIMAL // 99.8%</span>
-                            </div>
-                            <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Asset CDN Status</span>
-                                <span className="text-[10px] text-green-500 font-black">EDGE_WARM</span>
-                            </div>
-                             <div className="flex justify-between items-center">
-                                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Security Perimeter</span>
-                                <span className="text-[10px] text-blue-500 font-black">LOCKED</span>
-                            </div>
+                        <div className="space-y-4 relative z-10">
+                            {objectives.map((t: any) => (
+                                <button 
+                                    key={t.id} 
+                                    onClick={() => toggleObjective(t.id)}
+                                    className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${t.done ? 'bg-green-600/10 border-green-500/20 opacity-50' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                                >
+                                    <span className={`text-xs font-bold uppercase tracking-widest ${t.done ? 'text-green-500 line-through' : 'text-gray-300'}`}>{t.label}</span>
+                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${t.done ? 'bg-green-600 border-green-500' : 'border-gray-700'}`}>
+                                        {t.done && <svg className="w-3.5 h-3.5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                                    </div>
+                                </button>
+                            ))}
                         </div>
                     </div>
                     
                     <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 group hover:border-red-600/20 transition-all">
                         <div className="flex items-center gap-3 mb-4">
-                            <span className="text-xl">💡</span>
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em]">Studio Insight</p>
+                            <span className="text-xl">📺</span>
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em]">Roku Stabilization</p>
                         </div>
                         <p className="text-sm text-gray-400 leading-relaxed font-medium group-hover:text-gray-200 transition-colors">
-                            Your **25% bounce rate** is world-class. This indicates that your Hero selection is highly effective. Consider using the "Spike" data above to schedule a surprise **Watch Party** for trending titles.
+                            The Roku feed is synced every 60 seconds. Ensure metadata integrity by auditing the "Pipeline" before moving entries to the live catalog.
                         </p>
                     </div>
                 </div>
