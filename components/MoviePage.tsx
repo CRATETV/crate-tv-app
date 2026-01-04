@@ -1,19 +1,19 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
-import ActorBioModal from './components/ActorBioModal';
-import Header from './components/Header';
-import Footer from './components/Footer';
-import LoadingSpinner from './components/LoadingSpinner';
-import BackToTopButton from './components/BackToTopButton';
-import RokuBanner from './components/RokuBanner';
-import SquarePaymentModal from './components/SquarePaymentModal';
-import SEO from './components/SEO';
+import ActorBioModal from './ActorBioModal';
+import Header from './Header';
+import Footer from './Footer';
+import LoadingSpinner from './LoadingSpinner';
+import BackToTopButton from './BackToTopButton';
+import RokuBanner from './RokuBanner';
+import SquarePaymentModal from './SquarePaymentModal';
+import SEO from './SEO';
 import { isMovieReleased } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
-import PauseOverlay from './components/PauseOverlay';
-import MovieDetailsModal from './components/MovieDetailsModal';
+import PauseOverlay from './PauseOverlay';
+import MovieDetailsModal from './MovieDetailsModal';
 
 interface MoviePageProps {
   movieKey: string;
@@ -175,7 +175,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   return (
     <div ref={containerRef} className="flex flex-col min-h-screen bg-[#050505] text-white">
         <SEO title={movie.title} description={seoDescription} image={movie.poster} type="video.movie" />
-        {playerMode !== 'full' && <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} />}
+        {playerMode !== 'full' && <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={true} />}
         
         <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
             <div 
@@ -324,7 +324,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         <BackToTopButton />
         
         {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
-        {isDetailsModalOpen && <MovieDetailsModal movie={movie} isLiked={likedMoviesArray.includes(movieKey)} onToggleLike={toggleLikeMovie} onClose={() => setIsDetailsModalOpen(false)} onSelectActor={setSelectedActor} allMovies={allMovies} allCategories={allCategories} onSelectRecommendedMovie={(m) => window.location.href = `/movie/${m.key}`} onSupportMovie={() => setIsSupportModalOpen(true)} />}
+        {isDetailsModalOpen && <MovieDetailsModal movie={movie} isLiked={likedMoviesArray.includes(movieKey)} onToggleLike={toggleLikeMovie} onClose={() => setIsDetailsModalOpen(false)} onSelectActor={setSelectedActor} allMovies={allMovies} allCategories={allCategories} onSelectRecommendedMovie={(m: Movie) => window.location.href = `/movie/${m.key}`} onSupportMovie={() => setIsSupportModalOpen(true)} />}
         {isPurchaseModalOpen && <SquarePaymentModal movie={movie} paymentType="movie" onClose={() => setIsPurchaseModalOpen(false)} onPaymentSuccess={() => window.location.reload()} />}
         {isSupportModalOpen && <SquarePaymentModal movie={movie} paymentType="donation" onClose={() => setIsSupportModalOpen(false)} onPaymentSuccess={() => alert('Support recorded.')} />}
     </div>

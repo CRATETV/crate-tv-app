@@ -11,6 +11,12 @@ interface DailyPulseProps {
     categories: Record<string, Category>;
 }
 
+interface Objective {
+    id: number;
+    label: string;
+    done: boolean;
+}
+
 const formatCurrency = (val: number) => `$${(val / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
 const PulseMetric: React.FC<{ label: string; value: string | number; color?: string; sub?: string; trend?: string; live?: boolean }> = ({ label, value, color = "text-white", sub, trend, live }) => (
@@ -32,7 +38,7 @@ const PulseMetric: React.FC<{ label: string; value: string | number; color?: str
 
 const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, categories }) => {
     const [liveNodes, setLiveNodes] = useState(analytics?.liveNodes || 0);
-    const [objectives, setObjectives] = useState(() => {
+    const [objectives, setObjectives] = useState<Objective[]>(() => {
         const saved = localStorage.getItem('crate_daily_objectives');
         const today = new Date().toLocaleDateString();
         if (saved) {
@@ -55,7 +61,7 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
     }, [objectives]);
 
     const toggleObjective = (id: number) => {
-        setObjectives(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+        setObjectives((prev: Objective[]) => prev.map((t: Objective) => t.id === id ? { ...t, done: !t.done } : t));
     };
 
     useEffect(() => {
@@ -133,7 +139,7 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                             Daily Missions
                         </h3>
                         <div className="space-y-4 relative z-10">
-                            {objectives.map((t: any) => (
+                            {objectives.map((t: Objective) => (
                                 <button 
                                     key={t.id} 
                                     onClick={() => toggleObjective(t.id)}
