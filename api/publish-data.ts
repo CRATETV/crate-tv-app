@@ -116,7 +116,9 @@ export async function POST(request: Request) {
         }
 
         // LOG AUDIT TRAIL
-        batch.add(db.collection('audit_logs'), {
+        // FIX: WriteBatch does not have an .add() method. We create a ref first and then .set().
+        const auditLogRef = db.collection('audit_logs').doc();
+        batch.set(auditLogRef, {
             role,
             action: `DATA_MUTATION_${type.toUpperCase()}`,
             type: type === 'delete_movie' ? 'PURGE' : 'MUTATION',
