@@ -20,6 +20,11 @@ export interface User {
   rokuDeviceId?: string;
 }
 
+export interface UserRecord extends User {
+    joinDate?: any;
+    lastSignIn?: any;
+}
+
 export interface Actor {
   name: string;
   photo: string;

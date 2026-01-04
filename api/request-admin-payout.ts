@@ -1,5 +1,4 @@
-// This is a Vercel Serverless Function
-// Path: /api/request-admin-payout
+
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
@@ -14,7 +13,6 @@ export async function POST(request: Request) {
   try {
     const { password, amount, reason } = await request.json();
 
-    // --- Authentication ---
     if (password !== process.env.ADMIN_PASSWORD && password !== process.env.ADMIN_MASTER_PASSWORD) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
@@ -23,7 +21,6 @@ export async function POST(request: Request) {
         return new Response(JSON.stringify({ error: 'A valid amount and reason are required.' }), { status: 400 });
     }
 
-    // --- Firestore Logic ---
     const initError = getInitializationError();
     if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
     
@@ -31,21 +28,18 @@ export async function POST(request: Request) {
     if (!db) throw new Error("Database connection failed.");
 
     const payoutData = {
-        amount: Math.round(Number(amount) * 100), // Store in cents
+        amount: Math.round(Number(amount) * 100),
         reason,
         payoutDate: FieldValue.serverTimestamp(),
     };
     const newPayoutRef = await db.collection('admin_payouts').add(payoutData);
 
-    // --- Send Notification Email ---
     const emailHtml = `
       <div>
         <h1>Admin Payout Recorded</h1>
-        <p>A new payout to the admin has been recorded in the Crate TV system.</p>
         <ul>
           <li><strong>Amount:</strong> ${formatCurrency(payoutData.amount)}</li>
           <li><strong>Reason:</strong> ${reason}</li>
-          <li><strong>Transaction ID:</strong> ${newPayoutRef.id}</li>
         </ul>
       </div>
     `;
@@ -57,7 +51,7 @@ export async function POST(request: Request) {
         html: emailHtml,
     });
 
-    return new Response(JSON.stringify({ success: true, newPayout: { id: newPayoutRef.id, ...payoutData } }), { status: 200 });
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
 
   } catch (error) {
     console.error("Error processing admin payout:", error);

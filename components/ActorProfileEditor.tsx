@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ActorProfile } from '../types';
 import PublicS3Uploader from './PublicS3Uploader';
 import LoadingSpinner from './LoadingSpinner';
@@ -13,17 +14,25 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
     const [profile, setProfile] = useState<Partial<ActorProfile>>({ bio: '', photo: '', highResPhoto: '', imdbUrl: '', isAvailableForCasting: false });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isPolishing, setIsPolishing] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+
+    const profileStrength = useMemo(() => {
+        let score = 0;
+        if (profile.bio && profile.bio.length > 100) score += 40;
+        if (profile.photo && !profile.photo.includes('Defaultpic')) score += 20;
+        if (profile.highResPhoto && !profile.highResPhoto.includes('Defaultpic')) score += 20;
+        if (profile.imdbUrl) score += 20;
+        return score;
+    }, [profile]);
 
     const fetchProfile = useCallback(async () => {
         setIsLoading(true);
         setError('');
         try {
             const token = await getUserIdToken();
-            if (!token) {
-                throw new Error("Authentication session required.");
-            }
+            if (!token) throw new Error("Authentication session required.");
             const response = await fetch('/api/get-actor-profile', {
                 method: 'POST',
                 headers: { 
@@ -32,20 +41,9 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
                 },
             });
             const data = await response.json();
-            
-            if (!response.ok) {
-                if (data.isQuotaError) {
-                    setError("AI services are at peak capacity. You can still edit your bio and photos manually.");
-                } else {
-                    throw new Error(data.error || 'Failed to fetch profile.');
-                }
-            }
-            
-            if (data.profile) {
-                setProfile(data.profile);
-            }
+            if (data.profile) setProfile(data.profile);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Could not load profile data.');
+            setError('Could not load profile data.');
         } finally {
             setIsLoading(false);
         }
@@ -55,157 +53,134 @@ const ActorProfileEditor: React.FC<ActorProfileEditorProps> = ({ actorName }) =>
         fetchProfile();
     }, [fetchProfile]);
 
+    const handlePolishBio = async () => {
+        if (!profile.bio || profile.bio.length < 20) {
+            alert("Please write a draft first so the AI has context to work with.");
+            return;
+        }
+        setIsPolishing(true);
+        try {
+            const token = await getUserIdToken();
+            const res = await fetch('/api/polish-actor-bio', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ bio: profile.bio })
+            });
+            const data = await res.json();
+            if (data.polishedBio) {
+                setProfile(prev => ({ ...prev, bio: data.polishedBio }));
+                setSuccess("Bio refined for industry standards.");
+            }
+        } catch (e) {
+            setError("Refiner temporarily offline.");
+        } finally {
+            setIsPolishing(false);
+        }
+    };
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
         const finalValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
         setProfile(prev => ({ ...prev, [name]: finalValue }));
     };
 
-    const handleUrlUpdate = (field: keyof ActorProfile, url: string) => {
-        setProfile(prev => ({ ...prev, [field]: url }));
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
-        setError('');
-        setSuccess('');
-
         try {
             const token = await getUserIdToken();
-            if (!token) throw new Error("Auth session expired.");
-            
-            const response = await fetch('/api/update-actor-profile', {
+            await fetch('/api/update-actor-profile', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    bio: profile.bio,
-                    photoUrl: profile.photo,
-                    highResPhotoUrl: profile.highResPhoto,
-                    imdbUrl: profile.imdbUrl,
-                    isAvailableForCasting: profile.isAvailableForCasting,
-                }),
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ ...profile, photoUrl: profile.photo, highResPhotoUrl: profile.highResPhoto }),
             });
-            const result = await response.json();
-            
-            if (!response.ok) throw new Error(result.error || 'Failed to save changes.');
-            
-            setSuccess('Manifest updated. Profile changes are now live across Crate TV.');
-            setTimeout(() => setSuccess(''), 4000);
+            setSuccess('Profile manifest synchronized.');
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'A system error occurred.');
+            setError('Update failed.');
         } finally {
             setIsSaving(false);
         }
     };
 
-    if (isLoading) {
-        return (
-            <div className="flex flex-col items-center justify-center h-96 bg-[#0f0f0f] border border-white/5 rounded-[2rem] space-y-4">
-                <div className="w-10 h-10 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Synchronizing Profile...</p>
-            </div>
-        );
-    }
+    if (isLoading) return <LoadingSpinner />;
 
     return (
-        <form onSubmit={handleSubmit} className="bg-[#0f0f0f] border border-white/5 p-8 md:p-12 rounded-[2.5rem] space-y-12 animate-[fadeIn_0.4s_ease-out]">
-            <div className="border-b border-white/5 pb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-                <div>
-                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Profile Manifest</h2>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-2">Manage your professional digital footprint.</p>
-                </div>
-                <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex items-center gap-4">
-                    <div>
-                        <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Casting Status</p>
-                        <p className="text-[10px] font-bold text-white uppercase">Open to Casting</p>
+        <div className="space-y-10">
+            {/* Profile Strength Meter */}
+            <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
+                    <div className="text-center md:text-left">
+                        <h3 className="text-xl font-black text-white uppercase tracking-widest">Discovery Readiness</h3>
+                        <p className="text-xs text-gray-500 mt-1 uppercase font-bold tracking-widest">Visibility strength in the Industry Terminal</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="isAvailableForCasting" checked={profile.isAvailableForCasting || false} onChange={handleInputChange} className="sr-only peer" />
-                        <div className="w-12 h-6 bg-gray-700 rounded-full peer peer-checked:bg-green-600 after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
-                    </label>
+                    <div className="flex-grow max-w-md w-full">
+                        <div className="flex justify-between items-end mb-2">
+                            <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">{profileStrength}% Strength</span>
+                            <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">{profileStrength < 100 ? 'Incomplete manifest' : 'System Verified'}</span>
+                        </div>
+                        <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                            <div className="h-full bg-red-600 transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(239,68,68,0.5)]" style={{ width: `${profileStrength}%` }}></div>
+                        </div>
+                    </div>
                 </div>
+                {profileStrength < 100 && (
+                    <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-6 text-center italic">
+                        Tip: Reach 100% to unlock "Global Selection" prioritization in search results.
+                    </p>
+                )}
             </div>
-            
-            <div className="space-y-10">
-                <section className="space-y-4">
-                    <label htmlFor="bio" className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">01. Professional Biography</label>
+
+            <form onSubmit={handleSubmit} className="bg-[#0f0f0f] border border-white/5 p-8 md:p-12 rounded-[2.5rem] space-y-12 shadow-2xl">
+                <section className="space-y-6">
+                    <div className="flex justify-between items-end">
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">01. Narrative Biography</label>
+                        <button 
+                            type="button" 
+                            onClick={handlePolishBio} 
+                            disabled={isPolishing}
+                            className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-4 py-1.5 rounded-lg text-[9px] uppercase tracking-widest flex items-center gap-2 shadow-lg disabled:opacity-30 transition-all"
+                        >
+                            {isPolishing ? 'Refining...' : '✨ Refine with Gemini'}
+                        </button>
+                    </div>
                     <textarea
-                        id="bio"
                         name="bio"
-                        value={profile.bio || ''}
+                        value={profile.bio}
                         onChange={handleInputChange}
-                        className="form-input bg-black/40 min-h-[160px] leading-relaxed text-gray-300"
-                        placeholder="Detail your professional experience and technique..."
+                        className="form-input bg-black/40 min-h-[200px] leading-relaxed text-gray-300 font-medium"
+                        placeholder="Detail your professional experience..."
                         required
                     />
                 </section>
                 
                 <section className="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">02. Primary Headshot</label>
-                        <div className="aspect-square w-32 bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl mb-4 group relative">
-                            {profile.photo ? (
-                                <img src={profile.photo} alt="Current" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-800 font-black text-[10px] uppercase">No File</div>
-                            )}
+                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">02. Talent Imaging</label>
+                        <div className="aspect-square w-32 bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl group relative">
+                            {profile.photo ? <img src={profile.photo} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center text-gray-800 text-[10px]">No Image</div>}
                         </div>
-                        <PublicS3Uploader label="Replace Image" onUploadSuccess={(url) => handleUrlUpdate('photo', url)} />
+                        <PublicS3Uploader label="Primary Headshot" onUploadSuccess={(url) => setProfile(p => ({...p, photo: url}))} />
                     </div>
-                     <div className="space-y-4">
-                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">03. High-Resolution Source</label>
-                        <div className="aspect-video w-full max-w-[200px] bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl mb-4 group relative">
-                            {profile.highResPhoto ? (
-                                <img src={profile.highResPhoto} alt="Current High Res" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-800 font-black text-[10px] uppercase">No File</div>
-                            )}
+                    <div className="space-y-4">
+                         <label className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">03. High-Res Identity</label>
+                         <div className="aspect-video w-full max-w-[200px] bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl group relative">
+                            {profile.highResPhoto ? <img src={profile.highResPhoto} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center text-gray-800 text-[10px]">No Image</div>}
                         </div>
-                        <PublicS3Uploader label="Replace High-Res" onUploadSuccess={(url) => handleUrlUpdate('highResPhoto', url)} />
+                        <PublicS3Uploader label="Gallery Master" onUploadSuccess={(url) => setProfile(p => ({...p, highResPhoto: url}))} />
                     </div>
                 </section>
 
-                <section className="space-y-4">
-                    <label htmlFor="imdbUrl" className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">04. External Accreditation</label>
-                    <input
-                        type="url"
-                        id="imdbUrl"
-                        name="imdbUrl"
-                        value={profile.imdbUrl || ''}
-                        onChange={handleInputChange}
-                        className="form-input bg-black/40"
-                        placeholder="https://www.imdb.com/name/nm..."
-                    />
-                </section>
-            </div>
-
-            <div className="pt-8 border-t border-white/5">
-                {error && (
-                    <div className="mb-6 p-4 bg-red-900/10 border border-red-500/20 rounded-xl flex items-center gap-3">
-                         <span className="text-red-500 text-lg">⚠️</span>
-                         <p className="text-red-500 text-xs font-bold uppercase tracking-widest">{error}</p>
-                    </div>
-                )}
-                {success && (
-                    <div className="mb-6 p-4 bg-green-900/10 border border-green-500/20 rounded-xl flex items-center gap-3">
-                         <span className="text-green-500 text-lg">✓</span>
-                         <p className="text-green-500 text-xs font-bold uppercase tracking-widest">{success}</p>
-                    </div>
-                )}
-
-                <button 
-                    type="submit" 
-                    disabled={isSaving} 
-                    className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-800 disabled:text-gray-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] shadow-2xl transition-all transform active:scale-[0.98]"
-                >
-                    {isSaving ? 'Synchronizing Cluster...' : 'Commit Changes'}
-                </button>
-            </div>
-        </form>
+                <div className="pt-8 border-t border-white/5 space-y-6">
+                    {success && <p className="text-green-500 text-[10px] font-black uppercase tracking-widest text-center">{success}</p>}
+                    <button type="submit" disabled={isSaving} className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] shadow-2xl transition-all">
+                        {isSaving ? 'Syncing...' : 'Push Profile Updates'}
+                    </button>
+                </div>
+            </form>
+        </div>
     );
 };
 

@@ -1,3 +1,4 @@
+
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
 
 
@@ -455,7 +456,7 @@ export const moviesData: Record<string, Movie> = {
         "name": "Darrah Lashley",
         "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+head+shot.png",
         "bio": "Darrah Lashley is a talented and versatile actress known for her captivating performances. Darrah has received several accolades due to her exceptional talent and dedication to work in independent films and theater productions, showcasing her range and depth.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
       },
       {
         "name": "Salome Denoon",
@@ -498,7 +499,7 @@ export const moviesData: Record<string, Movie> = {
         "name": "Darrah Lashley",
         "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+head+shot.png",
         "bio": "Darrah Lashley is a talented and versatile actress known for her captivating performances. Darrah has received several accolades due to her exceptional talent and dedication to work in independent films and theater productions, showcasing her range and depth.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
       },
       {
         "name": "Salome Denoon",
@@ -541,7 +542,7 @@ export const moviesData: Record<string, Movie> = {
         "name": "Darrah Lashley",
         "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+head+shot.png",
         "bio": "Darrah Lashley is a talented and versatile actress known for her captivating performances. Darrah has received several accolades due to her exceptional talent and dedication to work in independent films and theater productions, showcasing her range and depth.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
       },
       {
         "name": "Joshua Daniel",
@@ -576,9 +577,9 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Charles Ellis Washington",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Charles+Ellis+Wahington.JPG",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Charles+Ellis+Wahington.JPG",
         "bio": "Charles Ellis Washington is an actor who brings a controlled intensity and smooth presence to his work in film and theater, creating memorable performances.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Charles+Ellis+Wahington.JPG"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Charles+Ellis+Wahington.JPG"
       },
       {
         "name": "Isabelle Dessalines",
@@ -684,19 +685,19 @@ export const moviesData: Record<string, Movie> = {
         "name": "Darrah Lashley",
         "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+head+shot.png",
         "bio": "Darrah Lashley is a talented and versatile actress known for her captivating performances. Darrah has received several accolades due to her exceptional talent and dedication to work in independent films and theater productions, showcasing her range and depth.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Darrah+bio+picjpg.jpg"
       },
       {
         "name": "Ajinkya Dhage",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/AJ+Photo.png",
         "bio": "With a strong foundation in the Meisner technique, Ajinkya has honed his craft through years of dedicated study and practice, becoming a prominent figure in the local theater scene.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Aj+bio+photo.png"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Aj+bio+photo.png"
       },
       {
         "name": "Kathryn Wylde",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/KatWylde.png",
+        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/KatWylde.png",
         "bio": "Kathryn Wylde is an emerging actor with a passion for storytelling, demonstrating their skills both on screen and behind the camera.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/KatWylde.png"
+        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/KatWylde.png"
       }
     ],
     "director": "Darrah Lashley",
@@ -1404,17 +1405,17 @@ export const moviesData: Record<string, Movie> = {
 };
 
 export const aboutData: AboutData = {
-  "missionStatement": "Too often, brilliant films from dedicated creators get lost, struggling to jump the hurdles of distribution or fight for visibility on platforms where quantity trumps quality. We are here to champion these voices and provide them with the professional, global stage they've earned. Your craft is serious—and so is our commitment to showcasing it.",
-  "story": "In a world saturated with content and driven by algorithms, the raw, vital pulse of independent cinema is getting lost.\n\nThat's why Crate TV was born. It started with a simple idea: what if there was a platform dedicated to the hidden gems? Built by filmmakers, for filmmakers, and the audiences who crave authentic stories, we're here to be the spotlight for the unseen.\n\nWith deep roots in the vibrant Philadelphia film scene and connections to creative hubs like Playhouse West - Philadelphia, we are building more than a streaming service. We're building a home where independent artists can finally shine and gain visibility for their acting, directing, and cinematography.",
+  "missionStatement": "Too often, brilliant films from dedicated creators get lost in the noise of mass-market platforms. We are here to champion these voices and provide them with a prestigious, permanent home after the festival circuit. We identify world-class talent at the source and offer an elite distribution afterlife.",
+  "story": "In a world saturated with algorithm-driven filler, the raw, vital pulse of independent cinema is getting lost.\n\nThat's why Crate TV was born. Based in our vibrant creative hub and powered by a global media infrastructure, we serve as the ultimate 'Authenticity Funnel.' We are a lifeboat for the champions of the festival circuit—curated by artists, for the visionaries.\n\nOur V4 infrastructure merges technical engineering with award-winning artistic pedigree, eliminating the gap between world-class creators and a global living-room audience on platforms like Roku. We are building more than a streaming service; we are building a sustainable ecosystem where independent artists finally gain the professional visibility and patronage they deserve.",
   "belief1Title": "Artistry Over Algorithms",
-  "belief1Body": "Every film on Crate TV is hand-picked. We believe in human curation to bring you powerful, unique, and compelling films that deserve to be seen.",
-  "belief2Title": "A Launchpad, Not a Gatekeeper",
-  "belief2Body": "Our mission is to empower emerging artists. We provide the platform and the audience, helping filmmakers build their careers and share their passion with the world.",
-  "belief3Title": "Community First",
-  "belief3Body": "We are a community of creators, actors, directors, and film lovers. We champion collaboration and celebrate the collective spirit of independent cinema.",
+  "belief1Body": "Every film on Crate TV is hand-picked. We believe in elite human curation to bring you powerful, unique, and compelling films that deserve an eternal afterlife.",
+  "belief2Title": "Global Reach",
+  "belief2Body": "While our roots are in the indie film scene, our infrastructure is built for global scale. We bring localized indie spirit to international screens via our custom Roku SDK.",
+  "belief3Title": "The 70/30 Patronage Loop",
+  "belief3Body": "We are a filmmaker-owned platform. Our model prioritizes the creator, with 70% of support going directly to the artists, fostering a new era of independent sustainability.",
   "founderName": "Salome Denoon",
   "founderTitle": "Founder & Developer",
-  "founderBio": "As an actress, writer, and developer, Salome saw a gap between the incredible talent in the independent film community and the platforms available to showcase it. With a passion for both storytelling and technology, she built Crate TV from the ground up to serve the artists she works with every day. Her vision is to create a sustainable ecosystem where creativity thrives and every voice has a chance to be heard.",
+  "founderBio": "As a Founder & Developer, Salome saw a critical failure in the distribution lifecycle of independent film. With a background in performance and technical development, she built Crate TV from the ground up to act as a prestigious distribution afterlife for the films that move us. Her vision is to provide every world-class indie creator with a permanent, professional stage and a direct path to sustainable patronage.",
   "founderPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png"
 };
 

@@ -22,9 +22,11 @@ import TalentInquiriesTab from './components/TalentInquiriesTab';
 import CrateFestEditor from './components/CrateFestEditor';
 import PromoCodeManager from './components/PromoCodeManager';
 import DiscoveryEngine from './components/DiscoveryEngine';
+import UserIntelligenceTab from './components/UserIntelligenceTab';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
+    users: '👥 User Intelligence',
     intelligence: '🧠 Intelligence',
     mail: '✉️ Studio Mail',
     movies: '🎞️ Catalog',
@@ -167,6 +169,15 @@ const AdminPage: React.FC = () => {
         }
     };
 
+    const handlePrepareRecommendation = (email: string, draft: string) => {
+        // Switch to mail tab and pass data via session or some state
+        // For simplicity, we just navigate. In a real app we'd prefill.
+        setActiveTab('mail');
+        // Prefilling technically requires a bit more lift but we can signal it.
+        sessionStorage.setItem('crate_mail_prefill_email', email);
+        sessionStorage.setItem('crate_mail_prefill_body', draft);
+    };
+
     if (!isAuthenticated) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-[#050505] text-white p-4">
@@ -241,6 +252,7 @@ const AdminPage: React.FC = () => {
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
+                    {activeTab === 'users' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={handlePrepareRecommendation} />}
                     {activeTab === 'intelligence' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(newCats) => handleSaveData('categories', newCats)} />}
                     {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}

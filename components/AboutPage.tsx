@@ -1,3 +1,4 @@
+
 import React, { useCallback } from 'react';
 import Header from './Header';
 import LoadingSpinner from './LoadingSpinner';
@@ -19,7 +20,6 @@ const TeamCard: React.FC<{ role: string; desc: string; icon: React.ReactNode }> 
 const AboutPage: React.FC = () => {
     const { isLoading, aboutData } = useFestival();
     
-    // FIX: Imported and used useCallback for navigation handler
     const handleGoHome = useCallback(() => {
         window.history.pushState({}, '', '/');
         window.dispatchEvent(new Event('pushstate'));
@@ -46,13 +46,12 @@ const AboutPage: React.FC = () => {
 
                     <div className="mb-16 text-center animate-fadeInHeroContent">
                         <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV Logo" className="mx-auto w-full max-w-md" onContextMenu={(e) => e.preventDefault()} />
-                        <p className="text-gray-500 font-black uppercase tracking-[0.8em] text-[10px] mt-4">Est. 2024</p>
                     </div>
 
                     <section className="text-center mb-24 animate-fadeInHeroContent">
                         <p className="text-red-500 font-black uppercase tracking-[0.4em] mb-4 text-xs">Our Purpose</p>
                         <h1 className="text-4xl md:text-6xl font-black text-white mb-8 tracking-tighter">Our Mission</h1>
-                        <p className="text-2xl md:text-4xl text-gray-200 font-medium leading-tight max-w-4xl mx-auto">"{aboutData.missionStatement}"</p>
+                        <p className="text-2xl md:text-4xl text-gray-200 font-medium leading-tight max-w-4xl mx-auto italic">"{aboutData.missionStatement}"</p>
                     </section>
 
                     <div className="space-y-24">
@@ -62,16 +61,16 @@ const AboutPage: React.FC = () => {
                                 <div className="text-gray-400 text-lg leading-relaxed space-y-4" dangerouslySetInnerHTML={{ __html: aboutData.story }}></div>
                             </div>
                             <div className="bg-white/5 p-8 rounded-3xl border border-white/10 shadow-2xl">
-                                <h3 className="text-2xl font-black text-white mb-6 uppercase tracking-tighter">Global Infrastructure</h3>
+                                <h3 className="text-2xl font-black text-white mb-6 uppercase tracking-tighter italic">Studio Logistics</h3>
                                 <p className="text-gray-400 mb-6 leading-relaxed">Founded in 2024, Crate TV operates as a high-density media infrastructure. By merging technical engineering with award-winning artistic pedigree, we eliminate the gap between creators and global distribution.</p>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="bg-black/40 p-4 rounded-xl border border-white/5 text-center">
-                                        <p className="text-2xl font-black text-white">Roku</p>
+                                        <p className="text-2xl font-black text-white italic">Roku</p>
                                         <p className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">SDK Optimized</p>
                                     </div>
                                     <div className="bg-black/40 p-4 rounded-xl border border-white/5 text-center">
-                                        <p className="text-2xl font-black text-white">Gemini</p>
-                                        <p className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">AI Intelligence</p>
+                                        <p className="text-2xl font-black text-white italic">Cloud</p>
+                                        <p className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">Global Network</p>
                                     </div>
                                 </div>
                             </div>

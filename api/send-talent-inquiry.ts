@@ -1,10 +1,11 @@
+
 import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@cratetv.net';
-const ADMIN_EMAIL = 'cratetiv@gmail.com';
+const ADMIN_EMAIL = 'studiocrate@gmail.com';
 
 export async function POST(request: Request) {
     try {
@@ -14,7 +15,6 @@ export async function POST(request: Request) {
             return new Response(JSON.stringify({ error: 'All fields are required.' }), { status: 400 });
         }
 
-        // 1. Save to Secure Database (Redundant Backup)
         const initError = getInitializationError();
         if (!initError) {
             const db = getAdminDb();
@@ -30,7 +30,6 @@ export async function POST(request: Request) {
             }
         }
 
-        // 2. Send Professional Notification Email
         const emailHtml = `
             <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
                 <h2 style="color: #ef4444; text-transform: uppercase; letter-spacing: 2px;">Professional Inquiry</h2>
@@ -43,7 +42,7 @@ export async function POST(request: Request) {
                     ${message.replace(/\n/g, '<br/>')}
                 </div>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-                <p style="font-size: 11px; color: #999;">This inquiry was routed through the Crate TV secure proxy and logged in the Admin Terminal. Do not reply directly to this notification.</p>
+                <p style="font-size: 11px; color: #999;">This inquiry was routed through the Crate TV secure proxy and logged in the Admin Terminal.</p>
             </div>
         `;
 

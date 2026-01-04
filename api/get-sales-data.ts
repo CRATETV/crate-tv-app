@@ -176,7 +176,6 @@ export async function POST(request: Request) {
             pastAdminPayouts: [], 
             billSavingsPotTotal: 0, 
             billSavingsTransactions: [], 
-            // FIX: Changed allAuthUsers.length to allUsers.length as allAuthUsers is not defined in this scope.
             totalUsers: allUsers.length, 
             viewCounts, 
             movieLikes: {}, 

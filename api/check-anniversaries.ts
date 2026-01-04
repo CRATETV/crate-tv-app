@@ -1,31 +1,28 @@
+
 import { getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
-const adminEmail = 'cratetiv@gmail.com'; // Admin email to notify
+const adminEmail = 'cratetiv@gmail.com'; 
 
 export async function GET(request: Request) {
     try {
-        // --- Cron Job Authentication ---
         const authHeader = request.headers.get('authorization');
         if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
             return new Response('Unauthorized', { status: 401 });
         }
 
-        // --- Firebase Admin Init ---
         const initError = getInitializationError();
         if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
         
         const auth = getAdminAuth();
         if (!auth) throw new Error("Firebase Auth connection failed.");
 
-        // --- Get today's date ---
         const today = new Date();
-        const todayMonth = today.getMonth(); // 0-11
+        const todayMonth = today.getMonth();
         const todayDay = today.getDate();
 
-        // --- Find users with anniversaries ---
         let anniversaryUsers: string[] = [];
         let nextPageToken;
         do {
@@ -42,11 +39,9 @@ export async function GET(request: Request) {
         } while (nextPageToken);
 
         if (anniversaryUsers.length === 0) {
-            console.log("No user anniversaries today.");
             return new Response(JSON.stringify({ message: "No anniversaries today." }), { status: 200, headers: { 'Content-Type': 'application/json' }});
         }
 
-        // --- Send notification email to admin ---
         const subject = `🎉 ${anniversaryUsers.length} User Anniversaries Today!`;
         const emailHtml = `
             <div>
@@ -69,8 +64,6 @@ export async function GET(request: Request) {
 
     } catch (error) {
         console.error("Error checking anniversaries:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown server error occurred.";
-        // Return 500 so Vercel logs the cron job failure
-        return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 }

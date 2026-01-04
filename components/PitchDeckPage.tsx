@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useFestival } from '../contexts/FestivalContext';
 
@@ -75,6 +76,8 @@ const MetricCard: React.FC<{ label: string; value: string; sub: string }> = ({ l
 const PitchDeckPage: React.FC = () => {
     const { settings } = useFestival();
     const [showHandshake, setShowHandshake] = useState(true);
+    
+    const studioEmail = settings.businessEmail || "studio@cratetv.net";
 
     const target = useMemo(() => {
         if (typeof window === 'undefined') return 'LIFT LABS';
@@ -238,7 +241,7 @@ const PitchDeckPage: React.FC = () => {
                     <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-20 text-left border-t border-black/10 pt-16">
                         <div>
                             <p className="text-[11px] font-black uppercase text-gray-400 tracking-[0.6em] mb-4">Strategic Contact</p>
-                            <p className="text-3xl font-black italic">cratetiv@gmail.com</p>
+                            <p className="text-3xl font-black italic">{studioEmail}</p>
                         </div>
                         <div>
                             <p className="text-[11px] font-black uppercase text-gray-400 tracking-[0.6em] mb-4">Network Terminal</p>

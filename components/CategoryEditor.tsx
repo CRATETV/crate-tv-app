@@ -184,7 +184,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
           </div>
 
           <div className="bg-gray-900 border border-red-500/20 p-8 rounded-[2rem] shadow-xl">
-              <h3 className="text-2xl font-black text-red-500 uppercase tracking-tighter mb-2">Dual Identity Core</h3>
+              <h3 className="text-2xl font-black text-red-500 uppercase tracking-tighter mb-2">Identity Hub</h3>
               <p className="text-gray-400 text-sm mb-8">Maintain separate professional and operational channels.</p>
               
               <div className="space-y-6">
@@ -205,7 +205,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                             type="email" 
                             value={holidaySettings.technicalEmail} 
                             onChange={(e) => setHolidaySettings({...holidaySettings, technicalEmail: e.target.value})}
-                            placeholder="e.g. your-private@gmail.com" 
+                            placeholder="e.g. cratetiv@gmail.com" 
                             className="form-input !bg-black/40 border-white/10" 
                         />
                     </div>
@@ -224,7 +224,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
 
                 <div className="bg-red-600/5 p-4 rounded-xl border border-red-500/10">
                     <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">⚠️ Multi-Route Verification</p>
-                    <p className="text-[9px] text-gray-500 mt-1">Outbound identity is locked to studio@cratetv.net for all system messages.</p>
+                    <p className="text-[9px] text-gray-500 mt-1">Professional replies will appear as studio@cratetv.net via Gmail.</p>
                 </div>
                 <button onClick={saveIdentityDetails} className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl shadow-lg transition-all">Publish Branding Updates</button>
               </div>
