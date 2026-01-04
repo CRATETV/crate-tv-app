@@ -35,6 +35,19 @@ export interface AuditEntry {
     ip?: string;
 }
 
+export interface EditorialStory {
+    id: string;
+    title: string;
+    subtitle: string;
+    content: string;
+    heroImage: string;
+    author: string;
+    linkedMovieKey?: string;
+    linkedBlockId?: string;
+    type: 'NEWS' | 'INTERVIEW' | 'DEEP_DIVE' | 'SPOTLIGHT' | 'FESTIVAL_HYPE';
+    publishedAt: any;
+}
+
 export interface GrantApplication {
     id: string;
     organization: string;

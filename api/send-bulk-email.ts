@@ -9,62 +9,43 @@ export async function POST(request: Request) {
     try {
         const { password, subject, htmlBody, audience = 'all' } = await request.json();
 
-        // --- Authentication ---
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
-        let isAuthenticated = false;
-        if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
-          isAuthenticated = true;
-        }
-        if (!isAuthenticated) {
-            return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' }});
+        if (password !== primaryAdminPassword && password !== masterPassword) {
+          return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
         }
         
-        if (!subject || !htmlBody) {
-             return new Response(JSON.stringify({ error: 'Subject and message body are required.' }), { status: 400, headers: { 'Content-Type': 'application/json' }});
-        }
-
-        // --- Firebase Admin Init ---
         const initError = getInitializationError();
-        if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
-        
+        if (initError) throw new Error(initError);
         const db = getAdminDb();
-        if (!db) throw new Error("Firebase DB connection failed.");
+        const auth = getAdminAuth();
+        if (!db || !auth) throw new Error("Infrastructure Offline");
 
-        // Fetch dynamic identity and signature
         const settingsDoc = await db.collection('content').doc('settings').get();
-        const settingsData = settingsDoc.data();
-        const businessEmail = settingsData?.businessEmail || FALLBACK_FROM;
-        const signature = settingsData?.emailSignature || "";
+        const businessEmail = settingsDoc.data()?.businessEmail || FALLBACK_FROM;
 
-        // Auto-append signature
-        const finalHtmlBody = signature 
-            ? `${htmlBody}<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #f0f0f0; color: #444; font-size: 14px; font-family: sans-serif; white-space: pre-wrap; line-height: 1.5;">${signature}</div>`
-            : htmlBody;
+        let allEmails: string[] = [];
 
-        // --- Fetch users based on audience ---
-        let usersQuery;
-        const usersCollection = db.collection('users');
-
-        if (audience === 'actors') {
-            usersQuery = usersCollection.where('isActor', '==', true);
-        } else if (audience === 'filmmakers') {
-            usersQuery = usersCollection.where('isFilmmaker', '==', true);
+        if (audience === 'inactive') {
+            const result = await auth.listUsers(1000);
+            const twoWeeksAgo = Date.now() - (14 * 24 * 60 * 60 * 1000);
+            allEmails = result.users
+                .filter(u => !u.metadata.lastSignInTime || new Date(u.metadata.lastSignInTime).getTime() < twoWeeksAgo)
+                .map(u => u.email)
+                .filter((e): e is string => !!e);
         } else {
-            usersQuery = usersCollection;
+            let usersQuery = db.collection('users');
+            if (audience === 'actors') usersQuery = usersQuery.where('isActor', '==', true) as any;
+            else if (audience === 'filmmakers') usersQuery = usersQuery.where('isFilmmaker', '==', true) as any;
+            
+            const usersSnapshot = await usersQuery.get();
+            allEmails = usersSnapshot.docs.map(doc => doc.data().email).filter(email => !!email);
         }
-        
-        const usersSnapshot = await usersQuery.get();
-        const allEmails = usersSnapshot.docs
-            .map(doc => doc.data().email)
-            .filter(email => !!email);
-
 
         if (allEmails.length === 0) {
-            return new Response(JSON.stringify({ message: `No users found in the '${audience}' group.` }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            return new Response(JSON.stringify({ message: `No targetable nodes in '${audience}' segment.` }), { status: 200 });
         }
 
-        // --- Send emails in batches of 50 using Resend ---
         const BATCH_SIZE = 50;
         for (let i = 0; i < allEmails.length; i += BATCH_SIZE) {
             const batch = allEmails.slice(i, i + BATCH_SIZE);
@@ -72,21 +53,15 @@ export async function POST(request: Request) {
                 from: `Crate TV <${businessEmail}>`,
                 to: 'delivered@resend.dev', 
                 bcc: batch,
-                subject: subject,
-                reply_to: businessEmail,
-                html: `
-                    <div style="font-family: sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto; padding: 30px;">
-                        ${finalHtmlBody}
-                    </div>
-                `,
+                subject,
+                html: `<div style="font-family: sans-serif; line-height: 1.6; color: #111;">${htmlBody}</div>`,
             });
         }
         
-        return new Response(JSON.stringify({ success: true, message: `Email successfully sent to ${allEmails.length} users in the '${audience}' group.` }), { status: 200, headers: { 'Content-Type': 'application/json' }});
+        return new Response(JSON.stringify({ success: true, count: allEmails.length }), { status: 200 });
 
     } catch (error) {
-        console.error("Error sending bulk email:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown server error occurred.";
-        return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+        console.error("Broadcaster error:", error);
+        return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
     }
 }

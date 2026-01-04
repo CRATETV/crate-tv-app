@@ -25,9 +25,13 @@ import DiscoveryEngine from './components/DiscoveryEngine';
 import UserIntelligenceTab from './components/UserIntelligenceTab';
 import PermissionsManager from './components/PermissionsManager';
 import AuditTerminal from './components/AuditTerminal';
+import EditorialManager from './components/EditorialManager';
+import CommunicationsTerminal from './components/CommunicationsTerminal';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
+    editorial: '🖋️ Editorial',
+    comms: '📢 Communications',
     audit: '📜 Chronos Audit',
     users: '👥 User Intelligence',
     intelligence: '🧠 Intelligence',
@@ -76,7 +80,6 @@ const AdminPage: React.FC = () => {
     const allowedTabs = useMemo(() => {
         const isMaster = role === 'super_admin' || role === 'master';
         if (isMaster) return Object.keys(ALL_TABS);
-        // Remove 'audit' from choices for anyone else
         return (permissions[role] || ['pulse']).filter(t => t !== 'audit');
     }, [role, permissions]);
 
@@ -278,6 +281,8 @@ const AdminPage: React.FC = () => {
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
+                    {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
+                    {activeTab === 'comms' && <CommunicationsTerminal analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'audit' && <AuditTerminal />}
                     {activeTab === 'users' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={handlePrepareRecommendation} />}
                     {activeTab === 'intelligence' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(newCats) => handleSaveData('categories', newCats)} />}

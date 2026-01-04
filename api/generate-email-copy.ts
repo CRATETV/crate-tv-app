@@ -1,3 +1,4 @@
+
 import { Type } from '@google/genai';
 import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
@@ -7,10 +8,11 @@ export async function POST(request: Request) {
         password, 
         templatePrompt, 
         festivalTitle, 
-        tagline, 
-        dates, 
-        passPrice, 
-        featuredFilms 
+        filmContext, 
+        storyContext,
+        blockContext,
+        isReengagement,
+        daysSinceLastVisit
     } = await request.json();
 
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
@@ -20,34 +22,33 @@ export async function POST(request: Request) {
     }
 
     const context = `
-        FESTIVAL IDENTITY:
-        Title: ${festivalTitle || 'Crate Fest'}
-        Tagline: ${tagline || 'Indie cinema unleashed.'}
-        Dates: ${dates || 'Coming Soon'}
-        Pass Price: $${passPrice} USD
+        BRAND: Crate Zine (Powered by Crate TV Infrastructure)
+        STRATEGIC MODE: ${isReengagement ? 'RE-ENGAGEMENT (Dormant Node)' : 'PUBLIC DISPATCH (Active Viral Feed)'}
+        UPLINK_RECENCY: ${daysSinceLastVisit || 'Unknown'} days
+        FESTIVAL: ${festivalTitle || 'Crate Fest'}
         
-        ACTIVE CATALOG SPOTLIGHT:
-        Films: ${featuredFilms || 'Top independent selections'}
+        AMPLIFIED CONTENT:
+        ${filmContext ? `FILM_MASTER: "${filmContext.title}" by ${filmContext.director}.` : ''}
+        ${storyContext ? `EDITORIAL_PIECE: "${storyContext.title}".` : ''}
+        ${blockContext ? `POWER_BLOCK: "${blockContext.title}" containing ${blockContext.films.join(', ')}.` : ''}
     `;
 
     const prompt = `
-        You are a world-class copywriter for Crate TV, an elite streaming platform for independent film. 
-        Your task is to write a high-conversion marketing email based on this objective: "${templatePrompt}".
+        You are the Editor-in-Chief of Crate Zine. 
+        Draft a high-impact, prestigious dispatch that is optimized for both private email nodes and public sharing. 
         
-        Context: ${context}
+        Brand Personality: "Crate Zine" is the definitive digital publication for the underground cinematic elite. "CRATE" is bold and italicized, while "zine" is modern and minimalist.
         
-        Requirements:
-        1. Subject Line: Must be cinematic, elite, and punchy. Short and high impact.
-        2. HTML Body: 
-           - Use a professional dark-themed design.
-           - Background: #050505
-           - Text: #ffffff
-           - Accents: #ef4444 (Crate Red)
-           - Include a clear call to action (CTA).
-           - Style it with inline CSS for maximum compatibility.
-           - Ensure the tone is prestigious and supportive of indie creators.
-           
-        Respond with ONLY a JSON object containing "subject" and "htmlBody".
+        Objective: "${templatePrompt}"
+        Technical Context: ${context}
+        
+        Styling Directives:
+        1. Header: Use a massive italicized headline. 
+        2. Visual Cues: Refer to the "Zine" as the digital pulse of the independent circuit.
+        3. CTAs: Focus on "SYNCHRONIZING WITH THE WORK" or "ANALYZING THE CHART". Always include a hint that the "Top 10 Today" chart has been updated.
+        4. Tone: Confident, artistic, and technical.
+        
+        Format your response as a JSON object: { "subject": "High-Impact Viral Headline", "htmlBody": "Full HTML payload with sophisticated inline styles" }.
     `;
 
     const response = await generateContentWithRetry({
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
         headers: { 'Content-Type': 'application/json' } 
     });
   } catch (error) {
-    console.error("Gemini Email Drafting Error:", error);
+    console.error("Crate Synthesis Error:", error);
     return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
   }
 }

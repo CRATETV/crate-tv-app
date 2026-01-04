@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -46,6 +47,7 @@ import TalentPage from './components/TalentPage';
 import LinkRokuPage from './components/LinkRokuPage';
 import SubmissionTermsPage from './components/SubmissionTermsPage';
 import PitchDeckPage from './components/PitchDeckPage';
+import ZinePage from './components/ZinePage';
 
 
 const rootElement = document.getElementById('root');
@@ -110,10 +112,18 @@ const AppRouter: React.FC = () => {
     return <ActorProfilePage slug={actorProfileMatch[1]} />;
   }
 
+  const zineMatch = route.match(/^\/zine\/([a-zA-Z0-9_-]+)/);
+  if (zineMatch && zineMatch[1]) {
+      return <ZinePage storyId={zineMatch[1]} />;
+  }
+
 
   switch (route) {
     case '/':
       return user ? <App /> : <LandingPage />;
+    case '/zine':
+    case '/newsletter': // Backward compatibility alias
+      return <ZinePage />;
     case '/account':
       return user ? <AccountPage /> : <RedirectToLogin />;
     case '/link-roku':
