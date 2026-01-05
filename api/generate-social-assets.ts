@@ -12,8 +12,25 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    // 1. Generate Viral Copy + Press Release
-    const textPrompt = `Create a social media "Kit" (3 IG, 3 X, 3 FB, 15 hashtags) and Press Release for: "${title}" by ${director}. Synopsis: "${synopsis}". Respond in JSON.`;
+    // Generate Viral Copy + Press Release
+    // Focusing purely on high-impact text since the user wants to use the real poster.
+    const textPrompt = `
+        You are the Head of Digital Marketing at Crate TV. 
+        Create a comprehensive social media "Kit" for the film: "${title}" directed by ${director}. 
+        Synopsis: "${synopsis}".
+        
+        The kit must include:
+        1. 3 Instagram captions (Focus on aesthetic and artistic depth)
+        2. 3 X/Twitter posts (Focus on viral impact and urgency)
+        3. 3 Facebook posts (Focus on storytelling and community)
+        4. 15 niche cinematic hashtags
+        5. 1 Official Press Release (Professional industry format)
+        
+        Tone: Prestigious, slightly elite, filmmaker-centric.
+        
+        Respond ONLY in valid JSON.
+    `;
+
     const textResponse = await generateContentWithRetry({
       model: 'gemini-3-flash-preview',
       contents: [{ parts: [{ text: textPrompt }] }],
@@ -33,29 +50,18 @@ export async function POST(request: Request) {
       }
     });
 
-    // 2. Generate Cinematic Image
-    const imagePrompt = `A cinematic high-quality promotional movie still for a film titled "${title}". Directed by ${director}. 16:9 aspect ratio, no text.`;
-    const imageResponse = await generateContentWithRetry({
-      model: 'gemini-2.5-flash-image',
-      contents: [{ parts: [{ text: imagePrompt }] }],
-      config: { 
-        imageConfig: { aspectRatio: "16:9" } 
-      } as any
-    });
-
-    let base64Image = '';
-    const part = imageResponse.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-    if (part?.inlineData?.data) {
-        base64Image = part.inlineData.data;
-    }
-
     return new Response(JSON.stringify({ 
-      copy: JSON.parse(textResponse.text || '{}'),
-      image: base64Image 
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      copy: JSON.parse(textResponse.text || '{}')
+    }), { 
+        status: 200, 
+        headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+        } 
+    });
 
   } catch (error) {
     console.error("Social Kit API error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Internal Error" }), { status: 500 });
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Internal System Error" }), { status: 500 });
   }
 }

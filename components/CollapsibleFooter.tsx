@@ -64,18 +64,12 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                             Join our year-round streaming catalog or submit to the annual festival circuit.
                         </p>
                     </div>
-                    <div className="flex-shrink-0 flex flex-col sm:flex-row gap-4">
+                    <div className="flex-shrink-0">
                         <button 
                             onClick={(e) => handleNavigate(e, '/submit')}
                             className="inline-flex items-center justify-center bg-white text-black font-black px-10 py-4 rounded-xl hover:bg-gray-200 transition-all transform hover:scale-105 active:scale-95 shadow-xl text-base uppercase tracking-widest"
                         >
                             Submit a Film
-                        </button>
-                        <button 
-                            onClick={(e) => handleNavigate(e, '/contact')}
-                            className="inline-flex items-center justify-center bg-gray-800 text-white font-black px-10 py-4 rounded-xl hover:bg-gray-700 transition-all border border-white/10 text-base uppercase tracking-widest min-w-[220px]"
-                        >
-                            Email us Directly
                         </button>
                     </div>
                 </div>

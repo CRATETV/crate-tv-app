@@ -15,33 +15,36 @@ interface ZinePageProps {
 }
 
 const ZINE_THEMES = [
-    { name: 'Red', accent: '#ef4444', glow: 'rgba(239, 68, 68, 0.15)' },
-    { name: 'Indigo', accent: '#6366f1', glow: 'rgba(99, 102, 241, 0.15)' },
-    { name: 'Green', accent: '#22c55e', glow: 'rgba(34, 197, 94, 0.15)' },
-    { name: 'Amber', accent: '#f59e0b', glow: 'rgba(245, 158, 11, 0.15)' },
-    { name: 'Purple', accent: '#a855f7', glow: 'rgba(168, 85, 247, 0.15)' }
+    { name: 'Red', accent: '#ef4444', glow: 'rgba(239, 68, 68, 0.2)', label: 'SECTOR_01' },
+    { name: 'Indigo', accent: '#6366f1', glow: 'rgba(99, 102, 241, 0.2)', label: 'SECTOR_02' },
+    { name: 'Green', accent: '#22c55e', glow: 'rgba(34, 197, 94, 0.2)', label: 'SECTOR_03' },
+    { name: 'Amber', accent: '#f59e0b', glow: 'rgba(245, 158, 11, 0.2)', label: 'SECTOR_04' }
 ];
 
 const GENESIS_STORY: EditorialStory = {
-    id: 'genesis',
-    title: 'THE SCENE HAS A NEW ARCHIVE.',
-    subtitle: 'Announcing Crate Zine: The High-Voltage Afterlife for Independent Masterpieces.',
+    id: 'genesis-manifesto',
+    title: 'THE AFTERLIFE IS HERE.',
+    subtitle: 'Defining the Crate Scene: Why independent cinema finally has a permanent vault.',
     content: `
-        <p>Welcome to the first transmission of <strong>Crate Zine</strong>. We aren't just a newsletter; we are a digital-industrial record of the cinematic underground. A play on the "Crate Scene," this publication is the pulse of everything we are building at Crate TV.</p>
-        
-        <h3>The Afterlife Infrastructure</h3>
-        <p>Too many films die after their festival run. We've built a permanent home for the champions. Our V4 infrastructure merges technical engineering with award-winning artistic pedigree, ensuring your work doesn't just sit on a server—it lives on the big screen via our custom Roku SDK.</p>
-        
-        <h3>The 70/30 Patronage Loop</h3>
-        <p>We are filmmaker-owned. Our model prioritizes the creator, with 70% of support going directly to the artists. Every view, every like, and every tip helps fuel the next generation of authentic stories.</p>
-        
-        <h3>AI Studio Core</h3>
-        <p>Powered by Gemini 3 Pro and Veo 3.1, our Studio Core identifies talent velocity and generates cinematic hype reels to ensure independent voices reach a global audience with the impact they deserve.</p>
-        
-        <p><strong>This is the scene. This is the Crate. Let's build.</strong></p>
+        <div class="zine-body">
+            <p class="dropcap">W</p><p>elcome to the first transmission of <strong>Crate Zine</strong>. We aren't just a platform; we are a high-voltage media infrastructure designed to act as the permanent record of the independent cinematic underground.</p>
+            
+            <div class="industrial-quote">"THE SCENE HAS AN ARCHIVE. THE CHAMPIONS HAVE A LIFEBOAT."</div>
+
+            <h3>The Death of Distribution</h3>
+            <p>For too long, world-class films have died 12 months after their festival run. They vanish into the digital void, lost to algorithms that favor filler over feeling. Crate TV was built to solve the distribution lifecycle failure. We identify world-class talent at the source and provide an elite distribution afterlife.</p>
+            
+            <h3>The 70/30 Patronage Loop</h3>
+            <p>Ownership is the only path to sustainability. Crate is filmmaker-owned and filmmaker-prioritized. 70% of every donation and rental goes directly to the creators, fueling the next generation of authentic narratives. When you watch on Crate, you aren't just a viewer—you are a patron of the work.</p>
+            
+            <h3>Native Engineering</h3>
+            <p>Our V4 infrastructure merges technical precision with artistic pedigree. From our custom Roku SDK that puts independent masters in the living room, to our AI Studio Core (Powered by Gemini 3 Pro) that generates high-velocity social hype, we are building the tools creators actually need.</p>
+            
+            <p class="signature">This is the scene. This is the Crate. Let's Build.</p>
+        </div>
     `,
     heroImage: 'https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg',
-    author: 'Editor-in-Chief',
+    author: 'EDITOR-IN-CHIEF',
     type: 'SPOTLIGHT',
     publishedAt: { seconds: Date.now() / 1000 }
 };
@@ -57,33 +60,33 @@ const StoryCard: React.FC<{ story: EditorialStory; themeColor: string }> = ({ st
         <a 
             href={`/zine/${story.id}`} 
             onClick={handleNavigate}
-            className="group block bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] overflow-hidden transition-all duration-700 shadow-2xl"
+            className="group block bg-[#050505] border border-white/5 rounded-[2.5rem] overflow-hidden transition-all duration-700 shadow-2xl relative"
             style={{ borderColor: `${themeColor}20` }}
         >
             <div className="aspect-video relative overflow-hidden">
                 <img 
                     src={story.heroImage || 'https://via.placeholder.com/800x450'} 
                     alt={story.title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 group-hover:rotate-1 opacity-80"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent"></div>
                 <div className="absolute top-4 left-4">
-                    <span className="text-white font-black px-3 py-1 rounded-full text-[8px] uppercase tracking-widest shadow-xl transition-colors duration-700" style={{ backgroundColor: themeColor }}>
+                    <span className="text-white font-black px-4 py-1.5 rounded-full text-[8px] uppercase tracking-[0.3em] shadow-2xl transition-colors duration-700" style={{ backgroundColor: themeColor }}>
                         {story.type}
                     </span>
                 </div>
             </div>
-            <div className="p-8 space-y-3">
-                <h3 className="text-2xl font-black text-white uppercase tracking-tighter transition-colors duration-700 leading-tight group-hover:text-white" style={{ color: themeColor }}>
+            <div className="p-10 space-y-4">
+                <h3 className="text-3xl font-black text-white uppercase tracking-tighter transition-colors duration-700 leading-none group-hover:text-white" style={{ color: themeColor }}>
                     {story.title}
                 </h3>
-                <p className="text-gray-400 text-sm font-medium line-clamp-2 leading-relaxed">
+                <p className="text-gray-500 text-sm font-medium line-clamp-2 leading-relaxed">
                     {story.subtitle}
                 </p>
-                <div className="pt-4 flex items-center justify-between">
-                    <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">By {story.author}</span>
+                <div className="pt-6 flex items-center justify-between border-t border-white/5">
+                    <span className="text-[9px] font-black text-gray-700 uppercase tracking-[0.4em]">Auth // {story.author}</span>
                     <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 group-hover:translate-x-1 transition-all duration-700" style={{ color: themeColor }}>
-                        Open Dispatch <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                        OPEN DISPATCH <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                     </span>
                 </div>
             </div>
@@ -98,11 +101,11 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [currentThemeIdx, setCurrentThemeIdx] = useState(0);
 
-    // Chromatic Shift Logic
+    // Chromatic Shift Timer
     useEffect(() => {
         const interval = setInterval(() => {
             setCurrentThemeIdx(prev => (prev + 1) % ZINE_THEMES.length);
-        }, 8000); // Shift every 8 seconds
+        }, 6000);
         return () => clearInterval(interval);
     }, []);
 
@@ -110,17 +113,25 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
 
     useEffect(() => {
         const db = getDbInstance();
-        if (!db) return;
+        
+        // Safety: If no DB instance or slow connection, fail-over to Genesis after 2 seconds
+        const timeout = setTimeout(() => {
+            if (isLoading) {
+                console.warn("Zine downlink timed out. Serving Genesis Issue.");
+                setStories([GENESIS_STORY]);
+                setIsLoading(false);
+            }
+        }, 2000);
 
         const fetchStories = async () => {
-            setIsLoading(true);
+            if (!db) return;
             try {
                 const snap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').get();
                 const fetched: EditorialStory[] = [];
                 snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as EditorialStory));
                 
-                // If no stories exist, inject Genesis issue
-                if (fetched.length === 0) {
+                // Add Genesis as always present
+                if (!fetched.find(s => s.id === GENESIS_STORY.id)) {
                     fetched.push(GENESIS_STORY);
                 }
 
@@ -133,14 +144,16 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                     setActiveStory(null);
                 }
             } catch (e) {
-                console.error("Zine downlink failed", e);
-                setStories([GENESIS_STORY]); // Fallback
+                console.error("Zine query failed (likely missing index). Serving Genesis.");
+                setStories([GENESIS_STORY]);
             } finally {
+                clearTimeout(timeout);
                 setIsLoading(false);
             }
         };
 
         fetchStories();
+        return () => clearTimeout(timeout);
     }, [storyId]);
 
     const handleSelectMovie = (key: string) => {
@@ -151,7 +164,7 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
     if (isLoading) return <LoadingSpinner />;
 
     return (
-        <div className="flex flex-col min-h-screen text-white bg-black selection:bg-white selection:text-black transition-colors duration-1000">
+        <div className="flex flex-col min-h-screen text-white bg-[#050505] selection:bg-white selection:text-black transition-colors duration-1000">
             <SEO 
                 title={activeStory ? activeStory.title : "Crate Zine"} 
                 description={activeStory ? activeStory.subtitle : "Crate Zine: The Underground Cinematic Culture. News, Interviews, and The Daily Chart."}
@@ -161,48 +174,46 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
 
             <main className="flex-grow pt-24 pb-24 md:pb-32 px-4 md:px-12 relative overflow-hidden">
-                {/* Chromatic Glow Orbs */}
+                {/* Visual Flair: Dynamic Glow Orbs */}
                 <div 
-                    className="absolute top-0 right-0 w-[800px] h-[800px] blur-[150px] pointer-events-none rounded-full transition-all duration-[3000ms]" 
-                    style={{ backgroundColor: theme.glow }}
-                ></div>
-                <div 
-                    className="absolute bottom-0 left-0 w-[600px] h-[600px] blur-[150px] pointer-events-none rounded-full transition-all duration-[3000ms]" 
-                    style={{ backgroundColor: `${theme.accent}10` }}
+                    className="absolute top-[-20%] right-[-10%] w-[1000px] h-[1000px] blur-[200px] pointer-events-none rounded-full transition-all duration-[4000ms] opacity-30" 
+                    style={{ backgroundColor: theme.accent }}
                 ></div>
                 
-                <div className="max-w-7xl mx-auto relative z-10">
+                <div className="max-w-[1600px] mx-auto relative z-10">
                     {!activeStory ? (
-                        <div className="space-y-20">
-                            {/* Header Section */}
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-white/5 pb-20 gap-10">
-                                <div className="space-y-4">
-                                    <p className="font-black uppercase tracking-[0.6em] text-[10px] transition-colors duration-1000" style={{ color: theme.accent }}>
-                                        Issue #001 // Genesis Manifest
-                                    </p>
-                                    <div className="flex flex-col md:flex-row items-baseline gap-4 md:gap-6">
-                                        <h1 className="text-8xl md:text-[12rem] font-black uppercase tracking-tighter leading-none italic italic-text">CRATE</h1>
-                                        <h2 className="text-3xl md:text-5xl font-bold uppercase tracking-[0.5em] text-gray-800">zine</h2>
+                        <div className="space-y-32">
+                            {/* Massive Brutalist Header */}
+                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end border-b border-white/5 pb-24 gap-12">
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-0.5 w-12 transition-colors duration-1000" style={{ backgroundColor: theme.accent }}></div>
+                                        <p className="font-black uppercase tracking-[0.8em] text-[10px] transition-colors duration-1000" style={{ color: theme.accent }}>
+                                            {theme.label} // MANIFEST_CORE
+                                        </p>
                                     </div>
-                                    <p className="text-xl md:text-2xl text-gray-500 font-medium max-w-2xl leading-relaxed">
-                                        The high-voltage archive of the independent film circuit. Curation with technical precision.
+                                    <div className="flex flex-col md:flex-row items-baseline gap-4 md:gap-8">
+                                        <h1 className="text-8xl md:text-[15rem] font-black uppercase tracking-tighter leading-[0.75] italic italic-text">CRATE</h1>
+                                        <h2 className="text-4xl md:text-7xl font-bold uppercase tracking-[0.4em] text-gray-800">zine</h2>
+                                    </div>
+                                    <p className="text-2xl md:text-3xl text-gray-500 font-medium max-w-3xl leading-tight">
+                                        The high-voltage archive of the independent film circuit. Digital-industrial news and elite curation.
                                     </p>
                                 </div>
                                 
-                                {/* Top 10 Link Banner */}
-                                <div className="w-full md:w-80 group">
+                                <div className="w-full md:w-max group">
                                     <a 
                                         href="/top-ten" 
                                         onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/top-ten'); window.dispatchEvent(new Event('pushstate')); }}
-                                        className="block p-8 rounded-[2.5rem] shadow-2xl transform transition-all duration-1000 group-hover:scale-[1.03] group-hover:rotate-[-2deg]"
+                                        className="block p-10 rounded-[3rem] shadow-[0_40px_100px_rgba(0,0,0,1)] transform transition-all duration-1000 group-hover:scale-[1.05] group-hover:rotate-[-1deg] border border-white/10"
                                         style={{ backgroundColor: theme.accent }}
                                     >
-                                        <p className="text-white font-black uppercase text-[10px] tracking-[0.3em] mb-2 opacity-70">Live Ranking</p>
-                                        <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-none">THE TOP 10 TODAY</h3>
-                                        <div className="mt-6 flex items-center justify-between">
-                                            <span className="text-[9px] font-black text-white/50 uppercase tracking-widest">View The Chart</span>
-                                            <div className="w-8 h-8 bg-black/20 rounded-full flex items-center justify-center text-white">
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                                        <p className="text-white font-black uppercase text-[10px] tracking-[0.5em] mb-4 opacity-60">LIVE_RANKING</p>
+                                        <h3 className="text-4xl font-black text-white uppercase italic tracking-tighter leading-none">THE TOP 10 TODAY</h3>
+                                        <div className="mt-12 flex items-center justify-between border-t border-black/10 pt-6">
+                                            <span className="text-[11px] font-black text-black/40 uppercase tracking-[0.4em]">SYNC SESSION</span>
+                                            <div className="w-12 h-12 bg-black/20 rounded-full flex items-center justify-center text-white">
+                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                                             </div>
                                         </div>
                                     </a>
@@ -210,89 +221,93 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                             </div>
 
                             {/* Story Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-16">
                                 {stories.map(story => (
                                     <StoryCard key={story.id} story={story} themeColor={theme.accent} />
                                 ))}
                             </div>
                         </div>
                     ) : (
-                        <div className="max-w-4xl mx-auto animate-[fadeIn_0.6s_ease-out]">
+                        <div className="max-w-5xl mx-auto animate-[fadeIn_0.6s_ease-out] pb-20">
                             <button 
                                 onClick={() => { window.history.pushState({}, '', '/zine'); window.dispatchEvent(new Event('pushstate')); }}
-                                className="mb-10 flex items-center gap-3 text-gray-500 hover:text-white transition-colors uppercase font-black text-[10px] tracking-widest"
+                                className="mb-16 flex items-center gap-4 text-gray-600 hover:text-white transition-all uppercase font-black text-[10px] tracking-[0.6em] group"
                             >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                                Back to All Pieces
+                                <svg className="w-5 h-5 transition-transform group-hover:-translate-x-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                                Back to All Transmissions
                             </button>
 
-                            <article className="space-y-12">
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-white font-black px-3 py-1 rounded-full text-[9px] uppercase tracking-widest transition-colors duration-1000" style={{ backgroundColor: theme.accent }}>
+                            <article className="space-y-20">
+                                <div className="space-y-8">
+                                    <div className="flex items-center gap-6">
+                                        <span className="text-white font-black px-4 py-1.5 rounded-full text-[10px] uppercase tracking-[0.3em] transition-colors duration-1000 shadow-2xl" style={{ backgroundColor: theme.accent }}>
                                             {activeStory.type}
                                         </span>
-                                        <span className="text-[10px] text-gray-600 font-black uppercase tracking-widest">
-                                            {activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Recently Released'}
+                                        <span className="text-[10px] text-gray-700 font-black uppercase tracking-[0.5em]">
+                                            ENTRY_DATE // {activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '01.01.2025'}
                                         </span>
                                     </div>
-                                    <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none italic">{activeStory.title}</h1>
-                                    <p className="text-2xl md:text-3xl text-gray-400 font-medium leading-tight">{activeStory.subtitle}</p>
-                                    <div className="flex items-center gap-4 pt-4">
-                                        <div className="w-10 h-10 rounded-full flex items-center justify-center border text-white font-black text-[10px] transition-all duration-1000" style={{ backgroundColor: `${theme.accent}20`, borderColor: `${theme.accent}40`, color: theme.accent }}>C</div>
-                                        <p className="text-xs font-black uppercase tracking-widest text-gray-500">By {activeStory.author}</p>
+                                    <h1 className="text-6xl md:text-[9rem] font-black uppercase tracking-tighter leading-[0.8] italic">{activeStory.title}</h1>
+                                    <p className="text-3xl md:text-4xl text-gray-500 font-medium leading-tight max-w-3xl">{activeStory.subtitle}</p>
+                                    <div className="flex items-center gap-6 pt-8 border-t border-white/5">
+                                        <div className="w-14 h-14 rounded-full flex items-center justify-center border text-white font-black text-xs transition-all duration-1000 shadow-2xl" style={{ backgroundColor: `${theme.accent}10`, borderColor: `${theme.accent}30`, color: theme.accent }}>C</div>
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-600">Authorized Source</p>
+                                            <p className="text-sm font-black uppercase tracking-widest text-gray-400 mt-0.5">{activeStory.author}</p>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="aspect-video rounded-[3rem] overflow-hidden border border-white/10 shadow-[0_50px_100px_rgba(0,0,0,0.8)]">
+                                <div className="aspect-video rounded-[4rem] overflow-hidden border border-white/10 shadow-[0_80px_150px_rgba(0,0,0,1)] relative">
                                     <img src={activeStory.heroImage} className="w-full h-full object-cover" alt="" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                                 </div>
 
                                 <div 
-                                    className="prose prose-invert max-w-none text-gray-300 text-lg md:text-xl leading-relaxed font-medium space-y-6 zine-content-style"
+                                    className="zine-content-v4 max-w-none text-gray-400 text-xl md:text-2xl leading-relaxed font-medium space-y-10"
                                     dangerouslySetInnerHTML={{ __html: activeStory.content }}
                                 />
 
-                                <div className="pt-16 border-t border-white/5 space-y-8">
+                                <div className="pt-24 border-t border-white/5 space-y-12">
                                     {(activeStory.linkedMovieKey || activeStory.linkedBlockId) && (
                                         <div 
-                                            className="p-12 rounded-[3.5rem] border flex flex-col md:flex-row items-center justify-between gap-10 transition-all duration-1000"
+                                            className="p-16 rounded-[4rem] border flex flex-col md:flex-row items-center justify-between gap-12 transition-all duration-1000 shadow-2xl"
                                             style={{ backgroundColor: `${theme.accent}05`, borderColor: `${theme.accent}20` }}
                                         >
-                                            <div className="space-y-4 text-center md:text-left">
-                                                <h3 className="text-3xl font-black uppercase tracking-tighter italic leading-none">Ready for the Scene?</h3>
-                                                <p className="text-gray-400 text-lg max-w-md">Experience the films that power Crate Zine directly on our streaming infrastructure.</p>
+                                            <div className="space-y-6 text-center md:text-left">
+                                                <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic leading-none">Ready for the Session?</h3>
+                                                <p className="text-gray-500 text-xl max-w-md font-medium">Experience the films that power Crate Zine directly on our infrastructure.</p>
                                             </div>
                                             {activeStory.linkedMovieKey ? (
                                                 <button 
                                                     onClick={() => handleSelectMovie(activeStory.linkedMovieKey!)}
-                                                    className="text-white font-black px-12 py-5 rounded-2xl uppercase tracking-widest text-sm shadow-2xl transition-all hover:scale-105 active:scale-95"
+                                                    className="text-white font-black px-16 py-7 rounded-[2rem] uppercase tracking-[0.2em] text-sm shadow-[0_25px_60px_rgba(0,0,0,0.5)] transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
                                                     style={{ backgroundColor: theme.accent }}
                                                 >
-                                                    Watch "{movies[activeStory.linkedMovieKey!]?.title || 'Film'}"
+                                                    WATCH "{movies[activeStory.linkedMovieKey!]?.title || 'FILM'}"
                                                 </button>
                                             ) : (
                                                 <button 
                                                     onClick={() => window.location.href='/festival'}
-                                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-12 py-5 rounded-2xl uppercase tracking-widest text-sm shadow-2xl transition-all hover:scale-105 active:scale-95"
+                                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-16 py-7 rounded-[2rem] uppercase tracking-[0.2em] text-sm shadow-[0_25px_60px_rgba(0,0,0,0.5)] transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
                                                 >
-                                                    Access Festival Block
+                                                    ENTER FESTIVAL
                                                 </button>
                                             )}
                                         </div>
                                     )}
                                     
                                     {/* Direct Chart Access Link */}
-                                    <div className="bg-white/5 p-10 rounded-[3rem] border border-white/5 flex flex-col md:flex-row items-center justify-between gap-10 opacity-80 hover:opacity-100 transition-opacity">
-                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.4em] mb-2 transition-colors duration-1000" style={{ color: theme.accent }}>Platform Pulse</p>
-                                            <h4 className="text-2xl font-black uppercase tracking-tighter text-white">Discover the global leaderboard</h4>
+                                    <div className="bg-white/[0.02] p-12 rounded-[3.5rem] border border-white/5 flex flex-col md:flex-row items-center justify-between gap-12 opacity-60 hover:opacity-100 transition-opacity">
+                                         <div className="text-center md:text-left">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.5em] mb-4 transition-colors duration-1000" style={{ color: theme.accent }}>PLATFORM_PULSE</p>
+                                            <h4 className="text-3xl font-black uppercase tracking-tighter text-white">DISCOVER THE GLOBAL LEADERBOARD</h4>
                                          </div>
                                          <button 
                                             onClick={() => window.location.href='/top-ten'}
-                                            className="px-8 py-3 bg-white text-black font-black rounded-xl uppercase text-[10px] tracking-widest"
+                                            className="px-10 py-4 bg-white text-black font-black rounded-2xl uppercase text-[10px] tracking-[0.3em] hover:bg-red-600 hover:text-white transition-all shadow-2xl"
                                          >
-                                            The Top 10 Chart
+                                            THE TOP 10
                                          </button>
                                     </div>
                                 </div>
@@ -307,16 +322,60 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
             <BottomNavBar onSearchClick={() => {}} />
             <style>{`
                 .italic-text { font-style: italic; }
-                .zine-content-style h3 {
+                
+                .zine-content-v4 h3 {
                     font-weight: 900;
                     text-transform: uppercase;
-                    letter-spacing: -0.02em;
+                    letter-spacing: -0.04em;
                     color: white;
-                    margin-top: 3rem;
-                    font-size: 2rem;
+                    margin-top: 5rem;
+                    font-size: 3rem;
+                    line-height: 0.9;
+                    font-style: italic;
                 }
-                .zine-content-style p {
-                    margin-bottom: 1.5rem;
+
+                .zine-content-v4 p {
+                    margin-bottom: 2rem;
+                }
+
+                .zine-content-v4 strong {
+                    color: white;
+                    font-weight: 900;
+                }
+
+                .dropcap {
+                    float: left;
+                    font-size: 6rem;
+                    line-height: 1;
+                    font-weight: 900;
+                    margin-right: 1.5rem;
+                    margin-bottom: -0.5rem;
+                    color: #ef4444;
+                    font-style: italic;
+                }
+
+                .industrial-quote {
+                    background: rgba(255,255,255,0.03);
+                    border-left: 8px solid #ef4444;
+                    padding: 3rem;
+                    font-size: 2.5rem;
+                    font-weight: 900;
+                    text-transform: uppercase;
+                    letter-spacing: -0.05em;
+                    line-height: 1;
+                    color: white;
+                    margin: 4rem 0;
+                    font-style: italic;
+                }
+
+                .signature {
+                    font-weight: 900;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5em;
+                    font-size: 0.75rem;
+                    color: #666;
+                    margin-top: 6rem;
+                    text-align: center;
                 }
             `}</style>
         </div>

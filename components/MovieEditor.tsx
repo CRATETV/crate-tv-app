@@ -132,6 +132,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
+    // Synthesis is possible if we have the three core narrative pillars
+    const canSynthesize = formData && formData.title && formData.synopsis && formData.director;
+
     return (
         <div className="space-y-6 pb-20">
             {!formData ? (
@@ -186,7 +189,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             <p className="text-[10px] text-gray-600 font-black uppercase mt-2 tracking-[0.4em]">UUID: {formData.key}</p>
                         </div>
                         <div className="flex gap-4">
-                            {!formData.key.startsWith('movie_') && (
+                            {canSynthesize && (
                                 <button onClick={() => setShowSocialKit(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl transition-all flex items-center gap-2">
                                     <span>✨</span> Synthesize Marketing Kit
                                 </button>
@@ -282,6 +285,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                     title={formData.title} 
                     synopsis={formData.synopsis} 
                     director={formData.director} 
+                    poster={formData.poster}
                     onClose={() => setShowSocialKit(false)} 
                 />
             )}

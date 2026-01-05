@@ -82,6 +82,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
       holidayName: settings.holidayName || 'Cratemas',
       holidayTagline: settings.holidayTagline || '',
       holidayTheme: settings.holidayTheme || 'generic',
+      maintenanceMode: settings.maintenanceMode || false,
       businessEmail: settings.businessEmail || 'studio@cratetv.net',
       technicalEmail: settings.technicalEmail || 'cratetiv@gmail.com',
       emailSignature: settings.emailSignature || "Best,\nThe Crate TV Studio Team"
@@ -98,6 +99,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
             holidayName: settings.holidayName || 'Cratemas',
             holidayTagline: settings.holidayTagline || '',
             holidayTheme: settings.holidayTheme || 'generic',
+            maintenanceMode: settings.maintenanceMode || false,
             businessEmail: settings.businessEmail || 'studio@cratetv.net',
             technicalEmail: settings.technicalEmail || 'cratetiv@gmail.com',
             emailSignature: settings.emailSignature || "Best,\nThe Crate TV Studio Team"
@@ -122,8 +124,8 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
     onSave(newCats);
   };
 
-  const handleHolidayToggle = async (active: boolean) => {
-      const nextSettings = { ...holidaySettings, isHolidayModeActive: active };
+  const handleToggle = async (field: keyof SiteSettings, value: boolean) => {
+      const nextSettings = { ...holidaySettings, [field]: value };
       setHolidaySettings(nextSettings);
       
       const password = sessionStorage.getItem('adminPassword');
@@ -146,7 +148,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password, type: 'settings', data: holidaySettings }),
         });
-        if (res.ok) alert("Identity profile updated.");
+        if (res.ok) alert("Settings updated.");
     } catch (err) {
         alert("Sync failed.");
     }
@@ -164,7 +166,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                   <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
                     <span className="text-[10px] font-black uppercase text-gray-500">Live</span>
                     <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" checked={holidaySettings.isHolidayModeActive} onChange={(e) => handleHolidayToggle(e.target.checked)} className="sr-only peer" />
+                        <input type="checkbox" checked={holidaySettings.isHolidayModeActive} onChange={(e) => handleToggle('isHolidayModeActive', e.target.checked)} className="sr-only peer" />
                         <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                     </label>
                   </div>
@@ -183,50 +185,13 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
               </div>
           </div>
 
-          <div className="bg-gray-900 border border-red-500/20 p-8 rounded-[2rem] shadow-xl">
-              <h3 className="text-2xl font-black text-red-500 uppercase tracking-tighter mb-2">Identity Hub</h3>
-              <p className="text-gray-400 text-sm mb-8">Maintain separate professional and operational channels.</p>
-              
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="form-label">Public Business Email</label>
-                        <input 
-                            type="email" 
-                            value={holidaySettings.businessEmail} 
-                            onChange={(e) => setHolidaySettings({...holidaySettings, businessEmail: e.target.value})}
-                            placeholder="e.g. studio@cratetv.net" 
-                            className="form-input !bg-black/40 border-white/10" 
-                        />
-                    </div>
-                    <div>
-                        <label className="form-label">Private Technical Email</label>
-                        <input 
-                            type="email" 
-                            value={holidaySettings.technicalEmail} 
-                            onChange={(e) => setHolidaySettings({...holidaySettings, technicalEmail: e.target.value})}
-                            placeholder="e.g. cratetiv@gmail.com" 
-                            className="form-input !bg-black/40 border-white/10" 
-                        />
-                    </div>
-                </div>
-                
-                <div>
-                    <label className="form-label">Global Email Signature</label>
-                    <textarea 
-                        value={holidaySettings.emailSignature} 
-                        onChange={(e) => setHolidaySettings({...holidaySettings, emailSignature: e.target.value})}
-                        placeholder="Your professional sign-off..." 
-                        className="form-input !bg-black/40 border-white/10 h-32 font-mono text-xs" 
-                    />
-                    <p className="text-[8px] text-gray-600 uppercase font-black mt-2 tracking-widest">Automatically appended to all outbound dispatch and mail replies.</p>
-                </div>
-
-                <div className="bg-red-600/5 p-4 rounded-xl border border-red-500/10">
-                    <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">⚠️ Multi-Route Verification</p>
-                    <p className="text-[9px] text-gray-500 mt-1">Professional replies will appear as studio@cratetv.net via Gmail.</p>
-                </div>
-                <button onClick={saveIdentityDetails} className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl shadow-lg transition-all">Publish Branding Updates</button>
+          <div className="bg-gray-900 border border-white/5 p-8 rounded-[2rem] shadow-xl flex items-center justify-center text-center">
+              <div className="space-y-4">
+                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto border border-white/10">
+                      <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                  </div>
+                  <p className="text-gray-500 font-black uppercase text-[10px] tracking-widest">Global Settings Core</p>
+                  <p className="text-sm text-gray-400 max-w-xs mx-auto">Specific branding and operational metadata is currently handled via the main infrastructure manifest.</p>
               </div>
           </div>
       </div>

@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const catalogList = Object.values(catalog).map((m: any) => `"${m.title}" (Director: ${m.director}, Synopsis: ${m.synopsis.slice(0,100)}...)`).join('\n');
 
     const prompt = `
-        You are the Head Curator at Crate TV. We need to send a personalized recommendation to ${userName || 'a valued viewer'}.
+        You are the Editor-in-Chief of Crate Zine. We need to send a highly prestigious, curatorial recommendation to ${userName || 'a node in our network'}.
         
         THEIR RECENT MANIFEST (What they have already watched):
         ${watchedTitles.length > 0 ? watchedTitles.join(', ') : 'No films watched yet.'}
@@ -25,14 +25,14 @@ export async function POST(request: Request) {
         
         OBJECTIVE:
         1. Identify the 1 or 2 films from our catalog they haven't watched but would LOVE based on their history.
-        2. Draft a professional, slightly elite, and encouraging email body.
-        3. Explain the curatorial logic (e.g., "Because you resonated with the grit of 'Power Trip'...")
-        4. Refer to Crate TV as a lifeboat for champions.
+        2. Draft a dispatch that feels like an exclusive editorial from "Crate Zine."
+        3. Explain the curatorial logic using terms like "Resonated," "Aesthetic Alignment," and "Technical Pedigree."
+        4. Refer to Crate TV as a high-density media infrastructure.
         
         FORMAT:
         Respond with ONLY a JSON object:
         {
-            "subject": "Elite Recommendation for ${userName || 'Your Next Session'}",
+            "subject": "CRATE ZINE // Curatorial Alignment: ${userName || 'Active Node'}",
             "draft": "[Full body text with line breaks]"
         }
     `;

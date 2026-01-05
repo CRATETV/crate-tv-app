@@ -12,17 +12,19 @@ export async function POST(request: Request) {
     }
 
     const prompt = `
-        You are the Executive Producer for Crate TV. Draft a professional, prestigious, and slightly elite response to the following message.
-        From: ${senderName || 'Sender'}
+        You are the Editor-in-Chief of Crate Zine. Draft a professional, prestigious, and slightly elite response to the following transmission.
+        From: ${senderName || 'Active Node'}
         Category: ${type}
-        Incoming Message Context: "${context}"
+        Incoming Payload Context: "${context}"
         
         Requirements:
-        - Tone: Sophisticated, filmmaker-first, encouraging but highly professional.
+        - Tone: Sophisticated, filmmaker-first, encouraging but highly industrial/professional.
+        - Strategic Objective: Re-establish the "Habit Loop." Mention that the "Daily Chart" has been recalculated.
         - Start with "Hello ${senderName || 'there'},"
-        - Refer to Crate TV as a high-density media infrastructure for independent film.
-        - Keep it concise (under 250 words).
-        - End with "Best, \nThe Crate TV Studio Team"
+        - Refer to Crate Zine as the definitive digital record of the independent cinematic underground.
+        - Keep it concise (under 200 words).
+        - Use "High-Velocity Hooks": intriguing questions about their work or specific aesthetic observations.
+        - End with "In pursuit of the work, \nThe Crate Zine Editorial Team"
         
         Respond with ONLY the plain text of the email body.
     `;

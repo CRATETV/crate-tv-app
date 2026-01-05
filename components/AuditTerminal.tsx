@@ -14,7 +14,7 @@ const AuditTerminal: React.FC = () => {
 
         const unsubscribe = db.collection('audit_logs')
             .orderBy('timestamp', 'desc')
-            .limit(100)
+            .limit(200)
             .onSnapshot(snap => {
                 const fetched: AuditEntry[] = [];
                 snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as AuditEntry));
@@ -35,6 +35,27 @@ const AuditTerminal: React.FC = () => {
         }
     };
 
+    const handleExportCSV = () => {
+        const headers = ["ID", "Timestamp", "Role", "Type", "Action", "Details"];
+        const rows = logs.map(log => [
+            log.id,
+            log.timestamp?.seconds ? new Date(log.timestamp.seconds * 1000).toISOString() : '---',
+            log.role,
+            log.type,
+            log.action,
+            `"${log.details.replace(/"/g, '""')}"`
+        ]);
+
+        const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `CrateTV_AuditLog_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     if (isLoading) return <LoadingSpinner />;
 
     return (
@@ -47,9 +68,17 @@ const AuditTerminal: React.FC = () => {
                     </div>
                     <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-2">Immutable modification history for the global infrastructure.</p>
                 </div>
-                <div className="flex items-center gap-3 text-[10px] font-black text-gray-700 uppercase tracking-widest">
-                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                    Immutable Stream Active
+                <div className="flex items-center gap-4">
+                    <button 
+                        onClick={handleExportCSV}
+                        className="bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-black py-2.5 px-6 rounded-xl transition-all uppercase text-[10px] tracking-widest border border-white/10"
+                    >
+                        Export Manifest (.csv)
+                    </button>
+                    <div className="flex items-center gap-3 text-[10px] font-black text-gray-700 uppercase tracking-widest">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        Immutable Stream Active
+                    </div>
                 </div>
             </div>
 

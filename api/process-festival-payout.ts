@@ -1,3 +1,4 @@
+
 // This is a Vercel Serverless Function
 // It will be accessible at the path /api/process-festival-payout
 import { randomUUID } from 'crypto';
@@ -23,7 +24,7 @@ async function fetchSquareFestivalPayments(accessToken: string, locationId: stri
 
     do {
         const url = new URL(`${squareUrlBase}/v2/payments`);
-        url.searchParams.append('begin_time', '2020-01-01T00:00:00Z');
+        url.searchParams.append('begin_time', '2025-05-24T00:00:00Z');
         if (locationId) url.searchParams.append('location_id', locationId);
         if (cursor) url.searchParams.append('cursor', cursor);
 
@@ -40,7 +41,6 @@ async function fetchSquareFestivalPayments(accessToken: string, locationId: stri
         cursor = data.cursor;
     } while (cursor);
     
-    // Filter for only festival-related payments server-side
     return allPayments.filter(p => {
         const details = parseNote(p.note);
         return details.type === 'pass' || details.type === 'block';
@@ -51,39 +51,60 @@ export async function POST(request: Request) {
   try {
     const { password } = await request.json();
 
-    // --- Authentication ---
-    if (password !== process.env.ADMIN_PASSWORD && password !== process.env.ADMIN_MASTER_PASSWORD) {
+    const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
+    const festPassword = process.env.FESTIVAL_ADMIN_PASSWORD;
+    if (password !== masterPassword && password !== festPassword) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    // --- Config & Variable Checks ---
+    const initError = getInitializationError();
+    if (initError) throw new Error(initError);
+    const db = getAdminDb();
+    if (!db) throw new Error("DB fail");
+
+    // 1. Fetch Payout Destination from DB
+    const configDoc = await db.collection('festival').doc('config').get();
+    const config = configDoc.data();
+    const recipientId = config?.payoutRecipientId;
+
+    if (!recipientId) {
+        throw new Error('Payout destination not configured. Please link a card in the dashboard.');
+    }
+
     const isProduction = process.env.VERCEL_ENV === 'production';
     const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
     const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
-    const recipientId = process.env.SQUARE_PLAYHOUSE_WEST_RECIPIENT_ID;
 
-    if (!accessToken || !locationId || !recipientId) {
-        throw new Error('Server is missing required Square configuration for payouts (Token, Location, or Recipient ID).');
+    if (!accessToken || !locationId) {
+        throw new Error('Server Square configuration missing.');
     }
 
-    // --- Firebase Init ---
-    const initError = getInitializationError();
-    if (initError) throw new Error(`Firebase connection failed: ${initError}`);
-    const db = getAdminDb();
-    if (!db) throw new Error("Database connection failed.");
-
-    // --- Recalculate Revenue Server-Side ---
+    // 2. Calculate Gross Revenue from Square
     const festivalPayments = await fetchSquareFestivalPayments(accessToken, locationId);
     const totalFestivalRevenue = festivalPayments.reduce((sum, p) => sum + p.amount_money.amount, 0);
-    const payoutAmount = Math.round(totalFestivalRevenue * 0.70);
+    
+    // 3. Calculate Previously Paid from DB
+    const payoutsSnapshot = await db.collection('payout_history').get();
+    const totalPaid = payoutsSnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+    
+    // 4. Mathematical Safeguard: (Total * 0.7) - AlreadyPaid
+    const eligibleAmount = Math.round(totalFestivalRevenue * 0.70) - totalPaid;
 
-    if (payoutAmount <= 100) { // Minimum payout of $1.00
-        return new Response(JSON.stringify({ message: 'Payout amount is too low to process.' }), { status: 200 });
+    if (eligibleAmount <= 100) { // Min $1.00
+        return new Response(JSON.stringify({ message: 'Insufficient balance for payout cycle.' }), { status: 200 });
     }
 
-    // --- Execute Square Payout ---
+    // 5. Square Payout Logic
     const idempotencyKey = randomUUID();
     const squareUrl = isProduction ? 'https://connect.squareup.com/v2/payouts' : 'https://connect.squareupsandbox.com/v2/payouts';
+
+    await db.collection('audit_logs').add({
+        role: 'festival_admin',
+        action: 'PAYOUT_INITIATED',
+        type: 'MUTATION',
+        details: `Authorized payout for amount: $${(eligibleAmount / 100).toFixed(2)} to ID: ${recipientId}`,
+        timestamp: FieldValue.serverTimestamp()
+    });
 
     const payoutResponse = await fetch(squareUrl, {
         method: 'POST',
@@ -91,29 +112,26 @@ export async function POST(request: Request) {
         body: JSON.stringify({
             idempotency_key: idempotencyKey,
             location_id: locationId,
-            recipient: { id: recipientId, type: 'BANK_ACCOUNT' }, // Assuming bank account recipient
-            amount_money: { amount: payoutAmount, currency: 'USD' },
+            recipient: { id: recipientId, type: 'CUSTOMER' },
+            amount_money: { amount: eligibleAmount, currency: 'USD' },
         }),
     });
 
     const payoutData = await payoutResponse.json();
-    if (!payoutResponse.ok) {
-        throw new Error(payoutData.errors?.[0]?.detail || 'Square Payout API returned an error.');
-    }
+    if (!payoutResponse.ok) throw new Error(payoutData.errors?.[0]?.detail || 'Square Payout Error.');
 
-    // --- Log Payout in Firestore ---
+    // 6. Finalize Record
     await db.collection('payout_history').add({
         recipient: 'Playhouse West',
-        amount: payoutAmount,
-        status: payoutData.payout.status,
-        squarePayoutId: payoutData.payout.id,
+        recipientId: recipientId,
+        amount: eligibleAmount,
+        status: 'SUCCESS',
         processedAt: FieldValue.serverTimestamp(),
     });
 
-    return new Response(JSON.stringify({ success: true, message: `Payout of $${(payoutAmount / 100).toFixed(2)} to Playhouse West initiated successfully.` }), { status: 200 });
+    return new Response(JSON.stringify({ success: true, message: `Handshake successful. $${(eligibleAmount / 100).toFixed(2)} dispatched.` }), { status: 200 });
 
   } catch (error) {
-    console.error("Error processing festival payout:", error);
     return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
   }
 }

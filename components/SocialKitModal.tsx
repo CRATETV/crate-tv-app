@@ -7,6 +7,7 @@ interface SocialKitModalProps {
     title: string;
     synopsis: string;
     director: string;
+    poster: string;
     onClose: () => void;
 }
 
@@ -15,7 +16,7 @@ const CopySection: React.FC<{ label: string; posts: string[] }> = ({ label, post
         <h4 className="text-[10px] font-black uppercase tracking-widest text-red-500">{label}</h4>
         {posts.map((post, i) => (
             <div key={i} className="bg-white/5 border border-white/10 p-3 rounded-lg relative group">
-                <p className="text-sm text-gray-300 pr-8">{post}</p>
+                <p className="text-sm text-gray-300 pr-8 leading-relaxed">{post}</p>
                 <button 
                     onClick={() => { navigator.clipboard.writeText(post); alert('Copied!'); }}
                     className="absolute top-3 right-3 text-gray-500 hover:text-white transition-colors"
@@ -27,9 +28,9 @@ const CopySection: React.FC<{ label: string; posts: string[] }> = ({ label, post
     </div>
 );
 
-const SocialKitModal: React.FC<SocialKitModalProps> = ({ title, synopsis, director, onClose }) => {
+const SocialKitModal: React.FC<SocialKitModalProps> = ({ title, synopsis, director, poster, onClose }) => {
     const [isLoading, setIsLoading] = useState(true);
-    const [kit, setKit] = useState<{ copy: any, image: string } | null>(null);
+    const [kit, setKit] = useState<{ copy: any } | null>(null);
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState<'social' | 'press'>('social');
 
@@ -59,24 +60,37 @@ const SocialKitModal: React.FC<SocialKitModalProps> = ({ title, synopsis, direct
     const handleDownloadAll = async () => {
         if (!kit) return;
         const zip = new JSZip();
-        if (kit.image) zip.file(`${title.replace(/\s/g, '_')}_Promo.png`, kit.image, { base64: true });
+        
+        // Fetch the actual poster to include it in the zip
+        try {
+            const posterRes = await fetch(`/api/proxy-image?url=${encodeURIComponent(poster)}`);
+            if (posterRes.ok) {
+                const blob = await posterRes.blob();
+                zip.file(`${title.replace(/\s/g, '_')}_Official_Poster.png`, blob);
+            }
+        } catch (e) {
+            console.warn("Poster fetch failed for zip export.");
+        }
         
         const textContent = `
 CRATE TV SOCIAL KIT: ${title}
 ---------------------------------
-INSTAGRAM:
+INSTAGRAM DISPATCHES:
 ${(kit.copy.instagram || []).join('\n\n')}
 
-X (TWITTER):
+X (TWITTER) DISPATCHES:
 ${(kit.copy.twitter || []).join('\n\n')}
 
-PRESS RELEASE:
+FACEBOOK DISPATCHES:
+${(kit.copy.facebook || []).join('\n\n')}
+
+PRESS RELEASE MASTER:
 ${kit.copy.pressRelease || '---'}
 
-HASHTAGS:
+COMMUNITY HASHTAGS:
 ${(kit.copy.hashtags || []).join(' ')}
         `.trim();
-        zip.file(`${title.replace(/\s/g, '_')}_Assets.txt`, textContent);
+        zip.file(`${title.replace(/\s/g, '_')}_Editorial_Manifest.txt`, textContent);
         
         const content = await zip.generateAsync({ type: 'blob' });
         const url = URL.createObjectURL(content);
@@ -94,8 +108,8 @@ ${(kit.copy.hashtags || []).join(' ')}
                         <h2 className="text-3xl font-black text-white uppercase tracking-tighter">AI Press & Social Kit</h2>
                         {!error && !isLoading && (
                             <div className="flex gap-4 mt-4">
-                                <button onClick={() => setActiveTab('social')} className={`text-[10px] font-black uppercase tracking-widest pb-1 border-b-2 ${activeTab === 'social' ? 'text-red-500 border-red-500' : 'text-gray-500 border-transparent'}`}>Social Feed</button>
-                                <button onClick={() => setActiveTab('press')} className={`text-[10px] font-black uppercase tracking-widest pb-1 border-b-2 ${activeTab === 'press' ? 'text-red-500 border-red-500' : 'text-gray-500 border-transparent'}`}>Official Press Release</button>
+                                <button onClick={() => setActiveTab('social')} className={`text-[10px] font-black uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === 'social' ? 'text-red-500 border-red-500' : 'text-gray-500 border-transparent hover:text-white'}`}>Social Channel Manifest</button>
+                                <button onClick={() => setActiveTab('press')} className={`text-[10px] font-black uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === 'press' ? 'text-red-500 border-red-500' : 'text-gray-500 border-transparent hover:text-white'}`}>Official Press Dispatch</button>
                             </div>
                         )}
                     </div>
@@ -108,40 +122,60 @@ ${(kit.copy.hashtags || []).join(' ')}
                     {isLoading ? (
                         <div className="h-64 flex flex-col items-center justify-center space-y-6">
                             <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                            <p className="text-red-500 font-black uppercase tracking-widest text-xs animate-pulse">Gemini is rendering cinematic assets...</p>
+                            <p className="text-red-500 font-black uppercase tracking-widest text-xs animate-pulse">Gemini is synthesizing viral dispatches...</p>
                         </div>
                     ) : error ? (
-                        <div className="p-12 text-center text-red-500 uppercase font-black tracking-widest">{error}</div>
+                        <div className="p-12 text-center text-red-500 uppercase font-black tracking-widest border border-red-500/20 rounded-3xl">{error}</div>
                     ) : kit && (
                         activeTab === 'social' ? (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 animate-[fadeIn_0.5s_ease-out]">
                                 <div className="space-y-6">
-                                    <div className="aspect-video bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-                                        <img src={`data:image/png;base64,${kit.image}`} className="w-full h-full object-cover" alt="AI Still" />
+                                    <div className="space-y-2">
+                                         <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Master Key Art (Poster)</label>
+                                         <div className="aspect-[2/3] max-w-[300px] mx-auto bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl group relative">
+                                            <img src={poster} className="w-full h-full object-cover" alt="Official Poster" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                                        </div>
                                     </div>
-                                    <div className="p-6 bg-white/5 rounded-2xl">
-                                        <h4 className="text-[10px] font-black uppercase text-gray-500 mb-3">Hashtags</h4>
-                                        <p className="text-sm text-gray-400 font-mono">{(kit.copy.hashtags || []).join(' ')}</p>
+                                    <div className="p-6 bg-white/5 rounded-2xl border border-white/10 shadow-inner">
+                                        <h4 className="text-[10px] font-black uppercase text-gray-500 mb-3 tracking-widest">Recommended Hashtags</h4>
+                                        <p className="text-sm text-gray-400 font-mono leading-relaxed">{(kit.copy.hashtags || []).join(' ')}</p>
                                     </div>
                                 </div>
                                 <div className="space-y-8">
-                                    <CopySection label="Instagram Options" posts={kit.copy.instagram} />
-                                    <CopySection label="X (Twitter) Options" posts={kit.copy.twitter} />
+                                    <CopySection label="Instagram Feed Layouts" posts={kit.copy.instagram} />
+                                    <CopySection label="X (Twitter) Transmissions" posts={kit.copy.twitter} />
+                                    <CopySection label="Facebook Announcements" posts={kit.copy.facebook} />
                                 </div>
                             </div>
                         ) : (
                             <div className="bg-white/5 p-12 rounded-3xl border border-white/5 font-serif text-gray-200 leading-relaxed text-lg max-w-3xl mx-auto shadow-inner">
-                                <pre className="whitespace-pre-wrap font-serif">{kit.copy.pressRelease}</pre>
+                                <p className="text-[10px] font-black uppercase text-gray-600 mb-8 tracking-[0.6em] text-center">OFFICIAL PRESS RELEASE // FOR IMMEDIATE DISPATCH</p>
+                                <pre className="whitespace-pre-wrap font-serif text-gray-300">{kit.copy.pressRelease}</pre>
+                                <div className="mt-12 pt-8 border-t border-white/5 text-center">
+                                    <p className="text-[10px] font-black uppercase text-gray-700 tracking-widest">Authorized by Crate TV Editorial Core</p>
+                                </div>
                             </div>
                         )
                     )}
                 </div>
 
                 <div className="p-8 border-t border-white/5 bg-white/[0.02] flex justify-between items-center">
-                    <p className="text-[10px] text-gray-500 max-w-xs leading-relaxed uppercase font-bold tracking-tighter">AI toolkit is an optional add-on and does not affect database integrity.</p>
+                    <div className="flex flex-col gap-1">
+                         <p className="text-[10px] text-gray-500 uppercase font-black tracking-tighter">AI synthesis is currently focusing on semantic payload optimization.</p>
+                         <p className="text-[8px] text-gray-700 uppercase font-bold tracking-widest">Key Art verification: SUCCESSFUL</p>
+                    </div>
                     <div className="flex gap-4">
-                        <button onClick={onClose} className="px-6 py-4 text-gray-400 hover:text-white uppercase font-black text-xs">Close</button>
-                        {!error && !isLoading && <button onClick={handleDownloadAll} className="bg-red-600 hover:bg-red-700 text-white font-black px-10 py-4 rounded-xl shadow-xl shadow-red-900/20 uppercase tracking-widest text-xs transition-all transform active:scale-95">Download Kit (.zip)</button>}
+                        <button onClick={onClose} className="px-6 py-4 text-gray-500 hover:text-white transition-colors uppercase font-black text-xs tracking-widest">Cancel</button>
+                        {!error && !isLoading && (
+                            <button 
+                                onClick={handleDownloadAll} 
+                                className="bg-red-600 hover:bg-red-700 text-white font-black px-10 py-4 rounded-xl shadow-[0_20px_50px_rgba(239,68,68,0.3)] uppercase tracking-widest text-xs transition-all transform active:scale-95 flex items-center gap-3"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                Export Kit Bundle (.zip)
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

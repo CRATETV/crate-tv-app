@@ -65,7 +65,8 @@ export async function POST(request: Request) {
         
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
         const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
-        if (password !== primaryAdminPassword && password !== masterPassword) {
+        const festPassword = process.env.FESTIVAL_ADMIN_PASSWORD;
+        if (password !== primaryAdminPassword && password !== masterPassword && password !== festPassword) {
             throw new Error('Unauthorized');
         }
 
@@ -87,8 +88,7 @@ export async function POST(request: Request) {
             moviesSnapshot, 
             viewsSnapshot, 
             usersSnapshot, 
-            adminPayoutsSnapshot, 
-            billSavingsSnapshot,
+            payoutHistorySnapshot,
             presenceSnapshot,
             recentEventsSnapshot
         ] = await Promise.all([
@@ -96,9 +96,8 @@ export async function POST(request: Request) {
             db.collection('movies').get(),
             db.collection('view_counts').get(),
             db.collection('users').get(),
-            db.collection('admin_payouts').where('payoutDate', '>=', resetTimestamp).get(),
-            db.collection('bill_savings_transactions').where('transactionDate', '>=', resetTimestamp).get(),
-            db.collection('presence').where('lastActive', '>=', oneHourAgo).get(), // Active in last hour
+            db.collection('payout_history').where('processedAt', '>=', resetTimestamp).get(),
+            db.collection('presence').where('lastActive', '>=', oneHourAgo).get(),
             db.collection('traffic_events').where('timestamp', '>=', oneHourAgo).get()
         ]);
 
@@ -108,15 +107,12 @@ export async function POST(request: Request) {
         const viewCounts: Record<string, number> = {};
         viewsSnapshot.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count) || 0; });
         
-        const watchlistCounts: Record<string, number> = {};
         const allUsers: { email: string }[] = [];
-
         usersSnapshot.forEach(doc => {
             const userData = doc.data() as User;
             allUsers.push({ email: userData.email || 'Anonymous' });
         });
 
-        // DETECT SPIKES
         const spikeMap: Record<string, number> = {};
         recentEventsSnapshot.forEach(doc => {
             const ev = doc.data();
@@ -137,20 +133,36 @@ export async function POST(request: Request) {
         let totalSales = 0;
         let festivalRevenue = 0;
         let crateFestRevenue = 0;
+        
+        let passUnits = 0;
+        let blockUnits = 0;
+        const salesByBlock: Record<string, { units: number, revenue: number }> = {};
 
         allPayments.forEach(p => {
             const details = parseNote(p.note);
+            const amount = p.amount_money.amount;
+            
             if (details.type === 'donation' && details.title) {
-                totalDonations += p.amount_money.amount;
-                donationsByFilm[details.title] = (donationsByFilm[details.title] || 0) + p.amount_money.amount;
+                totalDonations += amount;
+                donationsByFilm[details.title] = (donationsByFilm[details.title] || 0) + amount;
+            } else if (details.type === 'pass') {
+                festivalRevenue += amount;
+                passUnits++;
+            } else if (details.type === 'block' && details.blockTitle) {
+                festivalRevenue += amount;
+                blockUnits++;
+                if (!salesByBlock[details.blockTitle]) salesByBlock[details.blockTitle] = { units: 0, revenue: 0 };
+                salesByBlock[details.blockTitle].units++;
+                salesByBlock[details.blockTitle].revenue += amount;
             } else if (['movie', 'subscription'].includes(details.type)) {
-                totalSales += p.amount_money.amount;
-            } else if (['pass', 'block'].includes(details.type)) {
-                festivalRevenue += p.amount_money.amount;
+                totalSales += amount;
             } else if (details.type === 'crateFestPass') {
-                crateFestRevenue += p.amount_money.amount;
+                crateFestRevenue += amount;
             }
         });
+
+        // Calculate total previously paid out to partners
+        const totalAdminPayouts = payoutHistorySnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
 
         const totalRevenue = totalDonations + totalSales + festivalRevenue + crateFestRevenue;
         const totalCrateTvRevenue = (totalDonations * DONATION_PLATFORM_CUT) + (festivalRevenue * FESTIVAL_PLATFORM_CUT) + totalSales + crateFestRevenue;
@@ -172,8 +184,8 @@ export async function POST(request: Request) {
         const analyticsData: AnalyticsData = {
             totalRevenue, 
             totalCrateTvRevenue, 
-            totalAdminPayouts: 0, 
-            pastAdminPayouts: [], 
+            totalAdminPayouts, 
+            pastAdminPayouts: [], // History handled in AdminPayout
             billSavingsPotTotal: 0, 
             billSavingsTransactions: [], 
             totalUsers: allUsers.length, 
@@ -192,9 +204,9 @@ export async function POST(request: Request) {
             crateTvMerchCut: 0, 
             merchSales: {},
             totalFestivalRevenue: festivalRevenue, 
-            festivalPassSales: { units: 0, revenue: 0 }, 
-            festivalBlockSales: { units: 0, revenue: 0 }, 
-            salesByBlock: {}, 
+            festivalPassSales: { units: passUnits, revenue: festivalRevenue - (blockUnits * 1000) }, // Approximate
+            festivalBlockSales: { units: blockUnits, revenue: blockUnits * 1000 },
+            salesByBlock, 
             festivalUsers: [],
             crateFestRevenue, 
             liveNodes: presenceSnapshot.size,

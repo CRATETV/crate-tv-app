@@ -23,6 +23,26 @@ import NowStreamingBanner from './components/NowPlayingBanner';
 import CrateFestBanner from './components/CrateFestBanner';
 import firebase from 'firebase/compat/app';
 
+const MaintenanceScreen: React.FC = () => (
+    <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.05)_0%,transparent_70%)]"></div>
+        <div className="relative z-10 space-y-10 max-w-lg">
+            <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-40 mx-auto opacity-20" alt="Crate" />
+            <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 bg-amber-600/10 border border-amber-500/20 px-4 py-1 rounded-full">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <p className="text-amber-500 font-black uppercase tracking-widest text-[9px]">Maintenance Protocol Active</p>
+                </div>
+                <h2 className="text-5xl font-black text-white uppercase tracking-tighter italic">Optimizing the Stream.</h2>
+                <p className="text-gray-500 font-medium leading-relaxed">Our engineering core is currently performing scheduled infrastructure upgrades. We will be back online shortly.</p>
+            </div>
+            <div className="pt-8 border-t border-white/5">
+                <p className="text-[10px] text-gray-700 font-black uppercase tracking-[0.4em]">Crate TV Infrastructure // V4.0</p>
+            </div>
+        </div>
+    </div>
+);
+
 const FestivalActiveBanner: React.FC<{ onClose: () => void }> = ({ onClose }) => (
     <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-3 flex items-center justify-center gap-4 shadow-lg h-12">
         <div className="flex items-center gap-2">
@@ -72,11 +92,10 @@ const App: React.FC = () => {
         };
 
         updatePresence();
-        const interval = setInterval(updatePresence, 30000); // Heartbeat every 30s
+        const interval = setInterval(updatePresence, 30000); 
 
         return () => {
             clearInterval(interval);
-            // Optional: set offline on unmount
             db.collection('presence').doc(user.uid).delete().catch(() => {});
         };
     }, [user]);
@@ -122,17 +141,13 @@ const App: React.FC = () => {
         return liveKey ? movies[liveKey] : null;
     }, [activeParties, movies]);
 
-    // EXCLUSION LOGIC: Determine which single banner wins
     const activeBannerType = useMemo(() => {
         if (livePartyMovie) return 'WATCH_PARTY';
-        
         const config = settings.crateFestConfig;
         const isCrateFestWindow = config?.isActive && config?.startDate && config?.endDate && 
                                 (new Date() >= new Date(config.startDate) && new Date() <= new Date(config.endDate));
         if (isCrateFestWindow) return 'CRATE_FEST';
-        
         if (isFestivalLive && !isFestivalBannerDismissed) return 'GENERAL_FESTIVAL';
-        
         return 'NONE';
     }, [livePartyMovie, settings.crateFestConfig, isFestivalLive, isFestivalBannerDismissed]);
 
@@ -195,6 +210,10 @@ const App: React.FC = () => {
         setIsMobileSearchOpen(true);
     };
 
+    const onSearch = useCallback((query: string) => {
+        setSearchQuery(query);
+    }, []);
+
     useEffect(() => {
         if (heroMovies.length > 1) {
             const interval = setInterval(() => setHeroIndex(prev => (prev + 1) % heroMovies.length), 8000);
@@ -203,151 +222,52 @@ const App: React.FC = () => {
     }, [heroMovies.length]);
 
     if (isLoading) return <LoadingSpinner />;
+    if (settings.maintenanceMode) return <MaintenanceScreen />;
 
     const headerTop = activeBannerType !== 'NONE' ? '3rem' : '0px';
 
     return (
         <div className="flex flex-col min-h-screen text-white overflow-x-hidden w-full relative">
-            <SEO 
-                title="Home"
-                description="Stream the best independent short films, features, and documentaries. Crate TV is the home of the unseen, curated by artists for visionaries."
-            />
+            <SEO title="Home" description="Stream the best independent cinema." />
             <SmartInstallPrompt />
             
-            {/* Banner Rendering with Priority Exclusion */}
             {activeBannerType === 'WATCH_PARTY' && (
-                <LiveWatchPartyBanner 
-                    movie={livePartyMovie!} 
-                    onClose={() => setActiveParties(prev => {
-                        const next = { ...prev };
-                        delete next[livePartyMovie!.key];
-                        return next;
-                    })} 
-                />
+                <LiveWatchPartyBanner movie={livePartyMovie!} onClose={() => setActiveParties(prev => {
+                    const next = { ...prev };
+                    delete next[livePartyMovie!.key];
+                    return next;
+                })} />
             )}
+            {activeBannerType === 'CRATE_FEST' && settings.crateFestConfig && <CrateFestBanner config={settings.crateFestConfig} hasPass={hasCrateFestPass} />}
+            {activeBannerType === 'GENERAL_FESTIVAL' && <FestivalActiveBanner onClose={() => setIsFestivalBannerDismissed(true)} />}
 
-            {activeBannerType === 'CRATE_FEST' && settings.crateFestConfig && (
-                <CrateFestBanner config={settings.crateFestConfig} hasPass={hasCrateFestPass} />
-            )}
+            <Header searchQuery={searchQuery} onSearch={onSearch} onMobileSearchClick={handleSearchClick} topOffset={headerTop} isLiveSpotlight={isNowStreamingLive} />
 
-            {activeBannerType === 'GENERAL_FESTIVAL' && (
-                <FestivalActiveBanner onClose={() => setIsFestivalBannerDismissed(true)} />
-            )}
-
-            <Header 
-                searchQuery={searchQuery} 
-                onSearch={setSearchQuery} 
-                onMobileSearchClick={handleSearchClick}
-                topOffset={headerTop}
-                isLiveSpotlight={isNowStreamingLive}
-            />
-
-            <main 
-                className={`flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500`}
-                style={{ paddingTop: activeBannerType !== 'NONE' ? '3rem' : '0px' }}
-            >
+            <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500" style={{ paddingTop: activeBannerType !== 'NONE' ? '3rem' : '0px' }}>
                 {isFestivalLive && activeBannerType !== 'CRATE_FEST' ? (
                     <FestivalHero festivalConfig={festivalConfig} />
                 ) : (
-                    heroMovies.length > 0 && (
-                        <Hero 
-                            movies={heroMovies} 
-                            currentIndex={heroIndex} 
-                            onSetCurrentIndex={setHeroIndex} 
-                            onPlayMovie={handlePlayMovie}
-                            onMoreInfo={handleSelectMovie}
-                        />
-                    )
+                    heroMovies.length > 0 && <Hero movies={heroMovies} currentIndex={heroIndex} onSetCurrentIndex={setHeroIndex} onPlayMovie={handlePlayMovie} onMoreInfo={handleSelectMovie} />
                 )}
                 
                 <div className="px-4 md:px-12 relative z-10 w-full overflow-x-hidden">
                     <div className="mt-16 md:mt-24 lg:mt-32 space-y-12 md:space-y-16">
                         {searchQuery ? (
-                            <MovieCarousel
-                                key="search-results"
-                                title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`}
-                                movies={searchResults}
-                                onSelectMovie={handlePlayMovie}
-                                watchedMovies={watchedMovies}
-                                watchlist={watchlist}
-                                likedMovies={likedMovies}
-                                onToggleLike={toggleLikeMovie}
-                                onToggleWatchlist={toggleWatchlist}
-                                onSupportMovie={() => {}}
-                            />
+                            <MovieCarousel title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`} movies={searchResults} onSelectMovie={handlePlayMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />
                         ) : (
                           <>
-                            {crateFestMovies.length > 0 && (
-                                <MovieCarousel
-                                    key="crate-fest"
-                                    title={
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>
-                                            <button onClick={() => window.location.href='/cratefest'} className="bg-white text-black px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-gray-200 transition-all">Enter Collection</button>
-                                        </div>
-                                    }
-                                    movies={crateFestMovies}
-                                    onSelectMovie={(m) => window.location.href='/cratefest'}
-                                    watchedMovies={watchedMovies}
-                                    watchlist={watchlist}
-                                    likedMovies={likedMovies}
-                                    onToggleLike={toggleLikeMovie}
-                                    onToggleWatchlist={toggleWatchlist}
-                                    onSupportMovie={() => {}}
-                                />
-                            )}
-
-                            {comingSoonMovies.length > 0 && (
-                                <MovieCarousel
-                                    key="coming-soon"
-                                    title="Premiering Soon"
-                                    movies={comingSoonMovies}
-                                    onSelectMovie={handleSelectMovie}
-                                    watchedMovies={watchedMovies}
-                                    watchlist={watchlist}
-                                    likedMovies={likedMovies}
-                                    onToggleLike={toggleLikeMovie}
-                                    onToggleWatchlist={toggleWatchlist}
-                                    onSupportMovie={() => {}}
-                                    isComingSoonCarousel={true}
-                                />
-                            )}
-
-                            {nowStreamingMovie && !settings.isHolidayModeActive && (
-                                <NowStreamingBanner 
-                                    movie={nowStreamingMovie} 
-                                    onSelectMovie={handleSelectMovie} 
-                                    onPlayMovie={handlePlayMovie}
-                                    isLive={isNowStreamingLive}
-                                />
-                            )}
+                            {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => window.location.href='/cratefest'} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />}
+                            {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} />}
+                            {nowStreamingMovie && !settings.isHolidayModeActive && <NowStreamingBanner movie={nowStreamingMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} isLive={isNowStreamingLive} />}
                             
                             {Object.entries(categories).map(([key, category]) => {
-                                const typedCategory = category as Category;
+                                const typedCategory = category as any;
                                 const titleLower = (typedCategory.title || '').toLowerCase();
-                                
                                 if (key === 'featured' || key === 'nowStreaming' || key === 'publicDomainIndie') return null;
                                 if ((key === 'cratemas' || titleLower === 'cratemas') && !settings.isHolidayModeActive) return null;
-                                
-                                const categoryMovies = typedCategory.movieKeys
-                                    .map(movieKey => movies[movieKey])
-                                    .filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m));
-                                
+                                const categoryMovies = typedCategory.movieKeys.map((movieKey: string) => movies[movieKey]).filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m));
                                 if (categoryMovies.length === 0) return null;
-                                return (
-                                    <MovieCarousel
-                                        key={key}
-                                        title={typedCategory.title}
-                                        movies={categoryMovies}
-                                        onSelectMovie={handlePlayMovie}
-                                        watchedMovies={watchedMovies}
-                                        watchlist={watchlist}
-                                        likedMovies={likedMovies}
-                                        onToggleLike={toggleLikeMovie}
-                                        onToggleWatchlist={toggleWatchlist}
-                                        onSupportMovie={() => {}}
-                                    />
-                                );
+                                return <MovieCarousel key={key} title={typedCategory.title} movies={categoryMovies} onSelectMovie={handlePlayMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />;
                             })}
                           </>
                         )}
@@ -359,30 +279,9 @@ const App: React.FC = () => {
             <BackToTopButton />
             <BottomNavBar onSearchClick={handleSearchClick} />
 
-            {detailsMovie && (
-                <MovieDetailsModal 
-                    movie={detailsMovie} 
-                    isLiked={likedMovies.has(detailsMovie.key)}
-                    onToggleLike={toggleLikeMovie}
-                    onClose={() => setDetailsMovie(null)} 
-                    onSelectActor={setSelectedActor}
-                    allMovies={movies}
-                    allCategories={categories}
-                    onSelectRecommendedMovie={handleSelectMovie}
-                    onPlayMovie={handlePlayMovie}
-                    onSupportMovie={() => {}}
-                />
-            )}
+            {detailsMovie && <MovieDetailsModal movie={detailsMovie} isLiked={likedMovies.has(detailsMovie.key)} onToggleLike={toggleLikeMovie} onClose={() => setDetailsMovie(null)} onSelectActor={setSelectedActor} allMovies={movies} allCategories={categories} onSelectRecommendedMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} onSupportMovie={() => {}} />}
             {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
-            {isMobileSearchOpen && (
-                <SearchOverlay 
-                  searchQuery={searchQuery}
-                  onSearch={setSearchQuery}
-                  onClose={() => setIsMobileSearchOpen(false)}
-                  results={searchResults}
-                  onSelectMovie={(m) => { setIsMobileSearchOpen(false); handlePlayMovie(m); }}
-                />
-            )}
+            {isMobileSearchOpen && <SearchOverlay searchQuery={searchQuery} onSearch={onSearch} onClose={() => setIsMobileSearchOpen(false)} results={searchResults} onSelectMovie={(m) => { setIsMobileSearchOpen(false); handlePlayMovie(m); }} />}
         </div>
     );
 };

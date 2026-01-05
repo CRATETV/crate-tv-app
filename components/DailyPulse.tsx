@@ -11,8 +11,6 @@ interface DailyPulseProps {
     categories: Record<string, Category>;
 }
 
-const formatCurrency = (val: number) => `$${(val / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-
 const PulseMetric: React.FC<{ label: string; value: string | number; color?: string; sub?: string; trend?: string; live?: boolean }> = ({ label, value, color = "text-white", sub, trend, live }) => (
     <div className="bg-white/[0.02] border border-white/5 p-6 rounded-3xl hover:bg-white/[0.04] transition-all group relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -62,16 +60,16 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
         return (Object.values(analytics?.viewCounts || {}) as number[]).reduce((s, c) => s + (c || 0), 0);
     }, [analytics]);
 
+    const totalUsers = analytics?.totalUsers || 0;
     const pendingPipeline = pipeline.filter(p => p.status === 'pending');
 
     return (
         <div className="space-y-8 animate-[fadeIn_0.6s_ease-out]">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <PulseMetric label="Nodes Online" value={liveNodes} color="text-red-500" live={true} sub="NOW" />
-                <PulseMetric label="Platform Reach" value={totalViews} sub="Page Views" trend="+196%" />
-                <PulseMetric label="Yield Yield" value={formatCurrency(analytics?.totalRevenue || 0)} color="text-green-500" sub="GROSS" />
-                <PulseMetric label="Pipeline Load" value={pendingPipeline.length} color="text-amber-500" sub="REVIEWS" />
-                <PulseMetric label="User Retention" value="75%" color="text-indigo-400" sub="RE-VIEW" trend="+15%" />
+                <PulseMetric label="Global Reach" value={totalViews} sub="Total Views" trend="+196%" />
+                <PulseMetric label="User Base" value={totalUsers} sub="Total Accounts" />
+                <PulseMetric label="Pipeline" value={pendingPipeline.length} color="text-amber-500" sub="Pending Reviews" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -82,8 +80,8 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                         </div>
                         <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-4">
                             <div>
-                                <h3 className="text-xl font-black uppercase tracking-tighter italic">Viral Velocity</h3>
-                                <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-1">Real-time content acceleration monitor</p>
+                                <h3 className="text-xl font-black uppercase tracking-tighter italic">Traffic Velocity</h3>
+                                <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-1">Real-time engagement heatmap</p>
                             </div>
                         </div>
                         <div className="space-y-6">
@@ -94,18 +92,18 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                                             <span className="text-4xl font-black text-gray-800 italic group-hover:text-red-600/40 transition-colors">#0{idx+1}</span>
                                             <div>
                                                 <p className="font-black text-white uppercase text-xl tracking-tight leading-none mb-1 group-hover:text-red-500 transition-colors">{spike.title}</p>
-                                                <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">Active Discovery Node // Sector {idx + 1}</p>
+                                                <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">Active Stream Node // Sector {idx + 1}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-2xl font-black text-white">{spike.count}</p>
-                                            <p className="text-[8px] text-green-500 font-black uppercase tracking-tighter">Hits / Last 60m</p>
+                                            <p className="text-[8px] text-green-500 font-black uppercase tracking-tighter">Views / 60m</p>
                                         </div>
                                     </div>
                                 ))
                             ) : (
                                 <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-3xl opacity-20">
-                                    <p className="text-gray-500 font-black uppercase tracking-[0.5em]">Awaiting Data Spikes...</p>
+                                    <p className="text-gray-500 font-black uppercase tracking-[0.5em]">Scanning Traffic Nodes...</p>
                                 </div>
                             )}
                         </div>
@@ -117,31 +115,25 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.08)_0%,transparent_70%)]"></div>
                         <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500 mb-8 flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
-                            Admin Activity
+                            Audit Stream
                         </h3>
-                        <div className="space-y-4 relative z-10">
+                        <div className="space-y-6 relative z-10">
                             {recentAudits.map(log => (
                                 <div key={log.id} className="p-4 bg-white/5 rounded-xl border border-white/5">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">{log.role}</span>
-                                        <span className="text-[8px] text-gray-700 font-mono">
-                                            {log.timestamp?.seconds ? new Date(log.timestamp.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
-                                        </span>
-                                    </div>
-                                    <p className="text-[10px] text-gray-300 font-bold uppercase truncate">{log.details}</p>
+                                    <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">{log.action}</p>
+                                    <p className="text-[10px] text-gray-300 line-clamp-2">{log.details}</p>
                                 </div>
                             ))}
-                            {recentAudits.length === 0 && <p className="text-[10px] text-gray-600 text-center py-4">No recent mutations logged.</p>}
                         </div>
                     </div>
                     
                     <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 group hover:border-red-600/20 transition-all">
                         <div className="flex items-center gap-3 mb-4">
-                            <span className="text-xl">🛡️</span>
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em]">Chronos Security</p>
+                            <span className="text-xl">📈</span>
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em]">System Health</p>
                         </div>
                         <p className="text-sm text-gray-400 leading-relaxed font-medium group-hover:text-gray-200 transition-colors">
-                            Every modification to the global manifest is logged in the Chronos Audit terminal for accountability and disaster recovery.
+                            The Crate TV infrastructure is currently operating at optimal efficiency. Global node synchronization is active.
                         </p>
                     </div>
                 </div>

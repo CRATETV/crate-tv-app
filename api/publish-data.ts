@@ -8,6 +8,8 @@ const getRoleFromPassword = (password: string | null) => {
     if (!password) return 'unknown';
     if (password === process.env.ADMIN_PASSWORD) return 'super_admin';
     if (password === process.env.ADMIN_MASTER_PASSWORD) return 'master';
+    if (password === process.env.COLLABORATOR_PASSWORD) return 'collaborator';
+    if (password === process.env.FESTIVAL_ADMIN_PASSWORD) return 'festival_admin';
     for (const key in process.env) {
         if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
             return key.replace('ADMIN_PASSWORD_', '').toLowerCase();
@@ -74,10 +76,10 @@ const assembleAndSyncMasterData = async (db: Firestore) => {
 
 export async function POST(request: Request) {
     try {
-        const { password, type, data } = await request.json();
-        const role = getRoleFromPassword(password);
+        const { password, operatorName, type, data } = await request.json();
+        const baseRole = getRoleFromPassword(password);
 
-        if (role === 'unknown') {
+        if (baseRole === 'unknown') {
             return new Response(JSON.stringify({ error: 'Unauthorized Session' }), { status: 401 });
         }
         
@@ -116,10 +118,9 @@ export async function POST(request: Request) {
         }
 
         // LOG AUDIT TRAIL
-        // FIX: WriteBatch does not have an .add() method. We create a ref first and then .set().
         const auditLogRef = db.collection('audit_logs').doc();
         batch.set(auditLogRef, {
-            role,
+            role: `${baseRole.toUpperCase()}: ${operatorName || 'Unknown'}`,
             action: `DATA_MUTATION_${type.toUpperCase()}`,
             type: type === 'delete_movie' ? 'PURGE' : 'MUTATION',
             details: auditDetails,

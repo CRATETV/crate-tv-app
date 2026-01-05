@@ -181,22 +181,26 @@ const StudioMail: React.FC<StudioMailProps> = ({ analytics, festivalConfig, movi
             
             {/* Top Routing Helper */}
             <div className="flex flex-col md:flex-row gap-4 mb-6">
-                <div className="flex-grow bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center justify-between">
+                <div className="flex-grow bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center justify-between shadow-xl">
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center text-green-500">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Routing Link Active</p>
-                            <p className="text-xs text-white">Authorized Brand Identity: <span className="text-red-500 font-bold">{authorizedIdentity}</span></p>
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none">Routing Link Active</p>
+                            <p className="text-xs text-white mt-1">Authorized Identity: <span className="text-red-500 font-bold uppercase">{authorizedIdentity}</span></p>
                         </div>
                     </div>
                     <div className="flex gap-3">
+                        <div className="bg-black/40 px-4 py-2 rounded-xl border border-white/5 flex items-center gap-3">
+                            <span className="w-1 h-1 rounded-full bg-red-600 animate-pulse"></span>
+                            <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">HABIT_LOOP: ONLINE</span>
+                        </div>
                         <button 
                             onClick={handleCopyLink}
-                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${copyStatus ? 'bg-green-600 text-white' : 'bg-white/5 text-gray-500 border border-white/10 hover:bg-white hover:text-black'}`}
+                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${copyStatus ? 'bg-green-600 text-white shadow-lg' : 'bg-white/5 text-gray-500 border border-white/10 hover:bg-white hover:text-black'}`}
                         >
-                            {copyStatus ? 'Link Copied' : 'Contact Dashboard Link'}
+                            {copyStatus ? 'Link Copied' : 'Copy Contact Link'}
                         </button>
                     </div>
                 </div>
