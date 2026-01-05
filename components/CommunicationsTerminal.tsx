@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { AnalyticsData, CrateFestConfig, Movie, EditorialStory, FilmBlock, UserRecord } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -11,10 +10,10 @@ interface CommunicationsTerminalProps {
 }
 
 const TEMPLATES = [
-    { id: 'reengagement', label: '🔒 Vault Reactivation', prompt: 'Crate Zine Re-engagement. Tone: "Power restored to your sector." Direct the dormant node to resume their cinematic session with 2-3 new high-priority films from the Daily Chart.' },
-    { id: 'newsletter', label: '⚡ CRATE // THE ZINE', prompt: 'Crate Zine main dispatch (Issue Announcement). High-energy cinematic vibe. Use terms like "The Genesis Issue", "Toxic High-Voltage Cinema", and "The Daily Chart". Include a reference to checking the latest curated rankings.' },
-    { id: 'festival_hype', label: '⚙️ Machine Hype', prompt: 'Festival block reveal. Create high-velocity hype for a specific set of films. Connect it to their potential to climb the Top 10 chart.' },
-    { id: 'daily_reminder', label: '📟 Sync Update', prompt: 'Daily catalog reminder. Minimal, technical, and urgent. Link to the Top 10 Today.' }
+    { id: 'newsletter', label: '⚡ Dispatch Issue', prompt: 'Summarize the provided Zine story into a prestigious newsletter. Focus on the "Daily Chart" and "Authenticity". High-energy industrial tone.' },
+    { id: 'reengagement', label: '🔒 Vault Reactivation', prompt: 'Draft a re-engagement email for a dormant node. Tone: "Power restored to your sector." Invite them back to resume their session.' },
+    { id: 'festival_hype', label: '⚙️ Machine Hype', prompt: 'Create high-velocity hype for the festival blocks. Mention the 70/30 patronage loop.' },
+    { id: 'daily_reminder', label: '📟 Sync Update', prompt: 'Minimal, technical, and urgent daily sync update. Link to the Top 10 Today.' }
 ];
 
 const VIDEO_LAYOUTS = [
@@ -54,6 +53,8 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
             const fetched: EditorialStory[] = [];
             snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as EditorialStory));
             setStories(fetched);
+            // Auto-select the latest story for the newsletter template
+            if (fetched.length > 0) setSelectedStoryId(fetched[0].id);
         });
 
         db.collection('festival').doc('schedule').collection('days').get().then(snap => {
@@ -87,12 +88,14 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
         }
     };
 
-    const inactiveCount = useMemo(() => {
+    const targetCounts = useMemo(() => {
         const twoWeeksAgo = Date.now() - (14 * 24 * 60 * 60 * 1000);
-        return allUsers.filter(u => {
-            if (!u.lastSignIn) return true;
-            return new Date(u.lastSignIn).getTime() < twoWeeksAgo;
-        }).length;
+        return {
+            all: allUsers.length,
+            actors: allUsers.filter(u => u.isActor).length,
+            filmmakers: allUsers.filter(u => u.isFilmmaker).length,
+            inactive: allUsers.filter(u => !u.lastSignIn || new Date(u.lastSignIn).getTime() < twoWeeksAgo).length
+        };
     }, [allUsers]);
 
     const handleAIDraft = async (templateId: string) => {
@@ -104,12 +107,17 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
         const story = selectedStoryId ? stories.find(s => s.id === selectedStoryId) : null;
         const block = selectedBlockId ? blocks.find(b => b.id === selectedBlockId) : null;
 
+        // Context Construction
         const context = {
             festivalTitle: festivalConfig?.title || 'Crate Fest',
             templatePrompt: template?.prompt,
             isReengagement: templateId === 'reengagement',
             filmContext: film ? { title: film.title, director: film.director, synopsis: film.synopsis } : null,
-            storyContext: story ? { title: story.title, subtitle: story.subtitle, content: story.content.slice(0, 500) } : null,
+            storyContext: story ? { 
+                title: story.title, 
+                subtitle: story.subtitle, 
+                summary: story.sections?.filter(s => s.type === 'text' || s.type === 'header').map(s => s.content).join(' | ').slice(0, 1000) 
+            } : null,
             blockContext: block ? { title: block.title, time: block.time, films: block.movieKeys.map(k => movies[k]?.title).filter(Boolean) } : null
         };
 
@@ -166,8 +174,8 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        const count = audience === 'inactive' ? inactiveCount : (analytics?.totalUsers || '??');
-        if (!window.confirm(`BROADCAST PROTOCOL: Dispatch Zine Issue to ${count} nodes?`)) return;
+        const count = targetCounts[audience];
+        if (!window.confirm(`BROADCAST PROTOCOL: Dispatch transmission to ${count} nodes in '${audience}' segment?`)) return;
 
         setStatus('sending');
         setMessage('');
@@ -192,8 +200,7 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
     };
 
     return (
-        <div className="space-y-10 animate-[fadeIn_0.4s_ease-out]">
-            {/* View Selector */}
+        <div className="space-y-10 animate-[fadeIn_0.4s_ease-out] pb-32">
             <div className="flex gap-4 p-1.5 bg-black border border-white/5 rounded-2xl w-max mx-auto shadow-2xl">
                 <button onClick={() => setView('dispatch')} className={`px-12 py-3 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] transition-all flex items-center gap-3 ${view === 'dispatch' ? 'bg-red-600 text-white' : 'text-gray-600 hover:text-gray-400'}`}>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
@@ -212,23 +219,18 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
                 
                 <div className="relative z-10 space-y-12">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                        <div className="flex flex-col md:flex-row items-baseline gap-4">
-                            <h2 className="text-7xl font-black text-white uppercase tracking-tighter italic leading-none">CRATE</h2>
-                            <h3 className="text-xl font-bold uppercase tracking-[0.6em] text-gray-500">zine</h3>
+                        <div>
+                            <div className="flex flex-col md:flex-row items-baseline gap-4">
+                                <h2 className="text-7xl font-black text-white uppercase tracking-tighter italic leading-none">DISPATCH</h2>
+                                <h3 className="text-xl font-bold uppercase tracking-[0.6em] text-gray-500">terminal</h3>
+                            </div>
+                            <p className="text-gray-600 text-[10px] font-black uppercase tracking-widest mt-2">Active target base: {allUsers.length} nodes in current global user cluster.</p>
                         </div>
-                        {view === 'studio' && (
-                            <button 
-                                onClick={handleOpenKeySelector}
-                                className={`px-10 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all shadow-2xl ${hasApiKey ? 'bg-green-600/10 border-green-500/20 text-green-500' : 'bg-red-600 text-white animate-pulse'}`}
-                            >
-                                {hasApiKey ? '✓ Studio Link Active' : 'Establish Power Link'}
-                            </button>
-                        )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
                         <div className="space-y-4">
-                            <label className="text-[10px] font-black uppercase text-gray-600 tracking-[0.3em]">Issue Focus (Film)</label>
+                            <label className="text-[10px] font-black uppercase text-gray-600 tracking-[0.3em]">Context A: Film Focus</label>
                             <select value={selectedFilmKey} onChange={e => setSelectedFilmKey(e.target.value)} className="w-full bg-white/5 border border-white/10 text-white p-5 rounded-2xl font-bold focus:border-red-600 outline-none shadow-inner">
                                 <option value="">No Film Bound</option>
                                 {(Object.values(movies) as Movie[]).sort((a,b) => a.title.localeCompare(b.title)).map(m => <option key={m.key} value={m.key}>{m.title}</option>)}
@@ -238,16 +240,16 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
                         {view === 'dispatch' ? (
                             <>
                                 <div className="space-y-4">
-                                    <label className="text-[10px] font-black uppercase text-gray-600 tracking-[0.3em]">Festival Block</label>
+                                    <label className="text-[10px] font-black uppercase text-gray-600 tracking-[0.3em]">Context B: Festival Block</label>
                                     <select value={selectedBlockId} onChange={e => setSelectedBlockId(e.target.value)} className="w-full bg-white/5 border border-white/10 text-white p-5 rounded-2xl focus:border-red-600 outline-none">
                                         <option value="">No Block Selected</option>
                                         {blocks.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-4">
-                                    <label className="text-[10px] font-black uppercase text-gray-600 tracking-[0.3em]">Zine Issue Draft</label>
+                                    <label className="text-[10px] font-black uppercase text-gray-600 tracking-[0.3em]">Context C: Zine Story</label>
                                     <select value={selectedStoryId} onChange={e => setSelectedStoryId(e.target.value)} className="w-full bg-white/5 border border-white/10 text-white p-5 rounded-2xl focus:border-red-600 outline-none">
-                                        <option value="">No Draft Selected</option>
+                                        <option value="">No Story Selected</option>
                                         {stories.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
                                     </select>
                                 </div>
@@ -291,7 +293,7 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
                 </div>
             </div>
 
-            {view === 'dispatch' ? (
+            {view === 'dispatch' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     <form onSubmit={handleSend} className="bg-[#0a0a0a] border border-white/5 p-12 rounded-[4rem] space-y-12 shadow-2xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-8 opacity-5">
@@ -299,45 +301,62 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
                         </div>
                         <div className="space-y-10 relative z-10">
                             <div>
-                                <label className="form-label">Zine Dispatch Subject</label>
+                                <label className="form-label">Email Segment Targeting</label>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1.5 bg-black rounded-2xl border border-white/5">
+                                    {(['all', 'actors', 'filmmakers', 'inactive'] as const).map(a => (
+                                        <button key={a} type="button" onClick={() => setAudience(a)} className={`py-4 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all ${audience === a ? 'bg-red-600 text-white shadow-xl' : 'text-gray-500 hover:text-gray-400'}`}>
+                                            {a.charAt(0).toUpperCase() + a.slice(1)} ({targetCounts[a]})
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-[8px] text-gray-700 font-bold uppercase tracking-widest mt-2 px-2">
+                                    {audience === 'all' && 'Broadcast to 100% of network.'}
+                                    {audience === 'inactive' && 'Targeting nodes silent for > 14 days.'}
+                                    {audience === 'actors' && 'Exclusive dispatch to talent directory.'}
+                                    {audience === 'filmmakers' && 'Strategic update to content owners.'}
+                                </p>
+                            </div>
+                            <div>
+                                <label className="form-label">Transmission Headline (Subject)</label>
                                 <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Cinematic headline..." className="form-input bg-black border-white/10 text-2xl font-black italic tracking-tighter" required />
                             </div>
                             <div>
-                                <label className="form-label">Zine Payload (HTML)</label>
-                                <textarea value={htmlBody} onChange={e => setHtmlBody(e.target.value)} placeholder="HTML payload..." className="form-input bg-black border-white/10 h-[500px] font-mono text-[10px] leading-relaxed" required />
-                            </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1.5 bg-black rounded-2xl border border-white/5">
-                                {(['all', 'actors', 'filmmakers', 'inactive'] as const).map(a => (
-                                    <button key={a} type="button" onClick={() => setAudience(a)} className={`py-4 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all ${audience === a ? 'bg-red-600 text-white shadow-xl' : 'text-gray-600 hover:text-gray-400'}`}>
-                                        {a === 'inactive' ? `Inactive (${inactiveCount})` : a}
-                                    </button>
-                                ))}
+                                <label className="form-label">Dispatch Payload (Body HTML)</label>
+                                <textarea value={htmlBody} onChange={e => setHtmlBody(e.target.value)} placeholder="Enter HTML content..." className="form-input bg-black border-white/10 h-[400px] font-mono text-[11px] leading-relaxed" required />
                             </div>
                         </div>
                         <button type="submit" disabled={status === 'sending' || !subject || !htmlBody} className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-8 rounded-3xl uppercase tracking-[0.5em] text-sm shadow-[0_20px_60px_rgba(239,68,68,0.4)] disabled:opacity-30 active:scale-98 transition-all">
                             {status === 'sending' ? 'TRANSMITTING...' : 'EXECUTE GLOBAL DISPATCH'}
                         </button>
+                        {message && <p className={`text-center text-xs font-black uppercase tracking-widest ${status === 'error' ? 'text-red-500' : 'text-green-500'}`}>{message}</p>}
                     </form>
 
-                    <div className="flex flex-col h-full bg-white rounded-[4rem] shadow-inner overflow-hidden min-h-[700px] border-[20px] border-black relative">
-                        <div className="p-5 bg-gray-100 border-b flex justify-between items-center relative z-10">
+                    <div className="flex flex-col h-full bg-[#0a0a0a] rounded-[4rem] shadow-inner overflow-hidden min-h-[700px] border-[20px] border-[#000] relative">
+                        <div className="p-5 bg-black border-b border-white/5 flex justify-between items-center relative z-10">
                              <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full bg-red-600"></div>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 italic">CRATE // ZINE FEED PREVIEW</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 italic">FINAL TRANSMISSION PROOF</span>
                              </div>
                         </div>
-                        <div className="flex-grow overflow-y-auto p-16 bg-white relative z-0">
-                            <div className="max-w-xl mx-auto space-y-10">
-                                <div className="border-b border-gray-100 pb-10">
-                                    <h1 className="text-6xl font-black italic text-black tracking-tighter">CRATE</h1>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-400 mt-1">zine</p>
+                        <div className="flex-grow overflow-y-auto p-1 bg-[#050505] relative z-0 flex items-center justify-center">
+                            {/* Realistic Email Container Preview */}
+                            <div className="w-full max-w-[450px] bg-[#050505] border border-white/10 rounded-[32px] overflow-hidden p-10 space-y-8 shadow-2xl">
+                                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-24 invert" alt="" />
+                                <div className="border-l-4 border-red-600 pl-4">
+                                     <p className="text-[8px] font-black text-red-500 uppercase tracking-widest">Official Dispatch</p>
+                                     <h4 className="text-xl font-black text-white uppercase tracking-tighter leading-tight">{subject || 'AWAITING_HEADLINE'}</h4>
                                 </div>
-                                {htmlBody ? <div dangerouslySetInnerHTML={{ __html: htmlBody }} className="prose prose-sm max-w-none text-gray-800 leading-relaxed font-medium" /> : <div className="h-64 flex flex-col items-center justify-center opacity-10"><h1 className="text-[4rem] font-black italic tracking-tighter text-black">AWAITING</h1><p className="text-xs font-black uppercase tracking-tighter text-black">Uplink Draft</p></div>}
+                                <div className="text-gray-400 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: htmlBody || '<p style="opacity: 0.1">Payload content pending uplink draft...</p>' }} />
+                                <div className="pt-6 border-t border-white/5 text-center">
+                                    <span className="text-[8px] text-gray-700 font-black uppercase tracking-widest">Global Independent Infrastructure</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            ) : (
+            )}
+
+            {view === 'studio' && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                     <div className="lg:col-span-2 bg-[#020202] rounded-[4rem] border-[16px] border-black aspect-video overflow-hidden shadow-[0_100px_200px_rgba(0,0,0,1)] relative flex flex-col items-center justify-center group">
                         

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Movie, Actor, MoviePipelineEntry, Episode } from '../types';
+import { Movie, Actor, MoviePipelineEntry } from '../types';
 import S3Uploader from './S3Uploader';
 
 interface MovieEditorProps {
@@ -299,20 +299,32 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         placeholder="Talent Biography..." 
                                         className="form-input !bg-transparent border-white/5 h-24 text-xs font-medium"
                                     />
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Profile Headshot</p>
-                                            <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 mb-2">
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="space-y-3">
+                                            <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Headshot URL</p>
+                                            <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 mb-2 bg-black">
                                                 <img src={actor.photo} className="w-full h-full object-cover" alt="" />
                                             </div>
-                                            <S3Uploader label="Upload" onUploadSuccess={(url) => handleCastChange(idx, { photo: url })} />
+                                            <input 
+                                                type="text" 
+                                                value={actor.photo} 
+                                                onChange={(e) => handleCastChange(idx, { photo: e.target.value })} 
+                                                placeholder="https://..." 
+                                                className="form-input !py-1.5 !px-3 text-[10px] bg-white/5 border-white/5"
+                                            />
                                         </div>
-                                        <div className="space-y-2">
-                                            <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">High-Res Bio Art</p>
-                                            <div className="w-12 h-12 rounded-lg overflow-hidden border border-white/10 mb-2">
+                                        <div className="space-y-3">
+                                            <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Bio Art URL (High Res)</p>
+                                            <div className="w-16 h-16 rounded-lg overflow-hidden border border-white/10 mb-2 bg-black">
                                                 <img src={actor.highResPhoto} className="w-full h-full object-cover" alt="" />
                                             </div>
-                                            <S3Uploader label="Upload" onUploadSuccess={(url) => handleCastChange(idx, { highResPhoto: url })} />
+                                            <input 
+                                                type="text" 
+                                                value={actor.highResPhoto} 
+                                                onChange={(e) => handleCastChange(idx, { highResPhoto: e.target.value })} 
+                                                placeholder="https://..." 
+                                                className="form-input !py-1.5 !px-3 text-[10px] bg-white/5 border-white/5"
+                                            />
                                         </div>
                                     </div>
                                 </div>

@@ -72,13 +72,19 @@ const UserIntelligenceTab: React.FC<UserIntelligenceTabProps> = ({ movies, onPre
         return result;
     }, [users, searchTerm, filter]);
 
+    const watchedMoviesList = useMemo(() => {
+        if (!selectedUser) return [];
+        return (selectedUser.watchedMovies || [])
+            .map(key => movies[key])
+            .filter(Boolean);
+    }, [selectedUser, movies]);
+
     const unwatchedMovies = useMemo(() => {
         if (!selectedUser) return [];
         const watchedKeys = new Set(selectedUser.watchedMovies || []);
         return (Object.values(movies) as Movie[])
             .filter(m => !watchedKeys.has(m.key) && !m.isUnlisted)
-            .sort((a, b) => (b.likes || 0) - (a.likes || 0))
-            .slice(0, 12);
+            .sort((a, b) => (b.likes || 0) - (a.likes || 0));
     }, [selectedUser, movies]);
 
     const handleSynthesize = async (user: UserRecord, mode: 'rec' | 'direct') => {
@@ -262,13 +268,35 @@ const UserIntelligenceTab: React.FC<UserIntelligenceTabProps> = ({ movies, onPre
 
                         <div className="flex-grow overflow-y-auto p-10 space-y-12 scrollbar-hide">
                             
-                            {/* Discovery Pipeline Row */}
+                            {/* Uplink Manifest Row (Watched Movies) */}
+                            <section className="animate-[fadeIn_0.5s_ease-out]">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-green-500">Uplink Manifest</h3>
+                                    <span className="text-[8px] font-black text-gray-700 uppercase tracking-widest bg-black border border-white/5 px-2 py-1 rounded">Films screened by this node</span>
+                                </div>
+                                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                                    {watchedMoviesList.length > 0 ? watchedMoviesList.map(movie => (
+                                        <div key={movie.key} className="flex-shrink-0 w-24 opacity-60">
+                                            <div className="relative aspect-[3/4] rounded-lg overflow-hidden border border-white/5 shadow-lg">
+                                                <img src={movie.poster} className="w-full h-full object-cover" alt="" />
+                                            </div>
+                                            <p className="text-[8px] font-black text-gray-500 uppercase mt-2 truncate">{movie.title}</p>
+                                        </div>
+                                    )) : (
+                                        <div className="py-8 w-full text-center border-2 border-dashed border-white/5 rounded-3xl opacity-20">
+                                            <p className="text-[10px] font-black uppercase tracking-widest">No screening history recorded</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+
+                            {/* Discovery Pipeline Row (Unwatched Movies) */}
                             <section className="animate-[fadeIn_0.5s_ease-out]">
                                 <div className="flex justify-between items-center mb-6">
                                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">Discovery Pipeline</h3>
-                                    <span className="text-[8px] font-black text-gray-700 uppercase tracking-widest bg-black border border-white/5 px-2 py-1 rounded">Films this node is missing</span>
+                                    <span className="text-[8px] font-black text-gray-700 uppercase tracking-widest bg-black border border-white/5 px-2 py-1 rounded">Films this node is missing (Full Catalog)</span>
                                 </div>
-                                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                                <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide">
                                     {unwatchedMovies.length > 0 ? unwatchedMovies.map(movie => (
                                         <div 
                                             key={movie.key} 
