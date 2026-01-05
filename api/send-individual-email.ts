@@ -8,7 +8,7 @@ const LOGO_URL = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+b
 
 export async function POST(request: Request) {
     try {
-        const { password, email, subject, htmlBody } = await request.json();
+        const { password, email, subject, htmlBody, scheduledAt, posterUrl, movieTitle, synopsis, movieKey } = await request.json();
 
         // 1. Authentication check
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
@@ -34,11 +34,27 @@ export async function POST(request: Request) {
             signature = data?.emailSignature || "";
         }
 
-        // 3. Prepare Logo for CID
+        // 3. Handle Scheduling Logic
+        if (scheduledAt && db) {
+            await db.collection('scheduled_dispatches').add({
+                email,
+                subject,
+                htmlBody,
+                scheduledAt: new Date(scheduledAt),
+                status: 'pending',
+                createdAt: new Date(),
+                movieTitle,
+                posterUrl,
+                synopsis,
+                movieKey
+            });
+            return new Response(JSON.stringify({ success: true, message: 'Dispatch scheduled.' }), { status: 200 });
+        }
+
+        // 4. Prepare Transmission Assets
         const logoResponse = await fetch(LOGO_URL);
         const logoBuffer = Buffer.from(await logoResponse.arrayBuffer());
 
-        // 4. Dispatch with clean, industrial correspondence layout
         const { error } = await resend.emails.send({
             from: `Crate TV Studio <${businessEmail}>`,
             to: [email],
@@ -60,6 +76,27 @@ export async function POST(request: Request) {
                         <div style="font-size: 16px; color: #ccc; margin-bottom: 40px; line-height: 1.8;">
                             ${htmlBody}
                         </div>
+
+                        ${posterUrl ? `
+                        <!-- Cinematic Spotlight Block -->
+                        <div style="margin: 40px 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; overflow: hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.5);">
+                            <div style="width: 100%; height: 350px; overflow: hidden;">
+                                <img src="${posterUrl}" alt="${movieTitle}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+                            </div>
+                            <div style="padding: 30px; text-align: center;">
+                                <p style="font-size: 10px; font-weight: 900; color: #ef4444; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 12px;">Official Recommendation</p>
+                                <h3 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; line-height: 1;">${movieTitle}</h3>
+                                
+                                <div style="margin: 20px auto; width: 40px; height: 2px; background: rgba(255,255,255,0.1);"></div>
+                                
+                                <p style="color: #888; font-size: 14px; line-height: 1.6; margin-bottom: 30px; font-style: italic;">
+                                    ${synopsis ? synopsis.replace(/<[^>]+>/g, '').substring(0, 180) + '...' : ''}
+                                </p>
+                                
+                                <a href="https://cratetv.net/movie/${movieKey}?play=true" style="display: inline-block; background: #ffffff; color: #000000; text-decoration: none; padding: 18px 40px; border-radius: 14px; font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 20px 40px rgba(255,255,255,0.15);">Synchronize Session</a>
+                            </div>
+                        </div>
+                        ` : ''}
 
                         ${signature ? `
                         <div style="padding-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); color: #666; font-size: 13px; white-space: pre-wrap; font-style: italic;">

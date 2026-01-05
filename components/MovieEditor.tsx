@@ -262,6 +262,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             <div className="aspect-[2/3] bg-black rounded-xl border border-white/10 overflow-hidden mb-2">
                                                 <img src={formData.poster} className="w-full h-full object-cover" alt="" />
                                             </div>
+                                            <input type="text" name="poster" value={formData.poster} onChange={handleChange} className="form-input bg-black/40 mb-2 !py-2 text-xs" placeholder="Poster URL" />
                                             <S3Uploader label="Upload Art" onUploadSuccess={(url) => setFormData({...formData, poster: url, tvPoster: url})} />
                                         </div>
                                         <div className="space-y-4">
