@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Movie, Actor, MoviePipelineEntry, Episode } from '../types';
 import S3Uploader from './S3Uploader';
@@ -57,9 +58,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [showSocialKit, setShowSocialKit] = useState(false);
-    
-    const [newActor, setNewActor] = useState<Actor>({ name: '', photo: '', bio: '', highResPhoto: '' });
-    const [newEp, setNewEp] = useState<Episode>({ id: '', title: '', synopsis: '', url: '', duration: 0 });
 
     useEffect(() => {
         if (movieToCreate) {
@@ -102,19 +100,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         setFormData({ ...formData, [name]: type === 'checkbox' ? target.checked : (type === 'number' ? parseFloat(value) : value) });
     };
 
-    const handleAddActor = () => {
-        if (!formData || !newActor.name) return;
-        setFormData({ ...formData, cast: [...(formData.cast || []), { ...newActor }] });
-        setNewActor({ name: '', photo: '', bio: '', highResPhoto: '' });
-    };
-
-    const handleAddEpisode = () => {
-        if (!formData || !newEp.title || !newEp.url) return;
-        const ep = { ...newEp, id: 'ep_' + Date.now() };
-        setFormData({ ...formData, episodes: [...(formData.episodes || []), ep] });
-        setNewEp({ id: '', title: '', synopsis: '', url: '', duration: 0 });
-    };
-
     const handleSave = async () => {
         if (!formData) return;
         setIsSaving(true);
@@ -131,8 +116,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-
-    const canSynthesize = formData && formData.title && formData.synopsis && formData.director;
 
     return (
         <div className="space-y-6 pb-20">
@@ -152,12 +135,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     <tr key={movie.key} className="hover:bg-white/[0.01] transition-colors group">
                                         <td className="px-8 py-4">
                                             <div className="flex items-center gap-6">
-                                                <div className="w-16 h-24 flex-shrink-0 rounded-lg overflow-hidden border border-white/10 shadow-2xl group-hover:scale-105 transition-transform duration-500">
-                                                    <img 
-                                                        src={movie.poster || 'https://via.placeholder.com/100x150'} 
-                                                        className="w-full h-full object-cover" 
-                                                        alt="" 
-                                                    />
+                                                <div className="w-16 h-24 flex-shrink-0 rounded-lg overflow-hidden border border-white/10 shadow-2xl">
+                                                    <img src={movie.poster || 'https://via.placeholder.com/100x150'} className="w-full h-full object-cover" alt="" />
                                                 </div>
                                                 <div>
                                                     <span className="font-black text-white uppercase text-lg tracking-tighter">{movie.title || 'Untitled'}</span>
@@ -165,7 +144,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                     <div className="flex gap-2 mt-2">
                                                         {movie.isEpisode && <span className="text-[7px] bg-amber-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">EPISODE</span>}
                                                         {movie.isSeries && <span className="text-[7px] bg-indigo-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">SERIES</span>}
-                                                        {movie.isForSale && <span className="text-[7px] bg-green-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">PAYWALL</span>}
                                                         {movie.isSupportEnabled && <span className="text-[7px] bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">TIPS ACTIVE</span>}
                                                     </div>
                                                 </div>
@@ -188,11 +166,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             <p className="text-[10px] text-gray-600 font-black uppercase mt-2 tracking-[0.4em]">UUID: {formData.key}</p>
                         </div>
                         <div className="flex gap-4">
-                            {canSynthesize && (
-                                <button onClick={() => setShowSocialKit(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl transition-all flex items-center gap-2">
-                                    <span>✨</span> Marketing Kit
-                                </button>
-                            )}
                             <button onClick={() => setSelectedMovieKey('')} className="bg-white/5 text-gray-400 px-6 py-3 rounded-xl uppercase text-[10px] font-black">Close</button>
                             <button onClick={handleSave} disabled={isSaving} className="bg-red-600 text-white px-8 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl hover:bg-red-500 transition-all">{isSaving ? 'Syncing...' : 'Save Manifest'}</button>
                         </div>
@@ -200,29 +173,28 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
                         <div className="space-y-12">
-                            {/* IDENTITY SECTION */}
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">01. Core Identity</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">01. Content Structure</h4>
                                 <div className="space-y-4">
                                     <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Film/Series Title" className="form-input bg-black/40" />
                                     <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Director(s)" className="form-input bg-black/40" />
-                                    <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={4} placeholder="Full Treatment/Synopsis" className="form-input bg-black/40" />
+                                    <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={4} placeholder="Synopsis Treatment" className="form-input bg-black/40" />
+                                    
                                     <div className="grid grid-cols-2 gap-4">
                                         <label className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer">
                                             <input type="checkbox" name="isSeries" checked={formData.isSeries} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
-                                            <span className="text-xs font-black uppercase text-gray-300">Is Series</span>
+                                            <span className="text-xs font-black uppercase text-gray-300">Mark as Series</span>
                                         </label>
                                         <label className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer">
                                             <input type="checkbox" name="isEpisode" checked={formData.isEpisode} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-amber-600 focus:ring-amber-500" />
-                                            <span className="text-xs font-black uppercase text-gray-300">Is Episode</span>
+                                            <span className="text-xs font-black uppercase text-gray-300">Mark as Episode</span>
                                         </label>
                                     </div>
                                 </div>
                             </section>
 
-                            {/* REVENUE SECTION */}
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Monetization Rules</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Revenue Logic</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
                                     <label className="flex items-center gap-4 cursor-pointer group">
                                         <div className="relative">
@@ -232,7 +204,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         </div>
                                         <div>
                                             <p className="text-sm font-black text-white uppercase tracking-tight">Allow Community Donations</p>
-                                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Enables the "Support Filmmaker" button</p>
+                                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Enables the "Support Creator" button</p>
                                         </div>
                                     </label>
                                     
@@ -243,50 +215,35 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             <div className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-7"></div>
                                         </div>
                                         <div>
-                                            <p className="text-sm font-black text-white uppercase tracking-tight">VOD Paywall Activation</p>
+                                            <p className="text-sm font-black text-white uppercase tracking-tight">VOD Paywall Authorization</p>
                                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Requires paid rental for access</p>
                                         </div>
                                     </label>
-                                    
-                                    {formData.isForSale && (
-                                        <div className="animate-[fadeIn_0.3s_ease-out] pl-4 border-l-2 border-blue-600 space-y-4">
-                                            <div className="relative">
-                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-black">$</span>
-                                                <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} className="form-input !pl-8 bg-black/40" placeholder="5.00" step="0.50" />
-                                            </div>
-                                            <div className="bg-blue-900/10 p-4 rounded-xl border border-blue-800/30">
-                                                <p className="text-[8px] font-black text-blue-400 uppercase tracking-[0.2em]">Automated Release Protocol</p>
-                                                <input type="datetime-local" name="autoReleaseDate" value={formData.autoReleaseDate?.slice(0, 16)} onChange={handleChange} className="form-input !py-2 text-[10px] mt-2 bg-black/40" />
-                                                <p className="text-[7px] text-gray-600 mt-2 font-bold uppercase">Paywall will automatically lift on this date</p>
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             </section>
                         </div>
 
                         <div className="space-y-12">
-                             {/* MEDIA SECTION */}
                              <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">03. Source Media</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">03. Master Media</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
-                                    <div className="space-y-4">
-                                        <label className="form-label">High-Bitrate Master Stream</label>
+                                    <div className="space-y-2">
+                                        <label className="form-label">High-Bitrate Master</label>
                                         <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="form-input bg-black/40" placeholder="https://..." />
-                                        <S3Uploader label="Ingest New Master" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
+                                        <S3Uploader label="Ingest New Stream" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="form-label">Key Art (Poster)</label>
+                                            <label className="form-label">Key Art (2:3)</label>
                                             <div className="aspect-[2/3] bg-black rounded-xl border border-white/10 overflow-hidden mb-2">
                                                 <img src={formData.poster} className="w-full h-full object-cover" alt="" />
                                             </div>
-                                            <S3Uploader label="Upload Poster" onUploadSuccess={(url) => setFormData({...formData, poster: url, tvPoster: url})} />
+                                            <S3Uploader label="Upload Art" onUploadSuccess={(url) => setFormData({...formData, poster: url, tvPoster: url})} />
                                         </div>
                                         <div className="space-y-4">
-                                            <label className="form-label">Teaser/Trailer</label>
-                                            <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} className="form-input bg-black/40" placeholder="Trailer Link" />
-                                            <S3Uploader label="Upload Trailer" onUploadSuccess={(url) => setFormData({...formData, trailer: url})} />
+                                            <label className="form-label">Promotional Teaser</label>
+                                            <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} className="form-input bg-black/40" placeholder="Trailer URL" />
+                                            <S3Uploader label="Ingest Teaser" onUploadSuccess={(url) => setFormData({...formData, trailer: url})} />
                                         </div>
                                     </div>
                                 </div>
@@ -306,16 +263,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                         </button>
                     </div>
                 </div>
-            )}
-            
-            {showSocialKit && formData && (
-                <SocialKitModal 
-                    title={formData.title} 
-                    synopsis={formData.synopsis} 
-                    director={formData.director} 
-                    poster={formData.poster}
-                    onClose={() => setShowSocialKit(false)} 
-                />
             )}
         </div>
     );

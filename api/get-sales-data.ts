@@ -1,3 +1,4 @@
+
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { AnalyticsData, Movie, User, FilmmakerPayout } from '../types.js';
 

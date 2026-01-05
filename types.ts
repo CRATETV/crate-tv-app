@@ -1,3 +1,4 @@
+
 export interface User {
   uid: string;
   email: string;
@@ -211,14 +212,14 @@ export interface FilmmakerAnalytics {
 }
 
 export interface PayoutRequest {
-  id: string;
-  directorName: string;
-  amount: number;
-  payoutMethod: string;
-  payoutDetails: string;
-  status: 'pending' | 'completed';
-  requestDate: any;
-  completionDate?: any;
+    id: string;
+    directorName: string;
+    amount: number;
+    payoutMethod: string;
+    payoutDetails: string;
+    status: 'pending' | 'completed';
+    requestDate: any;
+    completionDate?: any;
 }
 
 export interface AdminPayout {
@@ -387,7 +388,6 @@ export interface StudioMessage {
 }
 
 export interface AdConfig {
-  // Add ad-related config here
 }
 
 export interface CrateFestConfig {

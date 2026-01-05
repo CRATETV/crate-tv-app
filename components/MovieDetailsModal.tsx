@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category, Episode } from '../types';
 import DirectorCreditsModal from './DirectorCreditsModal';
@@ -48,9 +49,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   onPlayMovie,
 }) => {
   const { watchlist, toggleWatchlist, rentals, purchaseMovie } = useAuth();
-  const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
 
   const [released, setReleased] = useState(() => isMovieReleased(movie));
@@ -62,28 +61,12 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     return new Date(expiration) > new Date();
   }, [rentals, movie.key]);
 
-  const isAutoReleased = useMemo(() => {
-      if (!movie.autoReleaseDate) return false;
-      return new Date() >= new Date(movie.autoReleaseDate);
-  }, [movie.autoReleaseDate]);
-
-  const needsPurchase = movie.isForSale && !isRented && !isAutoReleased;
+  const needsPurchase = movie.isForSale && !isRented;
 
   const canCollectDonations = useMemo(() => {
-    if (!movie) return false;
-    const isVintage = allCategories.publicDomainIndie?.movieKeys?.includes(movie.key);
-    const isCopyrightRestricted = movie.hasCopyrightMusic === true;
-    const isManualDisabled = movie.isSupportEnabled === false;
-    return !isVintage && !isCopyrightRestricted && !isManualDisabled && !movie.isForSale;
-  }, [movie, allCategories]);
-
-  const moreFromDirector = useMemo(() => {
-      const directors = movie.director.split(',').map(d => d.trim().toLowerCase());
-      return (Object.values(allMovies) as Movie[]).filter(m => 
-          m.key !== movie.key && 
-          m.director.split(',').some(d => directors.includes(d.trim().toLowerCase()))
-      ).slice(0, 4);
-  }, [movie, allMovies]);
+    // Donations are active if enabled on movie and not a paywalled film.
+    return movie.isSupportEnabled !== false && !movie.isForSale;
+  }, [movie]);
 
   useEffect(() => {
     if (released) return;
@@ -131,7 +114,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
         </button>
 
         <div className="relative w-full aspect-video bg-black overflow-hidden">
-            <img src={movie.poster} alt="" className="w-full h-full object-cover animate-ken-burns opacity-60 blur-sm scale-110" />
+            <img src={movie.poster} alt="" className="w-full h-full object-cover opacity-60 blur-sm scale-110" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-black/30"></div>
             
             <div className="absolute bottom-10 left-10 right-10 text-white z-10">
@@ -196,21 +179,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                 </div>
 
                 <div className="space-y-10 border-l border-white/5 pl-0 lg:pl-14">
-                    <div>
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4">The Cast</h3>
-                        <div className="flex flex-wrap gap-2">
-                            {movie.cast.map(actor => (
-                                <button 
-                                    key={actor.name} 
-                                    className="px-4 py-2 bg-white/5 border border-white/5 rounded-full text-white font-bold text-xs hover:bg-red-600 transition-colors" 
-                                    onClick={() => onSelectActor(actor)}
-                                >
-                                    {actor.name}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
                     <div>
                         <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Directed By</h3>
                         <p className="text-white font-black text-xl tracking-tighter uppercase">{movie.director}</p>

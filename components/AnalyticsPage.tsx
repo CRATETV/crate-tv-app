@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
@@ -26,7 +27,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showOnboarding, setShowOnboarding] = useState(false);
-    const [payoutRecipientId, setPayoutRecipientId] = useState<string | null>(null);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -51,12 +51,6 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
             if (analyticsJson.errors?.critical) throw new Error(analyticsJson.errors.critical);
             
             setAnalyticsData(analyticsJson.analyticsData);
-            
-            const db = getDbInstance();
-            if (db) {
-                const config = await db.collection('festival').doc('config').get();
-                setPayoutRecipientId(config.data()?.payoutRecipientId || null);
-            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unknown error.');
         } finally {
@@ -75,17 +69,17 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
         <div className="space-y-12">
             {!isFestivalView && (
                 <div className="flex gap-4">
-                    <button onClick={() => setActiveTab('overview')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === 'overview' ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-500'}`}>Overview</button>
+                    <button onClick={() => setActiveTab('overview')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === 'overview' ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-500'}`}>Platform Overview</button>
                     <button onClick={() => setActiveTab('festival')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === 'festival' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-500'}`}>Financial Ledgers</button>
                 </div>
             )}
 
             {analyticsData && activeTab === 'overview' && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-[fadeIn_0.5s_ease-out]">
-                    <StatCard title="Total Platform Yield" value={formatCurrency(analyticsData.totalRevenue)} />
-                    <StatCard title="Active Network Nodes" value={analyticsData.totalUsers} />
-                    <StatCard title="Global Impression Load" value={(Object.values(analyticsData.viewCounts) as number[]).reduce((a, b) => a + (b || 0), 0)} />
-                    <StatCard title="Node Velocity" value={analyticsData.liveNodes} />
+                    <StatCard title="Grand Yield" value={formatCurrency(analyticsData.totalRevenue)} />
+                    <StatCard title="Global reach" value={(Object.values(analyticsData.viewCounts) as number[]).reduce((a, b) => a + (b || 0), 0)} />
+                    <StatCard title="Node velocity" value={analyticsData.liveNodes} />
+                    <StatCard title="Total users" value={analyticsData.totalUsers} />
                 </div>
             )}
 

@@ -8,7 +8,7 @@ const LOGO_URL = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+b
 
 export async function POST(request: Request) {
     try {
-        const { password, email, subject, htmlBody, posterUrl, movieTitle, movieKey, movieSynopsis } = await request.json();
+        const { password, email, subject, htmlBody, posterUrl, movieTitle, movieKey } = await request.json();
 
         // 1. Authentication check
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
@@ -48,11 +48,12 @@ export async function POST(request: Request) {
                 {
                     content: logoBuffer,
                     filename: 'logo.png',
-                    content_id: 'logo'
+                    contentId: 'logo',
+                    disposition: 'inline'
                 }
             ],
             html: `
-                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; background: linear-gradient(180deg, #1a0b2e 0%, #050505 100%); border-radius: 32px; overflow: hidden;">
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; background: linear-gradient(180deg, #1a0b2e 0%, #050505 100%); border-radius: 32px; overflow: hidden; border: 1px solid #222;">
                     
                     <div style="padding: 40px; text-align: center;">
                         <img src="cid:logo" alt="Crate TV" style="width: 100px; height: auto; margin-bottom: 30px;" />
@@ -63,34 +64,34 @@ export async function POST(request: Request) {
                         </div>
                         ` : ''}
 
-                        <h2 style="font-size: 32px; font-weight: 900; letter-spacing: -1px; margin-bottom: 24px; text-transform: uppercase;">Did you like this?</h2>
+                        <h2 style="font-size: 32px; font-weight: 900; letter-spacing: -1px; margin-bottom: 24px; text-transform: uppercase; color: #fff;">Did you like this?</h2>
                         
                         <!-- Feedback Buttons -->
                         <div style="margin-bottom: 40px;">
                             <a href="https://cratetv.net/movie/${movieKey}?feedback=down" style="display: inline-block; margin: 0 10px; text-decoration: none;">
-                                <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2);">
+                                <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.15);">
                                     <span style="font-size: 24px; line-height: 64px;">👎</span>
                                 </div>
                             </a>
                             <a href="https://cratetv.net/movie/${movieKey}?feedback=up" style="display: inline-block; margin: 0 10px; text-decoration: none;">
-                                <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2);">
+                                <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.15);">
                                     <span style="font-size: 24px; line-height: 64px;">👍</span>
                                 </div>
                             </a>
                             <a href="https://cratetv.net/movie/${movieKey}?feedback=doubleup" style="display: inline-block; margin: 0 10px; text-decoration: none;">
-                                <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2);">
+                                <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.15);">
                                     <span style="font-size: 24px; line-height: 64px;">🤟</span>
                                 </div>
                             </a>
                         </div>
 
-                        <p style="color: #999; font-size: 14px; max-width: 400px; margin: 0 auto 40px; font-weight: 500;">Get better, more personalized recommendations after.</p>
+                        <p style="color: #888; font-size: 14px; max-width: 400px; margin: 0 auto 40px; font-weight: 500;">Get better, more personalized recommendations after.</p>
 
                         <div style="text-align: left; background: rgba(255,255,255,0.03); padding: 30px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05);">
-                            <div style="font-size: 16px; color: #ddd; margin-bottom: 20px;">
+                            <div style="font-size: 16px; color: #ccc; margin-bottom: 20px;">
                                 ${htmlBody}
                             </div>
-                            ${signature ? `<div style="padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); color: #666; font-size: 12px; white-space: pre-wrap;">${signature}</div>` : ''}
+                            ${signature ? `<div style="padding-top: 30px; margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); color: #666; font-size: 12px; white-space: pre-wrap;">${signature}</div>` : ''}
                         </div>
                     </div>
 
