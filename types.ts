@@ -34,11 +34,18 @@ export interface AuditEntry {
     ip?: string;
 }
 
+export interface ZineSection {
+    id: string;
+    type: 'text' | 'header' | 'quote' | 'image';
+    content: string;
+}
+
 export interface EditorialStory {
     id: string;
     title: string;
     subtitle: string;
-    content: string;
+    content: string; // Fallback for legacy stories
+    sections?: ZineSection[];
     heroImage: string;
     author: string;
     linkedMovieKey?: string;

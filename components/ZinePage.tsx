@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import Footer from './Footer';
@@ -6,7 +5,7 @@ import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';
 import BottomNavBar from './BottomNavBar';
 import SEO from './SEO';
-import { EditorialStory, Movie } from '../types';
+import { EditorialStory, Movie, ZineSection } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import { useFestival } from '../contexts/FestivalContext';
 
@@ -25,24 +24,15 @@ const GENESIS_STORY: EditorialStory = {
     id: 'genesis-manifesto',
     title: 'THE AFTERLIFE IS HERE.',
     subtitle: 'Defining the Crate Scene: Why independent cinema finally has a permanent vault.',
-    content: `
-        <div class="zine-body">
-            <p class="dropcap">W</p><p>elcome to the first transmission of <strong>Crate Zine</strong>. We aren't just a platform; we are a high-voltage media infrastructure designed to act as the permanent record of the independent cinematic underground.</p>
-            
-            <div class="industrial-quote">"THE SCENE HAS AN ARCHIVE. THE CHAMPIONS HAVE A LIFEBOAT."</div>
-
-            <h3>The Death of Distribution</h3>
-            <p>For too long, world-class films have died 12 months after their festival run. They vanish into the digital void, lost to algorithms that favor filler over feeling. Crate TV was built to solve the distribution lifecycle failure. We identify world-class talent at the source and provide an elite distribution afterlife.</p>
-            
-            <h3>The 70/30 Patronage Loop</h3>
-            <p>Ownership is the only path to sustainability. Crate is filmmaker-owned and filmmaker-prioritized. 70% of every donation and rental goes directly to the creators, fueling the next generation of authentic narratives. When you watch on Crate, you aren't just a viewer—you are a patron of the work.</p>
-            
-            <h3>Native Engineering</h3>
-            <p>Our V4 infrastructure merges technical precision with artistic pedigree. From our custom Roku SDK that puts independent masters in the living room, to our AI Studio Core (Powered by Gemini 3 Pro) that generates high-velocity social hype, we are building the tools creators actually need.</p>
-            
-            <p class="signature">This is the scene. This is the Crate. Let's Build.</p>
-        </div>
-    `,
+    content: '', // Legacy support
+    sections: [
+        { id: '1', type: 'text', content: 'Welcome to the first transmission of Crate Zine. We aren\'t just a platform; we are a high-voltage media infrastructure designed to act as the permanent record of the independent cinematic underground.' },
+        { id: '2', type: 'quote', content: 'THE SCENE HAS AN ARCHIVE. THE CHAMPIONS HAVE A LIFEBOAT.' },
+        { id: '3', type: 'header', content: 'The Death of Distribution' },
+        { id: '4', type: 'text', content: 'For too long, world-class films have died 12 months after their festival run. They vanish into the digital void, lost to algorithms that favor filler over feeling. Crate TV was built to solve the distribution lifecycle failure. We identify world-class talent at the source and provide an elite distribution afterlife.' },
+        { id: '5', type: 'header', content: 'The 70/30 Patronage Loop' },
+        { id: '6', type: 'text', content: 'Ownership is the only path to sustainability. Crate is filmmaker-owned and filmmaker-prioritized. 70% of every donation and rental goes directly to the creators, fueling the next generation of authentic narratives. When you watch on Crate, you aren\'t just a viewer—you are a patron of the work.' }
+    ],
     heroImage: 'https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg',
     author: 'EDITOR-IN-CHIEF',
     type: 'SPOTLIGHT',
@@ -101,7 +91,6 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [currentThemeIdx, setCurrentThemeIdx] = useState(0);
 
-    // Chromatic Shift Timer
     useEffect(() => {
         const interval = setInterval(() => {
             setCurrentThemeIdx(prev => (prev + 1) % ZINE_THEMES.length);
@@ -114,23 +103,17 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
     useEffect(() => {
         const db = getDbInstance();
         
-        // Safety: If no DB instance or slow connection, fail-over to Genesis after 2 seconds
-        const timeout = setTimeout(() => {
-            if (isLoading) {
-                console.warn("Zine downlink timed out. Serving Genesis Issue.");
+        const fetchStories = async () => {
+            if (!db) {
                 setStories([GENESIS_STORY]);
                 setIsLoading(false);
+                return;
             }
-        }, 2000);
-
-        const fetchStories = async () => {
-            if (!db) return;
             try {
                 const snap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').get();
                 const fetched: EditorialStory[] = [];
                 snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as EditorialStory));
                 
-                // Add Genesis as always present
                 if (!fetched.find(s => s.id === GENESIS_STORY.id)) {
                     fetched.push(GENESIS_STORY);
                 }
@@ -144,16 +127,14 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                     setActiveStory(null);
                 }
             } catch (e) {
-                console.error("Zine query failed (likely missing index). Serving Genesis.");
+                console.error("Zine query failed", e);
                 setStories([GENESIS_STORY]);
             } finally {
-                clearTimeout(timeout);
                 setIsLoading(false);
             }
         };
 
         fetchStories();
-        return () => clearTimeout(timeout);
     }, [storyId]);
 
     const handleSelectMovie = (key: string) => {
@@ -167,14 +148,13 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
         <div className="flex flex-col min-h-screen text-white bg-[#050505] selection:bg-white selection:text-black transition-colors duration-1000">
             <SEO 
                 title={activeStory ? activeStory.title : "Crate Zine"} 
-                description={activeStory ? activeStory.subtitle : "Crate Zine: The Underground Cinematic Culture. News, Interviews, and The Daily Chart."}
+                description={activeStory ? activeStory.subtitle : "Crate Zine: The Underground Cinematic Culture."}
                 image={activeStory?.heroImage}
             />
             
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
 
             <main className="flex-grow pt-24 pb-24 md:pb-32 px-4 md:px-12 relative overflow-hidden">
-                {/* Visual Flair: Dynamic Glow Orbs */}
                 <div 
                     className="absolute top-[-20%] right-[-10%] w-[1000px] h-[1000px] blur-[200px] pointer-events-none rounded-full transition-all duration-[4000ms] opacity-30" 
                     style={{ backgroundColor: theme.accent }}
@@ -183,7 +163,6 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                 <div className="max-w-[1600px] mx-auto relative z-10">
                     {!activeStory ? (
                         <div className="space-y-32">
-                            {/* Massive Brutalist Header */}
                             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end border-b border-white/5 pb-24 gap-12">
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-4">
@@ -220,7 +199,6 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                 </div>
                             </div>
 
-                            {/* Story Grid */}
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-16">
                                 {stories.map(story => (
                                     <StoryCard key={story.id} story={story} themeColor={theme.accent} />
@@ -228,7 +206,7 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                             </div>
                         </div>
                     ) : (
-                        <div className="max-w-5xl mx-auto animate-[fadeIn_0.6s_ease-out] pb-20">
+                        <div className="max-w-4xl mx-auto animate-[fadeIn_0.6s_ease-out] pb-20">
                             <button 
                                 onClick={() => { window.history.pushState({}, '', '/zine'); window.dispatchEvent(new Event('pushstate')); }}
                                 className="mb-16 flex items-center gap-4 text-gray-600 hover:text-white transition-all uppercase font-black text-[10px] tracking-[0.6em] group"
@@ -263,10 +241,26 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                                 </div>
 
-                                <div 
-                                    className="zine-content-v4 max-w-none text-gray-400 text-xl md:text-2xl leading-relaxed font-medium space-y-10"
-                                    dangerouslySetInnerHTML={{ __html: activeStory.content }}
-                                />
+                                <div className="zine-body space-y-12">
+                                    {activeStory.sections ? activeStory.sections.map((section, idx) => {
+                                        if (section.type === 'header') return <h3 key={section.id} className="text-4xl font-black uppercase tracking-tighter italic text-white border-l-8 border-red-600 pl-6 mt-20">{section.content}</h3>;
+                                        if (section.type === 'quote') return <div key={section.id} className="bg-white/5 border-l-8 border-white p-12 text-3xl font-black uppercase italic tracking-tight text-white my-16 shadow-2xl">"{section.content}"</div>;
+                                        if (section.type === 'image') return <div key={section.id} className="rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl my-12"><img src={section.content} className="w-full h-auto" alt="" /></div>;
+                                        return (
+                                            <div key={section.id} className="relative">
+                                                {idx === 0 && <span className="float-left text-9xl font-black italic leading-[0.7] mr-4 mt-4 text-red-600">{section.content.charAt(0)}</span>}
+                                                <p className="text-xl md:text-2xl text-gray-400 font-medium leading-relaxed">
+                                                    {idx === 0 ? section.content.slice(1) : section.content}
+                                                </p>
+                                            </div>
+                                        );
+                                    }) : (
+                                        <div 
+                                            className="text-gray-400 text-xl md:text-2xl leading-relaxed font-medium space-y-10"
+                                            dangerouslySetInnerHTML={{ __html: activeStory.content }}
+                                        />
+                                    )}
+                                </div>
 
                                 <div className="pt-24 border-t border-white/5 space-y-12">
                                     {(activeStory.linkedMovieKey || activeStory.linkedBlockId) && (
@@ -296,20 +290,6 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                             )}
                                         </div>
                                     )}
-                                    
-                                    {/* Direct Chart Access Link */}
-                                    <div className="bg-white/[0.02] p-12 rounded-[3.5rem] border border-white/5 flex flex-col md:flex-row items-center justify-between gap-12 opacity-60 hover:opacity-100 transition-opacity">
-                                         <div className="text-center md:text-left">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.5em] mb-4 transition-colors duration-1000" style={{ color: theme.accent }}>PLATFORM_PULSE</p>
-                                            <h4 className="text-3xl font-black uppercase tracking-tighter text-white">DISCOVER THE GLOBAL LEADERBOARD</h4>
-                                         </div>
-                                         <button 
-                                            onClick={() => window.location.href='/top-ten'}
-                                            className="px-10 py-4 bg-white text-black font-black rounded-2xl uppercase text-[10px] tracking-[0.3em] hover:bg-red-600 hover:text-white transition-all shadow-2xl"
-                                         >
-                                            THE TOP 10
-                                         </button>
-                                    </div>
                                 </div>
                             </article>
                         </div>
@@ -322,61 +302,6 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
             <BottomNavBar onSearchClick={() => {}} />
             <style>{`
                 .italic-text { font-style: italic; }
-                
-                .zine-content-v4 h3 {
-                    font-weight: 900;
-                    text-transform: uppercase;
-                    letter-spacing: -0.04em;
-                    color: white;
-                    margin-top: 5rem;
-                    font-size: 3rem;
-                    line-height: 0.9;
-                    font-style: italic;
-                }
-
-                .zine-content-v4 p {
-                    margin-bottom: 2rem;
-                }
-
-                .zine-content-v4 strong {
-                    color: white;
-                    font-weight: 900;
-                }
-
-                .dropcap {
-                    float: left;
-                    font-size: 6rem;
-                    line-height: 1;
-                    font-weight: 900;
-                    margin-right: 1.5rem;
-                    margin-bottom: -0.5rem;
-                    color: #ef4444;
-                    font-style: italic;
-                }
-
-                .industrial-quote {
-                    background: rgba(255,255,255,0.03);
-                    border-left: 8px solid #ef4444;
-                    padding: 3rem;
-                    font-size: 2.5rem;
-                    font-weight: 900;
-                    text-transform: uppercase;
-                    letter-spacing: -0.05em;
-                    line-height: 1;
-                    color: white;
-                    margin: 4rem 0;
-                    font-style: italic;
-                }
-
-                .signature {
-                    font-weight: 900;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5em;
-                    font-size: 0.75rem;
-                    color: #666;
-                    margin-top: 6rem;
-                    text-align: center;
-                }
             `}</style>
         </div>
     );
