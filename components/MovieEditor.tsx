@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Movie, Actor, MoviePipelineEntry, Episode } from '../types';
 import S3Uploader from './S3Uploader';
-import SocialKitModal from './SocialKitModal';
 
 interface MovieEditorProps {
     allMovies: Record<string, Movie>;
@@ -56,7 +55,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [formData, setFormData] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [showSocialKit, setShowSocialKit] = useState(false);
 
     useEffect(() => {
         if (movieToCreate) {
@@ -97,6 +95,33 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         const target = e.target as HTMLInputElement;
         const { name, value, type } = target;
         setFormData({ ...formData, [name]: type === 'checkbox' ? target.checked : (type === 'number' ? parseFloat(value) : value) });
+    };
+
+    const handleCastChange = (idx: number, updates: Partial<Actor>) => {
+        if (!formData) return;
+        const newCast = [...formData.cast];
+        newCast[idx] = { ...newCast[idx], ...updates };
+        setFormData({ ...formData, cast: newCast });
+    };
+
+    const handleAddActor = () => {
+        if (!formData) return;
+        setFormData({
+            ...formData,
+            cast: [...formData.cast, {
+                name: 'New Actor',
+                bio: '',
+                photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
+                highResPhoto: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png'
+            }]
+        });
+    };
+
+    const handleRemoveActor = (idx: number) => {
+        if (!formData) return;
+        const newCast = [...formData.cast];
+        newCast.splice(idx, 1);
+        setFormData({ ...formData, cast: newCast });
     };
 
     const handleSave = async () => {
@@ -247,6 +272,50 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     </div>
                                 </div>
                             </section>
+                        </div>
+                    </div>
+
+                    <div className="space-y-8">
+                        <div className="flex justify-between items-center">
+                            <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">04. Talent Manifest</h4>
+                            <button onClick={handleAddActor} className="bg-white/5 hover:bg-white text-gray-400 hover:text-black font-black px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all">+ Add Lead Talent</button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {formData.cast.map((actor, idx) => (
+                                <div key={idx} className="bg-black/60 p-6 rounded-3xl border border-white/5 space-y-6 group">
+                                    <div className="flex justify-between items-start border-b border-white/5 pb-4">
+                                        <input 
+                                            value={actor.name} 
+                                            onChange={(e) => handleCastChange(idx, { name: e.target.value })} 
+                                            className="bg-transparent text-white font-black text-xl uppercase tracking-tight focus:outline-none placeholder:text-gray-800" 
+                                            placeholder="Actor Name"
+                                        />
+                                        <button onClick={() => handleRemoveActor(idx)} className="text-gray-700 hover:text-red-500 text-[9px] font-black uppercase tracking-widest transition-colors">Erase Node</button>
+                                    </div>
+                                    <textarea 
+                                        value={actor.bio} 
+                                        onChange={(e) => handleCastChange(idx, { bio: e.target.value })} 
+                                        placeholder="Talent Biography..." 
+                                        className="form-input !bg-transparent border-white/5 h-24 text-xs font-medium"
+                                    />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Profile Headshot</p>
+                                            <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 mb-2">
+                                                <img src={actor.photo} className="w-full h-full object-cover" alt="" />
+                                            </div>
+                                            <S3Uploader label="Upload" onUploadSuccess={(url) => handleCastChange(idx, { photo: url })} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">High-Res Bio Art</p>
+                                            <div className="w-12 h-12 rounded-lg overflow-hidden border border-white/10 mb-2">
+                                                <img src={actor.highResPhoto} className="w-full h-full object-cover" alt="" />
+                                            </div>
+                                            <S3Uploader label="Upload" onUploadSuccess={(url) => handleCastChange(idx, { highResPhoto: url })} />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 

@@ -8,7 +8,7 @@ const LOGO_URL = 'https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+b
 
 export async function POST(request: Request) {
     try {
-        const { password, email, subject, htmlBody, posterUrl, movieTitle, movieKey } = await request.json();
+        const { password, email, subject, htmlBody } = await request.json();
 
         // 1. Authentication check
         const primaryAdminPassword = process.env.ADMIN_PASSWORD;
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         const logoResponse = await fetch(LOGO_URL);
         const logoBuffer = Buffer.from(await logoResponse.arrayBuffer());
 
-        // 4. Dispatch with Netflix-inspired high-impact layout
+        // 4. Dispatch with clean, industrial correspondence layout
         const { error } = await resend.emails.send({
             from: `Crate TV Studio <${businessEmail}>`,
             to: [email],
@@ -52,54 +52,26 @@ export async function POST(request: Request) {
                 } as any
             ],
             html: `
-                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; background: linear-gradient(180deg, #1a0b2e 0%, #050505 100%); border-radius: 32px; overflow: hidden; border: 1px solid #222;">
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; background: #050505; border-radius: 32px; overflow: hidden; border: 1px solid #222;">
                     
-                    <div style="padding: 40px; text-align: center;">
-                        <img src="cid:logo" alt="Crate TV" style="width: 100px; height: auto; margin-bottom: 30px;" />
+                    <div style="padding: 60px 40px; text-align: left;">
+                        <img src="cid:logo" alt="Crate TV" style="width: 120px; height: auto; margin-bottom: 40px;" />
                         
-                        ${posterUrl ? `
-                        <div style="margin: 0 auto 30px; width: 280px; box-shadow: 0 30px 60px rgba(0,0,0,0.8); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
-                            <img src="${posterUrl}" alt="${movieTitle}" style="width: 100%; display: block;" />
+                        <div style="font-size: 16px; color: #ccc; margin-bottom: 40px; line-height: 1.8;">
+                            ${htmlBody}
+                        </div>
+
+                        ${signature ? `
+                        <div style="padding-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); color: #666; font-size: 13px; white-space: pre-wrap; font-style: italic;">
+                            ${signature}
                         </div>
                         ` : ''}
-
-                        <h2 style="font-size: 32px; font-weight: 900; letter-spacing: -1px; margin-bottom: 24px; text-transform: uppercase; color: #fff;">Did you like this?</h2>
-                        
-                        <!-- Feedback Buttons -->
-                        <div style="margin-bottom: 40px;">
-                            <a href="https://cratetv.net/movie/${movieKey}?feedback=down" style="display: inline-block; margin: 0 10px; text-decoration: none;">
-                                <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.15);">
-                                    <span style="font-size: 24px; line-height: 64px;">👎</span>
-                                </div>
-                            </a>
-                            <a href="https://cratetv.net/movie/${movieKey}?feedback=up" style="display: inline-block; margin: 0 10px; text-decoration: none;">
-                                <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.15);">
-                                    <span style="font-size: 24px; line-height: 64px;">👍</span>
-                                </div>
-                            </a>
-                            <a href="https://cratetv.net/movie/${movieKey}?feedback=doubleup" style="display: inline-block; margin: 0 10px; text-decoration: none;">
-                                <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.15);">
-                                    <span style="font-size: 24px; line-height: 64px;">🤟</span>
-                                </div>
-                            </a>
-                        </div>
-
-                        <p style="color: #888; font-size: 14px; max-width: 400px; margin: 0 auto 40px; font-weight: 500;">Get better, more personalized recommendations after.</p>
-
-                        <div style="text-align: left; background: rgba(255,255,255,0.03); padding: 30px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05);">
-                            <div style="font-size: 16px; color: #ccc; margin-bottom: 20px;">
-                                ${htmlBody}
-                            </div>
-                            <div style="text-align: center; margin-top: 30px;">
-                                <a href="https://cratetv.net/movie/${movieKey}?action=support" style="background: #ef4444; color: #fff; text-decoration: none; padding: 15px 40px; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">Support the Creator</a>
-                            </div>
-                            ${signature ? `<div style="padding-top: 30px; margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); color: #666; font-size: 12px; white-space: pre-wrap;">${signature}</div>` : ''}
-                        </div>
                     </div>
 
                     <div style="background: #000; padding: 40px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05);">
                         <p style="font-size: 10px; color: #444; text-transform: uppercase; letter-spacing: 3px; font-weight: 900; margin-bottom: 10px;">Global Independent Infrastructure</p>
                         <p style="font-size: 10px; color: #222; margin: 0;">© ${new Date().getFullYear()} Crate TV. All rights reserved.</p>
+                        <p style="font-size: 9px; color: #111; margin-top: 20px;">TRANSMISSION_SECURED // AUTH_NODE_ALPHA</p>
                     </div>
                 </div>
             `,

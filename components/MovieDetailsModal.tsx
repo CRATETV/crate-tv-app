@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category, Episode } from '../types';
-import DirectorCreditsModal from './DirectorCreditsModal';
 import Countdown from './Countdown';
 import { isMovieReleased } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
@@ -161,9 +160,32 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
         
         <div className="p-10 md:p-14 space-y-16">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-14">
-                <div className="lg:col-span-2 space-y-10">
-                    <div className="text-gray-300 text-xl leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
+                <div className="lg:col-span-2 space-y-12">
+                    <div className="space-y-4">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">Synopsis</h3>
+                        <div className="text-gray-300 text-xl leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
+                    </div>
                     
+                    {movie.cast && movie.cast.length > 0 && (
+                        <div className="space-y-8">
+                            <h3 className="text-2xl font-black text-white uppercase tracking-widest border-l-4 border-red-600 pl-4">Featured Cast</h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                                {movie.cast.map((actor, idx) => (
+                                    <button 
+                                        key={idx} 
+                                        onClick={() => onSelectActor(actor)}
+                                        className="flex flex-col items-center text-center group transition-all transform hover:scale-105"
+                                    >
+                                        <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-2 border-white/10 mb-4 group-hover:border-red-600 transition-colors shadow-2xl">
+                                            <img src={actor.photo} alt={actor.name} className="w-full h-full object-cover" />
+                                        </div>
+                                        <p className="text-sm font-black text-white uppercase tracking-tighter group-hover:text-red-500 transition-colors">{actor.name}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {movie.isSeries && movie.episodes && movie.episodes.length > 0 && (
                         <div className="space-y-8 pt-6 border-t border-white/5">
                             <h3 className="text-2xl font-black text-white uppercase tracking-widest border-l-4 border-red-600 pl-4">Episodes</h3>
@@ -180,6 +202,16 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                     <div>
                         <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Directed By</h3>
                         <p className="text-white font-black text-xl tracking-tighter uppercase">{movie.director}</p>
+                    </div>
+                    {movie.producers && (
+                        <div>
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Produced By</h3>
+                            <p className="text-white font-black text-xl tracking-tighter uppercase">{movie.producers}</p>
+                        </div>
+                    )}
+                    <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
+                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-4">Official Accreditation</p>
+                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-20 opacity-20" alt="Crate Official" />
                     </div>
                 </div>
             </div>
