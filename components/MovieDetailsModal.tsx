@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category, Episode } from '../types';
 import DirectorCreditsModal from './DirectorCreditsModal';
@@ -64,7 +63,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   const needsPurchase = movie.isForSale && !isRented;
 
   const canCollectDonations = useMemo(() => {
-    // Donations are active if enabled on movie and not a paywalled film.
     return movie.isSupportEnabled !== false && !movie.isForSale;
   }, [movie]);
 

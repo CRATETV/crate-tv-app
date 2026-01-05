@@ -49,7 +49,7 @@ export async function POST(request: Request) {
                     content: logoBuffer,
                     filename: 'logo.png',
                     cid: 'logo'
-                }
+                } as any
             ],
             html: `
                 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; background: linear-gradient(180deg, #1a0b2e 0%, #050505 100%); border-radius: 32px; overflow: hidden; border: 1px solid #222;">

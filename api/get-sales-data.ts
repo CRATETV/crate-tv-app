@@ -21,7 +21,7 @@ const parseNote = (note: string | undefined): { type: string, title?: string, di
     const donationMatch = note.match(/Support for film: "(.*)" by (.*)/);
     if (donationMatch) return { type: 'donation', title: donationMatch[1].trim(), director: donationMatch[2].trim() };
     
-    // Distinguish between the two types of festivals via keyword matching
+    // Precise bifurcation via keyword detection
     if (note.includes('Crate Fest')) return { type: 'crateFestPass' };
     if (note.includes('All-Access Pass')) return { type: 'pass' };
     
