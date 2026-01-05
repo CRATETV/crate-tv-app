@@ -1,4 +1,3 @@
-
 export interface User {
   uid: string;
   email: string;
@@ -92,6 +91,7 @@ export interface Movie {
   autoReleaseDate?: string;
   isUnlisted?: boolean;
   isSeries?: boolean;
+  isEpisode?: boolean;
   episodes?: Episode[];
   durationInMinutes?: number;
   hasCopyrightMusic?: boolean;
@@ -261,8 +261,10 @@ export interface AnalyticsData {
   crateTvMerchCut: number;
   merchSales: Record<string, number>;
   totalFestivalRevenue: number;
+  totalCrateFestRevenue: number;
   festivalPassSales: { units: number; revenue: number };
   festivalBlockSales: { units: number; revenue: number };
+  crateFestPassSales: { units: number; revenue: number };
   salesByBlock: Record<string, { units: number; revenue: number }>;
   festivalUsers: string[];
   crateFestRevenue: number;

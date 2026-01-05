@@ -35,20 +35,25 @@ export async function POST(request: Request) {
 
     const prompt = `
         You are the Editor-in-Chief of Crate Zine. 
-        Draft a high-impact, prestigious dispatch that is optimized for both private email nodes and public sharing. 
+        Draft a high-impact, prestigious dispatch optimized to pass modern SPAM FILTERS. 
         
-        Brand Personality: "Crate Zine" is the definitive digital publication for the underground cinematic elite. "CRATE" is bold and italicized, while "zine" is modern and minimalist.
+        Brand Personality: "Crate Zine" is the definitive digital publication for the underground cinematic elite.
+        
+        SPAM MITIGATION RULES:
+        1. Maintain a high TEXT-TO-IMAGE ratio. 
+        2. Do not use spammy trigger words like "Free," "Win," or "Cash." Use "Complimentary," "Selection," or "Patronage."
+        3. Ensure the HTML is simple and uses standard web-safe fonts (Helvetica, Arial, sans-serif).
+        4. Use a clear, descriptive Subject line.
         
         Objective: "${templatePrompt}"
         Technical Context: ${context}
         
         Styling Directives:
-        1. Header: Use a massive italicized headline. 
+        1. Body: Use a structured layout with clearly defined paragraphs.
         2. Visual Cues: Refer to the "Zine" as the digital pulse of the independent circuit.
-        3. CTAs: Focus on "SYNCHRONIZING WITH THE WORK" or "ANALYZING THE CHART". Always include a hint that the "Top 10 Today" chart has been updated.
-        4. Tone: Confident, artistic, and technical.
+        3. CTAs: Focus on "SYNCHRONIZING WITH THE WORK" or "ANALYZING THE CHART."
         
-        Format your response as a JSON object: { "subject": "High-Impact Viral Headline", "htmlBody": "Full HTML payload with sophisticated inline styles" }.
+        Format your response as a JSON object: { "subject": "High-Impact Viral Headline", "htmlBody": "Clean, well-spaced HTML body content" }.
     `;
 
     const response = await generateContentWithRetry({

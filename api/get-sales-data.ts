@@ -1,10 +1,6 @@
-
-// This is a Vercel Serverless Function
-// Path: /api/get-sales-data
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { AnalyticsData, Movie, User, FilmmakerPayout } from '../types.js';
 
-// EPOCH RESET: May 24, 2025.
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z'; 
 
 interface SquarePayment {
@@ -12,7 +8,6 @@ interface SquarePayment {
   created_at: string;
   amount_money: {
     amount: number; // in cents
-    currency: string;
   };
   note?: string;
 }
@@ -25,12 +20,15 @@ const parseNote = (note: string | undefined): { type: string, title?: string, di
     if (note.startsWith('Deposit to Crate TV Bill Savings Pot')) return { type: 'billSavingsDeposit' };
     const donationMatch = note.match(/Support for film: "(.*)" by (.*)/);
     if (donationMatch) return { type: 'donation', title: donationMatch[1].trim(), director: donationMatch[2].trim() };
-    if (note.includes('All-Access Pass')) return { type: 'pass' };
+    
+    // Distinguish between the two types of festivals
+    if (note.includes('All-Access Pass') && !note.includes('Crate Fest')) return { type: 'pass' };
+    if (note.includes('Crate Fest 2026 Pass') || note.includes('Crate Fest All-Access')) return { type: 'crateFestPass' };
+    
     const blockMatch = note.match(/Unlock Block: "(.*)"/);
     if (blockMatch) return { type: 'block', blockTitle: blockMatch[1].trim() };
     if (note.includes('Purchase Film:')) return { type: 'movie' };
     if (note.includes('Crate TV Premium Subscription')) return { type: 'subscription' };
-    if (note.includes('Crate Fest 2026 Pass')) return { type: 'crateFestPass' };
     return { type: 'other' };
 };
 
@@ -79,26 +77,13 @@ export async function POST(request: Request) {
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
         const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
 
-        const resetTimestamp = new Date(SYSTEM_RESET_DATE);
-        const oneHourAgo = new Date(Date.now() - (60 * 60 * 1000));
-
-        // PARALLEL INTELLIGENCE GATHERING
-        const [
-            allPayments, 
-            moviesSnapshot, 
-            viewsSnapshot, 
-            usersSnapshot, 
-            payoutHistorySnapshot,
-            presenceSnapshot,
-            recentEventsSnapshot
-        ] = await Promise.all([
+        const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot, presenceSnapshot] = await Promise.all([
             accessToken ? fetchAllSquarePayments(accessToken, locationId) : Promise.resolve([]),
             db.collection('movies').get(),
             db.collection('view_counts').get(),
             db.collection('users').get(),
-            db.collection('payout_history').where('processedAt', '>=', resetTimestamp).get(),
-            db.collection('presence').where('lastActive', '>=', oneHourAgo).get(),
-            db.collection('traffic_events').where('timestamp', '>=', oneHourAgo).get()
+            db.collection('payout_history').get(),
+            db.collection('presence').get()
         ]);
 
         const allMovies: Record<string, Movie> = {};
@@ -107,36 +92,16 @@ export async function POST(request: Request) {
         const viewCounts: Record<string, number> = {};
         viewsSnapshot.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count) || 0; });
         
-        const allUsers: { email: string }[] = [];
-        usersSnapshot.forEach(doc => {
-            const userData = doc.data() as User;
-            allUsers.push({ email: userData.email || 'Anonymous' });
-        });
-
-        const spikeMap: Record<string, number> = {};
-        recentEventsSnapshot.forEach(doc => {
-            const ev = doc.data();
-            if (ev.movieKey) spikeMap[ev.movieKey] = (spikeMap[ev.movieKey] || 0) + 1;
-        });
-
-        const recentSpikes = Object.entries(spikeMap)
-            .map(([movieKey, count]) => ({
-                movieKey,
-                title: allMovies[movieKey]?.title || 'Unknown Title',
-                count
-            }))
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 3);
-
         let totalDonations = 0;
-        const donationsByFilm: Record<string, number> = {};
         let totalSales = 0;
         let festivalRevenue = 0;
         let crateFestRevenue = 0;
         
         let passUnits = 0;
         let blockUnits = 0;
+        let crateFestPassUnits = 0;
         const salesByBlock: Record<string, { units: number, revenue: number }> = {};
+        const donationsByFilm: Record<string, number> = {};
 
         allPayments.forEach(p => {
             const details = parseNote(p.note);
@@ -148,22 +113,21 @@ export async function POST(request: Request) {
             } else if (details.type === 'pass') {
                 festivalRevenue += amount;
                 passUnits++;
+            } else if (details.type === 'crateFestPass') {
+                crateFestRevenue += amount;
+                crateFestPassUnits++;
             } else if (details.type === 'block' && details.blockTitle) {
-                festivalRevenue += amount;
+                festivalRevenue += amount; 
                 blockUnits++;
                 if (!salesByBlock[details.blockTitle]) salesByBlock[details.blockTitle] = { units: 0, revenue: 0 };
                 salesByBlock[details.blockTitle].units++;
                 salesByBlock[details.blockTitle].revenue += amount;
             } else if (['movie', 'subscription'].includes(details.type)) {
                 totalSales += amount;
-            } else if (details.type === 'crateFestPass') {
-                crateFestRevenue += amount;
             }
         });
 
-        // Calculate total previously paid out to partners
         const totalAdminPayouts = payoutHistorySnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
-
         const totalRevenue = totalDonations + totalSales + festivalRevenue + crateFestRevenue;
         const totalCrateTvRevenue = (totalDonations * DONATION_PLATFORM_CUT) + (festivalRevenue * FESTIVAL_PLATFORM_CUT) + totalSales + crateFestRevenue;
 
@@ -185,16 +149,16 @@ export async function POST(request: Request) {
             totalRevenue, 
             totalCrateTvRevenue, 
             totalAdminPayouts, 
-            pastAdminPayouts: [], // History handled in AdminPayout
+            pastAdminPayouts: [],
             billSavingsPotTotal: 0, 
             billSavingsTransactions: [], 
-            totalUsers: allUsers.length, 
+            totalUsers: usersSnapshot.size, 
             viewCounts, 
             movieLikes: {}, 
             watchlistCounts: {}, 
             filmmakerPayouts, 
             viewLocations: {}, 
-            allUsers, 
+            allUsers: [], 
             actorUsers: [], 
             filmmakerUsers: [],
             totalDonations, 
@@ -204,13 +168,15 @@ export async function POST(request: Request) {
             crateTvMerchCut: 0, 
             merchSales: {},
             totalFestivalRevenue: festivalRevenue, 
-            festivalPassSales: { units: passUnits, revenue: festivalRevenue - (blockUnits * 1000) }, // Approximate
+            totalCrateFestRevenue: crateFestRevenue,
+            festivalPassSales: { units: passUnits, revenue: passUnits * 5000 }, 
             festivalBlockSales: { units: blockUnits, revenue: blockUnits * 1000 },
+            crateFestPassSales: { units: crateFestPassUnits, revenue: crateFestPassUnits * 1500 },
             salesByBlock, 
             festivalUsers: [],
             crateFestRevenue, 
             liveNodes: presenceSnapshot.size,
-            recentSpikes
+            recentSpikes: []
         };
 
         return new Response(JSON.stringify({ analyticsData, errors }), { status: 200, headers: { 'Content-Type': 'application/json' } });

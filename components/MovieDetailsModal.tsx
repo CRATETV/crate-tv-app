@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category, Episode } from '../types';
 import DirectorCreditsModal from './DirectorCreditsModal';
@@ -39,6 +38,8 @@ const EpisodeRow: React.FC<{ episode: Episode; onPlay: () => void }> = ({ episod
 const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({ 
   movie, 
   onClose, 
+  isLiked,
+  onToggleLike,
   onSelectActor, 
   allMovies,
   allCategories,
@@ -84,20 +85,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
       ).slice(0, 4);
   }, [movie, allMovies]);
 
-  const similarFilms = useMemo(() => {
-      const directorKeys = new Set(moreFromDirector.map(m => m.key));
-      const movieCategories = (Object.values(allCategories) as Category[]).filter(c => c.movieKeys.includes(movie.key));
-      const relatedKeys = new Set<string>();
-      
-      movieCategories.forEach(c => {
-          c.movieKeys.forEach(k => {
-              if (k !== movie.key && !directorKeys.has(k)) relatedKeys.add(k);
-          });
-      });
-      
-      return Array.from(relatedKeys).map(k => allMovies[k]).filter(Boolean).slice(0, 4);
-  }, [movie, allMovies, allCategories, moreFromDirector]);
-
   useEffect(() => {
     if (released) return;
     const interval = setInterval(() => {
@@ -108,24 +95,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
     }, 1000);
     return () => clearInterval(interval);
   }, [movie, released]);
-
-  useEffect(() => {
-    if (!isRented || !rentals[movie.key]) return;
-    const timer = setInterval(() => {
-        const expiration = new Date(rentals[movie.key]);
-        const now = new Date();
-        const diff = expiration.getTime() - now.getTime();
-        if (diff <= 0) {
-            setTimeRemaining(null);
-            clearInterval(timer);
-        } else {
-            const h = Math.floor(diff / 3600000);
-            const m = Math.floor((diff % 3600000) / 60000);
-            setTimeRemaining(`${h}h ${m}m remaining`);
-        }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [movie.key, rentals, isRented]);
 
   const handlePlayButtonClick = (url?: string) => {
       if (!released) {
@@ -148,11 +117,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
       }
   };
 
-  const handlePurchaseSuccess = async () => {
-      await purchaseMovie(movie.key);
-      setShowPurchaseModal(false);
-  };
-
   return (
     <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[100] p-0 md:p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
       <div 
@@ -173,15 +137,10 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
             <div className="absolute bottom-10 left-10 right-10 text-white z-10">
                 <div className="flex items-center gap-4 mb-4">
                    <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none">{movie.title}</h2>
-                   {timeRemaining && (
-                        <div className="bg-red-600 text-white px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest animate-pulse shadow-lg">
-                            {timeRemaining}
+                   {movie.isEpisode && (
+                        <div className="bg-amber-600 text-white px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg">
+                            Episode
                         </div>
-                   )}
-                   {isAutoReleased && (
-                       <div className="bg-green-600 text-white px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg">
-                            Public Access
-                       </div>
                    )}
                 </div>
                 
@@ -193,27 +152,20 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                                     onClick={() => handlePlayButtonClick()} 
                                     className={`flex items-center justify-center px-10 py-4 ${needsPurchase ? 'bg-indigo-600 text-white' : 'bg-white text-black'} font-black rounded-xl hover:opacity-90 transition-all transform hover:scale-105 active:scale-95 shadow-2xl`}
                                 >
-                                    {needsPurchase ? (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                            Premium Rental
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-                                            Play Now
-                                        </>
-                                    )}
+                                    {needsPurchase ? 'Premium Rental' : 'Play Now'}
                                 </button>
                             )}
                             {canCollectDonations && (
-                                <button onClick={() => onSupportMovie(movie)} className="flex items-center justify-center px-8 py-4 bg-purple-600 text-white font-black rounded-xl hover:bg-purple-500 transition-all transform hover:scale-105 active:scale-95 shadow-xl animate-[pulse_3s_infinite] shadow-purple-900/40">
+                                <button onClick={() => onSupportMovie(movie)} className="flex items-center justify-center px-10 py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-500 transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(16,185,129,0.3)] animate-pulse">
                                     Support Creator
                                 </button>
                             )}
+                            <button onClick={() => onToggleLike(movie.key)} className={`flex items-center justify-center px-10 py-4 border-2 font-black rounded-xl transition-all transform hover:scale-105 active:scale-95 ${isLiked ? 'bg-red-600 border-red-600 text-white' : 'bg-transparent border-red-600 text-red-500 hover:bg-red-600 hover:text-white'}`}>
+                                {isLiked ? '❤️ Liked' : '🤍 Like Film'}
+                            </button>
                         </>
                     ) : (
-                        <div className="bg-blue-600 text-white font-black px-8 py-4 rounded-xl shadow-lg flex flex-col sm:flex-row items-center gap-4">
+                        <div className="bg-blue-600 text-white font-black px-8 py-4 rounded-xl shadow-lg flex items-center gap-4">
                             <span className="uppercase text-xs tracking-widest bg-white/20 px-2 py-0.5 rounded">Premieres Soon</span>
                             <Countdown targetDate={movie.releaseDateTime!} onEnd={() => setReleased(true)} className="text-lg font-mono" />
                         </div>
@@ -229,21 +181,11 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
         <div className="p-10 md:p-14 space-y-16">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-14">
                 <div className="lg:col-span-2 space-y-10">
-                    {needsPurchase && movie.autoReleaseDate && (
-                        <div className="bg-indigo-600/10 border border-indigo-500/20 p-6 rounded-2xl flex items-center gap-6">
-                            <div className="w-12 h-12 bg-indigo-600/20 text-indigo-500 rounded-full flex items-center justify-center text-xl">⏳</div>
-                            <div>
-                                <p className="text-sm font-black text-white uppercase tracking-widest">Protection Period Active</p>
-                                <p className="text-xs text-gray-400 mt-1">This film is currently in its exclusive festival circuit. It will automatically join the public Crate TV catalog on <strong className="text-indigo-400">{new Date(movie.autoReleaseDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>.</p>
-                            </div>
-                        </div>
-                    )}
-
                     <div className="text-gray-300 text-xl leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
                     
                     {movie.isSeries && movie.episodes && movie.episodes.length > 0 && (
                         <div className="space-y-8 pt-6 border-t border-white/5">
-                            <h3 className="text-2xl font-black text-white uppercase tracking-widest border-l-4 border-red-600 pl-4">Episode Browser</h3>
+                            <h3 className="text-2xl font-black text-white uppercase tracking-widest border-l-4 border-red-600 pl-4">Episodes</h3>
                             <div className="grid gap-4">
                                 {movie.episodes.map(ep => (
                                     <EpisodeRow key={ep.id} episode={ep} onPlay={() => handlePlayButtonClick(ep.url)} />
@@ -277,21 +219,12 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
             </div>
         </div>
 
-        {selectedDirector && (
-            <DirectorCreditsModal
-                directorName={selectedDirector}
-                onClose={() => setSelectedDirector(null)}
-                allMovies={allMovies}
-                onSelectMovie={onSelectRecommendedMovie}
-            />
-        )}
-
         {showPurchaseModal && (
             <SquarePaymentModal
                 paymentType="movie"
                 movie={movie}
                 onClose={() => setShowPurchaseModal(false)}
-                onPaymentSuccess={handlePurchaseSuccess}
+                onPaymentSuccess={async () => { await purchaseMovie(movie.key); setShowPurchaseModal(false); }}
             />
         )}
       </div>
