@@ -48,8 +48,7 @@ export async function POST(request: Request) {
                 {
                     content: logoBuffer,
                     filename: 'logo.png',
-                    contentId: 'logo',
-                    disposition: 'inline'
+                    cid: 'logo'
                 }
             ],
             html: `
@@ -90,6 +89,9 @@ export async function POST(request: Request) {
                         <div style="text-align: left; background: rgba(255,255,255,0.03); padding: 30px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05);">
                             <div style="font-size: 16px; color: #ccc; margin-bottom: 20px;">
                                 ${htmlBody}
+                            </div>
+                            <div style="text-align: center; margin-top: 30px;">
+                                <a href="https://cratetv.net/movie/${movieKey}?action=support" style="background: #ef4444; color: #fff; text-decoration: none; padding: 15px 40px; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">Support the Creator</a>
                             </div>
                             ${signature ? `<div style="padding-top: 30px; margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); color: #666; font-size: 12px; white-space: pre-wrap;">${signature}</div>` : ''}
                         </div>

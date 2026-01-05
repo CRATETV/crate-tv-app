@@ -1,4 +1,3 @@
-
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { AnalyticsData, Movie, User, FilmmakerPayout } from '../types.js';
 
@@ -22,9 +21,9 @@ const parseNote = (note: string | undefined): { type: string, title?: string, di
     const donationMatch = note.match(/Support for film: "(.*)" by (.*)/);
     if (donationMatch) return { type: 'donation', title: donationMatch[1].trim(), director: donationMatch[2].trim() };
     
-    // Distinguish between the two types of festivals
-    if (note.includes('All-Access Pass') && !note.includes('Crate Fest')) return { type: 'pass' };
-    if (note.includes('Crate Fest 2026 Pass') || note.includes('Crate Fest All-Access')) return { type: 'crateFestPass' };
+    // Distinguish between the two types of festivals via keyword matching
+    if (note.includes('Crate Fest')) return { type: 'crateFestPass' };
+    if (note.includes('All-Access Pass')) return { type: 'pass' };
     
     const blockMatch = note.match(/Unlock Block: "(.*)"/);
     if (blockMatch) return { type: 'block', blockTitle: blockMatch[1].trim() };

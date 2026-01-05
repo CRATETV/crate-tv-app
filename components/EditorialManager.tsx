@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { EditorialStory, Movie } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -86,7 +85,6 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                {/* Main Composition Hub */}
                 <div className="lg:col-span-2 space-y-8">
                     <div className="bg-[#0f0f0f] border border-white/5 p-12 rounded-[3.5rem] shadow-2xl space-y-10">
                         <div className="space-y-6">
@@ -129,7 +127,6 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                     </div>
                 </div>
 
-                {/* Parameters & History */}
                 <div className="space-y-8">
                     <div className="bg-[#0f0f0f] border border-white/5 p-8 rounded-[3rem] space-y-8 shadow-2xl">
                         <h3 className="text-sm font-black text-red-500 uppercase tracking-[0.3em]">Story Parameters</h3>
