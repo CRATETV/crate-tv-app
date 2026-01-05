@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -28,9 +27,11 @@ import AuditTerminal from './components/AuditTerminal';
 import EditorialManager from './components/EditorialManager';
 import CommunicationsTerminal from './components/CommunicationsTerminal';
 import ContractsTab from './components/ContractsTab';
+import ArchiveScoutTab from './components/ArchiveScoutTab';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
+    scout: '🔍 Archive Scout',
     editorial: '🖋️ Editorial',
     comms: '📢 Communications',
     audit: '📜 Chronos Audit',
@@ -321,6 +322,7 @@ const AdminPage: React.FC = () => {
 
                         <div className="animate-[fadeIn_0.4s_ease-out]">
                             {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
+                            {activeTab === 'scout' && <ArchiveScoutTab />}
                             {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
                             {activeTab === 'comms' && <CommunicationsTerminal analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                             {activeTab === 'audit' && <AuditTerminal />}
