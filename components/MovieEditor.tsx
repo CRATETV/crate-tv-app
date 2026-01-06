@@ -157,6 +157,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
+    // FIX: Better logic to determine if the movie is a saved record or a brand new draft.
+    const isSavedRecord = formData && allMovies[formData.key] !== undefined;
+
     return (
         <div className="space-y-6 pb-20">
             {!formData ? (
@@ -204,9 +207,16 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                         <div className="flex items-center gap-6">
                             <div>
                                 <h3 className="text-4xl font-black text-white uppercase tracking-tighter">{formData.title || 'Draft Master'}</h3>
-                                <p className="text-[10px] text-gray-600 font-black uppercase mt-2 tracking-[0.4em]">UUID: {formData.key}</p>
+                                <div className="flex items-center gap-3 mt-2">
+                                    <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.4em]">UUID: {formData.key}</p>
+                                    {isSavedRecord ? (
+                                        <span className="text-[8px] font-black text-green-500 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 uppercase tracking-widest">Saved to Cloud</span>
+                                    ) : (
+                                        <span className="text-[8px] font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 uppercase tracking-widest">Draft Node</span>
+                                    )}
+                                </div>
                             </div>
-                            {!formData.key.startsWith('movie_') && (
+                            {isSavedRecord && (
                                 <button 
                                     onClick={handleSetSpotlight}
                                     disabled={isSettingSpotlight}
