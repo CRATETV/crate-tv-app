@@ -6,6 +6,7 @@ import PartnershipFinder from './PartnershipFinder';
 import GrantWriter from './GrantWriter';
 import LegalStrategist from './LegalStrategist';
 import RightsAuditor from './RightsAuditor';
+import FundStrategist from './FundStrategist';
 
 interface DiscoveryEngineProps {
     analytics: AnalyticsData | null;
@@ -57,20 +58,22 @@ const GrantLedger: React.FC = () => {
 };
 
 const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({ analytics, movies, categories, onUpdateCategories }) => {
-    const [activeSection, setActiveSection] = useState<'auditor' | 'strategist' | 'partners' | 'grantwriter' | 'ledger'>('auditor');
+    const [activeSection, setActiveSection] = useState<'auditor' | 'strategist' | 'fund' | 'partners' | 'grantwriter' | 'ledger'>('auditor');
 
     return (
         <div className="space-y-12 pb-20 animate-[fadeIn_0.4s_ease-out]">
             <div className="flex flex-wrap gap-4 p-1 bg-white/5 rounded-2xl border border-white/5 w-max mx-auto shadow-2xl">
                 <button onClick={() => setActiveSection('auditor')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'auditor' ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-white'}`}>Rights Auditor</button>
+                <button onClick={() => setActiveSection('fund')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'fund' ? 'bg-amber-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Fund Strategist</button>
                 <button onClick={() => setActiveSection('strategist')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'strategist' ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}>Legal Strategist</button>
                 <button onClick={() => setActiveSection('partners')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'partners' ? 'bg-green-600 text-white' : 'text-gray-500 hover:text-white'}`}>Grant Research</button>
                 <button onClick={() => setActiveSection('grantwriter')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'grantwriter' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-white'}`}>AI Writer</button>
-                <button onClick={() => setActiveSection('ledger')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'ledger' ? 'bg-amber-600 text-white' : 'text-gray-500 hover:text-white'}`}>Grant Ledger</button>
+                <button onClick={() => setActiveSection('ledger')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'ledger' ? 'bg-gray-600 text-white' : 'text-gray-500 hover:text-white'}`}>Grant Ledger</button>
             </div>
 
             <div className="animate-[fadeIn_0.5s_ease-out]">
                 {activeSection === 'auditor' && <RightsAuditor />}
+                {activeSection === 'fund' && <FundStrategist />}
                 {activeSection === 'strategist' && <LegalStrategist />}
                 {activeSection === 'partners' && <PartnershipFinder />}
                 {activeSection === 'grantwriter' && <GrantWriter />}
