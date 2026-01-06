@@ -54,6 +54,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [selectedMovieKey, setSelectedMovieKey] = useState<string>('');
     const [formData, setFormData] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isSettingSpotlight, setIsSettingSpotlight] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
@@ -137,6 +138,21 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         }
     };
 
+    const handleSetSpotlight = async () => {
+        if (!formData || isSettingSpotlight) return;
+        if (!window.confirm(`PROMOTE TO SPOTLIGHT: Set "${formData.title}" as the global Now Streaming film?`)) return;
+        
+        setIsSettingSpotlight(true);
+        try {
+            await onSetNowStreaming(formData.key);
+            alert(`"${formData.title}" is now the global spotlight.`);
+        } catch (err) {
+            alert("Spotlight update failed.");
+        } finally {
+            setIsSettingSpotlight(false);
+        }
+    };
+
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
@@ -185,13 +201,28 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             ) : (
                 <div className="bg-[#0f0f0f] rounded-[2.5rem] border border-white/5 p-8 md:p-12 space-y-12 animate-[fadeIn_0.3s_ease-out]">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/5 pb-10 gap-6">
-                        <div>
-                            <h3 className="text-4xl font-black text-white uppercase tracking-tighter">{formData.title || 'Draft Master'}</h3>
-                            <p className="text-[10px] text-gray-600 font-black uppercase mt-2 tracking-[0.4em]">UUID: {formData.key}</p>
+                        <div className="flex items-center gap-6">
+                            <div>
+                                <h3 className="text-4xl font-black text-white uppercase tracking-tighter">{formData.title || 'Draft Master'}</h3>
+                                <p className="text-[10px] text-gray-600 font-black uppercase mt-2 tracking-[0.4em]">UUID: {formData.key}</p>
+                            </div>
+                            {!formData.key.startsWith('movie_') && (
+                                <button 
+                                    onClick={handleSetSpotlight}
+                                    disabled={isSettingSpotlight}
+                                    className="bg-red-600/10 hover:bg-red-600 border border-red-500/20 text-red-500 hover:text-white font-black px-6 py-3 rounded-2xl flex items-center gap-2 transition-all group shadow-xl"
+                                >
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600 group-hover:bg-white"></span>
+                                    </span>
+                                    <span className="text-[10px] uppercase tracking-widest">{isSettingSpotlight ? 'Pulsing...' : 'Set as Global Spotlight'}</span>
+                                </button>
+                            )}
                         </div>
                         <div className="flex gap-4">
                             <button onClick={() => setSelectedMovieKey('')} className="bg-white/5 text-gray-400 px-6 py-3 rounded-xl uppercase text-[10px] font-black">Close</button>
-                            <button onClick={handleSave} disabled={isSaving} className="bg-red-600 text-white px-8 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl hover:bg-red-500 transition-all">{isSaving ? 'Syncing...' : 'Save Manifest'}</button>
+                            <button onClick={handleSave} disabled={isSaving} className="bg-white text-black px-8 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl hover:bg-gray-200 transition-all">{isSaving ? 'Syncing...' : 'Save Manifest'}</button>
                         </div>
                     </div>
 

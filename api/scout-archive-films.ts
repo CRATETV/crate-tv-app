@@ -13,37 +13,36 @@ export async function POST(request: Request) {
     }
 
     const categoryPrompts = {
-        open_master: "High-quality 4k short films released by Blender Studio or similar open-source studios 2023-2025 CC-BY license",
-        modern_short: "Award-winning independent short films released on Vimeo or YouTube with Creative Commons CC-BY 2023-2025",
-        experimental: "Modern experimental and avant-garde short films released 2024-2025 with Creative Commons license",
-        doc: "Contemporary short documentaries or investigative video essays 2023-2025 with Creative Commons redistribution license"
+        open_master: "High-production value short films from Blender Studio (Open Projects) released 2023-2025 CC-BY license. Look for titles like 'Charge', 'Wing It!', etc.",
+        modern_short: "Independent cinematic short films from Vimeo Staff Picks or curated Vimeo CC groups released 2023-2025 with CC-BY license only.",
+        experimental: "Modern digital avant-garde and AI-assisted films 2024-2025 explicitly released under CC0 or CC-BY on platforms like Archive.org or Open Culture.",
+        doc: "Short investigative documentaries or video essays released 2023-2025 by independent journalists using Creative Commons redistribution licenses."
     };
 
     const prompt = `
-        You are the Head of Modern Acquisitions for Crate TV. 
-        Your goal is to identify 6 high-production value, MODERN films released between 2023 and 2025 that are licensed under Creative Commons (specifically CC-BY or CC-BY-SA).
+        You are the Strategic Acquisitions lead for Crate TV. 
+        Your objective is to identify exactly 6 MODERN films released between 2023 and 2025 that are legally licensed under Creative Commons (CC-BY, CC-BY-SA, or CC0).
         
-        Search Sector: ${categoryPrompts[category as keyof typeof categoryPrompts] || categoryPrompts.open_master}
+        Search Target: ${categoryPrompts[category as keyof typeof categoryPrompts] || categoryPrompts.open_master}
         
-        Requirements:
-        1. ONLY include films released in 2023, 2024, or 2025. 
-        2. Prioritize films with high production quality (Cinematic, 4K, professional color grade).
-        3. Identify specific titles found on Vimeo, YouTube (Creative Commons filtered), or Open Source Studio repositories.
-        4. Do NOT return old public domain films.
+        Rigid Requirements:
+        1. NO VINTAGE FILMS. Release year must be 2023, 2024, or 2025.
+        2. VERIFIED SOURCES ONLY: Focus on Blender Studio, Vimeo (filter for CC-BY), and Open Source Cinema production houses.
+        3. HIGH QUALITY: Only include films that are 4K or high-bitrate cinematic quality.
         
         Provide:
         - title: The full film title
-        - director: Name of the director or studio
-        - year: Release year (MUST be 2023-2025)
-        - license: Specific CC license (e.g., "CC-BY 4.0")
-        - synopsis: 2-3 sentence engaging summary
-        - sourceUrl: Direct URL to the verified landing page
-        - sourceTitle: Platform name (e.g. "Vimeo", "YouTube", "Blender Studio")
+        - director: Name of the director or studio (e.g. "Blender Studio")
+        - year: Release year (2023-2025)
+        - license: Specific CC version (e.g., "CC-BY 4.0")
+        - synopsis: 2-3 sentence prestigious summary
+        - sourceUrl: Direct URL to the verified repository landing page
+        - sourceTitle: Platform name (e.g. "Blender Studio", "Vimeo CC")
+        - trustLevel: "High" if from an official studio site like Blender, "Medium" if from a curated user feed.
         
         Format your response as a JSON object: { "films": [ { ... }, ... ] }
     `;
 
-    // Use gemini-3-pro-preview for complex search and grounding tasks
     const response = await generateContentWithRetry({
         model: 'gemini-3-pro-preview',
         contents: [{ parts: [{ text: prompt }] }],
@@ -64,9 +63,10 @@ export async function POST(request: Request) {
                                 license: { type: Type.STRING },
                                 synopsis: { type: Type.STRING },
                                 sourceUrl: { type: Type.STRING },
-                                sourceTitle: { type: Type.STRING }
+                                sourceTitle: { type: Type.STRING },
+                                trustLevel: { type: Type.STRING, enum: ["High", "Medium", "Unverified"] }
                             },
-                            required: ["title", "director", "year", "license", "synopsis", "sourceUrl", "sourceTitle"]
+                            required: ["title", "director", "year", "license", "synopsis", "sourceUrl", "sourceTitle", "trustLevel"]
                         }
                     }
                 },
@@ -75,9 +75,6 @@ export async function POST(request: Request) {
         }
     });
     
-    // Log sources for transparency
-    console.log("Modern Grounding Links Found:", response.candidates?.[0]?.groundingMetadata?.groundingChunks);
-
     return new Response(response.text, { 
         status: 200, 
         headers: { 
@@ -87,7 +84,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error("Modern Scout Engine Failure:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Contemporary infrastructure scan interrupted." }), { status: 500 });
+    console.error("Modern Scout Failure:", error);
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Infrastructure scan interrupted." }), { status: 500 });
   }
 }

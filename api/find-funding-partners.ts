@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from '@google/genai';
 import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
@@ -12,25 +11,48 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
+    // --- TEMPORAL ROTATION LOGIC ---
+    // Calculate an index that changes every 14 days
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const daysSinceEpoch = Math.floor(Date.now() / msPerDay);
+    const fortnightIndex = Math.floor(daysSinceEpoch / 14);
+    
+    // Rotating focus sectors to ensure variety in results
+    const focusSectors = [
+        "Private philanthropic foundations and high-net-worth arts donors",
+        "Corporate Social Responsibility (CSR) technology and media grants",
+        "Government municipal and state arts endowment opportunities (PA/National)",
+        "Emerging media technology incubators and Web3/Creator ecosystem credits",
+        "Diversity-focused media subsidies and independent filmmaker grants"
+    ];
+    const currentFocus = focusSectors[fortnightIndex % focusSectors.length];
+
     const typeQueries = {
-        infrastructure: "AWS Activate credits for startups 2025, Google Cloud for Startups credits, Azure for Startups eligibility, media infrastructure grants for tech platforms",
-        grants: "Independent film distribution grants 2025, film festival technology sponsorships, National Endowment for the Arts media grants, Sundance Institute technology funding",
-        philly: "Philadelphia arts and technology grants 2025, PA media subsidies for small businesses, Philadelphia Cultural Fund grants, tech-arts initiatives in Greater Philadelphia"
+        infrastructure: "AWS Activate for startups 2025, Google Cloud credits for media platforms, Vercel startup program, digital infrastructure subsidies",
+        grants: "Independent film distribution grants 2025, Film festival tech sponsorships, National Endowment for the Arts media projects",
+        philly: "Philadelphia Cultural Fund 2025, PA media subsidies for small businesses, Greater Philadelphia technology grants"
     };
 
     const prompt = `
-        You are a strategic financial advisor for Crate TV, an independent film streaming platform based in Philadelphia.
-        Crate TV uses AWS S3, Vercel, and Google APIs and seeks organizations that provide cloud credits or grants to offset these costs.
+        You are a Strategic Financial Advisor for Crate TV. 
+        Crate TV is an independent film streaming platform based in Philadelphia using AWS and Google Cloud.
+        
+        CURRENT RESEARCH CYCLE: ${fortnightIndex}
+        TEMPORAL FOCUS: ${currentFocus}
+        TARGET SECTOR: ${typeQueries[type as keyof typeof typeQueries] || typeQueries.infrastructure}
 
-        Target Research: ${typeQueries[type as keyof typeof typeQueries] || typeQueries.infrastructure}
+        REQUIREMENTS:
+        1. Identify exactly 6 REAL-WORLD organizations or specific programs active in 2025.
+        2. Verify via search grounding that they are currently accepting applications.
+        3. Prioritize ${currentFocus} for this cycle.
+        4. Do NOT repeat high-level generic results unless they have a new 2025 window.
 
-        Identify exactly 6 real-world organizations or specific programs that are currently active in 2025.
         For each, provide:
-        - organization: Name of the entity
-        - program: Specific funding or credit program
-        - url: Valid official website URL (must be verified)
-        - fit: 2-sentence explanation of why this fits Crate TV's mission (indie film streaming + creator support)
-        - subsidy_type: (e.g. "Cloud Credits", "Cash Grant", "Corporate Sponsorship")
+        - organization: Name of entity
+        - program: Specific funding or credit name
+        - url: Verified official website
+        - fit: 2-sentence explanation of alignment with Crate TV's mission
+        - subsidy_type: (e.g. "Cloud Credits", "Cash Grant", "Sponsorship")
 
         Respond with ONLY a JSON object: { "partners": [ { ... }, ... ] }
     `;
@@ -64,16 +86,12 @@ export async function POST(request: Request) {
         }
     });
     
-    // Log sources for transparency (required by guidelines)
-    console.log("Grounding Metadata:", response.candidates?.[0]?.groundingMetadata);
-
     return new Response(response.text, { 
         status: 200, 
         headers: { 'Content-Type': 'application/json' } 
     });
 
   } catch (error) {
-    console.error("Funding Intel Error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Intelligence core unreachable." }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Funding intelligence core failure." }), { status: 500 });
   }
 }

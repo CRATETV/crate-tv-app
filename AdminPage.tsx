@@ -27,11 +27,9 @@ import AuditTerminal from './components/AuditTerminal';
 import EditorialManager from './components/EditorialManager';
 import CommunicationsTerminal from './components/CommunicationsTerminal';
 import ContractsTab from './components/ContractsTab';
-import ArchiveScoutTab from './components/ArchiveScoutTab';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
-    scout: '🔍 Archive Scout',
     editorial: '🖋️ Editorial',
     comms: '📢 Communications',
     audit: '📜 Chronos Audit',
@@ -63,7 +61,7 @@ const AdminPage: React.FC = () => {
     const [role, setRole] = useState('viewer');
     const [operatorName, setOperatorName] = useState('');
     const [password, setPassword] = useState('');
-    const [loginName, setLoginName] = useState(''); // Name entered at login
+    const [loginName, setLoginName] = useState(''); 
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -85,14 +83,10 @@ const AdminPage: React.FC = () => {
     const allowedTabs = useMemo(() => {
         const isMaster = role === 'super_admin' || role === 'master';
         if (isMaster) return Object.keys(ALL_TABS);
-        
         if (role === 'festival_admin') return ['festival', 'analytics'];
-        
         const specificTabs = permissions[role];
         if (specificTabs && specificTabs.length > 0) return specificTabs;
-        if (role.startsWith('collaborator') || role === 'collaborator') return [];
-        
-        return (permissions[role] || ['pulse']).filter(t => t !== 'audit');
+        return ['pulse'];
     }, [role, permissions]);
 
     useEffect(() => {
@@ -169,17 +163,11 @@ const AdminPage: React.FC = () => {
 
     const handleLogin = async (e?: React.FormEvent | null) => {
         e?.preventDefault();
-        
-        if (!loginName.trim()) {
-            setError('Operator Identity required for verification.');
-            return;
-        }
-
         try {
             const response = await fetch('/api/admin-login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: password, name: loginName }),
+                body: JSON.stringify({ password, name: loginName }),
             });
             const data = await response.json();
             if (data.success) {
@@ -213,20 +201,13 @@ const AdminPage: React.FC = () => {
                 setSaveMessage(`Sync Complete.`);
                 await fetchAllData(pass!);
             } else {
-                throw new Error(result.error || "Operation rejected by server.");
+                throw new Error(result.error || "Operation rejected.");
             }
         } catch (err) {
-            setSaveMessage(err instanceof Error ? err.message : "Synchronization failed.");
+            setSaveMessage(err instanceof Error ? err.message : "Sync failed.");
         } finally {
             setIsSaving(false);
         }
-    };
-
-    const handlePrepareRecommendation = (email: string, draft: string) => {
-        if (!allowedTabs.includes('mail')) return;
-        setActiveTab('mail');
-        sessionStorage.setItem('crate_mail_prefill_email', email);
-        sessionStorage.setItem('crate_mail_prefill_body', draft);
     };
 
     if (!isAuthenticated) {
@@ -238,46 +219,21 @@ const AdminPage: React.FC = () => {
                             <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-32 mx-auto mb-6" alt="Crate TV" />
                             <h1 className="text-xl font-black uppercase tracking-[0.2em] text-gray-700">Studio Command</h1>
                         </div>
-                        
                         <div className="space-y-6">
                             <div>
                                 <label className="form-label" htmlFor="password">Operator Key</label>
                                 <div className="relative">
-                                    <input 
-                                        id="password" 
-                                        type={showPassword ? "text" : "password"} 
-                                        value={password} 
-                                        onChange={(e) => setPassword(e.target.value)} 
-                                        className="form-input text-center tracking-widest bg-white/5 border-white/10 pr-12" 
-                                        required 
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute inset-y-0 right-0 px-4 flex items-center text-gray-500 hover:text-white transition-colors"
-                                    >
-                                        {showPassword ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" /></svg>
-                                        ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074L3.707 2.293zM10 12a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /><path d="M2 10s.955-2.263 2.828-4.136A10.046 10.046 0 0110 3c4.478 0 8.268 2.943 9.542 7-.153.483-.32.95-.5 1.401l-1.473-1.473A8.014 8.014 0 0010 8c-2.04 0-3.87.768-5.172 2.035l-1.473-1.473A8.013 8.013 0 002 10z" /></svg>
-                                        )}
+                                    <input id="password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} className="form-input text-center tracking-widest bg-white/5 border-white/10" required />
+                                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 px-4 flex items-center text-gray-500 hover:text-white transition-colors">
+                                        {showPassword ? 'Hide' : 'Show'}
                                     </button>
                                 </div>
                             </div>
-
-                            <div className="animate-[fadeIn_0.3s_ease-out]">
+                            <div>
                                 <label className="form-label">Operator Identity</label>
-                                <input 
-                                    type="text" 
-                                    value={loginName} 
-                                    onChange={(e) => setLoginName(e.target.value)} 
-                                    placeholder="Enter Your Name..."
-                                    className="form-input text-center bg-white/5 border-white/10 uppercase font-black text-xs tracking-widest"
-                                    required 
-                                />
+                                <input type="text" value={loginName} onChange={(e) => setLoginName(e.target.value)} placeholder="Enter Your Name..." className="form-input text-center bg-white/5 border-white/10 uppercase font-black text-xs tracking-widest" required />
                             </div>
                         </div>
-
                         {error && <p className="text-red-500 text-[10px] font-bold text-center uppercase tracking-widest">{error}</p>}
                         <button className="submit-btn w-full !rounded-2xl py-4 bg-red-600" type="submit">Establish Uplink</button>
                     </form>
@@ -289,75 +245,55 @@ const AdminPage: React.FC = () => {
     if (isLoading) return <LoadingSpinner />;
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white selection:bg-red-600 selection:text-white">
+        <div className="min-h-screen bg-[#050505] text-white">
             <div className="max-w-[1800px] mx-auto p-4 md:p-10">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-8 border-b border-white/5 pb-10">
                     <div className="flex items-center gap-6">
                          <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-20" alt="Logo" />
                          <div>
                             <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">Studio <span className="text-red-600">Command</span></h1>
-                            <div className="flex items-center gap-4 mt-2">
-                                <div className="flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-green-500">{role.startsWith('collaborator') ? 'COLLABORATOR' : role.toUpperCase()}</p>
-                                </div>
-                                <div className="h-3 w-px bg-white/10"></div>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">OPERATOR: {operatorName}</p>
-                            </div>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mt-2">OPERATOR: {operatorName}</p>
                          </div>
                     </div>
                     <button onClick={() => { sessionStorage.clear(); window.location.reload(); }} className="bg-white/5 hover:bg-red-600 text-gray-400 hover:text-white font-black py-2.5 px-6 rounded-xl transition-all uppercase text-[10px] tracking-widest border border-white/10">Log Out</button>
                 </div>
                 
-                {allowedTabs.length > 0 ? (
-                    <>
-                        <div className="flex overflow-x-auto pb-4 mb-10 gap-2 scrollbar-hide border-b border-white/5">
-                        {Object.entries(ALL_TABS).map(([tabId, label]) => {
-                                if (!allowedTabs.includes(tabId)) return null;
-                                return (
-                                    <button key={tabId} onClick={() => setActiveTab(tabId)} className={`px-6 py-3 text-[11px] font-black uppercase tracking-[0.15em] rounded-xl transition-all whitespace-nowrap border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-xl' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>{label}</button>
-                                );
-                        })}
-                        </div>
+                <div className="flex overflow-x-auto pb-4 mb-10 gap-2 scrollbar-hide border-b border-white/5">
+                    {Object.entries(ALL_TABS).map(([tabId, label]) => {
+                        if (!allowedTabs.includes(tabId)) return null;
+                        return (
+                            <button key={tabId} onClick={() => setActiveTab(tabId)} className={`px-6 py-3 text-[11px] font-black uppercase tracking-[0.15em] rounded-xl transition-all whitespace-nowrap border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-xl' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}>{label}</button>
+                        );
+                    })}
+                </div>
 
-                        <div className="animate-[fadeIn_0.4s_ease-out]">
-                            {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
-                            {activeTab === 'scout' && <ArchiveScoutTab />}
-                            {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
-                            {activeTab === 'comms' && <CommunicationsTerminal analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
-                            {activeTab === 'audit' && <AuditTerminal />}
-                            {activeTab === 'users' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={handlePrepareRecommendation} />}
-                            {activeTab === 'intelligence' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(newCats) => handleSaveData('categories', newCats)} />}
-                            {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
-                            {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
-                            {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={(item) => setActiveTab('movies')} onRefresh={() => fetchAllData(password)} />}
-                            {activeTab === 'inquiries' && <TalentInquiriesTab />}
-                            {activeTab === 'jury' && <JuryRoomTab pipeline={pipeline} />}
-                            {activeTab === 'analytics' && <AnalyticsPage viewMode={role === 'festival_admin' ? 'festival' : 'full'} />}
-                            {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
-                            {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}
-                            {activeTab === 'cratefest' && <CrateFestEditor config={crateFestConfig!} allMovies={movies} pipeline={pipeline} onSave={(newConfig) => handleSaveData('settings', { crateFestConfig: newConfig })} isSaving={isSaving} />}
-                            {activeTab === 'vouchers' && <PromoCodeManager isAdmin={true} targetFilms={Object.values(movies)} targetBlocks={[]} />}
-                            {activeTab === 'pitch' && <PitchDeckManager onSave={(settings) => handleSaveData('settings', settings)} isSaving={isSaving} />}
-                            {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
-                            {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={(d) => setFestivalData(d)} onConfigChange={(c) => setFestivalConfig(c)} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}
-                            {activeTab === 'contracts' && <ContractsTab />}
-                            {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}
-                            {activeTab === 'about' && aboutData && <AboutEditor initialData={aboutData} onSave={(newData) => handleSaveData('about', newData)} isSaving={isSaving} />}
-                            {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(password)} />}
-                            {activeTab === 'security' && <SecurityTerminal />}
-                            {activeTab === 'fallback' && <FallbackGenerator movies={movies} categories={categories} festivalData={festivalData} festivalConfig={festivalConfig} aboutData={aboutData} />}
-                        </div>
-                    </>
-                ) : (
-                    <div className="py-40 text-center border-2 border-dashed border-white/5 rounded-[4rem] animate-pulse">
-                         <div className="w-20 h-20 bg-red-600/10 rounded-full flex items-center justify-center mx-auto mb-8">
-                            <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                         </div>
-                         <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic">Access Restricted</h2>
-                         <p className="text-gray-500 max-w-sm mx-auto mt-4 font-medium">Your node has been initialized, but no sectors have been assigned. Contact a Super Admin to authorize specific terminal tabs.</p>
-                    </div>
-                )}
+                <div className="animate-[fadeIn_0.4s_ease-out]">
+                    {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
+                    {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
+                    {activeTab === 'comms' && <CommunicationsTerminal analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
+                    {activeTab === 'audit' && <AuditTerminal />}
+                    {activeTab === 'users' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={(e, d) => setActiveTab('mail')} />}
+                    {activeTab === 'intelligence' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(newCats) => handleSaveData('categories', newCats)} />}
+                    {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
+                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
+                    {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => setActiveTab('movies')} onRefresh={() => fetchAllData(password)} />}
+                    {activeTab === 'inquiries' && <TalentInquiriesTab />}
+                    {activeTab === 'jury' && <JuryRoomTab pipeline={pipeline} />}
+                    {activeTab === 'analytics' && <AnalyticsPage viewMode={role === 'festival_admin' ? 'festival' : 'full'} />}
+                    {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
+                    {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}
+                    {activeTab === 'cratefest' && <CrateFestEditor config={crateFestConfig!} allMovies={movies} pipeline={pipeline} onSave={(newConfig) => handleSaveData('settings', { crateFestConfig: newConfig })} isSaving={isSaving} />}
+                    {activeTab === 'vouchers' && <PromoCodeManager isAdmin={true} targetFilms={Object.values(movies)} targetBlocks={[]} />}
+                    {activeTab === 'pitch' && <PitchDeckManager onSave={(settings) => handleSaveData('settings', settings)} isSaving={isSaving} />}
+                    {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
+                    {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={(d) => setFestivalData(d)} onConfigChange={(c) => setFestivalConfig(c)} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}
+                    {activeTab === 'contracts' && <ContractsTab />}
+                    {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}
+                    {activeTab === 'about' && aboutData && <AboutEditor initialData={aboutData} onSave={(newData) => handleSaveData('about', newData)} isSaving={isSaving} />}
+                    {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(password)} />}
+                    {activeTab === 'security' && <SecurityTerminal />}
+                    {activeTab === 'fallback' && <FallbackGenerator movies={movies} categories={categories} festivalData={festivalData} festivalConfig={festivalConfig} aboutData={aboutData} />}
+                </div>
             </div>
             {saveMessage && <SaveStatusToast message={saveMessage} isError={false} onClose={() => setSaveMessage('')} />}
         </div>
