@@ -31,20 +31,26 @@ export async function POST(request: Request) {
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: { 
+        parts: [{ text: prompt }] 
+      },
       config: {
         imageConfig: {
           aspectRatio: "16:9"
         }
-      }
+      } as any
     });
 
     let imageUrl = '';
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
-        imageUrl = `data:image/png;base64,${part.inlineData.data}`;
-        break;
+    // Safely iterate through candidates and parts to find the generated image data
+    for (const candidate of response.candidates || []) {
+      for (const part of candidate.content?.parts || []) {
+        if (part.inlineData) {
+          imageUrl = `data:image/png;base64,${part.inlineData.data}`;
+          break;
+        }
       }
+      if (imageUrl) break;
     }
 
     if (!imageUrl) throw new Error("Image generation failed.");
@@ -53,6 +59,6 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("Brand Forge Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: error.message || "Internal server error" }), { status: 500 });
   }
 }
