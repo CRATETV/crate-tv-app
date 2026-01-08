@@ -68,32 +68,32 @@ const DeveloperGuidePage: React.FC = () => {
                                     title="Chief Infrastructure Architect"
                                     name="Salome Denoon"
                                     duties={["Stack Integrity (AWS/Vercel)", "Product Roadmap & UI/UX", "Final Transmission Gatekeeping"]}
-                                    tool="Admin > Pulse / Security / Fallback"
+                                    tool="Admin → Pulse / Security / Fallback"
                                     color="text-red-500"
                                 />
                                 <RoleCard 
                                     title="Chief Patronage Officer"
                                     name="Tathia MomPremier"
                                     duties={["Strategic Board Advisory", "Festival Fund Oversight", "Philly Institutional Bridge"]}
-                                    tool="Admin > Analytics / Vault / Users"
+                                    tool="Admin → Analytics / Vault / Users"
                                     color="text-amber-500"
                                 />
                                 <RoleCard 
                                     title="Chief Selection Officer"
                                     duties={["Pipeline Review & Adjudication", "High-Bitrate Asset Ingestion", "Watch Party Scheduling"]}
-                                    tool="Admin > Pipeline / Jury / Catalog"
+                                    tool="Admin → Pipeline / Jury / Catalog"
                                     color="text-purple-500"
                                 />
                                 <RoleCard 
                                     title="Director of Resource Acquisition"
                                     duties={["Grant Narrative Drafting", "Technology Credit Harvesting", "Regional Funding Research"]}
-                                    tool="Admin > Fund Strategist / Grant Writer"
+                                    tool="Admin → Fund Strategist / Grant Writer"
                                     color="text-green-500"
                                 />
                                 <RoleCard 
                                     title="Editorial Dispatcher"
                                     duties={["Crate Zine Direction", "Studio Mail Broadcasts", "AI Social Kit Management"]}
-                                    tool="Admin > Editorial / Dispatch / Mail"
+                                    tool="Admin → Editorial / Dispatch / Mail"
                                     color="text-blue-500"
                                 />
                             </div>
@@ -102,7 +102,7 @@ const DeveloperGuidePage: React.FC = () => {
                                 <h4 className="font-black text-indigo-500 uppercase tracking-widest text-[10px] mb-4">Onboarding Protocol</h4>
                                 <p className="mb-4 text-xs text-gray-400">To authorize a new Sector Lead without compromising the Master Key:</p>
                                 <ol className="list-decimal list-inside space-y-2 text-[11px] text-gray-400 leading-relaxed">
-                                    <li>Navigate to <strong>Admin > Permissions</strong>.</li>
+                                    <li>Navigate to <strong>Admin → Permissions</strong>.</li>
                                     <li>Click <strong>"Issue Key"</strong> and enter the Lead's name.</li>
                                     <li>Select only the tabs listed in their <strong>"Primary Workspace"</strong> above.</li>
                                     <li>Forward the unique <code>CRATE-XXXXXX</code> key to the member.</li>
