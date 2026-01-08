@@ -14,7 +14,7 @@ const TrailerStage: React.FC<{ movie: Movie }> = ({ movie }) => {
     }, [movie.key]);
 
     return (
-        <div className="relative aspect-video lg:aspect-[2.35/1] bg-black rounded-[3rem] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,1)] border border-white/10 group">
+        <div className="relative aspect-video lg:aspect-[2.35/1] bg-black rounded-[3rem] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,1)] border border-white/10 group z-10">
             <video 
                 ref={videoRef}
                 key={movie.key}
@@ -25,15 +25,16 @@ const TrailerStage: React.FC<{ movie: Movie }> = ({ movie }) => {
                 playsInline
                 className="w-full h-full object-cover opacity-80"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+            {/* Optimized overlay to allow interaction with child buttons */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none"></div>
             
             <div className="absolute bottom-8 left-8 right-8 flex flex-col md:flex-row justify-between items-end gap-6 z-20">
-                <div className="space-y-2 max-w-2xl">
+                <div className="space-y-2 max-w-2xl pointer-events-none">
                     <span className="text-red-500 font-black uppercase tracking-[0.4em] text-[9px] mb-2 block">NOW_SCREENING_STUDIO</span>
                     <h4 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic leading-none drop-shadow-2xl">{movie.title}</h4>
                     <p className="text-gray-300 text-sm md:text-lg font-medium italic line-clamp-2 drop-shadow-lg">"{movie.synopsis.replace(/<[^>]+>/g, '')}"</p>
                 </div>
-                <div className="flex gap-4">
+                <div className="flex gap-4 pointer-events-auto">
                     <button 
                         onClick={() => setIsMuted(!isMuted)}
                         className="bg-black/60 backdrop-blur-md p-4 rounded-full border border-white/20 hover:bg-white/10 transition-all"
@@ -69,8 +70,8 @@ const ZineTrailerPark: React.FC<{ movies: Movie[] }> = ({ movies }) => {
     const activeMovie = movies[selectedIdx] || movies[0];
 
     return (
-        <div className="space-y-12">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div className="space-y-12 relative z-10">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 relative z-30">
                 <div>
                     <h3 className="text-5xl font-black text-white uppercase tracking-tighter italic leading-none">THE CINEMA STAGE 🍿</h3>
                     <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.6em] mt-3">High-Bitrate Kinetic Dispatches</p>
@@ -83,7 +84,7 @@ const ZineTrailerPark: React.FC<{ movies: Movie[] }> = ({ movies }) => {
 
             <TrailerStage movie={activeMovie} />
 
-            <div className="relative group/carousel">
+            <div className="relative group/carousel z-30">
                 <div 
                     ref={scrollRef}
                     className="flex gap-4 overflow-x-auto scrollbar-hide pb-8 px-2 -mx-2 snap-x"
@@ -92,7 +93,7 @@ const ZineTrailerPark: React.FC<{ movies: Movie[] }> = ({ movies }) => {
                         <div 
                             key={m.key} 
                             onClick={() => setSelectedIdx(idx)}
-                            className={`flex-shrink-0 w-64 aspect-video rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 border-2 snap-start ${selectedIdx === idx ? 'border-red-600 scale-105 shadow-[0_0_40px_rgba(239,68,68,0.2)]' : 'border-white/5 opacity-40 hover:opacity-100'}`}
+                            className={`flex-shrink-0 w-64 aspect-video rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 border-2 snap-start relative ${selectedIdx === idx ? 'border-red-600 scale-105 shadow-[0_0_40px_rgba(239,68,68,0.2)]' : 'border-white/5 opacity-40 hover:opacity-100'}`}
                         >
                             <img src={m.poster} className="w-full h-full object-cover" alt="" />
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -102,7 +103,7 @@ const ZineTrailerPark: React.FC<{ movies: Movie[] }> = ({ movies }) => {
                     ))}
                 </div>
                 
-                {/* Scroll Indicators for large lists */}
+                {/* Scroll Indicators */}
                 <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
                     {movies.slice(0, 10).map((_, i) => (
                         <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${Math.floor(selectedIdx/1) === i ? 'bg-red-600 w-4' : 'bg-white/10'}`}></div>
