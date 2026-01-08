@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie, FilmBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,7 +8,7 @@ declare const Square: any;
 interface SquarePaymentModalProps {
     movie?: Movie;
     block?: FilmBlock;
-    paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'movie' | 'billSavingsDeposit' | 'watchPartyTicket' | 'crateFestPass';
+    paymentType: 'donation' | 'subscription' | 'pass' | 'block' | 'movie' | 'billSavingsDeposit' | 'watchPartyTicket' | 'crateFestPass' | 'juryPass';
     onClose: () => void;
     onPaymentSuccess: (details: { paymentType: SquarePaymentModalProps['paymentType'], itemId?: string, amount: number, email?: string }) => void;
     priceOverride?: number; 
@@ -32,21 +31,21 @@ const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type
             
             <div className="flex-grow flex flex-col justify-center">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">
-                    {type === 'watchPartyTicket' ? 'Live Screening Pass' : type === 'crateFestPass' ? 'Crate Fest All-Access' : type === 'movie' ? 'Authorized Rental' : 'Official Selection Access'}
+                    {type === 'juryPass' ? 'Grand Jury Credentials' : type === 'watchPartyTicket' ? 'Live Screening Pass' : type === 'crateFestPass' ? 'Crate Fest All-Access' : type === 'movie' ? 'Authorized Rental' : 'Official Selection Access'}
                 </p>
                 <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-tight line-clamp-1">{details.title}</h3>
-                <p className="text-xs text-gray-400 mt-2 font-mono">Issued to: {details.email || 'Verified Supporter'}</p>
+                <p className="text-xs text-gray-400 mt-2 font-mono">Issued to: {details.email || 'Verified Member'}</p>
             </div>
 
             <div className="mt-auto flex justify-between items-end border-t border-white/10 pt-4">
                 <div className="flex gap-4">
                     <div>
                         <p className="text-[7px] text-gray-500 uppercase font-black">Status</p>
-                        <p className="text-[10px] text-green-500 font-bold uppercase tracking-widest">Valid</p>
+                        <p className="text-[10px] text-green-500 font-bold uppercase tracking-widest">Authorized</p>
                     </div>
                     <div>
-                        <p className="text-[7px] text-gray-500 uppercase font-black">Expiry</p>
-                        <p className="text-[10px] text-white font-bold uppercase tracking-widest">Event End</p>
+                        <p className="text-[7px] text-gray-500 uppercase font-black">Rank</p>
+                        <p className="text-[10px] text-white font-bold uppercase tracking-widest">{type === 'juryPass' ? 'Jury Member' : 'Patron'}</p>
                     </div>
                 </div>
                 <div className="bg-white p-1 rounded">
@@ -60,10 +59,6 @@ const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type
     </div>
 );
 
-/**
- * FIXED: SquarePaymentModal component fully implemented and exported as default.
- * Handles loading the Square SDK, initializing the payment form, and processing transactions.
- */
 const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({ 
     movie, 
     block, 
@@ -89,6 +84,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
     const basePrice = useMemo(() => {
         if (priceOverride !== undefined) return priceOverride;
         switch (paymentType) {
+            case 'juryPass': return 25.00;
             case 'subscription': return 4.99;
             case 'pass': return 50.00;
             case 'block': return 10.00;
@@ -109,6 +105,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
     const itemTitle = useMemo(() => {
         if (movie) return movie.title;
         if (block) return block.title;
+        if (paymentType === 'juryPass') return 'Grand Jury Credentials';
         if (paymentType === 'subscription') return 'Premium Subscription';
         if (paymentType === 'pass') return 'Festival All-Access Pass';
         if (paymentType === 'crateFestPass') return 'Crate Fest All-Access';
@@ -126,12 +123,9 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                 const { applicationId, locationId } = await configRes.json();
 
                 // Load Square SDK script
-                // Fix: Cast window to any to access Square property safely in TypeScript
                 if (!(window as any).Square) {
                     const script = document.createElement('script');
-                    script.src = process.env.NODE_ENV === 'production' 
-                        ? 'https://web.squarecdn.com/v1/square.js' 
-                        : 'https://sandbox.web.squarecdn.com/v1/square.js';
+                    script.src = "https://web.squarecdn.com/v1/square.js";
                     script.async = true;
                     await new Promise((resolve) => {
                         script.onload = resolve;
@@ -139,7 +133,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                     });
                 }
 
-                const payments = Square.payments(applicationId, locationId);
+                const payments = (window as any).Square.payments(applicationId, locationId);
                 card = await payments.card();
                 await card.attach('#card-container');
                 cardRef.current = card;

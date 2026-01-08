@@ -29,6 +29,7 @@ interface AuthContextType {
     // Festival & Purchase related
     hasFestivalAllAccess: boolean;
     hasCrateFestPass: boolean;
+    hasJuryPass: boolean;
     unlockedFestivalBlockIds: Set<string>;
     purchasedMovieKeys: Set<string>; 
     rentals: Record<string, string>; 
@@ -36,6 +37,7 @@ interface AuthContextType {
     unlockFestivalBlock: (blockId: string) => Promise<void>;
     grantFestivalAllAccess: () => Promise<void>;
     grantCrateFestPass: () => Promise<void>;
+    grantJuryPass: () => Promise<void>;
     purchaseMovie: (movieKey: string) => Promise<void>;
     unlockWatchParty: (movieKey: string) => Promise<void>;
     subscribe: () => Promise<void>; 
@@ -204,6 +206,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const hasFestivalAllAccess = user?.hasFestivalAllAccess || false;
     const hasCrateFestPass = user?.hasCrateFestPass || false;
+    const hasJuryPass = user?.hasJuryPass || false;
     const unlockedFestivalBlockIds = useMemo(() => new Set(user?.unlockedBlockIds || []), [user]);
     const purchasedMovieKeys = useMemo(() => new Set(user?.purchasedMovieKeys || []), [user]);
     const rentals = user?.rentals || {};
@@ -226,6 +229,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!user || user.hasCrateFestPass) return;
         await updateUserProfile(user.uid, { hasCrateFestPass: true });
         setUser(currentUser => currentUser ? ({ ...currentUser, hasCrateFestPass: true }) : null);
+    };
+
+    const grantJuryPass = async () => {
+        if (!user || user.hasJuryPass) return;
+        await updateUserProfile(user.uid, { hasJuryPass: true });
+        setUser(currentUser => currentUser ? ({ ...currentUser, hasJuryPass: true }) : null);
     };
 
     const purchaseMovie = async (movieKey: string) => {
@@ -258,8 +267,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const value = {
         user, authInitialized, claimsLoaded, signIn, signUp, logout, sendPasswordReset, getUserIdToken, setAvatar, updateName,
         watchlist, toggleWatchlist, watchedMovies, markAsWatched, likedMovies, toggleLikeMovie,
-        hasFestivalAllAccess, hasCrateFestPass, unlockedFestivalBlockIds, purchasedMovieKeys, rentals, unlockedWatchPartyKeys,
-        unlockFestivalBlock, grantFestivalAllAccess, grantCrateFestPass, purchaseMovie, unlockWatchParty, subscribe
+        hasFestivalAllAccess, hasCrateFestPass, hasJuryPass, unlockedFestivalBlockIds, purchasedMovieKeys, rentals, unlockedWatchPartyKeys,
+        unlockFestivalBlock, grantFestivalAllAccess, grantCrateFestPass, grantJuryPass, purchaseMovie, unlockWatchParty, subscribe
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

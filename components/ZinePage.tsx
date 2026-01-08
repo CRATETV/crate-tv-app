@@ -5,7 +5,7 @@ import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';
 import BottomNavBar from './BottomNavBar';
 import SEO from './SEO';
-import { EditorialStory, Movie } from '../types';
+import { EditorialStory, Movie, ZineSection } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import { useFestival } from '../contexts/FestivalContext';
 import ZinePuzzle from './ZinePuzzle';
@@ -16,6 +16,33 @@ import ZineGameEmoji from './ZineGameEmoji';
 interface ZinePageProps {
     storyId?: string;
 }
+
+const ZineVideoEmbed: React.FC<{ url: string }> = ({ url }) => {
+    const isVimeo = url.includes('vimeo.com');
+    const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+
+    if (isVimeo) {
+        const id = url.split('/').pop();
+        return (
+            <div className="aspect-video rounded-3xl overflow-hidden shadow-2xl my-10">
+                <iframe src={`https://player.vimeo.com/video/${id}?color=ef4444&title=0&byline=0&portrait=0`} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen></iframe>
+            </div>
+        );
+    }
+    if (isYouTube) {
+        const id = url.includes('v=') ? url.split('v=').pop()?.split('&')[0] : url.split('/').pop();
+        return (
+            <div className="aspect-video rounded-3xl overflow-hidden shadow-2xl my-10">
+                <iframe src={`https://www.youtube.com/embed/${id}`} className="w-full h-full" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+            </div>
+        );
+    }
+    return (
+        <div className="aspect-video rounded-[3rem] overflow-hidden bg-black shadow-2xl my-10 border border-white/5">
+            <video src={url} controls className="w-full h-full object-contain" />
+        </div>
+    );
+};
 
 const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
     const { movies } = useFestival();
@@ -62,14 +89,33 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
 
     return (
         <div className="flex flex-col min-h-screen text-white bg-[#050505] selection:bg-red-600 selection:text-white">
-            <SEO title={activeStory ? activeStory.title : "Crate Zine // The Pulse"} description="Interactive cinema culture, dispatches, and puzzles." />
+            <style>{`
+                @keyframes colorShift {
+                    0% { color: #ef4444; filter: hue-rotate(0deg); }
+                    33% { color: #8b5cf6; filter: hue-rotate(90deg); }
+                    66% { color: #f59e0b; filter: hue-rotate(180deg); }
+                    100% { color: #ef4444; filter: hue-rotate(360deg); }
+                }
+                .animate-chroma {
+                    animation: colorShift 8s linear infinite;
+                }
+                .glow-shift {
+                    animation: hueRotate 12s linear infinite;
+                }
+                @keyframes hueRotate {
+                    from { filter: hue-rotate(0deg); }
+                    to { filter: hue-rotate(360deg); }
+                }
+            `}</style>
+            
+            <SEO title={activeStory ? activeStory.title : "Crate Zine // Interactive Cinema"} description="Interactive cinema culture, dispatches, and puzzles." />
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
 
             <main className="flex-grow pt-24 pb-32 px-4 md:px-12 relative overflow-hidden">
-                {/* Visual Atmosphere - Optimized Z-Index */}
-                <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20 z-0">
-                    <div className="absolute top-[-10%] right-[-5%] w-[800px] h-[800px] bg-red-600/10 blur-[120px] rounded-full animate-pulse"></div>
-                    <div className="absolute bottom-[10%] left-[-5%] w-[600px] h-[600px] bg-purple-600/10 blur-[120px] rounded-full animate-bounce"></div>
+                {/* Visual Atmosphere */}
+                <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20 z-0 glow-shift">
+                    <div className="absolute top-[-10%] right-[-5%] w-[800px] h-[800px] bg-red-600/20 blur-[150px] rounded-full animate-pulse"></div>
+                    <div className="absolute bottom-[10%] left-[-5%] w-[600px] h-[600px] bg-purple-600/20 blur-[150px] rounded-full animate-bounce"></div>
                 </div>
 
                 <div className="max-w-[1600px] mx-auto relative z-10">
@@ -78,20 +124,21 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                             {/* DYNAMIC HEADER */}
                             <header className="flex flex-col md:flex-row justify-between items-end gap-8 pb-12 border-b border-white/10">
                                 <div className="space-y-4">
-                                    <div className="inline-flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full shadow-[0_0_20px_rgba(239,68,68,0.4)]">
-                                        <span className="text-[9px] font-black uppercase tracking-widest animate-pulse">Network Active 📡</span>
+                                    <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1 rounded-full shadow-2xl">
+                                        <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Node Cluster: Online 📡</span>
                                     </div>
-                                    <h1 className="text-7xl md:text-9xl font-black uppercase tracking-tighter italic leading-none drop-shadow-2xl">
-                                        THE <span className="text-red-600">PULSE.</span>
+                                    <h1 className="text-7xl md:text-[10rem] font-black uppercase tracking-tighter italic leading-none drop-shadow-2xl animate-chroma">
+                                        CRATE <span className="text-white">ZINE.</span>
                                     </h1>
-                                    <p className="text-xl md:text-2xl text-gray-400 font-medium max-w-xl leading-tight">
-                                        Exploration of the Cinematic Underground ⚡ Monthly Puzzles 🧩 & Critical Dispatches 🎬
+                                    <p className="text-xl md:text-2xl text-gray-500 font-medium max-w-xl leading-tight">
+                                        The digital record of the cinematic underground ⚡ Interactive puzzles 🧩 & Editorial dispatches 🎬
                                     </p>
                                 </div>
                                 <ZineSentiment />
                             </header>
 
-                            {/* FEATURED EDITORIAL SECTOR - THE DISPATCH */}
+                            {/* FEATURED EDITORIAL SECTOR */}
                             <section className="space-y-8">
                                 <div className="flex items-center gap-4">
                                     <h2 className="text-3xl font-black uppercase tracking-tighter italic">Top Dispatches 🖋️</h2>
@@ -107,7 +154,7 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                             <img src={stories[0].heroImage} className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-[2000ms]" alt="" />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
                                             <div className="absolute bottom-10 left-10 right-10 space-y-4">
-                                                <span className="bg-red-600 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl">Headline Feature 🔥</span>
+                                                <span className="bg-red-600 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl">Headline Feature 🔥</span>
                                                 <h3 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic leading-none">{stories[0].title}</h3>
                                                 <p className="text-gray-300 text-lg md:text-xl font-medium max-w-2xl line-clamp-2">{stories[0].subtitle}</p>
                                                 <button className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/50 group-hover:text-white transition-colors">Begin Reading →</button>
@@ -136,7 +183,7 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                 </div>
                             </section>
 
-                            {/* IMMERSIVE TRAILER STAGE - Z-INDEX FIXED */}
+                            {/* IMMERSIVE TRAILER STAGE */}
                             <section className="bg-white/[0.02] border border-white/5 rounded-[4rem] p-12 shadow-2xl space-y-10 overflow-hidden relative z-20">
                                 <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none rotate-12">
                                     <h2 className="text-[12rem] font-black italic">TRAILERS</h2>
@@ -168,23 +215,20 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
 
                                 <div className="bg-gradient-to-br from-[#0a0a0a] to-black border border-white/5 rounded-[3.5rem] p-10 shadow-2xl flex flex-col justify-center space-y-8">
                                     <div className="space-y-4">
-                                        <h3 className="text-4xl font-black uppercase tracking-tighter italic">Join the Pulse.</h3>
-                                        <p className="text-gray-400 text-xl font-medium leading-relaxed">Stay synchronized with the latest festivals, exclusive premieres, and behind-the-scenes dispatches. 📧</p>
+                                        <h3 className="text-4xl font-black uppercase tracking-tighter italic">Crate Tries Series 👅</h3>
+                                        <p className="text-gray-400 text-xl font-medium leading-relaxed">Creators vs. The Unusual. Watch filmmakers step out of the booth and into the kitchen. 🌶️</p>
                                     </div>
-                                    <div className="flex flex-col sm:flex-row gap-4">
-                                        <input 
-                                            type="email" 
-                                            placeholder="NODE_EMAIL@ADDRESS.COM" 
-                                            className="flex-grow bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-black tracking-widest uppercase focus:border-red-600 transition-all outline-none"
-                                        />
-                                        <button className="bg-red-600 hover:bg-red-700 text-white font-black px-10 py-5 rounded-2xl uppercase tracking-widest text-xs shadow-xl transition-all active:scale-95">Uplink 📡</button>
+                                    <div className="flex gap-4">
+                                        <div className="w-24 h-24 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center grayscale opacity-30">🌮</div>
+                                        <div className="w-24 h-24 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center grayscale opacity-30">🍦</div>
+                                        <div className="w-24 h-24 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center grayscale opacity-30">🦗</div>
                                     </div>
-                                    <p className="text-[10px] text-gray-700 font-black uppercase tracking-widest">Global Independent Infrastructure // Sector Z</p>
+                                    <p className="text-[10px] text-gray-700 font-black uppercase tracking-widest">A Crate Original Production // Sector T</p>
                                 </div>
                             </section>
 
                             {/* SECONDARY STORIES BOARD */}
-                            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pb-20">
+                            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pb-24">
                                 {stories.slice(3, 11).map(story => (
                                     <div 
                                         key={story.id}
@@ -213,7 +257,7 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                 className="mb-12 flex items-center gap-3 text-gray-500 hover:text-white transition-colors uppercase font-black text-[10px] tracking-widest"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                                Back to The Pulse ⚡
+                                Back to Crate Zine ⚡
                             </button>
 
                             <article className="space-y-16">
@@ -226,7 +270,7 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                             Dispatch ID: {activeStory.id.substring(0,8).toUpperCase()}
                                         </span>
                                     </div>
-                                    <h1 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-[0.8] italic text-white">{activeStory.title}</h1>
+                                    <h1 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-[0.8] italic text-white animate-chroma">{activeStory.title}</h1>
                                     <p className="text-2xl md:text-4xl text-gray-400 font-medium leading-tight">{activeStory.subtitle}</p>
                                     <div className="pt-4 flex items-center gap-4 border-b border-white/5 pb-10">
                                         <div className="w-12 h-12 bg-red-600/10 rounded-2xl flex items-center justify-center border border-red-500/20 text-red-500 font-black text-xl italic">C</div>
@@ -237,17 +281,13 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                     </div>
                                 </header>
 
-                                <div className="aspect-video rounded-[4rem] overflow-hidden border border-white/10 shadow-[0_50px_100px_rgba(0,0,0,0.8)] relative">
-                                    <img src={activeStory.heroImage} className="w-full h-full object-cover" alt="" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-                                </div>
-
                                 <div className="space-y-12">
                                     {(activeStory.sections || []).map((section, idx) => (
                                         <div key={section.id} className="animate-[fadeIn_0.5s_ease-out]" style={{ animationDelay: `${idx * 100}ms` }}>
                                             {section.type === 'header' && <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic text-red-600 border-l-8 border-white pl-8 mt-20 mb-8">{section.content} ⚡</h3>}
                                             {section.type === 'quote' && <div className="bg-white/5 border-l-8 border-red-600 p-12 text-3xl md:text-4xl font-black uppercase italic tracking-tight text-white my-16 shadow-2xl rounded-r-3xl">"{section.content}"</div>}
                                             {section.type === 'image' && <div className="rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl my-14"><img src={section.content} className="w-full h-auto" alt="" /></div>}
+                                            {section.type === 'video' && <ZineVideoEmbed url={section.content} />}
                                             {section.type === 'text' && (
                                                 <div className="relative">
                                                     {idx === 0 && <span className="float-left text-[11rem] font-black italic leading-[0.7] mr-6 mt-6 text-red-600 drop-shadow-2xl">{section.content.charAt(0)}</span>}
@@ -266,7 +306,7 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                             <h2 className="text-[15rem] font-black italic tracking-tighter">DISPATCH</h2>
                                         </div>
                                         <div className="space-y-6 text-center lg:text-left relative z-10">
-                                            <h3 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic leading-none">THE SCREEN IS <span className="text-red-600">YOURS.</span></h3>
+                                            <h3 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic leading-none">THE SCREEN IS <span className="text-red-600 animate-chroma">YOURS.</span></h3>
                                             <p className="text-gray-400 text-xl md:text-2xl max-w-xl font-medium leading-relaxed">Join the global patrons of independent masters directly on our infrastructure. 🎬</p>
                                         </div>
                                         <button 

@@ -42,6 +42,11 @@ const ZineProof: React.FC<{ title: string; subtitle: string; sections: ZineSecti
                         if (s.type === 'header') return <h3 key={s.id} className="text-3xl font-black uppercase tracking-tighter italic border-l-4 border-red-600 pl-4">{s.content}</h3>;
                         if (s.type === 'quote') return <div key={s.id} className="bg-gray-50 border-l-8 border-black p-8 text-2xl font-black uppercase italic tracking-tight">"{s.content}"</div>;
                         if (s.type === 'image') return <div key={s.id} className="rounded-2xl overflow-hidden shadow-xl border border-gray-100"><img src={s.content} className="w-full h-auto" alt="" /></div>;
+                        if (s.type === 'video') return (
+                            <div key={s.id} className="rounded-3xl overflow-hidden bg-black aspect-video flex items-center justify-center">
+                                <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Video Stream Placeholder</span>
+                            </div>
+                        );
                         return (
                             <div key={s.id} className="relative">
                                 {idx === 0 && <span className="float-left text-7xl font-black italic leading-[0.7] mr-3 mt-2 text-red-600">{s.content.charAt(0)}</span>}
@@ -158,9 +163,21 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                          <div className="space-y-4">
                             <input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Headline" className="form-input bg-black/40 border-white/10 font-black text-xl uppercase tracking-tighter" />
                             <input value={formData.subtitle} onChange={e => setFormData({...formData, subtitle: e.target.value})} placeholder="Subtitle" className="form-input bg-black/40 border-white/10 font-bold" />
-                            <div className="space-y-2">
-                                <label className="text-[9px] font-black text-gray-600 uppercase">Hero Background URL</label>
-                                <input value={formData.heroImage} onChange={e => setFormData({...formData, heroImage: e.target.value})} placeholder="https://..." className="form-input bg-black/40 border-white/10 text-xs" />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-[9px] font-black text-gray-600 uppercase">Dispatch Type</label>
+                                    <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as any})} className="form-input bg-black/40 border-white/10 text-xs uppercase font-black">
+                                        <option value="SPOTLIGHT">Spotlight</option>
+                                        <option value="INTERVIEW">Interview</option>
+                                        <option value="TRIES">Crate Tries (Food)</option>
+                                        <option value="DEEP_DIVE">Deep Dive</option>
+                                        <option value="NEWS">News</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-black text-gray-600 uppercase">Hero Art URL</label>
+                                    <input value={formData.heroImage} onChange={e => setFormData({...formData, heroImage: e.target.value})} placeholder="https://..." className="form-input bg-black/40 border-white/10 text-xs" />
+                                </div>
                             </div>
                          </div>
                     </section>
@@ -169,12 +186,13 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                         <div className="flex justify-between items-center border-b border-white/5 pb-4">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">02. Narrative Manifest</h4>
                             <div className="flex gap-2">
-                                {(['text', 'header', 'quote', 'image'] as const).map(t => (
-                                    <button key={t} onClick={() => addSection(t)} className="w-8 h-8 bg-white/5 hover:bg-white text-gray-600 hover:text-black rounded-lg transition-all flex items-center justify-center text-xs font-black shadow-lg" title={`Add ${t}`}>
+                                {(['text', 'header', 'quote', 'image', 'video'] as const).map(t => (
+                                    <button key={t} onClick={() => addSection(t)} className="w-8 h-8 bg-white/5 hover:bg-white text-gray-600 hover:text-black rounded-lg transition-all flex items-center justify-center text-[8px] font-black shadow-lg" title={`Add ${t}`}>
                                         {t === 'text' && '¶'}
                                         {t === 'header' && 'H'}
                                         {t === 'quote' && '"'}
                                         {t === 'image' && 'IMG'}
+                                        {t === 'video' && 'VID'}
                                     </button>
                                 ))}
                             </div>
@@ -190,11 +208,11 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                                         <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Block {index + 1} // {section.type.toUpperCase()}</span>
                                         <button onClick={() => removeSection(section.id)} className="text-[9px] font-black text-gray-800 hover:text-red-500 uppercase transition-colors">Purge</button>
                                     </div>
-                                    {section.type === 'image' || section.type === 'header' ? (
+                                    {section.type === 'image' || section.type === 'header' || section.type === 'video' ? (
                                         <input 
                                             value={section.content}
                                             onChange={e => updateSection(section.id, e.target.value)}
-                                            placeholder={section.type === 'image' ? "Image URL (https://...)" : "Header Text..."}
+                                            placeholder={section.type === 'image' ? "Image URL (https://...)" : section.type === 'video' ? "Video URL (mp4/vimeo/yt)" : "Header Text..."}
                                             className="form-input bg-white/5 border-white/5 text-sm"
                                         />
                                     ) : (

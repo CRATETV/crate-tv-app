@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MoviePipelineEntry } from '../types';
+import { MoviePipelineEntry, JuryVerdict } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -50,6 +50,7 @@ const JuryRoomTab: React.FC<JuryRoomTabProps> = ({ pipeline }) => {
     const [selectedFilm, setSelectedFilm] = useState<MoviePipelineEntry | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [existingVotes, setExistingVotes] = useState<Record<string, any>>({});
+    const [communityVotes, setCommunityVotes] = useState<Record<string, JuryVerdict[]>>({});
     const [vote, setVote] = useState<JuryVote>({
         direction: 5,
         performance: 5,
@@ -71,7 +72,17 @@ const JuryRoomTab: React.FC<JuryRoomTabProps> = ({ pipeline }) => {
             setExistingVotes(votes);
         });
 
-        return () => unsubscribe();
+        const unsubCommunity = db.collection('guest_judging').onSnapshot(snapshot => {
+            const votes: Record<string, JuryVerdict[]> = {};
+            snapshot.forEach(doc => {
+                const data = doc.data() as JuryVerdict & { filmId: string };
+                if (!votes[data.filmId]) votes[data.filmId] = [];
+                votes[data.filmId].push(data);
+            });
+            setCommunityVotes(votes);
+        });
+
+        return () => { unsubscribe(); unsubCommunity(); };
     }, []);
 
     useEffect(() => {
@@ -88,6 +99,11 @@ const JuryRoomTab: React.FC<JuryRoomTabProps> = ({ pipeline }) => {
             });
         }
     }, [selectedFilm, existingVotes]);
+
+    // Define handleSelectFilm to fix the 'Cannot find name handleSelectFilm' error
+    const handleSelectFilm = (film: MoviePipelineEntry) => {
+        setSelectedFilm(film);
+    };
 
     const pendingFilms = pipeline.filter(item => item.status === 'pending' || !item.status);
 
@@ -122,8 +138,8 @@ const JuryRoomTab: React.FC<JuryRoomTabProps> = ({ pipeline }) => {
                     <p className="text-gray-400 mt-2 text-lg">Confidential deliberation portal for Crate TV festival adjudicators.</p>
                 </div>
                 <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-lg">
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Progress</p>
-                    <p className="text-white font-bold">{Object.keys(existingVotes).length} / {pendingFilms.length} Reviewed</p>
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Status</p>
+                    <p className="text-white font-bold">{Object.keys(existingVotes).length} / {pendingFilms.length} Vetted</p>
                 </div>
             </div>
 
@@ -140,145 +156,87 @@ const JuryRoomTab: React.FC<JuryRoomTabProps> = ({ pipeline }) => {
                     </button>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                        <div className="lg:col-span-2 space-y-6">
+                        <div className="lg:col-span-2 space-y-8">
                             <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 relative group">
-                                <video 
-                                    src={selectedFilm.movieUrl} 
-                                    controls 
-                                    className="w-full h-full"
-                                    controlsList="nodownload"
-                                />
-                                <div className="absolute top-4 left-4 pointer-events-none">
-                                    <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded border border-white/10 text-[10px] font-bold text-white uppercase tracking-widest">
-                                        Secure Screener
-                                    </div>
-                                </div>
+                                <video src={selectedFilm.movieUrl} controls className="w-full h-full" controlsList="nodownload" />
                             </div>
-                            <div className="bg-gray-800/40 p-8 rounded-2xl border border-white/5">
-                                <h3 className="text-3xl font-bold text-white mb-2">{selectedFilm.title}</h3>
-                                <p className="text-red-500 font-black uppercase tracking-widest mb-6">Directed by {selectedFilm.director}</p>
-                                <div className="prose prose-invert max-w-none">
-                                    <p className="text-gray-300 text-lg leading-relaxed">{selectedFilm.synopsis}</p>
-                                </div>
+                            
+                            {/* Community Intel Section */}
+                            <div className="bg-emerald-900/10 border border-emerald-500/20 p-8 rounded-3xl space-y-6">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-emerald-500">Guest Jury Intelligence</h3>
+                                {communityVotes[selectedFilm.id] ? (
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className="text-center bg-black/40 p-4 rounded-xl">
+                                            <p className="text-[8px] font-black text-emerald-800 uppercase">Avg Narrative</p>
+                                            {/* Fix: Simplified average calculation and made it safer with length check */}
+                                            <p className="text-2xl font-black text-white">
+                                                {communityVotes[selectedFilm.id].length > 0 
+                                                    ? (communityVotes[selectedFilm.id].reduce((a,b) => a + b.narrative, 0) / communityVotes[selectedFilm.id].length).toFixed(1) 
+                                                    : '---'}
+                                            </p>
+                                        </div>
+                                        <div className="text-center bg-black/40 p-4 rounded-xl">
+                                            <p className="text-[8px] font-black text-emerald-800 uppercase">Avg Tech</p>
+                                            {/* Fix: Corrected logic to check array length before calculating average, and removed invalid '.length' on number type (line 175) */}
+                                            <p className="text-2xl font-black text-white">
+                                                {communityVotes[selectedFilm.id].length > 0 
+                                                    ? (communityVotes[selectedFilm.id].reduce((a,b) => a + b.technique, 0) / communityVotes[selectedFilm.id].length).toFixed(1) 
+                                                    : '---'}
+                                            </p>
+                                        </div>
+                                        <div className="text-center bg-black/40 p-4 rounded-xl">
+                                            <p className="text-[8px] font-black text-emerald-800 uppercase">Total Votes</p>
+                                            <p className="text-2xl font-black text-white">{communityVotes[selectedFilm.id].length}</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-emerald-900 italic uppercase">No guest verdicts synchronized for this node.</p>
+                                )}
                             </div>
                         </div>
 
                         <div className="space-y-6">
                             <div className="bg-gray-900 border border-red-600/30 p-8 rounded-3xl shadow-2xl space-y-8">
                                 <h4 className="text-lg font-black text-white uppercase tracking-tighter border-b border-white/5 pb-4">Consensus Verdict</h4>
-                                
                                 <div className="space-y-6">
-                                    <RatingSlider 
-                                        label="Direction" 
-                                        value={vote.direction} 
-                                        onChange={(v) => setVote({...vote, direction: v})} 
-                                    />
-                                    <RatingSlider 
-                                        label="Performance" 
-                                        value={vote.performance} 
-                                        onChange={(v) => setVote({...vote, performance: v})} 
-                                    />
-                                    <RatingSlider 
-                                        label="Cinematography" 
-                                        value={vote.cinematography} 
-                                        onChange={(v) => setVote({...vote, cinematography: v})} 
-                                    />
-                                    <RatingSlider 
-                                        label="Writing" 
-                                        value={vote.writing} 
-                                        onChange={(v) => setVote({...vote, writing: v})} 
-                                    />
+                                    <RatingSlider label="Direction" value={vote.direction} onChange={(v) => setVote({...vote, direction: v})} />
+                                    <RatingSlider label="Performance" value={vote.performance} onChange={(v) => setVote({...vote, performance: v})} />
+                                    <RatingSlider label="Cinematography" value={vote.cinematography} onChange={(v) => setVote({...vote, cinematography: v})} />
+                                    <RatingSlider label="Writing" value={vote.writing} onChange={(v) => setVote({...vote, writing: v})} />
                                 </div>
-
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Laurel Recommendation</label>
-                                    <select 
-                                        value={vote.recommendation}
-                                        onChange={(e) => setVote({...vote, recommendation: e.target.value})}
-                                        className="form-input bg-gray-800 border-gray-700 text-sm"
-                                    >
-                                        {AWARD_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                                    </select>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Jury Notes</label>
-                                    <textarea 
-                                        value={vote.comments}
-                                        onChange={(e) => setVote({...vote, comments: e.target.value})}
-                                        className="form-input bg-gray-800 border-gray-700 text-sm h-24 resize-none"
-                                        placeholder="Specific reasoning for award nomination..."
-                                    />
-                                </div>
-
-                                <button 
-                                    onClick={handleSubmitVerdict}
-                                    disabled={isSubmitting}
-                                    className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl shadow-xl transition-all transform active:scale-95 disabled:bg-gray-800"
-                                >
+                                <select value={vote.recommendation} onChange={(e) => setVote({...vote, recommendation: e.target.value})} className="form-input bg-gray-800 border-gray-700 text-sm">
+                                    {AWARD_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                </select>
+                                <textarea value={vote.comments} onChange={(e) => setVote({...vote, comments: e.target.value})} className="form-input bg-gray-800 border-gray-700 text-sm h-24 resize-none" placeholder="Jury notes..." />
+                                <button onClick={handleSubmitVerdict} disabled={isSubmitting} className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl shadow-xl transition-all disabled:bg-gray-800">
                                     {isSubmitting ? 'Recording...' : 'Submit Jury Verdict'}
                                 </button>
-                            </div>
-
-                            <div className="bg-gray-800/40 p-6 rounded-2xl border border-white/5">
-                                <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Submission Logistics</h4>
-                                <div className="space-y-4">
-                                    <div>
-                                        <p className="text-[10px] text-gray-500 uppercase font-bold">Submitter</p>
-                                        <p className="text-white text-sm font-medium truncate">{selectedFilm.submitterEmail || 'Internal Entry'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-gray-500 uppercase font-bold">Cast Details</p>
-                                        <p className="text-white text-sm font-medium line-clamp-2">{selectedFilm.cast}</p>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                    {pendingFilms.length > 0 ? pendingFilms.map(film => {
+                    {pendingFilms.map(film => {
                         const isJudged = !!existingVotes[film.id];
+                        const communityCount = communityVotes[film.id]?.length || 0;
                         return (
-                            <div 
-                                key={film.id} 
-                                onClick={() => setSelectedFilm(film)}
-                                className="group cursor-pointer space-y-3"
-                            >
+                            <div key={film.id} onClick={() => handleSelectFilm(film)} className="group cursor-pointer space-y-3">
                                 <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/5 transition-all duration-500 group-hover:scale-[1.03] group-hover:border-red-600/50 shadow-xl">
                                     <img src={film.posterUrl} alt={film.title} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" />
-                                    
-                                    {/* Judged Overlay Badge */}
-                                    {isJudged && (
-                                        <div className="absolute top-2 right-2 bg-green-500 text-black font-black px-2 py-0.5 rounded text-[8px] uppercase tracking-tighter shadow-lg z-10">
-                                            Reviewed
-                                        </div>
-                                    )}
-
+                                    {isJudged && <div className="absolute top-2 right-2 bg-green-500 text-black font-black px-2 py-0.5 rounded text-[8px] uppercase tracking-tighter shadow-lg z-10">Vetted</div>}
+                                    {communityCount > 0 && <div className="absolute bottom-2 right-2 bg-emerald-600 text-white font-black px-2 py-0.5 rounded text-[8px] uppercase tracking-tighter shadow-lg z-10">{communityCount} Guest Votes</div>}
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <div className="bg-white text-black font-black px-4 py-2 rounded-full text-[10px] uppercase tracking-widest shadow-2xl">Screen Film</div>
+                                        <div className="bg-white text-black font-black px-4 py-2 rounded-full text-[10px] uppercase tracking-widest shadow-2xl">Enter Deliberation</div>
                                     </div>
                                 </div>
                                 <div className="px-1">
                                     <h4 className="text-white font-bold text-sm truncate">{film.title}</h4>
                                     <p className="text-gray-500 text-[9px] uppercase font-black tracking-tighter truncate">{film.director}</p>
-                                    {isJudged && (
-                                        <div className="mt-1 flex items-center gap-1">
-                                            <span className="text-yellow-500 text-[10px]">★</span>
-                                            <span className="text-gray-400 text-[10px] font-bold">
-                                                {((existingVotes[film.id].direction + existingVotes[film.id].performance + existingVotes[film.id].cinematography + existingVotes[film.id].writing) / 4).toFixed(1)}
-                                            </span>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         );
-                    }) : (
-                        <div className="col-span-full py-24 text-center">
-                            <p className="text-gray-600 font-bold uppercase tracking-[0.5em]">No Pending Submissions for Review</p>
-                        </div>
-                    )}
+                    })}
                 </div>
             )}
         </div>

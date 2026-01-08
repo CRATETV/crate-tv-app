@@ -31,21 +31,33 @@ const ZinePuzzle: React.FC = () => {
                     </div>
                     <button 
                         onClick={() => setShowHelp(!showHelp)}
-                        className="text-[9px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors border border-white/10 px-3 py-1 rounded-full bg-white/5"
+                        className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-all border ${showHelp ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg' : 'text-gray-500 border-white/10 hover:text-white bg-white/5'}`}
                     >
-                        {showHelp ? 'Hide Intel' : 'Mission Brief'}
+                        {showHelp ? 'Hide Intel' : 'How to Play'}
                     </button>
                 </div>
 
                 {showHelp ? (
                     <div className="bg-indigo-600/10 border border-indigo-500/20 p-6 rounded-2xl animate-[fadeIn_0.3s_ease-out] mb-8">
-                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Protocol: Analysis</p>
-                        <p className="text-sm text-gray-400 leading-relaxed font-medium">
-                            1. Read the weekly riddle carefully.<br/>
-                            2. Analyze film metadata for hidden clues.<br/>
-                            3. Enter the single-word decryption key below.<br/>
-                            4. Successful decryption unlocks a <span className="text-indigo-400 font-bold">VIP Voucher Code</span>.
-                        </p>
+                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3">Protocol: Mission Intelligence</p>
+                        <ul className="text-sm text-gray-400 leading-relaxed font-medium space-y-3">
+                            <li className="flex gap-3">
+                                <span className="text-indigo-500 font-bold">01.</span>
+                                <span>Analyze the weekly riddle carefully—it references specific films in the **Crate Catalog**.</span>
+                            </li>
+                            <li className="flex gap-3">
+                                <span className="text-indigo-500 font-bold">02.</span>
+                                <span>Navigate to the homepage or the **Cinema Stage** to inspect film synopses and director bios.</span>
+                            </li>
+                            <li className="flex gap-3">
+                                <span className="text-indigo-500 font-bold">03.</span>
+                                <span>The answer is a single word hidden within these metadata fields.</span>
+                            </li>
+                            <li className="flex gap-3">
+                                <span className="text-indigo-500 font-bold">04.</span>
+                                <span>Successful decryption unlocks an exclusive **Voucher Code** for rentals or merch.</span>
+                            </li>
+                        </ul>
                     </div>
                 ) : (
                     <div className="bg-black/40 border border-white/5 p-8 rounded-3xl shadow-inner relative group mb-8">
@@ -60,7 +72,7 @@ const ZinePuzzle: React.FC = () => {
             {status === 'success' ? (
                 <div className="bg-green-500/20 border border-green-500/50 p-8 rounded-[2rem] text-center animate-[fadeIn_0.5s_ease-out] shadow-[0_0_50px_rgba(34,197,94,0.1)]">
                     <p className="text-green-400 font-black uppercase tracking-widest text-xs mb-3">ACCESS_GRANTED 🔓</p>
-                    <p className="text-4xl font-black text-white tracking-tighter italic mb-4">PULSE_25</p>
+                    <p className="text-4xl font-black text-white tracking-tighter italic mb-4 animate-chroma">PULSE_25</p>
                     <p className="text-gray-500 text-[9px] uppercase font-bold tracking-widest">Valid for any Master File rental this week.</p>
                 </div>
             ) : (

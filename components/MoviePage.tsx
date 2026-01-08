@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import ActorBioModal from './ActorBioModal';
@@ -39,7 +38,7 @@ const SecureWatermark: React.FC<{ email: string; isTriggered: boolean }> = ({ em
 );
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals } = useAuth();
+  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass } = useAuth();
   const { movies: allMovies, categories: allCategories, isLoading: isDataLoading } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
@@ -92,10 +91,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   const hasAccess = useMemo(() => {
     if (!movie) return false;
+    
+    // Bypass paywall if user has Jury Pass (Member or Guest)
+    const hasGuestPass = localStorage.getItem('crate_guest_jury_active') === 'true';
+    if (hasJuryPass || hasGuestPass) return true;
+
     if (!movie.isForSale) return true;
     const expiration = rentals[movieKey];
     return expiration ? new Date(expiration) > new Date() : false;
-  }, [movie, rentals, movieKey]);
+  }, [movie, rentals, movieKey, hasJuryPass]);
 
   useEffect(() => {
     if (movie) {
@@ -158,8 +162,11 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const embedUrl = getEmbedUrl(movie.fullMovie);
   const isLiked = likedMoviesArray.includes(movieKey);
 
+  // Use guest email for watermark if not logged in
+  const effectiveEmail = user?.email || localStorage.getItem('crate_guest_jury_email') || 'authorized_judge';
+
   return (
-    <div ref={containerRef} className="flex flex-col min-h-screen bg-[#050505] text-white">
+    <div className="flex flex-col min-h-screen bg-[#050505] text-white">
         <SEO title={movie.title} description={movie.synopsis.replace(/<[^>]+>/g, '').trim()} image={movie.poster} type="video.movie" />
         {playerMode !== 'full' && <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={true} />}
         
@@ -172,7 +179,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen></iframe>
                             ) : (
                                 <div className="relative w-full h-full" onClick={toggleManualPause}>
-                                    {user?.email && <SecureWatermark email={user.email} isTriggered={isSecurityTriggered} />}
+                                    <SecureWatermark email={effectiveEmail} isTriggered={isSecurityTriggered} />
                                     <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full object-contain block transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'}`} controls={false} playsInline autoPlay onPause={() => !isEnded && setIsPaused(true)} onPlay={() => !isEnded && setIsPaused(false)} onEnded={() => setIsEnded(true)} controlsList="nodownload" />
                                     {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={() => toggleLikeMovie(movieKey)} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => {}} onHome={handleGoHome} />}
                                     {isEnded && (

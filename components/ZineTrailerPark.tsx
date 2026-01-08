@@ -4,59 +4,77 @@ import { Movie } from '../types';
 const TrailerStage: React.FC<{ movie: Movie }> = ({ movie }) => {
     const [isMuted, setIsMuted] = useState(true);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const hasTrailer = !!movie.trailer;
 
     useEffect(() => {
-        if (videoRef.current) {
+        if (videoRef.current && hasTrailer) {
             videoRef.current.play().catch(() => {
                 console.warn("Autoplay blocked for trailer stage");
             });
         }
-    }, [movie.key]);
+    }, [movie.key, hasTrailer]);
 
     return (
         <div className="relative aspect-video lg:aspect-[2.35/1] bg-black rounded-[3rem] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,1)] border border-white/10 group z-10">
-            <video 
-                ref={videoRef}
-                key={movie.key}
-                src={movie.trailer || movie.fullMovie}
-                autoPlay
-                muted={isMuted}
-                loop
-                playsInline
-                className="w-full h-full object-cover opacity-80"
-            />
-            {/* Optimized overlay to allow interaction with child buttons */}
+            {hasTrailer ? (
+                <video 
+                    ref={videoRef}
+                    key={movie.key}
+                    src={movie.trailer}
+                    autoPlay
+                    muted={isMuted}
+                    loop
+                    playsInline
+                    className="w-full h-full object-cover opacity-80"
+                />
+            ) : (
+                <div className="w-full h-full relative">
+                    <img src={movie.poster} className="w-full h-full object-cover opacity-40 blur-xl scale-110" alt="" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="bg-white/5 backdrop-blur-md p-10 rounded-[3rem] border border-white/10 text-center">
+                            <p className="text-[10px] font-black uppercase text-gray-500 tracking-[0.4em] mb-4">Teaser Source Missing</p>
+                            <h5 className="text-2xl font-black text-white uppercase italic tracking-tighter">High-Bitrate Manifest Ready</h5>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none"></div>
             
             <div className="absolute bottom-8 left-8 right-8 flex flex-col md:flex-row justify-between items-end gap-6 z-20">
                 <div className="space-y-2 max-w-2xl pointer-events-none">
-                    <span className="text-red-500 font-black uppercase tracking-[0.4em] text-[9px] mb-2 block">NOW_SCREENING_STUDIO</span>
+                    <div className="flex items-center gap-3 mb-2">
+                        <span className="text-red-500 font-black uppercase tracking-[0.4em] text-[9px] block">DISPATCH_TEASER_FEED</span>
+                        <span className="bg-white/10 text-[7px] font-black text-gray-400 px-2 py-0.5 rounded border border-white/5 uppercase">Preview Mode</span>
+                    </div>
                     <h4 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic leading-none drop-shadow-2xl">{movie.title}</h4>
                     <p className="text-gray-300 text-sm md:text-lg font-medium italic line-clamp-2 drop-shadow-lg">"{movie.synopsis.replace(/<[^>]+>/g, '')}"</p>
                 </div>
                 <div className="flex gap-4 pointer-events-auto">
-                    <button 
-                        onClick={() => setIsMuted(!isMuted)}
-                        className="bg-black/60 backdrop-blur-md p-4 rounded-full border border-white/20 hover:bg-white/10 transition-all"
-                    >
-                        {isMuted ? (
-                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                        ) : (
-                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.982 5.982 0 0115 10a5.982 5.982 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.987 3.987 0 0013 10a3.987 3.987 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" /></svg>
-                        )}
-                    </button>
+                    {hasTrailer && (
+                        <button 
+                            onClick={() => setIsMuted(!isMuted)}
+                            className="bg-black/60 backdrop-blur-md p-4 rounded-full border border-white/20 hover:bg-white/10 transition-all"
+                        >
+                            {isMuted ? (
+                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                            ) : (
+                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.982 5.982 0 0115 10a5.982 5.982 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.987 3.987 0 0013 10a3.987 3.987 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" /></svg>
+                            )}
+                        </button>
+                    )}
                     <button 
                         onClick={() => window.location.href = `/movie/${movie.key}?play=true`}
                         className="bg-white text-black font-black px-10 py-4 rounded-2xl uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-xl"
                     >
-                        Master Session ⚡
+                        Watch Full Film ⚡
                     </button>
                 </div>
             </div>
             
             <div className="absolute top-8 left-8 pointer-events-none">
                 <div className="bg-red-600/20 backdrop-blur-md px-3 py-1 rounded border border-red-500/30">
-                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest animate-pulse">Live Visual Feed</p>
+                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest animate-pulse">Teaser Core Sync</p>
                 </div>
             </div>
         </div>

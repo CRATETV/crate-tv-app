@@ -16,7 +16,7 @@ import HeroManager from './components/HeroManager';
 import LaurelManager from './components/LaurelManager';
 import PitchDeckManager from './components/PitchDeckManager';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
-import JuryRoomTab from './components/JuryRoomTab';
+import AcademyIntelTab from './components/AcademyIntelTab';
 import TalentInquiriesTab from './components/TalentInquiriesTab';
 import CrateFestEditor from './components/CrateFestEditor';
 import PromoCodeManager from './components/PromoCodeManager';
@@ -40,7 +40,7 @@ const ALL_TABS: Record<string, string> = {
     movies: '🎞️ Catalog',
     pipeline: '📥 Pipeline',
     inquiries: '🎭 Inquiries',
-    jury: '⚖️ Jury Room',
+    academy: '⚖️ Academy Intel',
     analytics: '📊 Analytics',
     hero: '🎬 Hero',
     laurels: '🏆 Laurels',
@@ -85,7 +85,7 @@ const AdminPage: React.FC = () => {
     const allowedTabs = useMemo(() => {
         const isMaster = role === 'super_admin' || role === 'master';
         if (isMaster) return Object.keys(ALL_TABS);
-        if (role === 'festival_admin') return ['festival', 'analytics'];
+        if (role === 'festival_admin') return ['festival', 'analytics', 'academy'];
         const specificTabs = permissions[role];
         if (specificTabs && specificTabs.length > 0) return specificTabs;
         return ['pulse'];
@@ -280,7 +280,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => setActiveTab('movies')} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'inquiries' && <TalentInquiriesTab />}
-                    {activeTab === 'jury' && <JuryRoomTab pipeline={pipeline} />}
+                    {activeTab === 'academy' && <AcademyIntelTab pipeline={pipeline} movies={movies} />}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode={role === 'festival_admin' ? 'festival' : 'full'} />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}

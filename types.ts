@@ -12,6 +12,7 @@ export interface User {
   likedMovies: string[];
   hasFestivalAllAccess?: boolean;
   hasCrateFestPass?: boolean;
+  hasJuryPass?: boolean;
   unlockedBlockIds: string[];
   purchasedMovieKeys: string[];
   rentals: Record<string, string>;
@@ -36,7 +37,7 @@ export interface AuditEntry {
 
 export interface ZineSection {
     id: string;
-    type: 'text' | 'header' | 'quote' | 'image';
+    type: 'text' | 'header' | 'quote' | 'image' | 'video';
     content: string;
 }
 
@@ -50,8 +51,18 @@ export interface EditorialStory {
     author: string;
     linkedMovieKey?: string;
     linkedBlockId?: string;
-    type: 'NEWS' | 'INTERVIEW' | 'DEEP_DIVE' | 'SPOTLIGHT' | 'FESTIVAL_HYPE';
+    type: 'NEWS' | 'INTERVIEW' | 'DEEP_DIVE' | 'SPOTLIGHT' | 'FESTIVAL_HYPE' | 'TRIES';
     publishedAt: any;
+}
+
+export interface JuryVerdict {
+    userId: string;
+    userName: string;
+    narrative: number;
+    technique: number;
+    impact: number;
+    comment: string;
+    timestamp: any;
 }
 
 export interface GrantApplication {

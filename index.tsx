@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -48,6 +47,7 @@ import LinkRokuPage from './components/LinkRokuPage';
 import SubmissionTermsPage from './components/SubmissionTermsPage';
 import PitchDeckPage from './components/PitchDeckPage';
 import ZinePage from './components/ZinePage';
+import JuryRoomPage from './components/JuryRoomPage';
 
 
 const rootElement = document.getElementById('root');
@@ -124,6 +124,8 @@ const AppRouter: React.FC = () => {
     case '/zine':
     case '/newsletter': // Backward compatibility alias
       return <ZinePage />;
+    case '/jury':
+        return <JuryRoomPage />; // Anyone can access the entry page/paywall
     case '/account':
       return user ? <AccountPage /> : <RedirectToLogin />;
     case '/link-roku':

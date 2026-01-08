@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useFestival } from '../contexts/FestivalContext';
 
@@ -78,22 +77,24 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                 <div>
                     <h3 className="font-bold text-white mb-4">Company</h3>
                     <ul className="space-y-2">
+                    <li><a href="/zine" onClick={(e) => handleNavigate(e, '/zine')} className="hover:text-white transition font-bold text-red-500">Crate Zine</a></li>
                     <li><a href="/about" onClick={(e) => handleNavigate(e, '/about')} className="hover:text-white transition">About Us</a></li>
                     <li><a href="/contact" onClick={(e) => handleNavigate(e, '/contact')} className="hover:text-white transition">Contact</a></li>
                     <li><a href="https://www.instagram.com/cratetv.philly/?hl=en" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Instagram</a></li>
                     </ul>
                 </div>
                 <div>
-                    <h3 className="font-bold text-white mb-4">Creators</h3>
+                    <h3 className="font-bold text-white mb-4">Community</h3>
                     <ul className="space-y-2">
+                        <li><a href="/jury" onClick={(e) => handleNavigate(e, '/jury')} className="hover:text-emerald-400 transition font-black text-emerald-500 uppercase tracking-widest text-[10px]">The Grand Jury</a></li>
                         <li><a href="/submit" onClick={(e) => handleNavigate(e, '/submit')} className="hover:text-white transition">For Filmmakers</a></li>
                         <li><a href="/submission-terms" onClick={(e) => handleNavigate(e, '/submission-terms')} className="hover:text-white transition">Submission Terms</a></li>
-                        <li><a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="hover:text-white transition">Creator Portals</a></li>
                     </ul>
                 </div>
                 <div>
-                    <h3 className="font-bold text-white mb-4">Partnerships</h3>
+                    <h3 className="font-bold text-white mb-4">Portals</h3>
                     <ul className="space-y-2">
+                        <li><a href="/portal" onClick={(e) => handleNavigate(e, '/portal')} className="hover:text-white transition">Creator Dashboard</a></li>
                         <li><a href="/talent" onClick={(e) => handleNavigate(e, '/talent')} className="hover:text-white transition">Talent Acquisition</a></li>
                         <li><a href="/actors-directory" onClick={(e) => handleNavigate(e, '/actors-directory')} className="hover:text-white transition">Actors Directory</a></li>
                     </ul>
