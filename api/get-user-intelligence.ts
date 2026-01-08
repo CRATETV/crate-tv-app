@@ -1,4 +1,3 @@
-
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { UserRecord } from '../types.js';
 
@@ -18,37 +17,49 @@ export async function POST(request: Request) {
         const auth = getAdminAuth();
         if (!db || !auth) throw new Error("Infrastructure Offline");
 
+        // 1. Fetch Auth data with 1000 node limit (Safety Cap)
+        const listUsersResult = await auth.listUsers(1000);
+        
+        // Fix: Explicitly type the Map to ensure authData retrieved later has defined properties and is not 'unknown'
+        const authMap = new Map<string, { lastSignIn: string | undefined, creationTime: string | undefined }>(
+            listUsersResult.users.map(u => [u.uid, {
+                lastSignIn: u.metadata.lastSignInTime,
+                creationTime: u.metadata.creationTime
+            }])
+        );
+
+        // 2. Fetch Firestore Profiles
         const usersSnapshot = await db.collection('users').get();
         const users: UserRecord[] = [];
         
-        // Fetch Auth data for lastSignInTime
-        const listAllUsers = async (nextPageToken?: string): Promise<any[]> => {
-            const result = await auth.listUsers(1000, nextPageToken);
-            let combined = result.users;
-            if (result.pageToken) {
-                const next = await listAllUsers(result.pageToken);
-                combined = [...combined, ...next];
-            }
-            return combined;
-        };
-
-        const authUsers = await listAllUsers();
-        const authMap = new Map(authUsers.map(u => [u.uid, u.metadata.lastSignInTime]));
-
         usersSnapshot.forEach(doc => {
             const data = doc.data();
+            // Fix: Retrieve typed data from the Map to prevent 'unknown' property access errors
+            const authData = authMap.get(doc.id);
+            
+            // Resolve composite identity
             users.push({ 
                 uid: doc.id, 
                 ...data,
-                lastSignIn: authMap.get(doc.id) || null
+                // Fix: Access properties on the now typed authData to resolve the compilation errors
+                lastSignIn: authData?.lastSignIn || data.lastSignIn || null,
+                joinDate: authData?.creationTime || data.joinDate || null
             } as UserRecord);
         });
 
-        users.sort((a, b) => (b.watchedMovies?.length || 0) - (a.watchedMovies?.length || 0));
+        // 3. Sort by total manifest density
+        users.sort((a, b) => {
+            const bDensity = (b.watchedMovies?.length || 0) + (b.likedMovies?.length || 0);
+            const aDensity = (a.watchedMovies?.length || 0) + (a.likedMovies?.length || 0);
+            return bDensity - aDensity;
+        });
 
         return new Response(JSON.stringify({ users }), { 
             status: 200,
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-store'
+            }
         });
 
     } catch (error) {

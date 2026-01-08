@@ -25,14 +25,12 @@ import UserIntelligenceTab from './components/UserIntelligenceTab';
 import PermissionsManager from './components/PermissionsManager';
 import AuditTerminal from './components/AuditTerminal';
 import EditorialManager from './components/EditorialManager';
-import CommunicationsTerminal from './components/CommunicationsTerminal';
 import ContractsTab from './components/ContractsTab';
 import RokuDeployTab from './components/RokuDeployTab';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
     editorial: '🖋️ Editorial',
-    comms: '📢 Communications',
     audit: '📜 Chronos Audit',
     users: '👥 User Intelligence',
     intelligence: '🧠 Intelligence',
@@ -272,7 +270,6 @@ const AdminPage: React.FC = () => {
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
                     {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
-                    {activeTab === 'comms' && <CommunicationsTerminal analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'audit' && <AuditTerminal />}
                     {activeTab === 'users' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={(e, d) => setActiveTab('mail')} />}
                     {activeTab === 'intelligence' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(newCats) => handleSaveData('categories', newCats)} />}

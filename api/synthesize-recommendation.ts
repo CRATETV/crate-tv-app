@@ -1,4 +1,3 @@
-
 import { Type } from '@google/genai';
 import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
@@ -12,28 +11,36 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    const catalogList = Object.values(catalog).map((m: any) => `"${m.title}" (Director: ${m.director}, Synopsis: ${m.synopsis.slice(0,100)}...)`).join('\n');
+    // Curate a dense catalog summary for the LLM
+    const catalogList = Object.values(catalog)
+        .filter((m: any) => !m.isUnlisted)
+        .map((m: any) => `[KEY: ${m.key}] TITLE: "${m.title}" | DIRECTOR: ${m.director} | GENRE/AESTHETIC: ${m.synopsis.slice(0, 150)}`)
+        .join('\n');
 
     const prompt = `
-        You are the Editor-in-Chief of Crate Zine. We need to send a highly prestigious, curatorial recommendation to ${userName || 'a node in our network'}.
+        ROLE: Editor-in-Chief of Crate Zine.
+        TASK: Synthesize a highly personalized, curatorial recommendation dispatch.
+        TARGET NODE: ${userName || 'Verified Patron'}
         
-        THEIR RECENT MANIFEST (What they have already watched):
-        ${watchedTitles.length > 0 ? watchedTitles.join(', ') : 'No films watched yet.'}
+        SCREENING MANIFEST (History):
+        ${watchedTitles.length > 0 ? watchedTitles.join(', ') : 'Manifest Empty (New Node)'}
         
         AVAILABLE CATALOG:
         ${catalogList}
         
         OBJECTIVE:
-        1. Identify the 1 or 2 films from our catalog they haven't watched but would LOVE based on their history.
-        2. Draft a dispatch that feels like an exclusive editorial from "Crate Zine."
-        3. Explain the curatorial logic using terms like "Resonated," "Aesthetic Alignment," and "Technical Pedigree."
-        4. Refer to Crate TV as a high-density media infrastructure.
+        1. Select EXACTLY ONE film from the catalog that best matches their aesthetic history.
+        2. Draft a dispatch explaining the "Curatorial Alignment." Use prestigious industry terminology.
+        3. Mention the specific Director of the recommended film.
+        4. Focus on the "Aesthetic Continuity" between what they watched and what you're suggesting.
         
-        FORMAT:
-        Respond with ONLY a JSON object:
+        TONE: Prestigious, authoritative, filmmaker-centric. Avoid generic marketing speak.
+        
+        FORMAT (JSON ONLY):
         {
             "subject": "CRATE ZINE // Curatorial Alignment: ${userName || 'Active Node'}",
-            "draft": "[Full body text with line breaks]"
+            "draft": "[Full body text]",
+            "recommendedKey": "[The key of the film you chose]"
         }
     `;
 
@@ -46,9 +53,10 @@ export async function POST(request: Request) {
                 type: Type.OBJECT,
                 properties: {
                     subject: { type: Type.STRING },
-                    draft: { type: Type.STRING }
+                    draft: { type: Type.STRING },
+                    recommendedKey: { type: Type.STRING }
                 },
-                required: ["subject", "draft"]
+                required: ["subject", "draft", "recommendedKey"]
             }
         }
     });

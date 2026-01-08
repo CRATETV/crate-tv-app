@@ -146,18 +146,6 @@ const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig
         return fromPipeline || 'Unknown Work';
     };
 
-    // Shortcut to the comms tab
-    const handleBroadcastUpdate = () => {
-        const currentUrl = new URL(window.location.href);
-        // We trigger the tab change via AdminPage's state if we can, but since this is a deep child,
-        // we'll use a hash or session signal that AdminPage can pick up if needed.
-        // For simplicity in this UI, we'll assume the admin clicks the tab, but we'll provide the button.
-        window.location.hash = 'comms';
-        // In index.tsx we might need to listen to hash change or just let the user click.
-        // For now, it serves as a visual reminder that Dispatch is ready.
-        alert("Schedule updated. Use the 'Dispatch' tab to notify your audience segments.");
-    };
-
     return (
         <div className="space-y-10 pb-20 animate-[fadeIn_0.5s_ease-out]">
             <div className="bg-red-600/10 border border-red-500/20 p-8 rounded-3xl shadow-xl flex flex-col md:flex-row justify-between gap-6">
@@ -166,7 +154,6 @@ const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig
                     <p className="text-gray-400 mt-2 font-medium">Coordinate the dynamic paywall and curate the discovery experience.</p>
                 </div>
                 <div className="flex items-center gap-4">
-                     <button onClick={handleBroadcastUpdate} className="bg-white text-black px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:scale-105 transition-all">Broadcast Update</button>
                     <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
                         <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">LIVE STATUS</span>
                         <label className="relative inline-flex items-center cursor-pointer">

@@ -39,28 +39,34 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
     }, []);
 
     const rankedFilms = useMemo(() => {
-        return pipeline.map(film => {
-            const admin = adminVerdicts[film.id];
-            const guests = guestVerdicts[film.id] || [];
-            
-            const adminAvg = admin ? (Number(admin.direction || 0) + Number(admin.performance || 0) + Number(admin.cinematography || 0) + Number(admin.writing || 0)) / 4 : 0;
-            const guestAvg = guests.length > 0 ? (guests.reduce((a: number, b: JuryVerdict) => a + (Number(b.narrative) + Number(b.technique) + Number(b.impact)) / 3, 0) / guests.length) : 0;
-            
-            const combinedScore = (adminAvg * 0.6) + (guestAvg * 0.4);
+        return pipeline
+            .filter(film => film.status === 'pending') // Only show films still in the adjudication phase
+            .map(film => {
+                const admin = adminVerdicts[film.id];
+                const guests = guestVerdicts[film.id] || [];
+                
+                const adminAvg = admin ? (Number(admin.direction || 0) + Number(admin.performance || 0) + Number(admin.cinematography || 0) + Number(admin.writing || 0)) / 4 : 0;
+                const guestAvg = guests.length > 0 ? (guests.reduce((a: number, b: JuryVerdict) => a + (Number(b.narrative) + Number(b.technique) + Number(b.impact)) / 3, 0) / guests.length) : 0;
+                
+                // Weighted logic: Admin counts for 60%, Guests for 40%
+                const combinedScore = (adminAvg * 0.6) + (guestAvg * 0.4);
 
-            return {
-                ...film,
-                adminScore: adminAvg,
-                guestScore: guestAvg,
-                guestCount: guests.length,
-                combinedScore,
-                categories: {
-                    narrative: (Number(admin?.writing || 0)) + (guests.reduce((a: number, b: JuryVerdict) => a + Number(b.narrative), 0) / (guests.length || 1)),
-                    technique: (Number(admin?.technique || 0)) + (guests.reduce((a: number, b: JuryVerdict) => a + Number(b.technique), 0) / (guests.length || 1)),
-                    impact: (Number(admin?.performance || 0)) + (guests.reduce((a: number, b: JuryVerdict) => a + Number(b.impact), 0) / (guests.length || 1))
-                }
-            };
-        }).sort((a, b) => b.combinedScore - a.combinedScore);
+                return {
+                    ...film,
+                    adminScore: adminAvg,
+                    guestScore: guestAvg,
+                    guestCount: guests.length,
+                    combinedScore,
+                    hasReview: !!admin || guests.length > 0,
+                    categories: {
+                        narrative: (Number(admin?.writing || 0)) + (guests.reduce((a: number, b: JuryVerdict) => a + Number(b.narrative), 0) / (guests.length || 1)),
+                        technique: (Number(admin?.technique || 0)) + (guests.reduce((a: number, b: JuryVerdict) => a + Number(b.technique), 0) / (guests.length || 1)),
+                        impact: (Number(admin?.performance || 0)) + (guests.reduce((a: number, b: JuryVerdict) => a + Number(b.impact), 0) / (guests.length || 1))
+                    }
+                };
+            })
+            .filter(f => f.hasReview) // ONLY show films that have been watched by at least one judge
+            .sort((a, b) => b.combinedScore - a.combinedScore);
     }, [pipeline, adminVerdicts, guestVerdicts]);
 
     const projectedAwards = useMemo(() => {
@@ -92,11 +98,11 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="bg-black/40 p-4 rounded-2xl border border-white/5 text-center">
-                        <p className="text-[8px] font-black text-gray-500 uppercase">Total Adjudicators</p>
+                        <p className="text-[8px] font-black text-gray-500 uppercase">Total Guest Ballots</p>
                         <p className="text-2xl font-black text-white">{totalVotesCount}</p>
                     </div>
                     <div className="bg-black/40 p-4 rounded-2xl border border-white/5 text-center">
-                        <p className="text-[8px] font-black text-gray-500 uppercase">Yield (Passes)</p>
+                        <p className="text-[8px] font-black text-gray-500 uppercase">Season Yield</p>
                         <p className="text-2xl font-black text-emerald-500">${(totalVotesCount * 25).toLocaleString()}</p>
                     </div>
                 </div>
@@ -107,7 +113,7 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
                     <div className="bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
                         <div className="p-6 bg-white/[0.02] border-b border-white/5 flex justify-between items-center">
                             <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Consensus Leaderboard</h3>
-                            <span className="text-[8px] font-black text-emerald-800 uppercase">Algorithm: 60_Expert / 40_Guest</span>
+                            <span className="text-[8px] font-black text-emerald-800 uppercase">Status: Filtered for Reviewed Items</span>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left font-mono text-xs">
@@ -121,7 +127,9 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
-                                    {rankedFilms.map((film, i) => (
+                                    {rankedFilms.length === 0 ? (
+                                        <tr><td colSpan={5} className="p-20 text-center text-gray-700 uppercase font-black">Awaiting judge synchronization...</td></tr>
+                                    ) : rankedFilms.map((film, i) => (
                                         <tr key={film.id} className="hover:bg-white/[0.01] transition-colors group">
                                             <td className="p-5">
                                                 <span className="text-xl font-black text-gray-800 italic group-hover:text-emerald-500/30 transition-colors">#0{i+1}</span>
@@ -172,9 +180,9 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
 
                     <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] space-y-4 shadow-xl">
                         <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest">Decision Logic</h3>
-                        <p className="text-xs text-gray-500 leading-relaxed font-medium italic">"Current projections are based on normalized sentiment data. Top-tier outliers are recommended for immediate promotion to the Prime Exhibition blocks."</p>
+                        <p className="text-xs text-gray-500 leading-relaxed font-medium italic">"Projections utilize normalized sentiment from the Grand Jury. High-velocity outliers are recommended for immediate catalog promotion."</p>
                         <div className="pt-4 border-t border-white/5 flex justify-between items-center">
-                            <span className="text-[8px] font-black text-gray-700 uppercase">Auth: V4_CORE</span>
+                            <span className="text-[8px] font-black text-gray-700 uppercase">Auth: V4_INTEL</span>
                             <div className="flex gap-1">
                                 <div className="w-1 h-1 rounded-full bg-emerald-500"></div>
                                 <div className="w-1 h-1 rounded-full bg-emerald-500"></div>

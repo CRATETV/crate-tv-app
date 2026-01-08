@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children?: ReactNode;
@@ -8,25 +8,33 @@ interface State {
   hasError: boolean;
 }
 
-// Fix: Explicitly extend React.Component with defined Props and State interfaces to ensure inherited properties are correctly typed
-class GlobalErrorBoundary extends React.Component<Props, State> {
-  // Fix: Initialize state as a class property to improve TypeScript property recognition and inheritance visibility
+/**
+ * GlobalErrorBoundary handles uncaught errors in the component tree.
+ * Inherits from Component with generic Props and State to ensure type safety.
+ */
+// FIX: Using Component directly from the react import to ensure proper inheritance and property recognition
+class GlobalErrorBoundary extends Component<Props, State> {
+  // FIX: Declare and initialize state as a class property so that TypeScript recognizes it on the class instance
   public state: State = { hasError: false };
 
+  // FIX: Explicit constructor call to correctly initialize base class props
   constructor(props: Props) {
     super(props);
   }
 
   public static getDerivedStateFromError(_: Error): State {
+    // Update state so the next render will show the fallback UI.
     return { hasError: true };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Log the error to the console for infrastructure monitoring
     console.error("CRITICAL_SYSTEM_FAILURE:", error, errorInfo);
   }
 
   public render(): ReactNode {
-    // Fix: Access state via this.state which is now properly recognized through explicit React.Component extension
+    // Access hasError from the correctly inherited state object
+    // FIX: this.state is now correctly recognized via Component inheritance and class property declaration
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center relative">
@@ -55,7 +63,8 @@ class GlobalErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: Access props via this.props which is now properly recognized
+    // Access children from the correctly inherited props object
+    // FIX: this.props is now correctly recognized via explicit Component inheritance
     return this.props.children;
   }
 }
