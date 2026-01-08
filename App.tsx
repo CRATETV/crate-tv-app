@@ -264,7 +264,7 @@ const App: React.FC = () => {
                           <>
                             {topTenMovies.length > 0 && (
                                 <MovieCarousel 
-                                    title={<div className="flex items-center gap-4 border-l-4 border-red-600 pl-4 mb-4"><h2 className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-white">Sector Priority: Top 10 Today</h2><span className="bg-red-600/10 border border-red-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-red-500 tracking-widest animate-pulse">High Velocity</span></div>} 
+                                    title="Top Ten Today" 
                                     movies={topTenMovies} 
                                     onSelectMovie={handlePlayMovie} 
                                     watchedMovies={watchedMovies} 

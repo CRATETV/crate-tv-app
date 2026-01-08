@@ -3,18 +3,19 @@ import path from 'path';
 import JSZip from 'jszip';
 import { Buffer } from 'buffer';
 
-// Helper to recursively read a directory, ignoring dotfiles
 async function readDirectory(dirPath: string): Promise<string[]> {
-    const entries = await fs.readdir(dirPath, { withFileTypes: true });
-    const files = await Promise.all(entries.map((entry) => {
-        // Ignore hidden files and directories (like .DS_Store)
-        if (entry.name.startsWith('.')) {
-            return [];
-        }
-        const res = path.resolve(dirPath, entry.name);
-        return entry.isDirectory() ? readDirectory(res) : res;
-    }));
-    return files.flat();
+    try {
+        const entries = await fs.readdir(dirPath, { withFileTypes: true });
+        const files = await Promise.all(entries.map((entry) => {
+            if (entry.name.startsWith('.')) return [];
+            const res = path.resolve(dirPath, entry.name);
+            return entry.isDirectory() ? readDirectory(res) : res;
+        }));
+        return files.flat();
+    } catch (e) {
+        console.warn(`[Roku Packager] Path not found: ${dirPath}`);
+        return [];
+    }
 }
 
 export async function POST(request: Request) {
@@ -24,67 +25,48 @@ export async function POST(request: Request) {
     const protocol = host?.startsWith('localhost') ? 'http' : 'https';
     const apiUrl = `${protocol}://${host}/api`;
     
-    // For local development, trust requests from localhost for the build script
-    if (host?.startsWith('localhost') || host?.startsWith('127.0.0.1')) {
-        isAuthenticated = true;
-    } else {
-        try {
-            const { password } = await request.json();
-            const primaryAdminPassword = process.env.ADMIN_PASSWORD;
-            const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
-            
-            if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
-                isAuthenticated = true;
-            } else {
-                for (const key in process.env) {
-                    if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
-                        isAuthenticated = true;
-                        break;
-                    }
-                }
-            }
-        } catch (e) {
-            // No auth if no body sent
+    try {
+        const { password } = await request.json();
+        const primaryAdminPassword = process.env.ADMIN_PASSWORD;
+        const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
+        if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
+            isAuthenticated = true;
         }
-    }
+    } catch (e) {}
 
-    if (!isAuthenticated) {
-        return new Response(JSON.stringify({ error: 'Unauthorized Node Access' }), { status: 401 });
-    }
+    if (host?.startsWith('localhost') || host?.startsWith('127.0.0.1')) isAuthenticated = true;
+    if (!isAuthenticated) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
 
     const rokuDir = path.join((process as any).cwd(), 'roku');
     const filesToInclude = await readDirectory(rokuDir);
     const zip = new JSZip();
 
-    // Standard Packaging Logic
+    if (filesToInclude.length === 0) throw new Error("Roku source missing.");
+
     for (const file of filesToInclude) {
         const contentBuffer = await fs.readFile(file);
         let zipPath = path.relative(rokuDir, file).replace(/\\/g, '/');
         let finalContent: string | Buffer = contentBuffer;
 
-        // Strip BOM and fix line endings for all Roku Source files
+        // Clean logic for Roku-sensitive files
         if (zipPath.endsWith('.brs') || zipPath.endsWith('.xml') || zipPath === 'manifest') {
             let textContent = contentBuffer.toString('utf-8');
             
-            // CRITICAL: Strip Byte Order Mark (BOM) which causes &hb9 compilation failures
-            if (textContent.startsWith('\uFEFF')) {
+            // Fix &hb9: Strip Byte Order Mark (BOM)
+            if (textContent.charCodeAt(0) === 0xFEFF) {
                 textContent = textContent.substring(1);
             }
             
-            // Normalize to Unix line endings
-            textContent = textContent.replace(/\r\n?/g, '\n');
+            // Fix &hb9: Normalize line endings to Unix style
+            textContent = textContent.replace(/\r\n/g, '\n');
 
-            // Inject API URL into Config
+            // Dynamic Config Binding
             if (zipPath === 'source/Config.brs') {
                 textContent = textContent.replace('API_URL_PLACEHOLDER', apiUrl);
             }
 
             finalContent = textContent;
         }
-
-        // Rename specific assets for channel requirements if necessary
-        if (zipPath === 'images/logo_hd.png') zipPath = 'images/roku_icon_540x405.png';
-        if (zipPath === 'images/splash_hd.jpg') zipPath = 'images/splash_screen_1920x1080.png';
 
         zip.file(zipPath, finalContent, { unixPermissions: 0o644 });
     }
@@ -100,12 +82,11 @@ export async function POST(request: Request) {
         status: 200,
         headers: {
             'Content-Type': 'application/zip',
-            'Content-Disposition': 'attachment; filename="cratetv-v4-production.zip"',
+            'Content-Disposition': 'attachment; filename="cratetv-production-roku.zip"',
         },
     });
 
   } catch (error) {
-    console.error("Roku Build Error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Compilation fail." }), { status: 500 });
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Packager failed." }), { status: 500 });
   }
 }
