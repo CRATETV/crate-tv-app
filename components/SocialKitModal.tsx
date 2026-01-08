@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import JSZip from 'jszip';
 import LoadingSpinner from './LoadingSpinner';
@@ -32,7 +31,7 @@ const SocialKitModal: React.FC<SocialKitModalProps> = ({ title, synopsis, direct
     const [isLoading, setIsLoading] = useState(true);
     const [kit, setKit] = useState<{ copy: any } | null>(null);
     const [error, setError] = useState('');
-    const [activeTab, setActiveTab] = useState<'social' | 'press'>('social');
+    const [activeTab, setActiveTab] = useState<'social' | 'story' | 'press'>('social');
 
     useEffect(() => {
         const generateKit = async () => {
@@ -61,7 +60,6 @@ const SocialKitModal: React.FC<SocialKitModalProps> = ({ title, synopsis, direct
         if (!kit) return;
         const zip = new JSZip();
         
-        // Fetch the actual poster to include it in the zip
         try {
             const posterRes = await fetch(`/api/proxy-image?url=${encodeURIComponent(poster)}`);
             if (posterRes.ok) {
@@ -75,14 +73,14 @@ const SocialKitModal: React.FC<SocialKitModalProps> = ({ title, synopsis, direct
         const textContent = `
 CRATE TV SOCIAL KIT: ${title}
 ---------------------------------
+STORY SLIDE MANIFEST (FOR CANVA):
+${(kit.copy.storySlides || []).map((s: string, i: number) => `SLIDE ${i+1}:\n${s}`).join('\n\n')}
+
 INSTAGRAM DISPATCHES:
 ${(kit.copy.instagram || []).join('\n\n')}
 
 X (TWITTER) DISPATCHES:
 ${(kit.copy.twitter || []).join('\n\n')}
-
-FACEBOOK DISPATCHES:
-${(kit.copy.facebook || []).join('\n\n')}
 
 PRESS RELEASE MASTER:
 ${kit.copy.pressRelease || '---'}
@@ -109,6 +107,7 @@ ${(kit.copy.hashtags || []).join(' ')}
                         {!error && !isLoading && (
                             <div className="flex gap-4 mt-4">
                                 <button onClick={() => setActiveTab('social')} className={`text-[10px] font-black uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === 'social' ? 'text-red-500 border-red-500' : 'text-gray-500 border-transparent hover:text-white'}`}>Social Channel Manifest</button>
+                                <button onClick={() => setActiveTab('story')} className={`text-[10px] font-black uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === 'story' ? 'text-red-500 border-red-500' : 'text-gray-500 border-transparent hover:text-white'}`}>Story Slide Manifest</button>
                                 <button onClick={() => setActiveTab('press')} className={`text-[10px] font-black uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === 'press' ? 'text-red-500 border-red-500' : 'text-gray-500 border-transparent hover:text-white'}`}>Official Press Dispatch</button>
                             </div>
                         )}
@@ -146,6 +145,29 @@ ${(kit.copy.hashtags || []).join(' ')}
                                     <CopySection label="Instagram Feed Layouts" posts={kit.copy.instagram} />
                                     <CopySection label="X (Twitter) Transmissions" posts={kit.copy.twitter} />
                                     <CopySection label="Facebook Announcements" posts={kit.copy.facebook} />
+                                </div>
+                            </div>
+                        ) : activeTab === 'story' ? (
+                            <div className="max-w-3xl mx-auto space-y-12 animate-[fadeIn_0.5s_ease-out]">
+                                <div className="bg-red-600/10 border border-red-500/20 p-6 rounded-2xl text-center">
+                                    <p className="text-xs font-black uppercase tracking-widest text-red-500">Canva Manifest Core</p>
+                                    <p className="text-[10px] text-gray-500 mt-1 uppercase font-bold">Copy these segments into your carousel templates.</p>
+                                </div>
+                                <div className="grid grid-cols-1 gap-6">
+                                    {(kit.copy.storySlides || []).map((slide: string, i: number) => (
+                                        <div key={i} className="bg-white/[0.02] border border-white/5 p-8 rounded-3xl relative group">
+                                            <span className="absolute top-4 left-4 text-[8px] font-black text-gray-800 uppercase tracking-widest">SLIDE 0{i+1}</span>
+                                            <p className="text-lg font-black text-white uppercase italic tracking-tight leading-relaxed text-center px-4">
+                                                {slide}
+                                            </p>
+                                            <button 
+                                                onClick={() => { navigator.clipboard.writeText(slide); alert('Slide content copied!'); }}
+                                                className="mt-6 w-full py-2 bg-white/5 hover:bg-white text-gray-500 hover:text-black font-black uppercase text-[9px] tracking-widest rounded-lg transition-all border border-white/5"
+                                            >
+                                                Copy Slide Text
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         ) : (

@@ -420,3 +420,11 @@ export interface SiteSettings {
   technicalEmail?: string;
   emailSignature?: string;
 }
+
+export interface ScoutReport {
+  potentialScore: number;
+  marketFit: string;
+  performanceDna: string[];
+  acquisitionStrategy: string;
+  comparables: string[];
+}

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -15,7 +14,7 @@ const PartnershipFinder: React.FC = () => {
     const [partners, setPartners] = useState<FundingPartner[]>([]);
     const [error, setError] = useState('');
 
-    const scanOpportunities = async (type: 'infrastructure' | 'grants' | 'philly') => {
+    const scanOpportunities = async (type: 'bootstrapper' | 'grants' | 'philly') => {
         setIsAnalyzing(true);
         setError('');
         setPartners([]);
@@ -47,15 +46,15 @@ const PartnershipFinder: React.FC = () => {
                 
                 <div className="relative z-10 max-w-3xl">
                     <h2 className="text-5xl font-black text-white uppercase tracking-tighter italic mb-4">Funding Intelligence</h2>
-                    <p className="text-xl text-gray-400 font-medium leading-relaxed mb-10">Real-time identification of technology credits, arts grants, and strategic subsidies to offset administrative overhead.</p>
+                    <p className="text-xl text-gray-400 font-medium leading-relaxed mb-10">Identifying technology credits and arts grants that DO NOT require VC backing. Strategic path for independent builders.</p>
                     
                     <div className="flex flex-wrap gap-4">
                         <button 
-                            onClick={() => scanOpportunities('infrastructure')} 
+                            onClick={() => scanOpportunities('bootstrapper')} 
                             disabled={isAnalyzing}
-                            className="bg-white text-black font-black px-8 py-4 rounded-2xl uppercase tracking-widest text-[10px] shadow-2xl hover:bg-green-500 hover:text-white transition-all active:scale-95 disabled:opacity-30"
+                            className="bg-white text-black font-black px-8 py-4 rounded-2xl uppercase tracking-widest text-[10px] shadow-xl hover:bg-green-500 hover:text-white transition-all active:scale-95 disabled:opacity-30"
                         >
-                            Scan Infrastructure Subsidies
+                            Scan Accessible Credits (No VC)
                         </button>
                         <button 
                             onClick={() => scanOpportunities('grants')} 
@@ -78,7 +77,7 @@ const PartnershipFinder: React.FC = () => {
             {isAnalyzing && (
                 <div className="py-20 flex flex-col items-center justify-center space-y-6">
                     <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-green-500 font-black uppercase tracking-[0.3em] text-xs animate-pulse">Gemini 3 Pro is Grounding Search Data...</p>
+                    <p className="text-green-500 font-black uppercase tracking-[0.3em] text-xs animate-pulse">Gemini 3 Pro is Scanning Bootstrapper-Friendly Programs...</p>
                 </div>
             )}
 
@@ -95,7 +94,7 @@ const PartnershipFinder: React.FC = () => {
                             <div className="space-y-6">
                                 <div className="flex justify-between items-start">
                                     <span className="text-[9px] font-black uppercase tracking-[0.4em] text-green-700">{p.subsidy_type}</span>
-                                    <span className="text-[8px] font-black px-2 py-0.5 rounded border border-green-900 text-green-900 uppercase">Strategic Node</span>
+                                    <span className="text-[8px] font-black px-2 py-0.5 rounded border border-green-900 text-green-900 uppercase">Indie Eligible</span>
                                 </div>
                                 <div>
                                     <h3 className="text-2xl font-black uppercase tracking-tighter italic text-white leading-none">{p.organization}</h3>

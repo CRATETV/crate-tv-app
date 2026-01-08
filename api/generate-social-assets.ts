@@ -1,4 +1,3 @@
-
 import { Type } from '@google/genai';
 import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
@@ -12,21 +11,19 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    // Generate Viral Copy + Press Release
-    // Focusing purely on high-impact text since the user wants to use the real poster.
     const textPrompt = `
         You are the Head of Digital Marketing at Crate TV. 
-        Create a comprehensive social media "Kit" for the film: "${title}" directed by ${director}. 
+        Create a comprehensive social media "Kit" for the film/platform: "${title}" directed by ${director}. 
         Synopsis: "${synopsis}".
         
         The kit must include:
         1. 3 Instagram captions (Focus on aesthetic and artistic depth)
         2. 3 X/Twitter posts (Focus on viral impact and urgency)
-        3. 3 Facebook posts (Focus on storytelling and community)
+        3. 5 "Story Slide" Manifests: Short, punchy text for Canva-style slides (Slide 1: Hook, Slide 2: Problem, Slide 3: Solution, Slide 4: 70/30 Model, Slide 5: CTA).
         4. 15 niche cinematic hashtags
         5. 1 Official Press Release (Professional industry format)
         
-        Tone: Prestigious, slightly elite, filmmaker-centric.
+        Tone: Prestigious, slightly elite, filmmaker-centric, industrial.
         
         Respond ONLY in valid JSON.
     `;
@@ -41,11 +38,12 @@ export async function POST(request: Request) {
           properties: {
             instagram: { type: Type.ARRAY, items: { type: Type.STRING } },
             twitter: { type: Type.ARRAY, items: { type: Type.STRING } },
+            storySlides: { type: Type.ARRAY, items: { type: Type.STRING } },
             facebook: { type: Type.ARRAY, items: { type: Type.STRING } },
             hashtags: { type: Type.ARRAY, items: { type: Type.STRING } },
             pressRelease: { type: Type.STRING }
           },
-          required: ["instagram", "twitter", "facebook", "hashtags", "pressRelease"]
+          required: ["instagram", "twitter", "facebook", "hashtags", "pressRelease", "storySlides"]
         }
       }
     });

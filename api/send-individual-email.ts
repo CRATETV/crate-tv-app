@@ -1,6 +1,5 @@
 import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { Buffer } from 'buffer';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FALLBACK_FROM = 'studio@cratetv.net';
@@ -51,66 +50,89 @@ export async function POST(request: Request) {
             return new Response(JSON.stringify({ success: true, message: 'Dispatch scheduled.' }), { status: 200 });
         }
 
-        // 4. Prepare Transmission Assets
-        const logoResponse = await fetch(LOGO_URL);
-        const logoBuffer = Buffer.from(await logoResponse.arrayBuffer());
+        // 4. Content Prep
+        const plainText = htmlBody.replace(/<[^>]+>/g, '').trim();
 
+        // 5. Dispatch Individual Transmission
         const { error } = await resend.emails.send({
-            from: `Crate TV Studio <${businessEmail}>`,
+            from: `Crate TV <${businessEmail}>`,
             to: [email],
             subject: subject,
             reply_to: businessEmail,
-            attachments: [
-                {
-                    content: logoBuffer,
-                    filename: 'logo.png',
-                    cid: 'logo'
-                } as any
-            ],
+            text: plainText,
             html: `
-                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #ffffff; max-width: 600px; margin: 0 auto; background: #050505; border-radius: 32px; overflow: hidden; border: 1px solid #222;">
-                    
-                    <div style="padding: 60px 40px; text-align: left;">
-                        <img src="cid:logo" alt="Crate TV" style="width: 120px; height: auto; margin-bottom: 40px;" />
-                        
-                        <div style="font-size: 16px; color: #ccc; margin-bottom: 40px; line-height: 1.8;">
-                            ${htmlBody}
-                        </div>
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>${subject}</title>
+                </head>
+                <body style="margin: 0; padding: 0; background-color: #050505; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #ffffff; -webkit-font-smoothing: antialiased;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #050505;">
+                        <tr>
+                            <td align="center" style="padding: 40px 20px;">
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #050505;">
+                                    <!-- Header / Logo -->
+                                    <tr>
+                                        <td align="center" style="padding-bottom: 40px;">
+                                            <a href="https://cratetv.net" target="_blank">
+                                                <img src="${LOGO_URL}" alt="Crate TV" width="120" style="display: block; border: 0;">
+                                            </a>
+                                        </td>
+                                    </tr>
 
-                        ${posterUrl ? `
-                        <!-- Cinematic Spotlight Block -->
-                        <div style="margin: 40px 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; overflow: hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.5);">
-                            <div style="width: 100%; height: 350px; overflow: hidden;">
-                                <img src="${posterUrl}" alt="${movieTitle}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
-                            </div>
-                            <div style="padding: 30px; text-align: center;">
-                                <p style="font-size: 10px; font-weight: 900; color: #ef4444; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 12px;">Official Recommendation</p>
-                                <h3 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; line-height: 1;">${movieTitle}</h3>
-                                
-                                <div style="margin: 20px auto; width: 40px; height: 2px; background: rgba(255,255,255,0.1);"></div>
-                                
-                                <p style="color: #888; font-size: 14px; line-height: 1.6; margin-bottom: 30px; font-style: italic;">
-                                    ${synopsis ? synopsis.replace(/<[^>]+>/g, '').substring(0, 180) + '...' : ''}
-                                </p>
-                                
-                                <a href="https://cratetv.net/movie/${movieKey}?play=true" style="display: inline-block; background: #ffffff; color: #000000; text-decoration: none; padding: 18px 40px; border-radius: 14px; font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 20px 40px rgba(255,255,255,0.15);">Synchronize Session</a>
-                            </div>
-                        </div>
-                        ` : ''}
+                                    <!-- Main Payload -->
+                                    <tr>
+                                        <td style="padding: 0 10px;">
+                                            <div style="font-size: 16px; line-height: 1.6; color: #cccccc;">
+                                                ${htmlBody}
+                                            </div>
 
-                        ${signature ? `
-                        <div style="padding-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); color: #666; font-size: 13px; white-space: pre-wrap; font-style: italic;">
-                            ${signature}
-                        </div>
-                        ` : ''}
-                    </div>
+                                            ${posterUrl ? `
+                                            <!-- Cinematic Content Spotlight -->
+                                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 40px; background-color: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 12px; overflow: hidden;">
+                                                <tr>
+                                                    <td align="center">
+                                                        <img src="${posterUrl}" alt="${movieTitle}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; object-fit: cover;">
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding: 30px; text-align: center;">
+                                                        <p style="font-size: 10px; font-weight: 900; color: #ef4444; text-transform: uppercase; letter-spacing: 3px; margin: 0 0 12px 0;">Official Recommendation</p>
+                                                        <h3 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: -1px;">${movieTitle}</h3>
+                                                        <p style="color: #666666; font-size: 14px; margin: 15px 0 25px 0; font-style: italic;">
+                                                            ${synopsis ? synopsis.replace(/<[^>]+>/g, '').substring(0, 150) + '...' : ''}
+                                                        </p>
+                                                        <a href="https://cratetv.net/movie/${movieKey}?play=true" style="background-color: #ffffff; color: #000000; text-decoration: none; padding: 15px 30px; border-radius: 4px; font-weight: bold; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">
+                                                            Stream Master File
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            ` : ''}
 
-                    <div style="background: #000; padding: 40px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05);">
-                        <p style="font-size: 10px; color: #444; text-transform: uppercase; letter-spacing: 3px; font-weight: 900; margin-bottom: 10px;">Global Independent Infrastructure</p>
-                        <p style="font-size: 10px; color: #222; margin: 0;">© ${new Date().getFullYear()} Crate TV. All rights reserved.</p>
-                        <p style="font-size: 9px; color: #111; margin-top: 20px;">TRANSMISSION_SECURED // AUTH_NODE_ALPHA</p>
-                    </div>
-                </div>
+                                            ${signature ? `
+                                            <div style="padding-top: 40px; color: #555555; font-size: 13px; font-style: italic; white-space: pre-wrap;">
+                                                ${signature}
+                                            </div>
+                                            ` : ''}
+                                        </td>
+                                    </tr>
+
+                                    <!-- Footer -->
+                                    <tr>
+                                        <td align="center" style="padding: 60px 10px 40px; border-top: 1px solid #111111;">
+                                            <p style="font-size: 10px; color: #333333; text-transform: uppercase; letter-spacing: 3px; font-weight: bold; margin: 0 0 10px 0;">Global Independent Infrastructure</p>
+                                            <p style="font-size: 9px; color: #222222; margin: 0;">© ${new Date().getFullYear()} Crate TV. Philadelphia, PA.</p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </body>
+                </html>
             `,
         });
 

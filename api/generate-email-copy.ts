@@ -1,4 +1,3 @@
-
 import { Type } from '@google/genai';
 import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
@@ -22,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     const context = `
-        BRAND: Crate Zine (Powered by Crate TV Infrastructure)
+        BRAND: Crate TV (Powered by Crate TV Infrastructure)
         STRATEGIC MODE: ${isReengagement ? 'RE-ENGAGEMENT (Dormant Node)' : 'PUBLIC DISPATCH (Active Viral Feed)'}
         UPLINK_RECENCY: ${daysSinceLastVisit || 'Unknown'} days
         FESTIVAL: ${festivalTitle || 'Crate Fest'}
@@ -35,25 +34,17 @@ export async function POST(request: Request) {
 
     const prompt = `
         You are the Editor-in-Chief of Crate Zine. 
-        Draft a high-impact, prestigious dispatch optimized to pass modern SPAM FILTERS. 
+        Draft a prestigious, high-impact dispatch.
         
-        Brand Personality: "Crate Zine" is the definitive digital publication for the underground cinematic elite.
+        SPECIAL THEME: If requested in the objective, treat the content release like an "Amazon Parcel Delivery." 
+        Use phrases like "Parcel successfully routed," "Delivery to Sector X," and "Secure Package Contents."
         
-        SPAM MITIGATION RULES:
-        1. Maintain a high TEXT-TO-IMAGE ratio. 
-        2. Do not use spammy trigger words like "Free," "Win," or "Cash." Use "Complimentary," "Selection," or "Patronage."
-        3. Ensure the HTML is simple and uses standard web-safe fonts (Helvetica, Arial, sans-serif).
-        4. Use a clear, descriptive Subject line.
+        Tone: Prestigious, authoritative, and sophisticated.
         
         Objective: "${templatePrompt}"
         Technical Context: ${context}
         
-        Styling Directives:
-        1. Body: Use a structured layout with clearly defined paragraphs.
-        2. Visual Cues: Refer to the "Zine" as the digital pulse of the independent circuit.
-        3. CTAs: Focus on "SYNCHRONIZING WITH THE WORK" or "ANALYZING THE CHART."
-        
-        Format your response as a JSON object: { "subject": "High-Impact Viral Headline", "htmlBody": "Clean, well-spaced HTML body content" }.
+        Format your response as a JSON object: { "subject": "Headline", "htmlBody": "Text-based HTML" }.
     `;
 
     const response = await generateContentWithRetry({

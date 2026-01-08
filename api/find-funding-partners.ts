@@ -11,48 +11,30 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    // --- TEMPORAL ROTATION LOGIC ---
-    // Calculate an index that changes every 14 days
-    const msPerDay = 1000 * 60 * 60 * 24;
-    const daysSinceEpoch = Math.floor(Date.now() / msPerDay);
-    const fortnightIndex = Math.floor(daysSinceEpoch / 14);
-    
-    // Rotating focus sectors to ensure variety in results
-    const focusSectors = [
-        "Private philanthropic foundations and high-net-worth arts donors",
-        "Corporate Social Responsibility (CSR) technology and media grants",
-        "Government municipal and state arts endowment opportunities (PA/National)",
-        "Emerging media technology incubators and Web3/Creator ecosystem credits",
-        "Diversity-focused media subsidies and independent filmmaker grants"
-    ];
-    const currentFocus = focusSectors[fortnightIndex % focusSectors.length];
-
     const typeQueries = {
-        infrastructure: "AWS Activate for startups 2025, Google Cloud credits for media platforms, Vercel startup program, digital infrastructure subsidies",
-        grants: "Independent film distribution grants 2025, Film festival tech sponsorships, National Endowment for the Arts media projects",
-        philly: "Philadelphia Cultural Fund 2025, PA media subsidies for small businesses, Greater Philadelphia technology grants"
+        bootstrapper: "Cloud startup programs for unfunded/bootstrapped companies 2025, AWS Activate Founders, Google Cloud pre-seed credits, Microsoft Founders Hub credits",
+        grants: "Independent film distribution grants 2025, Social impact media funding, National Endowment for the Arts media projects",
+        philly: "Philadelphia Cultural Fund 2025, PA small business tech grants, Philadelphia creative economy subsidies"
     };
 
     const prompt = `
         You are a Strategic Financial Advisor for Crate TV. 
-        Crate TV is an independent film streaming platform based in Philadelphia using AWS and Google Cloud.
+        Crate TV is a bootstrapped independent film streaming platform based in Philadelphia.
         
-        CURRENT RESEARCH CYCLE: ${fortnightIndex}
-        TEMPORAL FOCUS: ${currentFocus}
-        TARGET SECTOR: ${typeQueries[type as keyof typeof typeQueries] || typeQueries.infrastructure}
+        GOAL: Identify funding sources that do NOT require VC backing or institutional series funding.
+        TARGET SECTOR: ${typeQueries[type as keyof typeof typeQueries] || typeQueries.bootstrapper}
 
         REQUIREMENTS:
-        1. Identify exactly 6 REAL-WORLD organizations or specific programs active in 2025.
-        2. Verify via search grounding that they are currently accepting applications.
-        3. Prioritize ${currentFocus} for this cycle.
-        4. Do NOT repeat high-level generic results unless they have a new 2025 window.
-
+        1. Identify exactly 6 REAL-WORLD programs active in 2025.
+        2. EXCLUDE Vercel for Startups (already rejected due to VC requirement).
+        3. FOCUS ON: AWS Activate Founders (up to $5k credits), Microsoft Founders Hub ($2.5k OpenAI credits), and regional Philadelphia arts grants.
+        
         For each, provide:
         - organization: Name of entity
         - program: Specific funding or credit name
         - url: Verified official website
-        - fit: 2-sentence explanation of alignment with Crate TV's mission
-        - subsidy_type: (e.g. "Cloud Credits", "Cash Grant", "Sponsorship")
+        - fit: 2-sentence explanation of why Crate TV (bootstrapped media infrastructure) qualifies.
+        - subsidy_type: (e.g. "Cloud Credits", "Cash Grant", "In-Kind")
 
         Respond with ONLY a JSON object: { "partners": [ { ... }, ... ] }
     `;

@@ -1,10 +1,6 @@
-
-
 import React from 'react';
 import Header from './Header';
-// FIX: Corrected import path
 import Footer from './Footer';
-// FIX: Corrected the casing of the import from 'BackTotopButton' to 'BackToTopButton' to match the actual filename and prevent case-sensitivity issues.
 import BackToTopButton from './BackToTopButton';
 
 const CodeBlock: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -13,15 +9,32 @@ const CodeBlock: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     </pre>
 );
 
+const RoleCard: React.FC<{ title: string; name?: string; duties: string[]; tool: string; color: string }> = ({ title, name, duties, tool, color }) => (
+    <div className="bg-white/5 border border-white/10 p-6 rounded-3xl space-y-4 hover:border-white/20 transition-all">
+        <div className="flex justify-between items-start">
+            <div>
+                <h4 className={`text-sm font-black uppercase tracking-widest ${color}`}>{title}</h4>
+                {name && <p className="text-white font-bold text-lg mt-1 italic">{name}</p>}
+            </div>
+            <span className="text-[8px] font-black text-gray-600 bg-black px-2 py-1 rounded border border-white/5 uppercase tracking-widest">Core Node</span>
+        </div>
+        <ul className="space-y-2">
+            {duties.map((d, i) => (
+                <li key={i} className="text-[11px] text-gray-400 flex gap-2">
+                    <span className={color}>●</span> {d}
+                </li>
+            ))}
+        </ul>
+        <div className="pt-4 border-t border-white/5">
+            <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Primary Workspace</p>
+            <p className="text-[10px] text-gray-300 font-mono mt-1">{tool}</p>
+        </div>
+    </div>
+);
+
 const DeveloperGuidePage: React.FC = () => {
-    const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
-        e.preventDefault();
-        window.history.pushState({}, '', path);
-        window.dispatchEvent(new Event('pushstate'));
-    };
-    
     return (
-        <div className="flex flex-col min-h-screen text-white">
+        <div className="flex flex-col min-h-screen text-white bg-black">
             <Header 
                 searchQuery="" 
                 onSearch={() => {}} 
@@ -30,129 +43,134 @@ const DeveloperGuidePage: React.FC = () => {
                 showSearch={false}
             />
 
-            <main className="flex-grow pt-24 px-4 md:px-12">
-                <div className="max-w-3xl mx-auto">
+            <main className="flex-grow pt-24 px-4 md:px-12 pb-32">
+                <div className="max-w-5xl mx-auto">
                     <div className="text-center mb-12">
-                        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Developer & Contribution Guide</h1>
+                        <p className="text-red-500 font-black uppercase tracking-[0.5em] text-[10px] mb-4">Infrastructure V4.0</p>
+                        <h1 className="text-4xl md:text-6xl font-black text-white mb-4 uppercase tracking-tighter italic">Dev Guide.</h1>
                         <p className="text-lg text-gray-400">
-                           Welcome to the team! Here's how to get started and contribute to the Crate TV project.
+                           Technical protocols for scaling Crate TV and mastering cinematic assets.
                         </p>
                     </div>
 
-                    <div className="space-y-10">
-                        <section>
-                            <h2 className="text-3xl font-bold text-white mb-4">Getting Started</h2>
-                            <p className="text-gray-300 mb-4">
-                                First, clone the repository to your local machine and install the necessary dependencies.
-                            </p>
-                            <CodeBlock>
-                                {`git clone <repository_url>\ncd crate-tv\nnpm install`}
-                            </CodeBlock>
-                            <p className="text-gray-300">
-                                Next, create a <code className="bg-gray-700 p-1 rounded-md">.env.local</code> file in the root directory and add the required environment variables for the API keys.
-                            </p>
+                    <div className="space-y-16">
+                        {/* Personnel Protocol Section */}
+                        <section className="bg-white/[0.02] border border-white/5 p-8 rounded-[2.5rem] shadow-2xl">
+                            <div className="flex items-center gap-4 mb-10">
+                                <div className="w-10 h-10 bg-indigo-600/10 rounded-full flex items-center justify-center border border-indigo-500/30">
+                                    <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                                </div>
+                                <h2 className="text-2xl font-black uppercase tracking-tight italic">Personnel Manifest: The First Five</h2>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <RoleCard 
+                                    title="Chief Infrastructure Architect"
+                                    name="Salome Denoon"
+                                    duties={["Stack Integrity (AWS/Vercel)", "Product Roadmap & UI/UX", "Final Transmission Gatekeeping"]}
+                                    tool="Admin > Pulse / Security / Fallback"
+                                    color="text-red-500"
+                                />
+                                <RoleCard 
+                                    title="Chief Patronage Officer"
+                                    name="Tathia MomPremier"
+                                    duties={["Strategic Board Advisory", "Festival Fund Oversight", "Philly Institutional Bridge"]}
+                                    tool="Admin > Analytics / Vault / Users"
+                                    color="text-amber-500"
+                                />
+                                <RoleCard 
+                                    title="Chief Selection Officer"
+                                    duties={["Pipeline Review & Adjudication", "High-Bitrate Asset Ingestion", "Watch Party Scheduling"]}
+                                    tool="Admin > Pipeline / Jury / Catalog"
+                                    color="text-purple-500"
+                                />
+                                <RoleCard 
+                                    title="Director of Resource Acquisition"
+                                    duties={["Grant Narrative Drafting", "Technology Credit Harvesting", "Regional Funding Research"]}
+                                    tool="Admin > Fund Strategist / Grant Writer"
+                                    color="text-green-500"
+                                />
+                                <RoleCard 
+                                    title="Editorial Dispatcher"
+                                    duties={["Crate Zine Direction", "Studio Mail Broadcasts", "AI Social Kit Management"]}
+                                    tool="Admin > Editorial / Dispatch / Mail"
+                                    color="text-blue-500"
+                                />
+                            </div>
+
+                            <div className="mt-12 bg-indigo-900/10 border border-indigo-500/20 p-8 rounded-3xl">
+                                <h4 className="font-black text-indigo-500 uppercase tracking-widest text-[10px] mb-4">Onboarding Protocol</h4>
+                                <p className="mb-4 text-xs text-gray-400">To authorize a new Sector Lead without compromising the Master Key:</p>
+                                <ol className="list-decimal list-inside space-y-2 text-[11px] text-gray-400 leading-relaxed">
+                                    <li>Navigate to <strong>Admin > Permissions</strong>.</li>
+                                    <li>Click <strong>"Issue Key"</strong> and enter the Lead's name.</li>
+                                    <li>Select only the tabs listed in their <strong>"Primary Workspace"</strong> above.</li>
+                                    <li>Forward the unique <code>CRATE-XXXXXX</code> key to the member.</li>
+                                </ol>
+                            </div>
+                        </section>
+
+                        {/* Media Ops Section */}
+                        <section className="bg-white/[0.02] border border-white/5 p-8 rounded-[2.5rem] shadow-2xl">
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-10 h-10 bg-red-600/10 rounded-full flex items-center justify-center border border-red-500/30">
+                                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                </div>
+                                <h2 className="text-2xl font-black uppercase tracking-tight italic">Media Ops: Master Pathing</h2>
+                            </div>
+                            
+                            <div className="space-y-8 text-gray-300 text-sm leading-relaxed">
+                                <div className="bg-blue-900/10 border border-blue-500/20 p-6 rounded-2xl">
+                                    <h4 className="font-black text-blue-500 uppercase tracking-widest text-[10px] mb-4">Meridian Dataset Map</h4>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                                            <span className="text-xs font-mono">audio/</span>
+                                            <span className="text-[10px] font-black text-gray-500 uppercase">Contains Sound Masters (.wav)</span>
+                                        </div>
+                                        <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                                            <span className="text-xs font-mono">*.mp4</span>
+                                            <span className="text-[10px] font-black text-gray-500 uppercase">Silent Video Master</span>
+                                        </div>
+                                        <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                                            <span className="text-xs font-mono">subtitles/</span>
+                                            <span className="text-[10px] font-black text-gray-500 uppercase">SRT/VTT Caption Assets</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs font-mono">tiffs/</span>
+                                            <span className="text-[10px] font-black text-gray-500 uppercase">Raw Frames (Ignore for Muxing)</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-red-600/10 border border-red-500/20 p-6 rounded-2xl">
+                                    <h4 className="font-black text-red-500 uppercase tracking-widest text-[10px] mb-4">Quick Start: Meridian One-Liner</h4>
+                                    <p className="mb-4 text-xs">Copy and paste this exact command into Terminal to mux the 4K video and WAV audio from your Desktop:</p>
+                                    <CodeBlock>{`ffmpeg -i ~/Desktop/Meridian_UHD4k5994_HDR_P3PQ.mp4 -i ~/Desktop/audio/meridian_audio_ltrt.wav -c copy -map 0:v:0 -map 1:a:0 ~/Desktop/Meridian_Final.mp4`}</CodeBlock>
+                                </div>
+                            </div>
                         </section>
 
                         <section>
-                            <h2 className="text-3xl font-bold text-white mb-4">Our Commit Philosophy: Keep It Clean</h2>
-                            <p className="text-gray-300 mb-4">
-                                To keep our project history readable and easy to navigate, we follow a simple rule: one feature, one commit. This means that a pull request for a new feature or a bug fix should ideally contain only a single, well-written commit that summarizes all the work done.
+                            <h2 className="text-2xl font-black text-white mb-6 uppercase tracking-tighter">Commit Philosophy</h2>
+                            <p className="text-gray-300 mb-4 font-medium">
+                                To keep our infrastructure history readable, follow the <strong>One Feature, One Commit</strong> rule. Squash your local history before merging to main.
                             </p>
-                            <p className="text-gray-300">
-                                This avoids cluttering the main branch history with small, intermediate commits like "fix typo," "trying something," or "oops forgot a file." This is where "archiving" or **squashing** commits comes in.
-                            </p>
+                            <CodeBlock>
+{`# Interactive squash example
+git rebase -i HEAD~4`}
+                            </CodeBlock>
                         </section>
                         
                         <section>
-                            <h2 className="text-3xl font-bold text-white mb-4">How to "Archive" Commits by Squashing</h2>
-                            <p className="text-gray-300 mb-4">
-                                Squashing is the process of combining multiple commits into one. You should do this on your feature branch right before you're ready to create a pull request. The tool for this is <strong className="text-red-400">interactive rebase</strong>.
+                            <h2 className="text-2xl font-black text-white mb-6 uppercase tracking-tighter">Roku Deployment</h2>
+                            <p className="text-gray-300 mb-4 font-medium">
+                                Our Roku channel is a native SDK build. Content updates in the Admin Panel propagate to Roku via the live JSON feed.
                             </p>
-
-                            <h3 className="text-xl font-semibold text-white mt-6 mb-2">Step 1: Count Your Commits</h3>
-                            <p className="text-gray-300 mb-4">
-                                Let's say your work on a feature branch involved 4 commits. You can see them with <code className="bg-gray-700 p-1 rounded-md">git log</code>.
-                            </p>
-
-                            <h3 className="text-xl font-semibold text-white mt-6 mb-2">Step 2: Start Interactive Rebase</h3>
-                            <p className="text-gray-300 mb-4">
-                                To squash the last 4 commits, run the following command:
-                            </p>
-                            <CodeBlock>git rebase -i HEAD~4</CodeBlock>
-                            <p className="text-gray-300">
-                                This will open a text editor showing your 4 commits.
-                            </p>
-
-                            <h3 className="text-xl font-semibold text-white mt-6 mb-2">Step 3: Pick and Squash</h3>
-                            <p className="text-gray-300 mb-4">
-                                Your editor will look something like this. The commits are listed from oldest to newest.
-                            </p>
-                            <CodeBlock>
-{`pick a1b2c3d Start feature A
-pick d4e5f6g Add button
-pick h7i8j9k Fix styling issue
-pick l0m1n2o Final adjustments`}
-                            </CodeBlock>
-                            <p className="text-gray-300 mb-4">
-                                You want to combine commits 2, 3, and 4 into the very first one. To do this, change the word <code className="bg-gray-700 p-1 rounded-md">pick</code> to <code className="bg-gray-700 p-1 rounded-md">squash</code> (or just <code className="bg-gray-700 p-1 rounded-md">s</code>) for the commits you want to merge into the previous one.
-                            </p>
-                            <CodeBlock>
-{`pick a1b2c3d Start feature A
-squash d4e5f6g Add button
-squash h7i8j9k Fix styling issue
-squash l0m1n2o Final adjustments`}
-                            </CodeBlock>
-                            <p className="text-gray-300">
-                                Now, save the file and close the editor.
-                            </p>
-
-                            <h3 className="text-xl font-semibold text-white mt-6 mb-2">Step 4: Write the New Commit Message</h3>
-                            <p className="text-gray-300 mb-4">
-                                Another editor window will open, containing the messages from all your squashed commits. Delete all the old messages and write one new, clear message that describes the entire feature.
-                            </p>
-                             <CodeBlock>
-{`# This is a combination of 4 commits.
-# The first line will be the new commit message.
-
-Implement Feature A with new styling and adjustments`}
-                            </CodeBlock>
-                             <p className="text-gray-300">
-                                Save and close this file. Your 4 commits are now one clean commit! You're ready to push and create your pull request.
-                            </p>
-                        </section>
-                        
-                        <section>
-                            <h2 className="text-3xl font-bold text-white mb-4">How to Set Up the Roku Channel</h2>
-                            <p className="text-gray-300 mb-4">
-                                This project includes a full **SDK (Software Development Kit) channel** that loads its content from a live feed. The Admin Panel automates the packaging process, so you never have to edit code or manually zip files.
-                            </p>
-                            <p className="text-gray-300 mb-4">
-                                <strong className="text-yellow-400">Prerequisite:</strong> The Roku channel needs a public URL to fetch movie data from. Ensure your web application is deployed and accessible online before proceeding.
-                            </p>
-                        
-                             <h3 className="text-xl font-semibold text-white mt-6 mb-2">Publishing Process</h3>
-                            <ol className="list-decimal list-inside space-y-4 text-gray-300 mb-4">
-                                <li>
-                                    <strong>Download Your Channel Package:</strong>
-                                    <ul className="list-disc list-inside ml-6 mt-2">
-                                        <li>Log into your Crate TV admin panel (`/admin`).</li>
-                                        <li>Navigate to the **"Roku"** tab.</li>
-                                        <li>Click the **"Download Custom Roku Package (.pkg)"** button. The downloaded file is a complete, production-ready package. It automatically includes the latest Crate TV branding (logo and splash screen), so no manual image handling is required.</li>
-                                    </ul>
-                                </li>
-                                <li>
-                                    <strong>Upload and Publish:</strong>
-                                    <ul className="list-disc list-inside ml-6 mt-2">
-                                        <li>Log into your <a href="https://developer.roku.com/" target="_blank" rel="noopener noreferrer" className="text-red-400 hover:underline">Roku Developer Dashboard</a>.</li>
-                                        <li>Go to "Manage My Channels" and select your SDK channel.</li>
-                                        <li>Navigate to the "Package Upload" page and upload the `.pkg` file.</li>
-                                        <li>Follow Roku's instructions to install a preview on your device, test it, and then submit it for publishing.</li>
-                                    </ul>
-                                </li>
-                            </ol>
-                            <p className="text-gray-300">
-                               Once published, any content you update and **"Publish"** in the Crate TV admin panel will automatically appear in your live Roku channel. You only need to re-package and re-upload if you make changes to the channel's source code itself.
-                            </p>
+                             <ul className="list-decimal list-inside space-y-4 text-gray-400 text-sm">
+                                <li><strong>Package:</strong> Download the .pkg from the Admin Dashboard.</li>
+                                <li><strong>Sign:</strong> Sideload to your dev Roku to generate a signed build.</li>
+                                <li><strong>Publish:</strong> Upload the signed build to the Roku Developer Console.</li>
+                            </ul>
                         </section>
                     </div>
                 </div>

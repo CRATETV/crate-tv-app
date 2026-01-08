@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, WatchPartyState, ChatMessage, SentimentPoint } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -36,9 +35,10 @@ const SecureWatermark: React.FC<{ email: string; isTriggered: boolean }> = ({ em
 );
 
 const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({ emoji, onComplete }) => {
-    const randomLeft = useMemo(() => Math.floor(Math.random() * 80) + 10, []); 
-    const randomDuration = useMemo(() => 2 + Math.random() * 2, []); 
-    const randomScale = useMemo(() => 0.8 + Math.random() * 0.7, []); 
+    const randomLeft = useMemo(() => Math.floor(Math.random() * 85) + 5, []); 
+    const randomDuration = useMemo(() => 2.5 + Math.random() * 2, []); 
+    const randomScale = useMemo(() => 0.7 + Math.random() * 0.9, []); 
+    const randomRotate = useMemo(() => Math.floor(Math.random() * 40) - 20, []);
 
     useEffect(() => {
         const timer = setTimeout(onComplete, randomDuration * 1000);
@@ -47,11 +47,11 @@ const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({
 
     return (
         <div 
-            className="absolute bottom-0 pointer-events-none text-4xl animate-emoji-float z-[60]"
+            className="absolute bottom-0 pointer-events-none text-5xl animate-emoji-float z-[60]"
             style={{ 
                 left: `${randomLeft}%`, 
                 animationDuration: `${randomDuration}s`,
-                transform: `scale(${randomScale})`
+                transform: `scale(${randomScale}) rotate(${randomRotate}deg)`
             }}
         >
             {emoji}
@@ -335,13 +335,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             if (doc.exists) setPartyState(doc.data() as WatchPartyState);
         });
 
-        const fiveSecondsAgo = new Date(Date.now() - 5000);
+        // REACTION LISTENER: Listen for global reactions in the cluster
+        const tenSecondsAgo = new Date(Date.now() - 10000);
         const reactionsRef = partyRef.collection('live_reactions')
-            .where('timestamp', '>=', fiveSecondsAgo)
+            .where('timestamp', '>=', tenSecondsAgo)
             .onSnapshot(snapshot => {
                 snapshot.docChanges().forEach(change => {
                     if (change.type === 'added') {
                         const data = change.doc.data();
+                        // Only add to local pool if it didn't originate from this user 
+                        // (Sender already has a local burst for zero latency)
                         if (data.userId !== user?.uid) {
                             setLocalReactions(prev => [...prev, { id: change.doc.id, emoji: data.emoji }]);
                         }
@@ -452,7 +455,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     100% { transform: translateY(-600px) rotate(-15deg) scale(0.8); opacity: 0; }
                 }
                 .animate-emoji-float {
-                    animation: emojiFloat 3s ease-out forwards;
+                    animation: emojiFloat 3.5s cubic-bezier(0.33, 1, 0.68, 1) forwards;
                 }
             `}</style>
 
@@ -512,17 +515,23 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         )}
                     </div>
 
-                    <div className="flex-none bg-black/40 border-b border-white/5 py-2 px-4 flex justify-around items-center z-40">
-                         {REACTION_TYPES.map(emoji => (
-                            <button 
-                                key={emoji} 
-                                onClick={() => logSentiment(emoji)} 
-                                className="text-xl md:text-3xl hover:scale-150 active:scale-125 transition-transform drop-shadow-xl p-2 rounded-full transform"
-                                aria-label={`React with ${emoji}`}
-                            >
-                                {emoji}
-                            </button>
-                        ))}
+                    <div className="flex-none bg-black/40 border-b border-white/5 py-4 px-4 flex flex-col items-center gap-4 z-40">
+                         <div className="flex justify-around w-full max-w-md">
+                            {REACTION_TYPES.map(emoji => (
+                                <button 
+                                    key={emoji} 
+                                    onClick={() => logSentiment(emoji)} 
+                                    className="text-2xl md:text-4xl hover:scale-150 active:scale-125 transition-transform drop-shadow-xl p-2 rounded-full transform"
+                                    aria-label={`React with ${emoji}`}
+                                >
+                                    {emoji}
+                                </button>
+                            ))}
+                         </div>
+                         <div className="flex items-center gap-2">
+                             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                             <span className="text-[8px] font-black uppercase text-gray-600 tracking-[0.4em]">Group Pulse Active // Global Sync</span>
+                         </div>
                     </div>
                     
                     <div className="flex-grow flex flex-col md:hidden overflow-hidden bg-[#0a0a0a] min-h-0 relative">

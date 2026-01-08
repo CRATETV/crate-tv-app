@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -164,6 +163,13 @@ const App: React.FC = () => {
             .sort((a, b) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
     }, [movies]);
 
+    const topTenMovies = useMemo(() => {
+        return (Object.values(movies) as Movie[])
+            .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
+            .sort((a, b) => (b.likes || 0) - (a.likes || 0))
+            .slice(0, 10);
+    }, [movies]);
+
     const nowStreamingMovie = useMemo(() => {
         const keys = categories.nowStreaming?.movieKeys || [];
         if (keys.length === 0) return null;
@@ -256,6 +262,20 @@ const App: React.FC = () => {
                             <MovieCarousel title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`} movies={searchResults} onSelectMovie={handlePlayMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />
                         ) : (
                           <>
+                            {topTenMovies.length > 0 && (
+                                <MovieCarousel 
+                                    title={<div className="flex items-center gap-4 border-l-4 border-red-600 pl-4 mb-4"><h2 className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-white">Sector Priority: Top 10 Today</h2><span className="bg-red-600/10 border border-red-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-red-500 tracking-widest animate-pulse">High Velocity</span></div>} 
+                                    movies={topTenMovies} 
+                                    onSelectMovie={handlePlayMovie} 
+                                    watchedMovies={watchedMovies} 
+                                    watchlist={watchlist} 
+                                    likedMovies={likedMovies} 
+                                    onToggleLike={toggleLikeMovie} 
+                                    onToggleWatchlist={toggleWatchlist} 
+                                    onSupportMovie={() => {}} 
+                                    showRankings={true}
+                                />
+                            )}
                             {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => window.location.href='/cratefest'} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />}
                             {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} />}
                             {nowStreamingMovie && !settings.isHolidayModeActive && <NowStreamingBanner movie={nowStreamingMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} isLive={isNowStreamingLive} />}

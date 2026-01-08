@@ -10,10 +10,10 @@ interface CommunicationsTerminalProps {
 }
 
 const TEMPLATES = [
+    { id: 'parcel', label: '📦 Cinematic Parcel', prompt: 'Draft a delivery notification email. Treat the new film like a high-end package arrival. Use phrases like "Now Delivered to your Sector" and "Package Contents: Master Cinematic File". dopamine-driven tone.' },
     { id: 'newsletter', label: '⚡ Dispatch Issue', prompt: 'Summarize the provided Zine story into a prestigious newsletter. Focus on the "Daily Chart" and "Authenticity". High-energy industrial tone.' },
     { id: 'reengagement', label: '🔒 Vault Reactivation', prompt: 'Draft a re-engagement email for a dormant node. Tone: "Power restored to your sector." Invite them back to resume their session.' },
-    { id: 'festival_hype', label: '⚙️ Machine Hype', prompt: 'Create high-velocity hype for the festival blocks. Mention the 70/30 patronage loop.' },
-    { id: 'daily_reminder', label: '📟 Sync Update', prompt: 'Minimal, technical, and urgent daily sync update. Link to the Top 10 Today.' }
+    { id: 'festival_hype', label: '⚙️ Machine Hype', prompt: 'Create high-velocity hype for the festival blocks. Mention the 70/30 patronage loop.' }
 ];
 
 const VIDEO_LAYOUTS = [
@@ -53,7 +53,6 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
             const fetched: EditorialStory[] = [];
             snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as EditorialStory));
             setStories(fetched);
-            // Auto-select the latest story for the newsletter template
             if (fetched.length > 0) setSelectedStoryId(fetched[0].id);
         });
 
@@ -107,7 +106,6 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
         const story = selectedStoryId ? stories.find(s => s.id === selectedStoryId) : null;
         const block = selectedBlockId ? blocks.find(b => b.id === selectedBlockId) : null;
 
-        // Context Construction
         const context = {
             festivalTitle: festivalConfig?.title || 'Crate Fest',
             templatePrompt: template?.prompt,
@@ -144,10 +142,8 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
             alert("Bind film context to initialize Crate Studio synthesis.");
             return;
         }
-
         setVideoStatus('generating');
         const layout = VIDEO_LAYOUTS.find(l => l.id === selectedVideoLayout);
-        
         try {
             const res = await fetch('/api/generate-hype-video', {
                 method: 'POST',
@@ -160,15 +156,13 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
                 }),
             });
             const data = await res.json();
-            
             if (!res.ok) throw new Error(data.error || 'Synthesis rejected.');
-
             setVideoStatus('polling');
             setVideoUrl(data.videoUrl);
             setVideoStatus('success');
         } catch (err) {
             setVideoStatus('error');
-            setMessage(err instanceof Error ? err.message : 'Uplink to Veo Core failed.');
+            setMessage(err instanceof Error ? err.message : 'Uplink failed.');
         }
     };
 
@@ -176,11 +170,9 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
         e.preventDefault();
         const count = targetCounts[audience];
         if (!window.confirm(`BROADCAST PROTOCOL: Dispatch transmission to ${count} nodes in '${audience}' segment?`)) return;
-
         setStatus('sending');
         setMessage('');
         const password = sessionStorage.getItem('adminPassword');
-
         try {
             const response = await fetch('/api/send-bulk-email', {
                 method: 'POST',
@@ -275,7 +267,7 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
                     <div className="flex flex-wrap gap-4 pt-10 border-t border-white/5">
                         {view === 'dispatch' ? (
                             TEMPLATES.map(t => (
-                                <button key={t.id} onClick={() => handleAIDraft(t.id)} disabled={status === 'drafting'} className={`font-black px-12 py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 disabled:opacity-30 ${t.id === 'newsletter' ? 'bg-red-600 text-white shadow-[0_15px_40px_rgba(239,68,68,0.3)]' : 'bg-white text-black hover:bg-gray-200'}`}>
+                                <button key={t.id} onClick={() => handleAIDraft(t.id)} disabled={status === 'drafting'} className={`font-black px-12 py-5 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 disabled:opacity-30 ${t.id === 'parcel' ? 'bg-amber-600 text-white shadow-[0_15px_40px_rgba(245,158,11,0.3)]' : t.id === 'newsletter' ? 'bg-red-600 text-white' : 'bg-white text-black hover:bg-gray-200'}`}>
                                     {status === 'drafting' ? 'Analyzing Frequency...' : t.label}
                                 </button>
                             ))
@@ -309,12 +301,6 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
                                         </button>
                                     ))}
                                 </div>
-                                <p className="text-[8px] text-gray-700 font-bold uppercase tracking-widest mt-2 px-2">
-                                    {audience === 'all' && 'Broadcast to 100% of network.'}
-                                    {audience === 'inactive' && 'Targeting nodes silent for > 14 days.'}
-                                    {audience === 'actors' && 'Exclusive dispatch to talent directory.'}
-                                    {audience === 'filmmakers' && 'Strategic update to content owners.'}
-                                </p>
                             </div>
                             <div>
                                 <label className="form-label">Transmission Headline (Subject)</label>
@@ -339,7 +325,6 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
                              </div>
                         </div>
                         <div className="flex-grow overflow-y-auto p-1 bg-[#050505] relative z-0 flex items-center justify-center">
-                            {/* Realistic Email Container Preview */}
                             <div className="w-full max-w-[450px] bg-[#050505] border border-white/10 rounded-[32px] overflow-hidden p-10 space-y-8 shadow-2xl">
                                 <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-24 invert" alt="" />
                                 <div className="border-l-4 border-red-600 pl-4">
@@ -359,12 +344,6 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
             {view === 'studio' && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                     <div className="lg:col-span-2 bg-[#020202] rounded-[4rem] border-[16px] border-black aspect-video overflow-hidden shadow-[0_100px_200px_rgba(0,0,0,1)] relative flex flex-col items-center justify-center group">
-                        
-                        {/* Aperture Frame Overlays */}
-                        <div className="absolute inset-0 pointer-events-none border-[1px] border-white/5 z-40"></div>
-                        <div className="absolute top-0 left-0 w-20 h-20 border-t-2 border-l-2 border-red-600/30 m-8 z-40"></div>
-                        <div className="absolute bottom-0 right-0 w-20 h-20 border-b-2 border-r-2 border-red-600/30 m-8 z-40"></div>
-
                         {videoUrl ? (
                             <video src={videoUrl} controls autoPlay loop className="w-full h-full object-cover transition-opacity duration-1000" />
                         ) : (
@@ -382,40 +361,18 @@ const CommunicationsTerminal: React.FC<CommunicationsTerminalProps> = ({ analyti
                                      <div className="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
                                 </div>
                                 <p className="text-indigo-500 font-black uppercase tracking-[0.5em] text-xs animate-pulse text-center leading-loose">
-                                    BREACHING THE STUDIO...<br/>
                                     CONSTRUCTING KINETIC FRAMES
                                 </p>
-                                <div className="absolute bottom-16 w-64 h-1 bg-white/5 overflow-hidden rounded-full">
-                                    <div className="h-full bg-indigo-600 w-1/3 animate-[loading_1.5s_infinite]"></div>
-                                </div>
                             </div>
                         )}
                     </div>
 
                     <div className="space-y-8 flex flex-col justify-center">
                         <div className="bg-white/[0.03] border border-white/5 p-12 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
-                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
                              <h4 className="text-[11px] font-black uppercase text-gray-500 tracking-[0.6em] mb-10">STUDIO LOGIC</h4>
                              <div className="space-y-8">
-                                <p className="text-base text-gray-400 leading-relaxed font-medium italic">"Crate Studio uses Veo 3.1 to translate narrative DNA into industrial-scale visual energy. Optimized for high-velocity social engagement."</p>
-                                <div className="bg-black p-8 rounded-3xl border border-white/10 text-[10px] text-gray-600 space-y-4">
-                                    <p className="font-black text-white uppercase tracking-[0.3em] border-b border-white/5 pb-4">Manifest // Studio V4</p>
-                                    <ul className="space-y-4">
-                                        <li className="flex justify-between items-center"><span className="uppercase">Core Engine</span> <span className="text-green-500 font-bold">VEO_3.1_FAST</span></li>
-                                        <li className="flex justify-between items-center"><span className="uppercase">Resolution</span> <span className="text-white font-bold">1080P_MASTER</span></li>
-                                        <li className="flex justify-between items-center"><span className="uppercase">Aesthetics</span> <span className="text-white font-bold">{selectedVideoLayout.toUpperCase()}</span></li>
-                                    </ul>
-                                </div>
+                                <p className="text-base text-gray-400 leading-relaxed font-medium italic">"Crate Studio uses Veo 3.1 to translate narrative DNA into industrial-scale visual energy."</p>
                              </div>
-                             {videoUrl && (
-                                <a 
-                                    href={videoUrl} 
-                                    download 
-                                    className="block w-full text-center mt-12 bg-white text-black font-black py-6 rounded-2xl uppercase text-xs tracking-[0.4em] shadow-[0_20px_50px_rgba(255,255,255,0.1)] transition-all hover:scale-[1.05] active:scale-95"
-                                >
-                                    EXPORT MASTER
-                                </a>
-                             )}
                         </div>
                     </div>
                 </div>

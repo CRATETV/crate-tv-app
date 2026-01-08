@@ -27,9 +27,11 @@ import AuditTerminal from './components/AuditTerminal';
 import EditorialManager from './components/EditorialManager';
 import CommunicationsTerminal from './components/CommunicationsTerminal';
 import ContractsTab from './components/ContractsTab';
+import StrategicHub from './components/StrategicHub';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
+    strategic: '🚀 Strategic Hub',
     editorial: '🖋️ Editorial',
     comms: '📢 Communications',
     audit: '📜 Chronos Audit',
@@ -269,6 +271,7 @@ const AdminPage: React.FC = () => {
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
+                    {activeTab === 'strategic' && <StrategicHub analytics={analytics} />}
                     {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
                     {activeTab === 'comms' && <CommunicationsTerminal analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'audit' && <AuditTerminal />}
