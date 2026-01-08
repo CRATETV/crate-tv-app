@@ -1,67 +1,63 @@
 import { getApiData } from './_lib/data.js';
-import { Movie, Category, User } from '../types.js';
+import { Movie, Category, User, EditorialStory } from '../types.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 
-interface RokuMovie {
+interface RokuItem {
     id: string;
     title: string;
     description: string;
     SDPosterUrl: string;
     HDPosterUrl: string;
     heroImage: string;
-    streamUrl: string;
-    director: string;
-    actors: string[];
-    genres: string[];
-    rating: string;
-    duration: string;
-    isLiked: boolean;
-    isOnWatchlist: boolean;
-    isWatched: boolean;
-    isCratemas?: boolean;
+    streamUrl?: string;
+    director?: string;
+    actors?: string[];
+    genres?: string[];
+    rating?: string;
+    duration?: string;
+    isLiked?: boolean;
+    isOnWatchlist?: boolean;
+    isWatched?: boolean;
     itemComponentName?: string;
+    contentType: 'movie' | 'editorial';
 }
 
 interface RokuCategory {
     title: string;
-    children: (RokuMovie | null)[];
-    itemComponentName?: string;
+    children: RokuItem[];
 }
 
-const getVisibleMovies = (moviesData: Record<string, any>): Record<string, Movie> => {
-    const visibleMovies: Record<string, Movie> = {};
-    const now = new Date();
-
-    Object.values(moviesData).forEach((data: any) => {
-      const movie = data as Movie;
-      if (!movie || movie.isUnlisted) return; 
-      const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
-      const isReleased = !releaseDate || releaseDate <= now;
-      if (isReleased) {
-        visibleMovies[movie.key] = movie;
-      }
-    });
-    return visibleMovies;
-};
-
-const formatMovieForRoku = (movie: Movie, movieGenreMap: Map<string, string[]>, user: User | null): RokuMovie => {
+const formatMovieForRoku = (movie: Movie, genres: string[], user: User | null): RokuItem => {
     return {
-        id: movie.key || '',
+        id: movie.key,
         title: movie.title || 'Untitled Film',
-        description: (movie.synopsis || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim(),
-        SDPosterUrl: movie.poster || movie.tvPoster || '',
-        HDPosterUrl: movie.poster || movie.tvPoster || '',
+        description: (movie.synopsis || '').replace(/<[^>]+>/g, '').trim(),
+        SDPosterUrl: movie.poster || '',
+        HDPosterUrl: movie.poster || '',
         heroImage: movie.tvPoster || movie.poster || '',
         streamUrl: movie.fullMovie || '',
         director: movie.director || '',
         actors: movie.cast ? movie.cast.map(c => c.name || '') : [],
-        genres: movieGenreMap.get(movie.key) || [],
+        genres: genres,
         rating: movie.rating ? movie.rating.toFixed(1) : "0.0",
         duration: movie.durationInMinutes ? `${movie.durationInMinutes} min` : "0 min",
         isLiked: user?.likedMovies?.includes(movie.key) ?? false,
         isOnWatchlist: user?.watchlist?.includes(movie.key) ?? false,
         isWatched: user?.watchedMovies?.includes(movie.key) ?? false,
-        isCratemas: movie.isCratemas || false
+        contentType: 'movie'
+    };
+};
+
+const formatStoryForRoku = (story: EditorialStory): RokuItem => {
+    return {
+        id: story.id,
+        title: story.title,
+        description: story.subtitle,
+        SDPosterUrl: story.heroImage,
+        HDPosterUrl: story.heroImage,
+        heroImage: story.heroImage,
+        contentType: 'editorial',
+        itemComponentName: "EditorialPoster"
     };
 };
 
@@ -71,115 +67,74 @@ export async function GET(request: Request) {
     const deviceId = searchParams.get('deviceId');
 
     let user: User | null = null;
-    if (deviceId) {
-        const initError = getInitializationError();
-        const db = getAdminDb();
-        if (!initError && db) {
-            const linkDoc = await db.collection('roku_links').doc(deviceId).get();
-            if (linkDoc.exists) {
-                const uid = linkDoc.data()?.userId;
-                if (uid) {
-                    const userDoc = await db.collection('users').doc(uid).get();
-                    if (userDoc.exists) user = { uid, ...userDoc.data() } as User;
-                }
-            }
+    const initError = getInitializationError();
+    const db = getAdminDb();
+    
+    if (deviceId && !initError && db) {
+        const linkDoc = await db.collection('roku_links').doc(deviceId).get();
+        if (linkDoc.exists) {
+            const uid = linkDoc.data()?.userId;
+            const userDoc = await db.collection('users').doc(uid).get();
+            if (userDoc.exists) user = { uid, ...userDoc.data() } as User;
         }
     }
 
     const apiData = await getApiData();
-    const moviesData = apiData.movies || {};
-    const categoriesData = apiData.categories || {};
-    const settings = apiData.settings || { isHolidayModeActive: false };
-
-    const visibleMovies = getVisibleMovies(moviesData);
-    const movieGenreMap = new Map<string, string[]>();
-    Object.keys(visibleMovies).forEach(key => movieGenreMap.set(key, []));
-
-    (Object.values(categoriesData) as Category[]).forEach((category: Category) => {
-        if (category && Array.isArray(category.movieKeys)) {
-            category.movieKeys.forEach(movieKey => {
-                if (movieGenreMap.has(movieKey)) movieGenreMap.get(movieKey)?.push(category.title);
-            });
-        }
-    });
-    
     const finalCategories: RokuCategory[] = [];
 
-    // 1. TOP 10 RANKINGS (The signature "Web App" feature)
-    const topTenMovies = (Object.values(visibleMovies) as Movie[])
+    // 1. ZINE / EDITORIAL ROW (Impressive Header Row)
+    if (db) {
+        const storiesSnap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').limit(5).get();
+        if (!storiesSnap.empty) {
+            const stories: RokuItem[] = [];
+            storiesSnap.forEach(doc => stories.push(formatStoryForRoku({ id: doc.id, ...doc.data() } as EditorialStory)));
+            finalCategories.push({
+                title: "Crate Zine: The Dispatch",
+                children: stories
+            });
+        }
+    }
+
+    // 2. TOP 10 RANKINGS - RENAMED TO SECTOR PRIORITY
+    const topTen = (Object.values(apiData.movies) as Movie[])
+        .filter(m => !m.isUnlisted)
         .sort((a, b) => (b.likes || 0) - (a.likes || 0))
         .slice(0, 10);
 
-    if (topTenMovies.length > 0) {
+    if (topTen.length > 0) {
         finalCategories.push({
-            title: "Top 10 Today",
-            children: topTenMovies.map((m: Movie) => ({
-                ...formatMovieForRoku(m, movieGenreMap, user),
+            title: "Sector Priority: Top 10 Today",
+            children: topTen.map(m => ({
+                ...formatMovieForRoku(m, ["Top 10"], user),
                 itemComponentName: "RankedMoviePoster"
-            })),
+            }))
         });
     }
 
-    // 2. HOLIDAY MODE (If active)
-    if (settings.isHolidayModeActive) {
-        const holidayMovies = (Object.values(visibleMovies) as Movie[])
-            .filter((m: Movie) => m.isCratemas)
-            .map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user));
-        
-        if (holidayMovies.length > 0) {
-            finalCategories.push({
-                title: settings.holidayName || "Holiday Collection",
-                children: holidayMovies,
-            });
-        }
-    }
-
     // 3. CATALOG CATEGORIES
-    const catalogOrder = ["newReleases", "awardWinners", "comedy", "drama", "documentary"];
+    const catalogOrder = ["newReleases", "awardWinners", "comedy", "drama"];
     catalogOrder.forEach(key => {
-        const cat = categoriesData[key];
+        const cat = apiData.categories[key];
         if (cat && cat.movieKeys?.length > 0) {
             const children = cat.movieKeys
-                .map((k: string) => visibleMovies[k])
-                .filter((m: Movie | undefined): m is Movie => !!m)
-                .map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user));
+                .map((k: string) => apiData.movies[k])
+                .filter((m: any): m is Movie => !!m && !m.isUnlisted)
+                .map((m: Movie) => formatMovieForRoku(m, [cat.title], user));
             
             if (children.length > 0) {
-                finalCategories.push({
-                    title: cat.title,
-                    children,
-                });
+                finalCategories.push({ title: cat.title, children });
             }
         }
     });
 
-    // 4. VINTAGE VISIONS
-    const vintageCat = categoriesData["publicDomainIndie"];
-    if (vintageCat && vintageCat.movieKeys?.length > 0) {
-        finalCategories.push({
-            title: "Vintage Visions",
-            children: vintageCat.movieKeys
-                .map((k: string) => visibleMovies[k])
-                .filter((m: Movie | undefined): m is Movie => !!m)
-                .map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user))
-        });
-    }
-
     return new Response(JSON.stringify({
-        heroItems: (categoriesData['featured']?.movieKeys || [])
-            .map((k: string) => visibleMovies[k])
-            .filter((m: Movie | undefined): m is Movie => !!m)
-            .map((m: Movie) => formatMovieForRoku(m, movieGenreMap, user)),
         categories: finalCategories,
-        isFestivalLive: apiData.isFestivalLive || false
+        heroItems: topTen.slice(0, 3).map(m => formatMovieForRoku(m, ["Featured"], user))
     }, null, 2), {
       status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 's-maxage=60'
-      },
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 's-maxage=60' },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Feed generation failed.' }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Feed offline.' }), { status: 500 });
   }
 }

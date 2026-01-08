@@ -13,7 +13,7 @@ import SEO from './SEO';
 const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => void }> = ({ movie, rank, onSelect }) => (
     <div 
         onClick={() => onSelect(movie)}
-        className="group relative flex items-center bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-red-600/30 p-4 md:p-8 rounded-[2rem] transition-all duration-500 cursor-pointer overflow-hidden animate-[fadeIn_0.5s_ease-out]"
+        className="group relative flex items-center bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-red-600/30 p-4 md:p-8 rounded-[2.5rem] transition-all duration-500 cursor-pointer overflow-hidden animate-[fadeIn_0.5s_ease-out]"
         style={{ animationDelay: `${rank * 100}ms` }}
     >
         {/* Massive Background Rank Number */}
@@ -71,7 +71,7 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
 const TopTenPage: React.FC = () => {
     const { isLoading, movies } = useFestival();
     const [isGenerating, setIsGenerating] = useState(false);
-    const [shareStatus, setShareStatus] = useState<'idle' | 'success'>('idle');
+    const [shareStatus, setShareStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const shareableImageRef = useRef<HTMLDivElement>(null);
     const currentDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
@@ -120,7 +120,7 @@ const TopTenPage: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen text-white bg-[#050505]">
-            <SEO title="Top 10 Today" description="The most streamed and liked independent films on Crate TV right now." />
+            <SEO title="Sector Priority: Top 10 Today" description="The most streamed and liked independent films on Crate TV right now." />
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={false} />
             
             <main className="flex-grow pt-24 pb-24 md:pb-32 px-4 md:px-12 relative overflow-hidden">
@@ -136,7 +136,7 @@ const TopTenPage: React.FC = () => {
                                 <span className="w-1.5 h-10 bg-red-600 rounded-full"></span>
                                 <div>
                                     <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] leading-none">Global Network Feed</p>
-                                    <h1 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-none italic mt-2">The Chart.</h1>
+                                    <h1 className="text-4xl md:text-8xl font-black uppercase tracking-tighter leading-none italic mt-2">Sector Priority: <span className="text-gray-500">Top 10 Today.</span></h1>
                                 </div>
                             </div>
                             <p className="text-xl md:text-2xl text-gray-500 font-medium max-w-2xl leading-tight">

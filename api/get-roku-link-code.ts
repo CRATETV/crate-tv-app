@@ -1,12 +1,9 @@
-// This is a Vercel Serverless Function
-// Path: /api/get-roku-link-code
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
-// Function to generate a random, user-friendly code
 const generateCode = (): string => {
-    const chars = 'ABCDEFGHIJKLMNPQRSTUVWXYZ'; // Excluded O and I for clarity
-    const nums = '123456789'; // Excluded 0
+    const chars = 'ABCDEFGHIJKLMNPQRSTUVWXYZ'; 
+    const nums = '123456789'; 
     let code = '';
     for (let i = 0; i < 3; i++) {
         code += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -18,71 +15,46 @@ const generateCode = (): string => {
     return code;
 };
 
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const deviceId = searchParams.get('deviceId');
 
     if (!deviceId) {
-      return new Response(JSON.stringify({ error: 'Device ID is required.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(JSON.stringify({ error: 'Hardware Identity Missing.' }), { status: 400 });
     }
 
     const initError = getInitializationError();
-    if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
-    
+    if (initError) throw new Error(initError);
     const db = getAdminDb();
-    if (!db) throw new Error("Database connection failed.");
+    if (!db) throw new Error("Cloud DB Offline.");
 
-    // Check if a code already exists for this deviceId to prevent spamming
-    const existingCodeQuery = await db.collection('roku_codes').where('deviceId', '==', deviceId).limit(1).get();
-    if (!existingCodeQuery.empty) {
-        const existingCodeData = existingCodeQuery.docs[0].data();
-        // If the code is still valid, return it. Otherwise, let it generate a new one.
-        if (existingCodeData.expiresAt && existingCodeData.expiresAt.toDate() > new Date()) {
-            return new Response(JSON.stringify({ code: existingCodeData.code }), { status: 200 });
-        } else {
-            // Delete the expired code before creating a new one
-            await existingCodeQuery.docs[0].ref.delete();
+    // Check for existing valid code to reduce collision noise
+    const existing = await db.collection('roku_codes').where('deviceId', '==', deviceId).limit(1).get();
+    if (!existing.empty) {
+        const data = existing.docs[0].data();
+        if (data.expiresAt && data.expiresAt.toDate() > new Date()) {
+            return new Response(JSON.stringify({ code: data.code }), { status: 200 });
         }
+        await existing.docs[0].ref.delete();
     }
 
-    // Generate a unique code
-    let code;
-    let codeExists = true;
-    do {
-        code = generateCode();
-        const codeDoc = await db.collection('roku_codes').where('code', '==', code).get();
-        codeExists = !codeDoc.empty;
-    } while (codeExists);
-
-    // Store the code with a TTL (e.g., 15 minutes)
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const code = generateCode();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 Minute Window
 
     await db.collection('roku_codes').add({
-        code: code,
-        deviceId: deviceId,
+        code,
+        deviceId,
         createdAt: FieldValue.serverTimestamp(),
         expiresAt: expiresAt,
     });
 
     return new Response(JSON.stringify({ code }), {
       status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-      },
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     });
-
   } catch (error) {
-    console.error("Error generating Roku link code:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unknown server error occurred.";
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error("Roku Handshake Failure:", error);
+    return new Response(JSON.stringify({ error: 'Code generation offline.' }), { status: 500 });
   }
 }

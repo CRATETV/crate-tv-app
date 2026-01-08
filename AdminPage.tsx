@@ -27,11 +27,10 @@ import AuditTerminal from './components/AuditTerminal';
 import EditorialManager from './components/EditorialManager';
 import CommunicationsTerminal from './components/CommunicationsTerminal';
 import ContractsTab from './components/ContractsTab';
-import StrategicHub from './components/StrategicHub';
+import RokuDeployTab from './components/RokuDeployTab';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
-    strategic: '🚀 Strategic Hub',
     editorial: '🖋️ Editorial',
     comms: '📢 Communications',
     audit: '📜 Chronos Audit',
@@ -52,6 +51,7 @@ const ALL_TABS: Record<string, string> = {
     festival: '🍿 Film Festival',
     contracts: '📂 Vault',
     watchParty: '🍿 Watch Party',
+    roku: '📺 Roku Deploy',
     about: '📄 About',
     permissions: '🔑 Permissions',
     security: '🛡️ Security',
@@ -271,7 +271,6 @@ const AdminPage: React.FC = () => {
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
-                    {activeTab === 'strategic' && <StrategicHub analytics={analytics} />}
                     {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
                     {activeTab === 'comms' && <CommunicationsTerminal analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'audit' && <AuditTerminal />}
@@ -292,6 +291,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={(d) => setFestivalData(d)} onConfigChange={(c) => setFestivalConfig(c)} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}
                     {activeTab === 'contracts' && <ContractsTab />}
                     {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}
+                    {activeTab === 'roku' && <RokuDeployTab />}
                     {activeTab === 'about' && aboutData && <AboutEditor initialData={aboutData} onSave={(newData) => handleSaveData('about', newData)} isSaving={isSaving} />}
                     {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'security' && <SecurityTerminal />}

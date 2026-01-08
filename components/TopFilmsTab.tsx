@@ -3,7 +3,6 @@ import { AnalyticsData, Movie, FilmmakerPayout } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
 import TopTenShareableImage from './TopTenShareableImage';
-// import html2canvas from 'html2canvas'; // Removed for lazy-loading
 
 const formatCurrency = (amountInCents: number) => `$${(amountInCents / 100).toFixed(2)}`;
 const formatNumber = (num: number) => num.toLocaleString();
@@ -73,7 +72,6 @@ const TopFilmsTab: React.FC = () => {
 
         setIsGenerating(true);
         try {
-            // Dynamically import html2canvas only when needed for performance
             const { default: html2canvas } = await import('html2canvas');
 
             const canvas = await html2canvas(shareableImageRef.current, {
@@ -89,8 +87,8 @@ const TopFilmsTab: React.FC = () => {
             
             if (navigator.share && navigator.canShare({ files: [file] })) {
                 await navigator.share({
-                    title: 'Top 10 on Crate TV',
-                    text: `Check out the current Top 10 films on Crate TV! #indiefilm #cratetv`,
+                    title: 'Sector Priority: Top 10 Today',
+                    text: `Check out the current Sector Priority on Crate TV! #indiefilm #cratetv`,
                     files: [file],
                 });
             } else {
@@ -121,34 +119,34 @@ const TopFilmsTab: React.FC = () => {
     }
 
     if (!analyticsData) {
-        return <div className="p-4 text-yellow-300 bg-yellow-900/50 border border-yellow-700 rounded-md">Could not load analytics data to generate top films list.</div>
+        return <div className="p-4 text-yellow-300 bg-yellow-900/50 border border-yellow-700 rounded-md">Could not load analytics data.</div>
     }
 
     return (
         <div>
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-white">Top 10 Films by Likes</h2>
+                <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">Sector Priority: Top 10 Today</h2>
                 <button
                     onClick={handleShareImage}
                     disabled={isGenerating}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md text-sm no-print disabled:bg-blue-800 disabled:cursor-wait"
+                    className="bg-red-600 hover:bg-red-700 text-white font-black py-2 px-4 rounded-md text-[10px] uppercase tracking-widest shadow-lg no-print disabled:bg-gray-800"
                 >
-                    {isGenerating ? 'Generating Image...' : 'Share Image'}
+                    {isGenerating ? 'Synthesizing...' : 'Export Asset'}
                 </button>
             </div>
-            <p className="text-sm text-gray-400 mb-6">This list ranks all films by their total like count, providing a clear view of audience favorites.</p>
-            <div className="space-y-2">
+            <p className="text-sm text-gray-400 mb-6">Live leaderboard ranking films by audience sentiment velocity (total likes).</p>
+            <div className="space-y-3">
                 {topFilmsData.map((film, index) => (
-                    <div key={film.key} className="group flex items-center bg-gray-800/60 rounded-lg p-3">
-                        <div className="flex items-center justify-center w-24 flex-shrink-0">
+                    <div key={film.key} className="group flex items-center bg-white/[0.02] border border-white/5 hover:border-red-600/30 transition-all rounded-2xl p-4">
+                        <div className="flex items-center justify-center w-16 flex-shrink-0">
                             <span 
-                                className="font-black text-6xl md:text-7xl leading-none select-none text-gray-700"
-                                style={{ WebkitTextStroke: '1px rgba(255,255,255,0.1)' }}
+                                className="font-black text-4xl leading-none select-none text-gray-800 italic"
+                                style={{ WebkitTextStroke: '1px rgba(255,255,255,0.05)' }}
                             >
                                 {index + 1}
                             </span>
                         </div>
-                        <div className="relative w-16 h-24 flex-shrink-0 rounded-md overflow-hidden shadow-lg">
+                        <div className="relative w-12 h-16 flex-shrink-0 rounded-lg overflow-hidden shadow-2xl border border-white/10">
                             <img 
                                 src={allMovies[film.key]?.poster} 
                                 alt={film.title} 
@@ -156,19 +154,15 @@ const TopFilmsTab: React.FC = () => {
                             />
                         </div>
                         <div className="flex-grow min-w-0 pl-6">
-                            <h3 className="text-lg font-bold text-white truncate">{film.title}</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2 text-center sm:text-left">
-                                <div>
-                                    <p className="text-gray-400 text-xs">Likes</p>
-                                    <p className="font-bold text-lg text-red-400">{formatNumber(film.likes)}</p>
+                            <h3 className="text-lg font-black text-white uppercase tracking-tight truncate">{film.title}</h3>
+                            <div className="flex gap-6 mt-1">
+                                <div className="flex items-baseline gap-1.5">
+                                    <p className="text-[8px] text-gray-500 uppercase font-black">Sentiment</p>
+                                    <p className="font-bold text-xs text-red-500">{formatNumber(film.likes)}</p>
                                 </div>
-                                <div>
-                                    <p className="text-gray-400 text-xs">Views</p>
-                                    <p className="font-bold text-lg">{formatNumber(film.views)}</p>
-                                </div>
-                                <div>
-                                    <p className="text-gray-400 text-xs">Donations</p>
-                                    <p className="font-bold text-lg text-green-400">{formatCurrency(film.donations)}</p>
+                                <div className="flex items-baseline gap-1.5">
+                                    <p className="text-[8px] text-gray-500 uppercase font-black">Reach</p>
+                                    <p className="font-bold text-xs text-white">{formatNumber(film.views)}</p>
                                 </div>
                             </div>
                         </div>
