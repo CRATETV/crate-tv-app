@@ -1,5 +1,4 @@
-
-import React, { useRef } from 'react';
+import React, { useRef, isValidElement } from 'react';
 import { Movie, Category } from '../types';
 import { MovieCard } from './MovieCard';
 
@@ -24,7 +23,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
       const { scrollLeft, clientWidth } = scrollRef.current;
-      const scrollAmount = clientWidth * 0.8; // Scroll by 80% of the container width
+      const scrollAmount = clientWidth * 0.8;
       const scrollTo = direction === 'left' ? scrollLeft - scrollAmount : scrollLeft + scrollAmount;
       scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
     }
@@ -34,16 +33,28 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
     return null;
   }
   
-  // scroll-snap-x and snap-proximity provide that native-app "clicky" feel when browsing
   const carouselClasses = `flex overflow-x-auto space-x-4 pb-8 pt-4 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8 group/carousel-list snap-x snap-proximity overscroll-x-contain`;
+
+  // Robustly render the title. React nodes can be strings, numbers, elements, or arrays.
+  const renderTitle = () => {
+    if (typeof title === 'string' || typeof title === 'number') {
+      return (
+        <h2 className="text-lg md:text-2xl font-bold mb-4 text-white px-2 border-l-4 border-red-600 pl-4">
+          {title}
+        </h2>
+      );
+    }
+    
+    if (isValidElement(title) || Array.isArray(title)) {
+        return title;
+    }
+
+    return null;
+  };
 
   return (
     <div className="mb-8 md:mb-12">
-      {typeof title === 'string' ? (
-        <h2 className="text-lg md:text-2xl font-bold mb-4 text-white px-2 border-l-4 border-red-600 pl-4">{title}</h2>
-      ) : (
-        title
-      )}
+      {renderTitle()}
       <div className="relative group/carousel-container">
         <div ref={scrollRef} className={carouselClasses}>
           {movies.map((movie, index) => {
@@ -116,7 +127,6 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
           })}
         </div>
         
-        {/* Scroll Buttons */}
         <button
           onClick={() => scroll('left')}
           className="absolute left-0 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/90 text-white p-4 rounded-full opacity-0 group-hover/carousel-container:opacity-100 transition-opacity z-20 hidden md:block backdrop-blur-md border border-white/10 ml-2"

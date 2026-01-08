@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { MoviePipelineEntry, JuryVerdict, Movie } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
+import firebase from 'firebase/compat/app';
 
 interface AcademyIntelTabProps {
     pipeline: MoviePipelineEntry[];
@@ -25,7 +26,7 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
 
         const unsubGuest = db.collection('guest_judging').onSnapshot(snap => {
             const votes: Record<string, JuryVerdict[]> = {};
-            snapshot.forEach(doc => {
+            snap.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
                 const data = doc.data() as JuryVerdict & { filmId: string };
                 if (!votes[data.filmId]) votes[data.filmId] = [];
                 votes[data.filmId].push(data);
@@ -42,11 +43,9 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
             const admin = adminVerdicts[film.id];
             const guests = guestVerdicts[film.id] || [];
             
-            const adminAvg = admin ? (admin.direction + admin.performance + admin.cinematography + admin.writing) / 4 : 0;
-            // Add explicit type to reduce to ensure correct accumulator inference
-            const guestAvg = guests.length > 0 ? (guests.reduce<number>((a, b) => a + (b.narrative + b.technique + b.impact) / 3, 0) / guests.length) : 0;
+            const adminAvg = admin ? (Number(admin.direction || 0) + Number(admin.performance || 0) + Number(admin.cinematography || 0) + Number(admin.writing || 0)) / 4 : 0;
+            const guestAvg = guests.length > 0 ? (guests.reduce((a: number, b: JuryVerdict) => a + (Number(b.narrative) + Number(b.technique) + Number(b.impact)) / 3, 0) / guests.length) : 0;
             
-            // Weighted logic: Admin counts for 60%, Guests for 40%
             const combinedScore = (adminAvg * 0.6) + (guestAvg * 0.4);
 
             return {
@@ -56,10 +55,9 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
                 guestCount: guests.length,
                 combinedScore,
                 categories: {
-                    // Fix operator precedence and add explicit type to reduce
-                    narrative: (admin?.writing || 0) + (guests.reduce<number>((a,b) => a + b.narrative, 0) / (guests.length || 1)),
-                    technique: (admin?.technique || 0) + (guests.reduce<number>((a,b) => a + b.technique, 0) / (guests.length || 1)),
-                    impact: (admin?.performance || 0) + (guests.reduce<number>((a,b) => a + b.impact, 0) / (guests.length || 1))
+                    narrative: (Number(admin?.writing || 0)) + (guests.reduce((a: number, b: JuryVerdict) => a + Number(b.narrative), 0) / (guests.length || 1)),
+                    technique: (Number(admin?.technique || 0)) + (guests.reduce((a: number, b: JuryVerdict) => a + Number(b.technique), 0) / (guests.length || 1)),
+                    impact: (Number(admin?.performance || 0)) + (guests.reduce((a: number, b: JuryVerdict) => a + Number(b.impact), 0) / (guests.length || 1))
                 }
             };
         }).sort((a, b) => b.combinedScore - a.combinedScore);
@@ -68,7 +66,6 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
     const projectedAwards = useMemo(() => {
         if (rankedFilms.length === 0) return [];
         
-        // Simple logic for category leaders
         const bestNarrative = [...rankedFilms].sort((a,b) => b.categories.narrative - a.categories.narrative)[0];
         const bestTechnique = [...rankedFilms].sort((a,b) => b.categories.technique - a.categories.technique)[0];
         const mostImpact = [...rankedFilms].sort((a,b) => b.categories.impact - a.categories.impact)[0];
@@ -79,6 +76,10 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
             { category: 'Audience Choice', film: mostImpact, metric: 'Emotional Lead' }
         ];
     }, [rankedFilms]);
+
+    const totalVotesCount = useMemo(() => {
+        return (Object.values(guestVerdicts) as JuryVerdict[][]).reduce((a: number, b: JuryVerdict[]) => a + b.length, 0);
+    }, [guestVerdicts]);
 
     if (isLoading) return <LoadingSpinner />;
 
@@ -92,13 +93,11 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
                 <div className="grid grid-cols-2 gap-4">
                     <div className="bg-black/40 p-4 rounded-2xl border border-white/5 text-center">
                         <p className="text-[8px] font-black text-gray-500 uppercase">Total Adjudicators</p>
-                        {/* Fix type error by asserting Object.values type and using typed reduce */}
-                        <p className="text-2xl font-black text-white">{(Object.values(guestVerdicts) as JuryVerdict[][]).reduce<number>((a, b) => a + b.length, 0)}</p>
+                        <p className="text-2xl font-black text-white">{totalVotesCount}</p>
                     </div>
                     <div className="bg-black/40 p-4 rounded-2xl border border-white/5 text-center">
                         <p className="text-[8px] font-black text-gray-500 uppercase">Yield (Passes)</p>
-                        {/* Fix type error by asserting Object.values type and using typed reduce */}
-                        <p className="text-2xl font-black text-emerald-500">${((Object.values(guestVerdicts) as JuryVerdict[][]).reduce<number>((a, b) => a + b.length, 0) * 25).toLocaleString()}</p>
+                        <p className="text-2xl font-black text-emerald-500">${(totalVotesCount * 25).toLocaleString()}</p>
                     </div>
                 </div>
             </div>
@@ -117,7 +116,7 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
                                         <th className="p-5">Rank</th>
                                         <th className="p-5">Film Identity</th>
                                         <th className="p-5 text-center">Expert</th>
-                                        <th className="p-5 text-center">Guest ({rankedFilms[0]?.guestCount || 0})</th>
+                                        <th className="p-5 text-center">Guest</th>
                                         <th className="p-5 text-right">Weighted</th>
                                     </tr>
                                 </thead>
@@ -128,17 +127,17 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
                                                 <span className="text-xl font-black text-gray-800 italic group-hover:text-emerald-500/30 transition-colors">#0{i+1}</span>
                                             </td>
                                             <td className="p-5">
-                                                <p className="text-sm font-black text-white uppercase truncate max-w-[200px]">{film.title}</p>
-                                                <p className="text-[8px] text-gray-600 uppercase font-bold mt-1">Dir. {film.director}</p>
+                                                <p className="text-sm font-black text-white uppercase truncate max-w-[200px]">{String(film.title)}</p>
+                                                <p className="text-[8px] text-gray-600 uppercase font-bold mt-1">Dir. {String(film.director)}</p>
                                             </td>
                                             <td className="p-5 text-center font-bold text-gray-400">
-                                                {film.adminScore.toFixed(1)}
+                                                {Number(film.adminScore).toFixed(1)}
                                             </td>
                                             <td className="p-5 text-center font-bold text-emerald-800">
-                                                {film.guestScore.toFixed(1)}
+                                                {Number(film.guestScore).toFixed(1)}
                                             </td>
                                             <td className="p-5 text-right">
-                                                <span className="text-lg font-black text-white italic">{film.combinedScore.toFixed(2)}</span>
+                                                <span className="text-lg font-black text-white italic">{Number(film.combinedScore).toFixed(2)}</span>
                                             </td>
                                         </tr>
                                     ))}
@@ -158,7 +157,7 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
                             {projectedAwards.map(award => (
                                 <div key={award.category} className="bg-black/40 border border-white/5 p-5 rounded-2xl group hover:border-indigo-500/30 transition-all">
                                     <p className="text-[8px] font-black text-indigo-500 uppercase tracking-widest mb-1">{award.category}</p>
-                                    <h4 className="text-lg font-black text-white uppercase tracking-tighter italic">{award.film?.title || 'Calculating...'}</h4>
+                                    <h4 className="text-lg font-black text-white uppercase tracking-tighter italic">{award.film?.title ? String(award.film.title) : 'Calculating...'}</h4>
                                     <p className="text-[9px] text-gray-600 font-bold uppercase mt-2">Protocol: {award.metric}</p>
                                 </div>
                             ))}
