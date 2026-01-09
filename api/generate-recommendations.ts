@@ -3,61 +3,45 @@ import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
 export async function POST(request: Request) {
   try {
-    const { likedTitles, allMovies, isProAI } = await request.json();
+    const { likedTitles, allMovies } = await request.json();
 
-    if (!Array.isArray(likedTitles) || likedTitles.length === 0 || !allMovies) {
-      return new Response(JSON.stringify({ error: 'likedTitles (array) and allMovies (object) are required.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    if (!allMovies) return new Response(JSON.stringify({ error: 'Catalog required.' }), { status: 400 });
 
-    const availableMoviesCatalog = Object.entries(allMovies)
-      .map(([key, movie]: [string, any]) => `"${key}": "${movie.title}"`)
-      .join(',\n');
+    const catalogKeys = Object.keys(allMovies);
 
-    const prompt = `
-      You are a film recommendation expert for an indie streaming service called Crate TV.
-      A user likes the following movies: ${JSON.stringify(likedTitles)}.
-      Recommend up to 7 other movies from the available catalog below.
-      Available movie catalog:
-      {
-        ${availableMoviesCatalog}
-      }
-      Respond with a JSON object: { "recommendedKeys": ["key1", "key2"] }.
-    `;
+    try {
+        const catalogList = Object.entries(allMovies)
+          .map(([key, movie]: [string, any]) => `"${key}": "${movie.title}"`)
+          .join(',\n');
 
-    const model = isProAI ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
+        const prompt = `Recommend 5 movie keys from this list for a user who likes ${JSON.stringify(likedTitles)}: ${catalogList}. Respond in JSON: { "recommendedKeys": [] }`;
 
-    const response = await generateContentWithRetry({
-        model: model,
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    recommendedKeys: {
-                        type: Type.ARRAY,
-                        items: { type: Type.STRING }
+        const response = await generateContentWithRetry({
+            model: 'gemini-3-flash-preview',
+            contents: [{ parts: [{ text: prompt }] }],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        recommendedKeys: { type: Type.ARRAY, items: { type: Type.STRING } }
                     }
                 }
             }
-        }
-    });
-    
-    const responseJson = JSON.parse(response.text || '{}');
-    const recommendedKeys = responseJson.recommendedKeys || [];
-
-    return new Response(JSON.stringify({ recommendedKeys }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+        });
+        
+        return new Response(response.text, { status: 200 });
+    } catch (err: any) {
+        // FAIL-SAFE: Return random movies from the catalog if AI is exhausted
+        const shuffled = [...catalogKeys].sort(() => 0.5 - Math.random());
+        const fallbackKeys = shuffled.slice(0, 5);
+        
+        return new Response(JSON.stringify({ 
+            recommendedKeys: fallbackKeys,
+            isFallback: true 
+        }), { status: 200 });
+    }
   } catch (error) {
-    console.error('Error generating recommendations:', error);
-    return new Response(JSON.stringify({ error: `Failed: ${error instanceof Error ? error.message : "Unknown"}` }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ recommendedKeys: [] }), { status: 500 });
   }
 }

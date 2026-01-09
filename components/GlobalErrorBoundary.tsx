@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children?: ReactNode;
@@ -10,14 +10,14 @@ interface State {
 
 /**
  * GlobalErrorBoundary handles uncaught errors in the component tree.
- * Inherits from Component with generic Props and State to ensure type safety.
+ * Inherits from React.Component with generic Props and State to ensure type safety.
  */
-// FIX: Using Component directly from the react import to ensure proper inheritance and property recognition
-class GlobalErrorBoundary extends Component<Props, State> {
-  // FIX: Declare and initialize state as a class property so that TypeScript recognizes it on the class instance
+// Fix: Use React.Component explicitly to ensure 'props' and 'state' are correctly recognized by TypeScript
+class GlobalErrorBoundary extends React.Component<Props, State> {
+  // Fix: Initialize state as a class property correctly typed via the generic State interface
   public state: State = { hasError: false };
 
-  // FIX: Explicit constructor call to correctly initialize base class props
+  // Explicit constructor call to correctly initialize base class props
   constructor(props: Props) {
     super(props);
   }
@@ -33,8 +33,7 @@ class GlobalErrorBoundary extends Component<Props, State> {
   }
 
   public render(): ReactNode {
-    // Access hasError from the correctly inherited state object
-    // FIX: this.state is now correctly recognized via Component inheritance and class property declaration
+    // Fix: Access hasError from the correctly inherited state object
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center relative">
@@ -63,8 +62,7 @@ class GlobalErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Access children from the correctly inherited props object
-    // FIX: this.props is now correctly recognized via explicit Component inheritance
+    // Fix: Access children from the correctly inherited props object
     return this.props.children;
   }
 }

@@ -1,17 +1,17 @@
 import { GoogleGenAI, GenerateContentParameters, GenerateContentResponse } from '@google/genai';
 
 /**
- * ELITE RETRY ENGINE V5.3
- * Hardened for Paid Tiers and Free Quotas. 15 Retry Cycle.
+ * CRATE AI RESILIENCE ENGINE V7.0
+ * Specialized for Quota Management (Status 8 / 429).
  */
 export async function generateContentWithRetry(
   params: GenerateContentParameters,
-  maxRetries: number = 15
+  maxRetries: number = 5
 ): Promise<GenerateContentResponse> {
   let lastError: any;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    // Fresh client instance per call to ensure API key propagation
+    // Fresh client instance to ensure latest env state
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     try {
@@ -21,35 +21,29 @@ export async function generateContentWithRetry(
       lastError = error;
       const errorMessage = error.message || "";
       
-      const isTransientLimit = 
+      // Detection for Quota/Rate limits (Status 429 or Internal Error 8)
+      const isQuotaError = 
           errorMessage.includes("429") || 
           errorMessage.includes("RESOURCE_EXHAUSTED") ||
           errorMessage.includes("quota") ||
           errorMessage.includes("limit") ||
           errorMessage.includes(" 8 ") || 
-          errorMessage.startsWith("8 ");
+          errorMessage.startsWith("8 ") ||
+          error.code === 8;
 
-      if (isTransientLimit) {
+      if (isQuotaError) {
           if (attempt < maxRetries) {
-              // Quadratic Backoff with Jitter
-              const baseDelay = Math.pow(attempt + 1, 2) * 1000;
-              const jitter = Math.random() * 2000; 
-              const totalDelay = baseDelay + jitter;
-              
-              console.warn(`[Crate AI] Resource Exceeded (Error 8). Retrying ${attempt + 1}/${maxRetries} in ${totalDelay.toFixed(0)}ms...`);
-              await new Promise(resolve => setTimeout(resolve, totalDelay));
+              // Wait longer on each attempt: 2s, 8s, 18s, 32s...
+              const delay = Math.pow(attempt + 1, 2) * 2000 + (Math.random() * 1000);
+              console.warn(`[Crate AI] Quota Exhausted (Error 8). Re-syncing in ${Math.round(delay)}ms...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
               continue;
           }
           
-          const finalError = new Error("AI services are at peak capacity. Database update was successful, but AI generation is deferred.");
+          // If we exhausted retries, throw a specific error the API routes can catch
+          const finalError = new Error("AI Capacity Reached");
           (finalError as any).isQuotaError = true;
-          (finalError as any).code = 8;
           throw finalError;
-      }
-
-      if ((errorMessage.includes("503") || errorMessage.includes("overloaded")) && attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 3000 * (attempt + 1)));
-        continue;
       }
       
       throw error;
