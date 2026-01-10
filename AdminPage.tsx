@@ -22,9 +22,11 @@ import PromoCodeManager from './components/PromoCodeManager';
 import PermissionsManager from './components/PermissionsManager';
 import EditorialManager from './components/EditorialManager';
 import RokuDeployTab from './components/RokuDeployTab';
+import UserIntelligenceTab from './components/UserIntelligenceTab';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
+    intelligence: '🕵️ User Intelligence',
     editorial: '🖋️ Editorial',
     mail: '✉️ Studio Mail',
     movies: '🎞️ Catalog',
@@ -140,7 +142,7 @@ const AdminPage: React.FC = () => {
             }
             
             if (permsRes.ok) {
-                const data = await permsRes.ok ? await permsRes.json() : { permissions: {} };
+                const data = await permsRes.json();
                 setPermissions(data.permissions || {});
             }
 
@@ -257,6 +259,7 @@ const AdminPage: React.FC = () => {
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
+                    {activeTab === 'intelligence' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={() => {}} />}
                     {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
                     {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}

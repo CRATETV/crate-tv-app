@@ -209,27 +209,39 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
 
     const fetchCodes = async () => {
         const db = getDbInstance();
-        if (!db) return;
-        
-        let query: any = db.collection('promo_codes');
-        if (!isAdmin && filmmakerName) {
-            query = query.where('createdBy', '==', filmmakerName);
+        if (!db) {
+            // Prevent infinite loading if DB isn't ready immediately
+            setTimeout(() => setIsLoading(false), 2000);
+            return;
         }
+        
+        try {
+            let query: any = db.collection('promo_codes');
+            if (!isAdmin && filmmakerName) {
+                query = query.where('createdBy', '==', filmmakerName);
+            }
 
-        const snapshot = await query.orderBy('createdAt', 'desc').get();
-        const fetched = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as PromoCode));
-        setCodes(fetched);
-        setIsLoading(false);
+            const snapshot = await query.orderBy('createdAt', 'desc').get();
+            const fetched = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as PromoCode));
+            setCodes(fetched);
+        } catch (err) {
+            console.error("Voucher Retrieval Error:", err);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const fetchUsers = async () => {
         if (!isAdmin) return;
         const db = getDbInstance();
         if (!db) return;
-        // In Admin mode, we fetch everyone to allow viewer distribution
-        const snapshot = await db.collection('users').get();
-        const users = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
-        setAllUsers(users);
+        try {
+            const snapshot = await db.collection('users').get();
+            const users = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
+            setAllUsers(users);
+        } catch (err) {
+            console.error("User Retrieval Error:", err);
+        }
     };
 
     useEffect(() => {
@@ -298,7 +310,10 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
         return "Specific Content";
     };
 
-    if (isLoading) return <LoadingSpinner />;
+    if (isLoading) return <div className="h-64 flex flex-col items-center justify-center space-y-4">
+        <LoadingSpinner />
+        <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest animate-pulse">Initializing Voucher Repository...</p>
+    </div>;
 
     return (
         <div className="space-y-10 animate-[fadeIn_0.5s_ease-out]">

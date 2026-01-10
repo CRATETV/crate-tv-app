@@ -70,7 +70,6 @@ export async function POST(request: Request) {
         const plainText = htmlBody.replace(/<[^>]+>/g, '').trim();
 
         // 6. Execute Transmission via Resend
-        // Note: The 'from' address must be a verified domain in your Resend dashboard.
         const { error } = await resend.emails.send({
             from: `Crate TV <${businessEmail}>`,
             to: [email],
