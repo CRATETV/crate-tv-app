@@ -120,7 +120,6 @@ const UserIntelligenceTab: React.FC<UserIntelligenceTabProps> = ({ movies, onPre
         setAttachedMovie(movie);
         const hookText = `I specifically wanted to highlight "${movie.title}" directed by ${movie.director}. Based on your previous screening history, this film aligns with the technical pedigree you've previously engaged with.`;
         
-        // If body is empty, create full draft. If not, append curatorial hook.
         if (!msgBody) {
             setMsgSubject(`CRATE // Curatorial Spotlight: ${movie.title.toUpperCase()}`);
             setMsgBody(`Hello ${selectedUser?.name || 'there'},\n\n${hookText}\n\nWe look forward to your session notes.\n\nBest,\nThe Crate Zine Editorial Team`);
@@ -130,7 +129,10 @@ const UserIntelligenceTab: React.FC<UserIntelligenceTabProps> = ({ movies, onPre
     };
 
     const handleExecuteDispatch = async () => {
-        if (!selectedUser || !msgSubject || !msgBody) return;
+        if (!selectedUser?.email || !msgSubject || !msgBody) {
+            alert("Dispatch aborted: Recipient identity or payload manifest incomplete.");
+            return;
+        }
         setIsDispatching(true);
         const password = sessionStorage.getItem('adminPassword');
 
@@ -151,13 +153,16 @@ const UserIntelligenceTab: React.FC<UserIntelligenceTabProps> = ({ movies, onPre
                 }),
             });
             if (res.ok) {
-                alert("Transmission Securly Dispatched.");
+                alert("Transmission Successfully Dispatched.");
                 setMsgSubject('');
                 setMsgBody('');
                 setAttachedMovie(null);
+            } else {
+                const errData = await res.json();
+                throw new Error(errData.error || "Handshake rejected.");
             }
         } catch (e) {
-            alert("Handshake failed.");
+            alert(`Dispatch Error: ${e instanceof Error ? e.message : 'Unknown'}`);
         } finally {
             setIsDispatching(false);
         }

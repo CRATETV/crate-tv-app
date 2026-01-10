@@ -120,6 +120,7 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                 )}
                             </section>
 
+                            {/* Cinema Stage Spotlight */}
                             <section className="bg-white/[0.02] border border-white/5 rounded-[4rem] p-8 md:p-16 shadow-2xl overflow-hidden relative">
                                 <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none rotate-12">
                                     <h2 className="text-[10rem] font-black italic">PREVIEW</h2>

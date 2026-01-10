@@ -200,7 +200,7 @@ const WatchPartyControlRoom: React.FC<{
                 </div>
                 <div className="flex gap-3">
                     {canStart && (
-                        <button onClick={onStartParty} className="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-2xl uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all text-xs">
+                        <button onClick={() => { if(window.confirm("START SESSION: This will purge previous chat history for a clean screening. Continue?")) onStartParty(); }} className="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-2xl uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all text-xs">
                             Initialize Session
                         </button>
                     )}

@@ -201,6 +201,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
     
     // Form State
     const [newCode, setNewCode] = useState('');
+    const [internalName, setInternalName] = useState('');
     const [type, setType] = useState<'one_time_access' | 'discount'>('one_time_access');
     const [discountValue, setDiscountValue] = useState(100);
     const [maxUses, setMaxUses] = useState(1);
@@ -255,6 +256,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
 
         const codeData: Omit<PromoCode, 'id'> = {
             code: newCode.toUpperCase().trim().replace(/\s/g, ''),
+            internalName: internalName.trim() || undefined,
             type,
             discountValue: type === 'one_time_access' ? 100 : discountValue,
             maxUses: maxUses > 0 ? maxUses : 1, 
@@ -267,6 +269,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
         try {
             await db.collection('promo_codes').doc(codeData.code).set(codeData);
             setNewCode('');
+            setInternalName('');
             if (!defaultItemId) setSelectedItemId('');
             await fetchCodes();
         } catch (err) {
@@ -308,6 +311,19 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                         </div>
 
                         <div className="space-y-4">
+                            <div>
+                                <label className="form-label">Internal Name (Label)</label>
+                                <input 
+                                    type="text" 
+                                    value={internalName} 
+                                    onChange={e => setInternalName(e.target.value)} 
+                                    placeholder="e.g. VIP Press List 2025" 
+                                    className="form-input !bg-black/40 border-white/10" 
+                                    disabled={isQuotaExceeded}
+                                />
+                                <p className="text-[8px] text-gray-600 mt-1 uppercase font-bold tracking-widest">Internal reference only.</p>
+                            </div>
+
                             <div>
                                 <label className="form-label">Voucher Alias (The Code)</label>
                                 <input 
@@ -408,6 +424,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                                                 <td className="p-5">
                                                     <div className="space-y-1">
                                                         <p className="font-black text-white text-base tracking-[0.2em] group-hover:text-red-500 transition-colors">{c.code}</p>
+                                                        {c.internalName && <p className="text-[10px] text-amber-500 font-bold uppercase">{c.internalName}</p>}
                                                         <p className="text-[9px] text-gray-600 uppercase font-bold tracking-tighter">{resolveItemName(c.itemId)}</p>
                                                     </div>
                                                 </td>

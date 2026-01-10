@@ -383,6 +383,7 @@ export interface ActorPost {
 export interface PromoCode {
   id: string;
   code: string;
+  internalName?: string;
   type: 'one_time_access' | 'discount';
   discountValue: number;
   maxUses: number;

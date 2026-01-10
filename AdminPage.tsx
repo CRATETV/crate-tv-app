@@ -20,7 +20,6 @@ import TalentInquiriesTab from './components/TalentInquiriesTab';
 import CrateFestEditor from './components/CrateFestEditor';
 import PromoCodeManager from './components/PromoCodeManager';
 import PermissionsManager from './components/PermissionsManager';
-import AuditTerminal from './components/AuditTerminal';
 import EditorialManager from './components/EditorialManager';
 import RokuDeployTab from './components/RokuDeployTab';
 
@@ -43,7 +42,6 @@ const ALL_TABS: Record<string, string> = {
     roku: '📺 Roku Deploy',
     about: '📄 About',
     permissions: '🔑 Permissions',
-    audit: '📜 Chronos Audit',
     security: '🛡️ Security',
     fallback: '💾 Fallback'
 };
@@ -142,7 +140,7 @@ const AdminPage: React.FC = () => {
             }
             
             if (permsRes.ok) {
-                const data = await permsRes.json();
+                const data = await permsRes.ok ? await permsRes.json() : { permissions: {} };
                 setPermissions(data.permissions || {});
             }
 
@@ -276,7 +274,6 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'roku' && <RokuDeployTab />}
                     {activeTab === 'about' && aboutData && <AboutEditor initialData={aboutData} onSave={(newData) => handleSaveData('about', newData)} isSaving={isSaving} />}
                     {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(password)} />}
-                    {activeTab === 'audit' && <AuditTerminal />}
                     {activeTab === 'security' && <SecurityTerminal />}
                     {activeTab === 'fallback' && <FallbackGenerator movies={movies} categories={categories} festivalData={festivalData} festivalConfig={festivalConfig} aboutData={aboutData} />}
                 </div>
