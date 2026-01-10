@@ -8,10 +8,9 @@ import SEO from './SEO';
 import { EditorialStory, Movie, ZineSection } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import { useFestival } from '../contexts/FestivalContext';
-import ZinePuzzle from './ZinePuzzle';
+import { useAuth } from '../contexts/AuthContext';
 import ZineTrailerPark from './ZineTrailerPark';
 import ZineSentiment from './ZineSentiment';
-import ZineGameEmoji from './ZineGameEmoji';
 
 interface ZinePageProps {
     storyId?: string;
@@ -46,29 +45,35 @@ const ZineStoryCard: React.FC<{ story: EditorialStory; onClick: () => void }> = 
 
 const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
     const { movies } = useFestival();
+    const { authInitialized } = useAuth();
     const [stories, setStories] = useState<EditorialStory[]>([]);
     const [activeStory, setActiveStory] = useState<EditorialStory | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeLab, setActiveLab] = useState<'puzzle' | 'emoji'>('puzzle');
 
     useEffect(() => {
+        if (!authInitialized) return;
+
         const db = getDbInstance();
         const fetchStories = async () => {
-            if (!db) return;
+            if (!db) {
+                setIsLoading(false);
+                return;
+            }
             try {
                 const snap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').get();
                 const fetched: EditorialStory[] = [];
                 snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as EditorialStory));
                 setStories(fetched);
                 if (storyId) setActiveStory(fetched.find(s => s.id === storyId) || null);
+                else setActiveStory(null);
             } catch (e) {
-                console.error(e);
+                console.error("Zine Narrative Sync Error:", e);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchStories();
-    }, [storyId]);
+    }, [storyId, authInitialized]);
 
     const handleNavigate = (id: string | null) => {
         const path = id ? `/zine/${id}` : '/zine';
@@ -88,7 +93,6 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                 <div className="max-w-[1600px] mx-auto px-4 md:px-12">
                     {!activeStory ? (
                         <div className="space-y-24">
-                            {/* MASTERHEAD - REFINED */}
                             <header className="flex flex-col md:flex-row justify-between items-end border-b border-white/5 pb-16 gap-8">
                                 <div className="space-y-4">
                                     <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
@@ -105,7 +109,6 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                 </div>
                             </header>
 
-                            {/* MAIN EDITORIAL GRID */}
                             <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                                 {stories.map(story => (
                                     <ZineStoryCard key={story.id} story={story} onClick={() => handleNavigate(story.id)} />
@@ -117,41 +120,14 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                 )}
                             </section>
 
-                            {/* INTERACTIVE HUB - CONFINED AND CLEANER */}
                             <section className="bg-white/[0.02] border border-white/5 rounded-[4rem] p-8 md:p-16 shadow-2xl overflow-hidden relative">
                                 <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none rotate-12">
-                                    <h2 className="text-[10rem] font-black italic">THE LAB</h2>
+                                    <h2 className="text-[10rem] font-black italic">PREVIEW</h2>
                                 </div>
-                                
-                                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-16">
-                                    <div className="lg:col-span-7 space-y-12">
-                                        <div>
-                                            <h2 className="text-5xl font-black uppercase tracking-tighter italic mb-4">Interactive Core.</h2>
-                                            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Synchronized Cinematic Play</p>
-                                        </div>
-                                        <div className="bg-black/60 rounded-[3rem] border border-white/10 overflow-hidden shadow-2xl h-[500px] flex flex-col">
-                                            <div className="p-6 border-b border-white/5 flex gap-4 bg-white/[0.02]">
-                                                <button onClick={() => setActiveLab('puzzle')} className={`px-8 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeLab === 'puzzle' ? 'bg-indigo-600 text-white shadow-xl' : 'text-gray-600 hover:text-white'}`}>Codebreaker</button>
-                                                <button onClick={() => setActiveLab('emoji')} className={`px-8 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeLab === 'emoji' ? 'bg-red-600 text-white shadow-xl' : 'text-gray-600 hover:text-white'}`}>Cine-Emoji</button>
-                                            </div>
-                                            <div className="flex-grow p-10">
-                                                {activeLab === 'puzzle' ? <ZinePuzzle /> : <ZineGameEmoji />}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="lg:col-span-5 space-y-10">
-                                        <div className="p-10 bg-red-600/5 border border-red-500/10 rounded-[3rem] space-y-6">
-                                            <h3 className="text-2xl font-black uppercase tracking-tighter italic">Cinema Preview Park</h3>
-                                            <p className="text-gray-400 text-sm leading-relaxed font-medium">Kinetic teaser dispatches from our verified global catalog. Cycle through the aesthetics of the circuit.</p>
-                                            <ZineTrailerPark movies={Object.values(movies).slice(0, 10)} />
-                                        </div>
-                                    </div>
-                                </div>
+                                <ZineTrailerPark movies={Object.values(movies).slice(0, 10)} />
                             </section>
                         </div>
                     ) : (
-                        /* ARTICLE DETAIL VIEW */
                         <div className="max-w-4xl mx-auto animate-[fadeIn_0.6s_ease-out]">
                             <button onClick={() => handleNavigate(null)} className="mb-12 flex items-center gap-3 text-gray-500 hover:text-white transition-colors uppercase font-black text-[10px] tracking-widest group">
                                 <svg className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>

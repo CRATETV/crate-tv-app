@@ -14,7 +14,6 @@ interface SquarePaymentModalProps {
     priceOverride?: number; 
 }
 
-// Sub-component for a visual representation of the purchased access
 const DigitalTicket: React.FC<{ details: any, type: string }> = ({ details, type }) => (
     <div className="relative w-full aspect-[1.6/1] bg-gradient-to-br from-gray-900 to-black rounded-2xl border border-white/20 overflow-hidden shadow-2xl animate-[ticketEntry_0.8s_cubic-bezier(0.34,1.56,0.64,1)]">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
@@ -70,17 +69,17 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
     const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isValidatingPromo, setIsValidatingPromo] = useState(false);
     const [error, setError] = useState('');
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     
-    // User-defined amount for donations/deposits
     const [customAmount, setCustomAmount] = useState('5.00');
     const [promoCode, setPromoCode] = useState('');
+    const [appliedPromo, setAppliedPromo] = useState<any>(null);
     
     const cardRef = useRef<any>(null);
     const paymentFormRef = useRef<HTMLDivElement>(null);
 
-    // Fixed price logic mapping to server-side priceMap
     const basePrice = useMemo(() => {
         if (priceOverride !== undefined) return priceOverride;
         switch (paymentType) {
@@ -99,8 +98,11 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
         if (['donation', 'billSavingsDeposit'].includes(paymentType)) {
             return parseFloat(customAmount) || 0;
         }
+        if (appliedPromo) {
+            return appliedPromo.finalPriceInCents / 100;
+        }
         return basePrice;
-    }, [paymentType, customAmount, basePrice]);
+    }, [paymentType, customAmount, basePrice, appliedPromo]);
 
     const itemTitle = useMemo(() => {
         if (movie) return movie.title;
@@ -113,16 +115,16 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
         return 'Crate TV Item';
     }, [movie, block, paymentType]);
 
+    const isFree = useMemo(() => appliedPromo?.isFree === true, [appliedPromo]);
+
     useEffect(() => {
         let card: any;
         const initializeSquare = async () => {
             try {
-                // Fetch config
                 const configRes = await fetch('/api/square-config');
                 if (!configRes.ok) throw new Error("Failed to load payment configuration.");
                 const { applicationId, locationId } = await configRes.json();
 
-                // Load Square SDK script
                 if (!(window as any).Square) {
                     const script = document.createElement('script');
                     script.src = "https://web.squarecdn.com/v1/square.js";
@@ -146,53 +148,79 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
         };
 
         initializeSquare();
-
-        return () => {
-            if (card) card.destroy();
-        };
+        return () => { if (card) card.destroy(); };
     }, []);
+
+    const handleApplyPromo = async () => {
+        if (!promoCode.trim()) return;
+        setIsValidatingPromo(true);
+        setError('');
+        try {
+            const res = await fetch('/api/validate-promo-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    code: promoCode, 
+                    itemId: movie?.key || block?.id || paymentType,
+                    originalPriceInCents: Math.round(basePrice * 100)
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Validation failed.");
+            setAppliedPromo(data);
+        } catch (err: any) {
+            setError(err.message);
+            setAppliedPromo(null);
+        } finally {
+            setIsValidatingPromo(false);
+        }
+    };
 
     const handlePayment = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!cardRef.current || isProcessing) return;
+        if (isProcessing) return;
 
         setIsProcessing(true);
         setError('');
 
         try {
-            const result = await cardRef.current.tokenize();
-            if (result.status === 'OK') {
-                const response = await fetch('/api/process-square-payment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        sourceId: result.token,
-                        amount: displayAmount,
-                        paymentType,
-                        itemId: movie?.key || block?.id || paymentType,
-                        movieTitle: movie?.title,
-                        directorName: movie?.director,
-                        blockTitle: block?.title,
-                        email: user?.email,
-                        promoCode: promoCode.trim() || undefined
-                    }),
-                });
-
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.error || "Payment failed.");
-
-                setPaymentSuccess(true);
-                setTimeout(() => {
-                    onPaymentSuccess({
-                        paymentType,
-                        itemId: movie?.key || block?.id,
-                        amount: displayAmount,
-                        email: user?.email || undefined
-                    });
-                }, 2000);
-            } else {
-                throw new Error(result.errors?.[0]?.message || "Card validation failed.");
+            let sourceId = 'PROMO_VOUCHER';
+            
+            if (!isFree) {
+                if (!cardRef.current) throw new Error("Payment node offline.");
+                const result = await cardRef.current.tokenize();
+                if (result.status !== 'OK') throw new Error(result.errors?.[0]?.message || "Card validation failed.");
+                sourceId = result.token;
             }
+
+            const response = await fetch('/api/process-square-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sourceId,
+                    amount: displayAmount,
+                    paymentType,
+                    itemId: movie?.key || block?.id || paymentType,
+                    movieTitle: movie?.title,
+                    directorName: movie?.director,
+                    blockTitle: block?.title,
+                    email: user?.email,
+                    promoCode: promoCode.trim() || undefined
+                }),
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || "Payment failed.");
+
+            setPaymentSuccess(true);
+            setTimeout(() => {
+                onPaymentSuccess({
+                    paymentType,
+                    itemId: movie?.key || block?.id,
+                    amount: displayAmount,
+                    email: user?.email || undefined
+                });
+            }, 2000);
         } catch (err: any) {
             setError(err.message || "An unexpected error occurred.");
         } finally {
@@ -203,7 +231,6 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
     return (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center z-[150] p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
             <div className="bg-[#111] border border-white/10 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden relative" onClick={e => e.stopPropagation()}>
-                {/* Header */}
                 <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
                     <div>
                         <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Secure Checkout</h2>
@@ -232,7 +259,6 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                         </div>
                     ) : (
                         <form onSubmit={handlePayment} className="space-y-8">
-                            {/* Summary Card */}
                             <div className="bg-white/5 p-6 rounded-3xl border border-white/10 flex justify-between items-center shadow-inner">
                                 <div className="min-w-0">
                                     <p className="text-[9px] font-black text-red-500 uppercase tracking-widest mb-1">Target Resource</p>
@@ -240,11 +266,12 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                 </div>
                                 <div className="text-right">
                                     <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Amount</p>
-                                    <p className="text-2xl font-black text-white">${displayAmount.toFixed(2)}</p>
+                                    <p className={`text-2xl font-black ${isFree ? 'text-green-500' : 'text-white'}`}>
+                                        {isFree ? 'FREE' : `$${displayAmount.toFixed(2)}`}
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* Inputs for user-defined prices */}
                             {['donation', 'billSavingsDeposit'].includes(paymentType) && (
                                 <div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">
                                     <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Manual Amount Allocation</label>
@@ -262,25 +289,45 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                 </div>
                             )}
 
-                            {/* Square Card Input */}
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Secure Payment Channel</label>
-                                <div className="bg-black/40 border-2 border-white/10 rounded-2xl p-6 focus-within:border-red-600 transition-all">
-                                    <div id="card-container"></div>
+                            {!['donation', 'billSavingsDeposit'].includes(paymentType) && !isFree && (
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Secure Payment Channel</label>
+                                    <div className="bg-black/40 border-2 border-white/10 rounded-2xl p-6 focus-within:border-red-600 transition-all">
+                                        <div id="card-container"></div>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
-                            {/* Voucher Input */}
+                            {isFree && (
+                                <div className="p-8 bg-green-500/10 border border-green-500/20 rounded-3xl text-center space-y-4 animate-[fadeIn_0.5s_ease-out]">
+                                    <div className="text-3xl">🎁</div>
+                                    <div>
+                                        <p className="text-green-500 font-black uppercase text-xs tracking-widest">VIP Voucher Validated</p>
+                                        <p className="text-gray-400 text-[10px] font-bold mt-1 uppercase">Payment requirement waived for this session.</p>
+                                    </div>
+                                </div>
+                            )}
+
                             {!['donation', 'billSavingsDeposit'].includes(paymentType) && (
                                 <div className="space-y-3">
                                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Promotion Logic</p>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Voucher Code" 
-                                        value={promoCode} 
-                                        onChange={e => setPromoCode(e.target.value.toUpperCase())}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs font-mono tracking-widest text-white outline-none focus:border-red-600"
-                                    />
+                                    <div className="flex gap-2">
+                                        <input 
+                                            type="text" 
+                                            placeholder="Voucher Code" 
+                                            value={promoCode} 
+                                            onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                                            className="flex-grow bg-white/5 border border-white/10 rounded-xl p-3 text-xs font-mono tracking-widest text-white outline-none focus:border-red-600"
+                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={handleApplyPromo}
+                                            disabled={isValidatingPromo || !promoCode}
+                                            className="bg-white/10 hover:bg-white/20 text-white font-black px-6 py-2 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all disabled:opacity-20"
+                                        >
+                                            {isValidatingPromo ? '...' : 'Apply'}
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 
@@ -294,7 +341,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                             <button 
                                 type="submit" 
                                 disabled={isLoading || isProcessing}
-                                className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-800 disabled:text-gray-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-sm shadow-[0_20px_50px_rgba(239,68,68,0.2)] transition-all transform active:scale-[0.98] flex items-center justify-center gap-3"
+                                className={`w-full ${isFree ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} disabled:bg-gray-800 disabled:text-gray-600 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-sm shadow-[0_20px_50px_rgba(239,68,68,0.2)] transition-all transform active:scale-[0.98] flex items-center justify-center gap-3`}
                             >
                                 {isProcessing ? (
                                     <>
@@ -302,7 +349,7 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
                                         Processing...
                                     </>
                                 ) : (
-                                    `Authorize Transaction: $${displayAmount.toFixed(2)}`
+                                    isFree ? 'Redeem Digital Access' : `Authorize Transaction: $${displayAmount.toFixed(2)}`
                                 )}
                             </button>
                         </form>

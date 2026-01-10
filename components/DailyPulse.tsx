@@ -30,6 +30,7 @@ const PulseMetric: React.FC<{ label: string; value: string | number; color?: str
 const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, categories }) => {
     const [liveNodes, setLiveNodes] = useState(analytics?.liveNodes || 0);
     const [recentAudits, setRecentAudits] = useState<AuditEntry[]>([]);
+    const [aiStatus, setAiStatus] = useState<'nominal' | 'throttled'>('nominal');
 
     useEffect(() => {
         const db = getDbInstance();
@@ -49,9 +50,19 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                 setRecentAudits(audits);
             });
 
+        // Monitor Quota Breaches for real-time status
+        const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
+        const unsubHealth = db.collection('system_health')
+            .where('type', '==', 'AI_QUOTA_BREACH')
+            .where('timestamp', '>=', fifteenMinsAgo)
+            .onSnapshot(snap => {
+                setAiStatus(snap.empty ? 'nominal' : 'throttled');
+            });
+
         return () => {
             unsubPresence();
             unsubAudit();
+            unsubHealth();
         };
     }, []);
 
@@ -73,35 +84,31 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
-                    {/* Financial War Chest Section */}
-                    <div className="bg-gradient-to-br from-indigo-900/40 via-[#0f0f0f] to-black border border-indigo-500/20 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                            <svg className="w-48 h-48 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                    {/* NEW: Infrastructure Health Monitor */}
+                    <div className={`bg-[#0f0f0f] border ${aiStatus === 'throttled' ? 'border-red-600/50 shadow-[0_0_50px_rgba(239,68,68,0.1)]' : 'border-white/5'} p-8 rounded-[2.5rem] relative overflow-hidden transition-all duration-700`}>
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-2 h-2 rounded-full ${aiStatus === 'nominal' ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-red-600 animate-pulse shadow-[0_0_10px_#ef4444]'}`}></div>
+                                <h3 className="text-xl font-black uppercase tracking-tighter text-white">Infrastructure Health</h3>
+                            </div>
+                            <span className="text-[8px] font-black text-gray-700 uppercase tracking-widest">Global Ops Sync</span>
                         </div>
-                        <div className="relative z-10">
-                            <div className="flex items-center gap-3 mb-6">
-                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                <h3 className="text-xl font-black uppercase tracking-tighter text-white">Financial War Chest</h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Intelligence Core</p>
+                                <p className={`text-lg font-bold ${aiStatus === 'nominal' ? 'text-white' : 'text-red-500'}`}>
+                                    {aiStatus === 'nominal' ? 'NOMINAL // READY' : 'THROTTLED // ERROR 8'}
+                                </p>
+                                <p className="text-[9px] text-gray-600 mt-2 font-medium">
+                                    {aiStatus === 'nominal' ? 'Processing dispatches at standard frequency.' : 'Requests per minute exceeded. Backoff protocols active.'}
+                                </p>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <div className="bg-white/5 border border-white/10 p-6 rounded-2xl">
-                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Active Subsidy</p>
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="text-2xl font-black text-white">$1,000.00</h4>
-                                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/aws.png" className="h-6 grayscale opacity-50" alt="AWS" />
-                                    </div>
-                                    <p className="text-[9px] text-green-500 font-bold uppercase mt-2">✓ Verified: AWS Activate</p>
-                                </div>
-                                <div className="bg-white/5 border border-white/10 p-6 rounded-2xl opacity-40">
-                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Upcoming Target</p>
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="text-2xl font-black text-white">$2,500.00</h4>
-                                        <span className="text-indigo-500 font-black text-[9px] italic">MS Hub</span>
-                                    </div>
-                                    <p className="text-[9px] text-gray-600 font-bold uppercase mt-2">Locked // Awaiting Synthesis</p>
-                                </div>
+                            <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Data Pipeline</p>
+                                <p className="text-lg font-bold text-white uppercase">Authenticated</p>
+                                <p className="text-[9px] text-green-500 font-bold mt-2 uppercase tracking-widest">✓ AWS_S3_READY</p>
                             </div>
-                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-6 italic">Strategic Note: Use the "Fund Strategist" to leverage the AWS win for Microsoft Azure credits.</p>
                         </div>
                     </div>
 

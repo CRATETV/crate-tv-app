@@ -16,29 +16,21 @@ import HeroManager from './components/HeroManager';
 import LaurelManager from './components/LaurelManager';
 import PitchDeckManager from './components/PitchDeckManager';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
-import AcademyIntelTab from './components/AcademyIntelTab';
 import TalentInquiriesTab from './components/TalentInquiriesTab';
 import CrateFestEditor from './components/CrateFestEditor';
 import PromoCodeManager from './components/PromoCodeManager';
-import DiscoveryEngine from './components/DiscoveryEngine';
-import UserIntelligenceTab from './components/UserIntelligenceTab';
 import PermissionsManager from './components/PermissionsManager';
 import AuditTerminal from './components/AuditTerminal';
 import EditorialManager from './components/EditorialManager';
-import ContractsTab from './components/ContractsTab';
 import RokuDeployTab from './components/RokuDeployTab';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
     editorial: '🖋️ Editorial',
-    audit: '📜 Chronos Audit',
-    users: '👥 User Intelligence',
-    intelligence: '🧠 Intelligence',
     mail: '✉️ Studio Mail',
     movies: '🎞️ Catalog',
     pipeline: '📥 Pipeline',
     inquiries: '🎭 Inquiries',
-    academy: '⚖️ Academy Intel',
     analytics: '📊 Analytics',
     hero: '🎬 Hero',
     laurels: '🏆 Laurels',
@@ -47,11 +39,11 @@ const ALL_TABS: Record<string, string> = {
     pitch: '📽️ Pitch Deck',
     categories: '📂 Categories',
     festival: '🍿 Film Festival',
-    contracts: '📂 Vault',
     watchParty: '🍿 Watch Party',
     roku: '📺 Roku Deploy',
     about: '📄 About',
     permissions: '🔑 Permissions',
+    audit: '📜 Chronos Audit',
     security: '🛡️ Security',
     fallback: '💾 Fallback'
 };
@@ -83,7 +75,7 @@ const AdminPage: React.FC = () => {
     const allowedTabs = useMemo(() => {
         const isMaster = role === 'super_admin' || role === 'master';
         if (isMaster) return Object.keys(ALL_TABS);
-        if (role === 'festival_admin') return ['festival', 'analytics', 'academy'];
+        if (role === 'festival_admin') return ['festival', 'analytics'];
         const specificTabs = permissions[role];
         if (specificTabs && specificTabs.length > 0) return specificTabs;
         return ['pulse'];
@@ -216,7 +208,6 @@ const AdminPage: React.FC = () => {
                 <div className="w-full max-w-sm">
                     <form onSubmit={handleLogin} className="bg-[#0f0f0f] border border-white/5 p-10 rounded-[2.5rem] shadow-2xl space-y-8">
                         <div className="text-center">
-                            <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-32 mx-auto mb-6" alt="Crate TV" />
                             <h1 className="text-xl font-black uppercase tracking-[0.2em] text-gray-700">Studio Command</h1>
                         </div>
                         <div className="space-y-6">
@@ -249,7 +240,6 @@ const AdminPage: React.FC = () => {
             <div className="max-w-[1800px] mx-auto p-4 md:p-10">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-8 border-b border-white/5 pb-10">
                     <div className="flex items-center gap-6">
-                         <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo%20with%20background%20removed%20.png" className="w-20" alt="Logo" />
                          <div>
                             <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">Studio <span className="text-red-600">Command</span></h1>
                             <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mt-2">OPERATOR: {operatorName}</p>
@@ -270,14 +260,10 @@ const AdminPage: React.FC = () => {
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
                     {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
-                    {activeTab === 'audit' && <AuditTerminal />}
-                    {activeTab === 'users' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={(e, d) => setActiveTab('mail')} />}
-                    {activeTab === 'intelligence' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(newCats) => handleSaveData('categories', newCats)} />}
                     {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => setActiveTab('movies')} onRefresh={() => fetchAllData(password)} />}
                     {activeTab === 'inquiries' && <TalentInquiriesTab />}
-                    {activeTab === 'academy' && <AcademyIntelTab pipeline={pipeline} movies={movies} />}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode={role === 'festival_admin' ? 'festival' : 'full'} />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}
@@ -286,11 +272,11 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'pitch' && <PitchDeckManager onSave={(settings) => handleSaveData('settings', settings)} isSaving={isSaving} />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies)} onSave={(newData) => handleSaveData('categories', newData)} isSaving={isSaving} />}
                     {activeTab === 'festival' && festivalConfig && <FestivalEditor data={festivalData} config={festivalConfig} allMovies={movies} onDataChange={(d) => setFestivalData(d)} onConfigChange={(c) => setFestivalConfig(c)} onSave={() => handleSaveData('festival', { config: festivalConfig, schedule: festivalData })} isSaving={isSaving} />}
-                    {activeTab === 'contracts' && <ContractsTab />}
                     {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}
                     {activeTab === 'roku' && <RokuDeployTab />}
                     {activeTab === 'about' && aboutData && <AboutEditor initialData={aboutData} onSave={(newData) => handleSaveData('about', newData)} isSaving={isSaving} />}
                     {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(password)} />}
+                    {activeTab === 'audit' && <AuditTerminal />}
                     {activeTab === 'security' && <SecurityTerminal />}
                     {activeTab === 'fallback' && <FallbackGenerator movies={movies} categories={categories} festivalData={festivalData} festivalConfig={festivalConfig} aboutData={aboutData} />}
                 </div>

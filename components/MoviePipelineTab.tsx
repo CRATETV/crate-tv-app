@@ -73,9 +73,40 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
         setNewEntry(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleExportCSV = () => {
+        const headers = ["Title", "Director", "Cast", "Synopsis", "Poster URL", "Movie URL", "Submitter Email", "Date"];
+        const rows = pipeline.map(item => [
+            `"${item.title.replace(/"/g, '""')}"`,
+            `"${item.director.replace(/"/g, '""')}"`,
+            `"${item.cast.replace(/"/g, '""')}"`,
+            `"${item.synopsis.replace(/"/g, '""')}"`,
+            `"${item.posterUrl}"`,
+            `"${item.movieUrl}"`,
+            `"${item.submitterEmail}"`,
+            item.submissionDate?.seconds ? new Date(item.submissionDate.seconds * 1000).toISOString() : '---'
+        ]);
+
+        const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `CRATE_PIPELINE_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white uppercase tracking-tighter">Submission Pipeline ({pipeline.length})</h2>
+            <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-white uppercase tracking-tighter">Submission Pipeline ({pipeline.length})</h2>
+                <button 
+                    onClick={handleExportCSV}
+                    className="bg-white/5 hover:bg-white text-gray-500 hover:text-black font-black py-2.5 px-6 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all"
+                >
+                    Export Spreadsheet (.csv)
+                </button>
+            </div>
             
             <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
                 <button onClick={() => setIsFormVisible(!isFormVisible)} className="text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">

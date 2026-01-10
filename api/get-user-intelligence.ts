@@ -17,41 +17,38 @@ export async function POST(request: Request) {
         const auth = getAdminAuth();
         if (!db || !auth) throw new Error("Infrastructure Offline");
 
-        // 1. Fetch Auth data with 1000 node limit (Safety Cap)
+        // 1. Fetch Auth data - Increase limit for cluster visibility
         const listUsersResult = await auth.listUsers(1000);
         
-        // Fix: Explicitly type the Map to ensure authData retrieved later has defined properties and is not 'unknown'
-        const authMap = new Map<string, { lastSignIn: string | undefined, creationTime: string | undefined }>(
-            listUsersResult.users.map(u => [u.uid, {
-                lastSignIn: u.metadata.lastSignInTime,
-                creationTime: u.metadata.creationTime
-            }])
-        );
+        // 2. Fetch all Firestore Profiles for merging
+        const profilesSnapshot = await db.collection('users').get();
+        const profileMap = new Map();
+        profilesSnapshot.forEach(doc => profileMap.set(doc.id, doc.data()));
 
-        // 2. Fetch Firestore Profiles
-        const usersSnapshot = await db.collection('users').get();
-        const users: UserRecord[] = [];
-        
-        usersSnapshot.forEach(doc => {
-            const data = doc.data();
-            // Fix: Retrieve typed data from the Map to prevent 'unknown' property access errors
-            const authData = authMap.get(doc.id);
-            
-            // Resolve composite identity
-            users.push({ 
-                uid: doc.id, 
-                ...data,
-                // Fix: Access properties on the now typed authData to resolve the compilation errors
-                lastSignIn: authData?.lastSignIn || data.lastSignIn || null,
-                joinDate: authData?.creationTime || data.joinDate || null
-            } as UserRecord);
+        // 3. Assemble UserRecords using Auth as the primary source
+        // This ensures that even users who haven't had their Firestore doc created yet (rare) show up.
+        const users: UserRecord[] = listUsersResult.users.map(u => {
+            const profile = profileMap.get(u.uid) || {};
+            return {
+                uid: u.uid,
+                email: u.email || 'anonymous@node.local',
+                name: profile.name || u.displayName || u.email?.split('@')[0] || 'Patron',
+                isActor: profile.isActor === true,
+                isFilmmaker: profile.isFilmmaker === true,
+                isIndustryPro: profile.isIndustryPro === true,
+                watchlist: profile.watchlist || [],
+                watchedMovies: profile.watchedMovies || [],
+                likedMovies: profile.likedMovies || [],
+                lastSignIn: u.metadata.lastSignInTime,
+                joinDate: u.metadata.creationTime
+            } as UserRecord;
         });
 
-        // 3. Sort by total manifest density
+        // 4. Sort by activity density (most engaged first)
         users.sort((a, b) => {
-            const bDensity = (b.watchedMovies?.length || 0) + (b.likedMovies?.length || 0);
-            const aDensity = (a.watchedMovies?.length || 0) + (a.likedMovies?.length || 0);
-            return bDensity - aDensity;
+            const bEng = (b.watchedMovies?.length || 0) + (b.likedMovies?.length || 0);
+            const aEng = (a.watchedMovies?.length || 0) + (a.likedMovies?.length || 0);
+            return bEng - aEng;
         });
 
         return new Response(JSON.stringify({ users }), { 

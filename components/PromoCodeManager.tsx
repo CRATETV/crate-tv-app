@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { PromoCode, Movie, FilmBlock, User } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -258,7 +257,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
             code: newCode.toUpperCase().trim().replace(/\s/g, ''),
             type,
             discountValue: type === 'one_time_access' ? 100 : discountValue,
-            maxUses: type === 'one_time_access' ? 1 : (maxUses > 1 ? maxUses : 1000), 
+            maxUses: maxUses > 0 ? maxUses : 1, 
             usedCount: 0,
             itemId: selectedItemId || undefined,
             createdBy: isAdmin ? 'admin' : (filmmakerName || 'unknown'),
@@ -271,7 +270,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
             if (!defaultItemId) setSelectedItemId('');
             await fetchCodes();
         } catch (err) {
-            alert("Error generating code. Name may be taken.");
+            alert("Error generating code. Alias may be taken.");
         } finally {
             setIsGenerating(false);
         }
@@ -305,43 +304,45 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                     <form onSubmit={handleCreateCode} className="bg-gray-900 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl space-y-6">
                         <div>
                             <h3 className="text-xl font-black text-white uppercase tracking-tighter">Voucher Forge</h3>
-                            <p className="text-xs text-gray-500 uppercase font-black tracking-widest mt-1">Generating audience incentives</p>
+                            <p className="text-xs text-gray-500 uppercase font-black tracking-widest mt-1">Personalizing audience incentives</p>
                         </div>
 
                         <div className="space-y-4">
                             <div>
-                                <label className="form-label">Promotional Code</label>
+                                <label className="form-label">Voucher Alias (The Code)</label>
                                 <input 
                                     type="text" 
                                     value={newCode} 
                                     onChange={e => setNewCode(e.target.value.toUpperCase())} 
-                                    placeholder="e.g. SUMMER50" 
+                                    placeholder="e.g. PRESS-2025" 
                                     className="form-input !bg-black/40 border-white/10 uppercase tracking-widest font-black" 
                                     required 
                                     disabled={isQuotaExceeded}
                                 />
+                                <p className="text-[8px] text-gray-600 mt-1 uppercase font-bold tracking-widest">This is the text the user will enter.</p>
                             </div>
 
                             <div>
                                 <label className="form-label">Logic Model</label>
                                 <select value={type} onChange={e => setType(e.target.value as any)} className="form-input !bg-black/40 border-white/10" disabled={isQuotaExceeded}>
-                                    <option value="one_time_access">Gift Access (100% OFF / Single Use)</option>
+                                    <option value="one_time_access">Gift Access (100% OFF)</option>
                                     <option value="discount">Campaign Discount (Percentage Base)</option>
                                 </select>
                             </div>
 
-                            {type === 'discount' && (
-                                <div className="grid grid-cols-2 gap-4 animate-[fadeIn_0.3s_ease-out]">
+                            <div className="grid grid-cols-2 gap-4 animate-[fadeIn_0.3s_ease-out]">
+                                {type === 'discount' && (
                                     <div>
                                         <label className="form-label">Discount %</label>
                                         <input type="number" value={discountValue} onChange={e => setDiscountValue(parseInt(e.target.value))} className="form-input !bg-black/40" />
                                     </div>
-                                    <div>
-                                        <label className="form-label">Global Limit</label>
-                                        <input type="number" value={maxUses} onChange={e => setMaxUses(parseInt(e.target.value))} className="form-input !bg-black/40" />
-                                    </div>
+                                )}
+                                <div className={type === 'one_time_access' ? 'col-span-2' : ''}>
+                                    <label className="form-label">Global Usage Limit</label>
+                                    <input type="number" value={maxUses} onChange={e => setMaxUses(parseInt(e.target.value))} className="form-input !bg-black/40" min="1" />
+                                    <p className="text-[8px] text-gray-600 mt-1 uppercase font-bold tracking-widest">Total times this code can be used.</p>
                                 </div>
-                            )}
+                            </div>
 
                             {!defaultItemId && (
                                 <div>
@@ -391,7 +392,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                             <table className="w-full text-left text-xs">
                                 <thead className="text-gray-500 font-black uppercase tracking-widest bg-black/40">
                                     <tr>
-                                        <th className="p-5">Code Identity</th>
+                                        <th className="p-5">Code Alias</th>
                                         <th className="p-5">Logic Scope</th>
                                         <th className="p-5 text-center">Velocity</th>
                                         <th className="p-5 text-right">Dispatch</th>

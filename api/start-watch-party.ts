@@ -1,4 +1,3 @@
-
 // This is a Vercel Serverless Function
 // Path: /api/start-watch-party
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -38,17 +37,20 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     if (!db) throw new Error("Database connection failed.");
 
-    // CLEANUP: Purge old messages before starting new party to ensure a clean slate
+    // CLEANUP: Purge ALL messages before starting new party to ensure a clean slate
     const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages');
-    const oldMessages = await messagesRef.limit(500).get();
+    const snapshot = await messagesRef.get();
     
-    if (!oldMessages.empty) {
-        const batch = db.batch();
-        oldMessages.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        await batch.commit();
-        console.log(`[Watch Party] Purged ${oldMessages.size} messages for a fresh start on ${movieKey}.`);
+    if (!snapshot.empty) {
+        const batchSize = 400; // Firestore batch limit is 500
+        const docs = snapshot.docs;
+        for (let i = 0; i < docs.length; i += batchSize) {
+            const batch = db.batch();
+            const chunk = docs.slice(i, i + batchSize);
+            chunk.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+        }
+        console.log(`[Watch Party] Purged ${snapshot.size} messages for a fresh start on ${movieKey}.`);
     }
 
     const partyRef = db.collection('watch_parties').doc(movieKey);
@@ -56,7 +58,10 @@ export async function POST(request: Request) {
     // Set the status to 'live'. This will be picked up by listeners on the client-side.
     await partyRef.set({
       status: 'live',
-      lastStartedAt: new Date().toISOString()
+      lastStartedAt: new Date().toISOString(),
+      isPlaying: false,
+      currentTime: 0,
+      isQALive: false
     }, { merge: true });
 
     return new Response(JSON.stringify({ success: true, message: 'Watch party started with a fresh chat!' }), {

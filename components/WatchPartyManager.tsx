@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -43,7 +42,7 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
-        const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages').orderBy('timestamp', 'asc').limitToLast(100);
+        const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages').orderBy('timestamp', 'asc').limitToLast(200);
         const unsubscribe = messagesRef.onSnapshot(snapshot => {
             const fetchedMessages: ChatMessage[] = [];
             snapshot.forEach(doc => { fetchedMessages.push({ id: doc.id, ...doc.data() } as ChatMessage); });
@@ -85,7 +84,7 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
                         <div className="w-8 h-8 rounded-full bg-gray-800 flex-shrink-0 p-1 border border-white/10" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
                         <div className="min-w-0">
                             <p className="font-black text-[10px] text-red-500 uppercase tracking-tighter">{msg.userName}</p>
-                            <p className="text-sm text-gray-300 break-words leading-tight">{msg.text}</p>
+                            <p className="text-sm text-gray-200 break-words leading-tight">{msg.text}</p>
                         </div>
                     </div>
                 ))}
@@ -94,7 +93,7 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
             <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 flex-shrink-0">
                 <div className="flex items-center gap-2 bg-white/5 rounded-full px-4 border border-white/10 focus-within:border-red-600 transition-colors">
                     <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Send message..." className="bg-transparent border-none text-white text-sm w-full focus:ring-0 py-3" disabled={!user || isSending} />
-                    <button type="submit" className="text-red-500" disabled={!user || isSending || !newMessage.trim()}><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
+                    <button type="submit" className="text-red-500" disabled={!user || isSending || !newMessage.trim()}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
                 </div>
             </form>
         </div>
@@ -111,6 +110,7 @@ const WatchPartyControlRoom: React.FC<{
     const videoRef = useRef<HTMLVideoElement>(null);
     const { user } = useAuth();
     const lastSyncTime = useRef(0);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const handlePlay = () => onSyncState({ isPlaying: true });
     const handlePause = () => videoRef.current && onSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime });
@@ -150,6 +150,35 @@ const WatchPartyControlRoom: React.FC<{
         onSyncState(updates);
     };
 
+    const handleDownloadChat = async () => {
+        setIsDownloading(true);
+        const db = getDbInstance();
+        if (!db) return;
+        
+        try {
+            const snap = await db.collection('watch_parties').doc(movie.key).collection('messages').orderBy('timestamp', 'asc').get();
+            let log = `CHAT LOG: ${movie.title}\nDATE: ${new Date().toLocaleString()}\n--------------------------------\n\n`;
+            
+            snap.forEach(doc => {
+                const data = doc.data();
+                const time = data.timestamp?.seconds ? new Date(data.timestamp.seconds * 1000).toLocaleString() : '---';
+                log += `[${time}] ${data.userName}: ${data.text}\n`;
+            });
+            
+            const blob = new Blob([log], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `CHAT_LOG_${movie.title.replace(/\s+/g, '_')}_${Date.now()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            alert("Log extraction failed.");
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     return (
         <div className="mb-12 bg-white/[0.02] p-8 rounded-[3rem] border border-white/5 shadow-2xl">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/5 pb-8">
@@ -159,11 +188,14 @@ const WatchPartyControlRoom: React.FC<{
                          <span className={`px-3 py-1 text-[9px] font-black text-white rounded-full uppercase tracking-widest ${status.color}`}>
                             {status.text}
                         </span>
-                        {movie.isWatchPartyPaid && (
-                            <span className="text-[9px] font-black uppercase text-pink-500 tracking-widest border border-pink-500/30 px-2 py-1 rounded-full">
-                                Ticketed Access // ${movie.watchPartyPrice}
-                            </span>
-                        )}
+                        <button 
+                            onClick={handleDownloadChat} 
+                            disabled={isDownloading}
+                            className="text-[9px] font-black uppercase text-gray-500 hover:text-white transition-colors flex items-center gap-2"
+                        >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            {isDownloading ? 'Extracting...' : 'Download Chat Log'}
+                        </button>
                     </div>
                 </div>
                 <div className="flex gap-3">
