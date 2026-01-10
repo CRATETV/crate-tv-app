@@ -1,4 +1,3 @@
-// This is a Vercel Serverless Function to process payments with Square.
 import { randomUUID } from 'crypto';
 import { Resend } from 'resend';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -7,12 +6,12 @@ import { FieldValue } from 'firebase-admin/firestore';
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
 
-// Server-side price map in cents for fixed-price security.
-const priceMap: Record<string, number> = {
+// Server-side price map in cents for strictly static platform fees.
+const staticPriceMap: Record<string, number> = {
   subscription: 499,
   pass: 5000,
-  block: 1000,
-  movie: 500,
+  crateFestPass: 1500,
+  juryPass: 2500,
 };
 
 export async function POST(request: Request) {
@@ -39,10 +38,10 @@ export async function POST(request: Request) {
       });
     }
 
-    // --- PROMO CODE INTEGRITY CHECK ---
     const initError = getInitializationError();
     const db = !initError ? getAdminDb() : null;
 
+    // --- PROMO CODE INTEGRITY CHECK ---
     if (promoCode && db) {
         const promoRef = db.collection('promo_codes').doc(promoCode.toUpperCase().trim());
         const promoDoc = await promoRef.get();
@@ -55,47 +54,54 @@ export async function POST(request: Request) {
     }
 
     const idempotencyKey = randomUUID();
-    let amountInCents: number;
-    let note: string;
+    let amountInCents: number = 0;
+    let note: string = "Crate TV Purchase";
 
-    // Determine amount and note based on payment type.
-    if (['donation', 'billSavingsDeposit', 'watchPartyTicket', 'crateFestPass'].includes(paymentType)) {
+    // --- PRICING LOGIC ---
+    if (['donation', 'billSavingsDeposit'].includes(paymentType)) {
+        // User-defined amounts
         amountInCents = Math.round(Number(amount) * 100);
-        if (amountInCents < 100 && sourceId !== 'PROMO_VOUCHER') { // Minimum $1.00 unless free
+        if (amountInCents < 100 && sourceId !== 'PROMO_VOUCHER') { 
             throw new Error("Amount must be at least $1.00.");
         }
+        note = paymentType === 'donation' ? `Support for film: "${movieTitle}"` : 'Bill Savings Deposit';
+    } 
+    else if (paymentType === 'movie' || paymentType === 'watchPartyTicket') {
+        // Fetch source of truth from DB to prevent tampering
+        if (!db) throw new Error("Database offline.");
+        const movieDoc = await db.collection('movies').doc(itemId).get();
+        if (!movieDoc.exists) throw new Error("Item record not found.");
+        const movieData = movieDoc.data();
         
-        if (paymentType === 'donation') {
-            note = `Support for film: "${movieTitle}" by ${directorName}`;
-        } else if (paymentType === 'crateFestPass') {
-            note = 'Crate Fest 2026 Pass Access';
-        } else {
-            note = 'Deposit to Crate TV Bill Savings Pot';
+        const rawPrice = paymentType === 'movie' ? (movieData?.salePrice || 5.00) : (movieData?.watchPartyPrice || 5.00);
+        amountInCents = Math.round(rawPrice * 100);
+        note = `${paymentType === 'movie' ? 'VOD Rental' : 'Watch Party Ticket'}: ${movieData?.title || itemId}`;
+    }
+    else if (paymentType === 'block') {
+        amountInCents = 1000; // Fixed $10 for blocks currently
+        note = `Unlock Block: ${blockTitle || itemId}`;
+    }
+    else if (staticPriceMap[paymentType]) {
+        amountInCents = staticPriceMap[paymentType];
+        note = `Platform ${paymentType.replace(/([A-Z])/g, ' $1')}`;
+    }
+    else {
+        throw new Error("Invalid access vector specified.");
+    }
+
+    // --- APPLY VOUCHER DISCOUNT (If any) ---
+    if (promoCode && db) {
+        const promoRef = db.collection('promo_codes').doc(promoCode.toUpperCase().trim());
+        const promoDoc = await promoRef.get();
+        if (promoDoc.exists) {
+            const promo = promoDoc.data();
+            if (promo?.type === 'one_time_access') amountInCents = 0;
+            else if (promo?.type === 'discount') amountInCents = Math.round(amountInCents * ((100 - promo.discountValue) / 100));
         }
-    } else if (priceMap[paymentType]) {
-        amountInCents = priceMap[paymentType];
-        switch(paymentType) {
-            case 'subscription':
-                note = 'Crate TV Premium Subscription';
-                break;
-            case 'pass':
-                note = 'Crate TV Film Festival - All-Access Pass';
-                break;
-            case 'block':
-                note = `Crate TV Film Festival - Unlock Block: "${blockTitle || itemId}"`;
-                break;
-            case 'movie':
-                note = `Crate TV - Purchase Film: "${movieTitle || itemId}"`;
-                break;
-            default:
-                note = "Crate TV Purchase";
-        }
-    } else {
-        throw new Error("Invalid payment type specified.");
     }
 
     // --- PROCESS TRANSACTION ---
-    if (sourceId !== 'PROMO_VOUCHER') {
+    if (amountInCents > 0 && sourceId !== 'PROMO_VOUCHER') {
         const squareUrl = isProduction 
           ? 'https://connect.squareup.com/v2/payments' 
           : 'https://connect.squareupsandbox.com/v2/payments';
@@ -140,14 +146,17 @@ export async function POST(request: Request) {
             await resend.emails.send({
                 from: `Crate TV <${fromEmail}>`,
                 to: email,
-                subject: `Payment Confirmation: ${paymentType === 'crateFestPass' ? 'Crate Fest Pass' : movieTitle || 'Crate TV'}`,
+                subject: `Secure Auth: ${note}`,
                 html: `
-                    <div style="font-family: sans-serif; line-height: 1.6;">
-                        <h1 style="color: #ef4444;">Thank You!</h1>
-                        <p>Your payment of <strong>${amountFormatted}</strong> for your <strong>${paymentType === 'crateFestPass' ? 'Crate Fest Digital Pass' : 'Crate TV content'}</strong> has been processed successfully.</p>
-                        <p>Access is now unlocked on your account.</p>
+                    <div style="font-family: sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 12px;">
+                        <h1 style="color: #ef4444; text-transform: uppercase;">Transaction Complete</h1>
+                        <p>Your access vector has been successfully authorized.</p>
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                        <p><strong>Resource:</strong> ${note}</p>
+                        <p><strong>Amount:</strong> ${amountFormatted}</p>
                         ${promoCode ? `<p style="font-size: 11px; color: #999;">Voucher Applied: ${promoCode}</p>` : ''}
-                        <p>Sincerely,<br/>The Crate TV Team</p>
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                        <p style="font-size: 11px; color: #666;">This resource is now unlocked on your global account profile.</p>
                     </div>
                 `,
             });

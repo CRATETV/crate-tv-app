@@ -78,7 +78,6 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
     const [appliedPromo, setAppliedPromo] = useState<any>(null);
     
     const cardRef = useRef<any>(null);
-    const paymentFormRef = useRef<HTMLDivElement>(null);
 
     const basePrice = useMemo(() => {
         if (priceOverride !== undefined) return priceOverride;
@@ -87,8 +86,8 @@ const SquarePaymentModal: React.FC<SquarePaymentModalProps> = ({
             case 'subscription': return 4.99;
             case 'pass': return 50.00;
             case 'block': return 10.00;
-            case 'movie': return 5.00;
-            case 'watchPartyTicket': return movie?.watchPartyPrice || 5.00;
+            case 'movie': return movie?.salePrice ?? 5.00;
+            case 'watchPartyTicket': return movie?.watchPartyPrice ?? 5.00;
             case 'crateFestPass': return 15.00;
             default: return 0;
         }
