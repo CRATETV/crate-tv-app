@@ -206,11 +206,11 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
     const [discountValue, setDiscountValue] = useState(100);
     const [maxUses, setMaxUses] = useState(1);
     const [selectedItemId, setSelectedItemId] = useState(defaultItemId);
+    const [codeAvailability, setCodeAvailability] = useState<'checking' | 'available' | 'taken' | 'idle'>('idle');
 
     const fetchCodes = async () => {
         const db = getDbInstance();
         if (!db) {
-            // Prevent infinite loading if DB isn't ready immediately
             setTimeout(() => setIsLoading(false), 2000);
             return;
         }
@@ -249,6 +249,31 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
         fetchUsers();
     }, [isAdmin, filmmakerName]);
 
+    // Real-time Availability Check
+    useEffect(() => {
+        const checkAvailability = async () => {
+            const cleanCode = newCode.toUpperCase().trim();
+            if (cleanCode.length < 3) {
+                setCodeAvailability('idle');
+                return;
+            }
+
+            setCodeAvailability('checking');
+            const db = getDbInstance();
+            if (!db) return;
+
+            try {
+                const doc = await db.collection('promo_codes').doc(cleanCode).get();
+                setCodeAvailability(doc.exists ? 'taken' : 'available');
+            } catch (e) {
+                setCodeAvailability('idle');
+            }
+        };
+
+        const timer = setTimeout(checkAvailability, 500);
+        return () => clearTimeout(timer);
+    }, [newCode]);
+
     const quotaStatus = useMemo(() => {
         if (isAdmin) return null;
         if (!selectedItemId) return null;
@@ -258,16 +283,22 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
 
     const isQuotaExceeded = !!(quotaStatus && quotaStatus.used >= quotaStatus.max);
 
+    const handleGenerateRandomCode = () => {
+        const random = Math.random().toString(36).substring(2, 7).toUpperCase();
+        setNewCode(`CRATE-${random}`);
+    };
+
     const handleCreateCode = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newCode.trim() || isQuotaExceeded) return;
+        const cleanCode = newCode.toUpperCase().trim().replace(/\s/g, '');
+        if (!cleanCode || isQuotaExceeded || codeAvailability === 'taken') return;
         
         setIsGenerating(true);
         const db = getDbInstance();
         if (!db) return;
 
         const codeData: Omit<PromoCode, 'id'> = {
-            code: newCode.toUpperCase().trim().replace(/\s/g, ''),
+            code: cleanCode,
             internalName: internalName.trim() || undefined,
             type,
             discountValue: type === 'one_time_access' ? 100 : discountValue,
@@ -283,9 +314,12 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
             setNewCode('');
             setInternalName('');
             if (!defaultItemId) setSelectedItemId('');
+            setCodeAvailability('idle');
             await fetchCodes();
-        } catch (err) {
-            alert("Error generating code. Alias may be taken.");
+        } catch (err: any) {
+            alert(err.message?.includes('permission') 
+                ? "Access Denied: You cannot overwrite this code as it was created by another node." 
+                : "Error generating code. Please try a different alias.");
         } finally {
             setIsGenerating(false);
         }
@@ -320,9 +354,19 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 <div className="lg:col-span-1">
                     <form onSubmit={handleCreateCode} className="bg-gray-900 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl space-y-6">
-                        <div>
-                            <h3 className="text-xl font-black text-white uppercase tracking-tighter">Voucher Forge</h3>
-                            <p className="text-xs text-gray-500 uppercase font-black tracking-widest mt-1">Personalizing audience incentives</p>
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <h3 className="text-xl font-black text-white uppercase tracking-tighter">Voucher Forge</h3>
+                                <p className="text-xs text-gray-500 uppercase font-black tracking-widest mt-1">Personalizing audience incentives</p>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={handleGenerateRandomCode}
+                                className="p-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-gray-500 hover:text-red-500 transition-all"
+                                title="Generate random unique code"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5V4H4zm0 11h5v5H4v-5zm11 0h5v5h-5v-5zm0-11h5v5h-5V4z" /></svg>
+                            </button>
                         </div>
 
                         <div className="space-y-4">
@@ -339,18 +383,23 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                                 <p className="text-[8px] text-gray-600 mt-1 uppercase font-bold tracking-widest">Internal reference only.</p>
                             </div>
 
-                            <div>
+                            <div className="relative">
                                 <label className="form-label">Voucher Alias (The Code)</label>
                                 <input 
                                     type="text" 
                                     value={newCode} 
                                     onChange={e => setNewCode(e.target.value.toUpperCase())} 
                                     placeholder="e.g. PRESS-2025" 
-                                    className="form-input !bg-black/40 border-white/10 uppercase tracking-widest font-black" 
+                                    className={`form-input !bg-black/40 border-2 uppercase tracking-widest font-black ${codeAvailability === 'taken' ? 'border-red-600' : codeAvailability === 'available' ? 'border-green-600' : 'border-white/10'}`}
                                     required 
                                     disabled={isQuotaExceeded}
                                 />
-                                <p className="text-[8px] text-gray-600 mt-1 uppercase font-bold tracking-widest">This is the text the user will enter.</p>
+                                <div className="absolute right-4 top-[38px]">
+                                    {codeAvailability === 'checking' && <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>}
+                                    {codeAvailability === 'taken' && <span className="text-red-500 text-[10px] font-black">TAKEN</span>}
+                                    {codeAvailability === 'available' && <span className="text-green-500 text-[10px] font-black">OK</span>}
+                                </div>
+                                <p className="text-[8px] text-gray-600 mt-1 uppercase font-bold tracking-widest">User redemption input string.</p>
                             </div>
 
                             <div>
@@ -371,7 +420,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                                 <div className={type === 'one_time_access' ? 'col-span-2' : ''}>
                                     <label className="form-label">Global Usage Limit</label>
                                     <input type="number" value={maxUses} onChange={e => setMaxUses(parseInt(e.target.value))} className="form-input !bg-black/40" min="1" />
-                                    <p className="text-[8px] text-gray-600 mt-1 uppercase font-bold tracking-widest">Total times this code can be used.</p>
+                                    <p className="text-[8px] text-gray-600 mt-1 uppercase font-bold tracking-widest">Total redemptions allowed.</p>
                                 </div>
                             </div>
 
@@ -405,10 +454,10 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
 
                         <button 
                             type="submit" 
-                            disabled={isGenerating || isQuotaExceeded}
+                            disabled={isGenerating || isQuotaExceeded || codeAvailability === 'taken' || newCode.length < 3}
                             className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl uppercase tracking-widest text-xs transition-all active:scale-95 disabled:opacity-30 shadow-xl"
                         >
-                            {isGenerating ? 'Synthesizing...' : isQuotaExceeded ? 'Quota Reached' : 'Initialize Voucher'}
+                            {isGenerating ? 'Synthesizing...' : isQuotaExceeded ? 'Quota Reached' : codeAvailability === 'taken' ? 'Alias Occupied' : 'Initialize Voucher'}
                         </button>
                     </form>
                 </div>
