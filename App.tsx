@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import Header from './components/Header';
-import Hero from './components/Hero';
+import Header from './Header';
+import Hero from './Hero';
 import MovieCarousel from './components/MovieCarousel';
 import LoadingSpinner from './components/LoadingSpinner';
 import MovieDetailsModal from './components/MovieDetailsModal';
@@ -18,9 +18,9 @@ import CollapsibleFooter from './components/CollapsibleFooter';
 import BottomNavBar from './components/BottomNavBar';
 import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
-// Removed duplicate import on line 22
 import NowStreamingBanner from './components/NowPlayingBanner';
 import CrateFestBanner from './components/CrateFestBanner';
+import CrateVaultRow from './components/CrateVaultRow';
 import firebase from 'firebase/compat/app';
 
 const MaintenanceScreen: React.FC = () => (
@@ -133,6 +133,11 @@ const App: React.FC = () => {
         }
         return spotlightMovies;
     }, [movies, categories.featured]);
+
+    const vaultMovies = useMemo(() => {
+        return (Object.values(movies) as Movie[])
+            .filter((m: Movie) => !!m && m.isForSale === true && isMovieReleased(m) && !m.isUnlisted);
+    }, [movies]);
 
     const livePartyMovie = useMemo(() => {
         const liveKey = Object.keys(activeParties).find(key => {
@@ -278,6 +283,20 @@ const App: React.FC = () => {
                                     showRankings={true}
                                 />
                             )}
+                            
+                            {/* NEW ELITE VAULT ROW */}
+                            {vaultMovies.length > 0 && (
+                                <CrateVaultRow 
+                                    movies={vaultMovies} 
+                                    onSelectMovie={handleSelectMovie} 
+                                    likedMovies={likedMovies} 
+                                    onToggleLike={toggleLikeMovie} 
+                                    watchlist={watchlist} 
+                                    onToggleWatchlist={toggleWatchlist} 
+                                    watchedMovies={watchedMovies}
+                                />
+                            )}
+
                             {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => window.location.href='/cratefest'} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />}
                             {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} />}
                             {nowStreamingMovie && !settings.isHolidayModeActive && <NowStreamingBanner movie={nowStreamingMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} isLive={isNowStreamingLive} />}
