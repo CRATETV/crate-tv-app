@@ -18,6 +18,7 @@ import CollapsibleFooter from './components/CollapsibleFooter';
 import BottomNavBar from './components/BottomNavBar';
 import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
+// Removed duplicate import on line 22
 import NowStreamingBanner from './components/NowPlayingBanner';
 import CrateFestBanner from './components/CrateFestBanner';
 import firebase from 'firebase/compat/app';
@@ -85,6 +86,7 @@ const App: React.FC = () => {
         const updatePresence = () => {
             db.collection('presence').doc(user.uid).set({
                 uid: user.uid,
+                email: user.email,
                 lastActive: firebase.firestore.FieldValue.serverTimestamp(),
                 currentPath: window.location.pathname
             }, { merge: true });

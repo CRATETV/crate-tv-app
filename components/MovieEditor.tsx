@@ -157,7 +157,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
-    // FIX: Better logic to determine if the movie is a saved record or a brand new draft.
     const isSavedRecord = formData && allMovies[formData.key] !== undefined;
 
     return (
@@ -188,6 +187,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                         {movie.isEpisode && <span className="text-[7px] bg-amber-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">EPISODE</span>}
                                                         {movie.isSeries && <span className="text-[7px] bg-indigo-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">SERIES</span>}
                                                         {movie.isSupportEnabled && <span className="text-[7px] bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">TIPS ACTIVE</span>}
+                                                        {movie.isForSale && <span className="text-[7px] bg-blue-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">VOD: ${movie.salePrice?.toFixed(2)}</span>}
                                                     </div>
                                                 </div>
                                             </div>
@@ -210,9 +210,12 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 <div className="flex items-center gap-3 mt-2">
                                     <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.4em]">UUID: {formData.key}</p>
                                     {isSavedRecord ? (
-                                        <span className="text-[8px] font-black text-green-500 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 uppercase tracking-widest">Saved to Cloud</span>
+                                        <span className="text-[8px] font-black text-green-500 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 uppercase tracking-widest">Live in Database</span>
                                     ) : (
-                                        <span className="text-[8px] font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 uppercase tracking-widest">Draft Node</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[8px] font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 uppercase tracking-widest">Draft (Unsaved Changes)</span>
+                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -232,7 +235,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                         </div>
                         <div className="flex gap-4">
                             <button onClick={() => setSelectedMovieKey('')} className="bg-white/5 text-gray-400 px-6 py-3 rounded-xl uppercase text-[10px] font-black">Close</button>
-                            <button onClick={handleSave} disabled={isSaving} className="bg-white text-black px-8 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl hover:bg-gray-200 transition-all">{isSaving ? 'Syncing...' : 'Save Manifest'}</button>
+                            <button onClick={handleSave} disabled={isSaving} className="bg-white text-black px-8 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl hover:bg-gray-200 transition-all">{isSaving ? 'Syncing...' : 'Push Global Manifest'}</button>
                         </div>
                     </div>
 
@@ -260,37 +263,101 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
 
                             <section className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Revenue Logic</h4>
-                                <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
-                                    <label className="flex items-center gap-4 cursor-pointer group">
-                                        <div className="relative">
-                                            <input type="checkbox" name="isSupportEnabled" checked={formData.isSupportEnabled} onChange={handleChange} className="sr-only peer" />
-                                            <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-emerald-600 transition-all"></div>
-                                            <div className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-7"></div>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-black text-white uppercase tracking-tight">Allow Community Donations</p>
-                                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Enables the "Support Creator" button</p>
-                                        </div>
-                                    </label>
+                                <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-8">
+                                    <div className="space-y-4">
+                                        <label className="flex items-center gap-4 cursor-pointer group">
+                                            <div className="relative">
+                                                <input type="checkbox" name="isSupportEnabled" checked={formData.isSupportEnabled} onChange={handleChange} className="sr-only peer" />
+                                                <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-emerald-600 transition-all"></div>
+                                                <div className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-7"></div>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-black text-white uppercase tracking-tight">Allow Community Support (Tips)</p>
+                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Enables the "Support Creator" button</p>
+                                            </div>
+                                        </label>
+                                    </div>
                                     
-                                    <label className="flex items-center gap-4 cursor-pointer group">
-                                        <div className="relative">
-                                            <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="sr-only peer" />
-                                            <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-blue-600 transition-all"></div>
-                                            <div className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-7"></div>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-black text-white uppercase tracking-tight">VOD Paywall Authorization</p>
-                                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Requires paid rental for access</p>
-                                        </div>
-                                    </label>
+                                    <div className="space-y-4 border-t border-white/5 pt-6">
+                                        <label className="flex items-center gap-4 cursor-pointer group">
+                                            <div className="relative">
+                                                <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="sr-only peer" />
+                                                <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-blue-600 transition-all"></div>
+                                                <div className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-7"></div>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-black text-white uppercase tracking-tight">VOD Paywall Authorization</p>
+                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Requires paid rental for access</p>
+                                            </div>
+                                        </label>
+                                        
+                                        {formData.isForSale && (
+                                            <div className="pl-18 animate-[fadeIn_0.3s_ease-out] space-y-4">
+                                                <div>
+                                                    <label className="form-label !text-blue-400">VOD Rental Price (USD)</label>
+                                                    <div className="relative max-w-[200px]">
+                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                                                        <input 
+                                                            type="number" 
+                                                            name="salePrice" 
+                                                            value={formData.salePrice} 
+                                                            onChange={handleChange} 
+                                                            className="form-input !pl-8 bg-black/40 text-blue-500 font-black text-2xl" 
+                                                            step="0.01"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="form-label">Auto-Release Date (Becomes Free)</label>
+                                                    <input 
+                                                        type="datetime-local" 
+                                                        name="autoReleaseDate" 
+                                                        value={formData.autoReleaseDate?.slice(0, 16)} 
+                                                        onChange={handleChange} 
+                                                        className="form-input bg-black/40 border-white/10 text-xs" 
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-4 border-t border-white/5 pt-6">
+                                        <label className="flex items-center gap-4 cursor-pointer group">
+                                            <div className="relative">
+                                                <input type="checkbox" name="isWatchPartyPaid" checked={formData.isWatchPartyPaid} onChange={handleChange} className="sr-only peer" />
+                                                <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-pink-600 transition-all"></div>
+                                                <div className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-7"></div>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-black text-white uppercase tracking-tight">Paid Watch Party Admission</p>
+                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Requires ticket for live screening</p>
+                                            </div>
+                                        </label>
+
+                                        {formData.isWatchPartyPaid && (
+                                            <div className="pl-18 animate-[fadeIn_0.3s_ease-out]">
+                                                <label className="form-label !text-pink-400">Ticket Price (USD)</label>
+                                                <div className="relative max-w-[200px]">
+                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                                                    <input 
+                                                        type="number" 
+                                                        name="watchPartyPrice" 
+                                                        value={formData.watchPartyPrice} 
+                                                        onChange={handleChange} 
+                                                        className="form-input !pl-8 bg-black/40 text-pink-500 font-black text-2xl" 
+                                                        step="0.01"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </section>
                         </div>
 
                         <div className="space-y-12">
                              <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">03. Master Media</h4>
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">03. Master Media</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
                                     <div className="space-y-2">
                                         <label className="form-label">High-Bitrate Master</label>
@@ -314,12 +381,30 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     </div>
                                 </div>
                             </section>
+
+                            <section className="space-y-4">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">04. Visibility Window</h4>
+                                <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
+                                    <div>
+                                        <label className="form-label">Official Release Date & Time</label>
+                                        <input type="datetime-local" name="releaseDateTime" value={formData.releaseDateTime?.slice(0, 16)} onChange={handleChange} className="form-input bg-black/40 border-white/10" />
+                                        <p className="text-[8px] text-gray-600 mt-2 font-black uppercase tracking-widest italic">Film will be hidden from public catalog until this timestamp.</p>
+                                    </div>
+                                    <label className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer">
+                                        <input type="checkbox" name="isUnlisted" checked={formData.isUnlisted} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-gray-500 focus:ring-gray-400" />
+                                        <div className="min-w-0">
+                                            <span className="text-xs font-black uppercase text-gray-300">Unlist from Public Catalog</span>
+                                            <p className="text-[8px] text-gray-600 uppercase font-bold mt-1">Requires direct link for discovery.</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </section>
                         </div>
                     </div>
 
                     <div className="space-y-8">
                         <div className="flex justify-between items-center">
-                            <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">04. Talent Manifest</h4>
+                            <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">05. Talent Manifest</h4>
                             <button onClick={handleAddActor} className="bg-white/5 hover:bg-white text-gray-400 hover:text-black font-black px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all">+ Add Lead Talent</button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

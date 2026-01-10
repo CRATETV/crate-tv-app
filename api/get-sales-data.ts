@@ -21,7 +21,6 @@ const parseNote = (note: string | undefined): { type: string, title?: string, di
     const donationMatch = note.match(/Support for film: "(.*)" by (.*)/);
     if (donationMatch) return { type: 'donation', title: donationMatch[1].trim(), director: donationMatch[2].trim() };
     
-    // Precise bifurcation via keyword detection
     if (note.includes('Crate Fest')) return { type: 'crateFestPass' };
     if (note.includes('All-Access Pass')) return { type: 'pass' };
     
@@ -77,13 +76,16 @@ export async function POST(request: Request) {
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
         const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
 
+        // ACCURATE PRESENCE CALCULATION: Only count heartbeats from the last 5 minutes
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
         const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot, presenceSnapshot] = await Promise.all([
             accessToken ? fetchAllSquarePayments(accessToken, locationId) : Promise.resolve([]),
             db.collection('movies').get(),
             db.collection('view_counts').get(),
             db.collection('users').get(),
             db.collection('payout_history').get(),
-            db.collection('presence').get()
+            db.collection('presence').where('lastActive', '>=', fiveMinutesAgo).get()
         ]);
 
         const allMovies: Record<string, Movie> = {};
@@ -175,7 +177,7 @@ export async function POST(request: Request) {
             salesByBlock, 
             festivalUsers: [],
             crateFestRevenue, 
-            liveNodes: presenceSnapshot.size,
+            liveNodes: presenceSnapshot.size, // This is now accurately filtered to active nodes
             recentSpikes: []
         };
 

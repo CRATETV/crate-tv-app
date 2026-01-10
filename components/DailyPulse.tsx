@@ -36,10 +36,25 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
         const db = getDbInstance();
         if (!db) return;
 
-        const oneMinAgo = new Date(Date.now() - 60 * 1000);
-        const unsubPresence = db.collection('presence')
-            .where('lastActive', '>=', oneMinAgo)
-            .onSnapshot(snap => setLiveNodes(snap.size));
+        // DYNAMIC PRESENCE TRACKER
+        // We re-establish the listener with a fresh 'oneMinAgo' timestamp periodically
+        // to ensure we aren't just counting documents that were loaded initially.
+        const setupPresenceListener = () => {
+            const oneMinAgo = new Date(Date.now() - 60 * 1000);
+            return db.collection('presence')
+                .where('lastActive', '>=', oneMinAgo)
+                .onSnapshot(snap => {
+                    setLiveNodes(snap.size);
+                });
+        };
+
+        let unsubscribePresence = setupPresenceListener();
+        
+        // Refresh the query window every 30 seconds to keep the "live" count accurate
+        const refreshInterval = setInterval(() => {
+            unsubscribePresence();
+            unsubscribePresence = setupPresenceListener();
+        }, 30000);
 
         const unsubAudit = db.collection('audit_logs')
             .orderBy('timestamp', 'desc')
@@ -50,7 +65,6 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                 setRecentAudits(audits);
             });
 
-        // Monitor Quota Breaches for real-time status
         const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
         const unsubHealth = db.collection('system_health')
             .where('type', '==', 'AI_QUOTA_BREACH')
@@ -60,7 +74,8 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
             });
 
         return () => {
-            unsubPresence();
+            unsubscribePresence();
+            clearInterval(refreshInterval);
             unsubAudit();
             unsubHealth();
         };
@@ -84,7 +99,6 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
-                    {/* NEW: Infrastructure Health Monitor */}
                     <div className={`bg-[#0f0f0f] border ${aiStatus === 'throttled' ? 'border-red-600/50 shadow-[0_0_50px_rgba(239,68,68,0.1)]' : 'border-white/5'} p-8 rounded-[2.5rem] relative overflow-hidden transition-all duration-700`}>
                         <div className="flex justify-between items-center mb-6">
                             <div className="flex items-center gap-3">
