@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import Header from './Header';
-import Hero from './Hero';
+import Header from './components/Header';
+import Hero from './components/Hero';
 import MovieCarousel from './components/MovieCarousel';
 import LoadingSpinner from './components/LoadingSpinner';
 import MovieDetailsModal from './components/MovieDetailsModal';

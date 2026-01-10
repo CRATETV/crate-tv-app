@@ -87,9 +87,7 @@ const CrateVaultRow: React.FC<CrateVaultRowProps> = ({
                                     <MovieCard
                                         movie={movie}
                                         onSelectMovie={onSelectMovie}
-                                        likedMovies={likedMovies}
                                         onToggleLike={onToggleLike}
-                                        watchlist={watchlist}
                                         onToggleWatchlist={onToggleWatchlist}
                                         isWatched={watchedMovies.has(movie.key)}
                                         isOnWatchlist={watchlist.has(movie.key)}
