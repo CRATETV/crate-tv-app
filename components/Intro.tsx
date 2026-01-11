@@ -56,14 +56,6 @@ const Intro: React.FC<IntroProps> = ({ onIntroEnd }) => {
       >
           Skip Intro
       </button>
-
-      {/* Dynamic branding watermark */}
-      <div className="absolute bottom-10 left-10 z-50 pointer-events-none animate-[fadeIn_3s_ease-out] hidden sm:block">
-         <div className="flex items-center gap-4">
-            <div className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></div>
-            <p className="text-[10px] font-black text-white/10 uppercase tracking-[0.8em] mr-[-0.8em]">Crate Infrastructure V4.0</p>
-         </div>
-      </div>
     </div>
   );
 };

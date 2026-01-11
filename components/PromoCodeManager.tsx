@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { PromoCode, Movie, FilmBlock, User } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
+// Add firebase import to resolve missing reference error on line 320
+import firebase from 'firebase/compat/app';
 
 interface PromoCodeManagerProps {
     isAdmin: boolean;
@@ -221,8 +223,19 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                 query = query.where('createdBy', '==', filmmakerName);
             }
 
-            const snapshot = await query.orderBy('createdAt', 'desc').get();
+            // NOTE: Removed .orderBy('createdAt', 'desc') temporarily.
+            // Firestore hides documents missing the ordered field if an orderBy is applied.
+            // This ensures "disappeared" codes without timestamps are restored to the view.
+            const snapshot = await query.get();
             const fetched = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as PromoCode));
+            
+            // Manual sort in JS to be safe and inclusive
+            fetched.sort((a, b) => {
+                const dateA = a.createdAt?.seconds || 0;
+                const dateB = b.createdAt?.seconds || 0;
+                return dateB - dateA;
+            });
+
             setCodes(fetched);
         } catch (err) {
             console.error("Voucher Retrieval Error:", err);
@@ -306,7 +319,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
             usedCount: 0,
             itemId: selectedItemId || undefined,
             createdBy: isAdmin ? 'admin' : (filmmakerName || 'unknown'),
-            createdAt: new Date()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
         try {
@@ -371,7 +384,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
 
                         <div className="space-y-4">
                             <div>
-                                <label className="form-label">Internal Name (Label)</label>
+                                <label className="form-label">Internal Name (Label / Campaign Name)</label>
                                 <input 
                                     type="text" 
                                     value={internalName} 
@@ -380,11 +393,11 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                                     className="form-input !bg-black/40 border-white/10" 
                                     disabled={isQuotaExceeded}
                                 />
-                                <p className="text-[8px] text-gray-600 mt-1 uppercase font-bold tracking-widest">Internal reference only.</p>
+                                <p className="text-[8px] text-gray-600 mt-1 uppercase font-bold tracking-widest">Internal reference for identifying this code.</p>
                             </div>
 
                             <div className="relative">
-                                <label className="form-label">Voucher Alias (The Code)</label>
+                                <label className="form-label">Voucher Alias (The Code Word)</label>
                                 <input 
                                     type="text" 
                                     value={newCode} 
@@ -465,14 +478,14 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                 <div className="lg:col-span-2">
                     <div className="bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] overflow-hidden h-full flex flex-col shadow-2xl">
                         <div className="p-6 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
-                             <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">Active Vouchers</h4>
+                             <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">Active Vouchers Repository</h4>
                              <span className="text-[9px] text-green-500 font-black uppercase tracking-widest">Global Network Verified</span>
                         </div>
                         <div className="overflow-x-auto flex-grow">
                             <table className="w-full text-left text-xs">
                                 <thead className="text-gray-500 font-black uppercase tracking-widest bg-black/40">
                                     <tr>
-                                        <th className="p-5">Code Alias</th>
+                                        <th className="p-5">Name & Alias</th>
                                         <th className="p-5">Logic Scope</th>
                                         <th className="p-5 text-center">Velocity</th>
                                         <th className="p-5 text-right">Dispatch</th>
@@ -480,15 +493,21 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
                                     {codes.length === 0 ? (
-                                        <tr><td colSpan={4} className="p-16 text-center text-gray-700 uppercase font-black tracking-widest">No active access vectors in cluster</td></tr>
+                                        <tr><td colSpan={4} className="p-16 text-center text-gray-700 uppercase font-black tracking-widest">No active access vectors detected</td></tr>
                                     ) : codes.map(c => {
                                         const isDepleted = c.usedCount >= c.maxUses;
                                         return (
                                             <tr key={c.id} className={`hover:bg-white/[0.01] transition-colors group ${isDepleted ? 'opacity-40 grayscale' : ''}`}>
                                                 <td className="p-5">
                                                     <div className="space-y-1">
-                                                        <p className="font-black text-white text-base tracking-[0.2em] group-hover:text-red-500 transition-colors">{c.code}</p>
-                                                        {c.internalName && <p className="text-[10px] text-amber-500 font-bold uppercase">{c.internalName}</p>}
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="font-black text-white text-base tracking-[0.2em] group-hover:text-red-500 transition-colors">{c.code}</p>
+                                                            {c.internalName && (
+                                                                <span className="text-[9px] bg-red-600/10 text-red-400 px-2 py-0.5 rounded border border-red-500/20 font-black uppercase">
+                                                                    {c.internalName}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <p className="text-[9px] text-gray-600 uppercase font-bold tracking-tighter">{resolveItemName(c.itemId)}</p>
                                                     </div>
                                                 </td>

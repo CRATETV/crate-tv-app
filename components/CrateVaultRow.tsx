@@ -45,23 +45,15 @@ const CrateVaultRow: React.FC<CrateVaultRowProps> = ({
             <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-red-600/50 to-transparent"></div>
             <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-red-600/50 to-transparent"></div>
 
-            {/* Scanning Laser Animation - High Intensity */}
-            <div className="absolute inset-y-0 left-0 w-[4px] bg-red-600/60 shadow-[0_0_40px_#ef4444] animate-[vaultScan_12s_linear_infinite] pointer-events-none z-20"></div>
+            {/* Scanning Laser Animation - Adjusted for periodic frequency */}
+            <div className="absolute inset-y-0 left-0 w-[4px] bg-red-600/60 shadow-[0_0_40px_#ef4444] animate-[vaultScan_15s_cubic-bezier(0.4,0,0.2,1)_infinite] pointer-events-none z-20"></div>
 
             <div className="relative z-10 px-4 md:px-12 py-20">
                 {/* Header Unit */}
                 <div className="mb-12 pl-6 border-l-[6px] border-red-600 animate-[fadeIn_1s_ease-out]">
-                    <div className="flex items-center gap-4 mb-2">
-                        <p className="text-[10px] font-black uppercase text-red-500 tracking-[0.8em] drop-shadow-lg leading-none">Premier Selections</p>
-                        <div className="h-[2px] flex-grow max-w-[100px] bg-red-600/20"></div>
-                    </div>
                     <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter text-white italic leading-[0.8] mb-4">
                         The Crate <span className="text-gray-600">Vault.</span>
                     </h2>
-                    <div className="flex items-center gap-3">
-                        <span className="text-[9px] font-black text-gray-500 uppercase tracking-[0.4em] bg-white/5 px-3 py-1 rounded-lg border border-white/10">SECURE_NODE</span>
-                        <span className="text-[9px] font-black text-gray-700 uppercase tracking-[0.4em]">AUTHENTICITY_VERIFIED // 1080P_MASTERS</span>
-                    </div>
                 </div>
 
                 <div className="relative group/carousel-container">
@@ -72,9 +64,12 @@ const CrateVaultRow: React.FC<CrateVaultRowProps> = ({
                         {movies.map((movie) => (
                             <div key={movie.key} className="flex-shrink-0 w-[60vw] sm:w-[38vw] md:w-[26vw] lg:w-[20vw] snap-start relative">
                                 <div className="relative group/vault-card">
-                                    {/* Prestige Pricing Badge - Dynamic from your set prices */}
-                                    <div className="absolute -top-4 -right-4 z-[60] bg-white text-black font-black px-5 py-2 rounded-2xl text-[12px] uppercase shadow-[0_15px_40px_rgba(0,0,0,0.6)] border-2 border-red-600/20 transition-all duration-500 group-hover/vault-card:scale-125 group-hover/vault-card:-rotate-6 group-hover/vault-card:bg-red-600 group-hover/vault-card:text-white">
-                                        ${movie.salePrice?.toFixed(2) || '0.00'}
+                                    {/* Prestige Pricing Tag - Smaller, ribbon-like, revealed on hover */}
+                                    <div className="absolute top-3 right-3 z-[60] opacity-0 translate-y-[-10px] group-hover/vault-card:opacity-100 group-hover/vault-card:translate-y-0 bg-red-600 text-white font-black px-3 py-1.5 rounded-lg text-[10px] uppercase shadow-[0_10px_30px_rgba(0,0,0,0.8)] border border-white/20 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] scale-75 group-hover/vault-card:scale-100">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                                            ${movie.salePrice?.toFixed(2) || '0.00'}
+                                        </div>
                                     </div>
                                     
                                     {/* Decorative Tech Brackets that appear on hover */}
@@ -93,16 +88,6 @@ const CrateVaultRow: React.FC<CrateVaultRowProps> = ({
                                         isOnWatchlist={watchlist.has(movie.key)}
                                         isLiked={likedMovies.has(movie.key)}
                                     />
-                                    
-                                    {/* Bottom Node Indicator */}
-                                    <div className="mt-4 flex items-center justify-between px-2 opacity-0 group-hover/vault-card:opacity-100 transition-opacity duration-500">
-                                        <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Master_Asset // {movie.key.substring(0,8)}</p>
-                                        <div className="flex gap-1">
-                                            <div className="w-1 h-1 rounded-full bg-red-600 animate-pulse"></div>
-                                            <div className="w-1 h-1 rounded-full bg-red-600 animate-pulse [animation-delay:200ms]"></div>
-                                            <div className="w-1 h-1 rounded-full bg-red-600 animate-pulse [animation-delay:400ms]"></div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -133,8 +118,9 @@ const CrateVaultRow: React.FC<CrateVaultRowProps> = ({
             <style>{`
                 @keyframes vaultScan {
                     0% { transform: translateX(-200px); opacity: 0; }
-                    5% { opacity: 1; }
-                    95% { opacity: 1; }
+                    2% { opacity: 1; }
+                    23% { opacity: 1; }
+                    25% { transform: translateX(calc(100vw + 200px)); opacity: 0; }
                     100% { transform: translateX(calc(100vw + 200px)); opacity: 0; }
                 }
                 .custom-scrollbar::-webkit-scrollbar {

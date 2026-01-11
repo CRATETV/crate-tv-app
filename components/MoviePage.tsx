@@ -29,20 +29,16 @@ const getEmbedUrl = (url: string): string | null => {
     return null;
 };
 
-const SecureWatermark: React.FC<{ email: string; isTriggered: boolean }> = ({ email, isTriggered }) => (
-    <div className={`absolute inset-0 pointer-events-none z-[45] overflow-hidden select-none transition-opacity duration-1000 ${isTriggered ? 'opacity-20' : 'opacity-0'}`}>
-        <div className="dynamic-watermark absolute whitespace-nowrap bg-white/20 px-3 py-1 rounded-full text-[10px] font-black text-white uppercase tracking-[0.3em] border border-white/10 backdrop-blur-md shadow-2xl">
-            SECURITY TRACE // {email.toUpperCase()} // AUTH_ENFORCED
-        </div>
-    </div>
-);
-
+// FIX: Completed truncated MoviePage component and added default export.
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass } = useAuth();
+  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie } = useAuth();
   const { movies: allMovies, categories: allCategories, isLoading: isDataLoading } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
   
+  // Track the current search params to react to "play=true" changes in the URL
+  const [currentSearch, setCurrentSearch] = useState(window.location.search);
+
   const [playerMode, setPlayerMode] = useState<'poster' | 'full'>(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('play') === 'true' ? 'full' : 'poster';
@@ -53,41 +49,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
-  const [isSecurityTriggered, setIsSecurityTriggered] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const hasTrackedViewRef = useRef(false);
-  const securityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const triggerSecurity = () => {
-        setIsSecurityTriggered(true);
-        if (securityTimeoutRef.current) clearTimeout(securityTimeoutRef.current);
-        securityTimeoutRef.current = setTimeout(() => setIsSecurityTriggered(false), 8000);
-    };
-
-    const handleKeydown = (e: KeyboardEvent) => {
-        if (playerMode !== 'full') return;
-        const blockedKeys = ['PrintScreen', 'F12', 'F11'];
-        const blockedCombos = (e.ctrlKey || e.metaKey) && ['s', 'u', 'i', 'j', 'c'].includes(e.key.toLowerCase());
-        if (blockedKeys.includes(e.key) || blockedCombos) triggerSecurity();
-    };
-
-    const handleFocusOut = () => { if (playerMode === 'full') triggerSecurity(); };
-    const handleVisibilityChange = () => { if (document.visibilityState === 'hidden' && playerMode === 'full') triggerSecurity(); };
-
-    window.addEventListener('keydown', handleKeydown, true);
-    window.addEventListener('blur', handleFocusOut);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-        window.removeEventListener('keydown', handleKeydown, true);
-        window.removeEventListener('blur', handleFocusOut);
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        if (securityTimeoutRef.current) clearTimeout(securityTimeoutRef.current);
-    };
-  }, [playerMode]);
 
   const hasAccess = useMemo(() => {
     if (!movie) return false;
@@ -101,16 +65,33 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     return expiration ? new Date(expiration) > new Date() : false;
   }, [movie, rentals, movieKey, hasJuryPass]);
 
+  // Listen for navigation events to update player mode dynamically
+  useEffect(() => {
+    const onUrlChange = () => {
+        setCurrentSearch(window.location.search);
+    };
+    window.addEventListener('pushstate', onUrlChange);
+    window.addEventListener('popstate', onUrlChange);
+    return () => {
+        window.removeEventListener('pushstate', onUrlChange);
+        window.removeEventListener('popstate', onUrlChange);
+    };
+  }, []);
+
   useEffect(() => {
     if (movie) {
-        const params = new URLSearchParams(window.location.search);
+        const params = new URLSearchParams(currentSearch);
         if (params.get('play') === 'true' && hasAccess && isMovieReleased(movie)) {
             setPlayerMode('full');
+            setIsEnded(false); // Reset ended state if user is forcing a replay
+            if (videoRef.current && videoRef.current.ended) {
+                videoRef.current.currentTime = 0;
+            }
         } else {
             setPlayerMode('poster');
         }
     }
-  }, [movie, hasAccess, movieKey]);
+  }, [movie, hasAccess, movieKey, currentSearch]);
 
   const handleGoHome = useCallback(() => {
     if (document.fullscreenElement) document.exitFullscreen();
@@ -152,18 +133,22 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       }
   };
 
+  const handlePurchaseSuccess = async () => {
+      await purchaseMovie(movieKey);
+      setIsPurchaseModalOpen(false);
+  };
+
   useEffect(() => {
-      if (playerMode === 'full' && videoRef.current && hasAccess) playContent();
-  }, [playerMode, hasAccess, playContent]);
+      if (playerMode === 'full' && videoRef.current && hasAccess) {
+          playContent();
+      }
+  }, [playerMode, hasAccess, playContent, currentSearch]);
 
   if (isDataLoading) return <LoadingSpinner />;
   if (!movie) return <div className="h-screen flex items-center justify-center font-black uppercase text-gray-800 bg-black">Content Restricted</div>;
 
   const embedUrl = getEmbedUrl(movie.fullMovie);
   const isLiked = likedMoviesArray.includes(movieKey);
-
-  // Use guest email for watermark if not logged in
-  const effectiveEmail = user?.email || localStorage.getItem('crate_guest_jury_email') || 'authorized_judge';
 
   return (
     <div className="flex flex-col min-h-screen bg-[#050505] text-white">
@@ -176,10 +161,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     hasAccess ? (
                         <>
                             {embedUrl ? (
-                                <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen></iframe>
+                                <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen title={movie.title}></iframe>
                             ) : (
                                 <div className="relative w-full h-full" onClick={toggleManualPause}>
-                                    <SecureWatermark email={effectiveEmail} isTriggered={isSecurityTriggered} />
                                     <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full object-contain block transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'}`} controls={false} playsInline autoPlay onPause={() => !isEnded && setIsPaused(true)} onPlay={() => !isEnded && setIsPaused(false)} onEnded={() => setIsEnded(true)} controlsList="nodownload" />
                                     {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={() => toggleLikeMovie(movieKey)} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => {}} onHome={handleGoHome} />}
                                     {isEnded && (
@@ -201,41 +185,93 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             )}
                         </>
                     ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-black/95">
-                            <h2 className="text-4xl font-black uppercase mb-4 tracking-tighter">Rental Required</h2>
-                            <button onClick={() => setIsPurchaseModalOpen(true)} className="px-12 py-5 bg-white text-black font-black rounded-2xl hover:scale-105 transition-all">Authorize</button>
+                        <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6 bg-gray-900">
+                             <img src={movie.poster} alt="" className="w-32 h-auto rounded-lg shadow-xl opacity-50" />
+                             <h2 className="text-3xl font-black uppercase tracking-tighter">Access Locked</h2>
+                             <p className="text-gray-400 max-w-md">This selection requires a verified rental or Jury Pass to stream.</p>
+                             <button 
+                                 onClick={() => setIsPurchaseModalOpen(true)}
+                                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-4 rounded-xl shadow-2xl transition-all active:scale-95 uppercase text-xs tracking-widest"
+                             >
+                                 Unlock Selection // ${movie.salePrice}
+                             </button>
+                             <button onClick={handleGoHome} className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-white transition-colors">Return to Home</button>
                         </div>
                     )
                 ) : (
-                    <div className="relative w-full h-full flex items-center justify-center">
-                         <img src={movie.poster} className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-20" alt="" />
-                         <img src={movie.poster} className="relative w-full h-full object-contain max-w-2xl rounded-lg shadow-2xl border border-white/5" alt={movie.title} />
-                         <div className="absolute top-8 left-8"><button onClick={handleGoHome} className="bg-black/40 px-4 py-2 rounded-full border border-white/10 text-white font-black text-[10px] uppercase tracking-widest hover:bg-red-600 transition-all">Home</button></div>
-                         <button onClick={() => { if (hasAccess) { window.history.pushState({}, '', `/movie/${movie.key}?play=true`); window.dispatchEvent(new Event('pushstate')); } else { setIsPurchaseModalOpen(true); } }} className="absolute bg-white/10 backdrop-blur-md rounded-full p-8 border-4 border-white/20 hover:scale-110 transition-all shadow-2xl group"><svg className="w-16 h-16 text-white group-hover:text-red-500 transition-colors" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg></button>
+                    <div className="relative w-full h-full flex items-center justify-center group cursor-pointer" onClick={() => setIsDetailsModalOpen(true)}>
+                         <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30" crossOrigin="anonymous" />
+                         <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain relative z-10" crossOrigin="anonymous" />
+                         
+                         <div className="absolute inset-0 z-20 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-6">
+                             <div className="bg-white/10 backdrop-blur-md rounded-full p-8 border-2 border-white/20 scale-90 group-hover:scale-100 transition-transform shadow-2xl">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
+                             </div>
+                         </div>
                     </div>
                 )}
             </div>
 
             {playerMode !== 'full' && (
-                <div className="max-w-[1400px] mx-auto p-6 md:p-14 lg:p-24 space-y-12">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
-                        <div className="space-y-4 max-w-4xl">
-                            <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter uppercase leading-[0.85]">{movie.title}</h1>
-                            <p className="text-red-500 font-black uppercase tracking-[0.4em] text-xs">Dir. {movie.director}</p>
+                <div className="max-w-6xl mx-auto p-8 md:p-12">
+                    <div className="flex flex-col md:flex-row justify-between items-start gap-12">
+                        <div className="md:w-2/3 space-y-8">
+                            <div>
+                                <h1 className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-none">{movie.title}</h1>
+                                <p className="text-red-500 font-black uppercase tracking-[0.4em] text-xs mt-4">Directed by {movie.director}</p>
+                            </div>
+                            <div className="text-gray-300 text-lg leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
+                            <RokuBanner />
                         </div>
-                        <button onClick={() => setIsDetailsModalOpen(true)} className="bg-white text-black px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-xs border border-white/10">Full Credits</button>
+                        <div className="md:w-1/3 bg-white/5 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl space-y-8">
+                            <button 
+                                onClick={() => (hasAccess && isMovieReleased(movie)) ? setPlayerMode('full') : (movie.isForSale ? setIsPurchaseModalOpen(true) : setIsDetailsModalOpen(true))}
+                                className="w-full bg-white text-black font-black py-4 rounded-xl uppercase tracking-widest text-xs shadow-xl hover:scale-105 transition-all active:scale-95"
+                            >
+                                {hasAccess ? 'Play Selection' : 'Unlock Now'}
+                            </button>
+                            <div className="space-y-4">
+                                <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest border-b border-white/5 pb-2">Talent Involved</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {movie.cast.map(actor => (
+                                        <button key={actor.name} onClick={() => setSelectedActor(actor)} className="bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-lg text-white font-bold text-[10px] transition-all uppercase">{actor.name}</button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div className="text-gray-300 text-xl md:text-2xl leading-relaxed font-medium max-w-4xl" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
-                    <RokuBanner />
                 </div>
             )}
         </main>
-        
+
         {playerMode !== 'full' && <Footer />}
         <BackToTopButton />
+
+        {isDetailsModalOpen && (
+            <MovieDetailsModal 
+                movie={movie} 
+                isLiked={isLiked} 
+                onToggleLike={() => toggleLikeMovie(movieKey)} 
+                onClose={() => setIsDetailsModalOpen(false)} 
+                onSelectActor={setSelectedActor} 
+                allMovies={allMovies} 
+                allCategories={allCategories} 
+                onSelectRecommendedMovie={(m) => { setIsDetailsModalOpen(false); window.history.pushState({}, '', `/movie/${m.key}`); window.dispatchEvent(new Event('pushstate')); }} 
+                onSupportMovie={() => {}} 
+                onPlayMovie={() => { setIsDetailsModalOpen(false); setPlayerMode('full'); }}
+            />
+        )}
+
         {selectedActor && <ActorBioModal actor={selectedActor} onClose={() => setSelectedActor(null)} />}
-        {isDetailsModalOpen && <MovieDetailsModal movie={movie} isLiked={isLiked} onToggleLike={toggleLikeMovie} onClose={() => setIsDetailsModalOpen(false)} onSelectActor={setSelectedActor} allMovies={allMovies} allCategories={allCategories} onSelectRecommendedMovie={(m: any) => window.location.href = `/movie/${m.key}`} onSupportMovie={() => {}} />}
-        {isPurchaseModalOpen && <SquarePaymentModal movie={movie} paymentType="movie" onClose={() => setIsPurchaseModalOpen(false)} onPaymentSuccess={() => window.location.reload()} />}
+        
+        {isPurchaseModalOpen && (
+            <SquarePaymentModal 
+                paymentType="movie" 
+                movie={movie} 
+                onClose={() => setIsPurchaseModalOpen(false)} 
+                onPaymentSuccess={handlePurchaseSuccess} 
+            />
+        )}
     </div>
   );
 };

@@ -59,8 +59,12 @@ const SmartInstallPrompt: React.FC = () => {
         <div className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-[100] animate-[slideInUp_0.6s_cubic-bezier(0.34,1.56,0.64,1)]">
             <div className="bg-[#111] border border-white/10 rounded-[2rem] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
                 <div className="flex items-center gap-5">
-                    <div className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-2xl">
-                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon-96x96.png" className="w-10 h-10" alt="Crate" />
+                    <div className="w-16 h-16 bg-red-600/10 border border-red-600/20 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-2xl overflow-hidden p-2">
+                        <img 
+                            src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" 
+                            className="w-full h-full object-contain brightness-0 invert" 
+                            alt="Crate" 
+                        />
                     </div>
                     <div className="flex-grow">
                         <h3 className="text-white font-black text-lg uppercase tracking-tighter">Crate TV Pro</h3>

@@ -240,7 +240,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const purchaseMovie = async (movieKey: string) => {
         if (!user) return;
         const expirationDate = new Date();
-        expirationDate.setHours(expirationDate.getHours() + 24);
+        // Updated to 168 hours (1 week) as requested
+        expirationDate.setHours(expirationDate.getHours() + 168);
         const newRentals = { ...(user.rentals || {}), [movieKey]: expirationDate.toISOString() };
         await updateUserProfile(user.uid, { rentals: newRentals });
         setUser(currentUser => currentUser ? ({ ...currentUser, rentals: newRentals }) : null);

@@ -64,7 +64,6 @@ const Footer: React.FC<FooterProps> = ({ showPortalNotice = false, showActorLink
         )}
 
         <div className="border-t border-gray-800 pt-8 text-center text-sm mt-8">
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] mb-2">Crate TV Infrastructure V4.0</p>
           <p>&copy; {new Date().getFullYear()} Crate TV. All Rights Reserved.</p>
         </div>
       </div>

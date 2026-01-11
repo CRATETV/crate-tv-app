@@ -146,7 +146,7 @@ const JuryRoomPage: React.FC = () => {
                             </button>
                             
                             <div className="flex items-center gap-6">
-                                <p className="text-[10px] text-gray-700 font-black uppercase tracking-[0.4em]">Direct Access Node</p>
+                                <p className="text-[10px] text-gray-700 font-black uppercase tracking-[0.4em]">Direct Access</p>
                                 <div className="w-px h-4 bg-white/10"></div>
                                 <button 
                                     onClick={handleMemberLogin}
@@ -223,7 +223,6 @@ const JuryRoomPage: React.FC = () => {
                                 <span className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-800">Terminal Uplink: 2026 Active</span>
                             </div>
                             <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic text-emerald-400 leading-none">Jury Room.</h1>
-                            <p className="text-[10px] uppercase tracking-[0.4em] text-emerald-900 mt-4">SECURE_NODE: {effectiveEmail.toUpperCase()} // STATUS: {user ? 'VERIFIED_JUDGE' : 'GUEST_JUDGE'}</p>
                         </div>
                         <div className="text-right hidden md:block">
                              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-900">Season Contribution</p>
@@ -268,10 +267,6 @@ const JuryRoomPage: React.FC = () => {
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
                                 <div className="lg:col-span-8 space-y-10">
                                     <div className="aspect-video bg-black rounded-[3.5rem] overflow-hidden border border-emerald-900/20 relative group shadow-[0_40px_120px_rgba(0,0,0,1)]">
-                                         {/* Floating Secure Watermark */}
-                                        <div className="absolute inset-0 pointer-events-none z-50 opacity-[0.03] flex items-center justify-center rotate-[-25deg]">
-                                            <span className="text-[11rem] font-black uppercase select-none">{effectiveEmail.split('@')[0]}</span>
-                                        </div>
                                         <video 
                                             src={selectedFilm.movieUrl} 
                                             controls 
