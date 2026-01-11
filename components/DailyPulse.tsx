@@ -84,11 +84,13 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
 
     const totalUsers = analytics?.totalUsers || 0;
     const pendingPipeline = pipeline.filter(p => p.status === 'pending');
+    const catalogCount = Object.keys(movies).length;
 
     return (
         <div className="space-y-8 animate-[fadeIn_0.6s_ease-out]">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <PulseMetric label="Nodes Online" value={liveNodes} color="text-red-500" live={true} sub="NOW" />
+                <PulseMetric label="Catalog Depth" value={catalogCount} color="text-white" sub="Films" />
                 <PulseMetric label="Global Reach" value={totalViews} sub="Total Views" trend="+196%" />
                 <PulseMetric label="User Base" value={totalUsers} sub="Total Accounts" />
                 <PulseMetric label="Pipeline" value={pendingPipeline.length} color="text-amber-500" sub="Pending Reviews" />

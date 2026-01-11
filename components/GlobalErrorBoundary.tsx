@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children?: ReactNode;
@@ -10,12 +10,12 @@ interface State {
 
 /**
  * GlobalErrorBoundary handles uncaught errors in the component tree.
- * Inherits from Component with generic Props and State to ensure type safety.
+ * Inherits from React.Component with generic Props and State to ensure type safety.
  */
-// FIX: Using the imported Component class directly to resolve 'Property props does not exist' inheritance errors.
-class GlobalErrorBoundary extends Component<Props, State> {
+// FIX: Using React.Component explicitly to resolve 'Property props does not exist' inheritance errors.
+class GlobalErrorBoundary extends React.Component<Props, State> {
   // Explicitly initialize state
-  public state: State = { hasError: false };
+  public override state: State = { hasError: false };
 
   constructor(props: Props) {
     super(props);
@@ -26,14 +26,14 @@ class GlobalErrorBoundary extends Component<Props, State> {
     return { hasError: true };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  public override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log the error to the console for infrastructure monitoring
     console.error("CRITICAL_SYSTEM_FAILURE:", error, errorInfo);
   }
 
-  public render(): ReactNode {
+  public override render(): ReactNode {
     // Accessing this.props and this.state from the class component instance.
-    // Line 37: Standard React component property access.
+    // Fixed: Standard React component property access within a React.Component class.
     const { children } = this.props;
     const { hasError } = this.state;
 

@@ -1,5 +1,5 @@
 
-import { Category, Movie, FestivalDay, FestivalConfig, AboutData } from './types';
+import { Category, Movie, FestivalDay, FestivalConfig, AboutData, PromoCode } from './types';
 
 
 // Utility function to robustly check if a movie is past its release time.
@@ -9,6 +9,33 @@ export const isMovieReleased = (movie: Movie | undefined | null): boolean => {
     }
     // Compare the release time with the current time
     return new Date(movie.releaseDateTime) <= new Date();
+};
+
+export const promoCodesData: Record<string, Partial<PromoCode>> = {
+  "PULSE_25": {
+    "code": "PULSE_25",
+    "type": "discount",
+    "discountValue": 25,
+    "maxUses": 100,
+    "usedCount": 0,
+    "internalName": "Weekly Riddle Reward"
+  },
+  "VIP_ACCESS": {
+    "code": "VIP_ACCESS",
+    "type": "one_time_access",
+    "discountValue": 100,
+    "maxUses": 50,
+    "usedCount": 0,
+    "internalName": "Press & Partner Access"
+  },
+  "CRATE_COMMUNITY": {
+    "code": "CRATE_COMMUNITY",
+    "type": "discount",
+    "discountValue": 50,
+    "maxUses": 500,
+    "usedCount": 0,
+    "internalName": "Launch Celebration"
+  }
 };
 
 export const categoriesData: Record<string, Category> = {
@@ -577,7 +604,7 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Charles Ellis Washington",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Charles+Ellis+Wahington.JPG",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Charles+Ellis+Wahington.JPG",
         "bio": "Charles Ellis Washington is an actor who brings a controlled intensity and smooth presence to his work in film and theater, creating memorable performances.",
         "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Charles+Ellis+Wahington.JPG"
       },
@@ -1178,8 +1205,8 @@ export const moviesData: Record<string, Movie> = {
       {
         "name": "Michelle Reale-Opalesky",
         "bio": "Michelle Reale-Opalesky is a captivating actor with a remarkable range.",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg"
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Michelle+Reale-Opalesky.jpg"
       }
     ],
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Results.png",

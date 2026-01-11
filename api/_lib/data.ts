@@ -1,5 +1,6 @@
+
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { moviesData as fallbackMovies, categoriesData as fallbackCategories, festivalData as fallbackFestival, festivalConfigData as fallbackConfig, aboutData as fallbackAbout } from '../../constants.js';
+import { moviesData as fallbackMovies, categoriesData as fallbackCategories, festivalData as fallbackFestival, festivalConfigData as fallbackConfig, aboutData as fallbackAbout, promoCodesData as fallbackPromos } from '../../constants.js';
 
 let cachedData: any = null;
 let lastFetchTime = 0;
@@ -27,6 +28,7 @@ const getFallbackData = () => ({
     festivalData: fallbackFestival,
     festivalConfig: fallbackConfig,
     aboutData: fallbackAbout,
+    promoCodes: fallbackPromos,
     settings: { isHolidayModeActive: false }
 });
 

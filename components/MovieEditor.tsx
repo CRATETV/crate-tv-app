@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Movie, Actor, MoviePipelineEntry } from '../types';
 import S3Uploader from './S3Uploader';
@@ -158,13 +159,17 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
     const isSavedRecord = formData && allMovies[formData.key] !== undefined;
+    const totalCount = Object.keys(allMovies).length;
 
     return (
         <div className="space-y-6 pb-20">
             {!formData ? (
                 <div className="bg-[#0f0f0f] rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
                     <div className="p-8 bg-white/[0.02] flex flex-col sm:flex-row justify-between items-center gap-6 border-b border-white/5">
-                        <h3 className="text-xl font-black text-white uppercase tracking-widest">Catalog Records</h3>
+                        <div className="flex items-center gap-4">
+                            <h3 className="text-xl font-black text-white uppercase tracking-widest">Catalog Records</h3>
+                            <span className="bg-red-600/10 text-red-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{totalCount} Films Total</span>
+                        </div>
                         <div className="flex gap-3">
                             <input type="text" placeholder="Filter..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="form-input !py-3 text-xs bg-black/40 border-white/10" />
                             <button onClick={() => setSelectedMovieKey(`movie_${Date.now()}`)} className="bg-red-600 text-white font-black py-3 px-6 rounded-xl text-[10px] uppercase tracking-widest">+ New Entry</button>
