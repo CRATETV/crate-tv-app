@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';

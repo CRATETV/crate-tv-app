@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Movie, AnalyticsData, MoviePipelineEntry, Category, AuditEntry } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -36,9 +37,6 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
         const db = getDbInstance();
         if (!db) return;
 
-        // DYNAMIC PRESENCE TRACKER
-        // We re-establish the listener with a fresh 'oneMinAgo' timestamp periodically
-        // to ensure we aren't just counting documents that were loaded initially.
         const setupPresenceListener = () => {
             const oneMinAgo = new Date(Date.now() - 60 * 1000);
             return db.collection('presence')
@@ -50,7 +48,6 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
 
         let unsubscribePresence = setupPresenceListener();
         
-        // Refresh the query window every 30 seconds to keep the "live" count accurate
         const refreshInterval = setInterval(() => {
             unsubscribePresence();
             unsubscribePresence = setupPresenceListener();

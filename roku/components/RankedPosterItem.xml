@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="RankedPosterItem" extends="Group">
+    <interface>
+        <field id="itemContent" type="node" onChange="onContentChange" />
+        <field id="focusPercent" type="float" onChange="onFocusChange" />
+        <field id="index" type="integer" />
+    </interface>
+
+    <script type="text/brightscript" uri="pkg:/components/RankedPosterItem.brs" />
+
+    <children>
+        <!-- Massive Ranking Number (Studio V4 Style) -->
+        <Label 
+            id="rankLabel" 
+            text="0" 
+            translation="[-100, 0]" 
+            width="300" 
+            height="360" 
+            vertAlign="center" 
+            horizAlign="center" 
+            opacity="0.1"
+        >
+            <font role="sans" size="240" weight="bold" />
+        </Label>
+
+        <Rectangle
+            id="focusRing"
+            width="250"
+            height="370"
+            translation="[-5, -5]"
+            color="#EF4444"
+            visible="false"
+        />
+        
+        <Poster
+            id="poster"
+            width="240"
+            height="360"
+            loadDisplayMode="scaleToFill"
+        />
+
+        <Rectangle
+            id="titleOverlay"
+            width="240"
+            height="60"
+            translation="[0, 300]"
+            color="#050505"
+            opacity="0"
+        >
+            <Label id="titleLabel" width="240" horizAlign="center" font="font:SmallestBoldSystemFont" />
+        </Rectangle>
+    </children>
+</component>

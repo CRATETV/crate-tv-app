@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { MoviePipelineEntry } from '../types';
 import { deleteMoviePipelineEntry } from '../services/firebaseService';
@@ -48,15 +49,28 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
         setIsSubmitting(true);
         setError('');
         try {
+            // FIX: Map state keys to API expected keys (filmTitle, directorName, email)
+            const payload = {
+                filmTitle: newEntry.title,
+                directorName: newEntry.director,
+                email: newEntry.submitterEmail,
+                cast: newEntry.cast,
+                synopsis: newEntry.synopsis,
+                posterUrl: newEntry.posterUrl,
+                movieUrl: newEntry.movieUrl
+            };
+
             const response = await fetch('/api/send-submission', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    filmTitle: newEntry.title,
-                    ...newEntry
-                })
+                body: JSON.stringify(payload)
             });
-            if (!response.ok) throw new Error((await response.json()).error || "Failed to add to pipeline.");
+            
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || "Failed to add to pipeline.");
+            }
+            
             alert("Film added to pipeline successfully!");
             setNewEntry(emptyEntry);
             setIsFormVisible(false);
@@ -143,6 +157,15 @@ export const MoviePipelineTab: React.FC<MoviePipelineTabProps> = ({ pipeline, on
                                 <input type="text" name="movieUrl" value={newEntry.movieUrl} onChange={handleInputChange} className="form-input" required />
                             </div>
                         </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="form-label">Submitter Email</label>
+                                <input type="email" name="submitterEmail" value={newEntry.submitterEmail} onChange={handleInputChange} className="form-input" required />
+                            </div>
+                        </div>
+                        
+                        {error && <p className="text-red-500 text-xs font-bold uppercase tracking-widest">{error}</p>}
+                        
                         <button type="submit" className="submit-btn" disabled={isSubmitting}>
                             {isSubmitting ? 'Adding...' : 'Add to Pipeline'}
                         </button>

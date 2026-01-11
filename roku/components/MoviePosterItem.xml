@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="MoviePosterItem" extends="Group">
+    <interface>
+        <field id="itemContent" type="node" onChange="onContentChange" />
+        <field id="focusPercent" type="float" onChange="onFocusChange" />
+    </interface>
+
+    <script type="text/brightscript" uri="pkg:/components/MoviePosterItem.brs" />
+
+    <children>
+        <!-- V4 Master Focus Ring -->
+        <Rectangle
+            id="focusRing"
+            width="250"
+            height="370"
+            translation="[-5, -5]"
+            color="#EF4444"
+            visible="false"
+        />
+        
+        <Rectangle
+            id="cardBg"
+            width="240"
+            height="360"
+            color="#111111"
+        />
+        
+        <Poster
+            id="poster"
+            width="240"
+            height="360"
+            loadDisplayMode="scaleToFill"
+        />
+        
+        <!-- Bottom Identity Tag (Visible on Focus) -->
+        <Rectangle
+            id="titleOverlay"
+            width="240"
+            height="80"
+            translation="[0, 280]"
+            color="#050505"
+            opacity="0"
+        >
+            <Label
+                id="titleLabel"
+                width="220"
+                translation="[10, 20]"
+                font="font:SmallestBoldSystemFont"
+                color="#FFFFFF"
+                horizAlign="center"
+                wrap="true"
+            />
+        </Rectangle>
+    </children>
+</component>

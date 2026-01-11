@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { MoviePipelineEntry, JuryVerdict, Movie } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
