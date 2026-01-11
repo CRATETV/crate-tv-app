@@ -230,7 +230,8 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
             const fetched = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as PromoCode));
             
             // Manual sort in JS to be safe and inclusive
-            fetched.sort((a, b) => {
+            // FIX: Explicitly type sort parameters to resolve implicitly 'any' type build error
+            fetched.sort((a: PromoCode, b: PromoCode) => {
                 const dateA = a.createdAt?.seconds || 0;
                 const dateB = b.createdAt?.seconds || 0;
                 return dateB - dateA;
