@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children?: ReactNode;
@@ -10,34 +10,32 @@ interface State {
 
 /**
  * GlobalErrorBoundary handles uncaught errors in the component tree.
- * Inherits from Component with generic Props and State to ensure type safety.
+ * Inherits from React.Component with generic Props and State to ensure type safety.
  */
-// FIX: Using Component explicitly and removing 'override' to resolve inheritance check failures in some TS environments.
-class GlobalErrorBoundary extends Component<Props, State> {
-  // Explicitly initialize state
-  // FIX: Standard property definition for state in a class component (line 18).
+// FIX: Explicitly extending React.Component to resolve issues where this.props was not correctly recognized by TypeScript.
+class GlobalErrorBoundary extends React.Component<Props, State> {
+  // FIX: Explicitly define the initial state for the component using the State interface.
   public state: State = { hasError: false };
 
   constructor(props: Props) {
     super(props);
   }
 
-  // FIX: Standard static method definition for Error Boundary (line 29).
+  // FIX: Standard static method definition for Error Boundary to update state when an error occurs.
   public static getDerivedStateFromError(_: Error): State {
     // Update state so the next render will show the fallback UI.
     return { hasError: true };
   }
 
-  // FIX: Standard lifecycle method definition without 'override' (line 34).
+  // FIX: Standard lifecycle method definition for capturing error details for system monitoring.
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log the error to the console for infrastructure monitoring
     console.error("CRITICAL_SYSTEM_FAILURE:", error, errorInfo);
   }
 
-  // FIX: Standard render method definition without 'override' (line 39).
+  // FIX: Standard render method definition.
   public render(): ReactNode {
-    // Accessing this.props and this.state from the class component instance.
-    // Fixed: Standard React component property access within a Component class.
+    // FIX: Destructuring children and hasError from this.props and this.state which are now correctly inherited.
     const { children } = this.props;
     const { hasError } = this.state;
 

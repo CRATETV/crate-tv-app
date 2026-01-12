@@ -23,23 +23,27 @@ import PermissionsManager from './components/PermissionsManager';
 import EditorialManager from './components/EditorialManager';
 import RokuDeployTab from './components/RokuDeployTab';
 import UserIntelligenceTab from './components/UserIntelligenceTab';
+import CrateFestAnalytics from './components/CrateFestAnalytics';
+import FestivalAnalytics from './components/FestivalAnalytics';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
     intelligence: '🕵️ User Intelligence',
+    festivalAnalytics: '🍿 Festival Intel',
+    crateFestAnalytics: '🎪 Crate Fest Intel',
     editorial: '🖋️ Editorial',
     mail: '✉️ Studio Mail',
     movies: '🎞️ Catalog',
     pipeline: '📥 Pipeline',
     inquiries: '🎭 Inquiries',
-    analytics: '📊 Analytics',
+    analytics: '📊 Platform ROI',
     hero: '🎬 Hero',
     laurels: '🏆 Laurels',
-    cratefest: '🎪 Crate Fest',
+    cratefest: '🎪 Crate Fest Config',
     vouchers: '🎫 Promo Codes',
     pitch: '📽️ Pitch Deck',
     categories: '📂 Categories',
-    festival: '🍿 Film Festival',
+    festival: '🍿 Film Festival Config',
     watchParty: '🍿 Watch Party',
     roku: '📺 Roku Deploy',
     about: '📄 About',
@@ -75,7 +79,7 @@ const AdminPage: React.FC = () => {
     const allowedTabs = useMemo(() => {
         const isMaster = role === 'super_admin' || role === 'master';
         if (isMaster) return Object.keys(ALL_TABS);
-        if (role === 'festival_admin') return ['festival', 'analytics'];
+        if (role === 'festival_admin') return ['festival', 'festivalAnalytics', 'crateFestAnalytics'];
         const specificTabs = permissions[role];
         if (specificTabs && specificTabs.length > 0) return specificTabs;
         return ['pulse'];
@@ -198,6 +202,7 @@ const AdminPage: React.FC = () => {
         } catch (err) {
             setSaveMessage(err instanceof Error ? err.message : "Sync failed.");
         } finally {
+            setIsLoading(false);
             setIsSaving(false);
         }
     };
@@ -260,6 +265,8 @@ const AdminPage: React.FC = () => {
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
                     {activeTab === 'intelligence' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={() => {}} />}
+                    {activeTab === 'festivalAnalytics' && <FestivalAnalytics analytics={analytics} festivalData={festivalData} config={festivalConfig} />}
+                    {activeTab === 'crateFestAnalytics' && <CrateFestAnalytics analytics={analytics} config={crateFestConfig} />}
                     {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
                     {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
@@ -267,7 +274,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'inquiries' && <TalentInquiriesTab />}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode={role === 'festival_admin' ? 'festival' : 'full'} />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies)} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
-                    {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies)} />}
+                    {activeTab === 'laurels' && < LaurelManager allMovies={Object.values(movies)} />}
                     {activeTab === 'cratefest' && <CrateFestEditor config={crateFestConfig!} allMovies={movies} pipeline={pipeline} onSave={(newConfig) => handleSaveData('settings', { crateFestConfig: newConfig })} isSaving={isSaving} />}
                     {activeTab === 'vouchers' && <PromoCodeManager isAdmin={true} targetFilms={Object.values(movies)} targetBlocks={[]} />}
                     {activeTab === 'pitch' && <PitchDeckManager onSave={(settings) => handleSaveData('settings', settings)} isSaving={isSaving} />}

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Movie, AnalyticsData, MoviePipelineEntry, Category, AuditEntry } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -88,6 +87,32 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
 
     return (
         <div className="space-y-8 animate-[fadeIn_0.6s_ease-out]">
+            {/* AI STARTUP VALIDATION ROW */}
+            <div className="bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-transparent border border-blue-500/20 p-6 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+                <div className="flex items-center gap-6">
+                    <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 shadow-inner">
+                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-8 h-8 invert" alt="Crate" />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-xl font-black text-white uppercase tracking-tighter">AI Core Lifecycle</h3>
+                            <span className="bg-blue-500 text-white text-[8px] font-black px-2 py-0.5 rounded tracking-widest uppercase animate-pulse">Gemini 3 Pro Active</span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Status: Primary Operational Technology // Grant Class: AI Startup</p>
+                    </div>
+                </div>
+                <div className="flex gap-4">
+                    <div className="bg-black/40 px-6 py-3 rounded-xl border border-white/5 text-center min-w-[140px]">
+                        <p className="text-[8px] font-black text-blue-400 uppercase tracking-widest mb-1">Synthesis Rate</p>
+                        <p className="text-lg font-bold text-white uppercase">High Velocity</p>
+                    </div>
+                    <div className="bg-black/40 px-6 py-3 rounded-xl border border-white/5 text-center min-w-[140px]">
+                        <p className="text-[8px] font-black text-purple-400 uppercase tracking-widest mb-1">Inference Engine</p>
+                        <p className="text-lg font-bold text-white uppercase">Cloud Native</p>
+                    </div>
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <PulseMetric label="Nodes Online" value={liveNodes} color="text-red-500" live={true} sub="NOW" />
                 <PulseMetric label="Catalog Depth" value={catalogCount} color="text-white" sub="Films" />

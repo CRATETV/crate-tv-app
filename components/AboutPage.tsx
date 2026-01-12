@@ -1,4 +1,3 @@
-
 import React, { useCallback } from 'react';
 import Header from './Header';
 import LoadingSpinner from './LoadingSpinner';
@@ -49,28 +48,31 @@ const AboutPage: React.FC = () => {
                     </div>
 
                     <section className="text-center mb-24 animate-fadeInHeroContent">
-                        <p className="text-red-500 font-black uppercase tracking-[0.4em] mb-4 text-xs">Our Purpose</p>
-                        <h1 className="text-4xl md:text-6xl font-black text-white mb-8 tracking-tighter">Our Mission</h1>
+                        <p className="text-red-500 font-black uppercase tracking-[0.4em] mb-4 text-xs">AI-First Infrastructure</p>
+                        <h1 className="text-4xl md:text-6xl font-black text-white mb-8 tracking-tighter uppercase italic leading-[0.9]">The Distribution Afterlife.</h1>
                         <p className="text-2xl md:text-4xl text-gray-200 font-medium leading-tight max-w-4xl mx-auto italic">"{aboutData.missionStatement}"</p>
                     </section>
 
                     <div className="space-y-24">
                         <section className="grid grid-cols-1 md:grid-cols-2 gap-16 items-start">
                             <div>
-                                <h2 className="text-3xl font-black text-white mb-6 uppercase tracking-tighter border-b-4 border-red-600 pb-2 inline-block">The Crate Story</h2>
-                                <div className="text-gray-400 text-lg leading-relaxed space-y-4" dangerouslySetInnerHTML={{ __html: aboutData.story }}></div>
+                                <h2 className="text-3xl font-black text-white mb-6 uppercase tracking-tighter border-b-4 border-red-600 pb-2 inline-block">The Crate Intelligence</h2>
+                                <div className="text-gray-400 text-lg leading-relaxed space-y-4">
+                                    <p>Crate TV operates as a high-density media infrastructure powered by <strong>Google Gemini</strong>. We integrate Large Language Models into the core of our curatorial pipeline, automating talent discovery and aesthetic alignment.</p>
+                                    <p>By merging technical engineering with award-winning artistic pedigree, we eliminate the gap between creators and global distribution. Our platform uses AI to solve the specific market failure of the "Festival Void"—ensuring that world-class cinema reaches a professional audience on Roku and the web with sub-100ms synchronization.</p>
+                                </div>
                             </div>
                             <div className="bg-white/5 p-8 rounded-3xl border border-white/10 shadow-2xl">
-                                <h3 className="text-2xl font-black text-white mb-6 uppercase tracking-tighter italic">Studio Logistics</h3>
-                                <p className="text-gray-400 mb-6 leading-relaxed">Founded in 2024, Crate TV operates as a high-density media infrastructure. By merging technical engineering with award-winning artistic pedigree, we eliminate the gap between creators and global distribution.</p>
+                                <h3 className="text-2xl font-black text-white mb-6 uppercase tracking-tighter italic">Strategic Architecture</h3>
+                                <p className="text-gray-400 mb-6 leading-relaxed">Built on a serverless cloud foundation, Crate TV scales instantly. Our proprietary AI core handles rights auditing, personalized curatorial dispatches, and real-time audience sentiment analysis.</p>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="bg-black/40 p-4 rounded-xl border border-white/5 text-center">
-                                        <p className="text-2xl font-black text-white italic">Roku</p>
-                                        <p className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">SDK Optimized</p>
+                                        <p className="text-2xl font-black text-white italic">AI</p>
+                                        <p className="text-[10px] uppercase font-bold text-blue-500 tracking-widest">Gemini 3 Pro</p>
                                     </div>
                                     <div className="bg-black/40 p-4 rounded-xl border border-white/5 text-center">
                                         <p className="text-2xl font-black text-white italic">Cloud</p>
-                                        <p className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">Global Network</p>
+                                        <p className="text-[10px] uppercase font-bold text-red-500 tracking-widest">Global Network</p>
                                     </div>
                                 </div>
                             </div>

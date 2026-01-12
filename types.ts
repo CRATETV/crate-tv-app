@@ -136,7 +136,7 @@ export interface FilmBlock {
   title: string;
   time: string;
   movieKeys: string[];
-  price?: number; // New: Block-level pricing for festivals
+  price?: number; 
 }
 
 export interface FestivalDay {
@@ -194,8 +194,8 @@ export interface WatchPartyState {
   lastUpdatedBy?: string;
   backstageKey?: string;
   isQALive?: boolean;
-  activeBlockId?: string; // NEW: Block context for sequential play
-  activeMovieIndex?: number; // NEW: Current film position in block
+  activeBlockId?: string;
+  activeMovieIndex?: number;
 }
 
 export interface ChatMessage {
@@ -284,7 +284,7 @@ export interface AnalyticsData {
   totalAdRevenue: number;
   crateTvMerchCut: number;
   merchSales: Record<string, number>;
-  totalFestivalRevenue: number; // Partner-specific gross
+  totalFestivalRevenue: number; 
   totalCrateFestRevenue: number;
   festivalPassSales: { units: number; revenue: number };
   festivalBlockSales: { units: number; revenue: number };
