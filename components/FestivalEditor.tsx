@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Movie, FestivalDay, FestivalConfig } from '../types';
+import { Movie, FestivalDay, FestivalConfig, FilmBlock } from '../types';
 
 interface MovieSelectorModalProps {
   allMovies: Movie[];
@@ -8,7 +8,6 @@ interface MovieSelectorModalProps {
   onClose: () => void;
 }
 
-// The MovieSelectorModal component for selecting films within a block
 const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, initialSelectedKeys, onSave, onClose }) => {
   const [selectedKeys, setSelectedKeys] = useState(new Set(initialSelectedKeys));
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,8 +27,8 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
   };
 
   const filteredMovies = allMovies
-    .filter(movie => movie.title.toLowerCase().includes(searchTerm.toLowerCase()))
-    .sort((a, b) => a.title.localeCompare(b.title));
+    .filter(movie => (movie.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[110] p-4" onClick={onClose}>
@@ -79,7 +78,6 @@ interface FestivalEditorProps {
     isSaving: boolean;
 }
 
-// Correctly formats a UTC ISO string for a datetime-local input, accounting for timezone.
 const formatISOForInput = (isoString?: string): string => {
     if (!isoString) return '';
     try {
@@ -90,15 +88,12 @@ const formatISOForInput = (isoString?: string): string => {
         const day = date.getDate().toString().padStart(2, '0');
         const hours = date.getHours().toString().padStart(2, '0');
         const minutes = date.getMinutes().toString().padStart(2, '0');
-
         return `${year}-${month}-${day}T${hours}:${minutes}`;
     } catch (e) {
-        console.error("Error formatting date for input:", e);
         return '';
     }
 };
 
-// The FestivalEditor component for managing festival data
 const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies, onDataChange, onConfigChange, onSave, isSaving }) => {
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
 
@@ -109,7 +104,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
     onDataChange(newData);
   };
   
-  const handleBlockChange = (dayIndex: number, blockIndex: number, field: string, value: string) => {
+  const handleBlockChange = (dayIndex: number, blockIndex: number, field: string, value: any) => {
     const newData = data.map((day, i) => {
         if (i === dayIndex) {
           const updatedBlocks = day.blocks.map((block, j) => {
@@ -152,79 +147,25 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   };
   
   const addDay = () => {
-    const newDay: FestivalDay = {
-      day: data.length + 1,
-      date: `New Day Date`,
-      blocks: [],
-    };
-    onDataChange([...data, newDay]);
+    onDataChange([...data, { day: data.length + 1, date: `New Day Date`, blocks: [] }]);
   };
 
-  const removeDay = (dayIndex: number) => {
-    const newData = data
-      .filter((_, i) => i !== dayIndex)
-      .map((day, index) => ({ ...day, day: index + 1 }));
-    onDataChange(newData);
-  };
-  
   const addBlock = (dayIndex: number) => {
-    const newBlock = {
+    const newBlock: FilmBlock = {
       id: `day${dayIndex + 1}-block${Date.now()}`,
       title: 'New Film Block',
       time: 'TBD',
       movieKeys: [],
+      price: 10.00
     };
-    const newData = data.map((day, index) => {
-      if (index === dayIndex) {
-        return { ...day, blocks: [...day.blocks, newBlock] };
-      }
-      return day;
-    });
+    const newData = data.map((day, index) => index === dayIndex ? { ...day, blocks: [...day.blocks, newBlock] } : day);
     onDataChange(newData);
   };
   
   const removeBlock = (dayIndex: number, blockIndex: number) => {
-     const newData = data.map((day, index) => {
-        if (index === dayIndex) {
-          return { ...day, blocks: day.blocks.filter((_, i) => i !== blockIndex) };
-        }
-        return day;
-      });
+     const newData = data.map((day, index) => index === dayIndex ? { ...day, blocks: day.blocks.filter((_, i) => i !== blockIndex) } : day);
       onDataChange(newData);
   };
-
-  const handleSave = () => {
-    onSave();
-  };
-  
-  const handleGoLive = () => {
-    if (!window.confirm("CRITICAL ACTION: This will overwrite your current schedule to start RIGHT NOW and end in 7 days. Continue?")) return;
-    
-    const now = new Date();
-    const endDate = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
-
-    // Perform an atomic config update
-    const updatedConfig = { 
-        ...config, 
-        startDate: now.toISOString(),
-        endDate: endDate.toISOString(),
-    };
-    
-    onConfigChange(updatedConfig);
-    
-    // Explicitly trigger a manifest save to ensure the change is felt instantly
-    setTimeout(() => {
-        onSave();
-    }, 100);
-  };
-
-  if (!config) {
-    return (
-      <div className="bg-gray-950 p-6 rounded-lg text-center">
-        <p className="text-gray-400">Loading festival configuration...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-gray-950 p-6 rounded-lg text-gray-200">
@@ -232,109 +173,45 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
       
       <div className="space-y-4 mb-6 bg-gray-900/50 p-4 rounded-lg border border-gray-700">
           <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-300">Festival Title</label>
-              <input 
-                type="text" 
-                name="title" 
-                value={config.title || ''} 
-                onChange={handleConfigChange} 
-                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" 
-              />
+              <label className="block text-sm font-medium text-gray-300">Festival Title</label>
+              <input type="text" name="title" value={config.title || ''} onChange={handleConfigChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white" />
           </div>
           <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-300">Festival Description</label>
-              <textarea 
-                name="description" 
-                value={config.description || ''} 
-                onChange={handleConfigChange} 
-                rows={3} 
-                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-              ></textarea>
+              <label className="block text-sm font-medium text-gray-300">Description</label>
+              <textarea name="description" value={config.description || ''} onChange={handleConfigChange} rows={3} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="startDate" className="block text-sm font-medium text-gray-300">Start Date & Time</label>
-              <input type="datetime-local" name="startDate" value={formatISOForInput(config.startDate)} onChange={handleConfigChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
-            </div>
-            <div>
-              <label htmlFor="endDate" className="block text-sm font-medium text-gray-300">End Date & Time</label>
-              <input type="datetime-local" name="endDate" value={formatISOForInput(config.endDate)} onChange={handleConfigChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
-            </div>
-          </div>
-          <div className="pt-4 mt-4 border-t border-gray-800">
-                <button 
-                    type="button" 
-                    onClick={handleGoLive} 
-                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors"
-                >
-                    Push Live Now
-                </button>
-                <p className="text-xs text-gray-500 mt-1">Force-starts the festival for a 7-day duration immediately.</p>
-            </div>
       </div>
 
       <div className="space-y-6">
         {data.map((day, dayIndex) => (
-          <div key={day.day} className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4">
-              <h3 className="text-xl font-bold text-white">Day {day.day}</h3>
-              <button onClick={() => removeDay(dayIndex)} className="text-xs text-red-500 hover:text-red-400 self-end sm:self-center">Remove Day</button>
-            </div>
-            <input
-              type="text"
-              value={day.date}
-              onChange={e => handleDayChange(dayIndex, 'date', e.target.value)}
-              className="w-full mb-4 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white"
-            />
-            <div className="space-y-4 pl-4 border-l-2 border-gray-600">
+          <div key={dayIndex} className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+            <h3 className="text-xl font-bold text-white mb-4">Day {day.day}</h3>
+            <div className="space-y-4">
               {day.blocks.map((block, blockIndex) => (
-                <div key={block.id} className="bg-gray-800 p-3 rounded-md">
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-                        <input
-                            type="text"
-                            value={block.title}
-                            onChange={e => handleBlockChange(dayIndex, blockIndex, 'title', e.target.value)}
-                            placeholder="Block Title"
-                            className="w-full text-lg font-semibold bg-transparent text-white focus:outline-none focus:bg-gray-700 rounded-md px-2"
-                        />
-                         <input
-                            type="text"
-                            value={block.time}
-                            onChange={e => handleBlockChange(dayIndex, blockIndex, 'time', e.target.value)}
-                            placeholder="e.g., 7:00 PM EST"
-                            className="w-full text-sm font-normal bg-transparent text-gray-300 focus:outline-none focus:bg-gray-700 rounded-md px-2"
-                        />
+                <div key={blockIndex} className="bg-gray-800 p-4 rounded-md space-y-4">
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input value={block.title} onChange={e => handleBlockChange(dayIndex, blockIndex, 'title', e.target.value)} placeholder="Block Title" className="bg-transparent text-white font-bold border-b border-white/10" />
+                        <input value={block.time} onChange={e => handleBlockChange(dayIndex, blockIndex, 'time', e.target.value)} placeholder="Time (e.g. 7pm)" className="bg-transparent text-gray-400 border-b border-white/10" />
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 font-black">PRICE $</span>
+                            <input type="number" value={block.price} onChange={e => handleBlockChange(dayIndex, blockIndex, 'price', parseFloat(e.target.value))} className="bg-transparent text-green-500 font-bold w-20 border-b border-white/10" />
+                        </div>
                    </div>
-                   <div className="flex items-center justify-between">
-                     <div>
-                       <p className="text-xs text-gray-400 mb-2">{block.movieKeys.length} film(s) selected.</p>
-                       <button onClick={() => setEditingBlock({ dayIndex, blockIndex })} className="text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md">
-                         Edit Films
-                       </button>
-                     </div>
-                     <button onClick={() => removeBlock(dayIndex, blockIndex)} className="text-xs text-red-500 hover:text-red-400 self-end sm:self-center flex-shrink-0">Remove Block</button>
+                   <div className="flex justify-between items-center">
+                     <button onClick={() => setEditingBlock({ dayIndex, blockIndex })} className="text-xs bg-blue-600 px-3 py-1 rounded">Select Films ({block.movieKeys.length})</button>
+                     <button onClick={() => removeBlock(dayIndex, blockIndex)} className="text-xs text-red-500">Remove Block</button>
                    </div>
                 </div>
               ))}
-               <button onClick={() => addBlock(dayIndex)} className="text-sm bg-gray-600 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-md mt-4">
-                 + Add Block
-               </button>
+               <button onClick={() => addBlock(dayIndex)} className="text-sm bg-gray-700 px-4 py-2 rounded">+ Add Block</button>
             </div>
           </div>
         ))}
-        <button onClick={addDay} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md">
-          + Add Day
-        </button>
+        <button onClick={addDay} className="bg-purple-600 px-6 py-2 rounded font-bold">Add Day</button>
       </div>
 
       <div className="mt-6 pt-6 border-t border-gray-700">
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-bold py-2 px-5 rounded-md transition-colors"
-        >
-          {isSaving ? 'Publishing...' : 'Save & Publish Festival'}
-        </button>
+        <button onClick={onSave} disabled={isSaving} className="bg-red-600 px-10 py-3 rounded-xl font-black uppercase tracking-widest">{isSaving ? 'Publishing...' : 'Save Festival Manifest'}</button>
       </div>
       
       {editingBlock !== null && (

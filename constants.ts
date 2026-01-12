@@ -1,4 +1,3 @@
-
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData, PromoCode } from './types';
 
 
@@ -401,7 +400,7 @@ export const moviesData: Record<string, Movie> = {
   },
   "eharmonycs": {
     "key": "eharmonycs",
-    "title": "eHarmonycs",
+    "title": "eharmonycs",
     "synopsis": "Two people meet in a bar and decide whether to get to know each other.",
     "cast": [
       {
@@ -606,7 +605,7 @@ export const moviesData: Record<string, Movie> = {
         "name": "Charles Ellis Washington",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Charles+Ellis+Wahington.JPG",
         "bio": "Charles Ellis Washington is an actor who brings a controlled intensity and smooth presence to his work in film and theater, creating memorable performances.",
-        "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/Charles+Ellis+Wahington.JPG"
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Charles+Ellis+Wahington.JPG"
       },
       {
         "name": "Isabelle Dessalines",
@@ -672,9 +671,9 @@ export const moviesData: Record<string, Movie> = {
       }
     ],
     "director": "Robert Graves",
-    "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+trailer.mov",
+    "trailer": "https://cratetelevision.s3-east-1.amazonaws.com/it's+in+you+trailer.mov",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Its+In+You.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+poster+jpeg",
+    "poster": "https://cratetelevision.s3-east-1.amazonaws.com/it's+in+you+poster+jpeg",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/instant+tv+posters++folder/ItsInYou.png",
     "likes": 2
   },
@@ -722,7 +721,7 @@ export const moviesData: Record<string, Movie> = {
       },
       {
         "name": "Kathryn Wylde",
-        "photo": "https://cratetelevision.s3.amazonaws.com/photos+/KatWylde.png",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/KatWylde.png",
         "bio": "Kathryn Wylde is an emerging actor with a passion for storytelling, demonstrating their skills both on screen and behind the camera.",
         "highResPhoto": "https://cratetelevision.s3.amazonaws.com/photos+/KatWylde.png"
       }
