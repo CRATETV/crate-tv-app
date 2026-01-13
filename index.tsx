@@ -5,7 +5,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { FestivalProvider } from './contexts/FestivalContext';
 import { inject } from '@vercel/analytics';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
-import UpdateBanner from './components/UpdateBanner';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary';
 
 // Inject Vercel Analytics
@@ -215,7 +214,6 @@ const MainApp: React.FC = () => (
     <FestivalProvider>
       <GlobalErrorBoundary>
         <AppRouter />
-        <UpdateBanner onRefresh={() => window.location.reload()} onDismiss={() => {}} />
       </GlobalErrorBoundary>
     </FestivalProvider>
   </AuthProvider>

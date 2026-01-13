@@ -1,77 +1,61 @@
-// This is a Vercel Serverless Function
-// Path: /api/start-watch-party
+
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 
 export async function POST(request: Request) {
   try {
     const { movieKey, password } = await request.json();
 
-    // --- Authentication ---
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
     let isAuthenticated = false;
     if ((primaryAdminPassword && password === primaryAdminPassword) || (masterPassword && password === masterPassword)) {
       isAuthenticated = true;
     } else {
-        for (const key in process.env) {
-            if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
-                isAuthenticated = true;
-                break;
-            }
+        const db = getAdminDb();
+        if (db) {
+            const collabSnap = await db.collection('collaborator_access').where('accessKey', '==', password).limit(1).get();
+            if (!collabSnap.empty) isAuthenticated = true;
         }
     }
-    const anyPasswordSet = primaryAdminPassword || masterPassword || Object.keys(process.env).some(key => key.startsWith('ADMIN_PASSWORD_'));
-    if (!anyPasswordSet) isAuthenticated = true;
 
     if (!isAuthenticated) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' }});
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
     if (!movieKey) {
-        return new Response(JSON.stringify({ error: 'A movie key is required to start the party.' }), { status: 400, headers: { 'Content-Type': 'application/json' }});
+        return new Response(JSON.stringify({ error: 'Movie identification required.' }), { status: 400 });
     }
 
-    // --- Firestore Logic ---
     const initError = getInitializationError();
-    if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
+    if (initError) throw new Error(initError);
     const db = getAdminDb();
-    if (!db) throw new Error("Database connection failed.");
+    if (!db) throw new Error("Database offline.");
 
-    // CLEANUP: Purge ALL messages before starting new party to ensure a clean slate
+    // CLEANUP: Purge old messages
     const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages');
     const snapshot = await messagesRef.get();
-    
     if (!snapshot.empty) {
-        const batchSize = 400; // Firestore batch limit is 500
-        const docs = snapshot.docs;
-        for (let i = 0; i < docs.length; i += batchSize) {
-            const batch = db.batch();
-            const chunk = docs.slice(i, i + batchSize);
-            chunk.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
-        }
-        console.log(`[Watch Party] Purged ${snapshot.size} messages for a fresh start on ${movieKey}.`);
+        const batch = db.batch();
+        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
     }
 
     const partyRef = db.collection('watch_parties').doc(movieKey);
     
-    // Set the status to 'live'. This will be picked up by listeners on the client-side.
+    // Set canonical initial state
     await partyRef.set({
       status: 'live',
       lastStartedAt: new Date().toISOString(),
       isPlaying: false,
       currentTime: 0,
-      isQALive: false
+      isQALive: false,
+      lastUpdated: new Date()
     }, { merge: true });
 
-    return new Response(JSON.stringify({ success: true, message: 'Watch party started with a fresh chat!' }), {
-      status: 200, 
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
 
   } catch (error) {
-    console.error("Error starting watch party:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unknown server error occurred.";
-    return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    console.error("Watch Party Launch Error:", error);
+    return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
   }
 }
