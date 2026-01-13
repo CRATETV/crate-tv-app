@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+
+import React, { useMemo, useRef, useState } from 'react';
 import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';
 import BackToTopButton from './BackToTopButton';
@@ -7,6 +8,7 @@ import LoadingSpinner from './LoadingSpinner';
 import BottomNavBar from './BottomNavBar';
 import { useFestival } from '../contexts/FestivalContext';
 import SEO from './SEO';
+import TopTenShareableImage from './TopTenShareableImage';
 
 const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => void; views: number }> = ({ movie, rank, onSelect, views }) => (
     <div 
@@ -54,6 +56,8 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
 
 const TopTenPage: React.FC = () => {
     const { movies, analytics, isLoading } = useFestival();
+    const [isGenerating, setIsGenerating] = useState(false);
+    const exportRef = useRef<HTMLDivElement>(null);
     
     const sortedMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
@@ -67,6 +71,33 @@ const TopTenPage: React.FC = () => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    const handleExport = async () => {
+        if (!exportRef.current || isGenerating) return;
+        setIsGenerating(true);
+
+        try {
+            const { default: html2canvas } = await import('html2canvas');
+            const canvas = await html2canvas(exportRef.current, {
+                useCORS: true,
+                backgroundColor: '#050505',
+                scale: 1.5, // High fidelity
+                logging: false,
+            });
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            const link = document.createElement('a');
+            link.download = `CrateTV_Top10_${new Date().toISOString().split('T')[0]}.jpg`;
+            link.href = dataUrl;
+            link.click();
+        } catch (err) {
+            console.error("Export failure:", err);
+            alert("Digital synthesis failed. Please try again.");
+        } finally {
+            setIsGenerating(true);
+            setTimeout(() => setIsGenerating(false), 2000);
+        }
+    };
+
     if (isLoading) return <LoadingSpinner />;
 
     return (
@@ -76,6 +107,21 @@ const TopTenPage: React.FC = () => {
             
             <main className="flex-grow pt-32 pb-32 px-4 md:px-12">
                 <div className="max-w-5xl mx-auto space-y-8">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
+                        <div>
+                            <p className="text-red-500 font-black uppercase tracking-[0.5em] text-[10px] mb-4">Official Leaderboard</p>
+                            <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic">Top 10 Today.</h1>
+                        </div>
+                        <button 
+                            onClick={handleExport}
+                            disabled={isGenerating}
+                            className="bg-white text-black font-black px-8 py-4 rounded-2xl uppercase tracking-widest text-[10px] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            {isGenerating ? 'Synthesizing...' : 'Download Social Asset'}
+                        </button>
+                    </div>
+
                     <div className="space-y-6">
                         {sortedMovies.map((movie, index) => (
                             <RankCard 
@@ -99,6 +145,20 @@ const TopTenPage: React.FC = () => {
             <CollapsibleFooter />
             <BackToTopButton />
             <BottomNavBar onSearchClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }} />
+
+            {/* Hidden export target */}
+            <div className="fixed left-[-9999px] top-0 overflow-hidden" aria-hidden="true">
+                <div ref={exportRef}>
+                    <TopTenShareableImage 
+                        topFilms={sortedMovies.map(m => ({ 
+                            key: m.key, 
+                            title: m.title, 
+                            poster: m.poster 
+                        }))} 
+                        date={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} 
+                    />
+                </div>
+            </div>
         </div>
     );
 };

@@ -243,13 +243,14 @@ const AdminPage: React.FC = () => {
     if (isLoading) return <LoadingSpinner />;
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white">
+        <div className="min-h-screen bg-[#050505] text-white selection:bg-red-600 selection:text-white">
             <div className="max-w-[1800px] mx-auto p-4 md:p-10">
                 <div className="flex justify-between items-center mb-12 border-b border-white/5 pb-10">
                     <div className="flex items-center gap-6">
                         <h1 className="text-4xl font-black uppercase tracking-tighter italic">Studio <span className="text-red-600">Command</span></h1>
-                        <div className="bg-red-600/10 border border-red-500/20 px-3 py-1 rounded-lg">
-                            <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">Active Operator: {sessionStorage.getItem('operatorName')}</span>
+                        <div className="bg-red-600/10 border border-red-500/20 px-3 py-1.5 rounded-xl flex items-center gap-3">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                            <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Active Session: {sessionStorage.getItem('operatorName')}</span>
                         </div>
                     </div>
                     <button onClick={() => { sessionStorage.clear(); window.location.reload(); }} className="bg-white/5 text-gray-500 hover:text-white px-6 py-2.5 rounded-xl uppercase text-[10px] font-black border border-white/10 transition-all">Terminate Uplink</button>
@@ -257,7 +258,13 @@ const AdminPage: React.FC = () => {
                 
                 <div className="flex overflow-x-auto pb-4 mb-10 gap-2 scrollbar-hide">
                     {Object.entries(ALL_TABS).map(([tabId, label]) => allowedTabs.includes(tabId) && (
-                        <button key={tabId} onClick={() => setActiveTab(tabId)} className={`px-8 py-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}>{label}</button>
+                        <button 
+                            key={tabId} 
+                            onClick={() => setActiveTab(tabId)} 
+                            className={`px-8 py-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}
+                        >
+                            {label}
+                        </button>
                     ))}
                 </div>
 

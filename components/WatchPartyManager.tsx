@@ -148,17 +148,20 @@ const WatchPartyControlRoom: React.FC<{
     return (
         <div className="bg-white/[0.02] p-8 rounded-[3rem] border border-white/5 shadow-2xl mb-12 animate-[fadeIn_0.5s_ease-out]">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/5 pb-8">
-                <div>
-                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic">Console: {movie.title}</h2>
-                    <div className="flex items-center gap-4 mt-2">
-                         <span className={`px-3 py-1 text-[9px] font-black text-white rounded-full uppercase tracking-widest ${status.color}`}>
-                            {status.text}
-                        </span>
-                        {blockInfo && (
-                            <span className="text-[9px] font-black text-indigo-500 bg-indigo-500/10 px-3 py-1 rounded-full uppercase border border-indigo-500/20">
-                                BLOCK: {blockInfo.title} // Sequence {(partyState?.activeMovieIndex || 0) + 1}/{blockInfo.movieKeys.length}
+                <div className="flex items-center gap-6">
+                    <img src={movie.poster} className="w-20 h-28 object-cover rounded-xl shadow-2xl border border-white/10" alt="" />
+                    <div>
+                        <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">Console: {movie.title}</h2>
+                        <div className="flex items-center gap-4 mt-3">
+                            <span className={`px-3 py-1 text-[9px] font-black text-white rounded-full uppercase tracking-widest ${status.color}`}>
+                                {status.text}
                             </span>
-                        )}
+                            {blockInfo && (
+                                <span className="text-[9px] font-black text-indigo-500 bg-indigo-500/10 px-3 py-1 rounded-full uppercase border border-indigo-500/20">
+                                    BLOCK: {blockInfo.title} // Sequence {(partyState?.activeMovieIndex || 0) + 1}/{blockInfo.movieKeys.length}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
                 <div className="flex gap-3">
@@ -198,7 +201,7 @@ const WatchPartyControlRoom: React.FC<{
                     </div>
                 </div>
                 <div className="lg:col-span-1 h-[60vh] lg:h-auto">
-                     <EmbeddedChat movieKey={movie.key} user={null} />
+                     <EmbeddedChat movieKey={movie.key} movie={movie} user={null} />
                 </div>
             </div>
         </div>
@@ -226,9 +229,8 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
     }, []);
 
     const allBlocks = useMemo(() => {
-        // UNIFIED MANIFEST: Pull from regular Festival data AND Crate Fest config
         const regular = (festivalData || []).flatMap(day => (day.blocks || []).map(b => ({ ...b, time: b.time || 'TBD' })));
-        const crateFest = (settings.crateFestConfig?.movieBlocks || []).map(b => ({ ...b, time: 'SPECIAL_EVENT' }));
+        const crateFest = (settings.crateFestConfig?.movieBlocks || []).map(b => ({ ...b, title: `[Crate Fest] ${b.title}`, time: 'SPECIAL_EVENT' }));
         return [...regular, ...crateFest] as FilmBlock[];
     }, [festivalData, settings.crateFestConfig]);
 
@@ -241,6 +243,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         if (!liveKey) return null;
         const state = partyStates[liveKey];
         const movie = allMovies[liveKey];
+        if (!movie) return null;
         const block = allBlocks.find(b => b.id === state.activeBlockId);
         return { movie, state, block };
     }, [partyStates, allMovies, allBlocks]);
@@ -366,7 +369,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                         <table className="w-full text-left text-xs">
                             <thead className="bg-white/5 text-gray-500 uppercase font-black">
                                 <tr>
-                                    <th className="p-5">Film Title</th>
+                                    <th className="p-5">Film Identity</th>
                                     <th className="p-5">Handshake Status</th>
                                     <th className="p-5">Enabled</th>
                                     <th className="p-5 text-right">Action</th>
@@ -375,7 +378,15 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                             <tbody className="divide-y divide-white/5">
                                 {filteredMovies.map(movie => (
                                     <tr key={movie.key} className="hover:bg-white/[0.01] transition-colors group">
-                                        <td className="p-5 font-black text-white uppercase tracking-tight text-sm">{movie.title}</td>
+                                        <td className="p-5">
+                                            <div className="flex items-center gap-4">
+                                                <img src={movie.poster} className="w-10 h-14 object-cover rounded shadow-lg border border-white/10 group-hover:scale-105 transition-transform" alt="" />
+                                                <div>
+                                                    <p className="font-black text-white uppercase tracking-tight text-sm">{movie.title}</p>
+                                                    <p className="text-[9px] text-gray-600 font-bold uppercase mt-1">Dir. {movie.director}</p>
+                                                </div>
+                                            </div>
+                                        </td>
                                         <td className="p-5">
                                             <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border border-current opacity-70 ${getPartyStatusText(movie, partyStates[movie.key]).color.replace('bg-', 'text-')}`}>
                                                 {getPartyStatusText(movie, partyStates[movie.key]).text}
