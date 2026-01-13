@@ -14,7 +14,6 @@ inject();
 import App from './App';
 import AdminPage from './AdminPage';
 import LandingPage from './components/LandingPage';
-import ClassicsPage from './components/ClassicsPage';
 import PublicSquarePage from './components/PublicSquarePage';
 import CratemasPage from './components/CratemasPage';
 import SubmitPage from './SubmitPage';
@@ -136,8 +135,6 @@ const AppRouter: React.FC = () => {
        return user ? <CrateFestPage /> : <RedirectToLogin />;
     case '/watchlist':
       return user ? <WatchlistPage /> : <RedirectToLogin />;
-    case '/classics':
-      return user ? <ClassicsPage /> : <RedirectToLogin />;
     case '/public-square':
       return user ? <PublicSquarePage /> : <RedirectToLogin />;
     case '/cratemas':

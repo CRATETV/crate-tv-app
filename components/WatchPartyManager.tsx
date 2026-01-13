@@ -108,6 +108,7 @@ const WatchPartyControlRoom: React.FC<{
 }> = ({ movie, partyState, blockInfo, onStartParty, onEndParty, onNextFilm, onSyncState }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSyncTime = useRef(0);
+    const [isCopying, setIsCopying] = useState(false);
 
     const handlePlay = () => onSyncState({ isPlaying: true });
     const handlePause = () => videoRef.current && onSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime });
@@ -119,6 +120,15 @@ const WatchPartyControlRoom: React.FC<{
             lastSyncTime.current = Date.now();
             onSyncState({ currentTime: video.currentTime });
         }
+    };
+
+    const handleCopyBackstageInvite = () => {
+        if (!partyState?.backstageKey) return;
+        setIsCopying(true);
+        const url = `${window.location.origin}/watchparty/${movie.key}`;
+        const msg = `Hello! You are invited to the Backstage Talkback for "${movie.title}".\n\nLink: ${url}\nAccess Key: ${partyState.backstageKey}\n\nPlease enter the key when prompted to activate your broadcast node.`;
+        navigator.clipboard.writeText(msg);
+        setTimeout(() => setIsCopying(false), 2000);
     };
     
     useEffect(() => {
@@ -150,7 +160,7 @@ const WatchPartyControlRoom: React.FC<{
                             </span>
                             {blockInfo && (
                                 <span className="text-[9px] font-black text-indigo-500 bg-indigo-500/10 px-3 py-1 rounded-full uppercase border border-indigo-500/20">
-                                    BLOCK: {blockInfo.title} // Sequence {(partyState?.activeMovieIndex || 0) + 1}/{blockInfo.movieKeys.length}
+                                    BLOCK: {blockInfo.title} // Seq {(partyState?.activeMovieIndex || 0) + 1}/{blockInfo.movieKeys.length}
                                 </span>
                             )}
                         </div>
@@ -164,6 +174,13 @@ const WatchPartyControlRoom: React.FC<{
                     ) : (
                         <>
                             <button 
+                                onClick={handleCopyBackstageInvite}
+                                className={`px-6 py-4 rounded-2xl uppercase font-black text-[10px] tracking-widest transition-all flex items-center gap-2 ${isCopying ? 'bg-green-600 text-white' : 'bg-white/10 text-gray-400 border border-white/10 hover:text-white'}`}
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                                {isCopying ? 'Invite Copied ✓' : 'Invite Guest Backstage'}
+                            </button>
+                            <button 
                                 onClick={() => onSyncState({ isQALive: !partyState?.isQALive })} 
                                 className={`font-black py-4 px-10 rounded-2xl uppercase tracking-[0.2em] shadow-2xl transition-all text-xs border ${partyState?.isQALive ? 'bg-emerald-600 border-emerald-500 text-white animate-pulse' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
                             >
@@ -171,7 +188,7 @@ const WatchPartyControlRoom: React.FC<{
                             </button>
                             {blockInfo && onNextFilm && (partyState?.activeMovieIndex || 0) < blockInfo.movieKeys.length - 1 && (
                                 <button onClick={onNextFilm} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 px-10 rounded-2xl uppercase tracking-[0.2em] shadow-2xl transition-all text-xs flex items-center gap-3">
-                                    Next Film in Block
+                                    Next Film
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
                                 </button>
                             )}
@@ -187,10 +204,10 @@ const WatchPartyControlRoom: React.FC<{
                 <div className="lg:col-span-2 space-y-8">
                     <div className="relative aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10">
                         {partyState?.isQALive ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-emerald-900/10 text-emerald-500">
-                                <span className="text-6xl mb-4">🎤</span>
-                                <h4 className="text-2xl font-black uppercase italic tracking-tighter">Talkback Protocol Active</h4>
-                                <p className="text-xs font-bold uppercase mt-2 opacity-60">Director is being cued for live uplink.</p>
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-emerald-900/10 text-emerald-500 p-12 text-center">
+                                <span className="text-6xl mb-6">🎤</span>
+                                <h4 className="text-3xl font-black uppercase italic tracking-tighter">Talkback Protocol Active</h4>
+                                <p className="text-gray-400 text-sm font-bold uppercase mt-3 tracking-widest max-w-sm">Guest access key: <span className="text-white bg-white/10 px-3 py-1 rounded select-all font-mono ml-2">{partyState.backstageKey}</span></p>
                             </div>
                         ) : (
                             <video
@@ -235,7 +252,6 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
     }, []);
 
     const allBlocks = useMemo(() => {
-        // UNIFIED MANIFEST: Pull from regular Festival data AND Crate Fest config
         const regular = (festivalData || []).flatMap(day => (day.blocks || []).map(b => ({ ...b, time: b.time || 'TBD' })));
         const crateFest = (settings.crateFestConfig?.movieBlocks || []).map(b => ({ ...b, time: 'SPECIAL_EVENT' }));
         return [...regular, ...crateFest] as FilmBlock[];
@@ -273,7 +289,12 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
             body: JSON.stringify({ movieKey, password }),
         });
         if (res.ok) {
-            await handleSyncState(movieKey, { status: 'live', isPlaying: false, currentTime: 0 });
+            await handleSyncState(movieKey, { 
+                status: 'live', 
+                isPlaying: false, 
+                currentTime: 0, 
+                backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase()
+            });
         }
     };
 
@@ -296,7 +317,8 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                 isPlaying: false,
                 currentTime: 0,
                 activeBlockId: block.id, 
-                activeMovieIndex: 0 
+                activeMovieIndex: 0,
+                backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase()
             });
         }
     };
@@ -409,7 +431,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                                             <button 
                                                 onClick={() => handleStartIndividual(movie.key)}
                                                 disabled={activeParty !== null || !movie.isWatchPartyEnabled}
-                                                className="bg-white/10 hover:bg-red-600 text-gray-500 hover:text-white font-black px-4 py-1.5 rounded-lg text-[9px] uppercase tracking-widest transition-all disabled:opacity-20"
+                                                className="bg-white/10 hover:bg-red-600 text-gray-400 hover:text-white font-black px-4 py-1.5 rounded-lg text-[9px] uppercase tracking-widest transition-all disabled:opacity-20"
                                             >
                                                 Initialize
                                             </button>

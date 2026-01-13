@@ -8,6 +8,7 @@ import GrantWriter from './GrantWriter';
 import LegalStrategist from './LegalStrategist';
 import RightsAuditor from './RightsAuditor';
 import FundStrategist from './FundStrategist';
+import ArchiveScoutTab from './ArchiveScoutTab';
 
 interface DiscoveryEngineProps {
     analytics: AnalyticsData | null;
@@ -63,11 +64,12 @@ const GrantLedger: React.FC = () => {
 };
 
 const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({ analytics, movies, categories, onUpdateCategories }) => {
-    const [activeSection, setActiveSection] = useState<'auditor' | 'strategist' | 'fund' | 'partners' | 'grantwriter' | 'ledger'>('auditor');
+    const [activeSection, setActiveSection] = useState<'scout' | 'auditor' | 'strategist' | 'fund' | 'partners' | 'grantwriter' | 'ledger'>('scout');
 
     return (
         <div className="space-y-12 pb-20 animate-[fadeIn_0.4s_ease-out]">
             <div className="flex flex-wrap gap-4 p-1.5 bg-black border border-white/5 rounded-2xl w-max mx-auto shadow-2xl">
+                <button onClick={() => setActiveSection('scout')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'scout' ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-600 hover:text-white'}`}>Modern Scout</button>
                 <button onClick={() => setActiveSection('auditor')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'auditor' ? 'bg-red-600 text-white' : 'text-gray-600 hover:text-white'}`}>Rights Auditor</button>
                 <button onClick={() => setActiveSection('fund')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'fund' ? 'bg-amber-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Fund Strategist</button>
                 <button onClick={() => setActiveSection('strategist')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'strategist' ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}>Legal Strategist</button>
@@ -77,6 +79,7 @@ const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({ analytics, movies, ca
             </div>
 
             <div className="animate-[fadeIn_0.5s_ease-out]">
+                {activeSection === 'scout' && <ArchiveScoutTab />}
                 {activeSection === 'auditor' && <RightsAuditor />}
                 {activeSection === 'fund' && <FundStrategist />}
                 {activeSection === 'strategist' && <LegalStrategist />}

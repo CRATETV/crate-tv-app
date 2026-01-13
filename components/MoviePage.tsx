@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import ActorBioModal from './ActorBioModal';
@@ -29,16 +30,13 @@ const getEmbedUrl = (url: string): string | null => {
     return null;
 };
 
-// FIX: Completed truncated MoviePage component and added default export.
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie } = useAuth();
   const { movies: allMovies, categories: allCategories, isLoading: isDataLoading } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
   
-  // Track the current search params to react to "play=true" changes in the URL
   const [currentSearch, setCurrentSearch] = useState(window.location.search);
-
   const [playerMode, setPlayerMode] = useState<'poster' | 'full'>(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('play') === 'true' ? 'full' : 'poster';
@@ -49,23 +47,23 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [isAnimatingLike, setIsAnimatingLike] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasTrackedViewRef = useRef(false);
 
+  const isLiked = useMemo(() => likedMoviesArray.includes(movieKey), [likedMoviesArray, movieKey]);
+
   const hasAccess = useMemo(() => {
     if (!movie) return false;
-    
-    // Bypass paywall if user has Jury Pass (Member or Guest)
     const hasGuestPass = localStorage.getItem('crate_guest_jury_active') === 'true';
     if (hasJuryPass || hasGuestPass) return true;
-
     if (!movie.isForSale) return true;
     const expiration = rentals[movieKey];
     return expiration ? new Date(expiration) > new Date() : false;
   }, [movie, rentals, movieKey, hasJuryPass]);
 
-  // Listen for navigation events to update player mode dynamically
   useEffect(() => {
     const onUrlChange = () => {
         setCurrentSearch(window.location.search);
@@ -83,7 +81,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         const params = new URLSearchParams(currentSearch);
         if (params.get('play') === 'true' && hasAccess && isMovieReleased(movie)) {
             setPlayerMode('full');
-            setIsEnded(false); // Reset ended state if user is forcing a replay
+            setIsEnded(false);
             if (videoRef.current && videoRef.current.ended) {
                 videoRef.current.currentTime = 0;
             }
@@ -98,6 +96,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     window.history.pushState({}, '', '/');
     window.dispatchEvent(new Event('pushstate'));
   }, []);
+
+  const handleToggleLike = () => {
+    setIsAnimatingLike(true);
+    toggleLikeMovie(movieKey);
+    setTimeout(() => setIsAnimatingLike(false), 600);
+  };
 
   const playContent = useCallback(async () => {
     if (videoRef.current && movie?.key) {
@@ -148,7 +152,6 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   if (!movie) return <div className="h-screen flex items-center justify-center font-black uppercase text-gray-800 bg-black">Content Restricted</div>;
 
   const embedUrl = getEmbedUrl(movie.fullMovie);
-  const isLiked = likedMoviesArray.includes(movieKey);
 
   return (
     <div className="flex flex-col min-h-screen bg-[#050505] text-white">
@@ -165,17 +168,48 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                             ) : (
                                 <div className="relative w-full h-full" onClick={toggleManualPause}>
                                     <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full object-contain block transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'}`} controls={false} playsInline autoPlay onPause={() => !isEnded && setIsPaused(true)} onPlay={() => !isEnded && setIsPaused(false)} onEnded={() => setIsEnded(true)} controlsList="nodownload" />
-                                    {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={() => toggleLikeMovie(movieKey)} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => {}} onHome={handleGoHome} />}
+                                    
+                                    {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
+                                    
                                     {isEnded && (
-                                        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out]">
-                                            <div className="max-w-2xl space-y-10">
+                                        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/40 backdrop-blur-sm">
+                                            <div className="max-w-2xl w-full space-y-12">
                                                 <div>
-                                                    <p className="text-red-500 font-black uppercase tracking-[0.6em] text-xs mb-4">Transmission Complete</p>
+                                                    <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-4">Transmission Complete</p>
                                                     <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">{movie.title}</h2>
-                                                    <p className="text-gray-400 font-bold uppercase tracking-widest text-sm mt-4">Directed by {movie.director}</p>
+                                                    <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-4">Directed by {movie.director}</p>
                                                 </div>
-                                                <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
+
+                                                {/* Engagement Grid */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-xl mx-auto">
+                                                    <button 
+                                                        onClick={handleToggleLike}
+                                                        className={`p-8 rounded-[2.5rem] border transition-all transform hover:scale-105 active:scale-95 flex flex-col items-center gap-4 group ${isLiked ? 'bg-red-600 border-red-500 shadow-[0_0_50px_rgba(239,68,68,0.4)]' : 'bg-white/5 border-white/10 hover:border-red-600/50'}`}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-10 w-10 transition-all ${isLiked ? 'text-white scale-110' : 'text-gray-500 group-hover:text-red-500'} ${isAnimatingLike ? 'animate-heartbeat' : ''}`} fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                                        </svg>
+                                                        <div>
+                                                            <p className="text-base font-black uppercase tracking-tight">{isLiked ? 'Applauded' : 'Applaud Film'}</p>
+                                                            <p className="text-[8px] uppercase font-bold text-gray-500">Save to your favorites</p>
+                                                        </div>
+                                                    </button>
+
+                                                    <button 
+                                                        onClick={() => setIsSupportModalOpen(true)}
+                                                        className="p-8 rounded-[2.5rem] bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/30 transition-all transform hover:scale-105 active:scale-95 flex flex-col items-center gap-4 shadow-[0_0_50px_rgba(79,70,229,0.3)]"
+                                                    >
+                                                        <span className="text-4xl">💎</span>
+                                                        <div>
+                                                            <p className="text-base font-black uppercase tracking-tight">Support Creator</p>
+                                                            <p className="text-[8px] uppercase font-bold text-indigo-200">Help sustain the craft</p>
+                                                        </div>
+                                                    </button>
+                                                </div>
+
+                                                <div className="flex flex-col sm:flex-row items-center justify-center gap-10 pt-4">
                                                     <button onClick={handleGoHome} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">Return to Library</button>
+                                                    <div className="w-px h-4 bg-white/10 hidden sm:block"></div>
                                                     <button onClick={() => { setIsEnded(false); if(videoRef.current) videoRef.current.currentTime = 0; videoRef.current?.play(); }} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">Re-Watch Session</button>
                                                 </div>
                                             </div>
@@ -251,13 +285,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             <MovieDetailsModal 
                 movie={movie} 
                 isLiked={isLiked} 
-                onToggleLike={() => toggleLikeMovie(movieKey)} 
+                onToggleLike={handleToggleLike} 
                 onClose={() => setIsDetailsModalOpen(false)} 
                 onSelectActor={setSelectedActor} 
                 allMovies={allMovies} 
                 allCategories={allCategories} 
                 onSelectRecommendedMovie={(m) => { setIsDetailsModalOpen(false); window.history.pushState({}, '', `/movie/${m.key}`); window.dispatchEvent(new Event('pushstate')); }} 
-                onSupportMovie={() => {}} 
+                onSupportMovie={() => setIsSupportModalOpen(true)} 
                 onPlayMovie={() => { setIsDetailsModalOpen(false); setPlayerMode('full'); }}
             />
         )}
@@ -270,6 +304,15 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 movie={movie} 
                 onClose={() => setIsPurchaseModalOpen(false)} 
                 onPaymentSuccess={handlePurchaseSuccess} 
+            />
+        )}
+
+        {isSupportModalOpen && (
+            <SquarePaymentModal 
+                paymentType="donation" 
+                movie={movie} 
+                onClose={() => setIsSupportModalOpen(false)} 
+                onPaymentSuccess={() => setIsSupportModalOpen(false)} 
             />
         )}
     </div>
