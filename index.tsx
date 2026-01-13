@@ -57,7 +57,6 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
-// FIX: Variable 'root' is declared once here
 const root = ReactDOM.createRoot(rootElement);
 
 // This component now contains the router and authentication logic.
@@ -125,10 +124,9 @@ const AppRouter: React.FC = () => {
     case '/':
       return user ? <App /> : <LandingPage />;
     case '/zine':
-    case '/newsletter': // Backward compatibility alias
       return <ZinePage />;
     case '/jury':
-        return <JuryRoomPage />; // Anyone can access the entry page/paywall
+        return <JuryRoomPage />;
     case '/account':
       return user ? <AccountPage /> : <RedirectToLogin />;
     case '/link-roku':
@@ -212,7 +210,6 @@ const AppRouter: React.FC = () => {
   }
 };
 
-// FIX: Define MainApp to wrap AppRouter with context providers and Error Boundary
 const MainApp: React.FC = () => (
   <AuthProvider>
     <FestivalProvider>
@@ -224,7 +221,6 @@ const MainApp: React.FC = () => (
   </AuthProvider>
 );
 
-// FIX: Removed 'const' keyword to fix syntax error and prevent redeclaration of 'root'
 root.render(
   <React.StrictMode>
     <MainApp />

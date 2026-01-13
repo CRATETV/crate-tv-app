@@ -12,12 +12,6 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    const typeQueries = {
-        bootstrapper: "Tech startup programs for bootstrapped companies 2025, Cloud credits for non-VC startups, AWS Activate Founders",
-        grants: "Independent film grants 2025, Digital literacy subsidies, NEA media projects, Public access cinema funding, Sundance Institute grants",
-        philly: "Philadelphia Independence Public Media Foundation grants, Philly Cultural Fund cycles 2025, William Penn Foundation media arts"
-    };
-
     const prompt = `
         You are a Strategic Funding Intelligence Agent for Crate TV.
         Crate TV is an independent film distribution platform based in Philadelphia.
@@ -27,6 +21,7 @@ export async function POST(request: Request) {
         
         NARRATIVE LEVERS:
         - We fight "Digital Poverty" by providing high-fidelity distribution to non-commercial work.
+        - We act as a "Public Square" for community-driven cinematic journalism.
         - We are a "Distribution Afterlife" for filmmakers.
         - We use 70/30 creator-first economics.
 

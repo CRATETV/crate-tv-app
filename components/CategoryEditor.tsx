@@ -6,7 +6,7 @@ import { useFestival } from '../contexts/FestivalContext';
 interface MovieSelectorModalProps {
   allMovies: Movie[];
   initialSelectedKeys: string[];
-  excludedKeys?: string[]; // Keys to hide from the list (e.g. from other isolated sectors)
+  excludedKeys?: string[]; // Keys to hide from the list
   onSave: (newMovieKeys: string[]) => void;
   onClose: () => void;
   title?: string;
@@ -25,7 +25,6 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
 
   const handleSave = () => onSave(Array.from(selectedKeys));
 
-  // Filter out movies that are in the excludedKeys list, UNLESS they are already selected for this specific row
   const filteredMovies = allMovies
     .filter(movie => {
         const isExcluded = excludedKeys.includes(movie.key) && !selectedKeys.has(movie.key);
@@ -200,11 +199,12 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
         </div>
       </div>
 
+      {/* Global Meta Configuration */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-[#0f0f0f] border border-red-500/20 p-8 rounded-[2.5rem] shadow-xl">
               <div className="flex flex-col md:flex-row justify-between gap-6 mb-8">
                   <div>
-                      <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Holiday Hub</h3>
+                      <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Identity Module</h3>
                       <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Seasonal profile configuration</p>
                   </div>
                   <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
@@ -217,15 +217,15 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
               </div>
 
               <div className="space-y-4">
-                  <input type="text" value={holidaySettings.holidayName} onChange={(e) => setHolidaySettings({...holidaySettings, holidayName: e.target.value})} placeholder="Holiday Name" className="form-input !bg-black/40" />
-                  <textarea value={holidaySettings.holidayTagline} onChange={(e) => setHolidaySettings({...holidaySettings, holidayTagline: e.target.value})} placeholder="Tagline" className="form-input !bg-black/40" rows={2} />
+                  <input type="text" value={holidaySettings.holidayName} onChange={(e) => setHolidaySettings({...holidaySettings, holidayName: e.target.value})} placeholder="Session Title" className="form-input !bg-black/40" />
+                  <textarea value={holidaySettings.holidayTagline} onChange={(e) => setHolidaySettings({...holidaySettings, holidayTagline: e.target.value})} placeholder="Session Narrative..." className="form-input !bg-black/40" rows={2} />
                   <select value={holidaySettings.holidayTheme} onChange={(e) => setHolidaySettings({...holidaySettings, holidayTheme: e.target.value as any})} className="form-input !bg-black/40">
                       <option value="christmas">Christmas</option>
                       <option value="valentines">Valentine's</option>
                       <option value="gold">Anniversary Gold</option>
                       <option value="generic">Neutral Dark</option>
                   </select>
-                  <button onClick={saveIdentityDetails} className="w-full bg-red-600 hover:bg-red-500 text-white font-black py-4 rounded-xl shadow-lg transition-all uppercase text-[10px] tracking-widest">Commit Profile Updates</button>
+                  <button onClick={saveIdentityDetails} className="w-full bg-red-600 hover:bg-red-500 text-white font-black py-4 rounded-xl shadow-lg transition-all uppercase text-[10px] tracking-widest">Commit Settings</button>
               </div>
           </div>
 
@@ -236,7 +236,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                       <svg className="w-8 h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                   </div>
                   <p className="text-gray-700 font-black uppercase text-[10px] tracking-[0.5em]">Global Control Axis</p>
-                  <p className="text-sm text-gray-500 max-w-xs mx-auto font-medium">Specific operational meta-data is hardcoded into the V4.0 infrastructure manifest.</p>
+                  <p className="text-sm text-gray-500 max-w-xs mx-auto font-medium">Manifest synchronization propagates to all Roku and Web endpoints instantly.</p>
               </div>
           </div>
       </div>
@@ -248,7 +248,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                 <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">Homepage Clusters</h2>
                 <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Public-facing row distribution</p>
             </div>
-            <button onClick={() => setCategories({ [`row_${Date.now()}`]: { title: 'NEW_SECTOR', movieKeys: [] }, ...categories })} className="bg-red-600 hover:bg-red-700 text-white font-black py-3 px-6 rounded-xl text-[10px] uppercase tracking-widest shadow-xl transition-all active:scale-95">+ Add Cluster</button>
+            <button onClick={() => setCategories({ [`row_${Date.now()}`]: { title: 'NEW_CLUSTER', movieKeys: [] }, ...categories })} className="bg-red-600 hover:bg-red-700 text-white font-black py-3 px-6 rounded-xl text-[10px] uppercase tracking-widest shadow-xl transition-all active:scale-95">+ Add Cluster</button>
         </div>
 
         <div className="grid gap-4">
@@ -256,7 +256,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                 const cat = category as Category;
                 if (PROTECTED_KEYS.includes(key)) return null;
                 return (
-                    <div key={key} className="bg-white/[0.02] border border-white/5 p-6 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-6 group hover:border-white/10 transition-all">
+                    <div key={key} className="bg-white/[0.02] border border-white/5 p-6 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-6 group hover:border-white/10 transition-all shadow-xl">
                         <div className="flex-grow w-full">
                             <input type="text" value={cat.title} onChange={e => handleCategoryChange(key, 'title', e.target.value)} className="text-xl font-black uppercase tracking-tight bg-transparent text-white focus:outline-none w-full border-b border-transparent focus:border-white/10 italic" />
                             <div className="flex items-center gap-3 mt-2">
@@ -266,7 +266,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                             </div>
                         </div>
                         <div className="flex items-center gap-4 flex-shrink-0">
-                            <button onClick={() => setEditingCategoryKey(key)} className="bg-white/5 hover:bg-white text-gray-400 hover:text-black font-black py-3 px-8 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all">Edit Row Content</button>
+                            <button onClick={() => setEditingCategoryKey(key)} className="bg-white/5 hover:bg-white text-gray-400 hover:text-black font-black py-3 px-8 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all">Edit Content</button>
                             <button onClick={() => deleteCategory(key)} className="text-red-500 hover:text-red-400 font-black text-[9px] uppercase tracking-widest px-4 transition-colors">Purge</button>
                         </div>
                     </div>
