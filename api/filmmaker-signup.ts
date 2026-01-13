@@ -1,3 +1,4 @@
+
 // This is a Vercel Serverless Function
 // Path: /api/filmmaker-signup
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -9,6 +10,7 @@ const fromEmail = process.env.FROM_EMAIL || 'noreply@cratetv.net';
 
 // List of creators who should automatically get both Actor and Filmmaker roles.
 const DUAL_ROLE_NAMES = new Set([
+    'salome',
     'salome denoon',
     'michael dwayne paylor',
     'michelle reale-opalesky',
@@ -43,8 +45,9 @@ export async function POST(request: Request) {
 
     moviesSnapshot.forEach(movieDoc => {
         const movieData = movieDoc.data() as Movie;
-        const directors = (movieData.director || '').split(',').map(d => d.trim().toLowerCase());
-        const producers = (movieData.producers || '').split(',').map(p => p.trim().toLowerCase());
+        // Split by commas to handle multi-director/producer strings
+        const directors = (movieData.director || '').toLowerCase().split(',').map(d => d.trim());
+        const producers = (movieData.producers || '').toLowerCase().split(',').map(p => p.trim());
         
         if (directors.includes(trimmedName) || producers.includes(trimmedName)) {
             personFound = true;
@@ -72,12 +75,12 @@ export async function POST(request: Request) {
         }
     }
 
-    // --- Step 3: Set custom claim and Firestore profile (ROBUST METHOD) ---
+    // --- Step 3: Set custom claim and Firestore profile ---
     const isDualRole = DUAL_ROLE_NAMES.has(trimmedName);
     const existingClaims = userRecord.customClaims || {};
 
     const newClaims = {
-        isFilmmaker: true, // Always grant filmmaker role
+        isFilmmaker: true,
         isActor: existingClaims.isActor === true || isDualRole,
     };
     

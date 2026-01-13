@@ -24,21 +24,13 @@ const getPartyStatusText = (movie: Movie, partyState?: WatchPartyState) => {
     return { text: 'Session Inactive', color: 'bg-gray-700' };
 };
 
-const formatISOForInput = (isoString?: string): string => {
-    if (!isoString) return '';
-    try {
-        const date = new Date(isoString);
-        if (isNaN(date.getTime())) return '';
-        const tzoffset = date.getTimezoneOffset() * 60000;
-        return new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
-    } catch (e) {
-        return '';
-    }
-};
-
 // --- CHILD COMPONENTS ---
 
-const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: string | null; avatar?: string; } | null }> = ({ movieKey, user }) => {
+const EmbeddedChat: React.FC<{ 
+    movieKey: string; 
+    user: { name?: string; email: string | null; avatar?: string; } | null;
+    movie?: Movie; 
+}> = ({ movieKey, user, movie }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -81,7 +73,7 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
     return (
         <div className="w-full h-full flex flex-col bg-[#0a0a0a] border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
             <div className="p-4 text-xs font-black uppercase tracking-widest text-gray-500 border-b border-white/5 flex-shrink-0">
-                Live Dispatch Feed
+                Live Dispatch Feed {movie && `// ${movie.title}`}
             </div>
             <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide">
                 {messages.map(msg => (
@@ -149,7 +141,7 @@ const WatchPartyControlRoom: React.FC<{
         <div className="bg-white/[0.02] p-8 rounded-[3rem] border border-white/5 shadow-2xl mb-12 animate-[fadeIn_0.5s_ease-out]">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/5 pb-8">
                 <div className="flex items-center gap-6">
-                    <img src={movie.poster} className="w-20 h-28 object-cover rounded-xl shadow-2xl border border-white/10" alt="" />
+                    <img src={movie.poster} className="w-16 h-24 object-cover rounded-xl shadow-xl border border-white/10" alt="" />
                     <div>
                         <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">Console: {movie.title}</h2>
                         <div className="flex items-center gap-4 mt-3">
@@ -164,13 +156,19 @@ const WatchPartyControlRoom: React.FC<{
                         </div>
                     </div>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3">
                     {!isLive ? (
                         <button onClick={onStartParty} className="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-2xl uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all text-xs">
                             Initialize Session
                         </button>
                     ) : (
                         <>
+                            <button 
+                                onClick={() => onSyncState({ isQALive: !partyState?.isQALive })} 
+                                className={`font-black py-4 px-10 rounded-2xl uppercase tracking-[0.2em] shadow-2xl transition-all text-xs border ${partyState?.isQALive ? 'bg-emerald-600 border-emerald-500 text-white animate-pulse' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                            >
+                                {partyState?.isQALive ? 'End Talkback Mode' : 'Start Talkback Mode'}
+                            </button>
                             {blockInfo && onNextFilm && (partyState?.activeMovieIndex || 0) < blockInfo.movieKeys.length - 1 && (
                                 <button onClick={onNextFilm} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 px-10 rounded-2xl uppercase tracking-[0.2em] shadow-2xl transition-all text-xs flex items-center gap-3">
                                     Next Film in Block
@@ -188,16 +186,24 @@ const WatchPartyControlRoom: React.FC<{
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 <div className="lg:col-span-2 space-y-8">
                     <div className="relative aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10">
-                        <video
-                            ref={videoRef}
-                            src={movie.fullMovie}
-                            onPlay={handlePlay}
-                            onPause={handlePause}
-                            onSeeked={handleSeeked}
-                            onTimeUpdate={handleTimeUpdate}
-                            controls
-                            className="w-full h-full"
-                        />
+                        {partyState?.isQALive ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-emerald-900/10 text-emerald-500">
+                                <span className="text-6xl mb-4">🎤</span>
+                                <h4 className="text-2xl font-black uppercase italic tracking-tighter">Talkback Protocol Active</h4>
+                                <p className="text-xs font-bold uppercase mt-2 opacity-60">Director is being cued for live uplink.</p>
+                            </div>
+                        ) : (
+                            <video
+                                ref={videoRef}
+                                src={movie.fullMovie}
+                                onPlay={handlePlay}
+                                onPause={handlePause}
+                                onSeeked={handleSeeked}
+                                onTimeUpdate={handleTimeUpdate}
+                                controls
+                                className="w-full h-full"
+                            />
+                        )}
                     </div>
                 </div>
                 <div className="lg:col-span-1 h-[60vh] lg:h-auto">
@@ -229,8 +235,9 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
     }, []);
 
     const allBlocks = useMemo(() => {
+        // UNIFIED MANIFEST: Pull from regular Festival data AND Crate Fest config
         const regular = (festivalData || []).flatMap(day => (day.blocks || []).map(b => ({ ...b, time: b.time || 'TBD' })));
-        const crateFest = (settings.crateFestConfig?.movieBlocks || []).map(b => ({ ...b, title: `[Crate Fest] ${b.title}`, time: 'SPECIAL_EVENT' }));
+        const crateFest = (settings.crateFestConfig?.movieBlocks || []).map(b => ({ ...b, time: 'SPECIAL_EVENT' }));
         return [...regular, ...crateFest] as FilmBlock[];
     }, [festivalData, settings.crateFestConfig]);
 
@@ -361,7 +368,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                                 placeholder="Filter Manifest..." 
                                 value={filter} 
                                 onChange={e => setFilter(e.target.value)} 
-                                className="form-input !bg-black/40 border-white/10 !py-3 !px-6 text-xs max-w-sm"
+                                className="form-input !py-3 !px-6 text-xs max-w-sm"
                             />
                         </div>
                     </div>

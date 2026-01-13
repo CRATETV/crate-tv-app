@@ -53,12 +53,12 @@ export async function POST(request: Request) {
         if (zipPath.endsWith('.brs') || zipPath.endsWith('.xml') || zipPath === 'manifest') {
             let textContent = contentBuffer.toString('utf-8');
             
-            // Fix: Strip Byte Order Mark (BOM)
+            // Fix: Strip Byte Order Mark (BOM) - Critical for Roku compilation
             if (textContent.charCodeAt(0) === 0xFEFF) {
                 textContent = textContent.substring(1);
             }
             
-            // Fix: Normalize line endings to Unix style
+            // Fix: Normalize line endings to Unix style (LF)
             textContent = textContent.replace(/\r\n/g, '\n');
 
             // Dynamic Config Binding

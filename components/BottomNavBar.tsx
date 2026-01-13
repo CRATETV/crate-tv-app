@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
+import { avatars } from './avatars';
 
 interface BottomNavBarProps {
   onSearchClick: () => void;
@@ -97,7 +98,13 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ onSearchClick }) => {
             <NavItem 
                 path={accountPath} 
                 activePath={activePath} 
-                icon={<div className="w-5 h-5 rounded-md bg-white/10 border border-white/20 flex items-center justify-center font-black text-[8px] text-white">C</div>}
+                icon={
+                    user?.avatar ? (
+                        <div className="w-6 h-6 rounded-full overflow-hidden border border-white/20" dangerouslySetInnerHTML={{ __html: avatars[user.avatar] }} />
+                    ) : (
+                        <div className="w-5 h-5 rounded-md bg-white/10 border border-white/20 flex items-center justify-center font-black text-[8px] text-white">C</div>
+                    )
+                }
                 label="Account"
             />
         </div>

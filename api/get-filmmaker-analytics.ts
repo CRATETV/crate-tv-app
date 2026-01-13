@@ -1,15 +1,14 @@
+
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FilmmakerAnalytics, FilmmakerFilmPerformance, Movie, PayoutRequest, User, SentimentPoint } from '../types.js';
 
 // EPOCH RESET: Moved to May 24, 2025
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z';
-const AD_CPM_IN_CENTS = 0; // ADS DISABLED
-const AD_REVENUE_FILMMAKER_SHARE = 0.00;
 const DONATION_PLATFORM_CUT = 0.30;
 
 export async function POST(request: Request) {
     try {
-        const { directorName, password } = await request.json();
+        const { directorName } = await request.json();
         
         if (!directorName) return new Response(JSON.stringify({ error: 'Name required' }), { status: 400 });
         
@@ -19,14 +18,18 @@ export async function POST(request: Request) {
         if (!db) throw new Error("DB fail");
 
         const resetTimestamp = new Date(SYSTEM_RESET_DATE);
+        const normalizedTarget = directorName.trim().toLowerCase();
 
+        // 1. Fetch relevant financial records for this director
         const donationsSnapshot = await db.collection('donations')
-            .where('directorName', '==', directorName)
+            .where('directorName', '>=', directorName.trim())
+            .where('directorName', '<=', directorName.trim() + '\uf8ff')
             .where('timestamp', '>=', resetTimestamp)
             .get();
             
         const payoutsSnapshot = await db.collection('payout_requests')
-            .where('directorName', '==', directorName)
+            .where('directorName', '>=', directorName.trim())
+            .where('directorName', '<=', directorName.trim() + '\uf8ff')
             .where('status', '==', 'completed')
             .where('completionDate', '>=', resetTimestamp)
             .get();
@@ -41,7 +44,7 @@ export async function POST(request: Request) {
         });
 
         const viewCounts: Record<string, number> = {};
-        viewsSnapshot.forEach(doc => { viewCounts[doc.id] = doc.data().count || 0; });
+        viewsSnapshot.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count) || 0; });
 
         const watchlistCounts: Record<string, number> = {};
         usersSnapshot.forEach(doc => {
@@ -49,9 +52,16 @@ export async function POST(request: Request) {
             if (user.watchlist) user.watchlist.forEach(k => watchlistCounts[k] = (watchlistCounts[k] || 0) + 1);
         });
 
+        // REFINED MATCHING: Robust check against comma-separated credits (Case-Insensitive & Trimmed)
+        // Works for single names like "Salome" as long as it exists as a node in the credit list.
         const filmmakerFilms = Object.values(allMovies).filter(movie => {
-            const normalized = directorName.trim().toLowerCase();
-            return (movie.director || '').toLowerCase().includes(normalized) || (movie.producers || '').toLowerCase().includes(normalized);
+            const directors = (movie.director || '').toLowerCase().split(',').map(d => d.trim());
+            const producers = (movie.producers || '').toLowerCase().split(',').map(p => p.trim());
+            
+            // Match if exact name token found (handles "Salome" even if user is "Salome Denoon" in credits, 
+            // provided we normalize correctly)
+            return directors.some(d => d === normalizedTarget || d.includes(normalizedTarget)) || 
+                   producers.some(p => p === normalizedTarget || p.includes(normalizedTarget));
         });
 
         const donationsByFilm: Record<string, number> = {};
@@ -95,6 +105,7 @@ export async function POST(request: Request) {
         return new Response(JSON.stringify({ analytics }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
+        console.error("Filmmaker Intel Failure:", error);
         return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
     }
 }

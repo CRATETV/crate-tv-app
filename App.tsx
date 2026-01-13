@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -302,12 +303,29 @@ const App: React.FC = () => {
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as any;
                                 const titleLower = (typedCategory.title || '').toLowerCase();
-                                // EXCLUSION LOGIC: Public Access and Vintage Visions are strictly dedicated sectors and do not show on Home.
-                                if (key === 'featured' || key === 'nowStreaming' || key === 'publicDomainIndie' || key === 'publicAccess') return null;
+                                
+                                // ALREADY RENDERED OR FEATURED CATEGORIES
+                                // 'The Square' and 'Vintage Visions' are handled via the separate Square page now
+                                if (['featured', 'nowStreaming', 'publicAccess', 'publicDomainIndie'].includes(key)) return null;
+                                
                                 if ((key === 'cratemas' || titleLower === 'cratemas') && !settings.isHolidayModeActive) return null;
                                 const categoryMovies = typedCategory.movieKeys.map((movieKey: string) => movies[movieKey]).filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m));
                                 if (categoryMovies.length === 0) return null;
-                                return <MovieCarousel key={key} title={typedCategory.title} movies={categoryMovies} onSelectMovie={handlePlayMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />;
+                                
+                                return (
+                                    <MovieCarousel 
+                                        key={key} 
+                                        title={typedCategory.title} 
+                                        movies={categoryMovies} 
+                                        onSelectMovie={handlePlayMovie} 
+                                        watchedMovies={watchedMovies} 
+                                        watchlist={watchlist} 
+                                        likedMovies={likedMovies} 
+                                        onToggleLike={toggleLikeMovie} 
+                                        onToggleWatchlist={toggleWatchlist} 
+                                        onSupportMovie={() => {}} 
+                                    />
+                                );
                             })}
                           </>
                         )}

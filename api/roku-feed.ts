@@ -1,6 +1,6 @@
 
 import { getApiData } from './_lib/data.js';
-import { Movie, Category, User, EditorialStory } from '../types.js';
+import { Movie, Category, User } from '../types.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 
 interface RokuItem {
@@ -73,9 +73,9 @@ export async function GET(request: Request) {
     
     const finalCategories: RokuCategory[] = [];
 
-    // 1. TOP 10 RANKINGS
+    // 1. TOP 10 RANKINGS (Filter out untitled/listed)
     const topTen = (Object.values(apiData.movies) as Movie[])
-        .filter(m => !!m && !m.isUnlisted && !!m.poster)
+        .filter(m => !!m && !m.isUnlisted && !!m.poster && !!m.title && !m.title.toLowerCase().includes('untitled'))
         .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
         .slice(0, 10);
 
@@ -89,13 +89,17 @@ export async function GET(request: Request) {
         });
     }
 
-    // 2. PUBLIC SQUARE (THE COMMONS)
-    const publicSquare = apiData.categories['publicAccess'];
-    if (publicSquare && publicSquare.movieKeys?.length > 0) {
-        const children = publicSquare.movieKeys
+    // 2. THE SQUARE (Merged Sectors)
+    const squareKeys = Array.from(new Set([
+        ...(apiData.categories['publicAccess']?.movieKeys || []),
+        ...(apiData.categories['publicDomainIndie']?.movieKeys || [])
+    ]));
+
+    if (squareKeys.length > 0) {
+        const children = squareKeys
             .map((k: string) => apiData.movies[k])
-            .filter((m: any): m is Movie => !!m && !m.isUnlisted)
-            .map((m: Movie) => formatMovieForRoku(m, ["Public Square"], user));
+            .filter((m: any): m is Movie => !!m && !m.isUnlisted && !!m.title)
+            .map((m: Movie) => formatMovieForRoku(m, ["The Square"], user));
         if (children.length > 0) {
             finalCategories.push({ title: "The Public Square", children });
         }
@@ -108,7 +112,7 @@ export async function GET(request: Request) {
         if (cat && cat.movieKeys?.length > 0) {
             const children = cat.movieKeys
                 .map((k: string) => apiData.movies[k])
-                .filter((m: any): m is Movie => !!m && !m.isUnlisted)
+                .filter((m: any): m is Movie => !!m && !m.isUnlisted && !!m.title)
                 .map((m: Movie) => formatMovieForRoku(m, [cat.title], user));
             
             if (children.length > 0) {

@@ -80,21 +80,22 @@ const TopTenPage: React.FC = () => {
             const canvas = await html2canvas(exportRef.current, {
                 useCORS: true,
                 backgroundColor: '#050505',
-                scale: 1.5, // High fidelity
+                scale: 2.0, // Ultra-high fidelity for social
                 logging: false,
+                width: 1080,
+                height: 1920
             });
 
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
             const link = document.createElement('a');
-            link.download = `CrateTV_Top10_${new Date().toISOString().split('T')[0]}.jpg`;
+            link.download = `CrateTV_Top10_Dispatch_${new Date().toISOString().split('T')[0]}.jpg`;
             link.href = dataUrl;
             link.click();
         } catch (err) {
             console.error("Export failure:", err);
             alert("Digital synthesis failed. Please try again.");
         } finally {
-            setIsGenerating(true);
-            setTimeout(() => setIsGenerating(false), 2000);
+            setIsGenerating(false);
         }
     };
 
@@ -118,7 +119,7 @@ const TopTenPage: React.FC = () => {
                             className="bg-white text-black font-black px-8 py-4 rounded-2xl uppercase tracking-widest text-[10px] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            {isGenerating ? 'Synthesizing...' : 'Download Social Asset'}
+                            {isGenerating ? 'Synthesizing High-Res Jpeg...' : 'Download Social Asset'}
                         </button>
                     </div>
 
@@ -146,9 +147,9 @@ const TopTenPage: React.FC = () => {
             <BackToTopButton />
             <BottomNavBar onSearchClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }} />
 
-            {/* Hidden export target */}
+            {/* Hidden export target - Locked to 1080x1920 for mobile shareability */}
             <div className="fixed left-[-9999px] top-0 overflow-hidden" aria-hidden="true">
-                <div ref={exportRef}>
+                <div ref={exportRef} style={{ width: '1080px', height: '1920px' }}>
                     <TopTenShareableImage 
                         topFilms={sortedMovies.map(m => ({ 
                             key: m.key, 
