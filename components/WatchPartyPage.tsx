@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, WatchPartyState, ChatMessage, SentimentPoint } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,7 +26,6 @@ const getEmbedUrl = (url: string): string | null => {
     return null;
 };
 
-// Security Component: The reactive watermark
 const SecureWatermark: React.FC<{ email: string; isTriggered: boolean }> = ({ email, isTriggered }) => (
     <div className={`absolute inset-0 pointer-events-none z-[45] overflow-hidden select-none transition-opacity duration-1000 ${isTriggered ? 'opacity-20' : 'opacity-0'}`}>
         <div className="dynamic-watermark absolute whitespace-nowrap bg-white/20 px-3 py-1 rounded-full text-[10px] font-black text-white uppercase tracking-[0.3em] border border-white/10 backdrop-blur-md shadow-2xl">
@@ -335,7 +335,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             if (doc.exists) setPartyState(doc.data() as WatchPartyState);
         });
 
-        // REACTION LISTENER: Listen for global reactions in the cluster
         const tenSecondsAgo = new Date(Date.now() - 10000);
         const reactionsRef = partyRef.collection('live_reactions')
             .where('timestamp', '>=', tenSecondsAgo)
@@ -343,8 +342,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 snapshot.docChanges().forEach(change => {
                     if (change.type === 'added') {
                         const data = change.doc.data();
-                        // Only add to local pool if it didn't originate from this user 
-                        // (Sender already has a local burst for zero latency)
                         if (data.userId !== user?.uid) {
                             setLocalReactions(prev => [...prev, { id: change.doc.id, emoji: data.emoji }]);
                         }
@@ -400,6 +397,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const handleGoHome = () => {
         window.history.pushState({}, '', '/');
         window.dispatchEvent(new Event('pushstate'));
+    };
+
+    const handleShareSession = async () => {
+        const shareData = {
+            title: `Crate TV Live: ${movie.title}`,
+            text: `Join me for a live screening of "${movie.title}" on Crate TV! Interaction and Q&A active.`,
+            url: window.location.href
+        };
+        try {
+            if (navigator.share) await navigator.share(shareData);
+            else {
+                navigator.clipboard.writeText(window.location.href);
+                alert("Invitation link copied to clipboard.");
+            }
+        } catch (e) {}
     };
 
     const handleTicketSuccess = async () => {
@@ -474,7 +486,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             </div>
                             <h2 className="text-xs font-bold truncate text-gray-200">{movie.title}</h2>
                         </div>
-                        <div className="w-6"></div>
+                        <button onClick={handleShareSession} className="text-gray-400 hover:text-white p-2">
+                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                        </button>
                     </div>
 
                     <div className="flex-none w-full aspect-video bg-black relative shadow-2xl z-30 overflow-hidden">

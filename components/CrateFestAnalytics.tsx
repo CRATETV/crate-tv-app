@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AnalyticsData, CrateFestConfig } from '../types';
 
@@ -11,8 +12,39 @@ const formatCurrency = (val: number) => `$${(val / 100).toFixed(2)}`;
 const CrateFestAnalytics: React.FC<CrateFestAnalyticsProps> = ({ analytics, config }) => {
     if (!analytics || !config) return null;
 
+    const handleDownloadLedger = () => {
+        const headers = ["Category Title", "Films Linked", "Units Sold", "Yield (USD)"];
+        const rows = config.movieBlocks.map(block => {
+            const stats = analytics.salesByBlock[block.title] || { units: 0, revenue: 0 };
+            return [
+                `"${block.title.replace(/"/g, '""')}"`,
+                block.movieKeys.length,
+                stats.units,
+                (stats.revenue / 100).toFixed(2)
+            ];
+        });
+
+        const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.join(",")).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `CrateFest_Intel_${config.title.replace(/\s+/g, '_')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+    };
+
     return (
         <div className="space-y-12 animate-[fadeIn_0.5s_ease-out]">
+            <div className="flex justify-between items-center no-print">
+                <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">Crate Fest Intel Hub</h2>
+                <button 
+                    onClick={handleDownloadLedger}
+                    className="bg-white text-black font-black px-6 py-2 rounded-xl text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
+                >
+                    Download Intel (.csv)
+                </button>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-[#0f0f0f] border border-white/5 p-8 rounded-[2.5rem] shadow-2xl">
                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Crate Fest Gross</p>

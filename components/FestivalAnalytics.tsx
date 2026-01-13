@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AnalyticsData, FestivalConfig, FestivalDay } from '../types';
 
@@ -14,8 +15,39 @@ const FestivalAnalytics: React.FC<FestivalAnalyticsProps> = ({ analytics, festiv
 
     const allFestivalBlocks = festivalData.flatMap(day => day.blocks);
 
+    const handleDownloadLedger = () => {
+        const headers = ["Block Title", "Time", "Units Sold", "Revenue (USD)"];
+        const rows = allFestivalBlocks.map(block => {
+            const stats = analytics.salesByBlock[block.title] || { units: 0, revenue: 0 };
+            return [
+                `"${block.title.replace(/"/g, '""')}"`,
+                block.time,
+                stats.units,
+                (stats.revenue / 100).toFixed(2)
+            ];
+        });
+
+        const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.join(",")).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Festival_Intel_${config.title.replace(/\s+/g, '_')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+    };
+
     return (
         <div className="space-y-12 animate-[fadeIn_0.5s_ease-out]">
+            <div className="flex justify-between items-center no-print">
+                <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">Festival Intel Hub</h2>
+                <button 
+                    onClick={handleDownloadLedger}
+                    className="bg-white text-black font-black px-6 py-2 rounded-xl text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
+                >
+                    Download Intel (.csv)
+                </button>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-[#0f0f0f] border border-white/5 p-8 rounded-[2.5rem] shadow-2xl">
                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Gross Festival Yield</p>
@@ -40,10 +72,6 @@ const FestivalAnalytics: React.FC<FestivalAnalyticsProps> = ({ analytics, festiv
                         <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic">Block Engagement Manifest</h3>
                         <p className="text-xs text-gray-600 font-bold uppercase tracking-widest mt-1">Real-time individual session metrics</p>
                     </div>
-                    <div className="bg-white/5 px-4 py-2 rounded-xl border border-white/10">
-                        <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Active Nodes</p>
-                        <p className="text-xl font-bold text-white">{analytics.liveNodes} ONLINE</p>
-                    </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -51,9 +79,6 @@ const FestivalAnalytics: React.FC<FestivalAnalyticsProps> = ({ analytics, festiv
                         const stats = analytics.salesByBlock[block.title] || { units: 0, revenue: 0 };
                         return (
                             <div key={block.id} className="bg-white/5 p-8 rounded-[2rem] border border-white/10 group hover:border-indigo-600/30 transition-all relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
-                                    <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>
-                                </div>
                                 <p className="text-[9px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-2">{block.time}</p>
                                 <h4 className="text-2xl font-black text-white uppercase tracking-tight leading-[0.9] mb-8">{block.title}</h4>
                                 
@@ -67,20 +92,10 @@ const FestivalAnalytics: React.FC<FestivalAnalyticsProps> = ({ analytics, festiv
                                         <p className="text-xl font-black text-green-500 italic">{formatCurrency(stats.revenue)}</p>
                                     </div>
                                 </div>
-                                
-                                <div className="mt-6">
-                                    <p className="text-[8px] text-gray-700 font-bold uppercase tracking-widest">Linked Assets: {block.movieKeys.length} FILMS</p>
-                                </div>
                             </div>
                         );
                     })}
                 </div>
-            </div>
-            
-            <div className="bg-white/5 p-10 rounded-[3rem] border border-white/10 text-center">
-                 <p className="text-xs text-gray-500 font-medium leading-relaxed max-w-2xl mx-auto italic">
-                    "Festival analytics prioritize verified session handshakes. All revenue data is synchronized from Square production endpoints on a 60-second polling cycle."
-                 </p>
             </div>
         </div>
     );

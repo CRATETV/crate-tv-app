@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -25,10 +26,14 @@ import RokuDeployTab from './components/RokuDeployTab';
 import UserIntelligenceTab from './components/UserIntelligenceTab';
 import CrateFestAnalytics from './components/CrateFestAnalytics';
 import FestivalAnalytics from './components/FestivalAnalytics';
+import DiscoveryEngine from './components/DiscoveryEngine';
+import StrategicHub from './components/StrategicHub';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
-    intelligence: '🕵️ User Intelligence',
+    strategy: '🎯 Strategic Hub',
+    discovery: '🛰️ Research Lab',
+    intelligence: '🕵️ User Intel',
     festivalAnalytics: '🍿 Festival Intel',
     crateFestAnalytics: '🎪 Crate Fest Intel',
     editorial: '🖋️ Editorial',
@@ -264,6 +269,8 @@ const AdminPage: React.FC = () => {
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
+                    {activeTab === 'strategy' && <StrategicHub analytics={analytics} />}
+                    {activeTab === 'discovery' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(d) => handleSaveData('categories', d)} />}
                     {activeTab === 'intelligence' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={() => {}} />}
                     {activeTab === 'festivalAnalytics' && <FestivalAnalytics analytics={analytics} festivalData={festivalData} config={festivalConfig} />}
                     {activeTab === 'crateFestAnalytics' && <CrateFestAnalytics analytics={analytics} config={crateFestConfig} />}

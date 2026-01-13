@@ -29,6 +29,7 @@ const emptyMovie: Movie = {
     releaseDateTime: '',
     publishedAt: new Date().toISOString(),
     autoReleaseDate: '',
+    mainPageExpiry: '',
     isUnlisted: false,
     isSeries: false,
     isEpisode: false,
@@ -390,10 +391,15 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             <section className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">04. Visibility Window</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
-                                    <div>
-                                        <label className="form-label">Official Release Date & Time</label>
-                                        <input type="datetime-local" name="releaseDateTime" value={formData.releaseDateTime?.slice(0, 16)} onChange={handleChange} className="form-input bg-black/40 border-white/10" />
-                                        <p className="text-[8px] text-gray-600 mt-2 font-black uppercase tracking-widest italic">Film will be hidden from public catalog until this timestamp.</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="form-label">Official Release</label>
+                                            <input type="datetime-local" name="releaseDateTime" value={formData.releaseDateTime?.slice(0, 16)} onChange={handleChange} className="form-input bg-black/40 border-white/10" />
+                                        </div>
+                                        <div>
+                                            <label className="form-label">Vault Expiry (Urgency)</label>
+                                            <input type="datetime-local" name="mainPageExpiry" value={formData.mainPageExpiry?.slice(0, 16)} onChange={handleChange} className="form-input bg-black/40 border-white/10" />
+                                        </div>
                                     </div>
                                     <label className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer">
                                         <input type="checkbox" name="isUnlisted" checked={formData.isUnlisted} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-gray-500 focus:ring-gray-400" />

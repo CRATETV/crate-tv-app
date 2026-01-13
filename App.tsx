@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -68,7 +69,7 @@ const FestivalActiveBanner: React.FC<{ onClose: () => void }> = ({ onClose }) =>
 
 const App: React.FC = () => {
     const { user, hasCrateFestPass, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
-    const { isLoading, movies, categories, isFestivalLive, festivalConfig, settings } = useFestival();
+    const { isLoading, movies, categories, isFestivalLive, settings, analytics } = useFestival();
     
     const [heroIndex, setHeroIndex] = useState(0);
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
@@ -128,11 +129,11 @@ const App: React.FC = () => {
         if (spotlightMovies.length === 0) {
             spotlightMovies = (Object.values(movies) as Movie[])
                 .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !!m.title && !!m.poster && !m.isUnlisted)
-                .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+                .sort((a, b) => (analytics?.viewCounts?.[b.key] || 0) - (analytics?.viewCounts?.[a.key] || 0))
                 .slice(0, 4);
         }
         return spotlightMovies;
-    }, [movies, categories.featured]);
+    }, [movies, categories.featured, analytics]);
 
     const vaultMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
@@ -170,12 +171,13 @@ const App: React.FC = () => {
             .sort((a, b) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
     }, [movies]);
 
+    // UPDATED: Top Ten is now driven by Views (Reach)
     const topTenMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
             .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
-            .sort((a, b) => (b.likes || 0) - (a.likes || 0))
+            .sort((a, b) => (analytics?.viewCounts?.[b.key] || 0) - (analytics?.viewCounts?.[a.key] || 0))
             .slice(0, 10);
-    }, [movies]);
+    }, [movies, analytics]);
 
     const nowStreamingMovie = useMemo(() => {
         const keys = categories.nowStreaming?.movieKeys || [];
@@ -258,7 +260,7 @@ const App: React.FC = () => {
 
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500" style={{ paddingTop: activeBannerType !== 'NONE' ? '3rem' : '0px' }}>
                 {isFestivalLive && activeBannerType !== 'CRATE_FEST' ? (
-                    <FestivalHero festivalConfig={festivalConfig} />
+                    <FestivalHero festivalConfig={settings.festivalConfig || null} />
                 ) : (
                     heroMovies.length > 0 && <Hero movies={heroMovies} currentIndex={heroIndex} onSetCurrentIndex={setHeroIndex} onPlayMovie={handlePlayMovie} onMoreInfo={handleSelectMovie} />
                 )}
@@ -284,7 +286,6 @@ const App: React.FC = () => {
                                 />
                             )}
                             
-                            {/* NEW ELITE VAULT ROW */}
                             {vaultMovies.length > 0 && (
                                 <CrateVaultRow 
                                     movies={vaultMovies} 

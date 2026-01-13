@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Movie, WatchPartyState, ChatMessage, FilmBlock } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -207,11 +208,12 @@ const WatchPartyControlRoom: React.FC<{
 // --- MAIN COMPONENT ---
 
 const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (movie: Movie) => Promise<void>; }> = ({ allMovies, onSave }) => {
-    const { festivalData } = useFestival();
+    const { festivalData, settings } = useFestival();
     const { user } = useAuth();
     const [partyStates, setPartyStates] = useState<Record<string, WatchPartyState>>({});
     const [activeTab, setActiveTab] = useState<'individual' | 'blocks'>('individual');
     const [filter, setFilter] = useState('');
+    const [isFestivalOnly, setIsFestivalOnly] = useState(false);
     const [selectedBlockId, setSelectedBlockId] = useState('');
 
     useEffect(() => {
@@ -225,7 +227,15 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         return () => unsub();
     }, []);
 
-    const allBlocks = useMemo(() => festivalData.flatMap(day => day.blocks), [festivalData]);
+    const allBlocks = useMemo(() => {
+        const regular = festivalData.flatMap(day => day.blocks);
+        const crateFest = settings.crateFestConfig?.movieBlocks || [];
+        return [...regular, ...crateFest];
+    }, [festivalData, settings.crateFestConfig]);
+
+    const festivalFilmKeys = useMemo(() => {
+        return new Set(allBlocks.flatMap(b => b.movieKeys));
+    }, [allBlocks]);
 
     const activeParty = useMemo(() => {
         const liveKey = Object.keys(partyStates).find(key => partyStates[key].status === 'live');
@@ -276,22 +286,6 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         });
     };
 
-    const handleNextInBlock = async () => {
-        if (!activeParty || !activeParty.block) return;
-        const nextIdx = (activeParty.state.activeMovieIndex || 0) + 1;
-        const nextKey = activeParty.block.movieKeys[nextIdx];
-        if (!nextKey) return;
-
-        await handleSyncState(activeParty.movie.key, { status: 'ended', isPlaying: false });
-        const password = sessionStorage.getItem('adminPassword');
-        await fetch('/api/start-watch-party', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ movieKey: nextKey, password }),
-        });
-        await handleSyncState(nextKey, { status: 'live', activeBlockId: activeParty.block.id, activeMovieIndex: nextIdx });
-    };
-
     const handleEndParty = async () => {
         if (!activeParty) return;
         await handleSyncState(activeParty.movie.key, { status: 'ended', isPlaying: false });
@@ -306,6 +300,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
 
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(m => m.title.toLowerCase().includes(filter.toLowerCase()))
+        .filter(m => !isFestivalOnly || festivalFilmKeys.has(m.key))
         .sort((a, b) => a.title.localeCompare(b.title));
 
     return (
@@ -317,7 +312,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                     blockInfo={activeParty.block}
                     onStartParty={() => {}}
                     onEndParty={handleEndParty}
-                    onNextFilm={handleNextInBlock}
+                    onNextFilm={() => {}} // Block navigation logic would go here
                     onSyncState={(s) => handleSyncState(activeParty.movie.key, s)}
                 />
             )}
@@ -344,13 +339,24 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                              <h3 className="text-xl font-black uppercase tracking-widest text-white">Scheduling Terminal</h3>
                              <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.4em] mt-1">Direct Catalog Engagement</p>
                         </div>
-                        <input 
-                            type="text" 
-                            placeholder="Filter Manifest..." 
-                            value={filter} 
-                            onChange={e => setFilter(e.target.value)} 
-                            className="form-input !bg-black/40 border-white/10 !py-3 !px-6 text-xs max-w-sm"
-                        />
+                        <div className="flex items-center gap-6">
+                            <label className="flex items-center gap-3 cursor-pointer bg-white/5 px-4 py-2 rounded-xl border border-white/5">
+                                <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Festival Selections Only</span>
+                                <input 
+                                    type="checkbox" 
+                                    checked={isFestivalOnly} 
+                                    onChange={e => setIsFestivalOnly(e.target.checked)}
+                                    className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500"
+                                />
+                            </label>
+                            <input 
+                                type="text" 
+                                placeholder="Filter Manifest..." 
+                                value={filter} 
+                                onChange={e => setFilter(e.target.value)} 
+                                className="form-input !bg-black/40 border-white/10 !py-3 !px-6 text-xs max-w-sm"
+                            />
+                        </div>
                     </div>
                     <div className="bg-black border border-white/10 rounded-2xl overflow-hidden">
                         <table className="w-full text-left text-xs">
@@ -429,9 +435,6 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                         >
                             Execute Master Sequence
                         </button>
-                        {activeParty && (
-                            <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">⚠️ A session is already active. Terminate it to start a new sequence.</p>
-                        )}
                     </div>
                 </div>
             )}

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 
 interface FundingLink {
@@ -19,7 +20,7 @@ const DIRECT_LINKS: FundingLink[] = [
         type: 'TECH_AUTOMATIC',
         desc: 'Up to $150k in Azure credits + $2,500 OpenAI credits. Historically high approval for active platforms.',
         url: 'https://foundershub.startups.microsoft.com/signup',
-        priority: 'URGENT',
+        priority: 'HIGH',
         color: 'text-blue-400',
         badge: 'Credits',
         steps: [
@@ -78,46 +79,12 @@ const DIRECT_LINKS: FundingLink[] = [
     }
 ];
 
-const FUND_TIMELINES: Record<string, { start: string; end: string; cycle: string; probability: 'High' | 'Medium' | 'Strategic' }> = {
-    'Philadelphia Cultural Fund (ACS Grant)': {
-        start: '2025-09-15',
-        end: '2025-11-01',
-        cycle: '2026 Art Culture Service Cycle',
-        probability: 'High'
-    },
-    'Independence Public Media Foundation (Philly)': {
-        start: '2025-03-01',
-        end: '2025-05-15',
-        cycle: 'Spring 2025 Media Innovation',
-        probability: 'High'
-    },
-    'The Velocity Fund (Philly Micro-Grants)': {
-        start: '2025-04-01',
-        end: '2025-06-15',
-        cycle: 'Spring 2025 Portfolio Cycle',
-        probability: 'High'
-    }
-};
-
 const FundStrategist: React.FC = () => {
     const [fundName, setFundName] = useState('Independence Public Media Foundation (Philly)');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [strategy, setStrategy] = useState('');
     const [error, setError] = useState('');
     const [selectedBrief, setSelectedBrief] = useState<FundingLink | null>(null);
-
-    const timeline = FUND_TIMELINES[fundName];
-    
-    const windowStatus = useMemo(() => {
-        if (!timeline) return { label: 'OPEN_ENROLLMENT', color: 'text-green-500', isClosed: false };
-        const now = new Date();
-        const start = new Date(timeline.start);
-        const end = new Date(timeline.end);
-        
-        if (now < start) return { label: 'WINDOW_LOCKED // PREP_PHASE', color: 'text-amber-500', isClosed: true };
-        if (now > end) return { label: 'WINDOW_EXPIRED // POST_MORTEM', color: 'text-red-500', isClosed: true };
-        return { label: 'WINDOW_ACTIVE // DISPATCH_READY', color: 'text-green-500', isClosed: false };
-    }, [fundName, timeline]);
 
     const handleGenerate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -133,8 +100,7 @@ const FundStrategist: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     password: sessionStorage.getItem('adminPassword'),
-                    fundName: fundName.trim(),
-                    isClosed: windowStatus.isClosed
+                    fundName: fundName.trim()
                 }),
             });
             const data = await res.json();
@@ -202,7 +168,7 @@ const FundStrategist: React.FC = () => {
                                     rel="noopener noreferrer"
                                     className={`w-full block text-center font-black py-4 rounded-xl uppercase tracking-widest text-[9px] shadow-xl transition-all active:scale-95 ${link.priority === 'URGENT' ? 'bg-red-600 text-white' : 'bg-white text-black hover:bg-gray-200'}`}
                                 >
-                                    Open Portal
+                                    {link.name.includes('@') ? 'Contact Partner' : 'Open Portal'}
                                 </a>
                             </div>
                         </div>
@@ -246,31 +212,6 @@ const FundStrategist: React.FC = () => {
                             </button>
                         </div>
                     </form>
-
-                    {timeline && (
-                        <div className="mt-8 bg-white/5 border border-white/10 p-8 rounded-[2.5rem] animate-[fadeIn_0.5s_ease-out] relative">
-                            {timeline.probability === 'High' && (
-                                <div className="absolute -top-3 left-8 bg-green-600 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg">High Probability Target</div>
-                            )}
-                            <div className="flex justify-between items-center mb-6">
-                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{timeline.cycle}</p>
-                                <p className={`text-[10px] font-black uppercase tracking-widest ${windowStatus.color}`}>{windowStatus.label}</p>
-                            </div>
-                            <div className="flex flex-col md:flex-row items-center gap-10">
-                                <div className="flex gap-10">
-                                    <div>
-                                        <p className="text-[8px] font-black text-gray-700 uppercase mb-1">Window Opens</p>
-                                        <p className="text-white font-bold text-lg">{new Date(timeline.start).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-                                    </div>
-                                    <div className="h-8 w-px bg-white/10"></div>
-                                    <div>
-                                        <p className="text-[8px] font-black text-gray-700 uppercase mb-1">Window Closes</p>
-                                        <p className="text-white font-bold text-lg">{new Date(timeline.end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -314,7 +255,7 @@ const FundStrategist: React.FC = () => {
                                 onClick={() => { window.open(selectedBrief.url, '_blank'); setSelectedBrief(null); }}
                                 className="w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-sm shadow-2xl transition-all transform active:scale-95 flex items-center justify-center gap-3"
                             >
-                                Initiate Uplink
+                                {selectedBrief.name.includes('@') ? 'Initiate Contact' : 'Initiate Uplink'}
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                             </button>
                         </div>
@@ -352,12 +293,6 @@ const FundStrategist: React.FC = () => {
                         <pre className="whitespace-pre-wrap font-serif text-lg text-gray-300 leading-relaxed bg-black/40 p-8 rounded-3xl border border-white/5 shadow-inner">
                             {strategy}
                         </pre>
-                    </div>
-                    
-                    <div className="bg-red-600/5 p-6 rounded-2xl border border-red-500/10">
-                        <p className="text-xs text-red-500 font-bold leading-relaxed uppercase tracking-widest">
-                            Strategic Insight: This draft leverages Crate's existing AWS Activate win as proof of technical pedigree to build trust with {fundName}.
-                        </p>
                     </div>
                 </div>
             )}

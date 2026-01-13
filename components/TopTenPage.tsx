@@ -11,13 +11,12 @@ import { useAuth } from '../contexts/AuthContext';
 import TopTenShareableImage from './TopTenShareableImage';
 import SEO from './SEO';
 
-const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => void }> = ({ movie, rank, onSelect }) => (
+const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => void; views: number }> = ({ movie, rank, onSelect, views }) => (
     <div 
         onClick={() => onSelect(movie)}
         className="group relative flex items-center bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-red-600/30 p-4 md:p-8 rounded-[2.5rem] transition-all duration-500 cursor-pointer overflow-hidden animate-[fadeIn_0.5s_ease-out]"
         style={{ animationDelay: `${rank * 100}ms` }}
     >
-        {/* Massive Background Rank Number */}
         <span 
             className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[12rem] md:text-[18rem] leading-none select-none opacity-[0.03] group-hover:opacity-[0.08] transition-opacity italic"
             style={{ WebkitTextStroke: '2px white', color: 'transparent' }}
@@ -50,12 +49,12 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
                 
                 <div className="flex items-center gap-4 md:gap-8 pt-2 md:pt-4 border-t border-white/5">
                     <div className="hidden sm:block">
-                        <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Audience Sentiment</p>
-                        <p className="text-sm font-bold text-white uppercase">High Velocity</p>
+                        <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Audience Velocity</p>
+                        <p className="text-sm font-bold text-white uppercase">{views.toLocaleString()} Streams</p>
                     </div>
                     <div>
                         <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Platform Sync</p>
-                        <p className="text-sm font-bold text-green-500 uppercase">Verified</p>
+                        <p className="text-sm font-bold text-green-500 uppercase">High Reach</p>
                     </div>
                 </div>
             </div>
@@ -70,7 +69,7 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
 );
 
 const TopTenPage: React.FC = () => {
-    const { isLoading, movies } = useFestival();
+    const { isLoading, movies, analytics } = useFestival();
     const [isGenerating, setIsGenerating] = useState(false);
     const [shareStatus, setShareStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const shareableImageRef = useRef<HTMLDivElement>(null);
@@ -79,9 +78,9 @@ const TopTenPage: React.FC = () => {
     const topTenMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
             .filter((movie): movie is Movie => !!movie && !!movie.title && !movie.isUnlisted)
-            .sort((a, b) => (b.likes || 0) - (a.likes || 0))
+            .sort((a, b) => (analytics?.viewCounts?.[b.key] || 0) - (analytics?.viewCounts?.[a.key] || 0))
             .slice(0, 10);
-    }, [movies]);
+    }, [movies, analytics]);
     
     const handleSelectMovie = (movie: Movie) => {
         window.history.pushState({}, '', `/movie/${movie.key}`);
@@ -125,12 +124,10 @@ const TopTenPage: React.FC = () => {
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={false} />
             
             <main className="flex-grow pt-24 pb-24 md:pb-32 px-4 md:px-12 relative overflow-hidden">
-                {/* Visual Flair */}
                 <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-red-600/5 rounded-full blur-[150px] pointer-events-none"></div>
                 <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-purple-600/5 rounded-full blur-[150px] pointer-events-none"></div>
 
                 <div className="max-w-7xl mx-auto space-y-16">
-                    {/* Prestigious Header */}
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 border-b border-white/5 pb-16">
                         <div className="space-y-4">
                             <div className="flex items-center gap-3">
@@ -141,7 +138,7 @@ const TopTenPage: React.FC = () => {
                                 </div>
                             </div>
                             <p className="text-xl md:text-2xl text-gray-500 font-medium max-w-2xl leading-tight">
-                                Live ranking of the most impactful independent cinema on the Crate TV Infrastructure as of <span className="text-white font-bold">{currentDate}</span>.
+                                Live ranking of the most impactful independent cinema on the Crate TV Infrastructure by <span className="text-white font-bold">Stream Velocity</span>.
                             </p>
                         </div>
                         <button 
@@ -153,7 +150,6 @@ const TopTenPage: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* Rank #1 Spotlight */}
                     {heroMovie && (
                         <section 
                             onClick={() => handleSelectMovie(heroMovie)}
@@ -170,9 +166,9 @@ const TopTenPage: React.FC = () => {
                             <div className="relative h-full flex flex-col items-center justify-center p-8 md:p-20 text-center space-y-8">
                                 <div className="space-y-2">
                                     <div className="inline-flex items-center gap-3 bg-red-600 px-6 py-2 rounded-full shadow-2xl animate-bounce">
-                                        <span className="text-white font-black text-sm uppercase tracking-widest italic">Peak Performance #01</span>
+                                        <span className="text-white font-black text-sm uppercase tracking-widest italic">Peak Velocity #01</span>
                                     </div>
-                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.8em] pt-4">Global Selection Winner</p>
+                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.8em] pt-4">Global Discovery Leader</p>
                                 </div>
 
                                 <div className="flex flex-col md:flex-row items-center gap-12">
@@ -195,8 +191,8 @@ const TopTenPage: React.FC = () => {
                                                 <p className="text-lg font-bold text-white uppercase truncate">{heroMovie.director}</p>
                                             </div>
                                             <div className="bg-white/5 border border-white/10 backdrop-blur-xl px-6 py-3 rounded-2xl">
-                                                <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Status</p>
-                                                <p className="text-lg font-bold text-red-500 uppercase">Masterwork</p>
+                                                <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Impact Status</p>
+                                                <p className="text-lg font-bold text-red-500 uppercase">Massively Streamed</p>
                                             </div>
                                         </div>
                                      </div>
@@ -205,7 +201,6 @@ const TopTenPage: React.FC = () => {
                         </section>
                     )}
 
-                    {/* Ranks 2-10 Leaderboard */}
                     <section className="space-y-6 pt-16">
                         <div className="flex items-center gap-4 px-8 mb-10">
                             <h2 className="text-2xl font-black uppercase tracking-widest text-gray-600">The Ascent</h2>
@@ -218,6 +213,7 @@ const TopTenPage: React.FC = () => {
                                     movie={movie} 
                                     rank={index + 2} 
                                     onSelect={handleSelectMovie} 
+                                    views={analytics?.viewCounts?.[movie.key] || 0}
                                 />
                             ))}
                         </div>
@@ -229,7 +225,6 @@ const TopTenPage: React.FC = () => {
             <BackToTopButton />
             <BottomNavBar onSearchClick={() => {}} />
 
-            {/* Hidden Shareable Image Component */}
             {topTenMovies.length > 0 && (
                 <div className="absolute -left-[9999px] top-0" aria-hidden="true">
                     <div ref={shareableImageRef}>
@@ -237,10 +232,7 @@ const TopTenPage: React.FC = () => {
                     </div>
                 </div>
             )}
-
-            <style>{`
-                .italic-text { font-style: italic; }
-            `}</style>
+            <style>{`.italic-text { font-style: italic; }`}</style>
         </div>
     );
 };

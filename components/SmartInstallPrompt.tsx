@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 
 const SmartInstallPrompt: React.FC = () => {
@@ -5,23 +6,26 @@ const SmartInstallPrompt: React.FC = () => {
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
     useEffect(() => {
-        // Only run on client
         if (typeof window === 'undefined') return;
 
-        // 1. Check engagement: Min 3 page views
+        // CRITICAL CHECK: Detect if already in PWA/Standalone mode
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                           (window.navigator as any).standalone === true || 
+                           document.referrer.includes('android-app://');
+
+        if (isStandalone) {
+            console.log("[PWA] Standalone mode detected. Suppressing install prompt.");
+            return;
+        }
+
         const views = parseInt(localStorage.getItem('crate_tv_engagement_views') || '0', 10);
         const hasDismissed = localStorage.getItem('crate_tv_install_dismissed') === 'true';
-        
-        // Is PWA already installed?
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
 
-        if (views >= 3 && !hasDismissed && !isStandalone) {
-            // Delay visibility so it doesn't pop instantly on the 3rd page load
+        if (views >= 3 && !hasDismissed) {
             const timer = setTimeout(() => setIsVisible(true), 3000);
             return () => clearTimeout(timer);
         }
 
-        // Catch the native prompt
         const handleBeforeInstallPrompt = (e: Event) => {
             e.preventDefault();
             setDeferredPrompt(e);
@@ -33,7 +37,6 @@ const SmartInstallPrompt: React.FC = () => {
 
     const handleInstall = async () => {
         if (!deferredPrompt) {
-            // iOS or Browser that doesn't support the automated prompt
             alert("To install Crate TV, tap the 'Share' icon in your browser menu and select 'Add to Home Screen'.");
             handleDismiss();
             return;
@@ -68,7 +71,7 @@ const SmartInstallPrompt: React.FC = () => {
                     </div>
                     <div className="flex-grow">
                         <h3 className="text-white font-black text-lg uppercase tracking-tighter">Crate TV Pro</h3>
-                        <p className="text-gray-400 text-xs font-medium leading-snug">Install the app for the full cinematic experience and offline browsing.</p>
+                        <p className="text-gray-400 text-xs font-medium leading-snug">Install for the full cinematic experience and zero-latency dispatches.</p>
                     </div>
                     <button onClick={handleDismiss} className="p-2 text-gray-600 hover:text-white transition-colors">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -79,7 +82,7 @@ const SmartInstallPrompt: React.FC = () => {
                         onClick={handleInstall}
                         className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl uppercase text-xs tracking-[0.2em] shadow-lg shadow-red-900/40 transition-all active:scale-95"
                     >
-                        Install Application
+                        Secure App Access
                     </button>
                 </div>
             </div>
