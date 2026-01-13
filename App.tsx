@@ -78,7 +78,6 @@ const App: React.FC = () => {
     const [activeParties, setActiveParties] = useState<Record<string, WatchPartyState>>({});
     const [isFestivalBannerDismissed, setIsFestivalBannerDismissed] = useState(false);
     
-    // Heartbeat Presence System & Session Refresh
     useEffect(() => {
         const db = getDbInstance();
         if (!db || !user) return;
@@ -170,7 +169,6 @@ const App: React.FC = () => {
             .sort((a, b) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
     }, [movies]);
 
-    // Top Ten is now driven by View Count analytics
     const topTenMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
             .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
@@ -304,7 +302,8 @@ const App: React.FC = () => {
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as any;
                                 const titleLower = (typedCategory.title || '').toLowerCase();
-                                if (key === 'featured' || key === 'nowStreaming' || key === 'publicDomainIndie') return null;
+                                // EXCLUSION LOGIC: Public Access and Vintage Visions are strictly dedicated sectors and do not show on Home.
+                                if (key === 'featured' || key === 'nowStreaming' || key === 'publicDomainIndie' || key === 'publicAccess') return null;
                                 if ((key === 'cratemas' || titleLower === 'cratemas') && !settings.isHolidayModeActive) return null;
                                 const categoryMovies = typedCategory.movieKeys.map((movieKey: string) => movies[movieKey]).filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m));
                                 if (categoryMovies.length === 0) return null;

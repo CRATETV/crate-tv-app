@@ -48,7 +48,7 @@ const Slide: React.FC<{
                 {children}
             </div>
         </div>
-        <div className="flex justify-between items-end mt-16 text-[10px] font-black uppercase tracking-[0.4em] text-white/20 border-t border-white/5 pt-8 relative z-10">
+        <div className="flex justify-between items-end mt-16 text-[10px] font-black uppercase tracking-[0.4em] text-white/20 border-t border-white/5 relative z-10">
             <div className="flex gap-12">
                 <span>TERMINAL_SESSION // 0X5521</span>
                 <span>LATENCY: 14MS</span>
@@ -103,34 +103,67 @@ const PitchDeckPage: React.FC = () => {
                 </div>
             </Slide>
 
-            <Slide slideNumber="02" targetCompany={target} title="The Event." subtitle="Live Social Streaming Architecture">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                    <div className="space-y-10">
-                        <p className="text-4xl font-black uppercase italic leading-tight">Beyond Passive Viewing: <span className="text-red-600">The Watch Party.</span></p>
-                        <p className="text-xl text-gray-400 leading-relaxed font-medium">Crate TV solves the "lonely stream" problem. Our infrastructure allows hundreds of simultaneous viewers to sync playback, interact via live chat, and engage with directors in real-time Q&A sessions.</p>
-                        <div className="flex gap-10">
-                            <div className="space-y-2">
-                                <p className="text-4xl font-black text-white italic">Sub-100ms</p>
-                                <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Global Sync Latency</p>
+            <Slide slideNumber="02" targetCompany={target} title="The Event." subtitle="Watch Party Protocol // Live Logic">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-20">
+                    <div className="space-y-12">
+                        <div className="bg-white/5 p-10 rounded-[3rem] border border-white/10 space-y-4">
+                            <h4 className="text-red-500 font-black uppercase text-xs tracking-widest">Experience Design</h4>
+                            <p className="text-2xl text-white font-bold leading-tight uppercase italic tracking-tighter">Beyond passive streaming.</p>
+                            <p className="text-gray-400 text-lg leading-relaxed">Crate TV Watch Parties are synchronized live broadcasts. Director talkbacks and audience interaction happen in a unified, low-latency environment.</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-6 bg-black border border-white/10 rounded-3xl text-center">
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Status</p>
+                                <p className="text-xl font-bold text-green-500">SYNCED</p>
                             </div>
-                            <div className="space-y-2">
-                                <p className="text-4xl font-black text-red-600 italic">70%</p>
-                                <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Filmmaker Yield</p>
+                            <div className="p-6 bg-black border border-white/10 rounded-3xl text-center">
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Latency</p>
+                                <p className="text-xl font-bold text-red-500">{"<"}100MS</p>
                             </div>
                         </div>
                     </div>
-                    <div className="relative rounded-[4rem] overflow-hidden border border-white/10 shadow-2xl">
-                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg" className="w-full h-full object-cover opacity-40" alt="Watch Party" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
-                        <div className="absolute bottom-8 left-8 flex items-center gap-3">
-                            <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
-                            <span className="text-[10px] font-black uppercase tracking-widest">Live: Sector Delta Active</span>
+                    <div className="space-y-8">
+                        <div className="aspect-video bg-[#0a0a0a] rounded-[3rem] border border-white/5 flex items-center justify-center relative overflow-hidden shadow-2xl">
+                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.1)_0%,transparent_70%)]"></div>
+                             <div className="text-center space-y-4 relative z-10">
+                                <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto shadow-2xl animate-pulse">
+                                    <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
+                                </div>
+                                <p className="text-[10px] font-black uppercase text-white tracking-[0.6em]">Live Room Terminal</p>
+                             </div>
+                        </div>
+                        <p className="text-xs text-gray-600 font-bold uppercase tracking-widest leading-relaxed text-center">Watch parties create "Appointment Viewing" in an era of infinite, ignored content.</p>
+                    </div>
+                </div>
+            </Slide>
+
+            <Slide slideNumber="03" targetCompany={target} title="The Hub." subtitle="Dedicated Public Access Hub // The Commons">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+                    <div className="bg-indigo-600/10 border border-indigo-500/20 p-12 rounded-[3.5rem] shadow-2xl space-y-8">
+                        <h4 className="text-2xl font-black uppercase italic text-indigo-400 tracking-tighter">Civic Infrastructure</h4>
+                        <p className="text-lg text-gray-300 leading-relaxed font-medium">
+                            By launching <span className="text-white font-bold">The Community Commons</span> as a dedicated platform sector, Crate TV transitions from a commercial app to a **Public Utility**. This qualifies us for multi-year institutional technology grants.
+                        </p>
+                        <div className="pt-4 border-t border-indigo-500/10 space-y-4">
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Targetable Grant Vectors</p>
+                            <div className="flex flex-wrap gap-2">
+                                <span className="px-3 py-1 bg-white/5 rounded-full text-[9px] font-black text-white border border-white/10">DIGITAL EQUITY</span>
+                                <span className="px-3 py-1 bg-white/5 rounded-full text-[9px] font-black text-white border border-white/10">MEDIA PRESERVATION</span>
+                                <span className="px-3 py-1 bg-white/5 rounded-full text-[9px] font-black text-white border border-white/10">COMMUNITY ACCESS</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="space-y-8">
+                        <MetricCard label="Sector Status" value="FREE" sub="A dedicated hub for free community content drives massive top-of-funnel user growth without CAC." />
+                        <div className="p-8 bg-white/[0.02] border border-white/5 rounded-3xl">
+                            <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-2">Funding Model</p>
+                            <p className="text-sm text-gray-400 leading-relaxed italic">"Transitioning to a hybrid Grant-Subsidized infrastructure secures baseline operating capital and creates a resilient 'Social Impact' narrative for regional funders."</p>
                         </div>
                     </div>
                 </div>
             </Slide>
 
-            <Slide slideNumber="03" targetCompany={target} title="Economics." subtitle="Disruptive Acquisition Model">
+            <Slide slideNumber="04" targetCompany={target} title="Economics." subtitle="Disruptive Acquisition Model">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
                     <MetricCard label="Ticketed Events" value="$5.00" sub="Standard pricing for live watch parties. High conversion 'dopamine' purchase point." />
                     <MetricCard label="Artist Retention" value="70%" sub="Filmmakers keep the lion's share of all ticket sales and community donations." />
@@ -144,7 +177,7 @@ const PitchDeckPage: React.FC = () => {
 
             <Slide targetCompany={target} dark={true} gradient="bg-[#050505]">
                 <div className="flex flex-col items-center justify-center text-center py-20">
-                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" className="w-80 h-auto invert mb-20 animate-pulse" />
+                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-80 h-auto invert mb-20 animate-pulse" />
                     <h3 className="text-7xl md:text-9xl font-black uppercase tracking-tighter leading-none italic mb-10">Let's Build.</h3>
                     <p className="text-3xl font-black italic text-gray-600 uppercase tracking-widest">{studioEmail}</p>
                 </div>

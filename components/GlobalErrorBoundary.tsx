@@ -11,17 +11,16 @@ interface ErrorBoundaryState {
 
 /**
  * GlobalErrorBoundary handles uncaught errors in the component tree.
- * Inherits from React.Component with generic Props and State to ensure type safety.
+ * Inherits from Component with generic Props and State to ensure type safety.
  */
-// FIX: Correcting inheritance by using direct Component import to ensure 'this.props' and 'this.state' are correctly recognized by the compiler.
-class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // FIX: Explicitly declare and initialize the state property to avoid state resolution issues.
-  public state: ErrorBoundaryState = {
-    hasError: false
-  };
-
+// FIX: Refactored to extend React.Component explicitly to resolve 'state' and 'props' property missing errors.
+class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
+    // FIX: Initializing state correctly within the constructor
+    this.state = {
+      hasError: false
+    };
   }
 
   // FIX: Standard static method definition for Error Boundary to update state when an error occurs.
@@ -30,15 +29,14 @@ class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
     return { hasError: true };
   }
 
-  // FIX: Standard lifecycle method for capturing error details.
+  // FIX: Standard lifecycle method for capturing error details and logging for monitoring.
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log the error to the console for infrastructure monitoring
     console.error("CRITICAL_SYSTEM_FAILURE:", error, errorInfo);
   }
 
-  // FIX: Standard render method implementation for class-based Error Boundary components.
   public render(): ReactNode {
-    // FIX: Accessing props and state using correctly inherited and typed properties from the base Component class.
+    // FIX: Correctly accessing props and state through 'this'
     const { children } = this.props;
     const { hasError } = this.state;
 

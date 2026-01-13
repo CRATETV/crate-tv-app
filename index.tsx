@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -15,6 +16,7 @@ import App from './App';
 import AdminPage from './AdminPage';
 import LandingPage from './components/LandingPage';
 import ClassicsPage from './components/ClassicsPage';
+import PublicSquarePage from './components/PublicSquarePage';
 import CratemasPage from './components/CratemasPage';
 import SubmitPage from './SubmitPage';
 import MoviePage from './components/MoviePage';
@@ -55,6 +57,7 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
+// FIX: Variable 'root' is declared once here
 const root = ReactDOM.createRoot(rootElement);
 
 // This component now contains the router and authentication logic.
@@ -138,6 +141,8 @@ const AppRouter: React.FC = () => {
       return user ? <WatchlistPage /> : <RedirectToLogin />;
     case '/classics':
       return user ? <ClassicsPage /> : <RedirectToLogin />;
+    case '/public-square':
+      return user ? <PublicSquarePage /> : <RedirectToLogin />;
     case '/cratemas':
       return user ? <CratemasPage /> : <RedirectToLogin />;
     case '/top-ten':
@@ -207,109 +212,19 @@ const AppRouter: React.FC = () => {
   }
 };
 
-const SideloadingInstructions: React.FC = () => (
-  <div style={{
-    backgroundColor: '#141414',
-    color: 'white',
-    fontFamily: 'Inter, sans-serif',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100vh',
-    padding: '2rem',
-    textAlign: 'center',
-  }}>
-    <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#EF4444', marginBottom: '1rem' }}>Initialization Error</h1>
-    <p style={{ fontSize: '1.1rem', maxWidth: '600px', marginBottom: '1.5rem' }}>
-      This application requires a development server to run correctly. Please do not open the <strong>index.html</strong> file directly.
-    </p>
-    <p style={{ fontSize: '1.1rem', maxWidth: '600px', marginBottom: '2rem' }}>
-      To start the app, run the following commands in your project's terminal:
-    </p>
-    <pre style={{
-      backgroundColor: '#1F2937',
-      padding: '1rem 1.5rem',
-      borderRadius: '0.5rem',
-      fontSize: '1rem',
-      textAlign: 'left',
-      color: '#A5B4FC',
-      border: '1px solid #374151',
-    }}>
-      <code>
-        <div style={{color: '#6B7280'}}># 1. Install dependencies (if you haven't already)</div>
-        <div style={{fontWeight: 'bold', color: '#FBBF24'}}>npm install</div>
-        <br/>
-        <div style={{color: '#6B7280'}}># 2. Start the development server</div>
-        <div>npm run dev</div>
-      </code>
-    </pre>
-     <p style={{ fontSize: '0.9rem', color: '#6B7280', marginTop: '2rem' }}>
-        The app will then be available at <a href="http://localhost:5373" style={{color: '#8B5CF6', textDecoration: 'underline'}}>http://localhost:5373</a>.
-    </p>
-  </div>
+// FIX: Define MainApp to wrap AppRouter with context providers and Error Boundary
+const MainApp: React.FC = () => (
+  <AuthProvider>
+    <FestivalProvider>
+      <GlobalErrorBoundary>
+        <AppRouter />
+        <UpdateBanner onRefresh={() => window.location.reload()} onDismiss={() => {}} />
+      </GlobalErrorBoundary>
+    </FestivalProvider>
+  </AuthProvider>
 );
 
-
-const MainApp: React.FC = () => {
-  if (window.location.protocol === 'file:') {
-    return <SideloadingInstructions />;
-  }
-
-  const [showIntro, setShowIntro] = useState(() => {
-    const lastSeen = localStorage.getItem('introSeenTimestamp');
-    if (!lastSeen) {
-      return true;
-    }
-    const oneDay = 24 * 60 * 60 * 1000;
-    return (Date.now() - parseInt(lastSeen, 10)) > oneDay;
-  });
-
-  const [showUpdateBanner, setShowUpdateBanner] = useState(false);
-  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
-
-  const onUpdate = (registration: ServiceWorkerRegistration) => {
-    setShowUpdateBanner(true);
-    setWaitingWorker(registration.waiting);
-  };
-
-  const handleRefresh = () => {
-    waitingWorker?.postMessage({ type: 'SKIP_WAITING' });
-    setShowUpdateBanner(false);
-  };
-
-  useEffect(() => {
-    serviceWorkerRegistration.register({ onUpdate });
-    let refreshing = false;
-    navigator.serviceWorker?.addEventListener('controllerchange', () => {
-        if (refreshing) return;
-        refreshing = true;
-        window.location.reload();
-    });
-  }, []);
-
-  const handleIntroEnd = () => {
-    localStorage.setItem('introSeenTimestamp', Date.now().toString());
-    setShowIntro(false);
-  };
-
-  return (
-    <AuthProvider>
-      <FestivalProvider>
-        <GlobalErrorBoundary>
-            {showIntro ? <Intro onIntroEnd={handleIntroEnd} /> : <AppRouter />}
-            {showUpdateBanner && (
-                <UpdateBanner 
-                    onRefresh={handleRefresh} 
-                    onDismiss={() => setShowUpdateBanner(false)} 
-                />
-            )}
-        </GlobalErrorBoundary>
-      </FestivalProvider>
-    </AuthProvider>
-  );
-};
-
+// FIX: Removed 'const' keyword to fix syntax error and prevent redeclaration of 'root'
 root.render(
   <React.StrictMode>
     <MainApp />

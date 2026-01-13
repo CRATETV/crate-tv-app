@@ -38,6 +38,10 @@ export const promoCodesData: Record<string, Partial<PromoCode>> = {
 };
 
 export const categoriesData: Record<string, Category> = {
+  "publicAccess": {
+      "title": "The Commons",
+      "movieKeys": []
+  },
   "cratemas": {
     "title": "Cratemas",
     "movieKeys": [

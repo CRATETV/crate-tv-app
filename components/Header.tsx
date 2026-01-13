@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
@@ -67,7 +68,11 @@ const Header: React.FC<HeaderProps> = ({
 
     const headerClasses = `fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${isScrolled || isScrolledProp ? 'bg-black/85 backdrop-blur-xl border-b border-white/5 py-3' : 'bg-transparent py-5'}`;
     
-    const navLinks = [{ path: '/', label: 'Home' }, { path: '/classics', label: 'Vintage' }];
+    const navLinks = [
+        { path: '/', label: 'Home' }, 
+        { path: '/classics', label: 'Vintage' },
+        { path: '/public-square', label: 'Public Square' }
+    ];
     if (user && (user.isActor || user.isFilmmaker)) navLinks.push({ path: '/portal', label: 'Creator Hub' });
     
     const spotlightPath = isLiveSpotlight && nowStreamingMovie 
@@ -101,7 +106,7 @@ const Header: React.FC<HeaderProps> = ({
                     {showNavLinks && user && (
                         <nav className="hidden md:flex items-center gap-8">
                             {navLinks.map(link => (
-                                <a key={link.path} href={link.path} onClick={(e) => handleNavigate(e, link.path)} className={`transition-colors text-sm font-black uppercase tracking-[0.2em] ${link.label === 'Creator Hub' ? 'text-red-500 hover:text-white' : 'text-gray-300 hover:text-white'}`}>{link.label}</a>
+                                <a key={link.path} href={link.path} onClick={(e) => handleNavigate(e, link.path)} className={`transition-colors text-sm font-black uppercase tracking-[0.2em] ${link.label === 'Creator Hub' ? 'text-red-500 hover:text-white' : link.label === 'Public Square' ? 'text-emerald-400 hover:text-white' : 'text-gray-300 hover:text-white'}`}>{link.label}</a>
                             ))}
                         </nav>
                     )}

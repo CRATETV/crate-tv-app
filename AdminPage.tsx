@@ -23,18 +23,13 @@ import PermissionsManager from './components/PermissionsManager';
 import EditorialManager from './components/EditorialManager';
 import RokuDeployTab from './components/RokuDeployTab';
 import UserIntelligenceTab from './components/UserIntelligenceTab';
-import CrateFestAnalytics from './components/CrateFestAnalytics';
-import FestivalAnalytics from './components/FestivalAnalytics';
 import DiscoveryEngine from './components/DiscoveryEngine';
-import StrategicHub from './components/StrategicHub';
-import SocialKitModal from './components/SocialKitModal';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
-    strategy: '🎯 Strategic Hub',
     mail: '✉️ Studio Mail',
+    editorial: '✍️ Editorial Lab',
     watchParty: '🍿 Watch Party',
-    socialForge: '📱 Social Forge',
     discovery: '🛰️ Research Lab',
     intelligence: '🕵️ User Intel',
     movies: '🎞️ Catalog',
@@ -74,7 +69,6 @@ const AdminPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('pulse');
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
-    const [socialKitFilm, setSocialKitFilm] = useState<Movie | null>(null);
 
     const allowedTabs = useMemo(() => {
         const isMaster = role === 'super_admin' || role === 'master';
@@ -195,7 +189,27 @@ const AdminPage: React.FC = () => {
                 <form onSubmit={handleLogin} className="bg-[#0f0f0f] border border-white/5 p-10 rounded-[2.5rem] shadow-2xl space-y-8 w-full max-w-sm">
                     <h1 className="text-xl font-black uppercase text-center text-gray-700">Studio Command</h1>
                     <div className="space-y-6">
-                        <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Operator Key" className="form-input text-center bg-white/5" required />
+                        <div className="relative">
+                            <input 
+                                type={showPassword ? "text" : "password"} 
+                                value={password} 
+                                onChange={(e) => setPassword(e.target.value)} 
+                                placeholder="Operator Key" 
+                                className="form-input text-center bg-white/5 pr-12" 
+                                required 
+                            />
+                            <button 
+                                type="button" 
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                            >
+                                {showPassword ? (
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.022 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                ) : (
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
+                                )}
+                            </button>
+                        </div>
                         <input type="text" value={loginName} onChange={(e) => setLoginName(e.target.value)} placeholder="Operator Identity" className="form-input text-center bg-white/5 uppercase" required />
                     </div>
                     {error && <p className="text-red-500 text-xs text-center">{error}</p>}
@@ -223,33 +237,25 @@ const AdminPage: React.FC = () => {
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
-                    {activeTab === 'socialForge' && (
-                        <div className="space-y-8 bg-white/5 p-12 rounded-[3.5rem] border border-white/10 shadow-2xl">
-                             <h2 className="text-3xl font-black uppercase tracking-tighter italic">Social Media Asset Forge</h2>
-                             <p className="text-gray-400">Generate FOMO-driven promotional copy for Facebook and Instagram based on upcoming events.</p>
-                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                {/* FIX: Explicitly cast Object.values(movies) to Movie[] to ensure 'm' is correctly typed as Movie instead of 'unknown', resolving compilation errors on key, title, and isWatchPartyEnabled */}
-                                {(Object.values(movies) as Movie[]).filter(m => m.isWatchPartyEnabled).map(m => (
-                                    <button key={m.key} onClick={() => setSocialKitFilm(m)} className="bg-black/60 p-6 rounded-3xl border border-red-600/30 text-left group hover:bg-red-600 transition-all">
-                                        <p className="text-[8px] font-black uppercase tracking-[0.4em] text-red-500 group-hover:text-white mb-2">Live Event Active</p>
-                                        <h4 className="text-xl font-black uppercase text-white leading-tight">{m.title}</h4>
-                                        <p className="text-[10px] text-gray-500 group-hover:text-white/70 mt-2">Generate Campaign Assets →</p>
-                                    </button>
-                                ))}
-                             </div>
-                        </div>
-                    )}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(password)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
                     {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}
-                    {activeTab === 'strategy' && <StrategicHub analytics={analytics} />}
+                    {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
                     {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => setActiveTab('movies')} onRefresh={() => fetchAllData(password)} />}
+                    {activeTab === 'discovery' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(c) => handleSaveData('categories', c)} />}
+                    {activeTab === 'intelligence' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={() => {}} />}
                     {activeTab === 'roku' && <RokuDeployTab />}
-                    {/* FIX: Cast movies to Movie[] for consistent typing when passing allMovies to HeroManager */}
+                    {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies) as Movie[]} />}
                     {activeTab === 'hero' && <HeroManager allMovies={Object.values(movies) as Movie[]} featuredKeys={categories.featured?.movieKeys || []} onSave={(keys) => handleSaveData('categories', { featured: { title: 'Featured Films', movieKeys: keys } })} isSaving={isSaving} />}
+                    {activeTab === 'cratefest' && <CrateFestEditor config={crateFestConfig || { isActive: false, title: '', tagline: '', startDate: '', endDate: '', passPrice: 15, movieBlocks: [] }} allMovies={movies} pipeline={pipeline} onSave={(c) => handleSaveData('settings', { crateFestConfig: c })} isSaving={isSaving} />}
+                    {activeTab === 'vouchers' && <PromoCodeManager isAdmin={true} targetFilms={Object.values(movies) as Movie[]} />}
+                    {activeTab === 'pitch' && <PitchDeckManager onSave={(s) => handleSaveData('settings', s)} isSaving={isSaving} />}
+                    {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />}
+                    {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(password)} />}
+                    {activeTab === 'security' && <SecurityTerminal />}
+                    {activeTab === 'fallback' && <FallbackGenerator movies={movies} categories={categories} festivalData={festivalData} festivalConfig={festivalConfig} aboutData={aboutData} />}
                 </div>
             </div>
-            {socialKitFilm && <SocialKitModal title={socialKitFilm.title} synopsis={socialKitFilm.synopsis} director={socialKitFilm.director} poster={socialKitFilm.poster} onClose={() => setSocialKitFilm(null)} />}
             {saveMessage && <SaveStatusToast message={saveMessage} isError={false} onClose={() => setSaveMessage('')} />}
         </div>
     );

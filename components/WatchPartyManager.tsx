@@ -204,6 +204,75 @@ const WatchPartyControlRoom: React.FC<{
     );
 };
 
+// --- MOVIE ROW SUBCOMPONENT ---
+
+const MovieRow: React.FC<{ 
+    movie: Movie; 
+    partyState?: WatchPartyState; 
+    onChange: (updates: Partial<Movie>) => void; 
+}> = ({ movie, partyState, onChange }) => {
+    // FIX: Using local state for the input value to prevent "resetting while typing" bug.
+    // The parent state updates can cause props to fluctuate, but local state keeps the cursor stable.
+    const [localTime, setLocalTime] = useState(formatISOForInput(movie.watchPartyStartTime));
+
+    // Keep local state in sync if the prop changes externally (e.g. after a Save)
+    useEffect(() => {
+        setLocalTime(formatISOForInput(movie.watchPartyStartTime));
+    }, [movie.watchPartyStartTime]);
+
+    const handleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onChange({ isWatchPartyEnabled: e.target.checked });
+    };
+
+    const handleCommitTime = () => {
+        if (localTime) {
+            const utcDate = new Date(localTime).toISOString();
+            if (utcDate !== movie.watchPartyStartTime) {
+                onChange({ watchPartyStartTime: utcDate });
+            }
+        } else {
+            onChange({ watchPartyStartTime: '' });
+        }
+    };
+
+    const status = getPartyStatusText(movie, partyState);
+
+    return (
+        <tr className="hover:bg-white/[0.01] transition-colors group">
+            <td className="p-5">
+                <p className="font-black text-white uppercase tracking-tight text-sm">{movie.title}</p>
+                <p className="text-[9px] text-gray-600 font-bold uppercase mt-1">Dir. {movie.director}</p>
+            </td>
+            <td className="p-5">
+                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border border-current opacity-70 ${status.color.replace('bg-', 'text-')}`}>
+                    {status.text}
+                </span>
+            </td>
+            <td className="p-5">
+                <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                        type="checkbox" 
+                        checked={movie.isWatchPartyEnabled || false} 
+                        onChange={handleToggle} 
+                        className="sr-only peer" 
+                    />
+                    <div className="w-10 h-5 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+            </td>
+            <td className="p-5">
+                <input 
+                    type="datetime-local" 
+                    value={localTime}
+                    onChange={e => setLocalTime(e.target.value)}
+                    onBlur={handleCommitTime}
+                    className="bg-white/5 border border-white/10 text-[10px] font-black text-white px-3 py-1.5 rounded-lg outline-none focus:border-red-600 transition-all"
+                    disabled={!movie.isWatchPartyEnabled}
+                />
+            </td>
+        </tr>
+    );
+};
+
 // --- MAIN COMPONENT ---
 
 const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (movie: Movie) => Promise<void>; }> = ({ allMovies, onSave }) => {
@@ -311,7 +380,6 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                     blockInfo={activeParty.block}
                     onStartParty={() => {}}
                     onEndParty={handleEndParty}
-                    onNextFilm={() => {}} 
                     onSyncState={(s) => handleSyncState(activeParty.movie.key, s)}
                 />
             )}
@@ -340,7 +408,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                         </div>
                         <div className="flex items-center gap-6">
                             <label className="flex items-center gap-3 cursor-pointer bg-white/5 px-4 py-2 rounded-xl border border-white/5">
-                                <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Festival Selections Only</span>
+                                <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Festival Only</span>
                                 <input 
                                     type="checkbox" 
                                     checked={isFestivalOnly} 
@@ -363,46 +431,19 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                                 <tr>
                                     <th className="p-5">Film Title</th>
                                     <th className="p-5">Handshake Status</th>
+                                    <th className="p-5">Enabled</th>
                                     <th className="p-5">Scheduled Start</th>
-                                    <th className="p-5 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {filteredMovies.map(movie => {
-                                    const state = partyStates[movie.key];
-                                    const status = getPartyStatusText(movie, state);
-                                    return (
-                                        <tr key={movie.key} className="hover:bg-white/[0.01] transition-colors group">
-                                            <td className="p-5">
-                                                <p className="font-black text-white uppercase tracking-tight text-sm">{movie.title}</p>
-                                                <p className="text-[9px] text-gray-600 font-bold uppercase mt-1">Dir. {movie.director}</p>
-                                            </td>
-                                            <td className="p-5">
-                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${status.color} border-current opacity-70`}>{status.text}</span>
-                                            </td>
-                                            <td className="p-5">
-                                                <input 
-                                                    type="datetime-local" 
-                                                    value={formatISOForInput(movie.watchPartyStartTime)}
-                                                    onChange={e => handleMovieSettingChange(movie.key, { 
-                                                        isWatchPartyEnabled: true,
-                                                        watchPartyStartTime: e.target.value ? new Date(e.target.value).toISOString() : '' 
-                                                    })}
-                                                    className="bg-white/5 border border-white/10 text-[10px] font-black text-white px-3 py-1 rounded outline-none focus:border-red-600"
-                                                />
-                                            </td>
-                                            <td className="p-5 text-right">
-                                                <button 
-                                                    onClick={() => handleStartIndividual(movie.key)}
-                                                    disabled={activeParty !== null}
-                                                    className="bg-white text-black font-black px-4 py-2 rounded-lg text-[9px] uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all disabled:opacity-10"
-                                                >
-                                                    Override & Start
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                {filteredMovies.map(movie => (
+                                    <MovieRow 
+                                        key={movie.key} 
+                                        movie={movie} 
+                                        partyState={partyStates[movie.key]}
+                                        onChange={(updates) => handleMovieSettingChange(movie.key, updates)} 
+                                    />
+                                ))}
                             </tbody>
                         </table>
                     </div>
