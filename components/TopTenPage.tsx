@@ -25,212 +25,91 @@ const RankCard: React.FC<{ movie: Movie; rank: number; onSelect: (m: Movie) => v
 
         <div className="relative z-10 flex items-center gap-6 md:gap-12 w-full">
             <div className="flex-shrink-0 flex items-center justify-center w-12 md:w-20">
-                <span className="text-4xl md:text-6xl font-black text-white italic group-hover:text-red-600 transition-colors">
-                    {rank.toString().padStart(2, '0')}
-                </span>
+                {/* Fixed truncated text by providing a rank label */}
+                <span className="text-2xl font-black text-white/20 group-hover:text-red-500 transition-colors uppercase tracking-widest">#{rank}</span>
+            </div>
+            
+            <div className="relative w-20 h-28 md:w-32 md:h-44 flex-shrink-0 rounded-xl overflow-hidden shadow-2xl border border-white/10 group-hover:scale-105 transition-transform duration-500">
+                <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />
             </div>
 
-            <div className="relative w-24 h-36 md:w-32 md:h-48 flex-shrink-0 rounded-2xl overflow-hidden shadow-2xl border border-white/10 group-hover:scale-105 transition-transform duration-500">
-                <img 
-                    src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} 
-                    alt="" 
-                    className="w-full h-full object-cover"
-                    crossOrigin="anonymous"
-                />
-            </div>
-
-            <div className="flex-grow min-w-0 space-y-2 md:space-y-4">
-                <div className="space-y-1">
-                    <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[8px] md:text-[10px]">Active Leaderboard // SECTOR {rank}</p>
-                    <h3 className="text-2xl md:text-5xl font-black text-white uppercase tracking-tighter truncate leading-none">{movie.title}</h3>
-                    <p className="text-gray-500 font-bold uppercase text-[10px] md:text-xs tracking-widest">Dir. {movie.director}</p>
-                </div>
-                
-                <div className="flex items-center gap-4 md:gap-8 pt-2 md:pt-4 border-t border-white/5">
-                    <div className="hidden sm:block">
-                        <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Audience Velocity</p>
-                        <p className="text-sm font-bold text-white uppercase">{views.toLocaleString()} Streams</p>
-                    </div>
-                    <div>
-                        <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Platform Sync</p>
-                        <p className="text-sm font-bold text-green-500 uppercase">High Reach</p>
-                    </div>
+            <div className="flex-grow min-w-0 space-y-2">
+                <h3 className="text-2xl md:text-4xl font-black text-white uppercase tracking-tighter italic group-hover:text-red-500 transition-colors truncate leading-tight">
+                    {movie.title}
+                </h3>
+                <div className="flex flex-wrap items-center gap-2 md:gap-4">
+                    <p className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-widest">Directed by {movie.director}</p>
+                    <div className="hidden sm:block h-1 w-1 rounded-full bg-gray-800"></div>
+                    <p className="text-[10px] md:text-xs font-black text-red-600 uppercase tracking-widest">
+                        {views.toLocaleString()} Global Streams
+                    </p>
                 </div>
             </div>
 
-            <div className="flex-shrink-0 hidden md:flex items-center justify-center w-20 h-20 rounded-full border border-white/10 group-hover:bg-red-600 group-hover:border-red-600 transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                </svg>
+            <div className="hidden md:block opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center shadow-2xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                </div>
             </div>
         </div>
     </div>
 );
 
 const TopTenPage: React.FC = () => {
-    const { isLoading, movies, analytics } = useFestival();
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [shareStatus, setShareStatus] = useState<'idle' | 'success' | 'error'>('idle');
-    const shareableImageRef = useRef<HTMLDivElement>(null);
-    const currentDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
-    const topTenMovies = useMemo(() => {
+    const { movies, analytics, isLoading } = useFestival();
+    
+    // Sort movies by view counts provided by analytics
+    const sortedMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
-            .filter((movie): movie is Movie => !!movie && !!movie.title && !movie.isUnlisted)
+            .filter(m => !!m && !m.isUnlisted && !!m.poster)
             .sort((a, b) => (analytics?.viewCounts?.[b.key] || 0) - (analytics?.viewCounts?.[a.key] || 0))
             .slice(0, 10);
     }, [movies, analytics]);
-    
+
     const handleSelectMovie = (movie: Movie) => {
-        window.history.pushState({}, '', `/movie/${movie.key}`);
+        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
         window.dispatchEvent(new Event('pushstate'));
-    };
-    
-    const handleShare = async () => {
-        if (!shareableImageRef.current || isGenerating) return;
-        setIsGenerating(true);
-        try {
-            const { default: html2canvas } = await import('html2canvas');
-            const canvas = await html2canvas(shareableImageRef.current, { useCORS: true, backgroundColor: '#050505', scale: 2 });
-            const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
-            if (!blob) throw new Error('Failed to create image blob.');
-            const file = new File([blob], 'cratetv_top10.png', { type: 'image/png' });
-            if (navigator.share && navigator.canShare({ files: [file] })) {
-                await navigator.share({ title: 'Top 10 on Crate TV', files: [file] });
-            } else {
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = 'cratetv_top10.png';
-                link.click();
-                setShareStatus('success');
-                setTimeout(() => setShareStatus('idle'), 3000);
-            }
-        } catch (error) {
-            console.error("Share failed", error);
-        } finally {
-            setIsGenerating(false);
-        }
     };
 
     if (isLoading) return <LoadingSpinner />;
 
-    const heroMovie = topTenMovies[0];
-    const chartMovies = topTenMovies.slice(1);
-
     return (
-        <div className="flex flex-col min-h-screen text-white bg-[#050505]">
-            <SEO title="Sector Priority: Top 10 Today" description="The most streamed independent films on Crate TV right now based on viewership velocity." />
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={false} />
+        <div className="flex flex-col min-h-screen text-white bg-black">
+            <SEO title="Top 10 Today" description="The most streamed films on Crate TV today based on global audience reach." />
+            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
             
-            <main className="flex-grow pt-24 pb-24 md:pb-32 px-4 md:px-12 relative overflow-hidden">
-                <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-red-600/5 rounded-full blur-[150px] pointer-events-none"></div>
-                <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-purple-600/5 rounded-full blur-[150px] pointer-events-none"></div>
-
-                <div className="max-w-7xl mx-auto space-y-16">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 border-b border-white/5 pb-16">
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-3">
-                                <span className="w-1.5 h-10 bg-red-600 rounded-full"></span>
-                                <div>
-                                    <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] leading-none">Global Network Feed</p>
-                                    <h1 className="text-4xl md:text-8xl font-black uppercase tracking-tighter leading-none italic mt-2">Sector Priority: <span className="text-gray-500">Top 10 Today.</span></h1>
-                                </div>
-                            </div>
-                            <p className="text-xl md:text-2xl text-gray-500 font-medium max-w-2xl leading-tight">
-                                Live ranking of the most impactful independent cinema on the Crate TV Infrastructure by <span className="text-white font-bold">Stream Velocity</span>.
-                            </p>
-                        </div>
-                        <button 
-                            onClick={handleShare}
-                            disabled={isGenerating}
-                            className="bg-white text-black font-black px-10 py-5 rounded-2xl text-xs uppercase tracking-widest shadow-2xl hover:bg-gray-200 transition-all active:scale-95 disabled:opacity-50"
-                        >
-                            {isGenerating ? 'Synthesizing...' : 'Export Session Report'}
-                        </button>
+            <main className="flex-grow pt-24 pb-24 px-4 md:px-12">
+                <div className="max-w-5xl mx-auto space-y-16">
+                    <div className="text-center md:text-left">
+                        <p className="text-red-500 font-black uppercase tracking-[0.5em] text-[10px] mb-4">Live Performance Manifest</p>
+                        <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">Sector Priority.</h1>
+                        <p className="text-xl text-gray-500 mt-4 font-medium">Tracking global audience velocity in real-time. The definitive chart.</p>
                     </div>
 
-                    {heroMovie && (
-                        <section 
-                            onClick={() => handleSelectMovie(heroMovie)}
-                            className="relative w-full h-[60vh] md:h-[75vh] rounded-[4rem] overflow-hidden group cursor-pointer border border-white/10 shadow-[0_50px_100px_rgba(0,0,0,1)] animate-[fadeIn_1s_ease-out]"
-                        >
-                            <img 
-                                src={`/api/proxy-image?url=${encodeURIComponent(heroMovie.poster)}`} 
-                                alt="" 
-                                className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-20"
-                                crossOrigin="anonymous"
+                    <div className="space-y-6">
+                        {sortedMovies.map((movie, index) => (
+                            <RankCard 
+                                key={movie.key} 
+                                movie={movie} 
+                                rank={index + 1} 
+                                views={analytics?.viewCounts?.[movie.key] || 0}
+                                onSelect={handleSelectMovie}
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-                            
-                            <div className="relative h-full flex flex-col items-center justify-center p-8 md:p-20 text-center space-y-8">
-                                <div className="space-y-2">
-                                    <div className="inline-flex items-center gap-3 bg-red-600 px-6 py-2 rounded-full shadow-2xl animate-bounce">
-                                        <span className="text-white font-black text-sm uppercase tracking-widest italic">Peak Velocity #01</span>
-                                    </div>
-                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.8em] pt-4">Global Discovery Leader</p>
-                                </div>
-
-                                <div className="flex flex-col md:flex-row items-center gap-12">
-                                     <div className="relative">
-                                        <div className="absolute -inset-4 bg-red-600/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
-                                        <img 
-                                            src={`/api/proxy-image?url=${encodeURIComponent(heroMovie.poster)}`} 
-                                            alt={heroMovie.title} 
-                                            className="w-48 md:w-80 h-auto rounded-3xl shadow-[0_30px_60px_rgba(0,0,0,1)] border border-white/10 relative z-10 transition-transform duration-700 group-hover:rotate-[-2deg] group-hover:scale-105"
-                                            crossOrigin="anonymous"
-                                        />
-                                     </div>
-                                     <div className="text-center md:text-left max-w-2xl">
-                                        <h2 className="text-5xl md:text-8xl lg:text-[10rem] font-black uppercase tracking-tighter leading-[0.8] mb-8 italic drop-shadow-[0_10px_20px_rgba(0,0,0,1)]">
-                                            {heroMovie.title}
-                                        </h2>
-                                        <div className="flex flex-wrap justify-center md:justify-start gap-4">
-                                            <div className="bg-white/5 border border-white/10 backdrop-blur-xl px-6 py-3 rounded-2xl">
-                                                <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Director</p>
-                                                <p className="text-lg font-bold text-white uppercase truncate">{heroMovie.director}</p>
-                                            </div>
-                                            <div className="bg-white/5 border border-white/10 backdrop-blur-xl px-6 py-3 rounded-2xl">
-                                                <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Impact Status</p>
-                                                <p className="text-lg font-bold text-red-500 uppercase">Massively Streamed</p>
-                                            </div>
-                                        </div>
-                                     </div>
-                                </div>
+                        ))}
+                        
+                        {sortedMovies.length === 0 && (
+                            <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-[3rem] opacity-20">
+                                <p className="text-gray-500 font-black uppercase tracking-[0.5em]">Awaiting Cluster Synchronization</p>
                             </div>
-                        </section>
-                    )}
-
-                    <section className="space-y-6 pt-16">
-                        <div className="flex items-center gap-4 px-8 mb-10">
-                            <h2 className="text-2xl font-black uppercase tracking-widest text-gray-600">The Ascent</h2>
-                            <div className="h-px flex-grow bg-white/5"></div>
-                        </div>
-                        <div className="grid grid-cols-1 gap-6">
-                            {chartMovies.map((movie, index) => (
-                                <RankCard 
-                                    key={movie.key} 
-                                    movie={movie} 
-                                    rank={index + 2} 
-                                    onSelect={handleSelectMovie} 
-                                    views={analytics?.viewCounts?.[movie.key] || 0}
-                                />
-                            ))}
-                        </div>
-                    </section>
+                        )}
+                    </div>
                 </div>
             </main>
-
+            
             <CollapsibleFooter />
             <BackToTopButton />
-            <BottomNavBar onSearchClick={() => {}} />
-
-            {topTenMovies.length > 0 && (
-                <div className="absolute -left-[9999px] top-0" aria-hidden="true">
-                    <div ref={shareableImageRef}>
-                        <TopTenShareableImage topFilms={topTenMovies} date={currentDate} />
-                    </div>
-                </div>
-            )}
+            <BottomNavBar onSearchClick={() => { window.history.pushState({}, '', '/'); window.dispatchEvent(new Event('pushstate')); }} />
+            <style>{`.italic-text { font-style: italic; }`}</style>
         </div>
     );
 };

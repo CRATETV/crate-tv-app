@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useFestival } from '../contexts/FestivalContext';
 
@@ -12,15 +11,11 @@ const Slide: React.FC<{
     slideNumber?: string;
 }> = ({ children, dark = true, title, subtitle, gradient, targetCompany = 'LIFT LABS', slideNumber }) => (
     <section className={`pitch-slide w-full min-h-[100vh] flex flex-col p-8 md:p-24 relative overflow-hidden break-after-page ${gradient ? gradient : (dark ? 'bg-[#050505] text-white' : 'bg-white text-black')}`}>
-        {/* Cinematic Texture Layers */}
         <div className="absolute inset-0 opacity-[0.04] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-
-        {/* Dynamic Watermark Engine */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-[0.02] rotate-[-25deg] select-none whitespace-nowrap">
             <span className="text-[280px] font-black uppercase leading-none">{targetCompany.toUpperCase()} // STRATEGIC</span>
         </div>
-
         <div className="flex justify-between items-start mb-16 relative z-10">
             <div className="flex items-center gap-10">
                 <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate" className={`w-32 h-auto ${!dark && 'invert'}`} />
@@ -36,11 +31,10 @@ const Slide: React.FC<{
                 </div>
             )}
         </div>
-        
         <div className="flex-grow flex flex-col justify-center relative z-10 max-w-7xl">
             {title && (
                 <div className="mb-16">
-                    <h2 className="text-6xl md:text-[9rem] font-black uppercase tracking-tighter leading-[0.8] animate-[fadeIn_0.8s_ease-out] italic italic-text">
+                    <h2 className="text-6xl md:text-[9rem] font-black uppercase tracking-tighter leading-[0.8] animate-[fadeIn_0.8s_ease-out] italic">
                         {title}
                     </h2>
                     {subtitle && (
@@ -54,7 +48,6 @@ const Slide: React.FC<{
                 {children}
             </div>
         </div>
-
         <div className="flex justify-between items-end mt-16 text-[10px] font-black uppercase tracking-[0.4em] text-white/20 border-t border-white/5 pt-8 relative z-10">
             <div className="flex gap-12">
                 <span>TERMINAL_SESSION // 0X5521</span>
@@ -76,13 +69,10 @@ const MetricCard: React.FC<{ label: string; value: string; sub: string }> = ({ l
 const PitchDeckPage: React.FC = () => {
     const { settings } = useFestival();
     const [showHandshake, setShowHandshake] = useState(true);
-    
     const studioEmail = settings.businessEmail || "studio@cratetv.net";
-
     const target = useMemo(() => {
-        if (typeof window === 'undefined') return 'LIFT LABS';
         const params = new URLSearchParams(window.location.search);
-        return params.get('for') || params.get('company') || settings.pitchTargetCompany || 'LIFT LABS';
+        return params.get('for') || settings.pitchTargetCompany || 'LIFT LABS';
     }, [settings.pitchTargetCompany]);
 
     useEffect(() => {
@@ -98,156 +88,65 @@ const PitchDeckPage: React.FC = () => {
                     <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-full h-full object-contain animate-pulse" alt="Crate" />
                 </div>
                 <h2 className="text-white font-black uppercase tracking-[1em] text-sm mb-6">Securing Strategy Session</h2>
-                <p className="text-red-600 font-black uppercase text-xl tracking-[0.2em] animate-bounce">
-                    IDENTIFIED: {target.toUpperCase()}
-                </p>
-                <div className="absolute bottom-24 w-80 h-px bg-white/5 overflow-hidden">
-                    <div className="h-full bg-red-600 w-1/3 animate-[loading_1.5s_infinite]"></div>
-                </div>
-                <style>{`
-                    @keyframes loading {
-                        0% { transform: translateX(-100%); }
-                        100% { transform: translateX(200%); }
-                    }
-                    .italic-text { font-style: italic; }
-                `}</style>
+                <p className="text-red-600 font-black uppercase text-xl tracking-[0.2em] animate-bounce">IDENTIFIED: {target.toUpperCase()}</p>
             </div>
         );
     }
 
     return (
         <div className="bg-black min-h-screen selection:bg-red-600 selection:text-white scroll-smooth overflow-x-hidden">
-            <div className="no-print fixed top-10 right-10 z-[100] flex gap-6">
-                <button onClick={() => window.print()} className="bg-red-600 text-white font-black px-10 py-5 rounded-2xl text-[11px] uppercase tracking-widest shadow-[0_25px_60px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-all hover:scale-105 active:scale-95">Generate Audit Brief</button>
-                <button onClick={() => window.history.back()} className="bg-white/10 backdrop-blur-xl text-white font-black px-10 py-5 rounded-2xl text-[11px] uppercase tracking-widest border border-white/10 hover:bg-white/20 transition-all">Close Terminal</button>
-            </div>
-
-            {/* SLIDE 1: PRESTIGE COVER */}
             <Slide slideNumber="01" targetCompany={target} title="The Afterlife." subtitle="Crate TV: Strategic Yield 2025" gradient="bg-gradient-to-br from-[#0a0a0a] via-[#050505] to-red-950/20">
                 <div className="max-w-5xl space-y-16">
                     <p className="text-4xl md:text-7xl text-gray-200 font-black leading-[0.95] tracking-tight uppercase">
-                        The elite <span className="text-white italic underline decoration-red-600 underline-offset-[12px]">permanent home</span> for world-class cinema after the festival circuit.
+                        The elite <span className="text-white italic underline decoration-red-600 underline-offset-[12px]">permanent home</span> for world-class cinema.
                     </p>
-                    {settings.pitchDeckCustomMessage && (
-                        <div className="bg-white/5 p-8 rounded-3xl border border-white/10 italic text-2xl text-red-500 font-bold">
-                            "{settings.pitchDeckCustomMessage}"
-                        </div>
-                    )}
-                    <div className="flex items-center gap-16 pt-16 border-t border-white/5">
-                        <div className="space-y-2">
-                            <p className="text-[10px] font-black text-red-500 uppercase tracking-[0.4em]">Strategic Context</p>
-                            <p className="text-2xl font-black uppercase text-white">Active Proposal</p>
-                        </div>
-                        <div className="space-y-2">
-                            <p className="text-[10px] font-black text-red-500 uppercase tracking-[0.4em]">Prepared For</p>
-                            <p className="text-2xl font-black uppercase text-white">{target}</p>
-                        </div>
-                    </div>
                 </div>
             </Slide>
 
-            {/* SLIDE 2: THE PROBLEM */}
-            <Slide slideNumber="02" targetCompany={target} title="The Festival Void." subtitle="The Market Problem">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-24 items-center">
-                    <div className="space-y-12">
-                        <p className="text-5xl font-black leading-[1.1] text-white uppercase italic">Independent films deserve to be <span className="text-red-600">seen</span>, not just selected.</p>
-                        <ul className="space-y-8 text-gray-400 font-medium">
-                            <li className="flex gap-6 border-b border-white/5 pb-8"><span className="text-red-500 font-black text-xl italic">/ 01</span> <p className="text-xl">Brilliant films often "die" after their 12-month festival run due to lack of distribution.</p></li>
-                            <li className="flex gap-6 border-b border-white/5 pb-8"><span className="text-red-500 font-black text-xl italic">/ 02</span> <p className="text-xl">Audiences are exhausted by generic, over-produced algorithmic filler.</p></li>
-                            <li className="flex gap-6 border-b border-white/5 pb-8"><span className="text-red-500 font-black text-xl italic">/ 03</span> <p className="text-xl">Authentic stories require an authentic, hand-picked lifeboat platform.</p></li>
-                        </ul>
-                    </div>
-                    <div className="relative group">
-                         <div className="absolute -inset-10 bg-red-600/10 blur-[100px] opacity-50"></div>
-                         <MetricCard label="Market Failure" value="92%" sub="of award-winning indie films have no professional monetization path 12 months after premiere." />
-                    </div>
-                </div>
-            </Slide>
-
-            {/* SLIDE 3: THE AUTHENTICITY ENGINE */}
-            <Slide slideNumber="03" targetCompany={target} title="The Champion." subtitle="Brevity as a Strategic Weapon" gradient="bg-gradient-to-tr from-[#050505] to-red-950/30">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mt-16">
-                    <div className="p-12 bg-white/[0.02] border border-white/5 rounded-[4rem] space-y-6">
-                        <h4 className="text-3xl font-black uppercase tracking-tighter text-white italic">Elite Filter</h4>
-                        <p className="text-gray-400 leading-relaxed text-base font-medium">Crate TV acts as a high-density lifeboat for the champions of the circuit. We curate the elite so users never gamble on authenticity.</p>
-                    </div>
-                    <div className="p-12 bg-red-600/10 border border-red-500/20 rounded-[4rem] space-y-6 shadow-2xl">
-                        <h4 className="text-3xl font-black uppercase tracking-tighter text-white italic">Brevity = Impact</h4>
-                        <p className="text-gray-400 leading-relaxed text-base font-medium">Short stories maximize emotional ROI. Users support five unique artists in the time it takes to watch one blockbuster filler—accelerating the patronage loop.</p>
-                    </div>
-                    <div className="p-12 bg-white/[0.02] border border-white/5 rounded-[4rem] space-y-6">
-                        <h4 className="text-3xl font-black uppercase tracking-tighter text-white italic">Patronage Yield</h4>
-                        <p className="text-gray-400 leading-relaxed text-base font-medium">A transparent 70/30 model. We build careers, not just view counts, by providing a professional afterlife for independent masterpieces.</p>
-                    </div>
-                </div>
-            </Slide>
-
-            {/* SLIDE 4: INFRASTRUCTURE */}
-            <Slide slideNumber="04" targetCompany={target} title="Native Stack." subtitle="Roku // Cloud // Intelligence">
+            <Slide slideNumber="02" targetCompany={target} title="The Event." subtitle="Live Social Streaming Architecture">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                    <div className="relative rounded-[5rem] overflow-hidden border border-white/10 shadow-[0_50px_100px_rgba(0,0,0,1)]">
-                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/ruko+logo+.webp" className="w-full h-full object-cover opacity-30 blur-sm scale-110" alt="Roku" />
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-16 text-center bg-black/40">
-                            <h3 className="text-6xl font-black uppercase tracking-tighter text-white mb-6 italic">Big Screen Authority</h3>
-                            <p className="text-gray-300 max-w-sm font-bold text-lg">We own our Roku SDK codebase. We provide high-bitrate master exhibition directly in the living room, bypassing browser limitations.</p>
-                        </div>
-                    </div>
-                    <div className="space-y-8">
-                        <div className="p-10 bg-white/5 rounded-[3rem] border border-white/10 group hover:border-red-600/50 transition-all">
-                            <p className="text-red-500 font-black uppercase text-[10px] tracking-[0.5em] mb-3">Operational Velocity</p>
-                            <h4 className="text-2xl font-black text-white uppercase italic">Zero Latency Sync</h4>
-                            <p className="text-gray-400 mt-4 text-base font-medium leading-relaxed">Our V4 interface publishes content and re-routes monetization rules globally in sub-100ms cycles. Rental sync is instant across all devices.</p>
-                        </div>
-                        <div className="p-10 bg-white/5 rounded-[3rem] border border-white/10 group hover:border-red-600/50 transition-all">
-                            <p className="text-red-500 font-black uppercase text-[10px] tracking-[0.5em] mb-3">AI Intelligence</p>
-                            <h4 className="text-2xl font-black text-white uppercase italic">Predictive Hype Maps</h4>
-                            <p className="text-gray-400 mt-4 text-base font-medium leading-relaxed">Integrated Gemini 3 Pro analyzes audience sentiment data to predict which talent is ready for major IP acquisition.</p>
-                        </div>
-                    </div>
-                </div>
-            </Slide>
-
-            {/* SLIDE 5: OPPORTUNITY */}
-            <Slide slideNumber="05" targetCompany={target} title="The Synergy." subtitle="Growth Metrics">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-24">
                     <div className="space-y-10">
-                        <h4 className="text-5xl font-black text-white uppercase tracking-tighter italic leading-none">Why Crate TV x {target}?</h4>
-                        <p className="text-2xl text-gray-400 leading-relaxed font-medium">We serve as the ultimate <span className="text-white italic">Authenticity Funnel</span>. We identify high-impact talent at the point of origin, reducing IP acquisition costs for our partners.</p>
+                        <p className="text-4xl font-black uppercase italic leading-tight">Beyond Passive Viewing: <span className="text-red-600">The Watch Party.</span></p>
+                        <p className="text-xl text-gray-400 leading-relaxed font-medium">Crate TV solves the "lonely stream" problem. Our infrastructure allows hundreds of simultaneous viewers to sync playback, interact via live chat, and engage with directors in real-time Q&A sessions.</p>
+                        <div className="flex gap-10">
+                            <div className="space-y-2">
+                                <p className="text-4xl font-black text-white italic">Sub-100ms</p>
+                                <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Global Sync Latency</p>
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-4xl font-black text-red-600 italic">70%</p>
+                                <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Filmmaker Yield</p>
+                            </div>
+                        </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="bg-green-600/10 border border-green-500/20 p-10 rounded-[3rem] text-center shadow-2xl">
-                            <p className="text-5xl font-black text-white italic">82%</p>
-                            <p className="text-[11px] font-black text-green-500 uppercase tracking-[0.5em] mt-2">Retention</p>
-                        </div>
-                        <div className="bg-blue-600/10 border border-blue-500/20 p-10 rounded-[3rem] text-center shadow-2xl">
-                            <p className="text-5xl font-black text-white italic">2.4x</p>
-                            <p className="text-[11px] font-black text-blue-500 uppercase tracking-[0.5em] mt-2">Patronage Velocity</p>
-                        </div>
-                        <div className="col-span-2 bg-red-600/10 border border-red-500/20 p-12 rounded-[3.5rem] text-center shadow-2xl">
-                            <p className="text-5xl font-black text-white italic tracking-tighter uppercase">Authenticity at Scale</p>
+                    <div className="relative rounded-[4rem] overflow-hidden border border-white/10 shadow-2xl">
+                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg" className="w-full h-full object-cover opacity-40" alt="Watch Party" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                        <div className="absolute bottom-8 left-8 flex items-center gap-3">
+                            <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">Live: Sector Delta Active</span>
                         </div>
                     </div>
                 </div>
             </Slide>
 
-            {/* SLIDE 6: CONTACT */}
-            <Slide targetCompany={target} dark={false} gradient="bg-white">
+            <Slide slideNumber="03" targetCompany={target} title="Economics." subtitle="Disruptive Acquisition Model">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+                    <MetricCard label="Ticketed Events" value="$5.00" sub="Standard pricing for live watch parties. High conversion 'dopamine' purchase point." />
+                    <MetricCard label="Artist Retention" value="70%" sub="Filmmakers keep the lion's share of all ticket sales and community donations." />
+                </div>
+                <div className="mt-16 p-8 bg-white/5 border border-white/10 rounded-3xl">
+                    <p className="text-gray-400 text-lg leading-relaxed">
+                        Unlike traditional "buy-out" models that strip artists of their upside, Crate TV provides a <span className="text-white font-bold">continuous revenue engine</span>. We specialize in the "Encore Window"—providing new life to films that have completed their initial distribution run.
+                    </p>
+                </div>
+            </Slide>
+
+            <Slide targetCompany={target} dark={true} gradient="bg-[#050505]">
                 <div className="flex flex-col items-center justify-center text-center py-20">
-                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" className="w-[30rem] h-auto invert mb-20 animate-pulse" />
-                    <div className="space-y-6 mb-24">
-                        <h3 className="text-7xl md:text-9xl font-black uppercase tracking-tighter leading-none italic">Let's Build.</h3>
-                        <p className="text-red-600 font-black uppercase tracking-[0.8em] text-2xl">Excellence by Design</p>
-                    </div>
-                    <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-20 text-left border-t border-black/10 pt-16">
-                        <div>
-                            <p className="text-[11px] font-black uppercase text-gray-400 tracking-[0.6em] mb-4">Strategic Contact</p>
-                            <p className="text-3xl font-black italic">{studioEmail}</p>
-                        </div>
-                        <div>
-                            <p className="text-[11px] font-black uppercase text-gray-400 tracking-[0.6em] mb-4">Network Terminal</p>
-                            <p className="text-3xl font-black italic">cratetv.net</p>
-                        </div>
-                    </div>
+                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate TV" className="w-80 h-auto invert mb-20 animate-pulse" />
+                    <h3 className="text-7xl md:text-9xl font-black uppercase tracking-tighter leading-none italic mb-10">Let's Build.</h3>
+                    <p className="text-3xl font-black italic text-gray-600 uppercase tracking-widest">{studioEmail}</p>
                 </div>
             </Slide>
         </div>

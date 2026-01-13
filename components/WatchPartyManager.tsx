@@ -227,8 +227,8 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
     }, []);
 
     const allBlocks = useMemo(() => {
-        const regular = festivalData.flatMap(day => day.blocks);
-        const crateFest = settings.crateFestConfig?.movieBlocks || [];
+        const regular = (festivalData || []).flatMap(day => (day.blocks || []).map(b => ({ ...b, time: b.time || 'TBD' })));
+        const crateFest = (settings.crateFestConfig?.movieBlocks || []).map(b => ({ ...b, time: 'SPECIAL_EVENT' }));
         return [...regular, ...crateFest] as FilmBlock[];
     }, [festivalData, settings.crateFestConfig]);
 
@@ -311,7 +311,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                     blockInfo={activeParty.block}
                     onStartParty={() => {}}
                     onEndParty={handleEndParty}
-                    onNextFilm={() => {}} // Block navigation logic would go here
+                    onNextFilm={() => {}} 
                     onSyncState={(s) => handleSyncState(activeParty.movie.key, s)}
                 />
             )}

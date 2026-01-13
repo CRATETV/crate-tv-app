@@ -13,17 +13,17 @@ export async function POST(request: Request) {
 
     const textPrompt = `
         You are the Head of Digital Marketing at Crate TV. 
-        Create a comprehensive social media "Kit" for the film/platform: "${title}" directed by ${director}. 
+        Create a comprehensive social media "Kit" for an upcoming LIVE WATCH PARTY event for: "${title}" directed by ${director}. 
         Synopsis: "${synopsis}".
         
         The kit must include:
-        1. 3 Instagram captions (Focus on aesthetic and artistic depth)
-        2. 3 X/Twitter posts (Focus on viral impact and urgency)
-        3. 5 "Story Slide" Manifests: Short, punchy text for Canva-style slides (Slide 1: Hook, Slide 2: Problem, Slide 3: Solution, Slide 4: 70/30 Model, Slide 5: CTA).
-        4. 15 niche cinematic hashtags
-        5. 1 Official Press Release (Professional industry format)
+        1. 3 Instagram captions (Focus on aesthetic beauty and the exclusive nature of the live chat).
+        2. 3 Facebook posts (Focus on community engagement, "Watch together from home", and supporting independent artists).
+        3. 5 "Story Slide" Manifests: Punchy text for Canva templates.
+        4. 15 viral cinema hashtags (e.g., #CrateTV #LiveCinema #IndieFilm).
         
-        Tone: Prestigious, slightly elite, filmmaker-centric, industrial.
+        Tone: Sophisticated but high-energy. Focus on FOMO (Fear of Missing Out). 
+        Mention that the Director may be present in the live talkback.
         
         Respond ONLY in valid JSON.
     `;
@@ -60,6 +60,6 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("Social Kit API error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Internal System Error" }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Internal System Error" }), { status: 500 });
   }
 }

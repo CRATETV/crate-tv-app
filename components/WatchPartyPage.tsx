@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, WatchPartyState, ChatMessage, SentimentPoint } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -172,11 +171,15 @@ const LiveTalkbackTerminal: React.FC<{
     );
 };
 
-const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: string | null; avatar?: string; } | null }> = ({ movieKey, user }) => {
+const EmbeddedChat: React.FC<{ movieKey: string; movie: Movie; user: { name?: string; email: string | null; avatar?: string; } | null }> = ({ movieKey, movie, user }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const directorsList = useMemo(() => 
+        (movie.director || '').toLowerCase().split(',').map(d => d.trim()), 
+    [movie.director]);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -224,15 +227,23 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
                         <p className="text-gray-600 text-sm italic">Screening in progress. Join the conversation!</p>
                     </div>
                 ) : (
-                    messages.map(msg => (
-                        <div key={msg.id} className="flex items-start gap-3 animate-[fadeIn_0.2s_ease-out]">
-                            <div className="w-8 h-8 rounded-full bg-gray-800 flex-shrink-0 p-1 border border-white/5" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
-                            <div className="min-w-0">
-                                <p className="font-black text-[11px] text-red-500 uppercase tracking-tighter">{msg.userName}</p>
-                                <p className="text-sm text-gray-200 break-words leading-snug">{msg.text}</p>
+                    messages.map(msg => {
+                        const isDirector = directorsList.includes(msg.userName.toLowerCase().trim());
+                        return (
+                            <div key={msg.id} className={`flex items-start gap-3 animate-[fadeIn_0.2s_ease-out] ${isDirector ? 'bg-red-600/5 p-3 rounded-2xl border border-red-500/10' : ''}`}>
+                                <div className={`w-8 h-8 rounded-full flex-shrink-0 p-1 border ${isDirector ? 'border-red-500 bg-red-600/20' : 'border-white/5 bg-gray-800'}`} dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <p className={`font-black text-[11px] uppercase tracking-tighter ${isDirector ? 'text-white' : 'text-red-500'}`}>{msg.userName}</p>
+                                        {isDirector && (
+                                            <span className="bg-red-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded tracking-widest uppercase">Verified Director</span>
+                                        )}
+                                    </div>
+                                    <p className={`text-sm break-words leading-snug ${isDirector ? 'text-white font-medium' : 'text-gray-200'}`}>{msg.text}</p>
+                                </div>
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
                 <div ref={messagesEndRef} />
             </div>
@@ -549,12 +560,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
                     
                     <div className="flex-grow flex flex-col md:hidden overflow-hidden bg-[#0a0a0a] min-h-0 relative">
-                        <EmbeddedChat movieKey={movieKey} user={user} />
+                        <EmbeddedChat movieKey={movieKey} movie={movie} user={user} />
                     </div>
                 </div>
 
                 <div className="hidden md:flex w-80 lg:w-96 flex-shrink-0 h-full border-l border-gray-800 min-h-0 overflow-hidden">
-                    <EmbeddedChat movieKey={movieKey} user={user} />
+                    <EmbeddedChat movieKey={movieKey} movie={movie} user={user} />
                 </div>
             </div>
         </div>

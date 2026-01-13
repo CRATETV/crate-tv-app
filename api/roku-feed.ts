@@ -48,19 +48,6 @@ const formatMovieForRoku = (movie: Movie, genres: string[], user: User | null): 
     };
 };
 
-const formatStoryForRoku = (story: EditorialStory): RokuItem => {
-    return {
-        id: story.id,
-        title: story.title,
-        description: story.subtitle,
-        SDPosterUrl: story.heroImage,
-        HDPosterUrl: story.heroImage,
-        heroImage: story.heroImage,
-        contentType: 'editorial',
-        itemComponentName: "EditorialPoster"
-    };
-};
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -79,26 +66,16 @@ export async function GET(request: Request) {
         }
     }
 
+    // Fetch master data including view counts for ranking
     const apiData = await getApiData();
+    const viewCounts = apiData.viewCounts || {};
+    
     const finalCategories: RokuCategory[] = [];
 
-    // 1. ZINE / EDITORIAL ROW (Impressive Header Row)
-    if (db) {
-        const storiesSnap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').limit(5).get();
-        if (!storiesSnap.empty) {
-            const stories: RokuItem[] = [];
-            storiesSnap.forEach(doc => stories.push(formatStoryForRoku({ id: doc.id, ...doc.data() } as EditorialStory)));
-            finalCategories.push({
-                title: "Crate Zine: The Dispatch",
-                children: stories
-            });
-        }
-    }
-
-    // 2. TOP 10 RANKINGS - RENAMED TO SECTOR PRIORITY
+    // 1. TOP 10 RANKINGS - SORTED BY VIEW VELOCITY
     const topTen = (Object.values(apiData.movies) as Movie[])
-        .filter(m => !m.isUnlisted)
-        .sort((a, b) => (b.likes || 0) - (a.likes || 0))
+        .filter(m => !!m && !m.isUnlisted && !!m.poster)
+        .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
         .slice(0, 10);
 
     if (topTen.length > 0) {
@@ -106,12 +83,12 @@ export async function GET(request: Request) {
             title: "Sector Priority: Top 10 Today",
             children: topTen.map(m => ({
                 ...formatMovieForRoku(m, ["Top 10"], user),
-                itemComponentName: "RankedMoviePoster"
+                itemComponentName: "RankedPosterItem"
             }))
         });
     }
 
-    // 3. CATALOG CATEGORIES
+    // 2. DYNAMIC CATALOG CATEGORIES
     const catalogOrder = ["newReleases", "awardWinners", "comedy", "drama"];
     catalogOrder.forEach(key => {
         const cat = apiData.categories[key];
@@ -129,10 +106,10 @@ export async function GET(request: Request) {
 
     return new Response(JSON.stringify({
         categories: finalCategories,
-        heroItems: topTen.slice(0, 3).map(m => formatMovieForRoku(m, ["Featured"], user))
+        heroItems: topTen.slice(0, 5).map(m => formatMovieForRoku(m, ["Featured"], user))
     }, null, 2), {
       status: 200,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 's-maxage=60' },
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 's-maxage=1, stale-while-revalidate=5' },
     });
   } catch (error) {
     return new Response(JSON.stringify({ error: 'Feed offline.' }), { status: 500 });

@@ -170,7 +170,7 @@ const App: React.FC = () => {
             .sort((a, b) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
     }, [movies]);
 
-    // UPDATED: Top Ten is now driven by Views (Reach)
+    // Top Ten is now driven by View Count analytics
     const topTenMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
             .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
