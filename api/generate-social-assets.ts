@@ -3,7 +3,7 @@ import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
 export async function POST(request: Request) {
   try {
-    const { title, synopsis, director, password } = await request.json();
+    const { title, synopsis, director, password, isEditorialRepurpose } = await request.json();
 
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
@@ -11,7 +11,22 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    const textPrompt = `
+    const textPrompt = isEditorialRepurpose 
+      ? `
+        You are the Head of Content Strategy at Crate TV. 
+        Repurpose the following Zine article for a high-engagement Instagram CAROUSEL.
+        Article Title: "${title}" by ${director}. 
+        Full Content context: "${synopsis}".
+        
+        The kit must include:
+        1. 7 Carousel Slide Manifests: Each slide must have 1-2 punchy sentences. (Slide 1: Hook, Slide 2: The Problem/Setup, Slide 3-5: Key Takeaways/Details, Slide 6: The Vision, Slide 7: CTA "Link in bio to read full dispatch").
+        2. 2 Instagram captions (Sophisticated, intellectual, encouraging a deep read).
+        3. 15 viral cinema/journalism hashtags.
+        
+        Tone: Prestigious, authoritative, and cinematic.
+        Respond ONLY in valid JSON.
+      `
+      : `
         You are the Head of Digital Marketing at Crate TV. 
         Create a comprehensive social media "Kit" for an upcoming LIVE WATCH PARTY event for: "${title}" directed by ${director}. 
         Synopsis: "${synopsis}".

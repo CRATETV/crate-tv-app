@@ -3,6 +3,7 @@ import { EditorialStory, Movie, ZineSection } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
 import firebase from 'firebase/compat/app';
+import SocialKitModal from './SocialKitModal';
 
 interface EditorialManagerProps {
     allMovies: Record<string, Movie>;
@@ -64,6 +65,7 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [socialKitStory, setSocialKitStory] = useState<EditorialStory | null>(null);
 
     const fetchStories = async () => {
         setIsLoading(true);
@@ -191,6 +193,12 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                     <button onClick={() => { setSelectedStory(null); setFormData(emptyStory); }} className="bg-white/5 text-gray-500 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 transition-all">Clear Canvas</button>
                     {selectedStory && (
                         <>
+                            <button 
+                                onClick={() => setSocialKitStory(selectedStory)}
+                                className="bg-indigo-600/10 hover:bg-indigo-600 text-indigo-500 hover:text-white border border-indigo-500/30 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                            >
+                                📱 Repurpose for IG
+                            </button>
                             <button onClick={handleDownload} className="bg-white/10 text-white border border-white/20 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all">
                                 Download Archive
                             </button>
@@ -285,6 +293,17 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                     <ZineProof title={formData.title} subtitle={formData.subtitle} sections={formData.sections || []} heroImage={formData.heroImage} />
                 </div>
             </div>
+            
+            {socialKitStory && (
+                <SocialKitModal 
+                    title={socialKitStory.title} 
+                    synopsis={socialKitStory.subtitle + "\n\n" + (socialKitStory.sections?.map(s => s.content).join(' ') || '')} 
+                    director={socialKitStory.author} 
+                    poster={socialKitStory.heroImage} 
+                    onClose={() => setSocialKitStory(null)} 
+                    isEditorialRepurpose={true}
+                />
+            )}
         </div>
     );
 };
