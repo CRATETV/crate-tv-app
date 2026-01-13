@@ -12,16 +12,22 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
+    const typeQueries = {
+        bootstrapper: "Tech startup programs for bootstrapped companies 2025, Cloud credits for non-VC startups, AWS Activate Founders",
+        grants: "Public media infrastructure grants 2025, Digital equity funding, Knight Foundation media grants, NEA media projects, Public access technology grants",
+        philly: "Philadelphia Independence Public Media Foundation grants, Philly Cultural Fund cycles 2025, William Penn Foundation media arts, Philly digital equity funding"
+    };
+
     const prompt = `
         You are a Strategic Funding Intelligence Agent for Crate TV.
         Crate TV is an independent film distribution platform based in Philadelphia.
         We have launched the "Public Square" — a dedicated grant-subsidized wing for civic dispatches, student works, and media literacy.
         
-        GOAL: Identify Exactly 6 active 2025 funding programs for the category: ${type === 'grants' ? 'Media Arts and Civic Distribution' : type === 'philly' ? 'Philadelphia Regional Arts' : 'Technology Credits'}.
+        GOAL: Identify Exactly 6 active 2025 funding programs for the category: ${type === 'grants' ? 'Public Media and Civic Infrastructure' : type === 'philly' ? 'Philadelphia Civic Arts' : 'Technology Credits'}.
         
         NARRATIVE LEVERS:
-        - We fight "Digital Poverty" by providing high-fidelity distribution to non-commercial work.
-        - We act as a "Public Square" for community-driven cinematic journalism.
+        - We fight "Digital Media Poverty" by providing distribution to non-commercial work.
+        - We operate the "Public Square" as a civic utility.
         - We are a "Distribution Afterlife" for filmmakers.
         - We use 70/30 creator-first economics.
 
@@ -30,7 +36,7 @@ export async function POST(request: Request) {
         - program: Specific funding name
         - url: Verified portal URL
         - fit: 2-sentence explanation of why Crate TV's "Public Square" civic mission qualifies.
-        - subsidy_type: (e.g. "Community Grant", "Innovation Credit", "Production Subsidy")
+        - subsidy_type: (e.g. "Civic Grant", "Digital Equity Fund", "Innovation Subsidy")
 
         Respond with ONLY a JSON object: { "partners": [ { ... }, ... ] }
     `;

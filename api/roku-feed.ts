@@ -1,3 +1,4 @@
+
 import { getApiData } from './_lib/data.js';
 import { Movie, Category, User, EditorialStory } from '../types.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -72,7 +73,7 @@ export async function GET(request: Request) {
     
     const finalCategories: RokuCategory[] = [];
 
-    // 1. TOP 10 RANKINGS - SORTED BY VIEW VELOCITY
+    // 1. TOP 10 RANKINGS
     const topTen = (Object.values(apiData.movies) as Movie[])
         .filter(m => !!m && !m.isUnlisted && !!m.poster)
         .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
@@ -88,7 +89,19 @@ export async function GET(request: Request) {
         });
     }
 
-    // 2. DYNAMIC CATALOG CATEGORIES
+    // 2. PUBLIC SQUARE (THE COMMONS)
+    const publicSquare = apiData.categories['publicAccess'];
+    if (publicSquare && publicSquare.movieKeys?.length > 0) {
+        const children = publicSquare.movieKeys
+            .map((k: string) => apiData.movies[k])
+            .filter((m: any): m is Movie => !!m && !m.isUnlisted)
+            .map((m: Movie) => formatMovieForRoku(m, ["Public Square"], user));
+        if (children.length > 0) {
+            finalCategories.push({ title: "The Public Square", children });
+        }
+    }
+
+    // 3. DYNAMIC CATALOG CATEGORIES
     const catalogOrder = ["newReleases", "awardWinners", "comedy", "drama"];
     catalogOrder.forEach(key => {
         const cat = apiData.categories[key];
