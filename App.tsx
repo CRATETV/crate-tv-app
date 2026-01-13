@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -69,7 +68,7 @@ const FestivalActiveBanner: React.FC<{ onClose: () => void }> = ({ onClose }) =>
 
 const App: React.FC = () => {
     const { user, hasCrateFestPass, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
-    const { isLoading, movies, categories, isFestivalLive, settings, analytics } = useFestival();
+    const { isLoading, movies, categories, isFestivalLive, settings, analytics, festivalConfig } = useFestival();
     
     const [heroIndex, setHeroIndex] = useState(0);
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
@@ -79,7 +78,7 @@ const App: React.FC = () => {
     const [activeParties, setActiveParties] = useState<Record<string, WatchPartyState>>({});
     const [isFestivalBannerDismissed, setIsFestivalBannerDismissed] = useState(false);
     
-    // Heartbeat Presence System
+    // Heartbeat Presence System & Session Refresh
     useEffect(() => {
         const db = getDbInstance();
         if (!db || !user) return;
@@ -260,7 +259,7 @@ const App: React.FC = () => {
 
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500" style={{ paddingTop: activeBannerType !== 'NONE' ? '3rem' : '0px' }}>
                 {isFestivalLive && activeBannerType !== 'CRATE_FEST' ? (
-                    <FestivalHero festivalConfig={settings.festivalConfig || null} />
+                    <FestivalHero festivalConfig={festivalConfig} />
                 ) : (
                     heroMovies.length > 0 && <Hero movies={heroMovies} currentIndex={heroIndex} onSetCurrentIndex={setHeroIndex} onPlayMovie={handlePlayMovie} onMoreInfo={handleSelectMovie} />
                 )}

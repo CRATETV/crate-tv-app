@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo } from 'react';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
-import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry } from '../types';
+import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData } from '../types';
 import { moviesData, categoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
 
 interface FestivalContextType {
@@ -15,6 +15,7 @@ interface FestivalContextType {
     adConfig: AdConfig | null;
     settings: SiteSettings;
     pipeline: MoviePipelineEntry[];
+    analytics: AnalyticsData | null;
     refreshData: () => Promise<void>;
 }
 
@@ -38,6 +39,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [adConfig, setAdConfig] = useState<AdConfig | null>(null);
     const [settings, setSettings] = useState<SiteSettings>({ isHolidayModeActive: false });
     const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
+    const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
 
     const isFestivalLive = useMemo(() => {
@@ -61,6 +63,20 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 if (data.festivalData) setFestivalData(data.festivalData);
                 setDataSource('live');
             }
+            
+            // Also fetch analytics for global ranking
+            const password = sessionStorage.getItem('adminPassword') || process.env.ADMIN_PASSWORD;
+            if (password) {
+                const analyticsRes = await fetch('/api/get-sales-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password }),
+                });
+                if (analyticsRes.ok) {
+                    const aData = await analyticsRes.json();
+                    setAnalytics(aData.analyticsData);
+                }
+            }
         } catch (err) {
             console.error("Live sync failed, using local fallback.", err);
             setDataSource('fallback');
@@ -76,7 +92,6 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             await initializeFirebaseAuth();
             const db = getDbInstance();
             if (db) {
-                // Settings & Festival listeners
                 db.collection('content').doc('settings').onSnapshot(doc => {
                     if (doc.exists) setSettings(doc.data() as SiteSettings);
                 });
@@ -85,7 +100,6 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                     if (doc.exists) setFestivalConfig(doc.data() as FestivalConfig);
                 });
 
-                // Pipeline listener for Crate Fest submissions
                 db.collection('movie_pipeline').onSnapshot(snapshot => {
                     const entries: MoviePipelineEntry[] = [];
                     snapshot.forEach(doc => {
@@ -110,6 +124,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         adConfig,
         settings,
         pipeline,
+        analytics,
         refreshData: () => fetchData(true)
     };
 

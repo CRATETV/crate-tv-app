@@ -1,10 +1,10 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
-interface Props {
+interface ErrorBoundaryProps {
   children?: ReactNode;
 }
 
-interface State {
+interface ErrorBoundaryState {
   hasError: boolean;
 }
 
@@ -12,30 +12,24 @@ interface State {
  * GlobalErrorBoundary handles uncaught errors in the component tree.
  * Inherits from Component with generic Props and State to ensure type safety.
  */
-// Fixed: Explicitly extending React.Component from the React namespace to ensure 'props' and 'state' are correctly inherited and recognized by the compiler.
-class GlobalErrorBoundary extends React.Component<Props, State> {
-  // Fixed: Initializing state within the class structure.
-  public state: State = { hasError: false };
+// FIX: Explicitly extending Component and ensuring proper typing for Props and State to resolve inheritance issues.
+class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public state: ErrorBoundaryState = { hasError: false };
 
-  constructor(props: Props) {
-    super(props);
-  }
-
-  // Fixed: Standard static method definition for Error Boundary to update state when an error occurs.
-  public static getDerivedStateFromError(_: Error): State {
+  // FIX: Standard static method definition for Error Boundary to update state when an error occurs.
+  public static getDerivedStateFromError(_: Error): ErrorBoundaryState {
     // Update state so the next render will show the fallback UI.
     return { hasError: true };
   }
 
-  // Fixed: Standard lifecycle method for capturing error details. Removed 'override' as the compiler was failing to recognize the inheritance relationship correctly.
+  // FIX: Standard lifecycle method for capturing error details.
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log the error to the console for infrastructure monitoring
     console.error("CRITICAL_SYSTEM_FAILURE:", error, errorInfo);
   }
 
-  // Fixed: Standard render method. Removed 'override' as the compiler was failing to recognize the inheritance relationship correctly.
+  // FIX: render method using inherited this.props and this.state.
   public render(): ReactNode {
-    // Fixed: 'this.props' and 'this.state' are now correctly recognized as inherited from the React.Component base class.
     const { children } = this.props;
     const { hasError } = this.state;
 

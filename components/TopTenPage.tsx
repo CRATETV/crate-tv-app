@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';
@@ -120,7 +119,7 @@ const TopTenPage: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen text-white bg-[#050505]">
-            <SEO title="Sector Priority: Top 10 Today" description="The most streamed and liked independent films on Crate TV right now." />
+            <SEO title="Sector Priority: Top 10 Today" description="The most streamed independent films on Crate TV right now based on viewership velocity." />
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={false} />
             
             <main className="flex-grow pt-24 pb-24 md:pb-32 px-4 md:px-12 relative overflow-hidden">
@@ -182,7 +181,7 @@ const TopTenPage: React.FC = () => {
                                         />
                                      </div>
                                      <div className="text-center md:text-left max-w-2xl">
-                                        <h2 className="text-5xl md:text-8xl lg:text-[10rem] font-black uppercase tracking-tighter leading-[0.8] mb-8 italic italic-text drop-shadow-[0_10px_20px_rgba(0,0,0,1)]">
+                                        <h2 className="text-5xl md:text-8xl lg:text-[10rem] font-black uppercase tracking-tighter leading-[0.8] mb-8 italic drop-shadow-[0_10px_20px_rgba(0,0,0,1)]">
                                             {heroMovie.title}
                                         </h2>
                                         <div className="flex flex-wrap justify-center md:justify-start gap-4">
@@ -232,7 +231,6 @@ const TopTenPage: React.FC = () => {
                     </div>
                 </div>
             )}
-            <style>{`.italic-text { font-style: italic; }`}</style>
         </div>
     );
 };

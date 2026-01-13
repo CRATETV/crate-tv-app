@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Movie, WatchPartyState, ChatMessage, FilmBlock } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -230,7 +229,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
     const allBlocks = useMemo(() => {
         const regular = festivalData.flatMap(day => day.blocks);
         const crateFest = settings.crateFestConfig?.movieBlocks || [];
-        return [...regular, ...crateFest];
+        return [...regular, ...crateFest] as FilmBlock[];
     }, [festivalData, settings.crateFestConfig]);
 
     const festivalFilmKeys = useMemo(() => {

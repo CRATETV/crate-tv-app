@@ -22,7 +22,7 @@ const TopFilmsTab: React.FC = () => {
                 key: movie.key,
                 title: movie.title,
                 views: analytics.viewCounts[movie.key] || 0,
-                likes: analytics.movieLikes[movie.key] || 0,
+                likes: analytics.movieLikes?.[movie.key] || 0,
                 donations: donations,
                 poster: movie.poster,
             };
@@ -120,11 +120,9 @@ const TopFilmsTab: React.FC = () => {
                     </div>
                 ))}
             </div>
-            {/* // Fixed: Renamed topTenMovies to topFilmsData to match variable defined in useMemo. */}
             {topFilmsData.length > 0 && (
                 <div className="absolute -left-[9999px] top-0" aria-hidden="true">
                     <div ref={shareableImageRef}>
-                        {/* // Fixed: Renamed topTenMovies to topFilmsData. */}
                         <TopTenShareableImage topFilms={topFilmsData as any} date={currentDate} />
                     </div>
                 </div>
