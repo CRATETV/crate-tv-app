@@ -1,5 +1,5 @@
 
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -13,30 +13,26 @@ interface ErrorBoundaryState {
  * GlobalErrorBoundary handles uncaught errors in the component tree.
  * Inherits from React.Component with generic Props and State to ensure type safety.
  */
-// FIX: Refactored to explicitly extend React.Component to ensure 'props' and 'state' are correctly inherited.
-class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // FIX: Initialize state within the constructor to maintain clear lifecycle management.
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = {
-      hasError: false
-    };
-  }
+class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Use class field for state initialization to resolve property recognition issues in the constructor.
+  public state: ErrorBoundaryState = {
+    hasError: false
+  };
 
-  // FIX: Standard static method definition for Error Boundary to update state when an error occurs.
+  // Standard static method for Error Boundary to update state when an error occurs.
   public static getDerivedStateFromError(_: Error): ErrorBoundaryState {
     // Update state so the next render will show the fallback UI.
     return { hasError: true };
   }
 
-  // FIX: Standard lifecycle method for capturing error details and logging for monitoring.
+  // Standard lifecycle method for capturing error details and logging for monitoring.
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log the error to the console for infrastructure monitoring
     console.error("CRITICAL_SYSTEM_FAILURE:", error, errorInfo);
   }
 
   public render(): ReactNode {
-    // FIX: Access 'props' and 'state' from 'this', ensuring they are now recognized by TypeScript through proper inheritance.
+    // Access inherited 'props' and 'state' from the Component base class.
     const { children } = this.props;
     const { hasError } = this.state;
 

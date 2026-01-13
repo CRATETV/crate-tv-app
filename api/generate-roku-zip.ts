@@ -1,3 +1,4 @@
+
 import { promises as fs } from 'fs';
 import path from 'path';
 import JSZip from 'jszip';
@@ -52,12 +53,12 @@ export async function POST(request: Request) {
         if (zipPath.endsWith('.brs') || zipPath.endsWith('.xml') || zipPath === 'manifest') {
             let textContent = contentBuffer.toString('utf-8');
             
-            // Fix &hb9: Strip Byte Order Mark (BOM)
+            // Fix: Strip Byte Order Mark (BOM)
             if (textContent.charCodeAt(0) === 0xFEFF) {
                 textContent = textContent.substring(1);
             }
             
-            // Fix &hb9: Normalize line endings to Unix style
+            // Fix: Normalize line endings to Unix style
             textContent = textContent.replace(/\r\n/g, '\n');
 
             // Dynamic Config Binding
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
         status: 200,
         headers: {
             'Content-Type': 'application/zip',
-            'Content-Disposition': 'attachment; filename="cratetv-production-roku.zip"',
+            'Content-Disposition': 'attachment; filename="cratetv-production-roku-v4.zip"',
         },
     });
 
