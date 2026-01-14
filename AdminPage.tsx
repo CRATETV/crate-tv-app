@@ -4,7 +4,6 @@ import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineE
 import LoadingSpinner from './components/LoadingSpinner';
 import MovieEditor from './components/MovieEditor';
 import CategoryEditor from './components/CategoryEditor';
-import AnalyticsPage from './components/AnalyticsPage';
 import WatchPartyManager from './components/WatchPartyManager';
 import SecurityTerminal from './components/SecurityTerminal';
 import DailyPulse from './components/DailyPulse';
@@ -24,6 +23,8 @@ import FestivalAnalytics from './components/FestivalAnalytics';
 import JuryRoomTab from './components/JuryRoomTab';
 import AcademyIntelTab from './components/AcademyIntelTab';
 import OneTimePayoutTerminal from './components/OneTimePayoutTerminal';
+import AdminPayoutsTab from './components/AdminPayoutsTab';
+import ContractsTab from './components/ContractsTab';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
@@ -34,6 +35,8 @@ const ALL_TABS: Record<string, string> = {
     movies: '🎞️ Catalog',
     pipeline: '📥 Pipeline',
     jury: '⚖️ Jury Hub',
+    payouts: '💰 Payouts',
+    vault: '📁 Legal Vault',
     festival: '🎪 Festival Manager',
     cratefest: '🎪 Crate Fest Config',
     vouchers: '🎫 Promo Codes',
@@ -126,7 +129,6 @@ const AdminPage: React.FC = () => {
             }
             
             if (permsRes.ok) {
-                // Fix: use permsRes instead of undefined res
                 const data = await permsRes.json();
                 setPermissions(data.permissions || {});
             }
@@ -149,7 +151,7 @@ const AdminPage: React.FC = () => {
             const data = await response.json();
             if (data.success) {
                 sessionStorage.setItem('adminPassword', password);
-                sessionStorage.setItem('operatorName', loginName);
+                sessionStorage.setItem('operatorName', loginName || (data.role === 'director_payout' ? data.targetDirector : 'ARCHITECT'));
                 setRole(data.role);
                 
                 if (data.role === 'director_payout') {
@@ -240,7 +242,6 @@ const AdminPage: React.FC = () => {
                                     onChange={(e) => setLoginName(e.target.value)} 
                                     placeholder="e.g. ARCHITECT_01" 
                                     className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-6 text-sm font-black uppercase tracking-widest text-white focus:border-red-600 transition-all outline-none" 
-                                    required 
                                 />
                             </div>
                         </div>
@@ -308,6 +309,8 @@ const AdminPage: React.FC = () => {
                             <AcademyIntelTab pipeline={pipeline} movies={movies} />
                         </div>
                     )}
+                    {activeTab === 'payouts' && <AdminPayoutsTab />}
+                    {activeTab === 'vault' && <ContractsTab />}
                     {activeTab === 'festival' && (
                         <FestivalEditor 
                             data={festivalData} 
@@ -330,7 +333,13 @@ const AdminPage: React.FC = () => {
                             <CrateFestAnalytics analytics={analytics} config={crateFestConfig} />
                         </div>
                     )}
-                    {activeTab === 'vouchers' && <PromoCodeManager isAdmin={true} targetFilms={Object.values(movies) as Movie[]} />}
+                    {activeTab === 'vouchers' && (
+                        <PromoCodeManager 
+                            isAdmin={true} 
+                            targetFilms={Object.values(movies) as Movie[]} 
+                            targetBlocks={festivalData.flatMap(d => d.blocks)}
+                        />
+                    )}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies) as Movie[]} />}
                     {activeTab === 'roku' && <RokuDeployTab />}

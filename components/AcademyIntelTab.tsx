@@ -133,13 +133,6 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
                                     </td>
                                 </tr>
                             ))}
-                            {rankedFilms.length === 0 && (
-                                <tr>
-                                    <td colSpan={5} className="p-20 text-center opacity-20">
-                                        <p className="text-sm font-black uppercase tracking-[0.5em]">Awaiting Adjudication Data</p>
-                                    </td>
-                                </tr>
-                            )}
                         </tbody>
                     </table>
                 </div>

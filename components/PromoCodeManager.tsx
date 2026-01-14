@@ -1,15 +1,16 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { PromoCode, Movie, FilmBlock, User } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
-// Add firebase import to resolve missing reference error on line 320
 import firebase from 'firebase/compat/app';
+import { promoCodesData } from '../constants';
 
 interface PromoCodeManagerProps {
     isAdmin: boolean;
     filmmakerName?: string;
     targetFilms?: Movie[];
-    targetBlocks?: FilmBlock[];
+    targetBlocks?: any[]; 
     defaultItemId?: string; 
 }
 
@@ -197,6 +198,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isRestoring, setIsRestoring] = useState(false);
     
     // Distribution State
     const [distributingCode, setDistributingCode] = useState<PromoCode | null>(null);
@@ -223,14 +225,9 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                 query = query.where('createdBy', '==', filmmakerName);
             }
 
-            // NOTE: Removed .orderBy('createdAt', 'desc') temporarily.
-            // Firestore hides documents missing the ordered field if an orderBy is applied.
-            // This ensures "disappeared" codes without timestamps are restored to the view.
             const snapshot = await query.get();
             const fetched = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as PromoCode));
             
-            // Manual sort in JS to be safe and inclusive
-            // FIX: Explicitly type sort parameters to resolve implicitly 'any' type build error
             fetched.sort((a: PromoCode, b: PromoCode) => {
                 const dateA = a.createdAt?.seconds || 0;
                 const dateB = b.createdAt?.seconds || 0;
@@ -263,7 +260,6 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
         fetchUsers();
     }, [isAdmin, filmmakerName]);
 
-    // Real-time Availability Check
     useEffect(() => {
         const checkAvailability = async () => {
             const cleanCode = newCode.toUpperCase().trim();
@@ -300,6 +296,34 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
     const handleGenerateRandomCode = () => {
         const random = Math.random().toString(36).substring(2, 7).toUpperCase();
         setNewCode(`CRATE-${random}`);
+    };
+
+    const handleRestoreDefaults = async () => {
+        if (!window.confirm("RESTORE PROTOCOL: Synchronize hardcoded system vouchers from constants.ts into live database? Existing codes with matching IDs will be updated.")) return;
+        setIsRestoring(true);
+        const db = getDbInstance();
+        if (!db) return;
+
+        try {
+            const batch = db.batch();
+            Object.entries(promoCodesData).forEach(([id, data]) => {
+                const ref = db.collection('promo_codes').doc(id);
+                batch.set(ref, {
+                    ...data,
+                    code: id,
+                    usedCount: 0,
+                    createdBy: 'system_restore',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            });
+            await batch.commit();
+            alert("System vouchers successfully seeded.");
+            await fetchCodes();
+        } catch (e) {
+            alert("Restore failed.");
+        } finally {
+            setIsRestoring(false);
+        }
     };
 
     const handleCreateCode = async (e: React.FormEvent) => {
@@ -366,7 +390,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
     return (
         <div className="space-y-10 animate-[fadeIn_0.5s_ease-out]">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-1 space-y-6">
                     <form onSubmit={handleCreateCode} className="bg-gray-900 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl space-y-6">
                         <div className="flex justify-between items-start">
                             <div>
@@ -474,6 +498,19 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                             {isGenerating ? 'Synthesizing...' : isQuotaExceeded ? 'Quota Reached' : codeAvailability === 'taken' ? 'Alias Occupied' : 'Initialize Voucher'}
                         </button>
                     </form>
+
+                    {isAdmin && (
+                         <div className="bg-white/5 border border-white/10 p-6 rounded-[2.5rem] space-y-4">
+                            <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Maintenance Node</h4>
+                            <button 
+                                onClick={handleRestoreDefaults}
+                                disabled={isRestoring}
+                                className="w-full bg-white/5 hover:bg-indigo-600 border border-white/10 text-gray-500 hover:text-white font-black py-3 rounded-xl uppercase text-[9px] tracking-widest transition-all"
+                            >
+                                {isRestoring ? 'Restoring...' : 'Seed System Vouchers'}
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="lg:col-span-2">

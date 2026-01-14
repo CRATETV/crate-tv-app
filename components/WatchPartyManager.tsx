@@ -29,13 +29,14 @@ interface EmbeddedChatProps {
     movie?: Movie; 
 }
 
-// Fix: Changed to React.FC with explicit generic typing to resolve inference errors on 'movie' properties.
-const EmbeddedChat: React.FC<EmbeddedChatProps> = ({ movieKey, user, movie }) => {
+// Fix: Explicitly typing the destructured props to EmbeddedChatProps to resolve the 'unknown' type error for the movie property.
+const EmbeddedChat: React.FC<EmbeddedChatProps> = ({ movieKey, user, movie }: EmbeddedChatProps) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
+    // Fix: Accessing director property on movie object which is now correctly inferred as Movie | undefined.
     const directorsList = useMemo(() => 
         (movie?.director || '').toLowerCase().split(',').map(d => d.trim()), 
     [movie?.director]);
@@ -109,7 +110,8 @@ const PayoutKeyForge: React.FC<{ movies: Record<string, Movie> }> = ({ movies })
 
     const directors = useMemo(() => {
         const set = new Set<string>();
-        Object.values(movies).forEach(m => {
+        // Fix: Explicitly cast Object.values to Movie[] to resolve 'unknown' type errors for property access.
+        (Object.values(movies) as Movie[]).forEach(m => {
             if (m.director) m.director.split(',').forEach(d => set.add(d.trim()));
         });
         return Array.from(set).sort();
