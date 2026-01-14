@@ -1,4 +1,3 @@
-
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
@@ -29,7 +28,7 @@ export async function POST(request: Request) {
         if (!db) throw new Error("Database terminal offline.");
 
         let role = '';
-        let collaboratorData = null;
+        let targetDirector = '';
 
         // 1. Check Hardcoded Roles
         for (const [key, value] of Object.entries(validPasswords)) {
@@ -39,7 +38,22 @@ export async function POST(request: Request) {
             }
         }
         
-        // 2. Check Dynamic Collaborator Keys (Individual Management)
+        // 2. Check Director Payout Keys (PAY-XXXX)
+        if (!role && password.startsWith('PAY-')) {
+            const keySnap = await db.collection('director_payout_keys')
+                .where('accessKey', '==', password.trim())
+                .limit(1)
+                .get();
+            
+            if (!keySnap.empty) {
+                const doc = keySnap.docs[0];
+                const data = doc.data();
+                role = 'director_payout';
+                targetDirector = data.directorName;
+            }
+        }
+
+        // 3. Check Dynamic Collaborator Keys
         if (!role) {
             const collabSnap = await db.collection('collaborator_access')
                 .where('accessKey', '==', password.trim())
@@ -48,45 +62,31 @@ export async function POST(request: Request) {
             
             if (!collabSnap.empty) {
                 const doc = collabSnap.docs[0];
-                collaboratorData = doc.data();
                 role = `collaborator:${doc.id}`;
-            }
-        }
-
-        // 3. Check Env Vars for legacy passwords
-        if (!role) {
-             for (const key in process.env) {
-                if (key.startsWith('ADMIN_PASSWORD_') && process.env[key] === password) {
-                    role = key.replace('ADMIN_PASSWORD_', '').toLowerCase();
-                    break;
-                }
             }
         }
 
         if (role) {
             // Log successful login to audit trail
             await db.collection('audit_logs').add({
-                role: `${role.toUpperCase()}: ${name || 'Unknown'}`,
+                role: `${role.toUpperCase()}: ${name || targetDirector || 'Unknown'}`,
                 action: 'NODE_AUTH_SUCCESS',
                 type: 'LOGIN',
-                details: `Successful uplink from ${name || 'anonymous operator'} at IP: ${ip || 'Unknown'}`,
+                details: `Successful uplink from ${name || targetDirector} at IP: ${ip || 'Unknown'}`,
                 timestamp: FieldValue.serverTimestamp(),
                 ip
             });
 
-            return new Response(JSON.stringify({ success: true, role }), {
+            return new Response(JSON.stringify({ 
+                success: true, 
+                role, 
+                targetDirector // Only populated for filmmaker payout logins
+            }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
             });
         } else {
-             // Log failed attempt
-            await db.collection('security_events').add({
-                type: 'FAILED_ADMIN_LOGIN',
-                ip,
-                timestamp: FieldValue.serverTimestamp(),
-                details: { userAgent: request.headers.get('user-agent'), attemptedName: name }
-            });
-            return new Response(JSON.stringify({ success: false, error: 'Invalid password' }), {
+            return new Response(JSON.stringify({ success: false, error: 'Invalid access key' }), {
                 status: 401,
                 headers: { 'Content-Type': 'application/json' },
             });

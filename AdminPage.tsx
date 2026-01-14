@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -22,6 +21,7 @@ import RokuDeployTab from './components/RokuDeployTab';
 import DiscoveryEngine from './components/DiscoveryEngine';
 import CrateFestAnalytics from './components/CrateFestAnalytics';
 import FestivalAnalytics from './components/FestivalAnalytics';
+import OneTimePayoutTerminal from './components/OneTimePayoutTerminal';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
@@ -50,6 +50,9 @@ const AdminPage: React.FC = () => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     
+    // Metadata for specialized logins
+    const [payoutContext, setPayoutContext] = useState<{ director: string; role: string } | null>(null);
+
     const [movies, setMovies] = useState<Record<string, Movie>>({});
     const [categories, setCategories] = useState<Record<string, Category>>({});
     const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
@@ -143,8 +146,19 @@ const AdminPage: React.FC = () => {
                 sessionStorage.setItem('adminPassword', password);
                 sessionStorage.setItem('operatorName', loginName);
                 setRole(data.role);
-                setIsAuthenticated(true);
-                fetchAllData(password);
+                
+                if (data.role === 'director_payout') {
+                    setPayoutContext({ director: data.targetDirector, role: data.role });
+                    setIsAuthenticated(true);
+                    // Minimal load for payout view
+                    const liveDataRes = await fetch(`/api/get-live-data?t=${Date.now()}`);
+                    const liveData = await liveDataRes.json();
+                    setMovies(liveData.movies || {});
+                    setIsLoading(false);
+                } else {
+                    setIsAuthenticated(true);
+                    fetchAllData(password);
+                }
             } else {
                 setError('Authentication Failed: Invalid Node Key.');
             }
@@ -242,6 +256,19 @@ const AdminPage: React.FC = () => {
     
     if (isLoading) return <LoadingSpinner />;
 
+    // --- RESTRICTED ONE-TIME PAYOUT VIEW ---
+    if (role === 'director_payout' && payoutContext) {
+        return (
+            <div className="min-h-screen bg-[#050505] text-white p-6 md:p-20">
+                <OneTimePayoutTerminal 
+                    directorName={payoutContext.director} 
+                    onLogout={() => { sessionStorage.clear(); window.location.reload(); }}
+                    movies={movies}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-[#050505] text-white selection:bg-red-600 selection:text-white">
             <div className="max-w-[1800px] mx-auto p-4 md:p-10">
@@ -261,6 +288,7 @@ const AdminPage: React.FC = () => {
                         <button 
                             key={tabId} 
                             onClick={() => setActiveTab(tabId)} 
+                            // FIX: Changed 'tid' to 'tabId' to resolve "Cannot find name 'tid'" error.
                             className={`px-8 py-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}
                         >
                             {label}

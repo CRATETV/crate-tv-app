@@ -12,22 +12,27 @@ interface SquarePayment {
   note?: string;
 }
 
-const DONATION_PLATFORM_CUT = 0.30;
-const FESTIVAL_PLATFORM_CUT = 0.30;
+const PARTNER_SHARE = 0.70;
+const CRATE_SHARE = 0.30;
 
 const parseNote = (note: string | undefined): { type: string, title?: string, director?: string, blockTitle?: string } => {
     if (!note) return { type: 'unknown' };
-    if (note.startsWith('Deposit to Crate TV Bill Savings Pot')) return { type: 'billSavingsDeposit' };
-    const donationMatch = note.match(/Support for film: "(.*)" by (.*)/);
-    if (donationMatch) return { type: 'donation', title: donationMatch[1].trim(), director: donationMatch[2].trim() };
     
-    if (note.includes('Crate Fest')) return { type: 'crateFestPass' };
+    // Watch Party Ticket Regex
+    const wpMatch = note.match(/Watch Party Ticket: (.*)/) || note.match(/Live Screening Pass: (.*)/);
+    if (wpMatch) return { type: 'watchPartyTicket', title: wpMatch[1].trim() };
+    
+    // Donation Regex
+    const donationMatch = note.match(/Support for film: "(.*)"/);
+    if (donationMatch) return { type: 'donation', title: donationMatch[1].trim() };
+
     if (note.includes('All-Access Pass')) return { type: 'pass' };
+    if (note.includes('Crate Fest')) return { type: 'crateFestPass' };
     
     const blockMatch = note.match(/Unlock Block: "(.*)"/);
     if (blockMatch) return { type: 'block', blockTitle: blockMatch[1].trim() };
-    if (note.includes('Purchase Film:')) return { type: 'movie' };
-    if (note.includes('Crate TV Premium Subscription')) return { type: 'subscription' };
+    
+    if (note.includes('Purchase Film:') || note.includes('VOD Rental:')) return { type: 'movie' };
     return { type: 'other' };
 };
 
@@ -76,7 +81,6 @@ export async function POST(request: Request) {
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
         const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
 
-        // ACCURATE PRESENCE CALCULATION: Only count heartbeats from the last 5 minutes
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
         const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot, presenceSnapshot] = await Promise.all([
@@ -97,13 +101,8 @@ export async function POST(request: Request) {
         let totalDonations = 0;
         let totalSales = 0;
         let festivalRevenue = 0;
-        let crateFestRevenue = 0;
-        
-        let passUnits = 0;
-        let blockUnits = 0;
-        let crateFestPassUnits = 0;
         const salesByBlock: Record<string, { units: number, revenue: number }> = {};
-        const donationsByFilm: Record<string, number> = {};
+        const revenueByFilm: Record<string, { donations: number, tickets: number }> = {};
 
         allPayments.forEach(p => {
             const details = parseNote(p.note);
@@ -111,39 +110,44 @@ export async function POST(request: Request) {
             
             if (details.type === 'donation' && details.title) {
                 totalDonations += amount;
-                donationsByFilm[details.title] = (donationsByFilm[details.title] || 0) + amount;
-            } else if (details.type === 'pass') {
-                festivalRevenue += amount;
-                passUnits++;
-            } else if (details.type === 'crateFestPass') {
-                crateFestRevenue += amount;
-                crateFestPassUnits++;
+                if (!revenueByFilm[details.title]) revenueByFilm[details.title] = { donations: 0, tickets: 0 };
+                revenueByFilm[details.title].donations += amount;
+            } else if (details.type === 'watchPartyTicket' && details.title) {
+                totalSales += amount;
+                if (!revenueByFilm[details.title]) revenueByFilm[details.title] = { donations: 0, tickets: 0 };
+                revenueByFilm[details.title].tickets += amount;
             } else if (details.type === 'block' && details.blockTitle) {
                 festivalRevenue += amount; 
-                blockUnits++;
                 if (!salesByBlock[details.blockTitle]) salesByBlock[details.blockTitle] = { units: 0, revenue: 0 };
                 salesByBlock[details.blockTitle].units++;
                 salesByBlock[details.blockTitle].revenue += amount;
-            } else if (['movie', 'subscription'].includes(details.type)) {
+            } else if (details.type === 'pass' || details.type === 'crateFestPass') {
+                festivalRevenue += amount;
+            } else {
                 totalSales += amount;
             }
         });
 
         const totalAdminPayouts = payoutHistorySnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
-        const totalRevenue = totalDonations + totalSales + festivalRevenue + crateFestRevenue;
-        const totalCrateTvRevenue = (totalDonations * DONATION_PLATFORM_CUT) + (festivalRevenue * FESTIVAL_PLATFORM_CUT) + totalSales + crateFestRevenue;
+        const totalRevenue = totalDonations + totalSales + festivalRevenue;
+        
+        // Crate TV retains 30% of donations and festival revenue. 
+        // 100% of standard VOD sales go to platform currently, but we can refine.
+        const totalCrateTvRevenue = (totalDonations * CRATE_SHARE) + (festivalRevenue * CRATE_SHARE) + totalSales;
 
         const filmmakerPayouts: FilmmakerPayout[] = Object.values(allMovies).map(movie => {
-            const filmDonations = donationsByFilm[movie.title] || 0;
-            const payout = filmDonations * (1 - DONATION_PLATFORM_CUT);
+            const filmRev = revenueByFilm[movie.title] || { donations: 0, tickets: 0 };
+            const gross = filmRev.donations + filmRev.tickets;
+            const net = gross * PARTNER_SHARE;
+            
             return {
                 movieTitle: movie.title,
-                totalDonations: filmDonations,
-                crateTvCut: filmDonations * DONATION_PLATFORM_CUT,
-                filmmakerDonationPayout: payout,
-                totalAdRevenue: 0,
-                filmmakerAdPayout: 0,
-                totalFilmmakerPayout: payout,
+                totalDonations: filmRev.donations,
+                totalAdRevenue: filmRev.tickets, // Re-using ad field for tickets
+                crateTvCut: gross * CRATE_SHARE,
+                filmmakerDonationPayout: filmRev.donations * PARTNER_SHARE,
+                filmmakerAdPayout: filmRev.tickets * PARTNER_SHARE,
+                totalFilmmakerPayout: net,
             };
         });
 
@@ -152,33 +156,30 @@ export async function POST(request: Request) {
             totalCrateTvRevenue, 
             totalAdminPayouts, 
             pastAdminPayouts: [],
-            billSavingsPotTotal: 0, 
-            billSavingsTransactions: [], 
             totalUsers: usersSnapshot.size, 
             viewCounts, 
             movieLikes: {}, 
             watchlistCounts: {}, 
             filmmakerPayouts, 
             viewLocations: {}, 
-            allUsers: [], 
-            actorUsers: [], 
-            filmmakerUsers: [],
+            allUsers: [], actorUsers: [], filmmakerUsers: [],
             totalDonations, 
             totalSales, 
             totalMerchRevenue: 0, 
-            totalAdRevenue: 0, 
-            crateTvMerchCut: 0, 
-            merchSales: {},
+            totalAdRevenue: totalSales, 
+            crateTvMerchCut: 0, merchSales: {},
             totalFestivalRevenue: festivalRevenue, 
-            totalCrateFestRevenue: crateFestRevenue,
-            festivalPassSales: { units: passUnits, revenue: passUnits * 5000 }, 
-            festivalBlockSales: { units: blockUnits, revenue: blockUnits * 1000 },
-            crateFestPassSales: { units: crateFestPassUnits, revenue: crateFestPassUnits * 1500 },
+            totalCrateFestRevenue: 0,
+            festivalPassSales: { units: 0, revenue: 0 }, 
+            festivalBlockSales: { units: 0, revenue: 0 },
+            crateFestPassSales: { units: 0, revenue: 0 },
             salesByBlock, 
             festivalUsers: [],
-            crateFestRevenue, 
-            liveNodes: presenceSnapshot.size, // This is now accurately filtered to active nodes
-            recentSpikes: []
+            crateFestRevenue: 0, 
+            liveNodes: presenceSnapshot.size,
+            recentSpikes: [],
+            billSavingsPotTotal: 0,
+            billSavingsTransactions: []
         };
 
         return new Response(JSON.stringify({ analyticsData, errors }), { status: 200, headers: { 'Content-Type': 'application/json' } });

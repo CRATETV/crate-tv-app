@@ -49,7 +49,7 @@ const CrateVaultRow: React.FC<CrateVaultRowProps> = ({
             <div className="relative z-10 px-4 md:px-12 py-6 md:py-10">
                 {/* Header Unit */}
                 <div className="mb-6 md:mb-8 pl-4 border-l-4 border-red-600 animate-[fadeIn_1s_ease-out]">
-                    <h2 className="text-2xl md:text-5xl font-black uppercase tracking-tighter text-white italic leading-none mb-1">
+                    <h2 className="text-2xl md:text-5xl font-black uppercase tracking-tighter text-white italic leading-none">
                         The Crate <span className="text-gray-600">Vault.</span>
                     </h2>
                 </div>

@@ -12,28 +12,32 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized Node access.' }), { status: 401 });
     }
 
-    const categoryPrompts = {
-        open_master: "High-production value 4K short films from Blender Studio Open Projects released 2023-2025 CC-BY license. Target titles: 'Charge', 'Wing It!', 'Coffee Run'. Search for official Blender Studio mirrors.",
-        modern_short: "Independent cinematic short films from Vimeo Staff Picks or curated Vimeo groups released 2023-2025 with CC-BY license only. Look for festival-winning narratives released to public.",
-        experimental: "Modern digital avant-garde and AI-assisted films 2024-2025 explicitly released under CC0 or CC-BY. High production value digital art films.",
-        doc: "Short investigative documentaries or video essays released 2023-2025 by independent studios using Creative Commons redistribution licenses. High-quality journalism."
+    const categoryPrompts: Record<string, string> = {
+        philly_open: "Independent community shows, citizen journalism, or neighborhood dispatches tagged with 'Philadelphia' released 2023-2025. Look for raw, authentic community-produced content.",
+        open_master: "High-production value 4K short films from Blender Studio Open Projects released 2023-2025 CC-BY license.",
+        modern_short: "Independent cinematic short films from Vimeo Staff Picks or curated Vimeo groups released 2023-2025 with CC-BY license. Target authentic, community-focused narratives.",
+        experimental: "Modern digital avant-garde experiments 2024-2025 explicitly released under CC0 or CC-BY.",
+        doc: "Short investigative community documentaries or local video essays released 2023-2025."
     };
+
+    const targetCategory = category as string;
+    const focus = categoryPrompts[targetCategory] || categoryPrompts.modern_short;
 
     const prompt = `
         You are the Strategic Acquisitions lead for Crate TV.
-        Your goal is to identify exactly 6 premium independent short films released between 2023 and 2025 that are distributed under Creative Commons (CC-BY) or Open Source licenses.
+        Your goal is to identify exactly 6 premium independent short films or community shows released between 2023 and 2025 that are distributed under Creative Commons (CC-BY) or Open Source licenses.
         
-        Category Focus: ${categoryPrompts[category as keyof typeof categoryPrompts] || categoryPrompts.modern_short}
+        Category Focus: ${focus}
 
         For each film, provide:
         - title: The verified film title.
-        - director: The filmmaker or studio name.
+        - director: The filmmaker name.
         - year: Release year (2023, 2024, or 2025).
         - license: The specific license (e.g., CC-BY 4.0).
-        - synopsis: A 2-sentence sophisticated summary.
-        - sourceUrl: The direct link to the high-quality master file (Vimeo/Blender/Studio site).
-        - sourceTitle: Name of the platform/site.
-        - trustLevel: 'High' if from official studio site, 'Medium' if from curated feed.
+        - synopsis: A 2-sentence summary emphasizing community or cultural impact.
+        - sourceUrl: The direct link to the platform (Vimeo/YouTube/Studio site).
+        - sourceTitle: Name of the platform or source.
+        - trustLevel: 'High' if from official source, 'Medium' if from curated feed.
 
         Respond with ONLY a JSON object: { "films": [ { ... }, ... ] }
     `;

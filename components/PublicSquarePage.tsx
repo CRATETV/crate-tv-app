@@ -54,7 +54,7 @@ const PublicSquarePage: React.FC = () => {
         <div className="flex flex-col min-h-screen text-white bg-black selection:bg-emerald-600">
             <SEO 
                 title="Public Square" 
-                description="The digital town hall for community cinema. Free access to civic dispatches, student works, and preserved records." 
+                description="The community stage for independent cinema. Free access to grassroots shows, student works, and communal records." 
             />
             
             <Header 
@@ -75,14 +75,21 @@ const PublicSquarePage: React.FC = () => {
                     <div className="max-w-7xl mx-auto text-center px-4 animate-[fadeIn_0.8s_ease-out]">
                         <div className="inline-flex items-center gap-3 bg-emerald-600/10 border border-emerald-500/20 px-4 py-1.5 rounded-full mb-8 shadow-2xl">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <p className="text-emerald-400 font-black uppercase tracking-[0.4em] text-[10px]">Civic Infrastructure // Unified Hub</p>
+                            <p className="text-emerald-400 font-black uppercase tracking-[0.4em] text-[10px]">Community Stage // The Town Hall</p>
                         </div>
                         <h1 className="text-6xl md:text-[10rem] font-black uppercase tracking-tighter leading-[0.8] italic mb-8">
                             The <span className="text-emerald-500">Square.</span>
                         </h1>
                         <p className="text-xl md:text-3xl text-gray-400 max-w-3xl mx-auto font-medium leading-tight tracking-tight">
-                           A permanent digital stage for communal record, student performance, and preserved historical archives.
+                           A dedicated stage for student thesis films, local music videos, and the raw record of the Philadelphia cinematic underground.
                         </p>
+                        
+                        <div className="mt-12 flex justify-center">
+                            <div className="bg-white/5 border border-white/10 px-6 py-3 rounded-2xl">
+                                <p className="text-[10px] font-black uppercase text-emerald-500 tracking-widest">Summer Campaign active</p>
+                                <p className="text-xs text-gray-500 mt-1">Scan the "Refresh" bottle at any local screening to watch for free.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -92,8 +99,8 @@ const PublicSquarePage: React.FC = () => {
                         <section className="space-y-8">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                 <div>
-                                    <h2 className="text-3xl font-black uppercase tracking-widest text-emerald-500 italic">Active Dispatches</h2>
-                                    <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest mt-1">Status: Open Stream // Civic Feed</p>
+                                    <h2 className="text-3xl font-black uppercase tracking-widest text-emerald-500 italic">Local Showcases</h2>
+                                    <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest mt-1">Status: Open Stream // Community Records</p>
                                 </div>
                                 <div className="h-px flex-grow bg-white/5 mx-10 hidden md:block"></div>
                             </div>
@@ -151,15 +158,15 @@ const PublicSquarePage: React.FC = () => {
                 {/* Square Labs */}
                 <div className="max-w-7xl mx-auto px-4 md:px-12 pb-48">
                     <div className="mb-16">
-                        <h2 className="text-2xl font-black uppercase tracking-widest text-emerald-500 italic">Planned Labs</h2>
+                        <h2 className="text-2xl font-black uppercase tracking-widest text-emerald-500 italic">Square Labs</h2>
                         <p className="text-[10px] text-gray-800 font-black uppercase tracking-widest mt-1">Status: Narrative Pipeline Active</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {[
-                            { title: "Civic Town Halls", desc: "Live-streamed community discussions with local creators and civic leaders using our Watch Party tech." },
-                            { title: "Student Premieres", desc: "Providing the same prestigious exhibition platform to the next generation of filmmakers as our award winners." },
-                            { title: "Global Commons", desc: "Broadening the archive with experimental and open-source media from around the world." }
+                            { title: "Student Showcases", desc: "Highlighting thesis work and early performances from local film programs in a professional environment." },
+                            { title: "Citizen Journalism", desc: "Direct dispatches and community news from local creators, bypassing traditional media filters." },
+                            { title: "Live Town Halls", desc: "Interactive community discussions with local creators and civic leaders using our Watch Party tech." }
                         ].map((item, i) => (
                             <div key={i} className="bg-white/5 border border-white/5 p-10 rounded-[3rem] space-y-6 group hover:border-emerald-500/30 transition-all shadow-xl">
                                 <div className="w-12 h-12 bg-emerald-600/10 rounded-2xl flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-600 group-hover:text-white transition-all text-xs font-black">

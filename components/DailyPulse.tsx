@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Movie, AnalyticsData, MoviePipelineEntry, Category, AuditEntry } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
+import firebase from 'firebase/compat/app';
 
 interface DailyPulseProps {
     pipeline: MoviePipelineEntry[];
@@ -84,16 +85,14 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
 
     const totalUsers = analytics?.totalUsers || 0;
     const pendingPipeline = pipeline.filter(p => p.status === 'pending');
-    const catalogCount = Object.keys(movies).length;
 
     return (
         <div className="space-y-8 animate-[fadeIn_0.6s_ease-out]">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <PulseMetric label="Nodes Online" value={liveNodes} color="text-red-500" live={true} sub="NOW" />
-                <PulseMetric label="Catalog Depth" value={catalogCount} color="text-white" sub="Films" />
-                <PulseMetric label="Global Reach" value={totalViews} sub="Total Views" trend="+196%" />
-                <PulseMetric label="User Base" value={totalUsers} sub="Total Accounts" />
-                <PulseMetric label="Pipeline" value={pendingPipeline.length} color="text-amber-500" sub="Pending Reviews" />
+                <PulseMetric label="Global Reach" value={totalViews} sub="Views" trend="+196%" />
+                <PulseMetric label="User Base" value={totalUsers} sub="Accounts" />
+                <PulseMetric label="Pipeline" value={pendingPipeline.length} color="text-amber-500" sub="Pending" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -107,20 +106,15 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                             <span className="text-[8px] font-black text-gray-700 uppercase tracking-widest">Global Ops Sync</span>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
                                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Intelligence Core</p>
                                 <p className={`text-lg font-bold ${aiStatus === 'nominal' ? 'text-white' : 'text-red-500'}`}>
                                     {aiStatus === 'nominal' ? 'NOMINAL // READY' : 'THROTTLED // ERROR 8'}
                                 </p>
                                 <p className="text-[9px] text-gray-600 mt-2 font-medium">
-                                    {aiStatus === 'nominal' ? 'Processing dispatches at standard frequency.' : 'Requests per minute exceeded. Backoff protocols active.'}
+                                    {aiStatus === 'nominal' ? 'Processing dispatches at standard frequency.' : 'Requests per minute exceeded.'}
                                 </p>
-                            </div>
-                            <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
-                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Data Pipeline</p>
-                                <p className="text-lg font-bold text-white uppercase">Authenticated</p>
-                                <p className="text-[9px] text-green-500 font-bold mt-2 uppercase tracking-widest">✓ AWS_S3_READY</p>
                             </div>
                         </div>
                     </div>
@@ -176,16 +170,6 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                                 </div>
                             ))}
                         </div>
-                    </div>
-                    
-                    <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 group hover:border-red-600/20 transition-all">
-                        <div className="flex items-center gap-3 mb-4">
-                            <span className="text-xl">📈</span>
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em]">System Health</p>
-                        </div>
-                        <p className="text-sm text-gray-400 leading-relaxed font-medium group-hover:text-gray-200 transition-colors">
-                            The Crate TV infrastructure is currently operating at optimal efficiency. Global node synchronization is active.
-                        </p>
                     </div>
                 </div>
             </div>

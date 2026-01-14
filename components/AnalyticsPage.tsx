@@ -1,17 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AnalyticsData, Movie, AdminPayout, FilmmakerPayout } from '../types';
+import { AnalyticsData, Movie } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import LoadingSpinner from './LoadingSpinner';
-import FinancialOnboardingModal from './FinancialOnboardingModal';
-import { getDbInstance } from '../services/firebaseClient';
 
 const formatCurrency = (amountInCents: number) => `$${((amountInCents || 0) / 100).toFixed(2)}`;
-const formatNumber = (num: number) => num.toLocaleString();
 
 const StatCard: React.FC<{ title: string; value: string | number; className?: string }> = ({ title, value, className = '' }) => (
-    <div className={`bg-gray-800/50 border border-gray-700 p-6 rounded-2xl text-center ${className}`}>
-        <h3 className="text-xs font-black uppercase text-gray-500 tracking-widest">{title}</h3>
-        <p className="text-3xl font-black text-white mt-2 italic tracking-tighter uppercase">{value}</p>
+    <div className={`bg-white/[0.03] border border-white/5 p-8 rounded-[2rem] text-center hover:bg-white/[0.05] transition-all shadow-xl ${className}`}>
+        <h3 className="text-[10px] font-black uppercase text-gray-500 tracking-[0.3em] mb-2">{title}</h3>
+        <p className="text-3xl font-black text-white italic tracking-tighter uppercase">{value}</p>
     </div>
 );
 
@@ -25,30 +22,26 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
     const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [payoutStatus, setPayoutStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
 
     const fetchData = async () => {
         setIsLoading(true);
         const password = sessionStorage.getItem('adminPassword');
         if (!password) {
-            setError('Authentication error.');
+            setError('Authentication session expired.');
             setIsLoading(false);
             return;
         }
 
         try {
-            const [analyticsRes, liveDataRes] = await Promise.all([
-                fetch('/api/get-sales-data', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password }),
-                }),
-                fetchAndCacheLiveData({ force: true })
-            ]);
+            const analyticsRes = await fetch('/api/get-sales-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password }),
+            });
             
-            const analyticsJson: { analyticsData: AnalyticsData, errors: any } = await analyticsRes.json();
+            const analyticsJson = await analyticsRes.json();
             if (analyticsJson.errors?.critical) throw new Error(analyticsJson.errors.critical);
-            
             setAnalyticsData(analyticsJson.analyticsData);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred.');
@@ -61,131 +54,139 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
         fetchData();
     }, []);
 
-    const handleDownloadLedger = () => {
+    const handleWithdraw = async () => {
         if (!analyticsData) return;
-        const csvRows = [
-            ["Crate TV Financial Audit - Festival Entity"],
-            ["Generated Date", new Date().toLocaleString()],
-            [""],
-            ["Metric", "Value"],
-            ["Gross Festival Yield", formatCurrency(analyticsData.totalFestivalRevenue)],
-            ["Partner Share (70%)", formatCurrency(analyticsData.totalFestivalRevenue * 0.70)],
-            ["Platform Overhead (30%)", formatCurrency(analyticsData.totalFestivalRevenue * 0.30)],
-            ["Total All-Access Passes", analyticsData.festivalPassSales.units],
-            ["Total Block Tickets", analyticsData.festivalBlockSales.units],
-            [""]
-        ];
+        
+        // CRITICAL LOGIC: (Total Gross * 0.7) - Total_Already_Paid
+        const partnerGross = Number(analyticsData.totalFestivalRevenue || 0);
+        const partnerEntitlement = partnerGross * 0.70;
+        const availableNow = partnerEntitlement - (analyticsData.totalAdminPayouts || 0);
 
-        // FIX: Cast stats to correct type to resolve "Property 'revenue' does not exist on type 'unknown'" on line 80
-        Object.entries(analyticsData.salesByBlock).forEach(([title, stats]) => {
-            const s = stats as { units: number; revenue: number };
-            csvRows.push([`Block: ${title}`, formatCurrency(s.revenue)]);
-        });
+        if (availableNow <= 100) {
+            alert("No significant net entitlement available for disbursement at this time.");
+            return;
+        }
 
-        const csvString = csvRows.map(r => r.join(",")).join("\n");
-        const blob = new Blob([csvString], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.setAttribute('hidden', '');
-        a.setAttribute('href', url);
-        a.setAttribute('download', `FESTIVAL_LEDGER_${Date.now()}.csv`);
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        if (!window.confirm(`AUTHORIZE DISPATCH: Confirm transfer of ${formatCurrency(availableNow)} to your linked card? This strictly represents your 70% share.`)) return;
+
+        setPayoutStatus('processing');
+        const password = sessionStorage.getItem('adminPassword');
+        try {
+            const res = await fetch('/api/process-festival-payout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password }),
+            });
+            if (res.ok) {
+                setPayoutStatus('success');
+                fetchData();
+            } else {
+                throw new Error('Disbursement rejected by core.');
+            }
+        } catch (e) {
+            setPayoutStatus('error');
+            alert("Disbursement handshake failed.");
+        }
     };
 
     if (isLoading) return <LoadingSpinner />;
     if (error) return <div className="p-8 text-red-500 font-black uppercase tracking-widest">{error}</div>;
+    if (!analyticsData) return null;
+
+    const partnerNetEntitlement = (Number(analyticsData.totalFestivalRevenue || 0) * 0.70) - (analyticsData.totalAdminPayouts || 0);
 
     return (
-        <div className="space-y-12">
+        <div className="space-y-12 pb-24">
             {!isFestivalView && (
-                <div className="flex gap-4">
-                    <button onClick={() => setActiveTab('overview')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === 'overview' ? 'bg-red-600 text-white shadow-xl' : 'bg-white/5 text-gray-500'}`}>Platform Overview</button>
-                    <button onClick={() => setActiveTab('festival')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === 'festival' ? 'bg-indigo-600 text-white shadow-xl' : 'bg-white/5 text-gray-500'}`}>Festival Ledger</button>
+                <div className="flex gap-4 p-1.5 bg-black border border-white/5 rounded-2xl w-max">
+                    <button onClick={() => setActiveTab('overview')} className={`px-10 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === 'overview' ? 'bg-red-600 text-white shadow-xl' : 'text-gray-500 hover:text-white'}`}>Platform Overview</button>
+                    <button onClick={() => setActiveTab('festival')} className={`px-10 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === 'festival' ? 'bg-indigo-600 text-white shadow-xl' : 'text-gray-500 hover:text-white'}`}>Festival Ledger</button>
                 </div>
             )}
 
-            {analyticsData && activeTab === 'overview' && (
+            {activeTab === 'overview' && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-[fadeIn_0.5s_ease-out]">
-                    <StatCard title="Grand Yield" value={formatCurrency(analyticsData.totalRevenue)} />
-                    <StatCard title="Global reach" value={(Object.values(analyticsData.viewCounts) as number[]).reduce((a, b) => a + (b || 0), 0)} />
-                    <StatCard title="Node velocity" value={analyticsData.liveNodes} />
-                    <StatCard title="Total users" value={analyticsData.totalUsers} />
+                    <StatCard title="Gross Platform Yield" value={formatCurrency(analyticsData.totalRevenue)} />
+                    <StatCard title="Total Account Nodes" value={analyticsData.totalUsers} />
+                    <StatCard title="Live Stream Density" value={analyticsData.liveNodes} />
+                    {/* FIX: Cast Object.values to number[] to resolve 'unknown' type errors during reduction. */}
+                    <StatCard title="Total Film views" value={(Object.values(analyticsData.viewCounts) as number[]).reduce((a: number, b: number) => a + b, 0)} />
                 </div>
             )}
 
-            {analyticsData && activeTab === 'festival' && (
+            {activeTab === 'festival' && (
                 <div className="space-y-12 animate-[fadeIn_0.5s_ease-out]">
-                    {/* PARTNER TRANSPARENCY BLOCK */}
-                    <div className="bg-[#0f0f0f] border border-white/5 p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-10 opacity-5 rotate-12">
-                             <h2 className="text-[10rem] font-black italic text-indigo-500">LEDGER</h2>
+                    <div className="bg-[#0f0f0f] border border-white/5 p-10 md:p-14 rounded-[4rem] shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-14 opacity-[0.03] pointer-events-none rotate-12 scale-150">
+                             <h2 className="text-[15rem] font-black italic text-indigo-500">LEDGER</h2>
                         </div>
-                        <div className="relative z-10">
-                            <div className="flex justify-between items-start mb-12">
+                        <div className="relative z-10 space-y-16">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-10">
                                 <div>
-                                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic">Festival Financial Ledger</h2>
-                                    <p className="text-xs text-gray-600 font-bold uppercase tracking-widest mt-1">Authorized Partner Review Session</p>
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+                                        <p className="text-indigo-500 font-black uppercase tracking-[0.6em] text-[10px]">Institutional Partner Portal</p>
+                                    </div>
+                                    <h2 className="text-5xl md:text-7xl font-black text-white uppercase tracking-tighter italic leading-none">Financial Ledger.</h2>
+                                    <p className="text-gray-500 text-sm font-bold uppercase tracking-[0.3em] mt-4">Transparent 70/30 Revenue Manifest</p>
                                 </div>
-                                <button 
-                                    onClick={handleDownloadLedger}
-                                    className="bg-white/5 hover:bg-white text-gray-400 hover:text-black font-black px-6 py-3 rounded-xl border border-white/10 transition-all uppercase text-[10px] tracking-widest"
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <StatCard title="Gross Generated" value={formatCurrency(analyticsData.totalFestivalRevenue)} className="bg-indigo-600/5 border-indigo-500/20" />
+                                <StatCard title="Platform Overhead (30%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue || 0) * 0.30)} className="bg-red-600/5 border-red-500/20 !text-red-500" />
+                                <StatCard title="Your Net Share (70%)" value={formatCurrency(Number(analyticsData.totalFestivalRevenue || 0) * 0.70)} className="bg-green-600/5 border-green-500/20 !text-green-500" />
+                            </div>
+
+                            <div className="bg-black/60 p-10 md:p-16 rounded-[4rem] border border-white/10 flex flex-col items-center text-center space-y-10 shadow-inner">
+                                <div className="space-y-4">
+                                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-[1em]">Authorized for Withdrawal</p>
+                                    <p className="text-7xl md:text-[8rem] font-black text-white italic tracking-tighter leading-none">{formatCurrency(partnerNetEntitlement)}</p>
+                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest max-w-sm mx-auto pt-4 leading-relaxed">
+                                        Calculated as (Gross * 0.70) minus ${formatCurrency(analyticsData.totalAdminPayouts)} already dispatched.
+                                    </p>
+                                </div>
+                                
+                                <button
+                                    onClick={handleWithdraw}
+                                    disabled={payoutStatus === 'processing' || partnerNetEntitlement <= 100}
+                                    className="bg-white text-black font-black px-20 py-8 rounded-3xl text-2xl uppercase tracking-tighter hover:scale-105 active:scale-95 transition-all shadow-[0_30px_60px_rgba(255,255,255,0.1)] disabled:opacity-20"
                                 >
-                                    Download Financial Audit (.csv)
+                                    {payoutStatus === 'processing' ? 'Authorizing Dispatch...' : 'Disburse Net Funds'}
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                                <StatCard title="Gross Festival Yield" value={formatCurrency(analyticsData.totalFestivalRevenue)} className="bg-indigo-600/5 border-indigo-500/20" />
-                                <StatCard title="Partner Share (70%)" value={formatCurrency(analyticsData.totalFestivalRevenue * 0.70)} className="text-green-500 border-green-500/20" />
-                                <StatCard title="Crate Platform Fee" value={formatCurrency(analyticsData.totalFestivalRevenue * 0.30)} className="text-red-500 border-red-500/20" />
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                                <div className="space-y-6">
-                                    <h3 className="text-sm font-black text-gray-500 uppercase tracking-[0.4em]">Sales Performance by Block</h3>
-                                    <div className="space-y-3">
-                                        {Object.entries(analyticsData.salesByBlock).map(([title, stats]) => {
-                                            // FIX: Cast stats to correct type to resolve "Property 'units/revenue' does not exist on type 'unknown'" on lines 151 and 153
-                                            const s = stats as { units: number; revenue: number };
-                                            return (
-                                                <div key={title} className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5">
-                                                    <div>
-                                                        <p className="text-sm font-bold text-white uppercase">{title}</p>
-                                                        <p className="text-[9px] text-gray-600 font-black uppercase tracking-widest">{s.units} Tickets Sold</p>
-                                                    </div>
-                                                    <p className="text-lg font-black text-white italic">{formatCurrency(s.revenue)}</p>
+                            <div className="space-y-8">
+                                <h3 className="text-sm font-black text-gray-500 uppercase tracking-[0.4em] border-l-4 border-indigo-600 pl-6">Block-Level Ticket Breakdown</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {Object.entries(analyticsData.salesByBlock).map(([title, stats]) => {
+                                        const s = stats as { units: number; revenue: number };
+                                        return (
+                                            <div key={title} className="p-8 bg-white/[0.02] rounded-3xl border border-white/5 space-y-6 hover:border-white/10 transition-all">
+                                                <div className="flex justify-between items-start">
+                                                    <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Watch Party Node</span>
+                                                    <span className="text-[10px] text-gray-700 font-mono">{s.units} TICKETS</span>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                                <div className="space-y-6">
-                                    <h3 className="text-sm font-black text-gray-500 uppercase tracking-[0.4em]">Pass Distribution</h3>
-                                    <div className="bg-white/5 p-8 rounded-3xl border border-white/5 space-y-8">
-                                        <div>
-                                            <p className="text-[10px] font-black text-gray-600 uppercase mb-2">All-Access Activations</p>
-                                            <p className="text-5xl font-black text-indigo-500">{analyticsData.festivalPassSales.units}</p>
-                                        </div>
-                                        <div className="pt-6 border-t border-white/5">
-                                            <p className="text-xs text-gray-400 font-medium leading-relaxed">
-                                                All financial dispatches are processed via the linked Square card in the config tab. Dispatches occur on a 14-day rolling window post-event.
-                                            </p>
-                                        </div>
-                                    </div>
+                                                <h4 className="text-2xl font-black text-white uppercase tracking-tight leading-none truncate">{title}</h4>
+                                                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                                                    <div>
+                                                        <p className="text-[8px] text-gray-600 font-black uppercase mb-1">Gross</p>
+                                                        <p className="text-base font-bold text-gray-400">{formatCurrency(s.revenue)}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-[8px] text-green-700 font-black uppercase mb-1">Your 70%</p>
+                                                        <p className="text-base font-bold text-green-500">{formatCurrency(s.revenue * 0.7)}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <div className="flex justify-center pt-8">
-                         <button onClick={() => setShowOnboarding(true)} className="bg-white text-black font-black px-12 py-5 rounded-2xl uppercase tracking-widest text-xs shadow-2xl hover:scale-105 active:scale-95 transition-all">Link Payout Card</button>
-                    </div>
                 </div>
             )}
-            
-            {showOnboarding && <FinancialOnboardingModal onClose={() => setShowOnboarding(false)} onSuccess={() => { setShowOnboarding(false); fetchData(); }} />}
         </div>
     );
 };

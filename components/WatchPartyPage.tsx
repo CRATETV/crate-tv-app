@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, WatchPartyState, ChatMessage, SentimentPoint } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -64,9 +65,10 @@ const LiveTalkbackTerminal: React.FC<{
     userName: string; 
     backstageKeyMatch?: string;
     onManualSpeakerUnlock: (key: string) => void;
-}> = ({ movie, isSpeaker, userName, backstageKeyMatch, onManualSpeakerUnlock }) => {
+    showKeyInputInitially?: boolean;
+}> = ({ movie, isSpeaker, userName, backstageKeyMatch, onManualSpeakerUnlock, showKeyInputInitially = false }) => {
     const [cameraActive, setCameraActive] = useState(false);
-    const [showKeyInput, setShowKeyInput] = useState(false);
+    const [showKeyInput, setShowKeyInput] = useState(showKeyInputInitially);
     const [enteredKey, setEnteredKey] = useState('');
     const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -147,7 +149,7 @@ const LiveTalkbackTerminal: React.FC<{
                         {!showKeyInput ? (
                             <button 
                                 onClick={() => setShowKeyInput(true)} 
-                                className="block mx-auto text-[10px] font-black uppercase text-gray-700 hover:text-red-500 tracking-widest transition-colors"
+                                className="block mx-auto text-xs font-black uppercase text-red-500 hover:text-white tracking-widest transition-colors py-4 px-8 rounded-2xl border border-red-500/20 bg-red-600/5 shadow-xl"
                             >
                                 Have a Backstage Key?
                             </button>
@@ -284,6 +286,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [manualSpeakerKey, setManualSpeakerKey] = useState<string | null>(null);
     const [isSecurityTriggered, setIsSecurityTriggered] = useState(false);
     const [showPaywall, setShowPaywall] = useState(false);
+    const [showBackstageVerification, setShowBackstageVerification] = useState(false);
     const securityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
@@ -490,16 +493,27 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         <div className="text-center min-w-0 px-4 flex flex-col items-center">
                             <div className="flex items-center gap-1.5 mb-1">
                                 <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${partyState?.status === 'live' ? 'bg-white shadow-[0_0_10px_white]' : 'bg-red-400'} opacity-75`}></span>
+                                    <span className={`relative inline-flex rounded-full h-2 w-2 ${partyState?.status === 'live' ? 'bg-white shadow-[0_0_10px_white]' : 'bg-red-600'}`}></span>
                                 </span>
                                 <p className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none">LIVE SCREENING</p>
                             </div>
                             <h2 className="text-xs font-bold truncate text-gray-200">{movie.title}</h2>
                         </div>
-                        <button onClick={handleShareSession} className="text-gray-400 hover:text-white p-2">
-                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {/* Persistent Backstage Key Button for Early Auth */}
+                            {!isSpeakerCandidate && (
+                                <button 
+                                    onClick={() => setShowBackstageVerification(!showBackstageVerification)}
+                                    className={`px-3 py-1 rounded-lg border text-[8px] font-black uppercase tracking-widest transition-all ${showBackstageVerification ? 'bg-red-600 border-red-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'}`}
+                                >
+                                    Backstage Access
+                                </button>
+                            )}
+                            <button onClick={handleShareSession} className="text-gray-400 hover:text-white p-2">
+                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                            </button>
+                        </div>
                     </div>
 
                     <div className="flex-none w-full aspect-video bg-black relative shadow-2xl z-30 overflow-hidden">
@@ -515,6 +529,38 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
                         {user?.email && <SecureWatermark email={user.email} isTriggered={isSecurityTriggered} />}
                         
+                        {/* Drop-down Backstage Input Overlay (Pre-Talkback) */}
+                        {showBackstageVerification && !partyState?.isQALive && !isSpeakerCandidate && (
+                            <div className="absolute inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center animate-[fadeIn_0.3s_ease-out]">
+                                <div className="max-w-xs w-full p-8 bg-[#111] border border-white/10 rounded-3xl shadow-2xl text-center space-y-6">
+                                    <h3 className="text-xl font-black uppercase tracking-tighter text-white">Backstage Entry</h3>
+                                    <form onSubmit={(e) => {
+                                        e.preventDefault();
+                                        const key = (e.currentTarget.elements.namedItem('backstage_key') as HTMLInputElement).value;
+                                        if (partyState?.backstageKey && key.trim().toUpperCase() === partyState.backstageKey.toUpperCase()) {
+                                            setManualSpeakerKey(key.trim());
+                                            setShowBackstageVerification(false);
+                                            alert("Identity verified. You are authorized for stage broadcast.");
+                                        } else {
+                                            alert("Invalid Access Key.");
+                                        }
+                                    }} className="space-y-4">
+                                        <input 
+                                            name="backstage_key"
+                                            type="text" 
+                                            placeholder="ENTER_KEY"
+                                            className="w-full bg-black border border-white/20 rounded-xl px-4 py-3 text-center font-mono uppercase tracking-[0.3em] text-red-500 focus:border-red-600 outline-none"
+                                            autoFocus
+                                        />
+                                        <div className="flex gap-2">
+                                            <button type="button" onClick={() => setShowBackstageVerification(false)} className="flex-1 text-[9px] font-black uppercase text-gray-600">Cancel</button>
+                                            <button type="submit" className="flex-grow bg-white text-black font-black py-3 rounded-xl uppercase text-[10px] tracking-widest">Verify Access</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+
                         {partyState?.isQALive ? (
                             <LiveTalkbackTerminal 
                                 movie={movie} 
@@ -522,6 +568,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 userName={user?.name || "Guest Creator"}
                                 backstageKeyMatch={partyState.backstageKey}
                                 onManualSpeakerUnlock={setManualSpeakerKey}
+                                showKeyInputInitially={showBackstageVerification}
                             />
                         ) : (
                             embedUrl ? (

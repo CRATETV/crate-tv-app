@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -10,35 +10,26 @@ interface ErrorBoundaryState {
 
 /**
  * GlobalErrorBoundary handles uncaught errors in the component tree.
- * Inherits from React.Component with generic Props and State to ensure type safety.
+ * Inherits from Component with generic Props and State to ensure type safety.
  */
-// Fix: Use React.Component explicitly to ensure inherited properties like state and props are correctly resolved by the TypeScript compiler.
+// FIX: Using React.Component explicitly to resolve inheritance-related property access errors.
 class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Fix: Explicit constructor with super call to initialize state correctly on 'this'.
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    // Fix: Initializing state via the constructor is standard for class components and helps with property resolution to fix the "state does not exist" error on line 21.
-    this.state = {
-      hasError: false
-    };
-  }
+  // FIX: Explicitly typed state initialization.
+  public state: ErrorBoundaryState = {
+    hasError: false
+  };
 
-  // Standard static method for Error Boundary to update state when an error occurs.
   public static getDerivedStateFromError(_: Error): ErrorBoundaryState {
-    // Update state so the next render will show the fallback UI.
     return { hasError: true };
   }
 
-  // Standard lifecycle method for capturing error details and logging for monitoring.
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log the error to the console for infrastructure monitoring
     console.error("CRITICAL_SYSTEM_FAILURE:", error, errorInfo);
   }
 
-  public render(): ReactNode {
-    // Fix: Accessing props from the base class, which are now correctly typed through React.Component generics to fix the "props does not exist" error on line 40.
+  render(): ReactNode {
+    // FIX: Accessing children from 'this.props' and error state from 'this.state'.
     const { children } = this.props;
-    // Fix: Accessing state from the base class, which are now correctly typed through React.Component generics to fix the "state does not exist" error on line 42.
     const { hasError } = this.state;
 
     if (hasError) {
