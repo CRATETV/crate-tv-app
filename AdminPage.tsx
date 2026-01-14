@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -9,11 +10,10 @@ import SecurityTerminal from './components/SecurityTerminal';
 import DailyPulse from './components/DailyPulse';
 import StudioMail from './components/StudioMail';
 import SaveStatusToast from './components/SaveStatusToast';
-import HeroManager from './components/HeroManager';
 import LaurelManager from './components/LaurelManager';
-import PitchDeckManager from './components/PitchDeckManager';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
 import CrateFestEditor from './components/CrateFestEditor';
+import FestivalEditor from './components/FestivalEditor';
 import PromoCodeManager from './components/PromoCodeManager';
 import PermissionsManager from './components/PermissionsManager';
 import EditorialManager from './components/EditorialManager';
@@ -21,6 +21,8 @@ import RokuDeployTab from './components/RokuDeployTab';
 import DiscoveryEngine from './components/DiscoveryEngine';
 import CrateFestAnalytics from './components/CrateFestAnalytics';
 import FestivalAnalytics from './components/FestivalAnalytics';
+import JuryRoomTab from './components/JuryRoomTab';
+import AcademyIntelTab from './components/AcademyIntelTab';
 import OneTimePayoutTerminal from './components/OneTimePayoutTerminal';
 
 const ALL_TABS: Record<string, string> = {
@@ -31,11 +33,13 @@ const ALL_TABS: Record<string, string> = {
     discovery: '🛰️ Research Lab',
     movies: '🎞️ Catalog',
     pipeline: '📥 Pipeline',
-    laurels: '🏆 Laurel Forge',
-    festIntel: '🎪 Fest Analytics',
+    jury: '⚖️ Jury Hub',
+    festival: '🎪 Festival Manager',
     cratefest: '🎪 Crate Fest Config',
     vouchers: '🎫 Promo Codes',
+    festIntel: '📊 Fest Analytics',
     categories: '📂 Categories',
+    laurels: '🏆 Laurel Forge',
     roku: '📺 Roku Deploy',
     permissions: '🔑 Permissions',
     security: '🛡️ Security'
@@ -122,6 +126,7 @@ const AdminPage: React.FC = () => {
             }
             
             if (permsRes.ok) {
+                // Fix: use permsRes instead of undefined res
                 const data = await permsRes.json();
                 setPermissions(data.permissions || {});
             }
@@ -191,7 +196,6 @@ const AdminPage: React.FC = () => {
     if (!isAuthenticated) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-[#050505] text-white p-4 relative overflow-hidden">
-                {/* Background Decor */}
                 <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.05)_0%,transparent_70%)] pointer-events-none"></div>
                 <div className="absolute -top-24 -left-24 w-96 h-96 bg-red-600/10 blur-[120px] rounded-full pointer-events-none"></div>
                 
@@ -256,7 +260,6 @@ const AdminPage: React.FC = () => {
     
     if (isLoading) return <LoadingSpinner />;
 
-    // --- RESTRICTED ONE-TIME PAYOUT VIEW ---
     if (role === 'director_payout' && payoutContext) {
         return (
             <div className="min-h-screen bg-[#050505] text-white p-6 md:p-20">
@@ -288,7 +291,6 @@ const AdminPage: React.FC = () => {
                         <button 
                             key={tabId} 
                             onClick={() => setActiveTab(tabId)} 
-                            // FIX: Changed 'tid' to 'tabId' to resolve "Cannot find name 'tid'" error.
                             className={`px-8 py-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}
                         >
                             {label}
@@ -300,6 +302,24 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
                     {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}
+                    {activeTab === 'jury' && (
+                        <div className="space-y-16">
+                            <JuryRoomTab pipeline={pipeline} />
+                            <AcademyIntelTab pipeline={pipeline} movies={movies} />
+                        </div>
+                    )}
+                    {activeTab === 'festival' && (
+                        <FestivalEditor 
+                            data={festivalData} 
+                            config={festivalConfig || { isFestivalLive: false, title: '', description: '', startDate: '', endDate: '' }} 
+                            allMovies={movies}
+                            onDataChange={(d) => setFestivalData(d)}
+                            onConfigChange={(c) => setFestivalConfig(c)}
+                            onSave={() => handleSaveData('festival', { config: festivalConfig, data: festivalData })}
+                            isSaving={isSaving}
+                        />
+                    )}
+                    {activeTab === 'cratefest' && <CrateFestEditor config={crateFestConfig || { isActive: false, title: '', tagline: '', startDate: '', endDate: '', passPrice: 15, movieBlocks: [] }} allMovies={movies} pipeline={pipeline} onSave={(c) => handleSaveData('settings', { crateFestConfig: c })} isSaving={isSaving} />}
                     {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
                     {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => setActiveTab('movies')} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
@@ -310,11 +330,10 @@ const AdminPage: React.FC = () => {
                             <CrateFestAnalytics analytics={analytics} config={crateFestConfig} />
                         </div>
                     )}
-                    {activeTab === 'roku' && <RokuDeployTab />}
-                    {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies) as Movie[]} />}
-                    {activeTab === 'cratefest' && <CrateFestEditor config={crateFestConfig || { isActive: false, title: '', tagline: '', startDate: '', endDate: '', passPrice: 15, movieBlocks: [] }} allMovies={movies} pipeline={pipeline} onSave={(c) => handleSaveData('settings', { crateFestConfig: c })} isSaving={isSaving} />}
                     {activeTab === 'vouchers' && <PromoCodeManager isAdmin={true} targetFilms={Object.values(movies) as Movie[]} />}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />}
+                    {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies) as Movie[]} />}
+                    {activeTab === 'roku' && <RokuDeployTab />}
                     {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'security' && <SecurityTerminal />}
                 </div>

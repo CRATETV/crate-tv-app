@@ -22,23 +22,21 @@ const getPartyStatusText = (movie: Movie, partyState?: WatchPartyState) => {
     return { text: 'Session Inactive', color: 'bg-gray-700' };
 };
 
-// FIX: Combined interface for EmbeddedChatProps to resolve 'unknown' type errors and improve inference.
+// Combined interface for EmbeddedChatProps to resolve 'unknown' type errors and improve inference.
 interface EmbeddedChatProps {
     movieKey: string; 
     user: { name?: string; email: string | null; avatar?: string; } | null;
     movie?: Movie; 
 }
 
-// FIX: Changed from React.FC to explicit parameter typing to ensure 'movie' and 'director' are correctly recognized by the compiler.
-// Removed duplicate definition of EmbeddedChat and its props interface that was causing override issues.
-const EmbeddedChat = ({ movieKey, user, movie }: EmbeddedChatProps) => {
+// Fix: Changed to React.FC with explicit generic typing to resolve inference errors on 'movie' properties.
+const EmbeddedChat: React.FC<EmbeddedChatProps> = ({ movieKey, user, movie }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const directorsList = useMemo(() => 
-        // FIX: 'movie' is now correctly inferred via EmbeddedChatProps, resolving the 'unknown' error previously reported on line 114.
         (movie?.director || '').toLowerCase().split(',').map(d => d.trim()), 
     [movie?.director]);
 
@@ -317,7 +315,7 @@ const WatchPartyControlRoom: React.FC<{
                     </div>
                 </div>
                 <div className="lg:col-span-1 h-[60vh] lg:h-auto">
-                     {/* FIX: Correctly passed movie prop to EmbeddedChat to ensure typed context is maintained. */}
+                     {/* Correctly passed movie prop to EmbeddedChat to ensure typed context is maintained. */}
                      <EmbeddedChat movieKey={movie.key} movie={movie} user={user} />
                 </div>
             </div>

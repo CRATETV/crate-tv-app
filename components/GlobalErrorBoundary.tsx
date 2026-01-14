@@ -13,9 +13,8 @@ interface ErrorBoundaryState {
  * GlobalErrorBoundary handles uncaught errors in the component tree.
  * Inherits from Component with generic Props and State to ensure type safety.
  */
-// FIX: Explicitly extending React.Component to ensure this.props and this.state are correctly bound by the TypeScript compiler.
-class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // FIX: Explicitly typed state initialization.
+// Fix: Use Component directly from react import to ensure proper typing and inheritance recognition in TS.
+class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   public state: ErrorBoundaryState = {
     hasError: false
   };
@@ -29,7 +28,6 @@ class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBound
   }
 
   render(): ReactNode {
-    // FIX: Accessing children from 'this.props' and error state from 'this.state' correctly now that inheritance is properly typed via React.Component.
     const { children } = this.props;
     const { hasError } = this.state;
 
