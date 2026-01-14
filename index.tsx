@@ -48,6 +48,7 @@ import SubmissionTermsPage from './components/SubmissionTermsPage';
 import PitchDeckPage from './components/PitchDeckPage';
 import ZinePage from './components/ZinePage';
 import JuryRoomPage from './components/JuryRoomPage';
+import InstitutionalGatewayPage from './components/InstitutionalGatewayPage';
 
 
 const rootElement = document.getElementById('root');
@@ -121,6 +122,8 @@ const AppRouter: React.FC = () => {
   switch (route) {
     case '/':
       return user ? <App /> : <LandingPage />;
+    case '/edu':
+      return <InstitutionalGatewayPage />;
     case '/zine':
       return <ZinePage />;
     case '/jury':

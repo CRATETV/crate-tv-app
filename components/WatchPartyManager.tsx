@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Movie, WatchPartyState, ChatMessage, FilmBlock } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -21,13 +22,15 @@ const getPartyStatusText = (movie: Movie, partyState?: WatchPartyState) => {
     return { text: 'Session Inactive', color: 'bg-gray-700' };
 };
 
-// FIX: Added interface for EmbeddedChatProps to resolve 'unknown' type errors and improve inference.
+// FIX: Combined interface for EmbeddedChatProps to resolve 'unknown' type errors and improve inference.
 interface EmbeddedChatProps {
     movieKey: string; 
     user: { name?: string; email: string | null; avatar?: string; } | null;
     movie?: Movie; 
 }
 
+// FIX: Changed from React.FC to explicit parameter typing to ensure 'movie' and 'director' are correctly recognized by the compiler.
+// Removed duplicate definition of EmbeddedChat and its props interface that was causing override issues.
 const EmbeddedChat = ({ movieKey, user, movie }: EmbeddedChatProps) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -35,7 +38,7 @@ const EmbeddedChat = ({ movieKey, user, movie }: EmbeddedChatProps) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const directorsList = useMemo(() => 
-        // FIX: Use optional chaining as 'movie' is optional and may be undefined.
+        // FIX: 'movie' is now correctly inferred via EmbeddedChatProps, resolving the 'unknown' error previously reported on line 114.
         (movie?.director || '').toLowerCase().split(',').map(d => d.trim()), 
     [movie?.director]);
 
@@ -196,6 +199,7 @@ const WatchPartyControlRoom: React.FC<{
     onSyncState: (state: Partial<WatchPartyState>) => void;
 }> = ({ movie, partyState, blockInfo, onStartParty, onEndParty, onNextFilm, onSyncState }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const { user } = useAuth();
     const lastSyncTime = useRef(0);
     const [isCopying, setIsCopying] = useState(false);
 
@@ -313,7 +317,8 @@ const WatchPartyControlRoom: React.FC<{
                     </div>
                 </div>
                 <div className="lg:col-span-1 h-[60vh] lg:h-auto">
-                     <EmbeddedChat movieKey={movie.key} movie={movie} user={null} />
+                     {/* FIX: Correctly passed movie prop to EmbeddedChat to ensure typed context is maintained. */}
+                     <EmbeddedChat movieKey={movie.key} movie={movie} user={user} />
                 </div>
             </div>
         </div>

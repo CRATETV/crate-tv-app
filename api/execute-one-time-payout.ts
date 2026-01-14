@@ -108,7 +108,11 @@ export async function POST(request: Request) {
 
         // 5. Audit, Log, and PURGE AUTH
         const batch = db.batch();
-        batch.add(db.collection('payout_history'), {
+        
+        // FIX: Firestore WriteBatch does not have an .add() method. 
+        // We use .doc() to generate a reference and .set() to add the data.
+        const historyRef = db.collection('payout_history').doc();
+        batch.set(historyRef, {
             recipient: directorName,
             amount: eligibleAmount,
             status: 'SUCCESS',
@@ -116,7 +120,8 @@ export async function POST(request: Request) {
             method: 'ONE_TIME_HANDSHAKE'
         });
 
-        batch.add(db.collection('audit_logs'), {
+        const logRef = db.collection('audit_logs').doc();
+        batch.set(logRef, {
             role: 'director_payout',
             action: 'ONE_TIME_PAYOUT_SUCCESS',
             type: 'MUTATION',
