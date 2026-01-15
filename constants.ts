@@ -1,3 +1,4 @@
+
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData, PromoCode } from './types';
 
 
@@ -15,7 +16,7 @@ export const promoCodesData: Record<string, Partial<PromoCode>> = {
     "code": "PULSE_25",
     "type": "discount",
     "discountValue": 25,
-    "maxUses": 100,
+    "maxUses": 500,
     "usedCount": 0,
     "internalName": "Weekly Riddle Reward"
   },
@@ -23,7 +24,7 @@ export const promoCodesData: Record<string, Partial<PromoCode>> = {
     "code": "VIP_ACCESS",
     "type": "one_time_access",
     "discountValue": 100,
-    "maxUses": 50,
+    "maxUses": 100,
     "usedCount": 0,
     "internalName": "Press & Partner Access"
   },
@@ -31,9 +32,33 @@ export const promoCodesData: Record<string, Partial<PromoCode>> = {
     "code": "CRATE_COMMUNITY",
     "type": "discount",
     "discountValue": 50,
-    "maxUses": 500,
+    "maxUses": 1000,
     "usedCount": 0,
     "internalName": "Launch Celebration"
+  },
+  "FOUNDER_100": {
+    "code": "FOUNDER_100",
+    "type": "one_time_access",
+    "discountValue": 100,
+    "maxUses": 50,
+    "usedCount": 0,
+    "internalName": "Internal Founder Credentials"
+  },
+  "STUDY_50": {
+    "code": "STUDY_50",
+    "type": "discount",
+    "discountValue": 50,
+    "maxUses": 250,
+    "usedCount": 0,
+    "internalName": "Academic Outreach Program"
+  },
+  "ALUMNI_75": {
+    "code": "ALUMNI_75",
+    "type": "discount",
+    "discountValue": 75,
+    "maxUses": 150,
+    "usedCount": 0,
+    "internalName": "Legacy Participant Reward"
   }
 };
 

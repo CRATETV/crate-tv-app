@@ -299,7 +299,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
     };
 
     const handleRestoreDefaults = async () => {
-        if (!window.confirm("RESTORE PROTOCOL: Synchronize hardcoded system vouchers from constants.ts into live database? Existing codes with matching IDs will be updated.")) return;
+        if (!window.confirm("RESTORE PROTOCOL: Synchronize hardcoded system vouchers from constants.ts into live database? This will restore classic codes like PULSE_25 and VIP_ACCESS.")) return;
         setIsRestoring(true);
         const db = getDbInstance();
         if (!db) return;
@@ -317,7 +317,7 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                 }, { merge: true });
             });
             await batch.commit();
-            alert("System vouchers successfully seeded.");
+            alert("System vouchers successfully restored.");
             await fetchCodes();
         } catch (e) {
             alert("Restore failed.");
@@ -500,14 +500,18 @@ const PromoCodeManager: React.FC<PromoCodeManagerProps> = ({ isAdmin, filmmakerN
                     </form>
 
                     {isAdmin && (
-                         <div className="bg-white/5 border border-white/10 p-6 rounded-[2.5rem] space-y-4">
-                            <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Maintenance Node</h4>
+                         <div className="bg-[#0f0f0f] border border-indigo-500/20 p-8 rounded-[2.5rem] shadow-2xl space-y-6">
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">🔄</span>
+                                <h4 className="text-lg font-black text-white uppercase tracking-tighter">System Recovery</h4>
+                            </div>
+                            <p className="text-xs text-gray-500 leading-relaxed">Restore standard platform vouchers from the master record. Includes VIP_ACCESS and PULSE_25.</p>
                             <button 
                                 onClick={handleRestoreDefaults}
                                 disabled={isRestoring}
-                                className="w-full bg-white/5 hover:bg-indigo-600 border border-white/10 text-gray-500 hover:text-white font-black py-3 rounded-xl uppercase text-[9px] tracking-widest transition-all"
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-xl uppercase text-[9px] tracking-[0.2em] transition-all shadow-lg active:scale-95 disabled:opacity-20"
                             >
-                                {isRestoring ? 'Restoring...' : 'Seed System Vouchers'}
+                                {isRestoring ? 'Restoring Nodes...' : 'Restore System Vouchers'}
                             </button>
                         </div>
                     )}
