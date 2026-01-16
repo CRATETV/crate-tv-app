@@ -109,6 +109,16 @@ const WatchPartyControlRoom: React.FC<{
     const isLive = partyState?.status === 'live';
     const { user } = useAuth();
 
+    const toggleQA = async () => {
+        const db = getDbInstance();
+        if (db) {
+            await db.collection('watch_parties').doc(partyKey).update({
+                isQALive: !partyState?.isQALive,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+    };
+
     return (
         <div className="bg-white/[0.02] p-8 rounded-[3rem] border border-white/5 shadow-2xl mb-12 animate-[fadeIn_0.5s_ease-out]">
             <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8 border-b border-white/5 pb-8">
@@ -123,9 +133,17 @@ const WatchPartyControlRoom: React.FC<{
                 </div>
                 <div className="flex gap-4">
                     {isLive && (
-                        <button onClick={onEndParty} className="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-2xl uppercase tracking-widest text-xs shadow-2xl">
-                            Terminate Session
-                        </button>
+                        <>
+                            <button 
+                                onClick={toggleQA}
+                                className={`px-8 py-4 rounded-2xl uppercase tracking-widest text-xs transition-all font-black ${partyState?.isQALive ? 'bg-indigo-600 text-white shadow-[0_0_30px_rgba(79,70,229,0.4)]' : 'bg-white/5 text-gray-500 border border-white/10 hover:text-white'}`}
+                            >
+                                {partyState?.isQALive ? 'Director Stage Active' : 'Enable Director Stage'}
+                            </button>
+                            <button onClick={onEndParty} className="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-2xl uppercase tracking-widest text-xs shadow-2xl">
+                                Terminate Session
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -214,14 +232,12 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         } catch (e) { alert("Initialization failure."); }
     };
 
-    // Filtered Blocks based on search query
     const filteredBlocks = useMemo(() => {
         const allBlocks = festivalData.flatMap(d => d.blocks);
         if (!filter) return allBlocks;
         return allBlocks.filter(b => b.title.toLowerCase().includes(filter.toLowerCase()));
     }, [festivalData, filter]);
 
-    // Filtered Movies based on search query
     const filteredMovies = useMemo(() => {
         const moviesArr = (Object.values(allMovies) as Movie[]);
         if (!filter) return moviesArr.sort((a, b) => (a.title || '').localeCompare(b.title || ''));

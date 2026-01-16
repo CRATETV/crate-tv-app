@@ -19,7 +19,6 @@ const REACTION_TYPES = ['🔥', '😲', '❤️', '👏', '😢'] as const;
 const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({ emoji, onComplete }) => {
     const randomLeft = useMemo(() => Math.floor(Math.random() * 80) + 10, []); 
     const randomDuration = useMemo(() => 3.5 + Math.random() * 1.5, []); 
-    const randomScale = useMemo(() => 0.8 + Math.random() * 0.7, []); 
     const randomRotate = useMemo(() => Math.floor(Math.random() * 40) - 20, []);
 
     useEffect(() => {
@@ -38,7 +37,7 @@ const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({
             <div 
                 className="text-6xl drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
                 style={{ 
-                    transform: `scale(${randomScale}) rotate(${randomRotate}deg)`
+                    transform: `rotate(${randomRotate}deg)`
                 }}
             >
                 {emoji}
@@ -46,6 +45,26 @@ const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({
         </div>
     );
 };
+
+const DirectorStage: React.FC<{ name: string; isLive: boolean }> = ({ name, isLive }) => (
+    <div className="bg-red-600 border border-red-500/50 p-4 rounded-2xl flex items-center justify-between mb-4 shadow-2xl animate-[fadeIn_0.5s_ease-out]">
+        <div className="flex items-center gap-4">
+            <div className="relative">
+                <div className="w-12 h-12 rounded-full border-2 border-white overflow-hidden bg-gray-900">
+                    <div className="w-full h-full p-2" dangerouslySetInnerHTML={{ __html: avatars['fox'] }} />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-red-600 animate-pulse"></div>
+            </div>
+            <div>
+                <p className="text-[10px] font-black uppercase text-red-100 tracking-widest leading-none">LIVE TALKBACK</p>
+                <h4 className="text-sm font-black text-white uppercase tracking-tight mt-1">{name} is in the room</h4>
+            </div>
+        </div>
+        <div className="bg-white/20 px-3 py-1 rounded-lg">
+             <p className="text-[9px] font-black text-white uppercase tracking-[0.2em]">Active Stage</p>
+        </div>
+    </div>
+);
 
 const PreShowLobby: React.FC<{ 
     movie?: Movie; 
@@ -123,8 +142,9 @@ const PreShowLobby: React.FC<{
 const EmbeddedChat: React.FC<{ 
     partyKey: string; 
     directors: string[];
+    isQALive?: boolean;
     user: { name?: string; email: string | null; avatar?: string; } | null 
-}> = ({ partyKey, directors, user }) => {
+}> = ({ partyKey, directors, isQALive, user }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -169,7 +189,10 @@ const EmbeddedChat: React.FC<{
             <div className="hidden md:flex p-4 text-lg font-bold border-b border-gray-700 flex-shrink-0">
                 <h2 className="text-sm uppercase tracking-widest text-gray-400">Live Chat</h2>
             </div>
+            
             <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide min-h-0">
+                {isQALive && directors.length > 0 && <DirectorStage name={directors[0]} isLive={true} />}
+                
                 {messages.map(msg => {
                     const isDirector = directors.includes(msg.userName.toLowerCase().trim());
                     return (
@@ -208,7 +231,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [showPaywall, setShowPaywall] = useState(false);
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     
-    // NEW AUTO-SYNC FAILSAFE STATE
+    // Auto-sync handshake state
     const [showUnmutePrompt, setShowUnmutePrompt] = useState(false);
     
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -269,7 +292,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     useEffect(() => {
         if (!hasAccess || !partyState?.actualStartTime || partyState.status !== 'live') return;
         
-        // REFINED SYNC CLOCK: Aggressive Autoplay Pursuit
         const syncClock = setInterval(() => {
             const video = videoRef.current;
             if (!video) return;
@@ -280,18 +302,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             if (elapsedTotalSeconds < 0) return; 
 
             const applyGlobalSync = (targetTime: number) => {
-                // Keep visually in sync within 1.5s window
                 if (Math.abs(video.currentTime - targetTime) > 1.5) {
                     video.currentTime = targetTime;
                 }
                 
-                // FORCE PROGRESSION: Browser security usually allows muted autoplay if unmuted fails
                 if (video.paused) {
                     video.play().catch((error) => {
                         if (error.name === 'NotAllowedError' && !video.muted) {
                             video.muted = true;
                             setShowUnmutePrompt(true);
-                            video.play().catch(e => console.error("Total sync block", e));
+                            video.play().catch(e => console.error("Sync block", e));
                         }
                     });
                 }
@@ -349,13 +369,50 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const isWaiting = startTimeStr && new Date() < new Date(startTimeStr) && !isLive;
     const isFinished = partyState?.status === 'ended';
 
+    // CINEMATIC PAYWALL UI
     if (!hasAccess) {
+        const poster = context.type === 'movie' ? context.movie.poster : '';
+        const price = context.type === 'movie' ? context.movie.watchPartyPrice : 10.00;
+        
         return (
-            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8 text-center">
-                <h2 className="text-4xl font-black text-white uppercase italic">Entry Ticket Required</h2>
-                <p className="text-gray-400 mt-4">This screening is a ticketed community event.</p>
-                <button onClick={() => setShowPaywall(true)} className="bg-white text-black font-black py-5 px-12 rounded-2xl uppercase text-xs mt-8">Get Event Ticket</button>
-                {showPaywall && <SquarePaymentModal movie={context.type === 'movie' ? context.movie : undefined} paymentType={context.type === 'movie' ? "watchPartyTicket" : "block"} onClose={() => setShowPaywall(false)} onPaymentSuccess={() => { if (context.type === 'movie') unlockWatchParty(movieKey); setShowPaywall(false); }} />}
+            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
+                <div className="absolute inset-0 opacity-40">
+                    <img src={poster} className="w-full h-full object-cover blur-3xl scale-110" alt="" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60"></div>
+                </div>
+                
+                <div className="relative z-10 max-w-lg space-y-12 animate-[fadeIn_0.8s_ease-out]">
+                    <div className="space-y-4">
+                        <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-2 rounded-full shadow-2xl mb-4">
+                            <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse shadow-[0_0_10px_red]"></span>
+                            <p className="text-gray-400 font-black uppercase tracking-[0.4em] text-[10px]">Secure Live Node</p>
+                        </div>
+                        <h2 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter italic leading-none">Entry Ticket Required.</h2>
+                        <p className="text-gray-400 text-lg md:text-xl font-medium max-w-md mx-auto">This screening is a ticketed community event. Your patronage directly supports the filmmaker.</p>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-6">
+                        <button 
+                            onClick={() => setShowPaywall(true)} 
+                            className="bg-white text-black font-black py-6 px-16 rounded-[2rem] uppercase tracking-tighter text-xl md:text-2xl shadow-[0_30px_60px_rgba(255,255,255,0.1)] hover:scale-105 active:scale-95 transition-all"
+                        >
+                            Authorize Entry // ${price?.toFixed(2)}
+                        </button>
+                        <button onClick={handleGoHome} className="text-gray-600 font-black uppercase tracking-[0.4em] text-[10px] hover:text-white transition-colors">Return to Library</button>
+                    </div>
+                </div>
+
+                {showPaywall && (
+                    <SquarePaymentModal 
+                        movie={context.type === 'movie' ? context.movie : undefined} 
+                        paymentType={context.type === 'movie' ? "watchPartyTicket" : "block"} 
+                        onClose={() => setShowPaywall(false)} 
+                        onPaymentSuccess={() => { 
+                            if (context.type === 'movie') unlockWatchParty(movieKey); 
+                            setShowPaywall(false); 
+                        }} 
+                    />
+                )}
             </div>
         );
     }
@@ -380,7 +437,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             ))}
                         </div>
 
-                        {/* SUBTLE UNMUTE CALL TO ACTION */}
                         {showUnmutePrompt && (
                             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] animate-bounce pointer-events-none">
                                 <div className="bg-white text-black font-black px-8 py-4 rounded-2xl flex items-center gap-3 shadow-[0_20px_50px_rgba(255,255,255,0.2)] uppercase tracking-widest text-sm">
@@ -422,12 +478,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
                     
                     <div className="flex-grow flex flex-col md:hidden overflow-hidden bg-[#0a0a0a] min-h-0">
-                        <EmbeddedChat partyKey={movieKey} directors={directorsList} user={user} />
+                        <EmbeddedChat partyKey={movieKey} directors={directorsList} isQALive={partyState?.isQALive} user={user} />
                     </div>
                 </div>
 
                 <div className="hidden md:flex w-80 lg:w-96 flex-shrink-0 h-full border-l border-gray-800 min-h-0 overflow-hidden">
-                    <EmbeddedChat partyKey={movieKey} directors={directorsList} user={user} />
+                    <EmbeddedChat partyKey={movieKey} directors={directorsList} isQALive={partyState?.isQALive} user={user} />
                 </div>
             </div>
         </div>

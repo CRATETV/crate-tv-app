@@ -39,7 +39,7 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
 
     return (
         <div 
-            className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-red-600 via-pink-600 to-indigo-900 text-white p-3 flex items-center justify-between gap-4 shadow-2xl h-12 border-b border-white/10 animate-[slideInDown_0.4s_ease-out]"
+            className={`fixed top-0 left-0 right-0 z-50 p-3 flex items-center justify-between gap-4 shadow-2xl h-12 border-b border-white/10 animate-[slideInDown_0.4s_ease-out] transition-all ${movie.isWatchPartyPaid ? 'bg-gradient-to-r from-red-600 via-amber-600 to-indigo-900' : 'bg-gradient-to-r from-red-600 via-pink-600 to-indigo-900'}`}
             style={{ top: topOffset }}
         >
             <div className="flex items-center gap-4 ml-2 md:ml-8">
@@ -48,7 +48,7 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
                     <span className={`relative inline-flex rounded-full h-3 w-3 bg-white ${isLive ? 'shadow-[0_0_10px_white]' : ''}`}></span>
                 </span>
                 <span className="font-black text-[10px] uppercase tracking-[0.3em] whitespace-nowrap">
-                    {isLive ? 'Live Event Active' : 'Uplink Imminent'}
+                    {movie.isWatchPartyPaid ? 'PAID TICKETED EVENT' : (isLive ? 'Live Event Active' : 'Uplink Imminent')}
                 </span>
             </div>
             
@@ -69,7 +69,7 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
                     onClick={handleNavigate}
                     className="bg-white text-black font-black px-5 py-1 rounded-full text-[10px] uppercase tracking-tighter hover:bg-gray-200 transition-all flex-shrink-0"
                 >
-                    {isLive ? (hasAccess ? 'Enter Room' : 'Get Ticket') : 'Pre-Show Lobby'}
+                    {isLive ? (hasAccess ? 'Enter Room' : 'Unlock Ticket') : 'Pre-Show Lobby'}
                 </button>
                 <button onClick={onClose} className="text-white/40 hover:text-white transition-colors text-2xl leading-none ml-2" aria-label="Dismiss banner">
                     &times;
