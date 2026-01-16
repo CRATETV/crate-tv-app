@@ -292,7 +292,8 @@ const EmbeddedChat: React.FC<{
 };
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user, unlockedWatchPartyKeys, unlockWatchParty, unlockedBlockIds } = useAuth();
+    // FIX: Corrected variable name from unlockedBlockIds to unlockedFestivalBlockIds to match AuthContext definition.
+    const { user, unlockedWatchPartyKeys, unlockWatchParty, unlockedFestivalBlockIds } = useAuth();
     const { movies: allMovies, festivalData, isLoading: isFestivalLoading } = useFestival();
     
     const [partyState, setPartyState] = useState<WatchPartyState>();
@@ -321,10 +322,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             if (!context.movie.isWatchPartyPaid) return true;
             return unlockedWatchPartyKeys.has(movieKey);
         } else if (context?.type === 'block') {
-            return unlockedBlockIds.has(movieKey);
+            // FIX: Use correctly named unlockedFestivalBlockIds property.
+            return unlockedFestivalBlockIds.has(movieKey);
         }
         return false;
-    }, [context, movieKey, unlockedWatchPartyKeys, unlockedBlockIds]);
+    }, [context, movieKey, unlockedWatchPartyKeys, unlockedFestivalBlockIds]);
 
     const isSpeakerCandidate = useMemo(() => {
         if (manualSpeakerKey && manualSpeakerKey === partyState?.backstageKey) return true;
@@ -497,17 +499,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     return (
         <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden" onContextMenu={(e) => e.preventDefault()}>
-            <style>{`
-                @keyframes emojiFloat {
-                    0% { transform: translateY(0) rotate(0deg) scale(0.5); opacity: 0; }
-                    10% { opacity: 1; transform: translateY(-20px) rotate(5deg) scale(1.2); }
-                    100% { transform: translateY(-600px) rotate(-15deg) scale(0.8); opacity: 0; }
-                }
-                .animate-emoji-float {
-                    animation: emojiFloat 3.5s cubic-bezier(0.33, 1, 0.68, 1) forwards;
-                }
-            `}</style>
-
             <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full min-h-0">
                 <div className="flex-grow flex flex-col relative h-full min-h-0">
                     <div className="flex-none bg-black/90 backdrop-blur-md p-3 flex items-center justify-between border-b border-white/5 pt-[max(0.75rem,env(safe-area-inset-top))]">
