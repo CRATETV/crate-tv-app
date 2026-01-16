@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, WatchPartyState, ChatMessage, SentimentPoint, FilmBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
@@ -9,23 +9,13 @@ import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
 import SquarePaymentModal from './SquarePaymentModal';
 import Countdown from './Countdown';
+import SearchOverlay from './SearchOverlay';
 
 interface WatchPartyPageProps {
-  movieKey: string; // This can be a movieKey OR a blockId
+  movieKey: string;
 }
 
 const REACTION_TYPES = ['🔥', '😲', '❤️', '👏', '😢'] as const;
-
-const getEmbedUrl = (url: string): string | null => {
-    if (!url) return null;
-    const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
-    const vimeoMatch = url.match(vimeoRegex);
-    if (vimeoMatch && vimeoMatch[1]) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&color=ff0000&title=0&byline=0&portrait=0`;
-    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-    const ytMatch = url.match(youtubeRegex);
-    if (ytMatch && ytMatch[1]) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1`;
-    return null;
-};
 
 const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({ emoji, onComplete }) => {
     const randomLeft = useMemo(() => Math.floor(Math.random() * 85) + 5, []); 
@@ -60,7 +50,6 @@ const PreShowLobby: React.FC<{
 }> = ({ movie, block, allMovies, startTime }) => {
     const [currentTrailerIdx, setCurrentTrailerIdx] = useState(0);
     const lobbyAudioRef = useRef<HTMLAudioElement>(null);
-    const [audioStarted, setAudioStarted] = useState(false);
 
     const promotionMovies = useMemo(() => {
         return allMovies
@@ -77,18 +66,11 @@ const PreShowLobby: React.FC<{
         }
     }, [promotionMovies]);
 
-    const startLobbyAudio = () => {
-        if (lobbyAudioRef.current && !audioStarted) {
-            lobbyAudioRef.current.play().catch(e => console.log("Audio waiting for user interaction"));
-            setAudioStarted(true);
-        }
-    };
-
     const title = block ? block.title : (movie ? movie.title : 'Loading Session...');
     const backdrop = movie?.poster || 'https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg';
 
     return (
-        <div className="absolute inset-0 z-[60] bg-black flex flex-col items-center justify-center overflow-hidden animate-[fadeIn_0.5s_ease-out]" onClick={startLobbyAudio}>
+        <div className="absolute inset-0 z-[60] bg-black flex flex-col items-center justify-center overflow-hidden animate-[fadeIn_0.5s_ease-out]">
             <div className="absolute inset-0 opacity-40">
                 {promotionMovies.length > 0 ? (
                     <video 
@@ -127,87 +109,9 @@ const PreShowLobby: React.FC<{
                         <div className="w-px h-6 bg-white/10"></div>
                         <Countdown targetDate={startTime} className="text-4xl md:text-6xl font-black text-white font-mono tracking-tighter" prefix="" />
                     </div>
-                    {block && (
-                        <div className="flex gap-4">
-                             <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Films in Block: {block.movieKeys.length}</p>
-                        </div>
-                    )}
                 </div>
             </div>
-
-            <audio ref={lobbyAudioRef} src="https://cratetelevision.s3.us-east-1.amazonaws.com/ambient-lobby-loop.mp3" loop />
-        </div>
-    );
-};
-
-const LiveTalkbackTerminal: React.FC<{ 
-    title: string;
-    director: string;
-    isSpeaker: boolean; 
-    userName: string; 
-    backstageKeyMatch?: string;
-    onManualSpeakerUnlock: (key: string) => void;
-    showKeyInputInitially?: boolean;
-}> = ({ title, director, isSpeaker, userName, backstageKeyMatch, onManualSpeakerUnlock, showKeyInputInitially = false }) => {
-    const [cameraActive, setCameraActive] = useState(false);
-    const [showKeyInput, setShowKeyInput] = useState(showKeyInputInitially);
-    const [enteredKey, setEnteredKey] = useState('');
-    const videoRef = useRef<HTMLVideoElement>(null);
-
-    const startBroadcast = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                setCameraActive(true);
-            }
-        } catch (e) {
-            alert("Camera access denied.");
-        }
-    };
-
-    const handleKeySubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (backstageKeyMatch && enteredKey.trim().toUpperCase() === backstageKeyMatch.toUpperCase()) {
-            onManualSpeakerUnlock(enteredKey.trim());
-            setShowKeyInput(false);
-        } else {
-            alert("Invalid Backstage Access Key.");
-        }
-    };
-
-    return (
-        <div className="absolute inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-[fadeIn_0.5s_ease-out]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.05)_0%,transparent_70%)]"></div>
-            <div className="relative z-10 w-full max-w-4xl px-6 text-center">
-                <div className="inline-flex items-center gap-2 bg-red-600 px-4 py-1 rounded-full mb-8 shadow-[0_0_20px_rgba(239,68,68,0.4)]">
-                    <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-                    <span className="text-[10px] font-black uppercase tracking-widest">Live Talkback Session</span>
-                </div>
-                <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-4 italic">Post-Film Q&A</h2>
-                <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-12">Moderating: Crate TV Studio // Guest: {director}</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                    <div className="aspect-video bg-gray-900 rounded-3xl border border-white/10 relative overflow-hidden flex items-center justify-center group">
-                        <div className="absolute top-4 left-4 z-20 bg-black/60 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest text-red-500 border border-red-500/30">Host // Studio</div>
-                        <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-24 opacity-10 group-hover:opacity-20 transition-opacity" alt="" />
-                    </div>
-                    <div className="aspect-video bg-gray-900 rounded-3xl border border-red-600/30 relative overflow-hidden flex items-center justify-center shadow-2xl">
-                         {cameraActive ? (
-                            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                         ) : (
-                            <div className="text-center p-8">
-                                <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">
-                                    {isSpeaker ? `Ready for Uplink: ${userName}` : `Speaker Slot Reserved: ${director}`}
-                                </p>
-                            </div>
-                         )}
-                         <div className="absolute top-4 left-4 z-20 bg-red-600 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest text-white">Guest // Primary</div>
-                    </div>
-                </div>
-                {isSpeaker && !cameraActive && (
-                    <button onClick={startBroadcast} className="bg-white text-black font-black px-10 py-4 rounded-2xl uppercase tracking-widest text-xs hover:scale-105 transition-all shadow-2xl">Activate Stage Camera</button>
-                )}
-            </div>
+            <audio src="https://cratetelevision.s3.us-east-1.amazonaws.com/ambient-lobby-loop.mp3" loop autoPlay />
         </div>
     );
 };
@@ -292,51 +196,47 @@ const EmbeddedChat: React.FC<{
 };
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    // FIX: Corrected variable name from unlockedBlockIds to unlockedFestivalBlockIds to match AuthContext definition.
     const { user, unlockedWatchPartyKeys, unlockWatchParty, unlockedFestivalBlockIds } = useAuth();
     const { movies: allMovies, festivalData, isLoading: isFestivalLoading } = useFestival();
     
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [activeMovieKey, setActiveMovieKey] = useState<string | null>(null);
     const [showPaywall, setShowPaywall] = useState(false);
-    const [showBackstageVerification, setShowBackstageVerification] = useState(false);
-    const [manualSpeakerKey, setManualSpeakerKey] = useState<string | null>(null);
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
+    
+    // Isolated Search State
+    const [localSearchQuery, setLocalSearchQuery] = useState('');
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
     
     const videoRef = useRef<HTMLVideoElement>(null);
 
-    // Resolve Context: Single Movie or Block
     const context = useMemo(() => {
         const movie = allMovies[movieKey];
         if (movie) return { type: 'movie' as const, movie };
-        
         const allBlocks = festivalData.flatMap(d => d.blocks);
         const block = allBlocks.find(b => b.id === movieKey);
         if (block) return { type: 'block' as const, block };
-        
         return null;
     }, [movieKey, allMovies, festivalData]);
+
+    const searchResults = useMemo(() => {
+        if (!localSearchQuery) return [];
+        const query = localSearchQuery.toLowerCase().trim();
+        return (Object.values(allMovies) as Movie[]).filter(movie =>
+            movie && movie.poster && movie.title && !movie.isUnlisted &&
+            (movie.title.toLowerCase().includes(query) || movie.director.toLowerCase().includes(query))
+        );
+    }, [localSearchQuery, allMovies]);
 
     const hasAccess = useMemo(() => {
         if (context?.type === 'movie') {
             if (!context.movie.isWatchPartyPaid) return true;
             return unlockedWatchPartyKeys.has(movieKey);
         } else if (context?.type === 'block') {
-            // FIX: Use correctly named unlockedFestivalBlockIds property.
             return unlockedFestivalBlockIds.has(movieKey);
         }
         return false;
     }, [context, movieKey, unlockedWatchPartyKeys, unlockedFestivalBlockIds]);
-
-    const isSpeakerCandidate = useMemo(() => {
-        if (manualSpeakerKey && manualSpeakerKey === partyState?.backstageKey) return true;
-        if (!user?.name || !context) return false;
-        const normalized = user.name.toLowerCase().trim();
-        const movie = context.type === 'movie' ? context.movie : allMovies[activeMovieKey || ''];
-        if (!movie) return false;
-        const directors = movie.director.toLowerCase().split(',').map(d => d.trim());
-        return directors.includes(normalized);
-    }, [user, context, activeMovieKey, manualSpeakerKey, partyState?.backstageKey, allMovies]);
 
     const directorsList = useMemo(() => {
         if (context?.type === 'movie') return context.movie.director.toLowerCase().split(',').map(d => d.trim());
@@ -349,12 +249,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
-
         const partyRef = db.collection('watch_parties').doc(movieKey);
         const unsubscribe = partyRef.onSnapshot(doc => {
-            if (doc.exists) setPartyState(doc.data() as WatchPartyState);
+            if (doc.exists) {
+                const data = doc.data() as WatchPartyState;
+                setPartyState(data);
+                // Trigger immediate active key resolution if live
+                if (data.status === 'live' && context?.type === 'movie') {
+                    setActiveMovieKey(movieKey);
+                }
+            }
         });
-
         const tenSecondsAgo = new Date(Date.now() - 10000);
         const reactionsRef = partyRef.collection('live_reactions')
             .where('timestamp', '>=', tenSecondsAgo)
@@ -365,94 +270,54 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     }
                 });
             });
-
         return () => { unsubscribe(); reactionsRef(); };
-    }, [movieKey, user?.uid]);
+    }, [movieKey, user?.uid, context?.type]);
 
-    // SECURE PRESENCE HEARTBEAT (Binds node to specific party ID)
     useEffect(() => {
-        const db = getDbInstance();
-        if (!db || !user) return;
-
-        const updatePresence = () => {
-            db.collection('presence').doc(user.uid).set({
-                uid: user.uid,
-                email: user.email,
-                lastActive: firebase.firestore.FieldValue.serverTimestamp(),
-                currentPath: window.location.pathname,
-                currentPartyId: movieKey // Canonical binding for admin viewer count
-            }, { merge: true });
-        };
-
-        updatePresence();
-        const interval = setInterval(updatePresence, 30000);
-
-        return () => {
-            clearInterval(interval);
-            // Cleanup: Clear party ID when leaving the room
-            db.collection('presence').doc(user.uid).update({ currentPartyId: null }).catch(() => {});
-        };
-    }, [user, movieKey]);
-
-    // SEQUENTIAL BLOCK SYNC ENGINE
-    useEffect(() => {
-        if (!hasAccess || !partyState?.actualStartTime || partyState.isQALive) return;
+        if (!hasAccess || !partyState?.actualStartTime || partyState.status !== 'live') return;
         
         const syncClock = setInterval(() => {
             const serverStart = partyState.actualStartTime.toDate ? partyState.actualStartTime.toDate().getTime() : new Date(partyState.actualStartTime).getTime();
             const elapsedTotalSeconds = (Date.now() - serverStart) / 1000;
             
-            if (elapsedTotalSeconds < 0) return; // Still waiting
+            if (elapsedTotalSeconds < 0) return; 
 
             if (context?.type === 'movie') {
                 const video = videoRef.current;
                 if (video) {
-                    if (Math.abs(video.currentTime - elapsedTotalSeconds) > 2) video.currentTime = elapsedTotalSeconds;
+                    if (Math.abs(video.currentTime - elapsedTotalSeconds) > 2.5) video.currentTime = elapsedTotalSeconds;
                     if (video.paused) video.play().catch(() => {});
-                    setActiveMovieKey(context.movie.key);
+                    if (activeMovieKey !== movieKey) setActiveMovieKey(movieKey);
                 }
             } else if (context?.type === 'block') {
                 let accumulatedTime = 0;
-                let foundActive = false;
-
                 for (const key of context.block.movieKeys) {
                     const m = allMovies[key];
                     if (!m) continue;
                     const duration = (m.durationInMinutes || 10) * 60;
-                    
                     if (elapsedTotalSeconds >= accumulatedTime && elapsedTotalSeconds < accumulatedTime + duration) {
                         const movieElapsed = elapsedTotalSeconds - accumulatedTime;
                         if (activeMovieKey !== key) setActiveMovieKey(key);
-                        
                         const video = videoRef.current;
                         if (video) {
-                            if (Math.abs(video.currentTime - movieElapsed) > 2) video.currentTime = movieElapsed;
+                            if (Math.abs(video.currentTime - movieElapsed) > 2.5) video.currentTime = movieElapsed;
                             if (video.paused) video.play().catch(() => {});
                         }
-                        foundActive = true;
-                        break;
+                        return;
                     }
                     accumulatedTime += duration;
                 }
-                
-                if (!foundActive && partyState.status !== 'ended') {
-                    // Entire block is finished
-                    setActiveMovieKey(null);
-                }
             }
         }, 1000);
-
         return () => clearInterval(syncClock);
-    }, [partyState, hasAccess, context, activeMovieKey, allMovies]);
+    }, [partyState, hasAccess, context, activeMovieKey, allMovies, movieKey]);
 
     const logSentiment = async (emoji: string) => {
         setLocalReactions(prev => [...prev, { id: `local_${Date.now()}`, emoji }]);
         const db = getDbInstance();
         if (db) {
             db.collection('watch_parties').doc(movieKey).collection('live_reactions').add({
-                emoji,
-                userId: user?.uid,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                emoji, userId: user?.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
     };
@@ -462,99 +327,74 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    const onSelectMovieFromSearch = (movie: Movie) => {
+        setIsSearchOpen(false);
+        window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
     if (isFestivalLoading || !context) return <LoadingSpinner />;
 
     const startTimeStr = context.type === 'movie' ? context.movie.watchPartyStartTime : context.block.watchPartyStartTime;
-    const startTime = startTimeStr ? new Date(startTimeStr) : null;
-    const isWaiting = startTime && new Date() < startTime;
+    const isWaiting = startTimeStr && new Date() < new Date(startTimeStr) && partyState?.status !== 'live';
     const isFinished = partyState?.status === 'ended';
 
     if (!hasAccess) {
         return (
-            <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-black">
-                     <img src={context.type === 'movie' ? context.movie.poster : ''} className="w-full h-full object-cover blur-3xl opacity-20" alt="" />
-                </div>
-                <div className="relative z-10 space-y-8 max-w-lg">
-                    <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic">Entry Ticket Required</h2>
-                    <p className="text-gray-400 leading-relaxed font-medium">This live screening for <strong className="text-white">"{context.type === 'movie' ? context.movie.title : context.block.title}"</strong> is a ticketed community event.</p>
-                    <button onClick={() => setShowPaywall(true)} className="bg-white text-black font-black py-5 px-12 rounded-2xl uppercase tracking-widest text-xs shadow-2xl hover:scale-105 transition-all">Get Event Ticket</button>
-                    <button onClick={handleGoHome} className="text-[10px] font-black uppercase text-gray-600 hover:text-white transition-colors tracking-widest">Return to Home</button>
-                </div>
-                {showPaywall && (
-                    <SquarePaymentModal 
-                        movie={context.type === 'movie' ? context.movie : undefined} 
-                        block={context.type === 'block' ? context.block as any : undefined}
-                        paymentType={context.type === 'movie' ? "watchPartyTicket" : "block"} 
-                        onClose={() => setShowPaywall(false)} 
-                        onPaymentSuccess={() => {
-                            if (context.type === 'movie') unlockWatchParty(movieKey);
-                            setShowPaywall(false);
-                        }} 
-                    />
-                )}
+            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8 text-center">
+                <h2 className="text-4xl font-black text-white uppercase italic">Entry Ticket Required</h2>
+                <p className="text-gray-400 mt-4">This screening is a ticketed community event.</p>
+                <button onClick={() => setShowPaywall(true)} className="bg-white text-black font-black py-5 px-12 rounded-2xl uppercase text-xs mt-8">Get Event Ticket</button>
+                {showPaywall && <SquarePaymentModal movie={context.type === 'movie' ? context.movie : undefined} paymentType={context.type === 'movie' ? "watchPartyTicket" : "block"} onClose={() => setShowPaywall(false)} onPaymentSuccess={() => { if (context.type === 'movie') unlockWatchParty(movieKey); setShowPaywall(false); }} />}
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden" onContextMenu={(e) => e.preventDefault()}>
+        <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden">
             <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full min-h-0">
                 <div className="flex-grow flex flex-col relative h-full min-h-0">
-                    <div className="flex-none bg-black/90 backdrop-blur-md p-3 flex items-center justify-between border-b border-white/5 pt-[max(0.75rem,env(safe-area-inset-top))]">
-                        <button onClick={handleGoHome} className="text-gray-400 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-                        <div className="text-center min-w-0 px-4">
-                             <div className="flex items-center justify-center gap-1.5 mb-1">
-                                <span className="relative flex h-2 w-2">
-                                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${partyState?.status === 'live' ? 'bg-white shadow-[0_0_10px_white]' : 'bg-red-400'} opacity-75`}></span>
-                                    <span className={`relative inline-flex rounded-full h-2 w-2 ${partyState?.status === 'live' ? 'bg-white shadow-[0_0_10px_white]' : 'bg-red-600'}`}></span>
-                                </span>
-                                <p className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none">LIVE {context.type === 'block' ? 'BLOCK' : 'SCREENING'}</p>
-                            </div>
+                    <div className="flex-none bg-black/90 p-3 flex items-center justify-between border-b border-white/5">
+                        <div className="flex items-center gap-4">
+                            <button onClick={handleGoHome} className="text-gray-400 hover:text-white transition-colors" title="Home"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
+                            <button onClick={() => setIsSearchOpen(true)} className="text-gray-400 hover:text-red-500 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                            </button>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none">LIVE SESSION</p>
                             <h2 className="text-xs font-bold truncate text-gray-200">{context.type === 'movie' ? context.movie.title : context.block.title}</h2>
                         </div>
-                        <button onClick={() => setShowBackstageVerification(!showBackstageVerification)} className="bg-white/5 border border-white/10 text-gray-500 hover:text-white px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest">Backstage</button>
+                        <div className="w-10"></div>
                     </div>
 
-                    <div className="flex-grow w-full bg-black relative shadow-2xl z-30 overflow-hidden flex flex-col">
+                    <div className="flex-grow w-full bg-black relative z-30 overflow-hidden flex flex-col">
                         <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden">
                             {localReactions.map(r => (
                                 <FloatingReaction key={r.id} emoji={r.emoji} onComplete={() => setLocalReactions(prev => prev.filter(item => item.id !== r.id))} />
                             ))}
                         </div>
 
-                        {isWaiting && partyState?.status !== 'live' && (
+                        {isWaiting && (
                              <PreShowLobby movie={context.type === 'movie' ? context.movie : undefined} block={context.type === 'block' ? context.block : undefined} allMovies={Object.values(allMovies)} startTime={startTimeStr!} />
                         )}
 
                         {isFinished && (
-                            <div className="absolute inset-0 z-[110] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center">
-                                <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic mb-8">Transmission End.</h2>
-                                <button onClick={handleGoHome} className="bg-white text-black font-black px-12 py-4 rounded-2xl uppercase tracking-widest text-xs">Return to Catalog</button>
+                            <div className="absolute inset-0 z-[110] bg-black flex flex-col items-center justify-center p-8 text-center">
+                                <h2 className="text-5xl font-black uppercase tracking-tighter italic mb-8">Transmission End.</h2>
+                                <button onClick={handleGoHome} className="bg-white text-black font-black px-12 py-4 rounded-2xl text-xs uppercase">Return to Catalog</button>
                             </div>
                         )}
 
-                        {partyState?.isQALive ? (
-                            <LiveTalkbackTerminal 
-                                title={context.type === 'movie' ? context.movie.title : context.block.title}
-                                director={context.type === 'movie' ? context.movie.director : "Group Panel"}
-                                isSpeaker={isSpeakerCandidate} 
-                                userName={user?.name || "Guest Creator"}
-                                backstageKeyMatch={partyState.backstageKey}
-                                onManualSpeakerUnlock={setManualSpeakerKey}
-                                showKeyInputInitially={showBackstageVerification}
-                            />
-                        ) : (
-                            <div className="flex-grow flex items-center justify-center">
-                                {activeMovieKey ? (
-                                    <video ref={videoRef} src={allMovies[activeMovieKey]?.fullMovie} className="w-full h-full object-contain" playsInline autoPlay />
-                                ) : (
-                                    <div className="text-center space-y-4 opacity-30">
-                                        <p className="text-xs font-black uppercase tracking-[1em] mr-[-1em]">Establishing Uplink...</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                        <div className="flex-grow flex items-center justify-center">
+                            {activeMovieKey ? (
+                                <video ref={videoRef} src={allMovies[activeMovieKey]?.fullMovie} className="w-full h-full object-contain" playsInline autoPlay />
+                            ) : !isWaiting && (
+                                <div className="text-center space-y-4 opacity-30">
+                                    <p className="text-xs font-black uppercase tracking-[1em] mr-[-1em]">Establishing Uplink...</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex-none bg-black/40 border-b border-white/5 py-4 px-4 flex flex-col items-center gap-4 z-40">
@@ -565,7 +405,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                          </div>
                     </div>
                     
-                    <div className="flex-grow flex flex-col md:hidden overflow-hidden bg-[#0a0a0a] min-h-0 relative">
+                    <div className="flex-grow flex flex-col md:hidden overflow-hidden bg-[#0a0a0a] min-h-0">
                         <EmbeddedChat partyKey={movieKey} directors={directorsList} user={user} />
                     </div>
                 </div>
@@ -574,6 +414,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     <EmbeddedChat partyKey={movieKey} directors={directorsList} user={user} />
                 </div>
             </div>
+
+            {isSearchOpen && (
+                <SearchOverlay 
+                    searchQuery={localSearchQuery} 
+                    onSearch={setLocalSearchQuery} 
+                    onClose={() => setIsSearchOpen(false)} 
+                    results={searchResults} 
+                    onSelectMovie={onSelectMovieFromSearch} 
+                />
+            )}
         </div>
     );
 };

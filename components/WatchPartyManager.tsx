@@ -106,11 +106,9 @@ const WatchPartyControlRoom: React.FC<{
     const [isCopying, setIsCopying] = useState(false);
     const [viewerCount, setViewerCount] = useState(0);
     
-    // AUDIENCE TELEMETRY LISTENER
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
-
         const oneMinAgo = new Date(Date.now() - 60 * 1000);
         const unsubscribe = db.collection('presence')
             .where('currentPartyId', '==', partyKey)
@@ -118,7 +116,6 @@ const WatchPartyControlRoom: React.FC<{
             .onSnapshot(snapshot => {
                 setViewerCount(snapshot.size);
             });
-
         return () => unsubscribe();
     }, [partyKey]);
 
@@ -219,13 +216,8 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         const state = partyStates[liveKey];
         const movie = allMovies[liveKey];
         const block = festivalData.flatMap(d => d.blocks).find(b => b.id === liveKey);
-        
         if (!movie && !block) return null;
-        return { 
-            entity: movie || block, 
-            partyKey: liveKey,
-            state 
-        };
+        return { entity: movie || block, partyKey: liveKey, state };
     }, [partyStates, allMovies, festivalData]);
 
     const handleEndParty = async () => {
@@ -233,9 +225,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         const db = getDbInstance();
         if (db) {
             await db.collection('watch_parties').doc(activeParty.partyKey).set({ 
-                status: 'ended', 
-                isPlaying: false,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                status: 'ended', isPlaying: false, lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
         }
     };
@@ -250,17 +240,26 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
     const handleBlockSchedule = async (block: FilmBlock, startTime: string, enabled: boolean) => {
         const db = getDbInstance();
         if (!db) return;
-        
         const utcTime = startTime ? new Date(startTime).toISOString() : '';
         const dayRef = festivalData.find(d => d.blocks.some(b => b.id === block.id));
         if (!dayRef) return;
-
         const updatedBlocks = dayRef.blocks.map(b => b.id === block.id ? { ...b, watchPartyStartTime: utcTime, isWatchPartyEnabled: enabled } : b);
-        
-        await db.collection('festival').doc('schedule').collection('days').doc(`day_${dayRef.day}`).update({
-            blocks: updatedBlocks
-        });
+        await db.collection('festival').doc('schedule').collection('days').doc(`day_${dayRef.day}`).update({ blocks: updatedBlocks });
         await refreshData();
+    };
+
+    const handleInitializeManual = async (key: string) => {
+        if (!window.confirm("Initialize manual start protocol? This will force the session to LIVE immediately and clear previous chat history.")) return;
+        const password = sessionStorage.getItem('adminPassword');
+        try {
+            const res = await fetch('/api/start-watch-party', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey: key, password }),
+            });
+            if (res.ok) alert("System authorized. Session is now LIVE.");
+            else alert("Initialization rejected.");
+        } catch (e) { alert("Core unreachable."); }
     };
 
     const filteredMovies = (Object.values(allMovies) as Movie[])
@@ -289,18 +288,17 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
 
             {activeTab === 'calendar' && (
                 <div className="bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] p-8 md:p-12 shadow-2xl animate-[fadeIn_0.4s_ease-out] space-y-12">
-                    
-                    {/* FESTIVAL BLOCKS SECTION */}
                     <div className="space-y-6">
-                        <h3 className="text-2xl font-black uppercase tracking-tighter italic text-white">Festival Block Protocol</h3>
+                        <h3 className="text-2xl font-black uppercase tracking-tighter italic text-white">Watch Schedule</h3>
                         <div className="bg-black border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
                              <table className="w-full text-left text-xs">
                                 <thead className="bg-white/5 text-gray-500 uppercase font-black">
                                     <tr>
-                                        <th className="p-6">Film Block Node</th>
+                                        <th className="p-6">Node Identifier</th>
                                         <th className="p-6">Status</th>
-                                        <th className="p-6">Enabled</th>
-                                        <th className="p-6 text-right">Scheduled Start (Local)</th>
+                                        <th className="p-6">Auto-Start</th>
+                                        <th className="p-6 text-right">Target Window (Local)</th>
+                                        <th className="p-6 text-right">Manual</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
@@ -308,10 +306,10 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                                         <tr key={block.id} className="hover:bg-white/[0.01] transition-colors">
                                             <td className="p-6">
                                                 <p className="font-black text-white uppercase text-sm tracking-tight">{block.title}</p>
-                                                <p className="text-[9px] text-gray-600 font-bold uppercase mt-1">Contains {block.movieKeys.length} films</p>
+                                                <p className="text-[9px] text-gray-600 font-bold uppercase mt-1">BLOCK_ID: {block.id}</p>
                                             </td>
                                             <td className="p-6">
-                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border border-current opacity-70 ${getPartyStatusText(block, partyStates[block.id]).color.replace('bg-', 'text-')}`}>
+                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border border-current ${getPartyStatusText(block, partyStates[block.id]).color.replace('bg-', 'text-')}`}>
                                                     {getPartyStatusText(block, partyStates[block.id]).text}
                                                 </span>
                                             </td>
@@ -326,61 +324,46 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                                                     type="datetime-local"
                                                     value={formatISOForInput(block.watchPartyStartTime)}
                                                     onChange={e => handleBlockSchedule(block, e.target.value, block.isWatchPartyEnabled || false)}
-                                                    className="form-input !py-2 !px-4 text-xs bg-black/40 border-white/10 w-64 text-right"
+                                                    className="bg-white text-black font-black py-2 px-4 rounded-xl text-xs outline-none focus:ring-2 focus:ring-red-600 w-64 text-right"
                                                 />
+                                            </td>
+                                            <td className="p-6 text-right">
+                                                <button onClick={() => handleInitializeManual(block.id)} className="text-red-500 hover:text-white font-black uppercase text-[8px] tracking-widest border border-red-500/20 px-3 py-1.5 rounded-lg hover:bg-red-600 transition-all">Go Live Now</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {filteredMovies.map(movie => (
+                                        <tr key={movie.key} className="hover:bg-white/[0.01] transition-colors">
+                                            <td className="p-6">
+                                                <p className="font-black text-white uppercase text-sm tracking-tight">{movie.title}</p>
+                                                <p className="text-[9px] text-gray-600 font-bold uppercase mt-1">UUID: {movie.key}</p>
+                                            </td>
+                                            <td className="p-6">
+                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border border-current ${getPartyStatusText(movie, partyStates[movie.key]).color.replace('bg-', 'text-')}`}>
+                                                    {getPartyStatusText(movie, partyStates[movie.key]).text}
+                                                </span>
+                                            </td>
+                                            <td className="p-6">
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" checked={movie.isWatchPartyEnabled || false} onChange={e => handleMovieSchedule(movie.key, movie.watchPartyStartTime || '', e.target.checked)} className="sr-only peer" />
+                                                    <div className="w-10 h-5 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+                                                </label>
+                                            </td>
+                                            <td className="p-6 text-right">
+                                                <input
+                                                    type="datetime-local"
+                                                    value={formatISOForInput(movie.watchPartyStartTime)}
+                                                    onChange={e => handleMovieSchedule(movie.key, e.target.value, movie.isWatchPartyEnabled || false)}
+                                                    className="bg-white text-black font-black py-2 px-4 rounded-xl text-xs outline-none focus:ring-2 focus:ring-red-600 w-64 text-right"
+                                                />
+                                            </td>
+                                            <td className="p-6 text-right">
+                                                <button onClick={() => handleInitializeManual(movie.key)} className="text-red-500 hover:text-white font-black uppercase text-[8px] tracking-widest border border-red-500/20 px-3 py-1.5 rounded-lg hover:bg-red-600 transition-all">Go Live Now</button>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                              </table>
-                        </div>
-                    </div>
-
-                    {/* INDIVIDUAL FILMS SECTION */}
-                    <div className="space-y-6 pt-12 border-t border-white/5">
-                        <h3 className="text-2xl font-black uppercase tracking-tighter italic text-white">Standalone Film Manifest</h3>
-                        <div className="bg-black border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-xs">
-                                    <thead className="bg-white/5 text-gray-500 uppercase font-black">
-                                        <tr>
-                                            <th className="p-6">Cinematic Node</th>
-                                            <th className="p-6">Status</th>
-                                            <th className="p-6">Enabled</th>
-                                            <th className="p-6 text-right">Scheduled Start (Local)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/5">
-                                        {filteredMovies.map(movie => (
-                                            <tr key={movie.key} className="hover:bg-white/[0.01] transition-colors group">
-                                                <td className="p-6">
-                                                    <p className="font-black text-white uppercase text-sm tracking-tight">{movie.title}</p>
-                                                    <p className="text-[9px] text-gray-600 font-bold uppercase mt-1">Dir. {movie.director}</p>
-                                                </td>
-                                                <td className="p-6">
-                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border border-current opacity-70 ${getPartyStatusText(movie, partyStates[movie.key]).color.replace('bg-', 'text-')}`}>
-                                                        {getPartyStatusText(movie, partyStates[movie.key]).text}
-                                                    </span>
-                                                </td>
-                                                <td className="p-6">
-                                                    <label className="relative inline-flex items-center cursor-pointer">
-                                                        <input type="checkbox" checked={movie.isWatchPartyEnabled || false} onChange={e => handleMovieSchedule(movie.key, movie.watchPartyStartTime || '', e.target.checked)} className="sr-only peer" />
-                                                        <div className="w-10 h-5 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
-                                                    </label>
-                                                </td>
-                                                <td className="p-6 text-right">
-                                                    <input
-                                                        type="datetime-local"
-                                                        value={formatISOForInput(movie.watchPartyStartTime)}
-                                                        onChange={e => handleMovieSchedule(movie.key, e.target.value, movie.isWatchPartyEnabled || false)}
-                                                        className="form-input !py-2 !px-4 text-xs bg-black/40 border-white/10 w-64 text-right"
-                                                    />
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
                         </div>
                     </div>
                 </div>
