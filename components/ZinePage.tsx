@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
@@ -49,6 +50,8 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
     const [stories, setStories] = useState<EditorialStory[]>([]);
     const [activeStory, setActiveStory] = useState<EditorialStory | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isExporting, setIsExporting] = useState(false);
+    const articleRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
         if (!authInitialized) return;
@@ -82,6 +85,31 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
         window.scrollTo(0, 0);
     };
 
+    const handleExportImage = async () => {
+        if (!articleRef.current || isExporting) return;
+        setIsExporting(true);
+        try {
+            const { default: html2canvas } = await import('html2canvas');
+            const canvas = await html2canvas(articleRef.current, {
+                useCORS: true,
+                backgroundColor: '#000000',
+                scale: 1.5,
+                logging: false,
+                windowWidth: 800, // Fixed width for better layout logic
+            });
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            const link = document.createElement('a');
+            link.download = `Crate_Dispatch_${activeStory?.title.replace(/\s+/g, '_')}.jpg`;
+            link.href = dataUrl;
+            link.click();
+        } catch (err) {
+            console.error("Export failure:", err);
+            alert("Narrative synthesis for image failed.");
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     if (isLoading) return <LoadingSpinner />;
 
     return (
@@ -99,7 +127,7 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                         <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
                                         <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Global Dispatch Active</span>
                                     </div>
-                                    <h1 className="text-7xl md:text-8xl font-black uppercase tracking-tighter italic leading-none italic-text">
+                                    <h1 className="text-7xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">
                                         CRATE <span className="text-gray-500">ZINE.</span>
                                     </h1>
                                     <p className="text-xl text-gray-400 font-medium max-w-xl leading-relaxed">The authoritative record of independent cinema culture, curation, and the creators who move us.</p>
@@ -113,35 +141,36 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                 {stories.map(story => (
                                     <ZineStoryCard key={story.id} story={story} onClick={() => handleNavigate(story.id)} />
                                 ))}
-                                {stories.length === 0 && (
-                                    <div className="col-span-full py-32 text-center border-2 border-dashed border-white/5 rounded-[3rem] opacity-20">
-                                        <p className="text-gray-500 font-black uppercase tracking-[0.5em]">Awaiting Primary Dispatches</p>
-                                    </div>
-                                )}
                             </section>
 
-                            {/* Cinema Stage Spotlight */}
                             <section className="bg-white/[0.02] border border-white/5 rounded-[4rem] p-8 md:p-16 shadow-2xl overflow-hidden relative">
-                                <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none rotate-12">
-                                    <h2 className="text-[10rem] font-black italic">PREVIEW</h2>
-                                </div>
                                 <ZineTrailerPark movies={Object.values(movies).slice(0, 10)} />
                             </section>
                         </div>
                     ) : (
                         <div className="max-w-4xl mx-auto animate-[fadeIn_0.6s_ease-out]">
-                            <button onClick={() => handleNavigate(null)} className="mb-12 flex items-center gap-3 text-gray-500 hover:text-white transition-colors uppercase font-black text-[10px] tracking-widest group">
-                                <svg className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                                Back to All Dispatches
-                            </button>
+                            <div className="flex justify-between items-center mb-12">
+                                <button onClick={() => handleNavigate(null)} className="flex items-center gap-3 text-gray-500 hover:text-white transition-colors uppercase font-black text-[10px] tracking-widest group">
+                                    <svg className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                                    Back to All Dispatches
+                                </button>
+                                <button 
+                                    onClick={handleExportImage}
+                                    disabled={isExporting}
+                                    className="bg-white/5 hover:bg-white text-gray-500 hover:text-black px-6 py-2.5 rounded-xl border border-white/10 transition-all uppercase text-[10px] font-black tracking-widest flex items-center gap-2 shadow-2xl disabled:opacity-50"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                    {isExporting ? 'Synthesizing Jpeg...' : 'Export as Image'}
+                                </button>
+                            </div>
 
-                            <article className="space-y-16">
+                            <article ref={articleRef} className="space-y-16 p-2">
                                 <header className="space-y-6">
                                     <div className="flex items-center gap-4">
                                         <span className="bg-red-600 text-white font-black px-3 py-1 rounded-full text-[9px] uppercase tracking-widest shadow-xl">{activeStory.type}</span>
                                         <span className="text-[10px] text-gray-600 font-black uppercase tracking-widest">{activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString() : 'Active Dispatch'}</span>
                                     </div>
-                                    <h1 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-[0.8] italic italic-text drop-shadow-2xl">{activeStory.title}</h1>
+                                    <h1 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-2xl">{activeStory.title}</h1>
                                     <p className="text-2xl md:text-3xl text-gray-400 font-medium leading-tight">{activeStory.subtitle}</p>
                                     <div className="pt-6 border-b border-white/10 pb-8 flex items-center gap-4">
                                         <div className="w-10 h-10 bg-red-600/10 rounded-full flex items-center justify-center border border-red-500/20 text-red-500 font-black text-xs">C</div>
@@ -157,7 +186,7 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                     )}
 
                                     {(activeStory.sections || []).map((section, idx) => (
-                                        <div key={section.id} className="animate-[fadeIn_0.5s_ease-out]" style={{ animationDelay: `${idx * 100}ms` }}>
+                                        <div key={section.id}>
                                             {section.type === 'header' && <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic text-red-600 border-l-8 border-white pl-8 mt-16 mb-8">{section.content}</h3>}
                                             {section.type === 'quote' && <div className="bg-white/5 border-l-8 border-red-600 p-12 text-3xl font-black uppercase italic tracking-tight text-white my-12 rounded-r-3xl shadow-xl">"{section.content}"</div>}
                                             {section.type === 'image' && <div className="rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl my-14"><img src={section.content} className="w-full h-auto" alt="" /></div>}
@@ -172,6 +201,10 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                         </div>
                                     ))}
                                 </div>
+                                <div className="pt-20 border-t border-white/5 text-center flex flex-col items-center gap-4">
+                                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-32 opacity-20 invert" alt="" />
+                                    <p className="text-[10px] font-black text-gray-800 uppercase tracking-[1em] mr-[-1em]">WWW.CRATETV.NET</p>
+                                </div>
                             </article>
                         </div>
                     )}
@@ -181,7 +214,6 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
             <Footer />
             <BackToTopButton />
             <BottomNavBar onSearchClick={() => handleNavigate(null)} />
-            <style>{`.italic-text { font-style: italic; }`}</style>
         </div>
     );
 };

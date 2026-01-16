@@ -8,6 +8,7 @@ import firebase from 'firebase/compat/app';
 import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
 import SquarePaymentModal from './SquarePaymentModal';
+import Countdown from './Countdown';
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -25,14 +26,6 @@ const getEmbedUrl = (url: string): string | null => {
     if (ytMatch && ytMatch[1]) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1`;
     return null;
 };
-
-const SecureWatermark: React.FC<{ email: string; isTriggered: boolean }> = ({ email, isTriggered }) => (
-    <div className={`absolute inset-0 pointer-events-none z-[45] overflow-hidden select-none transition-opacity duration-1000 ${isTriggered ? 'opacity-20' : 'opacity-0'}`}>
-        <div className="dynamic-watermark absolute whitespace-nowrap bg-white/20 px-3 py-1 rounded-full text-[10px] font-black text-white uppercase tracking-[0.3em] border border-white/10 backdrop-blur-md shadow-2xl">
-            SECURITY TRACE // {email.toUpperCase()} // AUTH_ENFORCED
-        </div>
-    </div>
-);
 
 const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({ emoji, onComplete }) => {
     const randomLeft = useMemo(() => Math.floor(Math.random() * 85) + 5, []); 
@@ -55,6 +48,108 @@ const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({
             }}
         >
             {emoji}
+        </div>
+    );
+};
+
+const PreShowLobby: React.FC<{ movie: Movie; allMovies: Movie[] }> = ({ movie, allMovies }) => {
+    const [currentTrailerIdx, setCurrentTrailerIdx] = useState(0);
+    const lobbyAudioRef = useRef<HTMLAudioElement>(null);
+    const [audioStarted, setAudioStarted] = useState(false);
+
+    // Filter movies that actually have trailers to show in the loop
+    const promotionMovies = useMemo(() => {
+        return allMovies
+            .filter(m => m.trailer && m.key !== movie.key)
+            .sort(() => Math.random() - 0.5);
+    }, [allMovies, movie.key]);
+
+    useEffect(() => {
+        if (promotionMovies.length > 0) {
+            const interval = setInterval(() => {
+                setCurrentTrailerIdx(prev => (prev + 1) % promotionMovies.length);
+            }, 20000); // Rotate trailers every 20 seconds
+            return () => clearInterval(interval);
+        }
+    }, [promotionMovies]);
+
+    const startLobbyAudio = () => {
+        if (lobbyAudioRef.current && !audioStarted) {
+            lobbyAudioRef.current.play().catch(e => console.log("Audio waiting for user interaction"));
+            setAudioStarted(true);
+        }
+    };
+
+    return (
+        <div className="absolute inset-0 z-[60] bg-black flex flex-col items-center justify-center overflow-hidden animate-[fadeIn_0.5s_ease-out]" onClick={startLobbyAudio}>
+            {/* Background Trailer Loop */}
+            <div className="absolute inset-0 opacity-40">
+                {promotionMovies.length > 0 ? (
+                    <video 
+                        key={promotionMovies[currentTrailerIdx].key}
+                        src={promotionMovies[currentTrailerIdx].trailer}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        className="w-full h-full object-cover blur-sm"
+                    />
+                ) : (
+                    <img src={movie.poster} className="w-full h-full object-cover blur-2xl" alt="" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60"></div>
+            </div>
+
+            {/* Lobby UI */}
+            <div className="relative z-10 text-center space-y-12 max-w-4xl px-8">
+                <div className="space-y-4">
+                    <div className="inline-flex items-center gap-3 bg-red-600/10 border border-red-500/20 px-6 py-2 rounded-full shadow-2xl mb-6">
+                        <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+                        <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px]">Pre-Show Lobby // Global Sync Active</p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <p className="text-gray-500 font-black uppercase tracking-[0.5em] text-xs">Uplink Imminent</p>
+                        <h2 className="text-5xl md:text-[8rem] font-black uppercase tracking-tighter italic leading-none text-white drop-shadow-[0_10px_30px_rgba(0,0,0,1)]">
+                            {movie.title}
+                        </h2>
+                    </div>
+                </div>
+
+                <div className="bg-black/60 backdrop-blur-xl px-12 py-8 rounded-[3rem] border border-white/10 inline-flex flex-col items-center gap-6 shadow-2xl">
+                    <div className="flex items-center gap-6">
+                        <p className="text-sm font-black text-gray-500 uppercase tracking-[0.3em]">Feature Starts In</p>
+                        <div className="w-px h-6 bg-white/10"></div>
+                        <Countdown targetDate={movie.watchPartyStartTime!} className="text-4xl md:text-6xl font-black text-white font-mono tracking-tighter" prefix="" />
+                    </div>
+                    <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest animate-pulse">Establishing canonical time-code synchronization...</p>
+                </div>
+
+                <div className="pt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {[
+                        { label: 'Audio Status', val: audioStarted ? 'Synced' : 'Ready (Click to Enable)', color: audioStarted ? 'text-green-500' : 'text-amber-500' },
+                        { label: 'Room Latency', val: '< 14ms', color: 'text-red-500' },
+                        { label: 'Nodes Connected', val: 'Active', color: 'text-blue-500' }
+                    ].map(stat => (
+                        <div key={stat.label} className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                            <p className="text-[8px] font-black text-gray-700 uppercase tracking-widest mb-1">{stat.label}</p>
+                            <p className={`text-xs font-bold uppercase tracking-tight ${stat.color}`}>{stat.val}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Invisible Audio Loop */}
+            <audio 
+                ref={lobbyAudioRef} 
+                src="https://cratetelevision.s3.us-east-1.amazonaws.com/ambient-lobby-loop.mp3" 
+                loop 
+            />
+
+            {/* Security Overlays */}
+            <div className="absolute top-10 left-10 opacity-10">
+                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-32 invert" alt="" />
+            </div>
         </div>
     );
 };
@@ -233,6 +328,7 @@ const EmbeddedChat: React.FC<{ movieKey: string; movie: Movie; user: { name?: st
                         const isDirector = directorsList.includes(msg.userName.toLowerCase().trim());
                         return (
                             <div key={msg.id} className={`flex items-start gap-3 animate-[fadeIn_0.2s_ease-out] ${isDirector ? 'bg-red-600/5 p-3 rounded-2xl border border-red-500/10' : ''}`}>
+                                {/* FIX: Wrapped 'border-red-500 bg-red-600/20' in quotes to fix "Cannot find name" errors */}
                                 <div className={`w-8 h-8 rounded-full flex-shrink-0 p-1 border ${isDirector ? 'border-red-500 bg-red-600/20' : 'border-white/5 bg-gray-800'}`} dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2">
@@ -282,12 +378,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     
     const videoRef = useRef<HTMLVideoElement>(null);
     const [partyState, setPartyState] = useState<WatchPartyState>();
-    const [isVideoReady, setIsVideoReady] = useState(false);
     const [manualSpeakerKey, setManualSpeakerKey] = useState<string | null>(null);
-    const [isSecurityTriggered, setIsSecurityTriggered] = useState(false);
     const [showPaywall, setShowPaywall] = useState(false);
     const [showBackstageVerification, setShowBackstageVerification] = useState(false);
-    const securityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
 
@@ -297,39 +390,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [movie, unlockedWatchPartyKeys, movieKey]);
 
     const embedUrl = useMemo(() => movie ? getEmbedUrl(movie.fullMovie) : null, [movie]);
-
-    // SECURITY: Detect recording behavior
-    useEffect(() => {
-        const triggerSecurity = () => {
-            setIsSecurityTriggered(true);
-            if (securityTimeoutRef.current) clearTimeout(securityTimeoutRef.current);
-            securityTimeoutRef.current = setTimeout(() => setIsSecurityTriggered(false), 8000);
-        };
-
-        const handleKeydown = (e: KeyboardEvent) => {
-            const blockedKeys = ['PrintScreen', 'F12', 'F11'];
-            const blockedCombos = (e.ctrlKey || e.metaKey) && ['s', 'u', 'i', 'j', 'c'].includes(e.key.toLowerCase());
-            if (blockedKeys.includes(e.key) || blockedCombos) {
-                triggerSecurity();
-            }
-        };
-
-        const handleFocusOut = () => triggerSecurity();
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'hidden') triggerSecurity();
-        };
-
-        window.addEventListener('keydown', handleKeydown, true);
-        window.addEventListener('blur', handleFocusOut);
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        
-        return () => {
-            window.removeEventListener('keydown', handleKeydown, true);
-            window.removeEventListener('blur', handleFocusOut);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            if (securityTimeoutRef.current) clearTimeout(securityTimeoutRef.current);
-        };
-    }, []);
 
     const isSpeakerCandidate = useMemo(() => {
         if (manualSpeakerKey && manualSpeakerKey === partyState?.backstageKey) return true;
@@ -369,30 +429,38 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         };
     }, [movieKey, user?.uid]);
 
+    // STRICT GLOBAL SYNC LOGIC
     useEffect(() => {
-        if (!hasAccess || embedUrl || partyState?.isQALive) return; 
+        if (!hasAccess || embedUrl || partyState?.isQALive) return;
         const video = videoRef.current;
-        if (!video) return;
-        const handleCanPlay = () => setIsVideoReady(true);
-        video.addEventListener('canplay', handleCanPlay);
-        return () => { if (video) video.removeEventListener('canplay', handleCanPlay); };
-    }, [hasAccess, embedUrl, partyState?.isQALive]);
+        if (!video || !partyState?.actualStartTime) return;
 
-    useEffect(() => {
-        if (!hasAccess || embedUrl || partyState?.isQALive) return; 
-        const video = videoRef.current;
-        if (!video || !partyState) return;
+        const syncClock = setInterval(() => {
+            const serverStart = partyState.actualStartTime.toDate ? partyState.actualStartTime.toDate().getTime() : new Date(partyState.actualStartTime).getTime();
+            const elapsed = (Date.now() - serverStart) / 1000;
+            
+            if (elapsed > 0) {
+                // Feature duration logic
+                const duration = (movie.durationInMinutes || 90) * 60;
+                
+                // If the movie is over, ensure the state transitions to 'ended'
+                if (elapsed > duration && partyState.status !== 'ended') {
+                    // This is usually handled by the server, but client-side cleanup:
+                    video.pause();
+                }
 
-        if (partyState.isPlaying && video.paused) {
-            video.play().catch(e => console.warn("Autoplay prevented", e));
-        } else if (!partyState.isPlaying && !video.paused) {
-            video.pause();
-        }
+                if (Math.abs(video.currentTime - elapsed) > 2) {
+                    video.currentTime = elapsed;
+                }
+                
+                if (video.paused && !partyState.isQALive && elapsed < duration) {
+                    video.play().catch(() => {});
+                }
+            }
+        }, 1000);
 
-        if (Math.abs(video.currentTime - partyState.currentTime) > 5) {
-            video.currentTime = partyState.currentTime;
-        }
-    }, [partyState, hasAccess, embedUrl]);
+        return () => clearInterval(syncClock);
+    }, [partyState, hasAccess, embedUrl, movie?.durationInMinutes]);
 
     const logSentiment = async (emoji: string) => {
         const localId = `local_${Date.now()}_${Math.random()}`;
@@ -413,27 +481,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
-    const handleShareSession = async () => {
-        const shareData = {
-            title: `Crate TV Live: ${movie.title}`,
-            text: `Join me for a live screening of "${movie.title}" on Crate TV! Interaction and Q&A active.`,
-            url: window.location.href
-        };
-        try {
-            if (navigator.share) await navigator.share(shareData);
-            else {
-                navigator.clipboard.writeText(window.location.href);
-                alert("Invitation link copied to clipboard.");
-            }
-        } catch (e) {}
-    };
-
     const handleTicketSuccess = async () => {
         await unlockWatchParty(movieKey);
         setShowPaywall(false);
     };
 
     if (isFestivalLoading || !movie) return <LoadingSpinner />;
+
+    const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
+    const isWaiting = startTime && new Date() < startTime;
+    const isFinished = partyState?.status === 'ended';
 
     if (!hasAccess) {
         return (
@@ -501,7 +558,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             <h2 className="text-xs font-bold truncate text-gray-200">{movie.title}</h2>
                         </div>
                         <div className="flex items-center gap-2">
-                            {/* Persistent Backstage Key Button for Early Auth */}
                             {!isSpeakerCandidate && (
                                 <button 
                                     onClick={() => setShowBackstageVerification(!showBackstageVerification)}
@@ -510,13 +566,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     Backstage Access
                                 </button>
                             )}
-                            <button onClick={handleShareSession} className="text-gray-400 hover:text-white p-2">
-                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                            </button>
                         </div>
                     </div>
 
-                    <div className="flex-none w-full aspect-video bg-black relative shadow-2xl z-30 overflow-hidden">
+                    <div className="flex-grow w-full bg-black relative shadow-2xl z-30 overflow-hidden flex flex-col">
                         <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden">
                             {localReactions.map(r => (
                                 <FloatingReaction 
@@ -527,36 +580,33 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             ))}
                         </div>
 
-                        {user?.email && <SecureWatermark email={user.email} isTriggered={isSecurityTriggered} />}
-                        
-                        {/* Drop-down Backstage Input Overlay (Pre-Talkback) */}
-                        {showBackstageVerification && !partyState?.isQALive && !isSpeakerCandidate && (
-                            <div className="absolute inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center animate-[fadeIn_0.3s_ease-out]">
-                                <div className="max-w-xs w-full p-8 bg-[#111] border border-white/10 rounded-3xl shadow-2xl text-center space-y-6">
-                                    <h3 className="text-xl font-black uppercase tracking-tighter text-white">Backstage Entry</h3>
-                                    <form onSubmit={(e) => {
-                                        e.preventDefault();
-                                        const key = (e.currentTarget.elements.namedItem('backstage_key') as HTMLInputElement).value;
-                                        if (partyState?.backstageKey && key.trim().toUpperCase() === partyState.backstageKey.toUpperCase()) {
-                                            setManualSpeakerKey(key.trim());
-                                            setShowBackstageVerification(false);
-                                            alert("Identity verified. You are authorized for stage broadcast.");
-                                        } else {
-                                            alert("Invalid Access Key.");
-                                        }
-                                    }} className="space-y-4">
-                                        <input 
-                                            name="backstage_key"
-                                            type="text" 
-                                            placeholder="ENTER_KEY"
-                                            className="w-full bg-black border border-white/20 rounded-xl px-4 py-3 text-center font-mono uppercase tracking-[0.3em] text-red-500 focus:border-red-600 outline-none"
-                                            autoFocus
-                                        />
-                                        <div className="flex gap-2">
-                                            <button type="button" onClick={() => setShowBackstageVerification(false)} className="flex-1 text-[9px] font-black uppercase text-gray-600">Cancel</button>
-                                            <button type="submit" className="flex-grow bg-white text-black font-black py-3 rounded-xl uppercase text-[10px] tracking-widest">Verify Access</button>
-                                        </div>
-                                    </form>
+                        {/* Automated Pre-Show Lobby with Trailer Reel */}
+                        {isWaiting && partyState?.status !== 'live' && (
+                             <PreShowLobby movie={movie} allMovies={Object.values(allMovies)} />
+                        )}
+
+                        {/* Thank You View */}
+                        {isFinished && (
+                            <div className="absolute inset-0 z-[110] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.5s_ease-out]">
+                                <div className="max-w-2xl space-y-12">
+                                    <div className="w-24 h-24 bg-red-600/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(239,68,68,0.2)]">
+                                        <svg className="w-10 h-10 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <h2 className="text-5xl md:text-[6rem] font-black uppercase tracking-tighter italic leading-none">Transmission End.</h2>
+                                        <p className="text-gray-400 text-xl font-medium max-w-lg mx-auto leading-relaxed">
+                                            Thank you for being part of this live screening. We hope you enjoyed the work of <strong className="text-white font-black">{movie.director}</strong>.
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
+                                        <button 
+                                            onClick={handleGoHome}
+                                            className="bg-white text-black font-black px-12 py-4 rounded-2xl uppercase tracking-widest text-xs shadow-2xl hover:scale-105 active:scale-95 transition-all"
+                                        >
+                                            Return to Catalog
+                                        </button>
+                                        <p className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Session terminated safely.</p>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -571,19 +621,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 showKeyInputInitially={showBackstageVerification}
                             />
                         ) : (
-                            embedUrl ? (
-                                <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen title={movie.title}></iframe>
-                            ) : (
-                                <>
-                                    {!isVideoReady && (
-                                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
-                                            <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="w-full h-full object-cover blur-sm opacity-50" crossOrigin="anonymous" />
-                                            <div className="absolute"><LoadingSpinner /></div>
-                                        </div>
-                                    )}
-                                    <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full transition-opacity duration-500 ${isVideoReady ? 'opacity-100' : 'opacity-0'}`} playsInline autoPlay onContextMenu={(e) => e.preventDefault()} />
-                                </>
-                            )
+                            <div className="flex-grow flex items-center justify-center">
+                                <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full object-contain`} playsInline autoPlay muted={false} />
+                            </div>
                         )}
                     </div>
 

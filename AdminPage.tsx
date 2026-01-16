@@ -25,10 +25,12 @@ import AcademyIntelTab from './components/AcademyIntelTab';
 import OneTimePayoutTerminal from './components/OneTimePayoutTerminal';
 import AdminPayoutsTab from './components/AdminPayoutsTab';
 import ContractsTab from './components/ContractsTab';
+import UserIntelligenceTab from './components/UserIntelligenceTab';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
     mail: '✉️ Studio Mail',
+    intel: '🧠 User Intel',
     editorial: '✍️ Editorial Lab',
     watchParty: '🍿 Watch Party',
     discovery: '🛰️ Research Lab',
@@ -157,7 +159,6 @@ const AdminPage: React.FC = () => {
                 if (data.role === 'director_payout') {
                     setPayoutContext({ director: data.targetDirector, role: data.role });
                     setIsAuthenticated(true);
-                    // Minimal load for payout view
                     const liveDataRes = await fetch(`/api/get-live-data?t=${Date.now()}`);
                     const liveData = await liveDataRes.json();
                     setMovies(liveData.movies || {});
@@ -199,8 +200,6 @@ const AdminPage: React.FC = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-[#050505] text-white p-4 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.05)_0%,transparent_70%)] pointer-events-none"></div>
-                <div className="absolute -top-24 -left-24 w-96 h-96 bg-red-600/10 blur-[120px] rounded-full pointer-events-none"></div>
-                
                 <div className="relative z-10 w-full max-w-md space-y-12 animate-[fadeIn_0.8s_ease-out]">
                     <div className="text-center space-y-4">
                         <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-40 mx-auto drop-shadow-2xl" alt="Crate" />
@@ -253,7 +252,6 @@ const AdminPage: React.FC = () => {
                             Authorize Session
                         </button>
                     </form>
-                    <p className="text-[8px] font-black text-gray-800 uppercase tracking-[0.5em] text-center">Crate TV // Studio Layer V4.1 // Secure Access Only</p>
                 </div>
             </div>
         );
@@ -284,7 +282,6 @@ const AdminPage: React.FC = () => {
                             <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Active Session: {sessionStorage.getItem('operatorName')}</span>
                         </div>
                     </div>
-                    <button onClick={() => { sessionStorage.clear(); window.location.reload(); }} className="bg-white/5 text-gray-500 hover:text-white px-6 py-2.5 rounded-xl uppercase text-[10px] font-black border border-white/10 transition-all">Terminate Uplink</button>
                 </div>
                 
                 <div className="flex overflow-x-auto pb-4 mb-10 gap-2 scrollbar-hide">
@@ -292,7 +289,7 @@ const AdminPage: React.FC = () => {
                         <button 
                             key={tabId} 
                             onClick={() => setActiveTab(tabId)} 
-                            className={`px-8 py-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}
+                            className={`px-8 py-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${activeTab === tabId ? 'bg-red-600 border-red-500 text-white shadow-[0_10px_25px_rgba(239,68,68,0.2)]' : 'bg-white/5 border-white/10 text-gray-600 hover:text-white'}`}
                         >
                             {label}
                         </button>
@@ -301,6 +298,8 @@ const AdminPage: React.FC = () => {
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
+                    {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
+                    {activeTab === 'intel' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={() => {}} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
                     {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}
                     {activeTab === 'jury' && (
@@ -324,7 +323,6 @@ const AdminPage: React.FC = () => {
                     )}
                     {activeTab === 'cratefest' && <CrateFestEditor config={crateFestConfig || { isActive: false, title: '', tagline: '', startDate: '', endDate: '', passPrice: 15, movieBlocks: [] }} allMovies={movies} pipeline={pipeline} onSave={(c) => handleSaveData('settings', { crateFestConfig: c })} isSaving={isSaving} />}
                     {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
-                    {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => setActiveTab('movies')} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'discovery' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(c) => handleSaveData('categories', c)} />}
                     {activeTab === 'festIntel' && (

@@ -197,6 +197,7 @@ export interface WatchPartyState {
   isQALive?: boolean;
   activeBlockId?: string;
   activeMovieIndex?: number;
+  actualStartTime?: any; // Precise server timestamp when the movie hit 0:00
 }
 
 export interface ChatMessage {
