@@ -66,6 +66,13 @@ const GrantLedger: React.FC = () => {
 const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({ analytics, movies, categories, onUpdateCategories }) => {
     const [activeSection, setActiveSection] = useState<'scout' | 'auditor' | 'strategist' | 'fund' | 'partners' | 'grantwriter' | 'ledger'>('scout');
 
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('action') === 'negotiate') {
+            setActiveSection('strategist');
+        }
+    }, [window.location.search]);
+
     return (
         <div className="space-y-12 pb-20 animate-[fadeIn_0.4s_ease-out]">
             <div className="flex flex-wrap gap-4 p-1.5 bg-black border border-white/5 rounded-2xl w-max mx-auto shadow-2xl">

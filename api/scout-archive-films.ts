@@ -13,19 +13,18 @@ export async function POST(request: Request) {
     }
 
     const categoryPrompts: Record<string, string> = {
-        philly_open: "Independent community shows, citizen journalism, or neighborhood dispatches tagged with 'Philadelphia' released 2023-2025. Look for raw, authentic community-produced content.",
-        open_master: "High-production value 4K short films from Blender Studio Open Projects released 2023-2025 CC-BY license.",
-        modern_short: "Independent cinematic short films from Vimeo Staff Picks or curated Vimeo groups released 2023-2025 with CC-BY license. Target authentic, community-focused narratives.",
-        experimental: "Modern digital avant-garde experiments 2024-2025 explicitly released under CC0 or CC-BY.",
-        doc: "Short investigative community documentaries or local video essays released 2023-2025."
+        prestige_shorts: "Identify high-class independent short films that have won awards or were official selections at major festivals (Sundance, SXSW, Berlinale, Cannes) and are currently available on platforms like Shortverse, Vimeo, or official filmmaker sites. These do not need to be Creative Commons; identify them as negotiation targets.",
+        vimeo_staff: "Scout Vimeo Staff Picks or curated Vimeo channels for independent cinematic short films released 2023-2025 that explicitly use a Creative Commons (CC-BY or CC-BY-SA) license. Focus on high production value narratives.",
+        philly_open: "Independent community shows, citizen journalism, or neighborhood dispatches tagged with 'Philadelphia' released 2023-2025. Look for raw, authentic community-produced content on YouTube or Vimeo.",
+        experimental: "Modern digital avant-garde experiments 2024-2025 explicitly released under CC0 or CC-BY on platforms like Archive.org or Vimeo.",
     };
 
     const targetCategory = category as string;
-    const focus = categoryPrompts[targetCategory] || categoryPrompts.modern_short;
+    const focus = categoryPrompts[targetCategory] || categoryPrompts.prestige_shorts;
 
     const prompt = `
         You are the Strategic Acquisitions lead for Crate TV.
-        Your goal is to identify exactly 6 premium independent short films or community shows released between 2023 and 2025 that are distributed under Creative Commons (CC-BY) or Open Source licenses.
+        Your goal is to identify exactly 6 premium independent short films, prestigious shows, or community dispatches released between 2023 and 2025.
         
         Category Focus: ${focus}
 
@@ -33,11 +32,12 @@ export async function POST(request: Request) {
         - title: The verified film title.
         - director: The filmmaker name.
         - year: Release year (2023, 2024, or 2025).
-        - license: The specific license (e.g., CC-BY 4.0).
-        - synopsis: A 2-sentence summary emphasizing community or cultural impact.
-        - sourceUrl: The direct link to the platform (Vimeo/YouTube/Studio site).
+        - license: The specific license (e.g., CC-BY 4.0) or 'Standard Copyright'.
+        - synopsis: A 2-sentence summary highlighting why it is "High Class" (e.g. awards, unique technique).
+        - sourceUrl: The direct link to the platform (Shortverse/Vimeo/YouTube/Filmmaker Site).
         - sourceTitle: Name of the platform or source.
         - trustLevel: 'High' if from official source, 'Medium' if from curated feed.
+        - acquisitionMode: 'INGEST' if license is CC-BY/Open Source, 'NEGOTIATE' if standard copyright or high prestige.
 
         Respond with ONLY a JSON object: { "films": [ { ... }, ... ] }
     `;
@@ -63,9 +63,10 @@ export async function POST(request: Request) {
                                 synopsis: { type: Type.STRING },
                                 sourceUrl: { type: Type.STRING },
                                 sourceTitle: { type: Type.STRING },
-                                trustLevel: { type: Type.STRING, enum: ["High", "Medium", "Unverified"] }
+                                trustLevel: { type: Type.STRING, enum: ["High", "Medium", "Unverified"] },
+                                acquisitionMode: { type: Type.STRING, enum: ["INGEST", "NEGOTIATE"] }
                             },
-                            required: ["title", "director", "year", "license", "synopsis", "sourceUrl", "sourceTitle", "trustLevel"]
+                            required: ["title", "director", "year", "license", "synopsis", "sourceUrl", "sourceTitle", "trustLevel", "acquisitionMode"]
                         }
                     }
                 },

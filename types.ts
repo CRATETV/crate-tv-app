@@ -138,6 +138,8 @@ export interface FilmBlock {
   time: string;
   movieKeys: string[];
   price?: number; 
+  watchPartyStartTime?: string;
+  isWatchPartyEnabled?: boolean;
 }
 
 export interface FestivalDay {
@@ -197,7 +199,8 @@ export interface WatchPartyState {
   isQALive?: boolean;
   activeBlockId?: string;
   activeMovieIndex?: number;
-  actualStartTime?: any; // Precise server timestamp when the movie hit 0:00
+  actualStartTime?: any; // Precise server timestamp when the session hit 0:00
+  type: 'movie' | 'block';
 }
 
 export interface ChatMessage {

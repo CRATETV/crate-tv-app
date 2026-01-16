@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 
 const LegalStrategist: React.FC = () => {
@@ -9,6 +9,14 @@ const LegalStrategist: React.FC = () => {
     const [proposal, setProposal] = useState('');
     const [error, setError] = useState('');
     const [mode, setMode] = useState<'licensing' | 'grant'>('grant');
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const scoutTitle = params.get('title');
+        const scoutDirector = params.get('director');
+        if (scoutTitle) setTitle(scoutTitle);
+        if (scoutDirector) setDirector(scoutDirector);
+    }, []);
 
     const handleGenerate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -48,7 +56,7 @@ const LegalStrategist: React.FC = () => {
                         <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px]">Crate Acquisition Core</p>
                     </div>
                     <h2 className="text-5xl font-black text-white uppercase tracking-tighter italic mb-4">Strategic Offers.</h2>
-                    <p className="text-xl text-gray-400 font-medium leading-relaxed mb-10">Generate curated proposals for high-priority acquisitions like <span className="text-white">Tino</span>.</p>
+                    <p className="text-xl text-gray-400 font-medium leading-relaxed mb-10">Generate curated proposals for high-priority acquisitions like <span className="text-white">{title || 'Target Film'}</span>.</p>
                     
                     <div className="flex gap-2 mb-8 p-1 bg-black rounded-xl border border-white/5 w-max">
                         <button onClick={() => setMode('grant')} className={`px-6 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${mode === 'grant' ? 'bg-amber-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Sundance Submission Offer</button>

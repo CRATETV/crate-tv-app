@@ -7,15 +7,16 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import { avatars } from './avatars';
 
-const getPartyStatusText = (movie: Movie, partyState?: WatchPartyState) => {
+const getPartyStatusText = (entity: any, partyState?: WatchPartyState) => {
     if (partyState?.status === 'live') {
         return { text: 'LIVE NOW', color: 'bg-red-600 animate-pulse' };
     }
-    if (!movie.isWatchPartyEnabled || !movie.watchPartyStartTime) {
+    const now = new Date();
+    const startTimeStr = entity.watchPartyStartTime;
+    if (!entity.isWatchPartyEnabled || !startTimeStr) {
         return { text: 'Disabled', color: 'bg-gray-800 text-gray-500' };
     }
-    const now = new Date();
-    const startTime = new Date(movie.watchPartyStartTime);
+    const startTime = new Date(startTimeStr);
     if (now < startTime) {
         return { text: 'Upcoming', color: 'bg-indigo-600' };
     }
@@ -23,32 +24,28 @@ const getPartyStatusText = (movie: Movie, partyState?: WatchPartyState) => {
 };
 
 interface EmbeddedChatProps {
-    movieKey: string; 
+    partyKey: string; 
     user: { name?: string; email: string | null; avatar?: string; } | null;
-    movie?: Movie; 
+    entityName?: string; 
 }
 
-const EmbeddedChat: React.FC<EmbeddedChatProps> = ({ movieKey, user, movie }: EmbeddedChatProps) => {
+const EmbeddedChat: React.FC<EmbeddedChatProps> = ({ partyKey, user, entityName }: EmbeddedChatProps) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const directorsList = useMemo(() => 
-        (movie?.director || '').toLowerCase().split(',').map(d => d.trim()), 
-    [movie?.director]);
-
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
-        const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages').orderBy('timestamp', 'asc').limitToLast(200);
+        const messagesRef = db.collection('watch_parties').doc(partyKey).collection('messages').orderBy('timestamp', 'asc').limitToLast(200);
         const unsubscribe = messagesRef.onSnapshot(snapshot => {
             const fetchedMessages: ChatMessage[] = [];
             snapshot.forEach(doc => { fetchedMessages.push({ id: doc.id, ...doc.data() } as ChatMessage); });
             setMessages(fetchedMessages);
         });
         return () => unsubscribe();
-    }, [movieKey]);
+    }, [partyKey]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -62,7 +59,7 @@ const EmbeddedChat: React.FC<EmbeddedChatProps> = ({ movieKey, user, movie }: Em
             await fetch('/api/send-chat-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ movieKey, userName: user.name || user.email, userAvatar: user.avatar || 'fox', text: newMessage }),
+                body: JSON.stringify({ movieKey: partyKey, userName: user.name || user.email, userAvatar: user.avatar || 'fox', text: newMessage }),
             });
             setNewMessage('');
         } catch (error) {
@@ -75,11 +72,11 @@ const EmbeddedChat: React.FC<EmbeddedChatProps> = ({ movieKey, user, movie }: Em
     return (
         <div className="w-full h-full flex flex-col bg-[#0a0a0a] border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
             <div className="p-4 text-xs font-black uppercase tracking-widest text-gray-500 border-b border-white/5 flex-shrink-0">
-                Live Dispatch Feed {movie && `// ${movie.title}`}
+                Live Feed {entityName && `// ${entityName}`}
             </div>
             <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide">
                 {messages.map(msg => (
-                    <div key={msg.id} className="flex items-start gap-3 animate-[fadeIn_0.2s_ease-out]">
+                    <div key={msg.id} className="flex items-start gap-3">
                         <div className="w-8 h-8 rounded-full bg-gray-800 flex-shrink-0 p-1 border border-white/10" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
                         <div className="min-w-0">
                             <p className="font-black text-[10px] text-red-500 uppercase tracking-tighter">{msg.userName}</p>
@@ -100,52 +97,70 @@ const EmbeddedChat: React.FC<EmbeddedChatProps> = ({ movieKey, user, movie }: Em
 };
 
 const WatchPartyControlRoom: React.FC<{
-    movie: Movie;
+    entity: any;
+    partyKey: string;
     partyState: WatchPartyState | undefined;
-    blockInfo?: FilmBlock;
     onEndParty: () => void;
-    onSyncState: (state: Partial<WatchPartyState>) => void;
-}> = ({ movie, partyState, blockInfo, onEndParty, onSyncState }) => {
+}> = ({ entity, partyKey, partyState, onEndParty }) => {
     const { user } = useAuth();
     const [isCopying, setIsCopying] = useState(false);
+    const [viewerCount, setViewerCount] = useState(0);
+    
+    // AUDIENCE TELEMETRY LISTENER
+    useEffect(() => {
+        const db = getDbInstance();
+        if (!db) return;
 
-    const handleCopyBackstageInvite = () => {
+        const oneMinAgo = new Date(Date.now() - 60 * 1000);
+        const unsubscribe = db.collection('presence')
+            .where('currentPartyId', '==', partyKey)
+            .where('lastActive', '>=', oneMinAgo)
+            .onSnapshot(snapshot => {
+                setViewerCount(snapshot.size);
+            });
+
+        return () => unsubscribe();
+    }, [partyKey]);
+
+    const handleCopyInvite = () => {
         if (!partyState?.backstageKey) return;
         setIsCopying(true);
-        const url = `${window.location.origin}/watchparty/${movie.key}`;
-        const msg = `Hello! You are invited to the Backstage Talkback for "${movie.title}".\n\nLink: ${url}\nAccess Key: ${partyState.backstageKey}\n\nPlease enter the key when prompted to activate your broadcast node.`;
+        const url = `${window.location.origin}/watchparty/${partyKey}`;
+        const msg = `Invite to Backstage Talkback for "${entity.title}".\n\nLink: ${url}\nAccess Key: ${partyState.backstageKey}`;
         navigator.clipboard.writeText(msg);
         setTimeout(() => setIsCopying(false), 2000);
     };
     
-    const status = getPartyStatusText(movie, partyState);
+    const status = getPartyStatusText(entity, partyState);
     const isLive = partyState?.status === 'live';
 
     return (
         <div className="bg-white/[0.02] p-8 rounded-[3rem] border border-white/5 shadow-2xl mb-12 animate-[fadeIn_0.5s_ease-out]">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/5 pb-8">
                 <div className="flex items-center gap-6">
-                    <img src={movie.poster} className="w-16 h-24 object-cover rounded-xl shadow-xl border border-white/10" alt="" />
+                    <div className="w-16 h-24 bg-gray-900 rounded-xl border border-white/10 flex items-center justify-center font-black text-2xl text-gray-700 italic">C</div>
                     <div>
-                        <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">Live Monitor: {movie.title}</h2>
+                        <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">Monitor: {entity.title}</h2>
                         <div className="flex items-center gap-4 mt-3">
                             <span className={`px-3 py-1 text-[9px] font-black text-white rounded-full uppercase tracking-widest ${status.color}`}>
                                 {status.text}
                             </span>
+                            {isLive && (
+                                <div className="flex items-center gap-2 bg-emerald-600/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Audience: {viewerCount} Nodes</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-3">
                     {isLive && (
                         <>
-                            <button 
-                                onClick={handleCopyBackstageInvite}
-                                className={`px-6 py-4 rounded-2xl uppercase font-black text-[10px] tracking-widest transition-all flex items-center gap-2 ${isCopying ? 'bg-green-600 text-white' : 'bg-white/10 text-gray-400 border border-white/10 hover:text-white'}`}
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                            <button onClick={handleCopyInvite} className={`px-6 py-4 rounded-2xl uppercase font-black text-[10px] tracking-widest transition-all border border-white/10 ${isCopying ? 'bg-green-600 text-white' : 'bg-white/10 text-gray-400 hover:text-white'}`}>
                                 {isCopying ? 'Invite Copied ✓' : 'Invite Guest Backstage'}
                             </button>
-                            <button onClick={onEndParty} className="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-2xl uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all text-xs">
+                            <button onClick={onEndParty} className="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-2xl uppercase tracking-widest shadow-2xl active:scale-95 transition-all text-xs">
                                 Terminate Session
                             </button>
                         </>
@@ -155,16 +170,13 @@ const WatchPartyControlRoom: React.FC<{
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 <div className="lg:col-span-2 space-y-8">
-                     <div className="aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 flex items-center justify-center">
-                         <div className="text-center space-y-4">
-                            <p className="text-emerald-500 font-black uppercase tracking-widest text-xs animate-pulse">Global Sync Monitor Active</p>
-                            <h3 className="text-white font-black text-2xl uppercase italic">Session Streaming Globally</h3>
-                            <p className="text-gray-500 text-[10px] uppercase tracking-widest">Strict synchronization protocol enforced by server-time offset.</p>
-                         </div>
+                     <div className="aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 flex flex-col items-center justify-center">
+                        <p className="text-emerald-500 font-black uppercase tracking-widest text-xs animate-pulse">Global Sync Loop Active</p>
+                        <h3 className="text-white font-black text-xl uppercase mt-4">{isLive ? 'Session Streaming Globally' : 'Waiting for Automated Start'}</h3>
                      </div>
                 </div>
                 <div className="lg:col-span-1 h-[60vh] lg:h-auto">
-                     <EmbeddedChat movieKey={movie.key} movie={movie} user={user} />
+                     <EmbeddedChat partyKey={partyKey} entityName={entity.title} user={user} />
                 </div>
             </div>
         </div>
@@ -184,7 +196,7 @@ const formatISOForInput = (isoString?: string): string => {
 };
 
 const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (movie: Movie) => Promise<void>; }> = ({ allMovies, onSave }) => {
-    const { festivalData, settings } = useFestival();
+    const { festivalData, refreshData } = useFestival();
     const { user } = useAuth();
     const [partyStates, setPartyStates] = useState<Record<string, WatchPartyState>>({});
     const [activeTab, setActiveTab] = useState<'calendar' | 'access'>('calendar');
@@ -206,212 +218,173 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         if (!liveKey) return null;
         const state = partyStates[liveKey];
         const movie = allMovies[liveKey];
-        if (!movie) return null;
-        return { movie, state };
-    }, [partyStates, allMovies]);
-
-    const handleSyncState = useCallback(async (movieKey: string, newState: Partial<WatchPartyState>) => {
-        const db = getDbInstance();
-        if (!db) return;
-        await db.collection('watch_parties').doc(movieKey).set({
-            ...newState,
-            lastUpdatedBy: user?.name || user?.email,
-            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-        }, { merge: true });
-    }, [user]);
+        const block = festivalData.flatMap(d => d.blocks).find(b => b.id === liveKey);
+        
+        if (!movie && !block) return null;
+        return { 
+            entity: movie || block, 
+            partyKey: liveKey,
+            state 
+        };
+    }, [partyStates, allMovies, festivalData]);
 
     const handleEndParty = async () => {
         if (!activeParty) return;
-        await handleSyncState(activeParty.movie.key, { status: 'ended', isPlaying: false });
+        const db = getDbInstance();
+        if (db) {
+            await db.collection('watch_parties').doc(activeParty.partyKey).set({ 
+                status: 'ended', 
+                isPlaying: false,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        }
     };
 
-    const handleScheduleChange = async (movieKey: string, startTime: string) => {
+    const handleMovieSchedule = async (movieKey: string, startTime: string, enabled: boolean) => {
         const movie = allMovies[movieKey];
         if (!movie) return;
         const utcTime = startTime ? new Date(startTime).toISOString() : '';
-        await onSave({ ...movie, watchPartyStartTime: utcTime });
+        await onSave({ ...movie, watchPartyStartTime: utcTime, isWatchPartyEnabled: enabled });
+    };
+
+    const handleBlockSchedule = async (block: FilmBlock, startTime: string, enabled: boolean) => {
+        const db = getDbInstance();
+        if (!db) return;
+        
+        const utcTime = startTime ? new Date(startTime).toISOString() : '';
+        const dayRef = festivalData.find(d => d.blocks.some(b => b.id === block.id));
+        if (!dayRef) return;
+
+        const updatedBlocks = dayRef.blocks.map(b => b.id === block.id ? { ...b, watchPartyStartTime: utcTime, isWatchPartyEnabled: enabled } : b);
+        
+        await db.collection('festival').doc('schedule').collection('days').doc(`day_${dayRef.day}`).update({
+            blocks: updatedBlocks
+        });
+        await refreshData();
     };
 
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(m => m.title.toLowerCase().includes(filter.toLowerCase()))
-        .sort((a, b) => {
-            if (a.watchPartyStartTime && !b.watchPartyStartTime) return -1;
-            if (!a.watchPartyStartTime && b.watchPartyStartTime) return 1;
-            return a.title.localeCompare(b.title);
-        });
+        .sort((a, b) => a.title.localeCompare(b.title));
+
+    const allBlocks = useMemo(() => festivalData.flatMap(d => d.blocks), [festivalData]);
 
     return (
         <div className="space-y-8 pb-32">
             {activeParty && (
                 <WatchPartyControlRoom
-                    movie={activeParty.movie}
+                    entity={activeParty.entity}
+                    partyKey={activeParty.partyKey}
                     partyState={activeParty.state}
                     onEndParty={handleEndParty}
-                    onSyncState={(s) => handleSyncState(activeParty.movie.key, s)}
                 />
             )}
 
             <div className="flex justify-center mb-12">
                 <div className="bg-[#0f0f0f] border border-white/5 rounded-2xl p-1 shadow-2xl inline-flex">
                     <button onClick={() => setActiveTab('calendar')} className={`px-10 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === 'calendar' ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-white'}`}>Watch Calendar</button>
-                    <button onClick={() => setActiveTab('access')} className={`px-10 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === 'access' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-white'}`}>Payout Keys</button>
+                    <button onClick={() => setActiveTab('access')} className={`px-10 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === 'access' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-white'}`}>Access Keys</button>
                 </div>
             </div>
 
-            {activeTab === 'access' && <PayoutKeyForge movies={allMovies} />}
-
             {activeTab === 'calendar' && (
-                <div className="bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] p-8 md:p-12 shadow-2xl animate-[fadeIn_0.4s_ease-out]">
-                    <div className="flex flex-col sm:flex-row justify-between gap-6 mb-12 items-center">
-                        <div>
-                             <h3 className="text-3xl font-black uppercase tracking-tighter italic text-white">Event Scheduling Manifest</h3>
-                             <p className="text-gray-500 text-[10px] font-black uppercase mt-1 tracking-widest">Automatic global sync activates at scheduled timestamp.</p>
-                        </div>
-                        <input 
-                            type="text" 
-                            placeholder="Scan manifest..." 
-                            value={filter} 
-                            onChange={e => setFilter(e.target.value)} 
-                            className="form-input !py-3 !px-6 text-xs max-w-sm bg-black/40 border-white/10"
-                        />
-                    </div>
+                <div className="bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] p-8 md:p-12 shadow-2xl animate-[fadeIn_0.4s_ease-out] space-y-12">
                     
-                    <div className="bg-black border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs">
+                    {/* FESTIVAL BLOCKS SECTION */}
+                    <div className="space-y-6">
+                        <h3 className="text-2xl font-black uppercase tracking-tighter italic text-white">Festival Block Protocol</h3>
+                        <div className="bg-black border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+                             <table className="w-full text-left text-xs">
                                 <thead className="bg-white/5 text-gray-500 uppercase font-black">
                                     <tr>
-                                        <th className="p-6">Cinematic Node</th>
-                                        <th className="p-6">Live Status</th>
+                                        <th className="p-6">Film Block Node</th>
+                                        <th className="p-6">Status</th>
                                         <th className="p-6">Enabled</th>
                                         <th className="p-6 text-right">Scheduled Start (Local)</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
-                                    {filteredMovies.map(movie => (
-                                        <tr key={movie.key} className="hover:bg-white/[0.01] transition-colors group">
+                                    {allBlocks.map(block => (
+                                        <tr key={block.id} className="hover:bg-white/[0.01] transition-colors">
                                             <td className="p-6">
-                                                <div className="flex items-center gap-4">
-                                                    <img src={movie.poster} className="w-10 h-14 object-cover rounded-xl shadow-lg border border-white/10" alt="" />
-                                                    <div>
-                                                        <p className="font-black text-white uppercase tracking-tight text-sm">{movie.title}</p>
-                                                        <p className="text-[9px] text-gray-600 font-bold uppercase mt-1">Dir. {movie.director}</p>
-                                                    </div>
-                                                </div>
+                                                <p className="font-black text-white uppercase text-sm tracking-tight">{block.title}</p>
+                                                <p className="text-[9px] text-gray-600 font-bold uppercase mt-1">Contains {block.movieKeys.length} films</p>
                                             </td>
                                             <td className="p-6">
-                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border border-current opacity-70 ${getPartyStatusText(movie, partyStates[movie.key]).color.replace('bg-', 'text-')}`}>
-                                                    {getPartyStatusText(movie, partyStates[movie.key]).text}
+                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border border-current opacity-70 ${getPartyStatusText(block, partyStates[block.id]).color.replace('bg-', 'text-')}`}>
+                                                    {getPartyStatusText(block, partyStates[block.id]).text}
                                                 </span>
                                             </td>
                                             <td className="p-6">
                                                 <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input type="checkbox" checked={movie.isWatchPartyEnabled || false} onChange={e => onSave({ ...movie, isWatchPartyEnabled: e.target.checked })} className="sr-only peer" />
+                                                    <input type="checkbox" checked={block.isWatchPartyEnabled || false} onChange={e => handleBlockSchedule(block, block.watchPartyStartTime || '', e.target.checked)} className="sr-only peer" />
                                                     <div className="w-10 h-5 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
                                                 </label>
                                             </td>
                                             <td className="p-6 text-right">
                                                 <input
                                                     type="datetime-local"
-                                                    value={formatISOForInput(movie.watchPartyStartTime)}
-                                                    onChange={e => handleScheduleChange(movie.key, e.target.value)}
-                                                    className={`form-input !py-2 !px-4 text-xs bg-black/40 border-white/10 w-64 text-right transition-all ${movie.watchPartyStartTime ? 'text-indigo-400 border-indigo-500/30' : 'text-gray-700'}`}
-                                                    disabled={!movie.isWatchPartyEnabled}
+                                                    value={formatISOForInput(block.watchPartyStartTime)}
+                                                    onChange={e => handleBlockSchedule(block, e.target.value, block.isWatchPartyEnabled || false)}
+                                                    className="form-input !py-2 !px-4 text-xs bg-black/40 border-white/10 w-64 text-right"
                                                 />
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
-                            </table>
+                             </table>
+                        </div>
+                    </div>
+
+                    {/* INDIVIDUAL FILMS SECTION */}
+                    <div className="space-y-6 pt-12 border-t border-white/5">
+                        <h3 className="text-2xl font-black uppercase tracking-tighter italic text-white">Standalone Film Manifest</h3>
+                        <div className="bg-black border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                    <thead className="bg-white/5 text-gray-500 uppercase font-black">
+                                        <tr>
+                                            <th className="p-6">Cinematic Node</th>
+                                            <th className="p-6">Status</th>
+                                            <th className="p-6">Enabled</th>
+                                            <th className="p-6 text-right">Scheduled Start (Local)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                        {filteredMovies.map(movie => (
+                                            <tr key={movie.key} className="hover:bg-white/[0.01] transition-colors group">
+                                                <td className="p-6">
+                                                    <p className="font-black text-white uppercase text-sm tracking-tight">{movie.title}</p>
+                                                    <p className="text-[9px] text-gray-600 font-bold uppercase mt-1">Dir. {movie.director}</p>
+                                                </td>
+                                                <td className="p-6">
+                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border border-current opacity-70 ${getPartyStatusText(movie, partyStates[movie.key]).color.replace('bg-', 'text-')}`}>
+                                                        {getPartyStatusText(movie, partyStates[movie.key]).text}
+                                                    </span>
+                                                </td>
+                                                <td className="p-6">
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input type="checkbox" checked={movie.isWatchPartyEnabled || false} onChange={e => handleMovieSchedule(movie.key, movie.watchPartyStartTime || '', e.target.checked)} className="sr-only peer" />
+                                                        <div className="w-10 h-5 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                                    </label>
+                                                </td>
+                                                <td className="p-6 text-right">
+                                                    <input
+                                                        type="datetime-local"
+                                                        value={formatISOForInput(movie.watchPartyStartTime)}
+                                                        onChange={e => handleMovieSchedule(movie.key, e.target.value, movie.isWatchPartyEnabled || false)}
+                                                        className="form-input !py-2 !px-4 text-xs bg-black/40 border-white/10 w-64 text-right"
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
-        </div>
-    );
-};
-
-const PayoutKeyForge: React.FC<{ movies: Record<string, Movie> }> = ({ movies }) => {
-    const [selectedDirector, setSelectedDirector] = useState('');
-    const [scope, setScope] = useState<'WATCH_PARTY' | 'FESTIVAL'>('WATCH_PARTY');
-    const [generatedKey, setGeneratedKey] = useState('');
-    const [isForging, setIsForging] = useState(false);
-
-    const directors = useMemo(() => {
-        const set = new Set<string>();
-        (Object.values(movies) as Movie[]).forEach(m => {
-            if (m.director) m.director.split(',').forEach(d => set.add(d.trim()));
-        });
-        return Array.from(set).sort();
-    }, [movies]);
-
-    const forgeKey = async () => {
-        if (!selectedDirector) return;
-        setIsForging(true);
-        const accessKey = `PAY-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-        try {
-            const db = getDbInstance();
-            if (db) {
-                await db.collection('director_payout_keys').add({
-                    directorName: selectedDirector,
-                    accessKey,
-                    scope,
-                    status: 'ACTIVE',
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                });
-                setGeneratedKey(accessKey);
-            }
-        } catch (e) {
-            alert("Forge failure.");
-        } finally {
-            setIsForging(false);
-        }
-    };
-
-    return (
-        <div className="bg-[#0f0f0f] border border-indigo-500/20 p-8 rounded-[3rem] shadow-2xl space-y-6 max-w-3xl mx-auto">
-            <div className="flex justify-between items-start">
-                <div>
-                    <h3 className="text-2xl font-black text-white uppercase tracking-tight italic">Disbursement Forge</h3>
-                    <p className="text-gray-500 text-[9px] font-black uppercase tracking-widest mt-1">Single-use access keys for verified creators.</p>
-                </div>
-                <div className="flex gap-2 p-1 bg-black rounded-xl border border-white/5">
-                    <button onClick={() => setScope('WATCH_PARTY')} className={`px-4 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${scope === 'WATCH_PARTY' ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-gray-300'}`}>Watch Party</button>
-                    <button onClick={() => setScope('FESTIVAL')} className={`px-4 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${scope === 'FESTIVAL' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-300'}`}>Full Festival</button>
-                </div>
-            </div>
-            
-            <div className="space-y-4">
-                <select 
-                    value={selectedDirector} 
-                    onChange={e => { setSelectedDirector(e.target.value); setGeneratedKey(''); }}
-                    className="w-full bg-black border border-white/10 rounded-2xl p-5 text-sm font-bold text-white focus:border-indigo-600 outline-none"
-                >
-                    <option value="">Select Target Creator...</option>
-                    {directors.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-
-                {generatedKey ? (
-                    <div className="p-10 bg-green-600/10 border border-green-500/30 rounded-3xl text-center space-y-6 animate-[fadeIn_0.3s_ease-out]">
-                        <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">Active Single-Use Node: {scope}</p>
-                        <p className="text-5xl font-black text-white tracking-[0.2em] select-all">{generatedKey}</p>
-                        <button 
-                            onClick={() => { navigator.clipboard.writeText(generatedKey); alert('Key Copied.'); }}
-                            className="bg-white text-black font-black px-10 py-3 rounded-xl text-[10px] uppercase tracking-widest hover:scale-105 transition-all"
-                        >
-                            Copy Key
-                        </button>
-                    </div>
-                ) : (
-                    <button 
-                        onClick={forgeKey}
-                        disabled={isForging || !selectedDirector}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-6 rounded-2xl uppercase tracking-[0.3em] text-xs shadow-xl transition-all disabled:opacity-20 active:scale-95"
-                    >
-                        {isForging ? 'Synthesizing Access Node...' : 'Initialize Payout Terminal'}
-                    </button>
-                )}
-            </div>
         </div>
     );
 };
