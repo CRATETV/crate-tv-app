@@ -28,7 +28,7 @@ const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({
 
     return (
         <div 
-            className="absolute bottom-24 pointer-events-none z-[60] animate-emoji-float"
+            className="absolute bottom-24 pointer-events-none z-[120] animate-emoji-float"
             style={{ 
                 left: `${randomLeft}%`, 
                 animationDuration: `${randomDuration}s`
@@ -46,22 +46,22 @@ const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({
     );
 };
 
-const DirectorStage: React.FC<{ name: string; isLive: boolean }> = ({ name, isLive }) => (
-    <div className="bg-red-600 border border-red-500/50 p-4 rounded-2xl flex items-center justify-between mb-4 shadow-2xl animate-[fadeIn_0.5s_ease-out]">
+const DirectorStage: React.FC<{ name: string }> = ({ name }) => (
+    <div className="bg-red-600 border-2 border-red-400 p-5 rounded-2xl flex items-center justify-between mb-6 shadow-[0_0_40px_rgba(239,68,68,0.4)] animate-[slideInDown_0.5s_ease-out]">
         <div className="flex items-center gap-4">
             <div className="relative">
-                <div className="w-12 h-12 rounded-full border-2 border-white overflow-hidden bg-gray-900">
+                <div className="w-14 h-14 rounded-full border-2 border-white overflow-hidden bg-gray-900 shadow-2xl">
                     <div className="w-full h-full p-2" dangerouslySetInnerHTML={{ __html: avatars['fox'] }} />
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-red-600 animate-pulse"></div>
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-red-600 animate-pulse"></div>
             </div>
             <div>
-                <p className="text-[10px] font-black uppercase text-red-100 tracking-widest leading-none">LIVE TALKBACK</p>
-                <h4 className="text-sm font-black text-white uppercase tracking-tight mt-1">{name} is in the room</h4>
+                <p className="text-[10px] font-black uppercase text-red-100 tracking-[0.3em] leading-none">STAGE_ACTIVE // TALKBACK LIVE</p>
+                <h4 className="text-lg font-black text-white uppercase tracking-tight mt-1">{name} is on the stage</h4>
             </div>
         </div>
-        <div className="bg-white/20 px-3 py-1 rounded-lg">
-             <p className="text-[9px] font-black text-white uppercase tracking-[0.2em]">Active Stage</p>
+        <div className="bg-black/20 px-4 py-2 rounded-xl border border-white/10">
+             <p className="text-[9px] font-black text-white uppercase tracking-widest animate-pulse">Ask a Question</p>
         </div>
     </div>
 );
@@ -143,8 +143,9 @@ const EmbeddedChat: React.FC<{
     partyKey: string; 
     directors: string[];
     isQALive?: boolean;
+    isBackstageDirector?: boolean;
     user: { name?: string; email: string | null; avatar?: string; } | null 
-}> = ({ partyKey, directors, isQALive, user }) => {
+}> = ({ partyKey, directors, isQALive, isBackstageDirector, user }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -174,7 +175,13 @@ const EmbeddedChat: React.FC<{
             await fetch('/api/send-chat-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ movieKey: partyKey, userName: user.name || user.email, userAvatar: user.avatar || 'fox', text: newMessage }),
+                body: JSON.stringify({ 
+                    movieKey: partyKey, 
+                    userName: user.name || user.email, 
+                    userAvatar: user.avatar || 'fox', 
+                    text: newMessage,
+                    isVerifiedDirector: isBackstageDirector // Carry verification status
+                }),
             });
             setNewMessage('');
         } catch (error) {
@@ -191,19 +198,19 @@ const EmbeddedChat: React.FC<{
             </div>
             
             <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide min-h-0">
-                {isQALive && directors.length > 0 && <DirectorStage name={directors[0]} isLive={true} />}
+                {isQALive && directors.length > 0 && <DirectorStage name={directors[0]} />}
                 
                 {messages.map(msg => {
-                    const isDirector = directors.includes(msg.userName.toLowerCase().trim());
+                    const isDirector = directors.includes(msg.userName.toLowerCase().trim()) || (msg as any).isVerifiedDirector;
                     return (
-                        <div key={msg.id} className={`flex items-start gap-3 animate-[fadeIn_0.2s_ease-out] ${isDirector ? 'bg-red-600/5 p-3 rounded-2xl border border-red-500/10' : ''}`}>
+                        <div key={msg.id} className={`flex items-start gap-3 animate-[fadeIn_0.2s_ease-out] ${isDirector ? 'bg-red-600/5 p-4 rounded-3xl border border-red-500/20 shadow-lg' : ''}`}>
                             <div className={`w-8 h-8 rounded-full flex-shrink-0 p-1 border ${isDirector ? 'border-red-500 bg-red-600/20' : 'border-white/5 bg-gray-800'}`} dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2">
                                     <p className={`font-black text-[11px] uppercase tracking-tighter ${isDirector ? 'text-white' : 'text-red-500'}`}>{msg.userName}</p>
-                                    {isDirector && <span className="bg-red-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded tracking-widest uppercase">Director</span>}
+                                    {isDirector && <span className="bg-red-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded tracking-[0.2em] uppercase">Verified Creator</span>}
                                 </div>
-                                <p className={`text-sm break-words leading-snug ${isDirector ? 'text-white font-medium' : 'text-gray-200'}`}>{msg.text}</p>
+                                <p className={`text-sm break-words leading-snug ${isDirector ? 'text-white font-medium' : 'text-gray-300'}`}>{msg.text}</p>
                             </div>
                         </div>
                     );
@@ -212,7 +219,7 @@ const EmbeddedChat: React.FC<{
             </div>
             <form onSubmit={handleSendMessage} className="p-3 bg-black/60 backdrop-blur-xl border-t border-white/5 flex-shrink-0">
                 <div className="flex items-center gap-2 bg-gray-800/80 rounded-full px-4 py-1 border border-white/10">
-                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type a message..." className="bg-transparent border-none text-white text-sm w-full focus:ring-0 py-2.5" disabled={!user || isSending} />
+                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder={isBackstageDirector ? "Speak as Director..." : "Type a message..."} className="bg-transparent border-none text-white text-sm w-full focus:ring-0 py-2.5" disabled={!user || isSending} />
                     <button type="submit" className="text-red-500 hover:text-red-400 disabled:text-gray-600 transition-colors" disabled={!user || isSending || !newMessage.trim()}>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
                     </button>
@@ -231,6 +238,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [showPaywall, setShowPaywall] = useState(false);
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     
+    // BACKSTAGE AUTH STATE
+    const [isBackstageDirector, setIsBackstageDirector] = useState(false);
+    const [showBackstageModal, setShowBackstageModal] = useState(false);
+    const [backstageCode, setBackstageCode] = useState('');
+    
     // Auto-sync handshake state
     const [showUnmutePrompt, setShowUnmutePrompt] = useState(false);
     
@@ -246,6 +258,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [movieKey, allMovies, festivalData]);
 
     const hasAccess = useMemo(() => {
+        if (isBackstageDirector) return true; // BYPASS FOR DIRECTORS
         if (context?.type === 'movie') {
             if (!context.movie.isWatchPartyPaid) return true;
             return unlockedWatchPartyKeys.has(movieKey);
@@ -253,7 +266,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             return unlockedFestivalBlockIds.has(movieKey);
         }
         return false;
-    }, [context, movieKey, unlockedWatchPartyKeys, unlockedFestivalBlockIds]);
+    }, [context, movieKey, unlockedWatchPartyKeys, unlockedFestivalBlockIds, isBackstageDirector]);
 
     const directorsList = useMemo(() => {
         if (context?.type === 'movie') return context.movie.director.toLowerCase().split(',').map(d => d.trim());
@@ -288,6 +301,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             });
         return () => { unsubscribe(); reactionsRef(); };
     }, [movieKey, context?.type]);
+
+    const handleBackstageAuth = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (backstageCode.trim() === partyState?.backstageKey) {
+            setIsBackstageDirector(true);
+            setShowBackstageModal(false);
+            alert("Uplink Secure. Welcome Backstage, Director.");
+        } else {
+            alert("Invalid Key. Session rejected.");
+        }
+    };
 
     useEffect(() => {
         if (!hasAccess || !partyState?.actualStartTime || partyState.status !== 'live') return;
@@ -398,9 +422,33 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         >
                             Authorize Entry // ${price?.toFixed(2)}
                         </button>
-                        <button onClick={handleGoHome} className="text-gray-600 font-black uppercase tracking-[0.4em] text-[10px] hover:text-white transition-colors">Return to Library</button>
+                        <div className="flex items-center gap-6">
+                            <button onClick={() => setShowBackstageModal(true)} className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500 hover:text-white transition-colors">Director Entry</button>
+                            <div className="w-px h-3 bg-white/10"></div>
+                            <button onClick={handleGoHome} className="text-gray-600 font-black uppercase tracking-[0.4em] text-[10px] hover:text-white transition-colors">Return to Library</button>
+                        </div>
                     </div>
                 </div>
+
+                {showBackstageModal && (
+                    <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-6 backdrop-blur-xl" onClick={() => setShowBackstageModal(false)}>
+                        <form onSubmit={handleBackstageAuth} className="bg-gray-900 border border-white/10 p-10 rounded-[3rem] shadow-2xl w-full max-w-md text-center space-y-8" onClick={e => e.stopPropagation()}>
+                            <div>
+                                <h3 className="text-2xl font-black text-white uppercase tracking-tight italic">Backstage Authorization</h3>
+                                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-2">Enter unique session key provided by admin</p>
+                            </div>
+                            <input 
+                                type="text" 
+                                value={backstageCode} 
+                                onChange={e => setBackstageCode(e.target.value.toUpperCase())} 
+                                className="w-full bg-black/40 border border-white/10 rounded-2xl p-6 text-center text-4xl font-black tracking-[0.5em] text-white focus:border-red-600 outline-none"
+                                placeholder="------"
+                                required
+                            />
+                            <button type="submit" className="w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-widest text-xs shadow-xl active:scale-95">Open Secure Link</button>
+                        </form>
+                    </div>
+                )}
 
                 {showPaywall && (
                     <SquarePaymentModal 
@@ -431,7 +479,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
 
                     <div className="flex-grow w-full bg-black relative z-30 overflow-hidden flex flex-col">
-                        <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden">
+                        <div className="absolute inset-0 z-[150] pointer-events-none overflow-hidden">
                             {localReactions.map(r => (
                                 <FloatingReaction key={r.id} emoji={r.emoji} onComplete={() => setLocalReactions(prev => prev.filter(item => item.id !== r.id))} />
                             ))}
@@ -452,9 +500,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
                         {isFinished && (
                             <div className="absolute inset-0 z-[110] bg-black flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.5s_ease-out]">
-                                <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic mb-8">Transmission End.</h2>
-                                <p className="text-xl text-gray-400 max-w-xl mb-12 font-medium">Thank you for joining the Crate community. Your patronage directly supports the independent artists featured tonight.</p>
-                                <button onClick={handleGoHome} className="bg-white text-black font-black px-16 py-6 rounded-3xl text-sm uppercase tracking-widest hover:scale-105 transition-all shadow-2xl">Return to Catalog</button>
+                                <div className="space-y-6 max-w-xl">
+                                    <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none text-white">Transmission Complete.</h2>
+                                    <p className="text-lg md:text-xl text-gray-400 font-medium leading-relaxed">
+                                        Thank you for joining the Crate community. Your attendance directly fuels the next generation of independent filmmakers.
+                                    </p>
+                                    <div className="pt-8 flex flex-col items-center gap-4">
+                                        <button onClick={handleGoHome} className="bg-white text-black font-black px-16 py-6 rounded-3xl text-sm uppercase tracking-widest hover:scale-105 transition-all shadow-2xl">Return to Catalog</button>
+                                        <p className="text-[10px] text-gray-700 font-black uppercase tracking-[0.4em]">The chat remains open for talkback</p>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -478,12 +533,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
                     
                     <div className="flex-grow flex flex-col md:hidden overflow-hidden bg-[#0a0a0a] min-h-0">
-                        <EmbeddedChat partyKey={movieKey} directors={directorsList} isQALive={partyState?.isQALive} user={user} />
+                        <EmbeddedChat partyKey={movieKey} directors={directorsList} isQALive={partyState?.isQALive} isBackstageDirector={isBackstageDirector} user={user} />
                     </div>
                 </div>
 
                 <div className="hidden md:flex w-80 lg:w-96 flex-shrink-0 h-full border-l border-gray-800 min-h-0 overflow-hidden">
-                    <EmbeddedChat partyKey={movieKey} directors={directorsList} isQALive={partyState?.isQALive} user={user} />
+                    <EmbeddedChat partyKey={movieKey} directors={directorsList} isQALive={partyState?.isQALive} isBackstageDirector={isBackstageDirector} user={user} />
                 </div>
             </div>
         </div>

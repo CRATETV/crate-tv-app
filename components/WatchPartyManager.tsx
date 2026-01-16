@@ -150,11 +150,19 @@ const WatchPartyControlRoom: React.FC<{
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 <div className="lg:col-span-2">
-                    <div className="aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 relative flex items-center justify-center text-center p-12">
-                         <div className="space-y-4 opacity-50">
-                            <svg className="w-12 h-12 mx-auto text-red-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                            <p className="text-sm font-black uppercase tracking-[0.4em] text-white">Monitoring Disengaged</p>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase">Streaming globally to authenticated user nodes</p>
+                    <div className="aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 relative flex items-center justify-center p-12">
+                         <div className="space-y-8 text-center max-w-md">
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">Backstage Entry Protocol</p>
+                                <p className="text-gray-400 text-sm font-medium">Forward this key to the director. They can use it to bypass the paywall and activate verified creator status.</p>
+                            </div>
+                            
+                            <div className="bg-white/5 border border-white/10 p-8 rounded-3xl">
+                                <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-4">Master Session Key</p>
+                                <p className="text-6xl font-black text-white tracking-[0.5em] italic">{partyState?.backstageKey || '------'}</p>
+                            </div>
+
+                            <p className="text-[10px] text-gray-700 font-bold uppercase tracking-widest">Valid for duration of current uplink only.</p>
                          </div>
                     </div>
                 </div>

@@ -17,6 +17,7 @@ import PromoCodeManager from './components/PromoCodeManager';
 import PermissionsManager from './components/PermissionsManager';
 import EditorialManager from './components/EditorialManager';
 import RokuDeployTab from './components/RokuDeployTab';
+import RokuForge from './components/RokuForge';
 import DiscoveryEngine from './components/DiscoveryEngine';
 import CrateFestAnalytics from './components/CrateFestAnalytics';
 import FestivalAnalytics from './components/FestivalAnalytics';
@@ -46,6 +47,7 @@ const ALL_TABS: Record<string, string> = {
     categories: '📂 Categories',
     laurels: '🏆 Laurel Forge',
     roku: '📺 Roku Deploy',
+    rokuForge: '🔮 Roku Forge AI',
     permissions: '🔑 Permissions',
     security: '🛡️ Security'
 };
@@ -59,7 +61,6 @@ const AdminPage: React.FC = () => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     
-    // Metadata for specialized logins
     const [payoutContext, setPayoutContext] = useState<{ director: string; role: string } | null>(null);
 
     const [movies, setMovies] = useState<Record<string, Movie>>({});
@@ -283,7 +284,6 @@ const AdminPage: React.FC = () => {
                         </div>
                     </div>
                     
-                    {/* GLOBAL SECURITY STATUS */}
                     <div className="flex items-center gap-3 bg-black/40 border border-white/5 px-6 py-3 rounded-2xl shadow-inner">
                         <div className="flex flex-col items-end">
                             <p className="text-[8px] font-black text-gray-600 uppercase tracking-[0.4em]">Perimeter Integrity</p>
@@ -306,7 +306,7 @@ const AdminPage: React.FC = () => {
                 </div>
 
                 <div className="animate-[fadeIn_0.4s_ease-out]">
-                    {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
+                    {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} themeSettings={categories} />}
                     {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'intel' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={() => {}} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
@@ -350,6 +350,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />}
                     {activeTab === 'laurels' && <LaurelManager allMovies={Object.values(movies) as Movie[]} />}
                     {activeTab === 'roku' && <RokuDeployTab />}
+                    {activeTab === 'rokuForge' && <RokuForge />}
                     {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'security' && <SecurityTerminal />}
                 </div>

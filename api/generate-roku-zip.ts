@@ -1,8 +1,9 @@
-
 import { promises as fs } from 'fs';
 import path from 'path';
 import JSZip from 'jszip';
 import { Buffer } from 'buffer';
+// FIX: Added import for process to ensure availability and correct typing/casting in various environments.
+import process from 'process';
 
 async function readDirectory(dirPath: string): Promise<string[]> {
     try {
@@ -24,7 +25,8 @@ export async function POST(request: Request) {
     let isAuthenticated = false;
     const host = request.headers.get('host');
     const protocol = host?.startsWith('localhost') ? 'http' : 'https';
-    const apiUrl = `${protocol}://${host}/api`;
+    const domain = `${protocol}://${host}`;
+    const apiUrl = `${domain}/api`;
     
     try {
         const { password } = await request.json();
@@ -35,33 +37,36 @@ export async function POST(request: Request) {
         }
     } catch (e) {}
 
+    // Allow internal or authenticated nodes
     if (host?.startsWith('localhost') || host?.startsWith('127.0.0.1')) isAuthenticated = true;
-    if (!isAuthenticated) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    
+    if (!isAuthenticated) return new Response(JSON.stringify({ error: 'Unauthorized Infrastructure Access' }), { status: 401 });
 
+    // FIX: Cast process to any to safely access cwd() method which may be missing from the environment's Process type definition.
     const rokuDir = path.join((process as any).cwd(), 'roku');
     const filesToInclude = await readDirectory(rokuDir);
     const zip = new JSZip();
 
-    if (filesToInclude.length === 0) throw new Error("Roku source missing.");
+    if (filesToInclude.length === 0) throw new Error("Roku source files missing from project root.");
 
     for (const file of filesToInclude) {
         const contentBuffer = await fs.readFile(file);
         let zipPath = path.relative(rokuDir, file).replace(/\\/g, '/');
         let finalContent: string | Buffer = contentBuffer;
 
-        // Clean logic for Roku-sensitive files
+        // CRITICAL: Normalize text files for Roku (UTF-8, No BOM, LF line endings)
         if (zipPath.endsWith('.brs') || zipPath.endsWith('.xml') || zipPath === 'manifest') {
             let textContent = contentBuffer.toString('utf-8');
             
-            // Fix: Strip Byte Order Mark (BOM) - Critical for Roku compilation
+            // Strip Byte Order Mark (BOM) - Critical for Roku compilation
             if (textContent.charCodeAt(0) === 0xFEFF) {
                 textContent = textContent.substring(1);
             }
             
-            // Fix: Normalize line endings to Unix style (LF)
+            // Normalize line endings to Unix style (LF)
             textContent = textContent.replace(/\r\n/g, '\n');
 
-            // Dynamic Config Binding
+            // Dynamic Config Binding: Inject the live API URL into the channel
             if (zipPath === 'source/Config.brs') {
                 textContent = textContent.replace('API_URL_PLACEHOLDER', apiUrl);
             }
@@ -83,11 +88,13 @@ export async function POST(request: Request) {
         status: 200,
         headers: {
             'Content-Type': 'application/zip',
-            'Content-Disposition': 'attachment; filename="cratetv-production-roku-v4.zip"',
+            'Content-Disposition': `attachment; filename="CrateTV_Roku_Source_V4_${Date.now()}.zip"`,
+            'X-Crate-API-Target': apiUrl
         },
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Packager failed." }), { status: 500 });
+    console.error("Packager Error:", error);
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Internal system failure." }), { status: 500 });
   }
 }
