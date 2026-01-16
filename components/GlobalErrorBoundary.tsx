@@ -1,5 +1,3 @@
-
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
@@ -12,9 +10,10 @@ interface ErrorBoundaryState {
 
 /**
  * GlobalErrorBoundary handles uncaught errors in the component tree.
- * Inherits from Component with generic Props and State to ensure type safety.
+ * Inherits from React.Component with generic Props and State to ensure type safety.
  */
-class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+// Fixed: Using React.Component instead of the named import 'Component' to resolve inheritance issues in certain TypeScript environments.
+class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   // Explicitly initialize state to ensure the TypeScript compiler recognizes its existence on the class instance.
   public state: ErrorBoundaryState = {
     hasError: false
@@ -36,8 +35,9 @@ class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   public render(): ReactNode {
-    // Accessing props and state from 'this' which are provided by the Component base class.
+    // Accessing props and state from 'this' which are provided by the React.Component base class.
     const { hasError } = this.state;
+    // Fixed: 'props' is a member of the Component class inherited by GlobalErrorBoundary.
     const { children } = this.props;
 
     if (hasError) {
