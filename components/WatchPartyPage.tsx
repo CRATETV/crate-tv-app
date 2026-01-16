@@ -17,9 +17,9 @@ interface WatchPartyPageProps {
 const REACTION_TYPES = ['🔥', '😲', '❤️', '👏', '😢'] as const;
 
 const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({ emoji, onComplete }) => {
-    const randomLeft = useMemo(() => Math.floor(Math.random() * 85) + 5, []); 
-    const randomDuration = useMemo(() => 2.5 + Math.random() * 2, []); 
-    const randomScale = useMemo(() => 0.7 + Math.random() * 0.9, []); 
+    const randomLeft = useMemo(() => Math.floor(Math.random() * 80) + 10, []); 
+    const randomDuration = useMemo(() => 3.5 + Math.random() * 1.5, []); 
+    const randomScale = useMemo(() => 0.8 + Math.random() * 0.7, []); 
     const randomRotate = useMemo(() => Math.floor(Math.random() * 40) - 20, []);
 
     useEffect(() => {
@@ -29,14 +29,20 @@ const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({
 
     return (
         <div 
-            className="absolute bottom-0 pointer-events-none text-5xl animate-emoji-float z-[60]"
+            className="absolute bottom-24 pointer-events-none z-[60] animate-emoji-float"
             style={{ 
                 left: `${randomLeft}%`, 
-                animationDuration: `${randomDuration}s`,
-                transform: `scale(${randomScale}) rotate(${randomRotate}deg)`
+                animationDuration: `${randomDuration}s`
             }}
         >
-            {emoji}
+            <div 
+                className="text-6xl drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
+                style={{ 
+                    transform: `scale(${randomScale}) rotate(${randomRotate}deg)`
+                }}
+            >
+                {emoji}
+            </div>
         </div>
     );
 };
@@ -202,7 +208,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [showPaywall, setShowPaywall] = useState(false);
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     
-    // NEW SYNC HANDSHAKE STATE: Failsafe for autoplay policies
+    // NEW AUTO-SYNC FAILSAFE STATE
     const [showUnmutePrompt, setShowUnmutePrompt] = useState(false);
     
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -263,7 +269,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     useEffect(() => {
         if (!hasAccess || !partyState?.actualStartTime || partyState.status !== 'live') return;
         
-        // REFINED GLOBAL SYNC PULSE with Autoplay Failsafe
+        // REFINED SYNC CLOCK: Aggressive Autoplay Pursuit
         const syncClock = setInterval(() => {
             const video = videoRef.current;
             if (!video) return;
@@ -273,32 +279,30 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             
             if (elapsedTotalSeconds < 0) return; 
 
-            const attemptAutoPlaySync = (targetTime: number) => {
-                // Precision Sync: Jump if drift > 1.5s
+            const applyGlobalSync = (targetTime: number) => {
+                // Keep visually in sync within 1.5s window
                 if (Math.abs(video.currentTime - targetTime) > 1.5) {
                     video.currentTime = targetTime;
                 }
                 
+                // FORCE PROGRESSION: Browser security usually allows muted autoplay if unmuted fails
                 if (video.paused) {
-                    video.play().catch(error => {
-                        // If browser blocks unmuted playback, fallback to muted autoplay
-                        if (error.name === 'NotAllowedError') {
+                    video.play().catch((error) => {
+                        if (error.name === 'NotAllowedError' && !video.muted) {
                             video.muted = true;
                             setShowUnmutePrompt(true);
-                            video.play().catch(() => {});
+                            video.play().catch(e => console.error("Total sync block", e));
                         }
                     });
                 }
             };
 
             if (context?.type === 'movie') {
-                attemptAutoPlaySync(elapsedTotalSeconds);
+                applyGlobalSync(elapsedTotalSeconds);
                 if (activeMovieKey !== movieKey) setActiveMovieKey(movieKey);
             } 
             else if (context?.type === 'block') {
                 let accumulatedTime = 0;
-                let foundMovie = false;
-                
                 for (const key of context.block.movieKeys) {
                     const m = allMovies[key];
                     if (!m) continue;
@@ -307,8 +311,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     if (elapsedTotalSeconds >= accumulatedTime && elapsedTotalSeconds < accumulatedTime + duration) {
                         const movieElapsed = elapsedTotalSeconds - accumulatedTime;
                         if (activeMovieKey !== key) setActiveMovieKey(key);
-                        attemptAutoPlaySync(movieElapsed);
-                        foundMovie = true;
+                        applyGlobalSync(movieElapsed);
                         break;
                     }
                     accumulatedTime += duration;
@@ -358,7 +361,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }
 
     return (
-        <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden">
+        <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden" onClick={() => { if(showUnmutePrompt) handleManualUnmute(); }}>
             <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full min-h-0">
                 <div className="flex-grow flex flex-col relative h-full min-h-0">
                     <div className="flex-none bg-black/90 p-3 flex items-center justify-between border-b border-white/5">
@@ -377,16 +380,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             ))}
                         </div>
 
-                        {/* FLOATING UNMUTE PROMPT: Only shown if blocked by autoplay policy */}
+                        {/* SUBTLE UNMUTE CALL TO ACTION */}
                         {showUnmutePrompt && (
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] animate-bounce">
-                                <button 
-                                    onClick={handleManualUnmute}
-                                    className="bg-white text-black font-black px-8 py-4 rounded-2xl flex items-center gap-3 shadow-[0_20px_50px_rgba(255,255,255,0.2)] uppercase tracking-widest text-sm hover:scale-105 transition-all"
-                                >
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] animate-bounce pointer-events-none">
+                                <div className="bg-white text-black font-black px-8 py-4 rounded-2xl flex items-center gap-3 shadow-[0_20px_50px_rgba(255,255,255,0.2)] uppercase tracking-widest text-sm">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M12 5l-4 4H5v6h3l4 4V5z" /></svg>
-                                    Tap to Unmute Audio
-                                </button>
+                                    Tap for Audio
+                                </div>
                             </div>
                         )}
 
@@ -404,7 +404,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
                         <div className="flex-grow flex items-center justify-center">
                             {activeMovieKey ? (
-                                <video ref={videoRef} src={allMovies[activeMovieKey]?.fullMovie} className="w-full h-full object-contain" playsInline />
+                                <video ref={videoRef} src={allMovies[activeMovieKey]?.fullMovie} className="w-full h-full object-contain" playsInline autoPlay />
                             ) : !isWaiting && (
                                 <div className="text-center space-y-4 opacity-30">
                                     <p className="text-xs font-black uppercase tracking-[1em] mr-[-1em]">Establishing Uplink...</p>

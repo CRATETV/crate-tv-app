@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -74,6 +75,7 @@
       ::-webkit-scrollbar { display: none; }
       * { -ms-overflow-style: none; scrollbar-width: none; }
       .secure-video-container { position: relative; overflow: hidden; }
+      
       @keyframes floatWatermark {
         0% { transform: translate(5%, 5%); }
         25% { transform: translate(70%, 15%); }
@@ -84,6 +86,32 @@
       .dynamic-watermark {
         animation: floatWatermark 20s linear infinite;
         text-shadow: 0 0 4px rgba(0,0,0,0.5);
+      }
+
+      /* ZOOM-STYLE KINETIC REACTION PHYSICS */
+      @keyframes emoji-float {
+        0% { 
+          transform: translateY(0) translateX(0) scale(0); 
+          opacity: 0; 
+        }
+        15% { 
+          opacity: 1; 
+          transform: translateY(-40px) translateX(15px) scale(1.2);
+        }
+        40% {
+          transform: translateY(-120px) translateX(-20px) scale(1);
+        }
+        70% {
+          transform: translateY(-220px) translateX(20px) scale(1);
+          opacity: 1;
+        }
+        100% { 
+          transform: translateY(-350px) translateX(0) scale(0.6); 
+          opacity: 0; 
+        }
+      }
+      .animate-emoji-float {
+        animation: emoji-float 4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
       }
     </style>
     <script type="importmap">
