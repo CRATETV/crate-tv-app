@@ -168,7 +168,6 @@ const EmbeddedChat: React.FC<{
                     const isDirector = directors.includes(msg.userName.toLowerCase().trim());
                     return (
                         <div key={msg.id} className={`flex items-start gap-3 animate-[fadeIn_0.2s_ease-out] ${isDirector ? 'bg-red-600/5 p-3 rounded-2xl border border-red-500/10' : ''}`}>
-                            {/* FIX: Wrapped conditional class names in quotes to fix 'Cannot find name' errors. */}
                             <div className={`w-8 h-8 rounded-full flex-shrink-0 p-1 border ${isDirector ? 'border-red-500 bg-red-600/20' : 'border-white/5 bg-gray-800'}`} dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2">
@@ -203,8 +202,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [showPaywall, setShowPaywall] = useState(false);
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     
-    // SYNC STATE: Interaction required to start synced stream
-    const [isUplinkAuthorized, setIsUplinkAuthorized] = useState(false);
+    // NEW SYNC HANDSHAKE STATE: Failsafe for autoplay policies
+    const [showUnmutePrompt, setShowUnmutePrompt] = useState(false);
     
     const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -262,9 +261,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [movieKey, context?.type]);
 
     useEffect(() => {
-        if (!hasAccess || !partyState?.actualStartTime || partyState.status !== 'live' || !isUplinkAuthorized) return;
+        if (!hasAccess || !partyState?.actualStartTime || partyState.status !== 'live') return;
         
-        // REFINED GLOBAL SYNC PULSE
+        // REFINED GLOBAL SYNC PULSE with Autoplay Failsafe
         const syncClock = setInterval(() => {
             const video = videoRef.current;
             if (!video) return;
@@ -274,12 +273,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             
             if (elapsedTotalSeconds < 0) return; 
 
-            if (context?.type === 'movie') {
+            const attemptAutoPlaySync = (targetTime: number) => {
                 // Precision Sync: Jump if drift > 1.5s
-                if (Math.abs(video.currentTime - elapsedTotalSeconds) > 1.5) {
-                    video.currentTime = elapsedTotalSeconds;
+                if (Math.abs(video.currentTime - targetTime) > 1.5) {
+                    video.currentTime = targetTime;
                 }
-                if (video.paused) video.play().catch(() => {});
+                
+                if (video.paused) {
+                    video.play().catch(error => {
+                        // If browser blocks unmuted playback, fallback to muted autoplay
+                        if (error.name === 'NotAllowedError') {
+                            video.muted = true;
+                            setShowUnmutePrompt(true);
+                            video.play().catch(() => {});
+                        }
+                    });
+                }
+            };
+
+            if (context?.type === 'movie') {
+                attemptAutoPlaySync(elapsedTotalSeconds);
                 if (activeMovieKey !== movieKey) setActiveMovieKey(movieKey);
             } 
             else if (context?.type === 'block') {
@@ -294,25 +307,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     if (elapsedTotalSeconds >= accumulatedTime && elapsedTotalSeconds < accumulatedTime + duration) {
                         const movieElapsed = elapsedTotalSeconds - accumulatedTime;
                         if (activeMovieKey !== key) setActiveMovieKey(key);
-                        
-                        if (Math.abs(video.currentTime - movieElapsed) > 1.5) {
-                            video.currentTime = movieElapsed;
-                        }
-                        if (video.paused) video.play().catch(() => {});
+                        attemptAutoPlaySync(movieElapsed);
                         foundMovie = true;
                         break;
                     }
                     accumulatedTime += duration;
                 }
-                
-                // If block is finished
-                if (!foundMovie && elapsedTotalSeconds > accumulatedTime) {
-                    // Handled by isFinished screen logic
-                }
             }
         }, 1000); 
         return () => clearInterval(syncClock);
-    }, [partyState, hasAccess, context, activeMovieKey, allMovies, movieKey, isUplinkAuthorized]);
+    }, [partyState, hasAccess, context, activeMovieKey, allMovies, movieKey]);
 
     const logSentiment = async (emoji: string) => {
         const db = getDbInstance();
@@ -328,11 +332,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
-    const authorizeUplink = () => {
-        setIsUplinkAuthorized(true);
-        // Instant play logic on first click
+    const handleManualUnmute = () => {
         if (videoRef.current) {
-            videoRef.current.play().catch(() => {});
+            videoRef.current.muted = false;
+            setShowUnmutePrompt(false);
         }
     };
 
@@ -374,23 +377,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             ))}
                         </div>
 
-                        {/* SYNC GATEWAY: Required user gesture */}
-                        {isLive && !isUplinkAuthorized && (
-                            <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.5s_ease-out]">
-                                <div className="space-y-8 max-w-lg">
-                                    <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 px-4 py-1.5 rounded-full">
-                                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                        <p className="text-green-500 font-black uppercase tracking-widest text-[9px]">Uplink Secured</p>
-                                    </div>
-                                    <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic">Cinema Feed Active.</h2>
-                                    <p className="text-gray-400 text-lg font-medium">Global synchronization established. Tap below to join the community stream.</p>
-                                    <button 
-                                        onClick={authorizeUplink}
-                                        className="bg-white text-black font-black px-12 py-6 rounded-[2.5rem] text-xl uppercase tracking-tighter hover:scale-105 active:scale-95 transition-all shadow-[0_30px_60px_rgba(255,255,255,0.1)]"
-                                    >
-                                        Join Live Stream
-                                    </button>
-                                </div>
+                        {/* FLOATING UNMUTE PROMPT: Only shown if blocked by autoplay policy */}
+                        {showUnmutePrompt && (
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] animate-bounce">
+                                <button 
+                                    onClick={handleManualUnmute}
+                                    className="bg-white text-black font-black px-8 py-4 rounded-2xl flex items-center gap-3 shadow-[0_20px_50px_rgba(255,255,255,0.2)] uppercase tracking-widest text-sm hover:scale-105 transition-all"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M12 5l-4 4H5v6h3l4 4V5z" /></svg>
+                                    Tap to Unmute Audio
+                                </button>
                             </div>
                         )}
 
