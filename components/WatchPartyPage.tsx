@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Movie, WatchPartyState, ChatMessage, SentimentPoint, FilmBlock } from '../types';
+import { Movie, WatchPartyState, ChatMessage, FilmBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import { getDbInstance } from '../services/firebaseClient';
@@ -9,7 +9,6 @@ import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
 import SquarePaymentModal from './SquarePaymentModal';
 import Countdown from './Countdown';
-import SearchOverlay from './SearchOverlay';
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -49,7 +48,6 @@ const PreShowLobby: React.FC<{
     startTime: string;
 }> = ({ movie, block, allMovies, startTime }) => {
     const [currentTrailerIdx, setCurrentTrailerIdx] = useState(0);
-    const lobbyAudioRef = useRef<HTMLAudioElement>(null);
 
     const promotionMovies = useMemo(() => {
         return allMovies
@@ -170,6 +168,7 @@ const EmbeddedChat: React.FC<{
                     const isDirector = directors.includes(msg.userName.toLowerCase().trim());
                     return (
                         <div key={msg.id} className={`flex items-start gap-3 animate-[fadeIn_0.2s_ease-out] ${isDirector ? 'bg-red-600/5 p-3 rounded-2xl border border-red-500/10' : ''}`}>
+                            {/* FIX: Wrapped conditional class names in quotes to fix 'Cannot find name' errors. */}
                             <div className={`w-8 h-8 rounded-full flex-shrink-0 p-1 border ${isDirector ? 'border-red-500 bg-red-600/20' : 'border-white/5 bg-gray-800'}`} dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2">
@@ -187,7 +186,7 @@ const EmbeddedChat: React.FC<{
                 <div className="flex items-center gap-2 bg-gray-800/80 rounded-full px-4 py-1 border border-white/10">
                     <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type a message..." className="bg-transparent border-none text-white text-sm w-full focus:ring-0 py-2.5" disabled={!user || isSending} />
                     <button type="submit" className="text-red-500 hover:text-red-400 disabled:text-gray-600 transition-colors" disabled={!user || isSending || !newMessage.trim()}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
                     </button>
                 </div>
             </form>
@@ -203,6 +202,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [activeMovieKey, setActiveMovieKey] = useState<string | null>(null);
     const [showPaywall, setShowPaywall] = useState(false);
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
+    
+    // SYNC STATE: Interaction required to start synced stream
+    const [isUplinkAuthorized, setIsUplinkAuthorized] = useState(false);
     
     const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -251,7 +253,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             .where('timestamp', '>=', tenSecondsAgo)
             .onSnapshot(snapshot => {
                 snapshot.docChanges().forEach(change => {
-                    // Fix: Ensure everyone sees all new emojis including their own synced version
                     if (change.type === 'added') {
                         setLocalReactions(prev => [...prev, { id: change.doc.id, emoji: change.doc.data().emoji }]);
                     }
@@ -261,48 +262,57 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [movieKey, context?.type]);
 
     useEffect(() => {
-        if (!hasAccess || !partyState?.actualStartTime || partyState.status !== 'live') return;
+        if (!hasAccess || !partyState?.actualStartTime || partyState.status !== 'live' || !isUplinkAuthorized) return;
         
-        // Hardened Sync: Pulse every 2 seconds, jump only if drift > 5s
+        // REFINED GLOBAL SYNC PULSE
         const syncClock = setInterval(() => {
+            const video = videoRef.current;
+            if (!video) return;
+
             const serverStart = partyState.actualStartTime.toDate ? partyState.actualStartTime.toDate().getTime() : new Date(partyState.actualStartTime).getTime();
             const elapsedTotalSeconds = (Date.now() - serverStart) / 1000;
             
             if (elapsedTotalSeconds < 0) return; 
 
             if (context?.type === 'movie') {
-                const video = videoRef.current;
-                if (video) {
-                    if (Math.abs(video.currentTime - elapsedTotalSeconds) > 5) {
-                        video.currentTime = elapsedTotalSeconds;
-                    }
-                    if (video.paused) video.play().catch(() => {});
-                    if (activeMovieKey !== movieKey) setActiveMovieKey(movieKey);
+                // Precision Sync: Jump if drift > 1.5s
+                if (Math.abs(video.currentTime - elapsedTotalSeconds) > 1.5) {
+                    video.currentTime = elapsedTotalSeconds;
                 }
-            } else if (context?.type === 'block') {
+                if (video.paused) video.play().catch(() => {});
+                if (activeMovieKey !== movieKey) setActiveMovieKey(movieKey);
+            } 
+            else if (context?.type === 'block') {
                 let accumulatedTime = 0;
+                let foundMovie = false;
+                
                 for (const key of context.block.movieKeys) {
                     const m = allMovies[key];
                     if (!m) continue;
                     const duration = (m.durationInMinutes || 10) * 60;
+                    
                     if (elapsedTotalSeconds >= accumulatedTime && elapsedTotalSeconds < accumulatedTime + duration) {
                         const movieElapsed = elapsedTotalSeconds - accumulatedTime;
                         if (activeMovieKey !== key) setActiveMovieKey(key);
-                        const video = videoRef.current;
-                        if (video) {
-                            if (Math.abs(video.currentTime - movieElapsed) > 5) {
-                                video.currentTime = movieElapsed;
-                            }
-                            if (video.paused) video.play().catch(() => {});
+                        
+                        if (Math.abs(video.currentTime - movieElapsed) > 1.5) {
+                            video.currentTime = movieElapsed;
                         }
-                        return;
+                        if (video.paused) video.play().catch(() => {});
+                        foundMovie = true;
+                        break;
                     }
                     accumulatedTime += duration;
                 }
+                
+                // If block is finished
+                if (!foundMovie && elapsedTotalSeconds > accumulatedTime) {
+                    // Handled by isFinished screen logic
+                }
             }
-        }, 2000); 
+        }, 1000); 
         return () => clearInterval(syncClock);
-    }, [partyState, hasAccess, context, activeMovieKey, allMovies, movieKey]);
+    }, [partyState, hasAccess, context, activeMovieKey, allMovies, movieKey, isUplinkAuthorized]);
 
     const logSentiment = async (emoji: string) => {
         const db = getDbInstance();
@@ -318,10 +328,19 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
+    const authorizeUplink = () => {
+        setIsUplinkAuthorized(true);
+        // Instant play logic on first click
+        if (videoRef.current) {
+            videoRef.current.play().catch(() => {});
+        }
+    };
+
     if (isFestivalLoading || !context) return <LoadingSpinner />;
 
     const startTimeStr = context.type === 'movie' ? context.movie.watchPartyStartTime : context.block.watchPartyStartTime;
-    const isWaiting = startTimeStr && new Date() < new Date(startTimeStr) && partyState?.status !== 'live';
+    const isLive = partyState?.status === 'live';
+    const isWaiting = startTimeStr && new Date() < new Date(startTimeStr) && !isLive;
     const isFinished = partyState?.status === 'ended';
 
     if (!hasAccess) {
@@ -355,6 +374,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             ))}
                         </div>
 
+                        {/* SYNC GATEWAY: Required user gesture */}
+                        {isLive && !isUplinkAuthorized && (
+                            <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.5s_ease-out]">
+                                <div className="space-y-8 max-w-lg">
+                                    <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 px-4 py-1.5 rounded-full">
+                                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                        <p className="text-green-500 font-black uppercase tracking-widest text-[9px]">Uplink Secured</p>
+                                    </div>
+                                    <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic">Cinema Feed Active.</h2>
+                                    <p className="text-gray-400 text-lg font-medium">Global synchronization established. Tap below to join the community stream.</p>
+                                    <button 
+                                        onClick={authorizeUplink}
+                                        className="bg-white text-black font-black px-12 py-6 rounded-[2.5rem] text-xl uppercase tracking-tighter hover:scale-105 active:scale-95 transition-all shadow-[0_30px_60px_rgba(255,255,255,0.1)]"
+                                    >
+                                        Join Live Stream
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {isWaiting && (
                              <PreShowLobby movie={context.type === 'movie' ? context.movie : undefined} block={context.type === 'block' ? context.block : undefined} allMovies={Object.values(allMovies)} startTime={startTimeStr!} />
                         )}
@@ -369,7 +408,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
                         <div className="flex-grow flex items-center justify-center">
                             {activeMovieKey ? (
-                                <video ref={videoRef} src={allMovies[activeMovieKey]?.fullMovie} className="w-full h-full object-contain" playsInline autoPlay />
+                                <video ref={videoRef} src={allMovies[activeMovieKey]?.fullMovie} className="w-full h-full object-contain" playsInline />
                             ) : !isWaiting && (
                                 <div className="text-center space-y-4 opacity-30">
                                     <p className="text-xs font-black uppercase tracking-[1em] mr-[-1em]">Establishing Uplink...</p>

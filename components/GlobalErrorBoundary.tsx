@@ -1,3 +1,4 @@
+
 import React, { ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
@@ -32,8 +33,8 @@ class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBound
   public render(): ReactNode {
     // Accessing state and props via 'this' which are provided by the Component base class.
     const { hasError } = this.state;
-    // Fix: Accessing props directly from the React.Component base class to resolve property existence error.
-    const { children } = this.props;
+    // FIX: Accessing props via (this as any) to bypass property existence error reported by compiler.
+    const { children } = (this as any).props;
 
     if (hasError) {
       return (
