@@ -214,10 +214,21 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         } catch (e) { alert("Initialization failure."); }
     };
 
-    const allBlocks = useMemo(() => festivalData.flatMap(d => d.blocks), [festivalData]);
-    const filteredMovies = (Object.values(allMovies) as Movie[])
-        .filter(m => m.title.toLowerCase().includes(filter.toLowerCase()))
-        .sort((a, b) => a.title.localeCompare(b.title));
+    // Filtered Blocks based on search query
+    const filteredBlocks = useMemo(() => {
+        const allBlocks = festivalData.flatMap(d => d.blocks);
+        if (!filter) return allBlocks;
+        return allBlocks.filter(b => b.title.toLowerCase().includes(filter.toLowerCase()));
+    }, [festivalData, filter]);
+
+    // Filtered Movies based on search query
+    const filteredMovies = useMemo(() => {
+        const moviesArr = (Object.values(allMovies) as Movie[]);
+        if (!filter) return moviesArr.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+        return moviesArr
+            .filter(m => (m.title || '').toLowerCase().includes(filter.toLowerCase()))
+            .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    }, [allMovies, filter]);
 
     return (
         <div className="space-y-8 pb-32">
@@ -234,9 +245,18 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div>
                         <h3 className="text-2xl font-black uppercase tracking-tighter italic text-white">Watch Schedule</h3>
-                        <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Configure automated start times. Row state is isolated to prevent reset during typing.</p>
+                        <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Configure automated start times. Search filters apply to all sectors.</p>
                     </div>
-                    <input type="text" placeholder="Filter manifest..." value={filter} onChange={e => setFilter(e.target.value)} className="form-input !py-3 text-xs bg-black/40 border-white/10 w-full md:w-64" />
+                    <div className="relative w-full md:w-80">
+                        <input 
+                            type="text" 
+                            placeholder="Search by Title..." 
+                            value={filter} 
+                            onChange={e => setFilter(e.target.value)} 
+                            className="form-input !py-3 !pl-12 text-xs bg-black/40 border-white/10 w-full" 
+                        />
+                        <svg className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </div>
                 </div>
 
                 <div className="bg-black border border-white/10 rounded-3xl overflow-hidden">
@@ -251,12 +271,17 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {allBlocks.map(block => (
+                            {filteredBlocks.map(block => (
                                 <PartyRow key={block.id} entity={block} partyState={partyStates[block.id]} isBlock={true} onUpdate={handleUpdate} onManualStart={handleManualStart} />
                             ))}
                             {filteredMovies.map(movie => (
                                 <PartyRow key={movie.key} entity={movie} partyState={partyStates[movie.key]} isBlock={false} onUpdate={handleUpdate} onManualStart={handleManualStart} />
                             ))}
+                            {(filteredBlocks.length === 0 && filteredMovies.length === 0) && (
+                                <tr>
+                                    <td colSpan={5} className="p-20 text-center text-gray-700 font-black uppercase tracking-[0.5em]">No nodes match query: "{filter}"</td>
+                                </tr>
+                            )}
                         </tbody>
                      </table>
                 </div>

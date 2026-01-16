@@ -18,10 +18,10 @@ interface WatchPartyPageProps {
 const REACTION_TYPES = ['🔥', '😲', '❤️', '👏', '😢'] as const;
 
 const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({ emoji, onComplete }) => {
-    const randomLeft = useMemo(() => Math.floor(Math.random() * 80) + 10, []); 
-    const randomDuration = useMemo(() => 2.0 + Math.random() * 1.5, []); 
-    const randomScale = useMemo(() => 0.8 + Math.random() * 1.2, []); 
-    const randomRotate = useMemo(() => Math.floor(Math.random() * 60) - 30, []);
+    const randomLeft = useMemo(() => Math.floor(Math.random() * 85) + 5, []); 
+    const randomDuration = useMemo(() => 2.5 + Math.random() * 2, []); 
+    const randomScale = useMemo(() => 0.7 + Math.random() * 0.9, []); 
+    const randomRotate = useMemo(() => Math.floor(Math.random() * 40) - 20, []);
 
     useEffect(() => {
         const timer = setTimeout(onComplete, randomDuration * 1000);
@@ -30,12 +30,11 @@ const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({
 
     return (
         <div 
-            className="absolute bottom-10 pointer-events-none text-6xl animate-emoji-float z-[100] select-none"
+            className="absolute bottom-0 pointer-events-none text-5xl animate-emoji-float z-[60]"
             style={{ 
                 left: `${randomLeft}%`, 
                 animationDuration: `${randomDuration}s`,
-                transform: `scale(${randomScale}) rotate(${randomRotate}deg)`,
-                textShadow: '0 0 20px rgba(0,0,0,0.5)'
+                transform: `scale(${randomScale}) rotate(${randomRotate}deg)`
             }}
         >
             {emoji}
@@ -50,6 +49,8 @@ const PreShowLobby: React.FC<{
     startTime: string;
 }> = ({ movie, block, allMovies, startTime }) => {
     const [currentTrailerIdx, setCurrentTrailerIdx] = useState(0);
+    const lobbyAudioRef = useRef<HTMLAudioElement>(null);
+
     const promotionMovies = useMemo(() => {
         return allMovies
             .filter(m => m.trailer && (!movie || m.key !== movie.key))
@@ -66,6 +67,8 @@ const PreShowLobby: React.FC<{
     }, [promotionMovies]);
 
     const title = block ? block.title : (movie ? movie.title : 'Loading Session...');
+    const backdrop = movie?.poster || 'https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg';
+
     return (
         <div className="absolute inset-0 z-[60] bg-black flex flex-col items-center justify-center overflow-hidden animate-[fadeIn_0.5s_ease-out]">
             <div className="absolute inset-0 opacity-40">
@@ -80,7 +83,7 @@ const PreShowLobby: React.FC<{
                         className="w-full h-full object-cover blur-sm"
                     />
                 ) : (
-                    <div className="w-full h-full bg-gray-900 animate-pulse"></div>
+                    <img src={backdrop} className="w-full h-full object-cover blur-2xl" alt="" />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60"></div>
             </div>
@@ -91,9 +94,13 @@ const PreShowLobby: React.FC<{
                         <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
                         <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px]">Pre-Show Lobby // Global Sync Active</p>
                     </div>
-                    <h2 className="text-5xl md:text-[6rem] font-black uppercase tracking-tighter italic leading-none text-white drop-shadow-[0_10px_30px_rgba(0,0,0,1)]">
-                        {title}
-                    </h2>
+                    
+                    <div className="space-y-2">
+                        <p className="text-gray-500 font-black uppercase tracking-[0.5em] text-xs">Uplink Imminent</p>
+                        <h2 className="text-5xl md:text-[6rem] font-black uppercase tracking-tighter italic leading-none text-white drop-shadow-[0_10px_30px_rgba(0,0,0,1)]">
+                            {title}
+                        </h2>
+                    </div>
                 </div>
 
                 <div className="bg-black/60 backdrop-blur-xl px-12 py-8 rounded-[3rem] border border-white/10 inline-flex flex-col items-center gap-6 shadow-2xl">
@@ -197,11 +204,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [showPaywall, setShowPaywall] = useState(false);
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     
-    const [localSearchQuery, setLocalSearchQuery] = useState('');
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
-    
     const videoRef = useRef<HTMLVideoElement>(null);
-    const playerWrapperRef = useRef<HTMLDivElement>(null);
 
     const context = useMemo(() => {
         const movie = allMovies[movieKey];
@@ -211,15 +214,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (block) return { type: 'block' as const, block };
         return null;
     }, [movieKey, allMovies, festivalData]);
-
-    const searchResults = useMemo(() => {
-        if (!localSearchQuery) return [];
-        const query = localSearchQuery.toLowerCase().trim();
-        return (Object.values(allMovies) as Movie[]).filter(movie =>
-            movie && movie.poster && movie.title && !movie.isUnlisted &&
-            (movie.title.toLowerCase().includes(query) || movie.director.toLowerCase().includes(query))
-        );
-    }, [localSearchQuery, allMovies]);
 
     const hasAccess = useMemo(() => {
         if (context?.type === 'movie') {
@@ -243,38 +237,33 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const db = getDbInstance();
         if (!db) return;
         const partyRef = db.collection('watch_parties').doc(movieKey);
-        
-        // WATCH PARTY STATE LISTENER
         const unsubscribe = partyRef.onSnapshot(doc => {
             if (doc.exists) {
                 const data = doc.data() as WatchPartyState;
                 setPartyState(data);
-                if (data.status === 'live' && context?.type === 'movie' && !activeMovieKey) {
+                if (data.status === 'live' && context?.type === 'movie') {
                     setActiveMovieKey(movieKey);
                 }
             }
         });
-
-        // GLOBAL EMOJI LISTENER (Fix: Reliance on added changes for everyone)
         const tenSecondsAgo = new Date(Date.now() - 10000);
         const reactionsRef = partyRef.collection('live_reactions')
             .where('timestamp', '>=', tenSecondsAgo)
             .onSnapshot(snapshot => {
                 snapshot.docChanges().forEach(change => {
-                    // Trigger animation for all 'added' reactions from the database
+                    // Fix: Ensure everyone sees all new emojis including their own synced version
                     if (change.type === 'added') {
-                        const data = change.doc.data();
-                        setLocalReactions(prev => [...prev, { id: change.doc.id, emoji: data.emoji }]);
+                        setLocalReactions(prev => [...prev, { id: change.doc.id, emoji: change.doc.data().emoji }]);
                     }
                 });
             });
-
         return () => { unsubscribe(); reactionsRef(); };
-    }, [movieKey, context?.type, activeMovieKey]);
+    }, [movieKey, context?.type]);
 
     useEffect(() => {
         if (!hasAccess || !partyState?.actualStartTime || partyState.status !== 'live') return;
         
+        // Hardened Sync: Pulse every 2 seconds, jump only if drift > 5s
         const syncClock = setInterval(() => {
             const serverStart = partyState.actualStartTime.toDate ? partyState.actualStartTime.toDate().getTime() : new Date(partyState.actualStartTime).getTime();
             const elapsedTotalSeconds = (Date.now() - serverStart) / 1000;
@@ -284,7 +273,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             if (context?.type === 'movie') {
                 const video = videoRef.current;
                 if (video) {
-                    if (Math.abs(video.currentTime - elapsedTotalSeconds) > 10) {
+                    if (Math.abs(video.currentTime - elapsedTotalSeconds) > 5) {
                         video.currentTime = elapsedTotalSeconds;
                     }
                     if (video.paused) video.play().catch(() => {});
@@ -301,7 +290,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         if (activeMovieKey !== key) setActiveMovieKey(key);
                         const video = videoRef.current;
                         if (video) {
-                            if (Math.abs(video.currentTime - movieElapsed) > 10) {
+                            if (Math.abs(video.currentTime - movieElapsed) > 5) {
                                 video.currentTime = movieElapsed;
                             }
                             if (video.paused) video.play().catch(() => {});
@@ -311,19 +300,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     accumulatedTime += duration;
                 }
             }
-        }, 3000); 
+        }, 2000); 
         return () => clearInterval(syncClock);
     }, [partyState, hasAccess, context, activeMovieKey, allMovies, movieKey]);
 
     const logSentiment = async (emoji: string) => {
-        // Optimistic local UI trigger is removed in favor of purely synced DB trigger
-        // to ensure that if the sender sees it, they know the transmission was successful.
         const db = getDbInstance();
         if (db) {
             db.collection('watch_parties').doc(movieKey).collection('live_reactions').add({
-                emoji, 
-                userId: user?.uid || 'guest', 
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                emoji, userId: user?.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
     };
@@ -343,6 +328,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return (
             <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8 text-center">
                 <h2 className="text-4xl font-black text-white uppercase italic">Entry Ticket Required</h2>
+                <p className="text-gray-400 mt-4">This screening is a ticketed community event.</p>
                 <button onClick={() => setShowPaywall(true)} className="bg-white text-black font-black py-5 px-12 rounded-2xl uppercase text-xs mt-8">Get Event Ticket</button>
                 {showPaywall && <SquarePaymentModal movie={context.type === 'movie' ? context.movie : undefined} paymentType={context.type === 'movie' ? "watchPartyTicket" : "block"} onClose={() => setShowPaywall(false)} onPaymentSuccess={() => { if (context.type === 'movie') unlockWatchParty(movieKey); setShowPaywall(false); }} />}
             </div>
@@ -354,12 +340,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full min-h-0">
                 <div className="flex-grow flex flex-col relative h-full min-h-0">
                     <div className="flex-none bg-black/90 p-3 flex items-center justify-between border-b border-white/5">
-                        <div className="flex items-center gap-4">
-                            <button onClick={handleGoHome} className="text-gray-400 hover:text-white transition-colors" title="Home"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-                            <button onClick={() => setIsSearchOpen(true)} className="text-gray-400 hover:text-red-500 transition-colors" title="Browse catalog">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                            </button>
-                        </div>
+                        <button onClick={handleGoHome} className="text-gray-400 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
                         <div className="text-center">
                             <p className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none">LIVE SESSION</p>
                             <h2 className="text-xs font-bold truncate text-gray-200">{context.type === 'movie' ? context.movie.title : context.block.title}</h2>
@@ -367,9 +348,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         <div className="w-10"></div>
                     </div>
 
-                    <div ref={playerWrapperRef} className="flex-grow w-full bg-black relative z-30 overflow-hidden flex flex-col">
-                        {/* EMOJI LAYER - High Z-Index, inside player container for Fullscreen support */}
-                        <div className="absolute inset-0 z-[100] pointer-events-none overflow-hidden">
+                    <div className="flex-grow w-full bg-black relative z-30 overflow-hidden flex flex-col">
+                        <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden">
                             {localReactions.map(r => (
                                 <FloatingReaction key={r.id} emoji={r.emoji} onComplete={() => setLocalReactions(prev => prev.filter(item => item.id !== r.id))} />
                             ))}
@@ -380,9 +360,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         )}
 
                         {isFinished && (
-                            <div className="absolute inset-0 z-[110] bg-black flex flex-col items-center justify-center p-8 text-center">
-                                <h2 className="text-5xl font-black uppercase tracking-tighter italic mb-8">Transmission End.</h2>
-                                <button onClick={handleGoHome} className="bg-white text-black font-black px-12 py-4 rounded-2xl text-xs uppercase">Return to Catalog</button>
+                            <div className="absolute inset-0 z-[110] bg-black flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.5s_ease-out]">
+                                <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic mb-8">Transmission End.</h2>
+                                <p className="text-xl text-gray-400 max-w-xl mb-12 font-medium">Thank you for joining the Crate community. Your patronage directly supports the independent artists featured tonight.</p>
+                                <button onClick={handleGoHome} className="bg-white text-black font-black px-16 py-6 rounded-3xl text-sm uppercase tracking-widest hover:scale-105 transition-all shadow-2xl">Return to Catalog</button>
                             </div>
                         )}
 
@@ -414,16 +395,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     <EmbeddedChat partyKey={movieKey} directors={directorsList} user={user} />
                 </div>
             </div>
-
-            {isSearchOpen && (
-                <SearchOverlay 
-                    searchQuery={localSearchQuery} 
-                    onSearch={setLocalSearchQuery} 
-                    onClose={() => setIsSearchOpen(false)} 
-                    results={searchResults} 
-                    onSelectMovie={(m) => { setIsSearchOpen(false); window.location.href = `/movie/${m.key}?play=true`; }} 
-                />
-            )}
         </div>
     );
 };
