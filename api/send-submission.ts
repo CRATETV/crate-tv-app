@@ -1,3 +1,4 @@
+
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
@@ -8,7 +9,14 @@ const FALLBACK_ADMIN = 'cratetiv@gmail.com';
 
 export async function POST(request: Request) {
     try {
-        const { filmTitle, directorName, cast, email, synopsis, posterUrl, movieUrl } = await request.json();
+        const payload = await request.json();
+        const { filmTitle, directorName, cast, email, synopsis, posterUrl, movieUrl, website_url_check } = payload;
+
+        // SECURITY: If the honeypot field is filled, reject immediately
+        if (website_url_check) {
+            console.warn("[SECURITY] Blocked submission attempt from bot (honeypot triggered).");
+            return new Response(JSON.stringify({ error: 'System processing error' }), { status: 403 });
+        }
 
         if (!filmTitle || !directorName || !cast || !synopsis || !posterUrl || !movieUrl) {
             return new Response(JSON.stringify({ error: 'All fields are required.' }), { status: 400 });
@@ -33,12 +41,19 @@ export async function POST(request: Request) {
             submitterEmail: email || '',
             synopsis,
             submissionDate: FieldValue.serverTimestamp(),
-            status: 'pending', // CRITICAL: This enables Jury Hub visibility
-            source: 'WEB_FORM_V4', 
+            status: 'pending', 
+            source: 'WEB_FORM_V4_SECURE', 
             musicRightsConfirmation: true
         };
         
         await db.collection('movie_pipeline').add(pipelineEntry);
+
+        // Security Audit Log
+        await db.collection('security_events').add({
+            type: 'SUBMISSION_RECEIVED',
+            timestamp: FieldValue.serverTimestamp(),
+            details: { filmTitle, directorName, email }
+        });
 
         const emailHtml = `
             <div style="font-family: sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 30px; border-radius: 20px;">
@@ -68,6 +83,6 @@ export async function POST(request: Request) {
 
     } catch (error) {
         console.error('Submission API Error:', error);
-        return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), { status: 500 });
+        return new Response(JSON.stringify({ error: 'System core rejected transmission.' }), { status: 500 });
     }
 }

@@ -4,7 +4,11 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const cronSecret = process.env.CRON_SECRET;
+
+    // SECURITY: Reject immediately if secret is missing or header doesn't match
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+        console.error("[SECURITY] Unauthorized attempt to trigger Watch Party Cron.");
         return new Response('Unauthorized', { status: 401 });
     }
 
@@ -32,7 +36,8 @@ export async function GET(request: Request) {
             
             // If scheduled time has passed and party isn't live, START IT
             if (startTime && startTime <= now && (!state || state.status !== 'live')) {
-                batch.set(db.collection('watch_parties').doc(doc.id), {
+                const partyRef = db.collection('watch_parties').doc(doc.id);
+                batch.set(partyRef, {
                     status: 'live',
                     isPlaying: true,
                     currentTime: 0,
@@ -44,7 +49,7 @@ export async function GET(request: Request) {
             }
         });
 
-        // 2. CLEANUP Logic: End stale live sessions
+        // 2. CLEANUP Logic: End stale live sessions (after 12 hours)
         const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
         const activeParties = await db.collection('watch_parties').where('status', '==', 'live').get();
         
@@ -63,12 +68,18 @@ export async function GET(request: Request) {
 
         if (mutationsCount > 0) {
             await batch.commit();
+            // Log security event for successful automated mutation
+            await db.collection('security_events').add({
+                type: 'AUTOMATED_CRON_EXECUTION',
+                timestamp: FieldValue.serverTimestamp(),
+                details: { mutationsCount }
+            });
         }
 
         return new Response(JSON.stringify({ success: true, mutationsCount }), { status: 200 });
 
     } catch (error) {
         console.error("Error in update-watch-parties cron job:", error);
-        return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
+        return new Response(JSON.stringify({ error: 'System processing failed.' }), { status: 500 });
     }
 }

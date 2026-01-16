@@ -282,6 +282,15 @@ const AdminPage: React.FC = () => {
                             <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Active Session: {sessionStorage.getItem('operatorName')}</span>
                         </div>
                     </div>
+                    
+                    {/* GLOBAL SECURITY STATUS */}
+                    <div className="flex items-center gap-3 bg-black/40 border border-white/5 px-6 py-3 rounded-2xl shadow-inner">
+                        <div className="flex flex-col items-end">
+                            <p className="text-[8px] font-black text-gray-600 uppercase tracking-[0.4em]">Perimeter Integrity</p>
+                            <p className="text-[10px] font-bold text-green-500 uppercase">System Nominal</p>
+                        </div>
+                        <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]"></div>
+                    </div>
                 </div>
                 
                 <div className="flex overflow-x-auto pb-4 mb-10 gap-2 scrollbar-hide">

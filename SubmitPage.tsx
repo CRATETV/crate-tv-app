@@ -28,6 +28,9 @@ const SubmitPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [showDirectForm, setShowDirectForm] = useState(false);
     
+    // HONEYPOT STATE
+    const [hpValue, setHpValue] = useState('');
+
     const handleNavigate = (path: string) => {
         window.history.pushState({}, '', path);
         window.dispatchEvent(new Event('pushstate'));
@@ -36,6 +39,12 @@ const SubmitPage: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         
+        // HONEYPOT CHECK: If bots filled this hidden field, fail silently or block
+        if (hpValue) {
+            console.warn("[SECURITY] Bot detected via honeypot.");
+            return;
+        }
+
         if (!posterUrl || !movieUrl) {
             setError('Please upload both a poster and a movie file before submitting.');
             return;
@@ -141,7 +150,7 @@ const SubmitPage: React.FC = () => {
                             <div className="space-y-4 w-full">
                                 <button 
                                     onClick={() => setShowDirectForm(true)}
-                                    className="block w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-purple-900/20 text-lg text-center"
+                                    className="block w-full py-4 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-purple-900/20 text-lg text-center"
                                 >
                                     Access Submission Form
                                 </button>
@@ -168,6 +177,18 @@ const SubmitPage: React.FC = () => {
                                     <p className="text-gray-500 text-sm mt-2">Preferred for large files or private screeners.</p>
                                 </div>
                                 
+                                {/* HONEYPOT FIELD: Invisible to users */}
+                                <div style={{ display: 'none' }} aria-hidden="true">
+                                    <input 
+                                        type="text" 
+                                        name="website_url_check" 
+                                        value={hpValue} 
+                                        onChange={e => setHpValue(e.target.value)} 
+                                        tabIndex={-1} 
+                                        autoComplete="off"
+                                    />
+                                </div>
+
                                 <div>
                                     <label htmlFor="filmTitle" className="form-label">Film Title</label>
                                     <input type="text" id="filmTitle" name="filmTitle" className={formInputClasses} required />
