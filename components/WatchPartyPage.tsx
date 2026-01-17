@@ -97,7 +97,7 @@ const PreShowLobby: React.FC<{
                 </div>
 
                 <div className="bg-black/60 backdrop-blur-3xl px-16 py-12 rounded-[4rem] border border-white/10 flex flex-col items-center gap-6 shadow-2xl">
-                    <p className="text-sm font-black text-gray-500 uppercase tracking-[0.3em]">Synchronizing Uplink In</p>
+                    <p className="text-sm font-black text-gray-400 uppercase tracking-[0.3em]">Synchronizing Uplink In</p>
                     <div className="h-px w-24 bg-white/10"></div>
                     <Countdown targetDate={startTime} className="text-6xl md:text-[7rem] font-black text-white font-mono tracking-tighter" prefix="" />
                 </div>
@@ -300,9 +300,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             const targetTime = Math.max(0, elapsedTotalSeconds);
 
             const applyGlobalSync = (time: number) => {
-                // Ensure movie is rendered
                 if (!video.src) return;
 
+                // Sync threshold (1.5s)
                 if (Math.abs(video.currentTime - time) > 1.5 && !video.seeking) {
                     video.currentTime = time;
                 }
@@ -427,7 +427,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 placeholder="------"
                                 required
                             />
-                            <button type="submit" className="w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-widest text-xs shadow-xl active:scale-95">Open Secure Link</button>
+                            <button type="submit" className="w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-widest text-sm shadow-xl active:scale-95">Open Secure Link</button>
                         </form>
                     </div>
                 )}

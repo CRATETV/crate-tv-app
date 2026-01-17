@@ -18,11 +18,6 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
         return () => clearInterval(timer);
     }, []);
 
-    const hasAccess = useMemo(() => {
-        if (!movie.isWatchPartyPaid) return true;
-        return unlockedWatchPartyKeys.has(movie.key);
-    }, [movie, unlockedWatchPartyKeys]);
-
     const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
     const isLive = startTime && now >= startTime;
     const isPreShow = startTime && now < startTime && (startTime.getTime() - now.getTime() < 60 * 60 * 1000);
@@ -74,7 +69,7 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
                     onClick={handleNavigate}
                     className="bg-white text-black font-black px-3 md:px-6 py-1 rounded-full text-[8px] md:text-[10px] uppercase tracking-tighter hover:bg-gray-200 transition-all flex-shrink-0"
                 >
-                    {isLive ? 'Join' : 'Enter'}
+                    {isLive ? 'Join Room' : 'Enter Lobby'}
                 </button>
                 <button onClick={onClose} className="text-white/40 hover:text-white transition-colors text-lg leading-none ml-1" aria-label="Dismiss banner">
                     &times;

@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     const db = getAdminDb();
     if (!db) throw new Error("Database offline.");
 
-    // CLEANUP: Purge old messages
+    // CLEANUP: Purge old messages for a fresh session
     const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages');
     const snapshot = await messagesRef.get();
     if (!snapshot.empty) {
@@ -43,7 +43,8 @@ export async function POST(request: Request) {
 
     const partyRef = db.collection('watch_parties').doc(movieKey);
     
-    // Set canonical initial state with actualStartTime for sync
+    // Set canonical initial state. 
+    // actualStartTime is the "T-Zero" for global synchronization.
     await partyRef.set({
       status: 'live',
       lastStartedAt: new Date().toISOString(),
