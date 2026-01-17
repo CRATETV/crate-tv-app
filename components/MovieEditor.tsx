@@ -43,6 +43,8 @@ const emptyMovie: Movie = {
     watchPartyPrice: 5.00,
     isForSale: false,
     salePrice: 5.00,
+    isLiveStream: false,
+    liveStreamEmbed: ''
 };
 
 const MovieEditor: React.FC<MovieEditorProps> = ({ 
@@ -187,7 +189,10 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                     <img src={movie.poster || 'https://via.placeholder.com/100x150'} className="w-full h-full object-cover" alt="" />
                                                 </div>
                                                 <div>
-                                                    <span className="font-black text-white uppercase text-lg tracking-tighter">{movie.title || 'Untitled'}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-black text-white uppercase text-lg tracking-tighter">{movie.title || 'Untitled'}</span>
+                                                        {movie.isLiveStream && <span className="bg-red-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest animate-pulse">LIVE</span>}
+                                                    </div>
                                                     <p className="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-tighter">Dir. {movie.director}</p>
                                                     <div className="flex gap-2 mt-2">
                                                         {movie.isEpisode && <span className="text-[7px] bg-amber-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">EPISODE</span>}
@@ -262,6 +267,16 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         <label className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer">
                                             <input type="checkbox" name="isEpisode" checked={formData.isEpisode} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-amber-600 focus:ring-amber-500" />
                                             <span className="text-xs font-black uppercase text-gray-300">Mark as Episode</span>
+                                        </label>
+                                    </div>
+
+                                    <div className="p-4 bg-red-600/5 rounded-2xl border border-red-600/20">
+                                        <label className="flex items-center gap-3 cursor-pointer">
+                                            <input type="checkbox" name="isLiveStream" checked={formData.isLiveStream} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600" />
+                                            <div className="min-w-0">
+                                                <span className="text-xs font-black uppercase text-red-500 tracking-widest">Live Broadcast Mode</span>
+                                                <p className="text-[8px] text-gray-600 uppercase font-bold mt-0.5">Swaps master file for a Restream embed node.</p>
+                                            </div>
                                         </label>
                                     </div>
                                 </div>
@@ -365,11 +380,26 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                              <section className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">03. Master Media</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="form-label">High-Bitrate Master</label>
-                                        <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="form-input bg-black/40" placeholder="https://..." />
-                                        <S3Uploader label="Ingest New Stream" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
-                                    </div>
+                                    {!formData.isLiveStream ? (
+                                        <div className="space-y-2 animate-[fadeIn_0.3s_ease-out]">
+                                            <label className="form-label">High-Bitrate Master</label>
+                                            <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="form-input bg-black/40" placeholder="https://..." />
+                                            <S3Uploader label="Ingest New Stream" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2 animate-[fadeIn_0.3s_ease-out]">
+                                            <label className="form-label !text-red-500">Restream / Embed Payload</label>
+                                            <textarea 
+                                                name="liveStreamEmbed" 
+                                                value={formData.liveStreamEmbed} 
+                                                onChange={handleChange} 
+                                                className="form-input !bg-black/40 border-red-500/20 font-mono text-[10px]" 
+                                                placeholder="Paste iframe embed code from Restream here..." 
+                                                rows={4}
+                                            />
+                                            <p className="text-[8px] text-gray-600 uppercase font-black tracking-widest mt-1">Accepts standard HTML &lt;iframe&gt; manifest.</p>
+                                        </div>
+                                    )}
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="form-label">Key Art (2:3)</label>

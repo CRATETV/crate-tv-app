@@ -125,6 +125,8 @@ export interface Movie {
   awardName?: string;
   awardYear?: string;
   isCratemas?: boolean;
+  isLiveStream?: boolean;
+  liveStreamEmbed?: string;
 }
 
 export interface Category {

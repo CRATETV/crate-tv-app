@@ -25,7 +25,8 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
 
     const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
     const isLive = startTime && now >= startTime;
-    const isPreShow = startTime && now < startTime && (startTime.getTime() - now.getTime() < 15 * 60 * 1000);
+    // Increased window to 60 minutes for better engagement
+    const isPreShow = startTime && now < startTime && (startTime.getTime() - now.getTime() < 60 * 60 * 1000);
 
     const handleNavigate = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -39,39 +40,43 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
 
     return (
         <div 
-            className={`fixed top-0 left-0 right-0 z-50 p-3 flex items-center justify-between gap-4 shadow-2xl h-12 border-b border-white/10 animate-[slideInDown_0.4s_ease-out] transition-all ${movie.isWatchPartyPaid ? 'bg-gradient-to-r from-red-600 via-amber-600 to-indigo-900' : 'bg-gradient-to-r from-red-600 via-pink-600 to-indigo-900'}`}
+            className={`fixed top-0 left-0 right-0 z-50 p-3 flex items-center justify-between gap-2 md:gap-4 shadow-2xl h-12 border-b border-white/10 animate-[slideInDown_0.4s_ease-out] transition-all ${movie.isWatchPartyPaid ? 'bg-gradient-to-r from-red-600 via-amber-600 to-indigo-900' : 'bg-gradient-to-r from-red-600 via-pink-600 to-indigo-900'}`}
             style={{ top: topOffset }}
         >
-            <div className="flex items-center gap-4 ml-2 md:ml-8">
-                <span className="relative flex h-3 w-3">
+            <div className="flex items-center gap-2 md:gap-4 ml-1 md:ml-8">
+                <span className="relative flex h-2.5 w-2.5">
                     <span className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75`}></span>
-                    <span className={`relative inline-flex rounded-full h-3 w-3 bg-white ${isLive ? 'shadow-[0_0_10px_white]' : ''}`}></span>
+                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 bg-white ${isLive ? 'shadow-[0_0_10px_white]' : ''}`}></span>
                 </span>
-                <span className="font-black text-[10px] uppercase tracking-[0.3em] whitespace-nowrap">
-                    {movie.isWatchPartyPaid ? 'PAID TICKETED EVENT' : (isLive ? 'Live Event Active' : 'Uplink Imminent')}
+                <span className="font-black text-[9px] md:text-[10px] uppercase tracking-widest md:tracking-[0.3em] whitespace-nowrap">
+                    {movie.isWatchPartyPaid ? 'TICKETED' : (isLive ? 'LIVE' : 'UPCOMING')}
                 </span>
             </div>
             
-            <div className="flex-grow text-center overflow-hidden flex items-center justify-center gap-4">
-                <p className="text-xs font-black truncate uppercase tracking-tight hidden sm:block">
+            <div className="flex-grow text-center overflow-hidden flex items-center justify-center gap-2 md:gap-4">
+                <p className="text-[10px] md:text-xs font-black truncate uppercase tracking-tight hidden sm:block">
                     {movie.title}
                 </p>
-                {isPreShow && (
-                    <div className="bg-black/40 px-3 py-0.5 rounded-full border border-white/10 flex items-center gap-2">
-                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Commencing In</span>
-                        <Countdown targetDate={movie.watchPartyStartTime!} className="text-[10px] font-mono font-black text-white" prefix="" />
+                {isPreShow ? (
+                    <div className="bg-black/40 px-2 md:px-3 py-0.5 rounded-full border border-white/10 flex items-center gap-2">
+                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest hidden md:block">Commencing In</span>
+                        <Countdown targetDate={movie.watchPartyStartTime!} className="text-[9px] md:text-[10px] font-mono font-black text-white" prefix="" />
+                    </div>
+                ) : isLive && (
+                    <div className="bg-white/10 px-2 md:px-3 py-0.5 rounded-full border border-white/20">
+                        <span className="text-[8px] font-black text-white uppercase tracking-widest animate-pulse">Synced</span>
                     </div>
                 )}
             </div>
 
-            <div className="flex items-center gap-2 mr-2 md:mr-8">
+            <div className="flex items-center gap-2 mr-1 md:mr-8">
                 <button 
                     onClick={handleNavigate}
-                    className="bg-white text-black font-black px-5 py-1 rounded-full text-[10px] uppercase tracking-tighter hover:bg-gray-200 transition-all flex-shrink-0"
+                    className="bg-white text-black font-black px-3 md:px-5 py-1 rounded-full text-[9px] md:text-[10px] uppercase tracking-tighter hover:bg-gray-200 transition-all flex-shrink-0"
                 >
-                    {isLive ? (hasAccess ? 'Enter Room' : 'Unlock Ticket') : 'Pre-Show Lobby'}
+                    {isLive ? 'Enter' : 'Lobby'}
                 </button>
-                <button onClick={onClose} className="text-white/40 hover:text-white transition-colors text-2xl leading-none ml-2" aria-label="Dismiss banner">
+                <button onClick={onClose} className="text-white/40 hover:text-white transition-colors text-xl leading-none ml-1" aria-label="Dismiss banner">
                     &times;
                 </button>
             </div>

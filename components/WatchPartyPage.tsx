@@ -72,68 +72,91 @@ const PreShowLobby: React.FC<{
     allMovies: Movie[]; 
     startTime: string;
 }> = ({ movie, block, allMovies, startTime }) => {
-    const [currentTrailerIdx, setCurrentTrailerIdx] = useState(0);
+    const [cycleIndex, setCycleIndex] = useState(0);
 
-    const promotionMovies = useMemo(() => {
+    // Filter catalog for cycling background (exclude the main attraction)
+    const catalogCycle = useMemo(() => {
         return allMovies
-            .filter(m => m.trailer && (!movie || m.key !== movie.key))
+            .filter(m => m.poster && m.title && (!movie || m.key !== movie.key))
             .sort(() => Math.random() - 0.5);
     }, [allMovies, movie]);
 
     useEffect(() => {
-        if (promotionMovies.length > 0) {
+        if (catalogCycle.length > 0) {
             const interval = setInterval(() => {
-                setCurrentTrailerIdx(prev => (prev + 1) % promotionMovies.length);
-            }, 20000);
+                setCycleIndex(prev => (prev + 1) % catalogCycle.length);
+            }, 12000); // Cycle every 12 seconds
             return () => clearInterval(interval);
         }
-    }, [promotionMovies]);
+    }, [catalogCycle]);
 
-    const title = block ? block.title : (movie ? movie.title : 'Loading Session...');
-    const backdrop = movie?.poster || 'https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg';
+    const targetTitle = block ? block.title : (movie ? movie.title : 'Loading Session...');
+    const currentCycleFilm = catalogCycle[cycleIndex];
 
     return (
         <div className="absolute inset-0 z-[60] bg-black flex flex-col items-center justify-center overflow-hidden animate-[fadeIn_0.5s_ease-out]">
-            <div className="absolute inset-0 opacity-40">
-                {promotionMovies.length > 0 ? (
-                    <video 
-                        key={promotionMovies[currentTrailerIdx].key}
-                        src={promotionMovies[currentTrailerIdx].trailer}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        className="w-full h-full object-cover blur-sm"
-                    />
-                ) : (
-                    <img src={backdrop} className="w-full h-full object-cover blur-2xl" alt="" />
+            {/* AMBIENT BACKGROUND CYCLE */}
+            <div className="absolute inset-0 transition-all duration-1000 ease-in-out">
+                {currentCycleFilm && (
+                    <div key={currentCycleFilm.key} className="absolute inset-0 animate-[fadeIn_1.5s_ease-out]">
+                         <img 
+                            src={currentCycleFilm.poster} 
+                            className="w-full h-full object-cover blur-[80px] opacity-40 scale-110" 
+                            alt="" 
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black"></div>
+                        
+                        {/* THEATER HIGHLIGHT CARD */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl px-8 flex flex-col md:flex-row items-center gap-12 pointer-events-none opacity-60 group">
+                             <div className="w-48 md:w-64 aspect-[2/3] rounded-3xl overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.8)] border border-white/10 flex-shrink-0 transition-transform duration-700">
+                                <img src={currentCycleFilm.poster} className="w-full h-full object-cover" alt="" />
+                             </div>
+                             <div className="text-center md:text-left space-y-6 max-w-xl">
+                                <div className="space-y-2">
+                                    <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px]">Crate Collection Spotlight</p>
+                                    <h3 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter italic leading-tight">
+                                        {currentCycleFilm.title}
+                                    </h3>
+                                </div>
+                                <p className="text-gray-400 text-lg md:text-xl font-medium leading-relaxed italic line-clamp-3">
+                                    "{currentCycleFilm.synopsis.replace(/<[^>]+>/g, '')}"
+                                </p>
+                             </div>
+                        </div>
+                    </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60"></div>
             </div>
 
-            <div className="relative z-10 text-center space-y-12 max-w-4xl px-8">
-                <div className="space-y-4">
-                    <div className="inline-flex items-center gap-3 bg-red-600/10 border border-red-500/20 px-6 py-2 rounded-full shadow-2xl mb-6">
+            {/* PERSISTENT MAIN ATTRACTION OVERLAY */}
+            <div className="relative z-50 w-full h-full flex flex-col items-center justify-between py-20 px-8">
+                {/* ANCHORED WELCOME HEADER */}
+                <div className="text-center space-y-4 animate-[slideInDown_1s_ease-out]">
+                    <div className="inline-flex items-center gap-3 bg-red-600/10 border border-red-500/20 px-6 py-2 rounded-full shadow-2xl mb-4">
                         <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
-                        <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px]">Pre-Show Lobby // Global Sync Active</p>
+                        <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px]">Live Session Queue // Secure Node</p>
                     </div>
-                    
                     <div className="space-y-2">
-                        <p className="text-gray-500 font-black uppercase tracking-[0.5em] text-xs">Uplink Imminent</p>
-                        <h2 className="text-5xl md:text-[6rem] font-black uppercase tracking-tighter italic leading-none text-white drop-shadow-[0_10px_30px_rgba(0,0,0,1)]">
-                            {title}
+                        <p className="text-gray-500 font-black uppercase tracking-[0.8em] text-[10px]">Transmission Welcomes You To</p>
+                        <h2 className="text-5xl md:text-[5rem] font-black uppercase tracking-tighter italic leading-none text-white drop-shadow-[0_10px_50px_rgba(0,0,0,1)]">
+                            {targetTitle}
                         </h2>
                     </div>
                 </div>
 
-                <div className="bg-black/60 backdrop-blur-xl px-12 py-8 rounded-[3rem] border border-white/10 inline-flex flex-col items-center gap-6 shadow-2xl">
-                    <div className="flex items-center gap-6">
-                        <p className="text-sm font-black text-gray-500 uppercase tracking-[0.3em]">Session Starts In</p>
-                        <div className="w-px h-6 bg-white/10"></div>
-                        <Countdown targetDate={startTime} className="text-4xl md:text-6xl font-black text-white font-mono tracking-tighter" prefix="" />
-                    </div>
+                {/* HEARTBEAT COUNTDOWN */}
+                <div className="bg-black/60 backdrop-blur-3xl px-16 py-12 rounded-[4rem] border border-white/10 flex flex-col items-center gap-6 shadow-[0_50px_100px_rgba(0,0,0,0.8)] animate-[fadeIn_1.5s_ease-out]">
+                    <p className="text-sm font-black text-gray-400 uppercase tracking-[0.5em]">Synchronizing Uplink In</p>
+                    <div className="h-px w-32 bg-white/10"></div>
+                    <Countdown targetDate={startTime} className="text-6xl md:text-[7rem] font-black text-white font-mono tracking-tighter drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]" prefix="" />
+                </div>
+
+                <div className="text-center space-y-2 opacity-40">
+                     <p className="text-[10px] text-gray-500 uppercase font-black tracking-[1em] animate-pulse">Ambient Audio Transmitting</p>
+                     <p className="text-[8px] text-gray-700 font-bold uppercase tracking-[0.4em]">Crate TV Infrastructure V4.2</p>
                 </div>
             </div>
+
+            {/* Ambient Royalty-Free Loop */}
             <audio src="https://cratetelevision.s3.us-east-1.amazonaws.com/ambient-lobby-loop.mp3" loop autoPlay />
         </div>
     );
@@ -180,7 +203,7 @@ const EmbeddedChat: React.FC<{
                     userName: user.name || user.email, 
                     userAvatar: user.avatar || 'fox', 
                     text: newMessage,
-                    isVerifiedDirector: isBackstageDirector // Carry verification status
+                    isVerifiedDirector: isBackstageDirector 
                 }),
             });
             setNewMessage('');
@@ -237,15 +260,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [activeMovieKey, setActiveMovieKey] = useState<string | null>(null);
     const [showPaywall, setShowPaywall] = useState(false);
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
-    
-    // BACKSTAGE AUTH STATE
     const [isBackstageDirector, setIsBackstageDirector] = useState(false);
     const [showBackstageModal, setShowBackstageModal] = useState(false);
     const [backstageCode, setBackstageCode] = useState('');
-    
-    // Auto-sync handshake state
     const [showUnmutePrompt, setShowUnmutePrompt] = useState(false);
-    
+    const [isVideoActive, setIsVideoActive] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     const context = useMemo(() => {
@@ -258,7 +277,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [movieKey, allMovies, festivalData]);
 
     const hasAccess = useMemo(() => {
-        if (isBackstageDirector) return true; // BYPASS FOR DIRECTORS
+        if (isBackstageDirector) return true;
         if (context?.type === 'movie') {
             if (!context.movie.isWatchPartyPaid) return true;
             return unlockedWatchPartyKeys.has(movieKey);
@@ -316,9 +335,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     useEffect(() => {
         if (!hasAccess || !partyState?.actualStartTime || partyState.status !== 'live') return;
         
+        // Disable sync logic for Live Streams (Restream handles its own sync)
+        if (context?.type === 'movie' && context.movie.isLiveStream) {
+            setIsVideoActive(true);
+            return;
+        }
+
         const syncClock = setInterval(() => {
             const video = videoRef.current;
-            if (!video) return;
+            if (!video || video.readyState < 2) return; // Wait for metadata/frame data
 
             const serverStart = partyState.actualStartTime.toDate ? partyState.actualStartTime.toDate().getTime() : new Date(partyState.actualStartTime).getTime();
             const elapsedTotalSeconds = (Date.now() - serverStart) / 1000;
@@ -326,11 +351,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             if (elapsedTotalSeconds < 0) return; 
 
             const applyGlobalSync = (targetTime: number) => {
-                if (Math.abs(video.currentTime - targetTime) > 1.5) {
+                // Only seek if divergence is greater than 1.5s to avoid jitter
+                if (Math.abs(video.currentTime - targetTime) > 1.5 && !video.seeking) {
                     video.currentTime = targetTime;
                 }
                 
-                if (video.paused) {
+                if (video.paused && !video.seeking) {
                     video.play().catch((error) => {
                         if (error.name === 'NotAllowedError' && !video.muted) {
                             video.muted = true;
@@ -354,7 +380,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     
                     if (elapsedTotalSeconds >= accumulatedTime && elapsedTotalSeconds < accumulatedTime + duration) {
                         const movieElapsed = elapsedTotalSeconds - accumulatedTime;
-                        if (activeMovieKey !== key) setActiveMovieKey(key);
+                        if (activeMovieKey !== key) {
+                            setActiveMovieKey(key);
+                            setIsVideoActive(false); // Reset visual state for new film in block
+                        }
                         applyGlobalSync(movieElapsed);
                         break;
                     }
@@ -390,10 +419,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     const startTimeStr = context.type === 'movie' ? context.movie.watchPartyStartTime : context.block.watchPartyStartTime;
     const isLive = partyState?.status === 'live';
-    const isWaiting = startTimeStr && new Date() < new Date(startTimeStr) && !isLive;
-    const isFinished = partyState?.status === 'ended';
+    // isWaiting now checks if the video is actually moving to prevent early lobby dismissal
+    const isWaiting = (startTimeStr && !isLive && !isFestivalLoading) || (isLive && !isVideoActive);
 
-    // CINEMATIC PAYWALL UI
     if (!hasAccess) {
         const poster = context.type === 'movie' ? context.movie.poster : '';
         const price = context.type === 'movie' ? context.movie.watchPartyPrice : 10.00;
@@ -405,7 +433,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60"></div>
                 </div>
                 
-                <div className="relative z-10 max-w-lg space-y-12 animate-[fadeIn_0.8s_ease-out]">
+                <div className="relative z-10 max-lg space-y-12 animate-[fadeIn_0.8s_ease-out]">
                     <div className="space-y-4">
                         <div className="inline-flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-2 rounded-full shadow-2xl mb-4">
                             <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse shadow-[0_0_10px_red]"></span>
@@ -416,10 +444,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
 
                     <div className="flex flex-col items-center gap-6">
-                        <button 
-                            onClick={() => setShowPaywall(true)} 
-                            className="bg-white text-black font-black py-6 px-16 rounded-[2rem] uppercase tracking-tighter text-xl md:text-2xl shadow-[0_30px_60px_rgba(255,255,255,0.1)] hover:scale-105 active:scale-95 transition-all"
-                        >
+                        <button onClick={() => setShowPaywall(true)} className="bg-white text-black font-black py-6 px-16 rounded-[2rem] uppercase tracking-tighter text-xl md:text-2xl shadow-[0_30px_60px_rgba(255,255,255,0.1)] hover:scale-105 active:scale-95 transition-all">
                             Authorize Entry // ${price?.toFixed(2)}
                         </button>
                         <div className="flex items-center gap-6">
@@ -465,6 +490,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         );
     }
 
+    const isLiveStream = context.type === 'movie' && context.movie.isLiveStream;
+
     return (
         <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden" onClick={() => { if(showUnmutePrompt) handleManualUnmute(); }}>
             <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full min-h-0">
@@ -472,7 +499,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     <div className="flex-none bg-black/90 p-3 flex items-center justify-between border-b border-white/5">
                         <button onClick={handleGoHome} className="text-gray-400 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
                         <div className="text-center">
-                            <p className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none">LIVE SESSION</p>
+                            <p className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none">{isLiveStream ? 'LIVE BROADCAST' : 'LIVE SESSION'}</p>
                             <h2 className="text-xs font-bold truncate text-gray-200">{context.type === 'movie' ? context.movie.title : context.block.title}</h2>
                         </div>
                         <div className="w-10"></div>
@@ -498,7 +525,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                              <PreShowLobby movie={context.type === 'movie' ? context.movie : undefined} block={context.type === 'block' ? context.block : undefined} allMovies={Object.values(allMovies)} startTime={startTimeStr!} />
                         )}
 
-                        {isFinished && (
+                        {partyState?.status === 'ended' && (
                             <div className="absolute inset-0 z-[110] bg-black flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.5s_ease-out]">
                                 <div className="space-y-6 max-w-xl">
                                     <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none text-white">Transmission Complete.</h2>
@@ -514,8 +541,21 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         )}
 
                         <div className="flex-grow flex items-center justify-center">
-                            {activeMovieKey ? (
-                                <video ref={videoRef} src={allMovies[activeMovieKey]?.fullMovie} className="w-full h-full object-contain" playsInline autoPlay />
+                            {isLiveStream ? (
+                                <div 
+                                    className="w-full h-full p-4 md:p-8 flex items-center justify-center bg-black"
+                                    dangerouslySetInnerHTML={{ __html: context.movie.liveStreamEmbed || '' }}
+                                />
+                            ) : activeMovieKey ? (
+                                <video 
+                                    ref={videoRef} 
+                                    src={allMovies[activeMovieKey]?.fullMovie} 
+                                    className="w-full h-full object-contain" 
+                                    playsInline 
+                                    autoPlay 
+                                    muted 
+                                    onPlaying={() => setIsVideoActive(true)}
+                                />
                             ) : !isWaiting && (
                                 <div className="text-center space-y-4 opacity-30">
                                     <p className="text-xs font-black uppercase tracking-[1em] mr-[-1em]">Establishing Uplink...</p>
