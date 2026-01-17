@@ -47,12 +47,15 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
                 const guests = guestVerdicts[film.id] || [];
                 
                 const adminAvg = admin ? (Number(admin.direction || 0) + Number(admin.performance || 0) + Number(admin.cinematography || 0) + Number(admin.writing || 0)) / 4 : 0;
-                const guestAvg = guests.length > 0 ? (guests.reduce((a, b) => a + (Number(b.narrative) + Number(b.technique) + Number(b.impact)) / 3, 0) / guests.length) : 0;
+                
+                // Robust guest average calculation
+                const guestAvg = guests.length > 0 
+                    ? (guests.reduce((sum, g) => sum + (Number(g.narrative) + Number(g.technique) + Number(g.impact)) / 3, 0) / guests.length) 
+                    : 0;
                 
                 const combinedScore = (adminAvg * 0.6) + (guestAvg * 0.4);
                 const velocity = (guests.length * 2.5) + (combinedScore * 1.5);
                 
-                // Prediction: Should this film move to The Vault?
                 const yieldPotential = velocity > 25 ? 'HIGH' : velocity > 15 ? 'MODERATE' : 'STABLE';
 
                 return {
@@ -82,7 +85,7 @@ const AcademyIntelTab: React.FC<AcademyIntelTabProps> = ({ pipeline, movies }) =
                 <div className="flex gap-4">
                     <div className="bg-black/40 p-6 rounded-3xl border border-white/5 text-center min-w-[140px]">
                         <p className="text-[8px] font-black text-gray-500 uppercase mb-1">Active Ballots</p>
-                        <p className="text-3xl font-black text-white">{(Object.values(guestVerdicts) as JuryVerdict[][]).reduce((a, b) => a + b.length, 0)}</p>
+                        <p className="text-3xl font-black text-white">{(Object.values(guestVerdicts) as JuryVerdict[][]).reduce((sum, list) => sum + list.length, 0)}</p>
                     </div>
                 </div>
             </div>

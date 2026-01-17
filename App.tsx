@@ -139,7 +139,7 @@ const App: React.FC = () => {
             .filter((m: Movie) => !!m && m.isForSale === true && isMovieReleased(m) && !m.isUnlisted);
     }, [movies]);
 
-    // NEW: Expanded logic to find the active OR upcoming party movie
+    // NEW: Expanded logic to find the active OR upcoming party movie within a 7-day window
     const livePartyMovie = useMemo(() => {
         const now = new Date();
         const movieArray = Object.values(movies) as Movie[];
@@ -157,6 +157,7 @@ const App: React.FC = () => {
             .filter(m => {
                 const start = new Date(m.watchPartyStartTime!);
                 const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+                // Allow a 4-hour window past start time to catch events that just finished but are still "relevant"
                 const fourHoursAgo = 4 * 60 * 60 * 1000;
                 return start.getTime() > (now.getTime() - fourHoursAgo) && 
                        start.getTime() < (now.getTime() + sevenDaysInMs);
@@ -229,7 +230,6 @@ const App: React.FC = () => {
     const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
     
     const handlePlayMovie = (movie: Movie) => {
-        // Enforce synchronization: Only navigate to the watch party if the session is currently LIVE.
         const partyState = activeParties[movie.key];
         const isActuallyLive = !!partyState && partyState.status === 'live';
 
@@ -237,8 +237,6 @@ const App: React.FC = () => {
             window.history.pushState({}, '', `/watchparty/${movie.key}`);
             window.dispatchEvent(new Event('pushstate'));
         } else {
-            // If it's a watch party but not live yet, just open the poster details
-            // instead of letting them enter the room early.
             if (movie.isWatchPartyEnabled && !isActuallyLive) {
                 setDetailsMovie(movie);
             } else {
@@ -267,6 +265,7 @@ const App: React.FC = () => {
     if (isLoading) return <LoadingSpinner />;
     if (settings.maintenanceMode) return <MaintenanceScreen />;
 
+    // Sync header offset with current active banner
     const headerTop = activeBannerType !== 'NONE' ? '3rem' : '0px';
 
     return (
@@ -275,11 +274,7 @@ const App: React.FC = () => {
             <SmartInstallPrompt />
             
             {activeBannerType === 'WATCH_PARTY' && (
-                <LiveWatchPartyBanner movie={livePartyMovie!} onClose={() => {
-                    // Logic to temporarily hide this specific movie's banner locally if needed
-                    const bannerSpace = document.querySelector('main');
-                    if (bannerSpace) bannerSpace.style.paddingTop = '0px';
-                }} />
+                <LiveWatchPartyBanner movie={livePartyMovie!} onClose={() => setIsFestivalBannerDismissed(true)} />
             )}
             {activeBannerType === 'CRATE_FEST' && settings.crateFestConfig && <CrateFestBanner config={settings.crateFestConfig} hasPass={hasCrateFestPass} />}
             {activeBannerType === 'GENERAL_FESTIVAL' && <FestivalActiveBanner onClose={() => setIsFestivalBannerDismissed(true)} />}
@@ -332,13 +327,8 @@ const App: React.FC = () => {
                             
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as any;
-                                const titleLower = (typedCategory.title || '').toLowerCase();
-                                
-                                // ALREADY RENDERED OR FEATURED CATEGORIES
-                                // 'The Square' and 'Vintage Visions' are handled via the separate Square page now
                                 if (['featured', 'nowStreaming', 'publicAccess', 'publicDomainIndie'].includes(key)) return null;
-                                
-                                if ((key === 'cratemas' || titleLower === 'cratemas') && !settings.isHolidayModeActive) return null;
+                                if ((key === 'cratemas' || (typedCategory.title || '').toLowerCase() === 'cratemas') && !settings.isHolidayModeActive) return null;
                                 const categoryMovies = typedCategory.movieKeys.map((movieKey: string) => movies[movieKey]).filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m));
                                 if (categoryMovies.length === 0) return null;
                                 

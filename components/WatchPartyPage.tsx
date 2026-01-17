@@ -402,13 +402,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
 
                     <div className="flex flex-col items-center gap-6">
-                        <button onClick={() => setShowPaywall(true)} className="bg-white text-black font-black py-6 px-16 rounded-[2rem] uppercase tracking-tighter text-xl md:text-2xl shadow-[0_30px_60px_rgba(255,255,255,0.1)] hover:scale-105 active:scale-95 transition-all">
+                        <button onClick={() => setShowPaywall(true)} className="bg-white text-black font-black px-12 py-6 rounded-[2rem] uppercase tracking-tighter text-xl md:text-2xl shadow-[0_30px_60px_rgba(255,255,255,0.1)] hover:scale-105 active:scale-95 transition-all">
                             Authorize Entry // ${price?.toFixed(2)}
                         </button>
                         <div className="flex items-center gap-6">
                             <button onClick={() => setShowBackstageModal(true)} className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500 hover:text-white transition-colors">Director Entry</button>
                             <div className="w-px h-3 bg-white/10"></div>
-                            <button onClick={handleGoHome} className="text-gray-600 font-black uppercase tracking-[0.4em] text-[10px] hover:text-white transition-colors">Return to Library</button>
+                            <button handleGoHome={handleGoHome} className="text-gray-600 font-black uppercase tracking-[0.4em] text-[10px] hover:text-white transition-colors">Return to Library</button>
                         </div>
                     </div>
                 </div>
@@ -489,9 +489,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         )}
 
                         {partyState?.status === 'ended' && (
-                            <div className="absolute inset-0 z-[110] bg-black flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.5s_ease-out]">
-                                <div className="space-y-6 max-w-xl">
-                                    <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none text-white">Transmission Complete.</h2>
+                            <div className="absolute inset-0 z-[110] bg-black flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.5s_ease-out] pt-20">
+                                <div className="space-y-12 max-w-xl">
+                                    <h2 className="text-5xl md:text-[5.5rem] font-black uppercase tracking-tighter italic leading-[0.85] text-white">Transmission Complete.</h2>
                                     <p className="text-lg md:text-xl text-gray-400 font-medium leading-relaxed">
                                         Thank you for joining the Crate community. Your attendance directly fuels the next generation of independent filmmakers.
                                     </p>

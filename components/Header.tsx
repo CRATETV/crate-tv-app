@@ -79,7 +79,7 @@ const Header: React.FC<HeaderProps> = ({
         : nowStreamingMovie ? `/movie/${nowStreamingMovie.key}?play=true` : '/';
 
     return (
-        <header className={headerClasses} style={{ top: topOffset }}>
+        <header className={headerClasses} style={{ top: topOffset, paddingTop: 'calc(var(--sat, 0px) + 0.5rem)' }}>
             <div className="max-w-[1800px] mx-auto px-4 md:px-12 flex items-center justify-between">
                 <div className="flex items-center gap-10">
                     <div className="flex items-center gap-4">
@@ -88,7 +88,7 @@ const Header: React.FC<HeaderProps> = ({
                                 onClick={(e) => handleNavigate(e, spotlightPath)}
                                 className={`group flex items-center gap-3 ${isLiveSpotlight ? 'bg-red-600' : 'bg-red-600/10 border border-red-600/20'} hover:bg-red-600 transition-all px-4 py-2 rounded-xl shadow-lg`}
                             >
-                                <div className="flex items-center gap.1.5">
+                                <div className="flex items-center gap-1.5">
                                     <span className="relative flex h-2 w-2">
                                         <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isLiveSpotlight ? 'bg-white' : 'bg-red-400'} opacity-75`}></span>
                                         <span className={`relative inline-flex rounded-full h-2 w-2 ${isLiveSpotlight ? 'bg-white' : 'bg-red-600'}`}></span>

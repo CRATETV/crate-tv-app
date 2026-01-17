@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { MoviePipelineEntry, JuryVerdict } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
+import firebase from 'firebase/compat/app';
 
 interface JuryRoomTabProps {
     pipeline: MoviePipelineEntry[];
@@ -74,7 +76,7 @@ const JuryRoomTab: React.FC<JuryRoomTabProps> = ({ pipeline }) => {
 
         const unsubCommunity = db.collection('guest_judging').onSnapshot(snapshot => {
             const votes: Record<string, JuryVerdict[]> = {};
-            snapshot.forEach(doc => {
+            snapshot.forEach((doc: firebase.firestore.QueryDocumentSnapshot) => {
                 const data = doc.data() as JuryVerdict & { filmId: string };
                 if (!votes[data.filmId]) votes[data.filmId] = [];
                 votes[data.filmId].push(data);
@@ -100,7 +102,6 @@ const JuryRoomTab: React.FC<JuryRoomTabProps> = ({ pipeline }) => {
         }
     }, [selectedFilm, existingVotes]);
 
-    // Define handleSelectFilm to fix the 'Cannot find name handleSelectFilm' error
     const handleSelectFilm = (film: MoviePipelineEntry) => {
         setSelectedFilm(film);
     };
@@ -161,27 +162,20 @@ const JuryRoomTab: React.FC<JuryRoomTabProps> = ({ pipeline }) => {
                                 <video src={selectedFilm.movieUrl} controls className="w-full h-full" controlsList="nodownload" />
                             </div>
                             
-                            {/* Community Intel Section */}
                             <div className="bg-emerald-900/10 border border-emerald-500/20 p-8 rounded-3xl space-y-6">
                                 <h3 className="text-sm font-black uppercase tracking-widest text-emerald-500">Guest Jury Intelligence</h3>
-                                {communityVotes[selectedFilm.id] ? (
+                                {communityVotes[selectedFilm.id] && communityVotes[selectedFilm.id].length > 0 ? (
                                     <div className="grid grid-cols-3 gap-4">
                                         <div className="text-center bg-black/40 p-4 rounded-xl">
                                             <p className="text-[8px] font-black text-emerald-800 uppercase">Avg Narrative</p>
-                                            {/* Fix: Simplified average calculation and made it safer with length check */}
                                             <p className="text-2xl font-black text-white">
-                                                {communityVotes[selectedFilm.id].length > 0 
-                                                    ? (communityVotes[selectedFilm.id].reduce((a,b) => a + b.narrative, 0) / communityVotes[selectedFilm.id].length).toFixed(1) 
-                                                    : '---'}
+                                                {(communityVotes[selectedFilm.id].reduce((sum, v) => sum + Number(v.narrative), 0) / communityVotes[selectedFilm.id].length).toFixed(1)}
                                             </p>
                                         </div>
                                         <div className="text-center bg-black/40 p-4 rounded-xl">
                                             <p className="text-[8px] font-black text-emerald-800 uppercase">Avg Tech</p>
-                                            {/* Fix: Corrected logic to check array length before calculating average, and removed invalid '.length' on number type (line 175) */}
                                             <p className="text-2xl font-black text-white">
-                                                {communityVotes[selectedFilm.id].length > 0 
-                                                    ? (communityVotes[selectedFilm.id].reduce((a,b) => a + b.technique, 0) / communityVotes[selectedFilm.id].length).toFixed(1) 
-                                                    : '---'}
+                                                {(communityVotes[selectedFilm.id].reduce((sum, v) => sum + Number(v.technique), 0) / communityVotes[selectedFilm.id].length).toFixed(1)}
                                             </p>
                                         </div>
                                         <div className="text-center bg-black/40 p-4 rounded-xl">

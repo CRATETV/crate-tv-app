@@ -80,7 +80,7 @@ const TopTenShareableImage: React.FC<TopTenShareableImageProps> = ({ topFilms, d
             </div>
             
             <div className="flex-grow min-w-0 relative z-10 pr-6">
-                <h2 className="text-3xl font-black uppercase tracking-tighter italic leading-[1] mb-1 line-clamp-2">{film.title}</h2>
+                <h2 className="text-3xl font-black uppercase tracking-tighter italic leading-[1.1] mb-1 line-clamp-2">{film.title}</h2>
                 <div className="flex items-center gap-2">
                     <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse"></div>
                     <span className="text-[7px] font-black uppercase text-gray-500 tracking-[0.4em]">Streaming Now</span>
