@@ -192,7 +192,7 @@ const EmbeddedChat: React.FC<{
                 <div className="flex items-center gap-2 bg-gray-800/80 rounded-full px-4 py-1 border border-white/10">
                     <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder={isBackstageDirector ? "Speak as Director..." : "Type a message..."} className="bg-transparent border-none text-white text-sm w-full focus:ring-0 py-2.5" disabled={!user || isSending} />
                     <button type="submit" className="text-red-500 hover:text-red-400 disabled:text-gray-600 transition-colors" disabled={!user || isSending || !newMessage.trim()}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 00.17-1.408l-7-14z" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
                     </button>
                 </div>
             </form>
@@ -212,7 +212,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [showBackstageModal, setShowBackstageModal] = useState(false);
     const [backstageCode, setBackstageCode] = useState('');
     const [showUnmutePrompt, setShowUnmutePrompt] = useState(false);
-    const [isVideoActive, setIsVideoActive] = useState(false);
+    const [isVideoActuallyPlaying, setIsVideoActuallyPlaying] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     const context = useMemo(() => {
@@ -285,23 +285,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         
         // Disable sync logic for Live Streams (Restream handles its own sync)
         if (context?.type === 'movie' && context.movie.isLiveStream) {
-            setIsVideoActive(true);
+            setIsVideoActuallyPlaying(true);
             return;
         }
 
         const syncClock = setInterval(() => {
             const video = videoRef.current;
-            if (!video || video.readyState < 2) return; // Wait for metadata/frame data
+            if (!video) return;
 
             const serverStart = partyState.actualStartTime.toDate ? partyState.actualStartTime.toDate().getTime() : new Date(partyState.actualStartTime).getTime();
             const elapsedTotalSeconds = (Date.now() - serverStart) / 1000;
             
-            if (elapsedTotalSeconds < 0) return; 
+            // Allow a small window of drift
+            const targetTime = Math.max(0, elapsedTotalSeconds);
 
-            const applyGlobalSync = (targetTime: number) => {
-                // Only seek if divergence is greater than 1.5s to avoid jitter
-                if (Math.abs(video.currentTime - targetTime) > 1.5 && !video.seeking) {
-                    video.currentTime = targetTime;
+            const applyGlobalSync = (time: number) => {
+                // Ensure movie is rendered
+                if (!video.src) return;
+
+                if (Math.abs(video.currentTime - time) > 1.5 && !video.seeking) {
+                    video.currentTime = time;
                 }
                 
                 if (video.paused && !video.seeking) {
@@ -313,10 +316,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         }
                     });
                 }
+                
+                // Once we have a non-zero time, the movie has "started"
+                if (video.currentTime > 0.1 && !isVideoActuallyPlaying) {
+                    setIsVideoActuallyPlaying(true);
+                }
             };
 
             if (context?.type === 'movie') {
-                applyGlobalSync(elapsedTotalSeconds);
+                applyGlobalSync(targetTime);
                 if (activeMovieKey !== movieKey) setActiveMovieKey(movieKey);
             } 
             else if (context?.type === 'block') {
@@ -326,11 +334,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     if (!m) continue;
                     const duration = (m.durationInMinutes || 10) * 60;
                     
-                    if (elapsedTotalSeconds >= accumulatedTime && elapsedTotalSeconds < accumulatedTime + duration) {
-                        const movieElapsed = elapsedTotalSeconds - accumulatedTime;
+                    if (targetTime >= accumulatedTime && targetTime < accumulatedTime + duration) {
+                        const movieElapsed = targetTime - accumulatedTime;
                         if (activeMovieKey !== key) {
                             setActiveMovieKey(key);
-                            setIsVideoActive(false); // Reset visual state for new film in block
+                            setIsVideoActuallyPlaying(false);
                         }
                         applyGlobalSync(movieElapsed);
                         break;
@@ -340,7 +348,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             }
         }, 1000); 
         return () => clearInterval(syncClock);
-    }, [partyState, hasAccess, context, activeMovieKey, allMovies, movieKey]);
+    }, [partyState, hasAccess, context, activeMovieKey, allMovies, movieKey, isVideoActuallyPlaying]);
 
     const logSentiment = async (emoji: string) => {
         const db = getDbInstance();
@@ -367,7 +375,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     const startTimeStr = context.type === 'movie' ? context.movie.watchPartyStartTime : context.block.watchPartyStartTime;
     const isLive = partyState?.status === 'live';
-    const isWaiting = (startTimeStr && !isLive && !isFestivalLoading) || (isLive && !isVideoActive);
+    
+    // CRITICAL: Lobby stays active until status is Live AND video is confirmed to be moving
+    const isWaiting = (startTimeStr && !isLive && !isFestivalLoading) || (isLive && !isVideoActuallyPlaying);
 
     if (!hasAccess) {
         const poster = context.type === 'movie' ? context.movie.poster : '';
@@ -413,7 +423,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 type="text" 
                                 value={backstageCode} 
                                 onChange={e => setBackstageCode(e.target.value.toUpperCase())} 
-                                className="w-full bg-black/40 border border-white/10 rounded-2xl p-6 text-center text-4xl font-black tracking-[0.5em] text-white focus:border-red-600 outline-none"
+                                className="w-full bg-black/40 border border-white/10 rounded-2xl p-6 text-center text-5xl tracking-[0.5em] font-black text-white focus:border-red-600 outline-none"
                                 placeholder="------"
                                 required
                             />
@@ -501,7 +511,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     playsInline 
                                     autoPlay 
                                     muted 
-                                    onPlaying={() => setIsVideoActive(true)}
+                                    onPlaying={() => setIsVideoActuallyPlaying(true)}
                                 />
                             ) : !isWaiting && (
                                 <div className="text-center space-y-4 opacity-30">

@@ -1,5 +1,6 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request: Request) {
   try {
@@ -42,14 +43,16 @@ export async function POST(request: Request) {
 
     const partyRef = db.collection('watch_parties').doc(movieKey);
     
-    // Set canonical initial state
+    // Set canonical initial state with actualStartTime for sync
     await partyRef.set({
       status: 'live',
       lastStartedAt: new Date().toISOString(),
-      isPlaying: false,
+      actualStartTime: FieldValue.serverTimestamp(),
+      isPlaying: true,
       currentTime: 0,
       isQALive: false,
-      lastUpdated: new Date()
+      lastUpdated: FieldValue.serverTimestamp(),
+      backstageKey: Math.random().toString(36).substring(2, 8).toUpperCase()
     }, { merge: true });
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });
