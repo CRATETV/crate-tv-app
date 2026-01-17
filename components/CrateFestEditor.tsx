@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { CrateFestConfig, Movie, MoviePipelineEntry } from '../types';
 
@@ -107,6 +108,22 @@ interface CrateFestEditorProps {
     isSaving: boolean;
 }
 
+const formatISOForInput = (isoString?: string): string => {
+    if (!isoString) return '';
+    try {
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) return '';
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (e) {
+        return '';
+    }
+};
+
 const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig, allMovies, pipeline, onSave, isSaving }) => {
     const [config, setConfig] = useState<CrateFestConfig>(initialConfig);
     const [editingBlockIdx, setEditingBlockIdx] = useState<number | null>(null);
@@ -184,12 +201,12 @@ const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="form-label">Window Opens</label>
-                                <input type="datetime-local" name="startDate" value={config.startDate?.slice(0, 16)} onChange={handleChange} className="form-input bg-black/40" />
+                                <label className="form-label">Window Opens (Show Banner)</label>
+                                <input type="datetime-local" name="startDate" value={formatISOForInput(config.startDate)} onChange={handleChange} className="form-input bg-black/40" />
                             </div>
                             <div>
-                                <label className="form-label">Window Closes</label>
-                                <input type="datetime-local" name="endDate" value={config.endDate?.slice(0, 16)} onChange={handleChange} className="form-input bg-black/40" />
+                                <label className="form-label">Window Closes (Hide Banner)</label>
+                                <input type="datetime-local" name="endDate" value={formatISOForInput(config.endDate)} onChange={handleChange} className="form-input bg-black/40" />
                             </div>
                         </div>
                         <div className="p-6 bg-red-600/5 border border-red-500/10 rounded-2xl">

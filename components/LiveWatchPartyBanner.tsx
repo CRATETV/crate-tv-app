@@ -19,8 +19,15 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
     }, []);
 
     const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
-    const isLive = startTime && now >= startTime;
-    const isPreShow = startTime && now < startTime && (startTime.getTime() - now.getTime() < 60 * 60 * 1000);
+    if (!startTime) return null;
+
+    const isLive = now >= startTime;
+    const isUpcoming = now < startTime;
+    
+    // Determine the "Era" of the countdown
+    const diff = startTime.getTime() - now.getTime();
+    const isUnderOneHour = diff < 60 * 60 * 1000;
+    const isUnderOneDay = diff < 24 * 60 * 60 * 1000;
 
     const handleNavigate = (e: React.MouseEvent) => {
         if (!isLive) return;
@@ -30,8 +37,6 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
     };
 
     const topOffset = sessionStorage.getItem('crateTvStaging') === 'true' ? '32px' : '0px';
-
-    if (!isLive && !isPreShow) return null;
 
     return (
         <div 
@@ -52,15 +57,17 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
                 <p className="text-[9px] md:text-xs font-black truncate uppercase tracking-tight hidden sm:block">
                     {movie.title}
                 </p>
-                {isPreShow ? (
+                {isUpcoming ? (
                     <div className="bg-black/40 px-2 md:px-4 py-0.5 rounded-full border border-white/10 flex items-center gap-2">
-                        <span className="text-[7px] md:text-[8px] font-black text-gray-400 uppercase tracking-widest hidden md:block">Commencing In</span>
+                        <span className="text-[7px] md:text-[8px] font-black text-gray-400 uppercase tracking-widest hidden md:block">
+                            {isUnderOneHour ? 'Commencing In' : 'Starts In'}
+                        </span>
                         <Countdown targetDate={movie.watchPartyStartTime!} className="text-[8px] md:text-[11px] font-mono font-black text-white" prefix="" />
                     </div>
                 ) : isLive && (
                     <div className="bg-white/10 px-2 md:px-4 py-0.5 rounded-full border border-white/20 flex items-center gap-2">
                         <span className="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                        <span className="text-[8px] md:text-[10px] font-black text-white uppercase tracking-widest">Live Now</span>
+                        <span className="text-[8px] md:text-[10px] font-black text-white uppercase tracking-widest">Live Session Node</span>
                     </div>
                 )}
             </div>

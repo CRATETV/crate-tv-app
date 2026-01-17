@@ -209,7 +209,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isBackstageDirector, setIsBackstageDirector] = useState(false);
     const [showBackstageModal, setShowBackstageModal] = useState(false);
     const [backstageCode, setBackstageCode] = useState('');
-    const [showUnmutePrompt, setShowUnmutePrompt] = useState(false);
+    const [isHardwareMuted, setIsHardwareMuted] = useState(false);
     const [isVideoActuallyPlaying, setIsVideoActuallyPlaying] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -278,12 +278,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         }
     };
 
-    const handleManualUnmute = (e?: React.MouseEvent) => {
+    const handleManualSyncHandshake = (e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
         if (videoRef.current) {
             videoRef.current.muted = false;
             videoRef.current.volume = 1.0;
-            setShowUnmutePrompt(false);
+            setIsHardwareMuted(false);
             videoRef.current.play().catch(() => {});
         }
     };
@@ -293,7 +293,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         
         const video = videoRef.current;
         if (video && video.muted) {
-            setShowUnmutePrompt(true);
+            setIsHardwareMuted(true);
         }
 
         const syncClock = setInterval(() => {
@@ -314,7 +314,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     video.play().catch((error) => {
                         if (error.name === 'NotAllowedError') {
                             video.muted = true;
-                            setShowUnmutePrompt(true);
+                            setIsHardwareMuted(true);
                             video.play();
                         }
                     });
@@ -325,7 +325,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 }
                 
                 if (video.muted && !isWaiting) {
-                    setShowUnmutePrompt(true);
+                    setIsHardwareMuted(true);
                 }
             };
 
@@ -451,7 +451,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const isLiveStream = context.type === 'movie' && context.movie.isLiveStream;
 
     return (
-        <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden" onClick={() => { if(showUnmutePrompt) handleManualUnmute(); }}>
+        <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden" onClick={() => { if(isHardwareMuted) handleManualSyncHandshake(); }}>
             <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full min-h-0">
                 <div className="flex-grow flex flex-col relative h-full min-h-0">
                     <div className="flex-none bg-black/90 p-3 flex items-center justify-between border-b border-white/5">
@@ -475,15 +475,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             ))}
                         </div>
 
-                        {showUnmutePrompt && (
-                            <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-[fadeIn_0.5s_ease-out]">
-                                <button 
-                                    onClick={handleManualUnmute}
-                                    className="bg-red-600 text-white font-black px-10 py-5 rounded-[2rem] flex items-center gap-4 shadow-[0_0_80px_rgba(239,68,68,0.5)] uppercase tracking-widest text-lg transform hover:scale-110 transition-transform border-4 border-white/20 animate-bounce"
-                                >
-                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M12 5l-4 4H5v6h3l4 4V5z" /></svg>
-                                    Enable Session Audio
-                                </button>
+                        {isHardwareMuted && (
+                            <div className="absolute top-4 left-4 z-[200] animate-[fadeIn_0.5s_ease-out] pointer-events-none">
+                                <div className="bg-red-600/20 backdrop-blur-xl border border-red-500/40 px-4 py-1.5 rounded-full flex items-center gap-3">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-white">Audio Muted // Tap Screen to Sync</p>
+                                </div>
                             </div>
                         )}
 

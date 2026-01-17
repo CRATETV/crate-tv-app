@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Movie, FestivalDay, FestivalConfig, FilmBlock } from '../types';
 
@@ -171,14 +172,35 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
     <div className="bg-gray-950 p-6 rounded-lg text-gray-200">
       <h2 className="text-xl sm:text-2xl font-bold mb-4 text-purple-400">Film Festival Editor</h2>
       
-      <div className="space-y-4 mb-6 bg-gray-900/50 p-4 rounded-lg border border-gray-700">
-          <div>
-              <label className="block text-sm font-medium text-gray-300">Festival Title</label>
-              <input type="text" name="title" value={config.title || ''} onChange={handleConfigChange} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white" />
+      <div className="space-y-4 mb-6 bg-gray-900/50 p-6 rounded-[2rem] border border-gray-700">
+          <div className="flex items-center gap-3 mb-4">
+              <span className="w-2 h-2 rounded-full bg-red-500"></span>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Global Festival Manifest</h3>
           </div>
-          <div>
-              <label className="block text-sm font-medium text-gray-300">Description</label>
-              <textarea name="description" value={config.description || ''} onChange={handleConfigChange} rows={3} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                  <label className="form-label">Festival Title</label>
+                  <input type="text" name="title" value={config.title || ''} onChange={handleConfigChange} className="form-input bg-black/40" />
+              </div>
+              <div className="flex items-center gap-4 bg-black/20 p-4 rounded-xl border border-white/5">
+                <span className="text-[10px] font-black uppercase text-gray-500">Active Status</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" name="isFestivalLive" checked={config.isFestivalLive} onChange={(e) => onConfigChange({...config, isFestivalLive: e.target.checked})} className="sr-only peer" />
+                    <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+              <div className="md:col-span-2">
+                  <label className="form-label">Mission Brief</label>
+                  <textarea name="description" value={config.description || ''} onChange={handleConfigChange} rows={3} className="form-input bg-black/40" />
+              </div>
+              <div>
+                  <label className="form-label">Uplink Visibility Start (Banner Open)</label>
+                  <input type="datetime-local" name="startDate" value={formatISOForInput(config.startDate)} onChange={handleConfigChange} className="form-input bg-black/40" />
+              </div>
+              <div>
+                  <label className="form-label">Uplink Visibility End (Banner Close)</label>
+                  <input type="datetime-local" name="endDate" value={formatISOForInput(config.endDate)} onChange={handleConfigChange} className="form-input bg-black/40" />
+              </div>
           </div>
       </div>
 
