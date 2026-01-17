@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, WatchPartyState, ChatMessage, FilmBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,7 +17,10 @@ const REACTION_TYPES = ['🔥', '😲', '❤️', '👏', '😢'] as const;
 
 const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({ emoji, onComplete }) => {
     const randomLeft = useMemo(() => Math.floor(Math.random() * 80) + 10, []); 
-    const randomDuration = useMemo(() => 3.5 + Math.random() * 1.5, []); 
+    const randomDuration = useMemo(() => {
+        const d = 3.5 + Math.random() * 1.5;
+        return d;
+    }, []); 
     const randomRotate = useMemo(() => Math.floor(Math.random() * 40) - 20, []);
 
     useEffect(() => {
@@ -408,7 +410,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         <div className="flex items-center gap-6">
                             <button onClick={() => setShowBackstageModal(true)} className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500 hover:text-white transition-colors">Director Entry</button>
                             <div className="w-px h-3 bg-white/10"></div>
-                            <button handleGoHome={handleGoHome} className="text-gray-600 font-black uppercase tracking-[0.4em] text-[10px] hover:text-white transition-colors">Return to Library</button>
+                            <button onClick={handleGoHome} className="text-gray-600 font-black uppercase tracking-[0.4em] text-[10px] hover:text-white transition-colors">Return to Library</button>
                         </div>
                     </div>
                 </div>
@@ -454,7 +456,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden" onClick={() => { if(isHardwareMuted) handleManualSyncHandshake(); }}>
             <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full min-h-0">
                 <div className="flex-grow flex flex-col relative h-full min-h-0">
-                    <div className="flex-none bg-black/90 p-3 flex items-center justify-between border-b border-white/5">
+                    <div className="flex-none bg-black/90 p-3 flex items-center justify-between border-b border-white/5 pt-[calc(0.75rem+env(safe-area-inset-top))]">
                         <button onClick={handleGoHome} className="text-gray-400 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
                         <div className="text-center">
                             <p className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none">{isLiveStream ? 'LIVE BROADCAST' : 'LIVE SESSION'}</p>
@@ -489,9 +491,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         )}
 
                         {partyState?.status === 'ended' && (
-                            <div className="absolute inset-0 z-[110] bg-black flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.5s_ease-out] pt-20">
+                            <div className="absolute inset-0 z-[110] bg-black flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.5s_ease-out] pt-[calc(2rem+env(safe-area-inset-top))]">
                                 <div className="space-y-12 max-w-xl">
-                                    <h2 className="text-5xl md:text-[5.5rem] font-black uppercase tracking-tighter italic leading-[0.85] text-white">Transmission Complete.</h2>
+                                    <h2 className="text-5xl md:text-[5.5rem] font-black uppercase tracking-tighter italic leading-[0.9] text-white">Transmission Complete.</h2>
                                     <p className="text-lg md:text-xl text-gray-400 font-medium leading-relaxed">
                                         Thank you for joining the Crate community. Your attendance directly fuels the next generation of independent filmmakers.
                                     </p>

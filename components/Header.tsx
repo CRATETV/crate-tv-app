@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
@@ -79,7 +78,7 @@ const Header: React.FC<HeaderProps> = ({
         : nowStreamingMovie ? `/movie/${nowStreamingMovie.key}?play=true` : '/';
 
     return (
-        <header className={headerClasses} style={{ top: topOffset, paddingTop: 'calc(var(--sat, 0px) + 0.5rem)' }}>
+        <header className={headerClasses} style={{ top: topOffset, paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
             <div className="max-w-[1800px] mx-auto px-4 md:px-12 flex items-center justify-between">
                 <div className="flex items-center gap-10">
                     <div className="flex items-center gap-4">
