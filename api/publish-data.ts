@@ -116,6 +116,18 @@ export async function POST(request: Request) {
             batch.set(db.collection('content').doc('settings'), data, { merge: true });
             auditDetails = `Modified global site settings (Holiday/Branding).`;
         }
+        else if (type === 'festival') {
+            const { config, data: days } = data;
+            if (config) {
+                batch.set(db.collection('festival').doc('config'), config, { merge: true });
+            }
+            if (Array.isArray(days)) {
+                days.forEach((day: any) => {
+                    batch.set(db.collection('festival').doc('schedule').collection('days').doc(`day_${day.day}`), day, { merge: false });
+                });
+            }
+            auditDetails = `Synchronized annual festival manifest and schedule days.`;
+        }
 
         // LOG AUDIT TRAIL
         const auditLogRef = db.collection('audit_logs').doc();

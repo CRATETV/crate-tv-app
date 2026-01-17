@@ -113,12 +113,10 @@ const formatISOForInput = (isoString?: string): string => {
     try {
         const date = new Date(isoString);
         if (isNaN(date.getTime())) return '';
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
+        
+        // Handle timezone offset to keep date consistent in picker
+        const tzoffset = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
     } catch (e) {
         return '';
     }
@@ -130,9 +128,20 @@ const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
+        let finalValue: any = value;
+        
+        if (type === 'checkbox') {
+            finalValue = (e.target as HTMLInputElement).checked;
+        } else if (type === 'number') {
+            finalValue = parseFloat(value);
+        } else if (type === 'datetime-local') {
+            // CRITICAL: Ensure local picker strings are converted back to UTC ISO for storage
+            finalValue = value ? new Date(value).toISOString() : '';
+        }
+        
         setConfig(prev => ({ 
             ...prev, 
-            [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : (type === 'number' ? parseFloat(value) : value)
+            [name]: finalValue
         }));
     };
 
