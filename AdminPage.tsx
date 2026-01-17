@@ -55,6 +55,7 @@ const ALL_TABS: Record<string, string> = {
 const AdminPage: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [role, setRole] = useState('viewer');
+    const [assignedJobTitle, setAssignedJobTitle] = useState('');
     const [password, setPassword] = useState('');
     const [loginName, setLoginName] = useState(''); 
     const [showPassword, setShowPassword] = useState(false);
@@ -156,6 +157,7 @@ const AdminPage: React.FC = () => {
                 sessionStorage.setItem('adminPassword', password);
                 sessionStorage.setItem('operatorName', loginName || (data.role === 'director_payout' ? data.targetDirector : 'ARCHITECT'));
                 setRole(data.role);
+                setAssignedJobTitle(data.jobTitle || '');
                 
                 if (data.role === 'director_payout') {
                     setPayoutContext({ director: data.targetDirector, role: data.role });
@@ -275,12 +277,19 @@ const AdminPage: React.FC = () => {
     return (
         <div className="min-h-screen bg-[#050505] text-white selection:bg-red-600 selection:text-white">
             <div className="max-w-[1800px] mx-auto p-4 md:p-10">
-                <div className="flex justify-between items-center mb-12 border-b border-white/5 pb-10">
-                    <div className="flex items-center gap-6">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-12 border-b border-white/5 pb-10 gap-6">
+                    <div className="flex flex-col md:flex-row items-center gap-6">
                         <h1 className="text-4xl font-black uppercase tracking-tighter italic">Studio <span className="text-red-600">Command</span></h1>
-                        <div className="bg-red-600/10 border border-red-500/20 px-3 py-1.5 rounded-xl flex items-center gap-3">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
-                            <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Active Session: {sessionStorage.getItem('operatorName')}</span>
+                        <div className="flex flex-col gap-1">
+                            <div className="bg-red-600/10 border border-red-500/20 px-3 py-1.5 rounded-xl flex items-center gap-3">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Active Session: {sessionStorage.getItem('operatorName')}</span>
+                            </div>
+                            {assignedJobTitle && (
+                                <div className="bg-indigo-600/10 border border-indigo-500/20 px-3 py-1 rounded-lg flex items-center gap-2">
+                                    <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Assigned Function: {assignedJobTitle}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                     

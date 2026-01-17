@@ -1,7 +1,6 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
-import { randomUUID } from 'crypto';
 
 export async function POST(request: Request) {
     try {
@@ -21,6 +20,7 @@ export async function POST(request: Request) {
             const accessKey = `CRATE-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
             const docRef = await db.collection('collaborator_access').add({
                 name: data.name,
+                jobTitle: data.jobTitle || 'Standard Personnel',
                 accessKey,
                 assignedTabs: [],
                 status: 'active',
@@ -36,7 +36,8 @@ export async function POST(request: Request) {
 
         if (action === 'update_perms') {
             await db.collection('collaborator_access').doc(data.id).update({
-                assignedTabs: data.assignedTabs
+                assignedTabs: data.assignedTabs,
+                jobTitle: data.jobTitle || 'Standard Personnel'
             });
             return new Response(JSON.stringify({ success: true }), { status: 200 });
         }

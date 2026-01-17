@@ -210,12 +210,23 @@ const App: React.FC = () => {
     const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
     
     const handlePlayMovie = (movie: Movie) => {
-        const path = (activeParties[movie.key] && movie.isWatchPartyEnabled)
-            ? `/watchparty/${movie.key}` 
-            : `/movie/${movie.key}?play=true`;
-        
-        window.history.pushState({}, '', path);
-        window.dispatchEvent(new Event('pushstate'));
+        // Enforce synchronization: Only navigate to the watch party if the session is currently LIVE.
+        const partyState = activeParties[movie.key];
+        const isActuallyLive = !!partyState && partyState.status === 'live';
+
+        if (movie.isWatchPartyEnabled && isActuallyLive) {
+            window.history.pushState({}, '', `/watchparty/${movie.key}`);
+            window.dispatchEvent(new Event('pushstate'));
+        } else {
+            // If it's a watch party but not live yet, just open the poster details
+            // instead of letting them enter the room early.
+            if (movie.isWatchPartyEnabled && !isActuallyLive) {
+                setDetailsMovie(movie);
+            } else {
+                window.history.pushState({}, '', `/movie/${movie.key}?play=true`);
+                window.dispatchEvent(new Event('pushstate'));
+            }
+        }
     };
 
     const handleSearchClick = () => {

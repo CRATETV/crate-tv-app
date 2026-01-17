@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
-/* Fix: Added missing import for LoadingSpinner */
 import LoadingSpinner from './LoadingSpinner';
 
 interface Collaborator {
     id: string;
     name: string;
+    jobTitle: string;
     accessKey: string;
     assignedTabs: string[];
     status: string;
@@ -23,6 +24,7 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
     const [isCollabLoading, setIsCollabLoading] = useState(true);
     const [processingRole, setProcessingRole] = useState<string | null>(null);
     const [newCollabName, setNewCollabName] = useState('');
+    const [newCollabJob, setNewCollabJob] = useState('');
     const [error, setError] = useState('');
 
     const fetchCollaborators = async () => {
@@ -73,9 +75,30 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
         await fetch('/api/manage-collaborators', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password, action: 'update_perms', data: { id: collabId, assignedTabs: nextTabs } }),
+            body: JSON.stringify({ 
+                password, 
+                action: 'update_perms', 
+                data: { id: collabId, assignedTabs: nextTabs, jobTitle: collab.jobTitle } 
+            }),
         });
         onRefresh();
+    };
+
+    const handleUpdateJobTitle = async (collabId: string, jobTitle: string) => {
+        const collab = collaborators.find(c => c.id === collabId);
+        if (!collab) return;
+        
+        const password = sessionStorage.getItem('adminPassword');
+        await fetch('/api/manage-collaborators', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                password, 
+                action: 'update_perms', 
+                data: { id: collabId, assignedTabs: collab.assignedTabs, jobTitle } 
+            }),
+        });
+        setCollaborators(prev => prev.map(c => c.id === collabId ? { ...c, jobTitle } : c));
     };
 
     const handleCreateCollab = async (e: React.FormEvent) => {
@@ -85,9 +108,10 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
         await fetch('/api/manage-collaborators', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password, action: 'create', data: { name: newCollabName } }),
+            body: JSON.stringify({ password, action: 'create', data: { name: newCollabName, jobTitle: newCollabJob } }),
         });
         setNewCollabName('');
+        setNewCollabJob('');
         fetchCollaborators();
     };
 
@@ -149,12 +173,19 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
                         <p className="text-gray-500 text-sm mt-1 uppercase font-bold tracking-widest italic">Issue and revoke unique personnel keys.</p>
                     </div>
                     
-                    <form onSubmit={handleCreateCollab} className="flex gap-2">
+                    <form onSubmit={handleCreateCollab} className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                         <input
                             type="text"
                             value={newCollabName}
                             onChange={e => setNewCollabName(e.target.value)}
                             placeholder="Personnel Name..."
+                            className="form-input !py-3 !px-6 text-xs bg-black/40 border-white/10"
+                        />
+                        <input
+                            type="text"
+                            value={newCollabJob}
+                            onChange={e => setNewCollabJob(e.target.value)}
+                            placeholder="Job Title/Function..."
                             className="form-input !py-3 !px-6 text-xs bg-black/40 border-white/10"
                         />
                         <button type="submit" className="bg-red-600 text-white font-black px-6 py-3 rounded-xl uppercase text-[10px] tracking-widest shadow-xl transition-all active:scale-95">Issue Key</button>
@@ -166,7 +197,8 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
                         <table className="w-full text-left text-xs">
                             <thead className="bg-white/5 text-gray-500 uppercase font-black">
                                 <tr>
-                                    <th className="p-5">Name / Identifier</th>
+                                    <th className="p-5">Name / Identity</th>
+                                    <th className="p-5">Job Function</th>
                                     <th className="p-5">Access Token</th>
                                     <th className="p-5">Permitted Sectors</th>
                                     <th className="p-5 text-right">Actions</th>
@@ -174,9 +206,9 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
                             </thead>
                             <tbody className="divide-y divide-white/5">
                                 {isCollabLoading ? (
-                                    <tr><td colSpan={4} className="p-10 text-center"><LoadingSpinner /></td></tr>
+                                    <tr><td colSpan={5} className="p-10 text-center"><LoadingSpinner /></td></tr>
                                 ) : collaborators.length === 0 ? (
-                                    <tr><td colSpan={4} className="p-10 text-center text-gray-600 font-black uppercase tracking-widest">No Active Personnel</td></tr>
+                                    <tr><td colSpan={5} className="p-10 text-center text-gray-600 font-black uppercase tracking-widest">No Active Personnel</td></tr>
                                 ) : collaborators.map(c => (
                                     <tr key={c.id} className="hover:bg-white/[0.01] transition-colors group">
                                         <td className="p-5">
@@ -184,6 +216,14 @@ const PermissionsManager: React.FC<PermissionsManagerProps> = ({ allTabs, initia
                                                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                                                 <span className="text-sm font-black text-white uppercase">{c.name}</span>
                                             </div>
+                                        </td>
+                                        <td className="p-5">
+                                            <input 
+                                                type="text" 
+                                                defaultValue={c.jobTitle} 
+                                                onBlur={(e) => handleUpdateJobTitle(c.id, e.target.value)}
+                                                className="bg-transparent border-b border-transparent focus:border-indigo-500 text-indigo-400 font-bold outline-none transition-all w-full max-w-[150px]"
+                                            />
                                         </td>
                                         <td className="p-5">
                                             <code className="bg-white/5 px-3 py-1.5 rounded-lg text-red-500 font-mono tracking-widest select-all">{c.accessKey}</code>

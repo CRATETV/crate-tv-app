@@ -14,6 +14,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import PauseOverlay from './PauseOverlay';
 import MovieDetailsModal from './MovieDetailsModal';
+import CastButton from './CastButton';
 
 interface MoviePageProps {
   movieKey: string;
@@ -169,6 +170,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 <div className="relative w-full h-full" onClick={toggleManualPause}>
                                     <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full object-contain block transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'}`} controls={false} playsInline autoPlay onPause={() => !isEnded && setIsPaused(true)} onPlay={() => !isEnded && setIsPaused(false)} onEnded={() => setIsEnded(true)} controlsList="nodownload" />
                                     
+                                    <CastButton videoElement={videoRef.current} />
+
                                     {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
                                     
                                     {isEnded && (

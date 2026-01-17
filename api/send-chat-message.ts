@@ -1,11 +1,10 @@
-// This is a Vercel Serverless Function
-// Path: /api/send-chat-message
+
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(request: Request) {
   try {
-    const { movieKey, userName, userAvatar, text } = await request.json();
+    const { movieKey, userName, userAvatar, text, isVerifiedDirector } = await request.json();
 
     if (!movieKey || !userName || !userAvatar || !text) {
       return new Response(JSON.stringify({ error: 'Missing required fields for chat message.' }), {
@@ -24,6 +23,7 @@ export async function POST(request: Request) {
       userName,
       userAvatar,
       text,
+      isVerifiedDirector: isVerifiedDirector === true,
       timestamp: FieldValue.serverTimestamp(),
     };
 

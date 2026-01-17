@@ -23,6 +23,7 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
     const isPreShow = startTime && now < startTime && (startTime.getTime() - now.getTime() < 60 * 60 * 1000);
 
     const handleNavigate = (e: React.MouseEvent) => {
+        if (!isLive) return;
         e.preventDefault();
         window.history.pushState({}, '', `/watchparty/${movie.key}`);
         window.dispatchEvent(new Event('pushstate'));
@@ -67,9 +68,10 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
             <div className="flex items-center gap-2 mr-1 md:mr-8">
                 <button 
                     onClick={handleNavigate}
-                    className="bg-white text-black font-black px-3 md:px-6 py-1 rounded-full text-[8px] md:text-[10px] uppercase tracking-tighter hover:bg-gray-200 transition-all flex-shrink-0"
+                    disabled={!isLive}
+                    className={`font-black px-3 md:px-6 py-1 rounded-full text-[8px] md:text-[10px] uppercase tracking-tighter transition-all flex-shrink-0 ${isLive ? 'bg-white text-black hover:bg-gray-200' : 'bg-white/10 text-white/40 cursor-not-allowed border border-white/10'}`}
                 >
-                    {isLive ? 'Join Room' : 'Enter Lobby'}
+                    {isLive ? 'Join Room' : 'Synchronizing...'}
                 </button>
                 <button onClick={onClose} className="text-white/40 hover:text-white transition-colors text-lg leading-none ml-1" aria-label="Dismiss banner">
                     &times;

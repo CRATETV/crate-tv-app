@@ -1,4 +1,5 @@
-import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
+
+import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
 const getIp = (req: Request) => {
@@ -29,11 +30,13 @@ export async function POST(request: Request) {
 
         let role = '';
         let targetDirector = '';
+        let jobTitle = '';
 
         // 1. Check Hardcoded Roles
         for (const [key, value] of Object.entries(validPasswords)) {
             if (value && password === value) {
                 role = key;
+                jobTitle = key === 'super_admin' ? 'Chief Architect' : key === 'master' ? 'Strategic Advisor' : 'Festival Lead';
                 break;
             }
         }
@@ -50,6 +53,7 @@ export async function POST(request: Request) {
                 const data = doc.data();
                 role = 'director_payout';
                 targetDirector = data.directorName;
+                jobTitle = 'Filmmaker Payout Terminal';
             }
         }
 
@@ -62,7 +66,9 @@ export async function POST(request: Request) {
             
             if (!collabSnap.empty) {
                 const doc = collabSnap.docs[0];
+                const data = doc.data();
                 role = `collaborator:${doc.id}`;
+                jobTitle = data.jobTitle || 'Collaborator';
             }
         }
 
@@ -80,6 +86,7 @@ export async function POST(request: Request) {
             return new Response(JSON.stringify({ 
                 success: true, 
                 role, 
+                jobTitle,
                 targetDirector // Only populated for filmmaker payout logins
             }), {
                 status: 200,

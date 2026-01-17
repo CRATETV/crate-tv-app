@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category, Episode } from '../types';
 import Countdown from './Countdown';
@@ -97,6 +98,40 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
       }
   };
 
+  const ActionButtons = () => (
+    <div className="flex flex-wrap items-center gap-3">
+        {released ? (
+            <>
+                {!movie.isSeries && (
+                    <button 
+                        onClick={() => handlePlayButtonClick()} 
+                        className={`flex items-center justify-center px-8 py-3.5 ${needsPurchase ? 'bg-indigo-600 text-white' : 'bg-white text-black'} font-black rounded-xl hover:opacity-90 transition-all transform hover:scale-105 active:scale-95 shadow-2xl uppercase tracking-widest text-xs`}
+                    >
+                        {needsPurchase ? 'Premium Rental' : 'Play Now'}
+                    </button>
+                )}
+                {canCollectDonations && (
+                    <button onClick={() => onSupportMovie(movie)} className="flex items-center justify-center px-8 py-3.5 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-500 transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(16,185,129,0.3)] uppercase tracking-widest text-xs">
+                        Support Creator
+                    </button>
+                )}
+                <button onClick={() => onToggleLike(movie.key)} className={`flex items-center justify-center px-8 py-3.5 border-2 font-black rounded-xl transition-all transform hover:scale-105 active:scale-95 uppercase tracking-widest text-xs ${isLiked ? 'bg-red-600 border-red-600 text-white' : 'bg-transparent border-red-600 text-white hover:bg-red-600 hover:text-white'}`}>
+                    {isLiked ? '❤️ Liked' : '🤍 Like Film'}
+                </button>
+            </>
+        ) : (
+            <div className="bg-blue-600 text-white font-black px-8 py-4 rounded-xl shadow-lg flex items-center gap-4">
+                <span className="uppercase text-xs tracking-widest bg-white/20 px-2 py-0.5 rounded">Premieres Soon</span>
+                <Countdown targetDate={movie.releaseDateTime!} onEnd={() => setReleased(true)} className="text-lg font-mono" />
+            </div>
+        )}
+        
+        <button onClick={() => toggleWatchlist(movie.key)} className="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all active:scale-90 shadow-xl">
+            {isOnWatchlist ? <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg> : <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>}
+        </button>
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[100] p-0 md:p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
       <div 
@@ -104,71 +139,56 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         ref={modalContentRef}
       >
-        <button onClick={onClose} className="fixed md:absolute top-5 right-5 text-white bg-black/40 backdrop-blur-xl rounded-full p-2.5 hover:bg-red-600 transition-all z-50 shadow-2xl border border-white/10">
+        <button onClick={onClose} className="fixed md:absolute top-5 right-5 text-white bg-black/40 backdrop-blur-xl rounded-full p-2.5 hover:bg-red-600 transition-all z-[110] shadow-2xl border border-white/10">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
-        <div className="relative w-full aspect-video bg-black overflow-hidden">
+        {/* Hero Section */}
+        <div className="relative w-full aspect-video bg-black overflow-hidden shadow-2xl">
             <img src={movie.poster} alt="" className="w-full h-full object-cover opacity-60 blur-sm scale-110" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-black/30"></div>
             
-            <div className="absolute bottom-10 left-10 right-10 text-white z-10">
-                <div className="flex items-center gap-4 mb-4">
-                   <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none">{movie.title}</h2>
+            {/* Desktop Hero Overlay */}
+            <div className="hidden md:block absolute bottom-10 left-10 right-10 text-white z-10">
+                <div className="flex items-center gap-4 mb-6">
+                   <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none drop-shadow-2xl">{movie.title}</h2>
                    {movie.isEpisode && (
                         <div className="bg-amber-600 text-white px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg">
                             Episode
                         </div>
                    )}
                 </div>
-                
-                <div className="flex flex-wrap items-center gap-4">
-                    {released ? (
-                        <>
-                            {!movie.isSeries && (
-                                <button 
-                                    onClick={() => handlePlayButtonClick()} 
-                                    className={`flex items-center justify-center px-10 py-4 ${needsPurchase ? 'bg-indigo-600 text-white' : 'bg-white text-black'} font-black rounded-xl hover:opacity-90 transition-all transform hover:scale-105 active:scale-95 shadow-2xl`}
-                                >
-                                    {needsPurchase ? 'Premium Rental' : 'Play Now'}
-                                </button>
-                            )}
-                            {canCollectDonations && (
-                                <button onClick={() => onSupportMovie(movie)} className="flex items-center justify-center px-10 py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-500 transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(16,185,129,0.3)] animate-pulse">
-                                    Support Creator
-                                </button>
-                            )}
-                            <button onClick={() => onToggleLike(movie.key)} className={`flex items-center justify-center px-10 py-4 border-2 font-black rounded-xl transition-all transform hover:scale-105 active:scale-95 ${isLiked ? 'bg-red-600 border-red-600 text-white' : 'bg-transparent border-red-600 text-red-500 hover:bg-red-600 hover:text-white'}`}>
-                                {isLiked ? '❤️ Liked' : '🤍 Like Film'}
-                            </button>
-                        </>
-                    ) : (
-                        <div className="bg-blue-600 text-white font-black px-8 py-4 rounded-xl shadow-lg flex items-center gap-4">
-                            <span className="uppercase text-xs tracking-widest bg-white/20 px-2 py-0.5 rounded">Premieres Soon</span>
-                            <Countdown targetDate={movie.releaseDateTime!} onEnd={() => setReleased(true)} className="text-lg font-mono" />
-                        </div>
-                    )}
-                    
-                    <button onClick={() => toggleWatchlist(movie.key)} className="w-14 h-14 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all active:scale-90 shadow-xl">
-                        {isOnWatchlist ? <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg> : <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>}
-                    </button>
-                </div>
+                <ActionButtons />
             </div>
         </div>
         
-        <div className="p-10 md:p-14 space-y-16">
+        <div className="p-8 md:p-14 space-y-12">
+            {/* Mobile Title and Actions Section (outside of absolute container) */}
+            <div className="md:hidden space-y-6">
+                <div>
+                    <h2 className="text-4xl font-black uppercase tracking-tighter leading-tight text-white">{movie.title}</h2>
+                    {movie.isEpisode && (
+                        <span className="inline-block bg-amber-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest mt-2">Episode</span>
+                    )}
+                </div>
+                <ActionButtons />
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-14">
                 <div className="lg:col-span-2 space-y-12">
                     <div className="space-y-4">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">Synopsis</h3>
-                        <div className="text-gray-300 text-xl leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
+                        <div className="text-gray-300 text-lg md:text-xl leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
                     </div>
                     
                     {movie.cast && movie.cast.length > 0 && (
                         <div className="space-y-8">
-                            <h3 className="text-2xl font-black text-white uppercase tracking-widest border-l-4 border-red-600 pl-4">Featured Cast</h3>
+                            <div className="flex items-center gap-4">
+                                <div className="w-1.5 h-8 bg-red-600"></div>
+                                <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-widest">Featured Cast</h3>
+                            </div>
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                                 {movie.cast.map((actor, idx) => (
                                     <button 
@@ -176,10 +196,10 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                                         onClick={() => onSelectActor(actor)}
                                         className="flex flex-col items-center text-center group transition-all transform hover:scale-105"
                                     >
-                                        <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-2 border-white/10 mb-4 group-hover:border-red-600 transition-colors shadow-2xl">
+                                        <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-2 border-white/10 mb-4 group-hover:border-red-600 transition-colors shadow-2xl bg-gray-900">
                                             <img src={actor.photo} alt={actor.name} className="w-full h-full object-cover" />
                                         </div>
-                                        <p className="text-sm font-black text-white uppercase tracking-tighter group-hover:text-red-500 transition-colors">{actor.name}</p>
+                                        <p className="text-[10px] md:text-xs font-black text-white uppercase tracking-tighter group-hover:text-red-500 transition-colors px-2 leading-tight">{actor.name}</p>
                                     </button>
                                 ))}
                             </div>
@@ -188,7 +208,10 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
 
                     {movie.isSeries && movie.episodes && movie.episodes.length > 0 && (
                         <div className="space-y-8 pt-6 border-t border-white/5">
-                            <h3 className="text-2xl font-black text-white uppercase tracking-widest border-l-4 border-red-600 pl-4">Episodes</h3>
+                            <div className="flex items-center gap-4">
+                                <div className="w-1.5 h-8 bg-red-600"></div>
+                                <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-widest">Episodes</h3>
+                            </div>
                             <div className="grid gap-4">
                                 {movie.episodes.map(ep => (
                                     <EpisodeRow key={ep.id} episode={ep} onPlay={() => handlePlayButtonClick(ep.url)} />
