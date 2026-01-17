@@ -102,10 +102,8 @@ const PreShowLobby: React.FC<{
                     <Countdown targetDate={startTime} className="text-6xl md:text-[7rem] font-black text-white font-mono tracking-tighter" prefix="" />
                 </div>
                 
-                <p className="text-[10px] text-gray-600 uppercase font-black tracking-[1em] pt-12 animate-pulse">Ambient Audio Transmitting</p>
+                <p className="text-[10px] text-gray-600 uppercase font-black tracking-[1em] pt-12 animate-pulse">Establishing Canonical Clock Sync</p>
             </div>
-            {/* Ambient Royalty-Free Loop */}
-            <audio src="https://cratetelevision.s3.us-east-1.amazonaws.com/ambient-lobby-loop.mp3" loop autoPlay />
         </div>
     );
 };
@@ -280,51 +278,63 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         }
     };
 
+    const handleManualUnmute = (e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        if (videoRef.current) {
+            videoRef.current.muted = false;
+            videoRef.current.volume = 1.0;
+            setShowUnmutePrompt(false);
+            videoRef.current.play().catch(() => {});
+        }
+    };
+
     useEffect(() => {
         if (!hasAccess || !partyState?.actualStartTime || partyState.status !== 'live') return;
         
-        // Disable sync logic for Live Streams (Restream handles its own sync)
-        if (context?.type === 'movie' && context.movie.isLiveStream) {
-            setIsVideoActuallyPlaying(true);
-            return;
+        const video = videoRef.current;
+        if (video && video.muted) {
+            setShowUnmutePrompt(true);
         }
 
         const syncClock = setInterval(() => {
-            const video = videoRef.current;
             if (!video) return;
 
             const serverStart = partyState.actualStartTime.toDate ? partyState.actualStartTime.toDate().getTime() : new Date(partyState.actualStartTime).getTime();
             const elapsedTotalSeconds = (Date.now() - serverStart) / 1000;
-            
-            // Allow a small window of drift
             const targetTime = Math.max(0, elapsedTotalSeconds);
 
             const applyGlobalSync = (time: number) => {
                 if (!video.src) return;
 
-                // Sync threshold (1.5s)
                 if (Math.abs(video.currentTime - time) > 1.5 && !video.seeking) {
                     video.currentTime = time;
                 }
                 
                 if (video.paused && !video.seeking) {
                     video.play().catch((error) => {
-                        if (error.name === 'NotAllowedError' && !video.muted) {
+                        if (error.name === 'NotAllowedError') {
                             video.muted = true;
                             setShowUnmutePrompt(true);
-                            video.play().catch(e => console.error("Sync block", e));
+                            video.play();
                         }
                     });
                 }
                 
-                // Once we have a non-zero time, the movie has "started"
                 if (video.currentTime > 0.1 && !isVideoActuallyPlaying) {
                     setIsVideoActuallyPlaying(true);
+                }
+                
+                if (video.muted && !isWaiting) {
+                    setShowUnmutePrompt(true);
                 }
             };
 
             if (context?.type === 'movie') {
-                applyGlobalSync(targetTime);
+                if (context.movie.isLiveStream) {
+                    setIsVideoActuallyPlaying(true);
+                } else {
+                    applyGlobalSync(targetTime);
+                }
                 if (activeMovieKey !== movieKey) setActiveMovieKey(movieKey);
             } 
             else if (context?.type === 'block') {
@@ -364,19 +374,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         window.dispatchEvent(new Event('pushstate'));
     };
 
-    const handleManualUnmute = () => {
-        if (videoRef.current) {
-            videoRef.current.muted = false;
-            setShowUnmutePrompt(false);
-        }
-    };
-
     if (isFestivalLoading || !context) return <LoadingSpinner />;
 
     const startTimeStr = context.type === 'movie' ? context.movie.watchPartyStartTime : context.block.watchPartyStartTime;
     const isLive = partyState?.status === 'live';
-    
-    // CRITICAL: Lobby stays active until status is Live AND video is confirmed to be moving
     const isWaiting = (startTimeStr && !isLive && !isFestivalLoading) || (isLive && !isVideoActuallyPlaying);
 
     if (!hasAccess) {
@@ -459,7 +460,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             <p className="text-[10px] font-black uppercase text-red-500 tracking-widest leading-none">{isLiveStream ? 'LIVE BROADCAST' : 'LIVE SESSION'}</p>
                             <h2 className="text-xs font-bold truncate text-gray-200">{context.type === 'movie' ? context.movie.title : context.block.title}</h2>
                         </div>
-                        <div className="w-10"></div>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); setShowBackstageModal(true); }}
+                            className={`text-[9px] font-black uppercase border border-white/20 px-3 py-1 rounded-full transition-all ${isBackstageDirector ? 'bg-red-600 text-white border-red-500' : 'bg-white/5 text-gray-500 hover:text-white'}`}
+                        >
+                            {isBackstageDirector ? 'Backstage Access' : 'Director entry'}
+                        </button>
                     </div>
 
                     <div className="flex-grow w-full bg-black relative z-30 overflow-hidden flex flex-col">
@@ -470,11 +476,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         </div>
 
                         {showUnmutePrompt && (
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] animate-bounce pointer-events-none">
-                                <div className="bg-white text-black font-black px-8 py-4 rounded-2xl flex items-center gap-3 shadow-[0_20px_50px_rgba(255,255,255,0.2)] uppercase tracking-widest text-sm">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M12 5l-4 4H5v6h3l4 4V5z" /></svg>
-                                    Tap for Audio
-                                </div>
+                            <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-[fadeIn_0.5s_ease-out]">
+                                <button 
+                                    onClick={handleManualUnmute}
+                                    className="bg-red-600 text-white font-black px-10 py-5 rounded-[2rem] flex items-center gap-4 shadow-[0_0_80px_rgba(239,68,68,0.5)] uppercase tracking-widest text-lg transform hover:scale-110 transition-transform border-4 border-white/20 animate-bounce"
+                                >
+                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M12 5l-4 4H5v6h3l4 4V5z" /></svg>
+                                    Enable Session Audio
+                                </button>
                             </div>
                         )}
 
@@ -497,7 +506,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             </div>
                         )}
 
-                        <div className="flex-grow flex items-center justify-center">
+                        <div className="flex-grow flex items-center justify-center relative">
                             {isLiveStream ? (
                                 <div 
                                     className="w-full h-full p-4 md:p-8 flex items-center justify-center bg-black"
@@ -538,6 +547,26 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     <EmbeddedChat partyKey={movieKey} directors={directorsList} isQALive={partyState?.isQALive} isBackstageDirector={isBackstageDirector} user={user} />
                 </div>
             </div>
+
+            {showBackstageModal && (
+                <div className="fixed inset-0 z-[300] bg-black/95 flex items-center justify-center p-6 backdrop-blur-xl" onClick={() => setShowBackstageModal(false)}>
+                    <form onSubmit={handleBackstageAuth} className="bg-gray-900 border border-white/10 p-10 rounded-[3rem] shadow-2xl w-full max-w-md text-center space-y-8" onClick={e => e.stopPropagation()}>
+                        <div>
+                            <h3 className="text-2xl font-black text-white uppercase tracking-tight italic">Backstage Authorization</h3>
+                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-2">Enter unique session key provided by admin</p>
+                        </div>
+                        <input 
+                            type="text" 
+                            value={backstageCode} 
+                            onChange={e => setBackstageCode(e.target.value.toUpperCase())} 
+                            className="w-full bg-black/40 border border-white/10 rounded-2xl p-6 text-center text-5xl tracking-[0.5em] font-black text-white focus:border-red-600 outline-none"
+                            placeholder="------"
+                            required
+                        />
+                        <button type="submit" className="w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-widest text-sm shadow-xl active:scale-95">Open Secure Link</button>
+                    </form>
+                </div>
+            )}
         </div>
     );
 };
