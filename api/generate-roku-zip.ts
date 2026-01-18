@@ -2,7 +2,6 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import JSZip from 'jszip';
 import { Buffer } from 'buffer';
-// FIX: Added import for process to ensure availability and correct typing/casting in various environments.
 import process from 'process';
 
 async function readDirectory(dirPath: string): Promise<string[]> {
@@ -18,6 +17,19 @@ async function readDirectory(dirPath: string): Promise<string[]> {
         console.warn(`[Roku Packager] Path not found: ${dirPath}`);
         return [];
     }
+}
+
+/**
+ * CRITICAL CLEANER: Purges "Ghost Codes"
+ * Strips zero-width spaces, non-breaking spaces, and BOMs that often 
+ * appear from copy-pasting from AI.
+ */
+function purgeGhostCharacters(text: string): string {
+    return text
+        .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '') // Strip ZWSP, ZWNJ, ZWJ, BOM, NBSP
+        .replace(/\r\n/g, '\n')                     // Normalize to Unix LF
+        .replace(/[ \t]+\n/g, '\n')                  // Strip trailing whitespace per line
+        .trim() + '\n';                              // Roku requires trailing newline
 }
 
 export async function POST(request: Request) {
@@ -37,36 +49,33 @@ export async function POST(request: Request) {
         }
     } catch (e) {}
 
-    // Allow internal or authenticated nodes
     if (host?.startsWith('localhost') || host?.startsWith('127.0.0.1')) isAuthenticated = true;
     
     if (!isAuthenticated) return new Response(JSON.stringify({ error: 'Unauthorized Infrastructure Access' }), { status: 401 });
 
-    // FIX: Cast process to any to safely access cwd() method which may be missing from the environment's Process type definition.
     const rokuDir = path.join((process as any).cwd(), 'roku');
     const filesToInclude = await readDirectory(rokuDir);
     const zip = new JSZip();
 
-    if (filesToInclude.length === 0) throw new Error("Roku source files missing from project root.");
+    if (filesToInclude.length === 0) throw new Error("Roku source directory is empty or missing.");
+
+    // CHECK: Manifest must exist for a valid Roku app
+    const hasManifest = filesToInclude.some(f => f.endsWith('manifest'));
+    if (!hasManifest) throw new Error("CRITICAL_FAILURE: 'manifest' file missing from /roku folder.");
 
     for (const file of filesToInclude) {
         const contentBuffer = await fs.readFile(file);
         let zipPath = path.relative(rokuDir, file).replace(/\\/g, '/');
         let finalContent: string | Buffer = contentBuffer;
 
-        // CRITICAL: Normalize text files for Roku (UTF-8, No BOM, LF line endings)
+        // Clean text-based Roku files
         if (zipPath.endsWith('.brs') || zipPath.endsWith('.xml') || zipPath === 'manifest') {
             let textContent = contentBuffer.toString('utf-8');
             
-            // Strip Byte Order Mark (BOM) - Critical for Roku compilation
-            if (textContent.charCodeAt(0) === 0xFEFF) {
-                textContent = textContent.substring(1);
-            }
-            
-            // Normalize line endings to Unix style (LF)
-            textContent = textContent.replace(/\r\n/g, '\n');
+            // Deep clean artifacts
+            textContent = purgeGhostCharacters(textContent);
 
-            // Dynamic Config Binding: Inject the live API URL into the channel
+            // Dynamic Config Binding
             if (zipPath === 'source/Config.brs') {
                 textContent = textContent.replace('API_URL_PLACEHOLDER', apiUrl);
             }
@@ -74,7 +83,11 @@ export async function POST(request: Request) {
             finalContent = textContent;
         }
 
-        zip.file(zipPath, finalContent, { unixPermissions: 0o644 });
+        // Add to zip with Unix permissions
+        zip.file(zipPath, finalContent, { 
+            unixPermissions: 0o644,
+            date: new Date()
+        });
     }
     
     const zipBuffer = await zip.generateAsync({
@@ -88,7 +101,7 @@ export async function POST(request: Request) {
         status: 200,
         headers: {
             'Content-Type': 'application/zip',
-            'Content-Disposition': `attachment; filename="CrateTV_Roku_Source_V4_${Date.now()}.zip"`,
+            'Content-Disposition': `attachment; filename="cratetv-production-source-v4.zip"`,
             'X-Crate-API-Target': apiUrl
         },
     });
