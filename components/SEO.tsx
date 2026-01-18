@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 
 interface SEOProps {
@@ -5,7 +6,7 @@ interface SEOProps {
     description: string;
     image?: string;
     url?: string;
-    type?: 'website' | 'video.movie' | 'profile';
+    type?: 'website' | 'video.movie' | 'profile' | 'article';
     schemaData?: any;
 }
 
@@ -36,15 +37,17 @@ const SEO: React.FC<SEOProps> = ({
             el.setAttribute('content', content);
         };
 
-        updateMeta('description', description);
+        const cleanDesc = description.replace(/<[^>]+>/g, '').substring(0, 160);
+
+        updateMeta('description', cleanDesc);
         updateMeta('og:title', fullTitle, true);
-        updateMeta('og:description', description, true);
+        updateMeta('og:description', cleanDesc, true);
         updateMeta('og:image', image, true);
         updateMeta('og:url', siteUrl, true);
         updateMeta('og:type', type, true);
         updateMeta('twitter:card', 'summary_large_image');
         updateMeta('twitter:title', fullTitle);
-        updateMeta('twitter:description', description);
+        updateMeta('twitter:description', cleanDesc);
         updateMeta('twitter:image', image);
 
         // Update Canonical
@@ -70,10 +73,6 @@ const SEO: React.FC<SEOProps> = ({
             });
             document.head.appendChild(script);
         }
-
-        return () => {
-            // Clean up schema on unmount if necessary
-        };
     }, [fullTitle, description, image, siteUrl, type, schemaData]);
 
     return null;
