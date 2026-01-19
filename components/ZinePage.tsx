@@ -93,9 +93,9 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
             const canvas = await html2canvas(articleRef.current, {
                 useCORS: true,
                 backgroundColor: '#000000',
-                scale: 1.5,
+                scale: 2,
                 logging: false,
-                windowWidth: 800, // Fixed width for better layout logic
+                windowWidth: 1000, 
             });
             const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
             const link = document.createElement('a');
@@ -114,7 +114,6 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
 
     return (
         <div className="flex flex-col min-h-screen text-white bg-black selection:bg-red-600">
-            {/* DYNAMIC SEO FOR FACEBOOK SHARING */}
             <SEO 
                 title={activeStory ? activeStory.title : "Crate Zine"} 
                 description={activeStory ? activeStory.subtitle : "Editorial dispatches from the independent cinematic underground."} 
@@ -171,13 +170,13 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                 </button>
                             </div>
 
-                            <article ref={articleRef} className="space-y-16 p-2">
+                            <article ref={articleRef} className="space-y-16 p-8 bg-black rounded-[3rem] border border-white/5">
                                 <header className="space-y-6">
                                     <div className="flex items-center gap-4">
                                         <span className="bg-red-600 text-white font-black px-3 py-1 rounded-full text-[9px] uppercase tracking-widest shadow-xl">{activeStory.type}</span>
                                         <span className="text-[10px] text-gray-600 font-black uppercase tracking-widest">{activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Active Dispatch'}</span>
                                     </div>
-                                    <h1 className="text-6xl md:text-9xl font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-2xl">{activeStory.title}</h1>
+                                    <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-2xl">{activeStory.title}</h1>
                                     <p className="text-2xl md:text-3xl text-gray-400 font-medium leading-tight">{activeStory.subtitle}</p>
                                     <div className="pt-6 border-b border-white/10 pb-8 flex items-center gap-4">
                                         <div className="w-10 h-10 bg-red-600/10 rounded-full flex items-center justify-center border border-red-500/20 text-red-500 font-black text-xs">C</div>
@@ -199,16 +198,14 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                                             {section.type === 'image' && <div className="rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl my-14"><img src={section.content} className="w-full h-auto" alt="" /></div>}
                                             {section.type === 'text' && (
                                                 <div className="relative">
-                                                    {/* FIXED DROP CAP LOGIC TO PREVENT OVERLAP */}
                                                     {idx === 0 && (
-                                                        <span className="float-left text-[8rem] md:text-[11rem] font-black italic leading-[0.8] mr-6 mt-2 text-red-600 drop-shadow-2xl select-none">
+                                                        <span className="float-left text-[8rem] md:text-[11rem] font-black italic leading-[0.9] pr-12 mr-2 mt-2 text-red-600 drop-shadow-2xl select-none">
                                                             {section.content.charAt(0)}
                                                         </span>
                                                     )}
                                                     <p className="text-xl md:text-3xl text-gray-400 font-medium leading-relaxed">
                                                         {idx === 0 ? section.content.slice(1) : section.content}
                                                     </p>
-                                                    {/* Ensure float is cleared for subsequent sections */}
                                                     <div className="clear-both"></div>
                                                 </div>
                                             )}

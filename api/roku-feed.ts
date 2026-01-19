@@ -7,6 +7,7 @@ interface RokuItem {
     id: string;
     title: string;
     description: string;
+    shortDescription: string;
     SDPosterUrl: string;
     HDPosterUrl: string;
     heroImage: string;
@@ -16,6 +17,7 @@ interface RokuItem {
     genres?: string[];
     rating?: string;
     duration?: string;
+    length?: number; // duration in seconds
     isLiked?: boolean;
     isOnWatchlist?: boolean;
     isWatched?: boolean;
@@ -29,10 +31,12 @@ interface RokuCategory {
 }
 
 const formatMovieForRoku = (movie: Movie, genres: string[], user: User | null): RokuItem => {
+    const cleanSynopsis = (movie.synopsis || '').replace(/<[^>]+>/g, '').trim();
     return {
         id: movie.key,
         title: movie.title || 'Untitled Film',
-        description: (movie.synopsis || '').replace(/<[^>]+>/g, '').trim(),
+        description: cleanSynopsis,
+        shortDescription: cleanSynopsis.substring(0, 200),
         SDPosterUrl: movie.poster || '',
         HDPosterUrl: movie.poster || '',
         heroImage: movie.tvPoster || movie.poster || '',
@@ -42,6 +46,7 @@ const formatMovieForRoku = (movie: Movie, genres: string[], user: User | null): 
         genres: genres,
         rating: movie.rating ? movie.rating.toFixed(1) : "0.0",
         duration: movie.durationInMinutes ? `${movie.durationInMinutes} min` : "0 min",
+        length: movie.durationInMinutes ? movie.durationInMinutes * 60 : 0,
         isLiked: user?.likedMovies?.includes(movie.key) ?? false,
         isOnWatchlist: user?.watchlist?.includes(movie.key) ?? false,
         isWatched: user?.watchedMovies?.includes(movie.key) ?? false,
@@ -67,14 +72,16 @@ export async function GET(request: Request) {
         }
     }
 
-    // Fetch master data including view counts for ranking
+    // Fetch master data
     const apiData = await getApiData();
     const viewCounts = apiData.viewCounts || {};
+    const moviesObj = apiData.movies || {};
     
     const finalCategories: RokuCategory[] = [];
 
-    // 1. TOP 10 RANKINGS (Filter out untitled/listed)
-    const topTen = (Object.values(apiData.movies) as Movie[])
+    // 1. TOP 10 RANKINGS
+    const movieArray = Object.values(moviesObj) as Movie[];
+    const topTen = movieArray
         .filter(m => !!m && !m.isUnlisted && !!m.poster && !!m.title && !m.title.toLowerCase().includes('untitled'))
         .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
         .slice(0, 10);
@@ -89,15 +96,15 @@ export async function GET(request: Request) {
         });
     }
 
-    // 2. THE SQUARE (Merged Sectors)
+    // 2. THE SQUARE
     const squareKeys = Array.from(new Set([
-        ...(apiData.categories['publicAccess']?.movieKeys || []),
-        ...(apiData.categories['publicDomainIndie']?.movieKeys || [])
+        ...(apiData.categories?.['publicAccess']?.movieKeys || []),
+        ...(apiData.categories?.['publicDomainIndie']?.movieKeys || [])
     ]));
 
     if (squareKeys.length > 0) {
         const children = squareKeys
-            .map((k: string) => apiData.movies[k])
+            .map((k: string) => moviesObj[k])
             .filter((m: any): m is Movie => !!m && !m.isUnlisted && !!m.title)
             .map((m: Movie) => formatMovieForRoku(m, ["The Square"], user));
         if (children.length > 0) {
@@ -108,10 +115,10 @@ export async function GET(request: Request) {
     // 3. DYNAMIC CATALOG CATEGORIES
     const catalogOrder = ["newReleases", "awardWinners", "comedy", "drama"];
     catalogOrder.forEach(key => {
-        const cat = apiData.categories[key];
+        const cat = apiData.categories?.[key];
         if (cat && cat.movieKeys?.length > 0) {
             const children = cat.movieKeys
-                .map((k: string) => apiData.movies[k])
+                .map((k: string) => moviesObj[k])
                 .filter((m: any): m is Movie => !!m && !m.isUnlisted && !!m.title)
                 .map((m: Movie) => formatMovieForRoku(m, [cat.title], user));
             
@@ -126,9 +133,18 @@ export async function GET(request: Request) {
         heroItems: topTen.slice(0, 5).map(m => formatMovieForRoku(m, ["Featured"], user))
     }, null, 2), {
       status: 200,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 's-maxage=1, stale-while-revalidate=5' },
+      headers: { 
+          'Content-Type': 'application/json', 
+          'Cache-Control': 's-maxage=1, stale-while-revalidate=5',
+          'Access-Control-Allow-Origin': '*' 
+      },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Feed offline.' }), { status: 500 });
+    console.error("Roku Feed Logic Failure:", error);
+    return new Response(JSON.stringify({ 
+        categories: [], 
+        heroItems: [], 
+        error: 'System core re-syncing.' 
+    }), { status: 200 });
   }
 }
