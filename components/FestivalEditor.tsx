@@ -32,16 +32,16 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
     .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[110] p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[110] p-4" onClick={onClose}>
       <div className="bg-[#0a0a0a] rounded-[2.5rem] border border-white/10 shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="p-8 border-b border-white/5">
-          <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Select Films</h3>
+          <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Select Programmed Works</h3>
           <input
             type="text"
-            placeholder="Search catalog..."
+            placeholder="Scan catalog manifest..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full mt-4 bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-red-600 transition-all text-sm"
+            className="w-full mt-6 bg-white/5 border border-white/10 rounded-xl py-4 px-6 text-white focus:outline-none focus:border-red-600 transition-all text-sm"
           />
         </div>
         <div className="p-6 overflow-y-auto scrollbar-hide space-y-2">
@@ -62,10 +62,13 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
                 </div>
               </label>
             ))}
+            {filteredMovies.length === 0 && (
+                <p className="text-center text-gray-600 py-10 uppercase font-black text-[10px] tracking-widest">No matching nodes found.</p>
+            )}
         </div>
         <div className="p-8 border-t border-white/5 flex justify-end gap-4 bg-white/[0.01]">
-          <button onClick={onClose} className="text-[10px] font-black uppercase text-gray-500 hover:text-white transition-colors">Cancel</button>
-          <button onClick={handleSave} className="bg-red-600 hover:bg-red-700 text-white font-black py-3 px-8 rounded-xl text-[10px] uppercase tracking-widest shadow-xl">Save Selections</button>
+          <button onClick={onClose} className="text-[10px] font-black uppercase text-gray-500 hover:text-white transition-colors">Discard</button>
+          <button onClick={handleSave} className="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-xl text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all">Save Selections</button>
         </div>
       </div>
     </div>
@@ -145,8 +148,12 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   };
   
   const addDay = () => {
+    if (data.length >= 3) {
+        alert("Sector Capacity Reached: 3 Day Festival Maximum.");
+        return;
+    }
     const newDayNum = data.length + 1;
-    onDataChange([...data, { day: newDayNum, date: 'October 1, 2026', blocks: [] }]);
+    onDataChange([...data, { day: newDayNum, date: 'October 24, 2026', blocks: [] }]);
   };
 
   const removeDay = (index: number) => {
@@ -159,7 +166,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   const addBlock = (dayIndex: number) => {
     const newBlock: FilmBlock = {
       id: `day${dayIndex + 1}-block${Date.now()}`,
-      title: 'New Selection Block',
+      title: 'Official Selection Block',
       time: '7:00 PM',
       movieKeys: [],
       price: 10.00
@@ -183,10 +190,10 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
             <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic">Festival Programming</h2>
-            <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-1">Institutional Adjudication Hub V4</p>
+            <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mt-1">Institutional Adjudication Hub V4.2</p>
         </div>
         <div className="flex items-center gap-4">
-             {isDirty && <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest animate-pulse">Manifest Pending</span>}
+             {isDirty && <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest animate-pulse">Pending Sync</span>}
              <button 
                 onClick={handleSaveManifest} 
                 disabled={isSaving || !isDirty} 
@@ -216,17 +223,17 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                   <textarea name="description" value={config.description || ''} onChange={handleConfigChange} className="form-input bg-black/40 h-24" />
               </div>
               <div>
-                  <label className="form-label">Activation Window Start</label>
+                  <label className="form-label">Activation Start</label>
                   <input type="datetime-local" name="startDate" value={formatISOForInput(config.startDate)} onChange={handleConfigChange} className="form-input bg-black/40 border-white/10" />
               </div>
               <div>
-                  <label className="form-label">Activation Window End</label>
+                  <label className="form-label">Activation End</label>
                   <input type="datetime-local" name="endDate" value={formatISOForInput(config.endDate)} onChange={handleConfigChange} className="form-input bg-black/40 border-white/10" />
               </div>
               <div className="flex items-center justify-between gap-4 bg-black/20 p-6 rounded-2xl border border-white/5">
                 <div>
                     <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">LIVE STATUS</span>
-                    <p className="text-[8px] text-gray-700 uppercase font-bold mt-1">Force enable the portal override</p>
+                    <p className="text-[8px] text-gray-700 uppercase font-bold mt-1">Force enable portal access</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" name="isFestivalLive" checked={config.isFestivalLive} onChange={(e) => onConfigChange({...config, isFestivalLive: e.target.checked})} className="sr-only peer" />
@@ -238,8 +245,14 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
 
       <div className="space-y-12">
         <div className="flex justify-between items-center px-4">
-            <h3 className="text-xl font-black uppercase italic tracking-widest">Daily Sequencing</h3>
-            <button onClick={addDay} className="bg-white/5 hover:bg-white text-gray-500 hover:text-black font-black px-6 py-2 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all">+ Add Session Day</button>
+            <h3 className="text-xl font-black uppercase italic tracking-widest text-white">Program Sequencing (Limit 3 Days)</h3>
+            <button 
+                onClick={addDay} 
+                disabled={data.length >= 3}
+                className="bg-white/5 hover:bg-white text-gray-500 hover:text-black font-black px-6 py-2 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all disabled:opacity-10"
+            >
+                + Add Session Day
+            </button>
         </div>
 
         {data.map((day, dayIndex) => (
@@ -253,16 +266,22 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
 
             <div className="flex flex-col md:flex-row items-center gap-10 border-b border-white/5 pb-10">
                 <div className="bg-red-600 text-white w-16 h-16 rounded-2xl flex flex-col items-center justify-center font-black italic tracking-tighter shadow-[0_15px_30px_rgba(239,68,68,0.3)]">
-                    <span className="text-[10px] uppercase mb-1">Day</span>
+                    <span className="text-[10px] uppercase mb-1 leading-none">Day</span>
                     <span className="text-3xl leading-none">0{day.day}</span>
                 </div>
                 <div className="flex-grow w-full">
-                    <label className="text-[9px] font-black text-gray-600 uppercase tracking-[0.3em] mb-2 block">Canonical Date Identification</label>
-                    <input value={day.date} onChange={e => {
-                        const newData = [...data];
-                        newData[dayIndex].date = e.target.value;
-                        onDataChange(newData);
-                    }} className="bg-transparent text-white font-black text-4xl uppercase tracking-tighter outline-none focus:text-red-500 transition-colors w-full border-b border-white/5 pb-2" placeholder="e.g. October 1, 2026" />
+                    <label className="text-[9px] font-black text-gray-600 uppercase tracking-[0.4em] mb-3 block">Display Date / Headline</label>
+                    <input 
+                        value={day.date} 
+                        onChange={e => {
+                            const newData = [...data];
+                            newData[dayIndex].date = e.target.value;
+                            onDataChange(newData);
+                        }} 
+                        className="bg-transparent text-white font-black text-4xl uppercase tracking-tighter outline-none focus:text-red-500 transition-colors w-full border-b border-white/5 pb-3" 
+                        placeholder="e.g. Opening Night" 
+                    />
+                    <p className="text-[8px] text-gray-700 font-bold uppercase mt-2 tracking-widest">This will appear as the main headline for Day {day.day}.</p>
                 </div>
             </div>
 
@@ -280,7 +299,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                                 <input value={block.time} onChange={e => handleBlockChange(dayIndex, blockIndex, 'time', e.target.value)} className="bg-transparent text-gray-400 text-sm font-black uppercase tracking-widest outline-none border-b border-white/5" placeholder="7:00 PM" />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Session Yield $</label>
+                                <label className="text-[8px] text-gray-700 font-black tracking-widest uppercase">Yield $</label>
                                 <div className="flex items-center gap-1">
                                     <span className="text-emerald-500 font-bold">$</span>
                                     <input type="number" value={block.price} onChange={e => handleBlockChange(dayIndex, blockIndex, 'price', parseFloat(e.target.value))} className="bg-transparent text-emerald-500 font-black w-20 text-lg outline-none" />
@@ -293,17 +312,24 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                         <p className="text-[8px] font-black text-gray-700 uppercase mb-1">Content Capacity</p>
                         <p className="text-white font-bold">{block.movieKeys.length} Linked Nodes</p>
                      </div>
-                     <button onClick={() => setEditingBlock({ dayIndex, blockIndex })} className="bg-white text-black font-black px-8 py-3 rounded-xl text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all shadow-xl">Program Works</button>
+                     <button onClick={() => setEditingBlock({ dayIndex, blockIndex })} className="bg-white text-black font-black px-8 py-4 rounded-xl text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all shadow-xl active:scale-95">Program Works</button>
                      <button onClick={() => removeBlock(dayIndex, blockIndex)} className="text-gray-800 hover:text-red-500 transition-colors p-3 bg-white/5 rounded-xl border border-white/5">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                      </button>
                    </div>
                 </div>
               ))}
-               <button onClick={() => addBlock(dayIndex)} className="w-full border-2 border-dashed border-white/5 hover:border-white/10 py-8 rounded-[2rem] text-gray-700 hover:text-gray-500 font-black text-[10px] uppercase tracking-[0.5em] transition-all">+ Initialize Block Stack</button>
+               <button onClick={() => addBlock(dayIndex)} className="w-full border-2 border-dashed border-white/5 hover:border-white/10 py-10 rounded-[2rem] text-gray-700 hover:text-gray-500 font-black text-[10px] uppercase tracking-[0.5em] transition-all">+ Initialize Block Stack</button>
             </div>
           </div>
         ))}
+
+        {data.length === 0 && (
+             <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-[4rem]">
+                 <p className="text-gray-700 font-black uppercase tracking-[0.5em] mb-8">No Session Days Programmed</p>
+                 <button onClick={addDay} className="bg-white text-black font-black px-12 py-5 rounded-2xl uppercase tracking-widest text-xs shadow-2xl hover:scale-105 active:scale-95 transition-all">Initialize Day 01</button>
+             </div>
+        )}
       </div>
 
       {editingBlock !== null && (

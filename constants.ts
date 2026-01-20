@@ -1,7 +1,6 @@
 
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData, PromoCode } from './types';
 
-
 // Utility function to robustly check if a movie is past its release time.
 export const isMovieReleased = (movie: Movie | undefined | null): boolean => {
     if (!movie || !movie.releaseDateTime) {
@@ -19,42 +18,13 @@ export const promoCodesData: Record<string, Partial<PromoCode>> = {
     "maxUses": 500,
     "usedCount": 0,
     "internalName": "Weekly Riddle Reward"
-  },
-  "VIP_ACCESS": {
-    "code": "VIP_ACCESS",
-    "type": "one_time_access",
-    "discountValue": 100,
-    "maxUses": 100,
-    "usedCount": 0,
-    "internalName": "Press & Partner Access"
-  },
-  "CRATE_COMMUNITY": {
-    "code": "CRATE_COMMUNITY",
-    "type": "discount",
-    "discountValue": 50,
-    "maxUses": 1000,
-    "usedCount": 0,
-    "internalName": "Launch Celebration"
   }
 };
 
 export const categoriesData: Record<string, Category> = {
-  "publicAccess": {
-      "title": "The Commons",
-      "movieKeys": []
-  },
   "featured": {
     "title": "Featured Films",
-    "movieKeys": [
-      "fighter",
-      "juniper"
-    ]
-  },
-  "newReleases": {
-    "title": "New Releases",
-    "movieKeys": [
-      "fighter"
-    ]
+    "movieKeys": ["fighter"]
   }
 };
 
@@ -98,51 +68,12 @@ export const aboutData: AboutData = {
 
 export const festivalConfigData: FestivalConfig = {
   isFestivalLive: false,
-  title: "Crate Film Festival 2026",
-  subheader: "Official Selections",
+  title: "Crate Film Festival",
+  subheader: "12th Annual Official Selections",
   description: "A three-day digital experience celebrating cinematic innovation.",
   startDate: "2026-10-01T00:00:00Z",
   endDate: "2026-10-03T23:59:59Z"
 };
 
-export const festivalData: FestivalDay[] = [
-  {
-    day: 1,
-    date: "Opening Night",
-    blocks: [
-      {
-        id: "d1b1",
-        title: "Opening Selection",
-        time: "7:00 PM",
-        movieKeys: ["fighter"],
-        price: 10.00
-      }
-    ]
-  },
-  {
-    day: 2,
-    date: "Mid-Session",
-    blocks: [
-      {
-        id: "d2b1",
-        title: "Official Block 02",
-        time: "7:00 PM",
-        movieKeys: [],
-        price: 10.00
-      }
-    ]
-  },
-  {
-    day: 3,
-    date: "Grand Finale",
-    blocks: [
-      {
-        id: "d3b1",
-        title: "Awards Showcase",
-        time: "7:00 PM",
-        movieKeys: [],
-        price: 10.00
-      }
-    ]
-  }
-];
+// Start with an empty array so Admin can add the 3 specific days manually without doubles
+export const festivalData: FestivalDay[] = [];

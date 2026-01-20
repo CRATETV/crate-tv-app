@@ -11,15 +11,19 @@
             m.labels = []
             m.focusIdx = 0
             
-            xPos = 100
+            ' Precise spacing for 1920p viewport
+            ' Increased xPos and width to ensure NO OVERLAP on long strings like "THE SQUARE"
+            xPos = 250 
             for i = 0 to m.items.Count() - 1
                 lbl = m.top.createChild("Label")
                 lbl.text = m.items[i]
                 lbl.font = "font:SmallBoldSystemFont"
-                lbl.translation = [xPos, 40]
+                lbl.translation = [xPos, 50]
                 lbl.color = "0x888888FF"
+                lbl.width = 320
+                lbl.horizAlign = "center"
                 m.labels.Push(lbl)
-                xPos += 300
+                xPos += 380 ' Significant gap to prevent clipping
             end for
             
             updateFocus()
@@ -30,6 +34,7 @@
                 if i = m.focusIdx
                     m.labels[i].color = "0xEF4444FF"
                     m.labels[i].scale = [1.1, 1.1]
+                    m.labels[i].scaleRotateCenter = [160, 20] ' Center of 320w label
                 else
                     m.labels[i].color = "0x888888FF"
                     m.labels[i].scale = [1.0, 1.0]

@@ -7,7 +7,7 @@
     <children>
         <Rectangle width="1920" height="1080" color="#050505" />
         
-        <!-- Persistent Global Navigation -->
+        <!-- Persistent Global Navigation (Netflix Style) -->
         <Header id="navBar" translation="[0, 0]" />
         
         <Group id="viewport" translation="[0, 120]" />

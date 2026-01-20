@@ -67,8 +67,14 @@ const FestivalView: React.FC<FestivalViewProps> = ({
   };
 
   if (!festivalData || festivalData.length === 0) {
-      return null;
+      return (
+          <div className="py-32 text-center border-2 border-dashed border-white/5 rounded-[4rem] mx-4">
+              <p className="text-gray-700 font-black uppercase tracking-[0.5em]">Global programming manifest pending synchronization...</p>
+          </div>
+      );
   }
+
+  const currentDayData = festivalData.find(d => d.day === activeDay) || festivalData[0];
 
   return (
     <div className="font-sans bg-gray-950 text-gray-200">
@@ -100,13 +106,13 @@ const FestivalView: React.FC<FestivalViewProps> = ({
       )}
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
-          <div className="mb-12 flex justify-center">
+          <div className="mb-16 flex justify-center">
             <div className="inline-flex p-1 bg-black border border-white/5 rounded-2xl shadow-2xl overflow-x-auto scrollbar-hide max-w-full">
                 {festivalData.map(day => (
                     <button
                         key={day.day}
                         onClick={() => setActiveDay(day.day)}
-                        className={`flex-shrink-0 whitespace-nowrap px-8 py-3 text-xs font-black uppercase tracking-widest transition-all rounded-xl ${activeDay === day.day ? 'bg-red-600 text-white shadow-xl' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`flex-shrink-0 whitespace-nowrap px-10 py-4 text-sm font-black uppercase tracking-widest transition-all rounded-xl ${activeDay === day.day ? 'bg-red-600 text-white shadow-xl' : 'text-gray-600 hover:text-gray-300'}`}
                     >
                         Day {day.day}
                     </button>
@@ -114,53 +120,64 @@ const FestivalView: React.FC<FestivalViewProps> = ({
             </div>
           </div>
 
-          <div>
-              {festivalData.filter(day => day.day === activeDay).map(day => (
-                  <div key={day.day} className="space-y-12 animate-[fadeIn_0.5s_ease-out]">
-                      <div className="text-center mb-8">
-                           <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mb-1">Active Sector // {day.date}</p>
-                           <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter">Day {day.day} Program.</h2>
-                      </div>
-                      {day.blocks.map(block => {
-                          const blockMovies = block.movieKeys.map(key => allMovies[key]).filter(Boolean);
-                          const isBlockUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
-                          return (
-                              <div key={block.id} className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] shadow-2xl overflow-hidden">
-                                <div className="p-8 md:p-10 bg-white/[0.01] border-b border-white/5">
-                                   <div className="flex flex-col md:flex-row justify-between md:items-center gap-6">
-                                     <div>
-                                      <p className="text-red-500 font-black text-[10px] uppercase tracking-widest mb-2">{block.time}</p>
-                                      <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic">{block.title}</h2>
-                                    </div>
-                                    {!isBlockUnlocked && (
-                                      <button
-                                        onClick={() => handlePurchaseClick('block', block)}
-                                        className="bg-white text-black font-black px-6 py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all shadow-xl hover:bg-gray-200"
-                                      >
-                                        Unlock Block // $10.00
-                                      </button>
+          <div className="space-y-16 animate-[fadeIn_0.5s_ease-out]">
+              <div className="text-center mb-16">
+                   <h2 className="text-6xl sm:text-8xl font-black text-white uppercase italic tracking-tighter leading-none mb-4">
+                       Day 0{currentDayData.day}.
+                   </h2>
+                   <p className="text-red-500 font-black uppercase tracking-[0.5em] text-[10px] md:text-xs">
+                       {currentDayData.date}
+                   </p>
+              </div>
+
+              <div className="space-y-12">
+                  {currentDayData.blocks.map(block => {
+                      const blockMovies = block.movieKeys.map(key => allMovies[key]).filter(Boolean);
+                      const isBlockUnlocked = hasFestivalAllAccess || unlockedFestivalBlockIds.has(block.id);
+                      return (
+                          <div key={block.id} className="bg-white/[0.02] border border-white/5 rounded-[3rem] shadow-2xl overflow-hidden">
+                            <div className="p-8 md:p-12 bg-white/[0.01] border-b border-white/5">
+                               <div className="flex flex-col md:flex-row justify-between md:items-center gap-8">
+                                 <div>
+                                  <p className="text-gray-500 font-black text-[10px] uppercase tracking-[0.4em] mb-3">{block.time}</p>
+                                  <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter italic leading-none">{block.title}</h2>
+                                </div>
+                                {!isBlockUnlocked && (
+                                  <button
+                                    onClick={() => handlePurchaseClick('block', block)}
+                                    className="bg-white text-black font-black px-8 py-4 rounded-2xl uppercase text-xs tracking-widest transition-all shadow-xl hover:bg-gray-200 active:scale-95"
+                                  >
+                                    Unlock Block // $10.00
+                                  </button>
+                                )}
+                               </div>
+                            </div>
+                            <div className="p-8 md:p-12">
+                                <div className="flex overflow-x-auto space-x-8 pb-8 scrollbar-hide -mx-2 px-2 snap-x">
+                                    {blockMovies.map(movie => (
+                                        <div key={movie.key} className="flex-shrink-0 w-[55vw] sm:w-[35vw] md:w-[25vw] lg:w-[18vw] snap-start">
+                                            <FilmBlockCard
+                                                movie={movie}
+                                                isUnlocked={isBlockUnlocked}
+                                                onWatch={() => navigateToMovie(movie.key)}
+                                                onUnlock={() => handlePurchaseClick('movie', movie)}
+                                            />
+                                        </div>
+                                    ))}
+                                    {blockMovies.length === 0 && (
+                                        <p className="text-gray-700 font-black uppercase tracking-widest text-xs italic py-10 px-4">Selections pending synchronization...</p>
                                     )}
-                                   </div>
                                 </div>
-                                <div className="p-8 md:p-10">
-                                    <div className="flex overflow-x-auto space-x-6 pb-6 scrollbar-hide -mx-2 px-2 snap-x">
-                                        {blockMovies.map(movie => (
-                                            <div key={movie.key} className="flex-shrink-0 w-[45vw] sm:w-[30vw] md:w-[22vw] lg:w-[15vw] snap-start">
-                                                <FilmBlockCard
-                                                    movie={movie}
-                                                    isUnlocked={isBlockUnlocked}
-                                                    onWatch={() => navigateToMovie(movie.key)}
-                                                    onUnlock={() => handlePurchaseClick('movie', movie)}
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                              </div>
-                          )
-                        })}
-                  </div>
-              ))}
+                            </div>
+                          </div>
+                      )
+                  })}
+                  {currentDayData.blocks.length === 0 && (
+                      <div className="py-32 text-center border-2 border-dashed border-white/5 rounded-[4rem]">
+                          <p className="text-gray-700 font-black uppercase tracking-[0.5em]">No blocks programmed for Day {activeDay}</p>
+                      </div>
+                  )}
+              </div>
           </div>
       </div>
       {isPaymentModalOpen && paymentItem && (
