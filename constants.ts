@@ -99,6 +99,7 @@ export const aboutData: AboutData = {
 export const festivalConfigData: FestivalConfig = {
   isFestivalLive: false,
   title: "Crate Film Festival 2026",
+  subheader: "Official Selections",
   description: "A three-day digital experience celebrating cinematic innovation.",
   startDate: "2026-10-01T00:00:00Z",
   endDate: "2026-10-03T23:59:59Z"
@@ -107,7 +108,7 @@ export const festivalConfigData: FestivalConfig = {
 export const festivalData: FestivalDay[] = [
   {
     day: 1,
-    date: "Day 1: Opening Night",
+    date: "Opening Night",
     blocks: [
       {
         id: "d1b1",
@@ -120,7 +121,7 @@ export const festivalData: FestivalDay[] = [
   },
   {
     day: 2,
-    date: "Day 2: Mid-Session",
+    date: "Mid-Session",
     blocks: [
       {
         id: "d2b1",
@@ -133,7 +134,7 @@ export const festivalData: FestivalDay[] = [
   },
   {
     day: 3,
-    date: "Day 3: Grand Finale",
+    date: "Grand Finale",
     blocks: [
       {
         id: "d3b1",

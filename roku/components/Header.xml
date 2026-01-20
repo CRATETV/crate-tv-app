@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="Header" extends="Group">
+    <interface>
+        <field id="itemSelected" type="integer" alwaysNotify="true" />
+    </interface>
+    
+    <script type="text/brightscript">
+        <![CDATA[
+        sub init()
+            m.items = ["HOME", "THE SQUARE", "SEARCH", "ACCOUNT"]
+            m.labels = []
+            m.focusIdx = 0
+            
+            xPos = 100
+            for i = 0 to m.items.Count() - 1
+                lbl = m.top.createChild("Label")
+                lbl.text = m.items[i]
+                lbl.font = "font:SmallBoldSystemFont"
+                lbl.translation = [xPos, 40]
+                lbl.color = "0x888888FF"
+                m.labels.Push(lbl)
+                xPos += 300
+            end for
+            
+            updateFocus()
+        end sub
+
+        sub updateFocus()
+            for i = 0 to m.labels.Count() - 1
+                if i = m.focusIdx
+                    m.labels[i].color = "0xEF4444FF"
+                    m.labels[i].scale = [1.1, 1.1]
+                else
+                    m.labels[i].color = "0x888888FF"
+                    m.labels[i].scale = [1.0, 1.0]
+                end if
+            end for
+        end sub
+
+        function onKeyEvent(key as String, press as Boolean) as Boolean
+            if press
+                if key = "right" and m.focusIdx < m.labels.Count() - 1
+                    m.focusIdx++
+                    updateFocus()
+                    return true
+                else if key = "left" and m.focusIdx > 0
+                    m.focusIdx--
+                    updateFocus()
+                    return true
+                else if key = "OK"
+                    m.top.itemSelected = m.focusIdx
+                    return true
+                end if
+            end if
+            return false
+        end function
+        ]]>
+    </script>
+</component>

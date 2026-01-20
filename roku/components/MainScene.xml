@@ -1,97 +1,15 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="MainScene" extends="Scene">
-    <interface>
-        <field id="deepLinkContentId" type="string" />
-        <field id="deepLinkMediaType" type="string" />
-    </interface>
-
     <script type="text/brightscript" uri="pkg:/components/MainScene.brs" />
-
+    <interface>
+        <field id="authStatus" type="string" />
+    </interface>
     <children>
-        <Rectangle id="background" width="1920" height="1080" color="#050505" />
-
-        <!-- STUDIO V4 SECURITY WATERMARK -->
-        <Group id="watermark" opacity="0.08">
-            <Label text="SECURE TRANSMISSION // AUTH_ENFORCED // V4.0_INFRASTRUCTURE" translation="[1300, 1040]" font="font:SmallestSystemFont" color="#FFFFFF" />
-        </Group>
-
-        <!-- Main Content Area -->
-        <Group id="contentGroup" visible="false">
-            <!-- CINEMATIC HERO SPOTLIGHT -->
-            <Group id="hero" translation="[0, 0]">
-                <Poster
-                    id="heroBg"
-                    width="1920"
-                    height="800"
-                    loadDisplayMode="scaleToFill"
-                    loadingBitmapOpacity="0"
-                />
-                <!-- V4 Cinematic Masking -->
-                <Rectangle width="1920" height="800" color="#050505" opacity="0.3" />
-                <Rectangle width="1300" height="800" color="#050505" opacity="0.6" />
-                <Rectangle width="1920" height="450" translation="[0, 350]" color="#050505" opacity="0.95" />
-                <Rectangle width="1920" height="200" translation="[0, 600]" color="#050505" opacity="1.0" />
-                
-                <!-- Metadata Layer -->
-                <Group id="heroInfo" translation="[100, 350]">
-                    <Group id="tag" translation="[0, -50]">
-                        <Rectangle width="4" height="40" color="#EF4444" />
-                        <Label text="GLOBAL NETWORK FEED // SECTOR SPOTLIGHT" translation="[25, 0]" font="font:SmallBoldSystemFont" color="#EF4444" />
-                    </Group>
-                    
-                    <Label id="heroTitle" width="1200" font="font:LargeBoldSystemFont" color="#FFFFFF" />
-                    <Label id="heroDesc" translation="[0, 130]" width="850" wrap="true" maxLines="3" font="font:SmallSystemFont" color="#AAAAAA" />
-                    
-                    <Group id="heroButtons" translation="[0, 260]">
-                        <Rectangle id="btnPlayBg" width="300" height="80" color="#FFFFFF" radius="16">
-                            <Label text="STREAM SELECTION" width="300" height="80" horizAlign="center" vertAlign="center" font="font:SmallBoldSystemFont" color="#000000" />
-                        </Rectangle>
-                        <Rectangle id="btnInfoBg" width="260" height="80" translation="[330, 0]" color="#181818" radius="16" opacity="0.9">
-                            <Label text="MANIFEST" width="260" height="80" horizAlign="center" vertAlign="center" font="font:SmallBoldSystemFont" color="#FFFFFF" />
-                        </Rectangle>
-                    </Group>
-                </Group>
-            </Group>
-
-            <!-- DYNAMIC CONTENT ROWS -->
-            <RowList
-                id="contentRowList"
-                translation="[0, 750]"
-                itemSize="[1920, 440]"
-                numRows="4"
-                rowItemSize="[[240, 360]]"
-                rowItemSpacing="[[40, 0]]"
-                itemSpacing="[0, 100]"
-                showRowLabel="[true]"
-                rowLabelOffset="[[100, 15]]"
-                rowLabelFont="font:SmallBoldSystemFont"
-                rowLabelColor="#FFFFFF"
-                rowItemComponentName="MoviePosterItem"
-                drawFocusFeedback="false"
-                rowFocusAnimationStyle="fixedFocusWrap"
-            />
-        </Group>
-
-        <!-- Loading State -->
-        <Group id="loadingGroup">
-            <Label text="ESTABLISHING V4 UPLINK..." translation="[960, 540]" horizAlign="center" vertAlign="center" font="font:SmallBoldSystemFont" color="#666666" />
-        </Group>
-
-        <!-- DETAILS MODAL (TRANSMISSION OVERLAY) -->
-        <Group id="detailsOverlay" visible="false">
-            <Rectangle width="1920" height="1080" color="#000000" opacity="0.95" />
-            <Group translation="[220, 180]">
-                <Poster id="detailsPoster" width="400" height="600" radius="32" />
-                <Group id="detailsInfo" translation="[480, 0]">
-                    <Label text="OFFICIAL ACCREDITATION // CATALOG RECORD" font="font:SmallestBoldSystemFont" color="#EF4444" />
-                    <Label id="detailsTitle" width="1000" translation="[0, 60]" font="font:LargeBoldSystemFont" color="#FFFFFF" />
-                    <Label id="detailsDesc" translation="[0, 160]" width="950" wrap="true" maxLines="12" font="font:SmallSystemFont" color="#CCCCCC" />
-                    <Label id="detailsMeta" translation="[0, 540]" font="font:SmallestBoldSystemFont" color="#555555" />
-                </Group>
-            </Group>
-        </Group>
-
-        <!-- VIDEO PLAYER -->
-        <Video id="videoPlayer" visible="false" width="1920" height="1080" enableUI="true" />
+        <Rectangle width="1920" height="1080" color="#050505" />
+        
+        <!-- Persistent Global Navigation -->
+        <Header id="navBar" translation="[0, 0]" />
+        
+        <Group id="viewport" translation="[0, 120]" />
     </children>
 </component>

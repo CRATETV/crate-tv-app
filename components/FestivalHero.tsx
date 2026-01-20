@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { FestivalConfig } from '../types';
 
@@ -27,18 +28,25 @@ const FestivalHero: React.FC<FestivalHeroProps> = ({ festivalConfig }) => {
       
       {/* Content */}
       <div className="relative z-10 flex flex-col justify-center h-full px-4 md:px-12 py-12 text-white items-center text-center">
-        <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold mb-4 max-w-3xl animate-[slideInUp_0.7s_ease-out] drop-shadow-lg">
-          {festivalConfig.title}
-        </h1>
-        <p className="text-sm md:text-base lg:text-lg max-w-xl mb-8 animate-[slideInUp_0.9s_ease-out]">
+        <div className="space-y-2 mb-6 animate-[slideInUp_0.7s_ease-out]">
+            <h1 className="text-3xl md:text-5xl lg:text-7xl font-extrabold max-w-4xl drop-shadow-lg uppercase tracking-tighter italic">
+            {festivalConfig.title}
+            </h1>
+            {festivalConfig.subheader && (
+                <p className="text-red-500 font-black uppercase tracking-[0.5em] text-[10px] md:text-sm drop-shadow-md">
+                    {festivalConfig.subheader}
+                </p>
+            )}
+        </div>
+        <p className="text-sm md:text-base lg:text-lg max-w-xl mb-12 animate-[slideInUp_0.9s_ease-out] text-gray-300 font-medium">
           {festivalConfig.description}
         </p>
         <div className="animate-[slideInUp_1.1s_ease-out]">
           <button
             onClick={handleNavigate}
-            className="flex items-center justify-center px-8 py-3 bg-white text-black font-bold rounded-lg hover:bg-gray-300 transition-colors text-lg"
+            className="flex items-center justify-center px-12 py-4 bg-white text-black font-black rounded-xl hover:bg-gray-200 transition-all transform hover:scale-105 active:scale-95 text-xs uppercase tracking-widest shadow-2xl"
           >
-            Explore the Festival
+            Explore Official Selections
           </button>
         </div>
       </div>

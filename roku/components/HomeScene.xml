@@ -1,62 +1,26 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<component name="HomeScene" extends="Scene">
-
+<component name="HomeScene" extends="Group">
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
-
-    <interface>
-        <field id="content" type="node" onChange="onContentChange" />
-    </interface>
-
     <children>
-        <Rectangle id="background" color="0x050505FF" width="1920" height="1080" />
-        
-        <!-- HERO SECTION (Spotlight) -->
-        <Group id="heroGroup" visible="false">
-            <Poster id="heroImage" width="1920" height="1080" loadDisplayMode="scaleToFill" opacity="0.4" />
-            <Rectangle id="heroGradient" color="0x050505FF" endColor="0x05050500" gradient="linear" gradientDirection="down" width="1920" height="600" translation="[0, 480]" />
-            <Rectangle id="heroGradientSide" color="0x050505E0" endColor="0x05050500" gradient="linear" gradientDirection="left-right" width="1200" height="1080" />
-            
-            <Group id="heroText" translation="[100, 350]">
-                <Label id="heroTitle" width="1000" wrap="true" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
-                <Label id="heroSynopsis" width="800" wrap="true" maxLines="4" translation="[0, 100]" font="font:SmallSystemFont" color="0xCCCCCCFF" />
-                
-                <Group id="heroButtons" translation="[0, 280]">
-                    <Rectangle id="playBtn" width="240" height="70" color="0xFFFFFFFF" radius="8">
-                        <Label text="PLAY" width="240" height="70" horizAlign="center" vertAlign="center" color="0x000000FF" font="font:SmallBoldSystemFont" />
-                    </Rectangle>
-                    <Rectangle id="infoBtn" width="240" height="70" color="0x333333FF" translation="[260, 0]" radius="8">
-                        <Label text="DETAILS" width="240" height="70" horizAlign="center" vertAlign="center" color="0xFFFFFFFF" font="font:SmallBoldSystemFont" />
-                    </Rectangle>
-                </Group>
-            </Group>
+        <!-- Hero Spotlight -->
+        <Group id="hero">
+            <Poster id="heroImage" width="1920" height="800" opacity="0.5" loadDisplayMode="scaleToFill" />
+            <Rectangle width="1920" height="400" translation="[0, 400]" gradientDirection="top-to-bottom" color="0x05050500" endColor="0x050505FF" />
+            <Label id="heroTitle" translation="[100, 500]" font="font:LargeBoldSystemFont" width="1000" />
         </Group>
 
-        <!-- ROW LIST -->
-        <RowList
-            id="categoryRowList"
-            translation="[100, 750]"
-            itemComponentName="MoviePoster"
-            itemSize="[240, 360]"
-            rowItemSpacing="[ [40, 0] ]"
-            numRows="5"
-            rowHeights="[360, 360, 360, 360, 360]"
-            rowLabelOffset="[ [0, -50] ]"
-            rowFocusAnimationStyle="floatingFocus"
-            showRowLabel="[true]"
-            visible="false"
+        <RowList 
+            id="rowList" 
+            translation="[0, 650]" 
+            itemComponentName="MoviePosterItem" 
+            itemSize="[1920, 450]" 
+            numRows="3" 
+            rowItemSize="[ [300, 450] ]"
+            rowItemSpacing="[ [30, 0] ]"
+            rowLabelOffset="[ [100, 20] ]"
+            focusXOffset="[ 100 ]"
         />
-
-        <Poster id="logo" uri="pkg:/images/logo_hd.png" width="160" height="40" translation="[100, 40]" />
         
-        <Label 
-            id="loadingLabel"
-            text="ESTABLISHING UPLINK..."
-            translation="[960, 540]"
-            horizAlign="center"
-            vertAlign="center"
-            font="font:SmallBoldSystemFont"
-            color="0x444444FF"
-        />
-
+        <Task id="loadTask" uri="pkg:/components/ContentTask.xml" />
     </children>
 </component>
