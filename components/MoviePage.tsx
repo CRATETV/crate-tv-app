@@ -32,7 +32,7 @@ const getEmbedUrl = (url: string): string | null => {
 };
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie } = useAuth();
+  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie, markAsWatched } = useAuth();
   const { movies: allMovies, categories: allCategories, isLoading: isDataLoading } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
@@ -107,6 +107,9 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const playContent = useCallback(async () => {
     if (videoRef.current && movie?.key) {
         try {
+            // TRACK VIEWING HISTORY FOR INTEL
+            markAsWatched(movie.key);
+
             if (!hasTrackedViewRef.current) {
                 hasTrackedViewRef.current = true;
                 const token = await getUserIdToken();
@@ -123,7 +126,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             setIsPaused(true);
         }
     }
-  }, [movie, getUserIdToken]);
+  }, [movie, getUserIdToken, markAsWatched]);
 
   const toggleManualPause = (e: React.MouseEvent) => {
       if (isEnded) return;

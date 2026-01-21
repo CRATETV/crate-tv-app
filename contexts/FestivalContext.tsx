@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo } from 'react';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData } from '../types';
@@ -58,24 +59,8 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 if (data.movies) setMovies(data.movies);
                 if (data.categories) setCategories(data.categories);
                 if (data.aboutData) setAboutData(data.aboutData);
-                if (data.settings) setSettings(data.settings);
-                if (data.festivalConfig) setFestivalConfig(data.festivalConfig);
-                if (data.festivalData) setFestivalData(data.festivalData);
+                // We will let the real-time listener handle settings/festival for "Instant" feel
                 setDataSource('live');
-            }
-            
-            // Also fetch analytics for global ranking
-            const password = sessionStorage.getItem('adminPassword') || process.env.ADMIN_PASSWORD;
-            if (password) {
-                const analyticsRes = await fetch('/api/get-sales-data', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password }),
-                });
-                if (analyticsRes.ok) {
-                    const aData = await analyticsRes.json();
-                    setAnalytics(aData.analyticsData);
-                }
             }
         } catch (err) {
             console.error("Live sync failed, using local fallback.", err);
@@ -92,12 +77,21 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             await initializeFirebaseAuth();
             const db = getDbInstance();
             if (db) {
+                // INSTANT SYNC: Listen directly to Firestore for high-frequency changes
                 db.collection('content').doc('settings').onSnapshot(doc => {
                     if (doc.exists) setSettings(doc.data() as SiteSettings);
                 });
 
                 db.collection('festival').doc('config').onSnapshot(doc => {
                     if (doc.exists) setFestivalConfig(doc.data() as FestivalConfig);
+                });
+
+                db.collection('festival').doc('schedule').collection('days').onSnapshot(snap => {
+                    const days: FestivalDay[] = [];
+                    snap.forEach(doc => days.push(doc.data() as FestivalDay));
+                    if (days.length > 0) {
+                        setFestivalData(days.sort((a, b) => a.day - b.day));
+                    }
                 });
 
                 db.collection('movie_pipeline').onSnapshot(snapshot => {

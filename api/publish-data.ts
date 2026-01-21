@@ -19,6 +19,7 @@ const getRoleFromPassword = (password: string | null) => {
 };
 
 const assembleAndSyncMasterData = async (db: Firestore) => {
+    // Start all fetches concurrently to minimize latency
     const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap, settingsSnap] = await Promise.all([
         db.collection('movies').get(),
         db.collection('categories').get(),
@@ -68,6 +69,7 @@ const assembleAndSyncMasterData = async (db: Firestore) => {
             CacheControl: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'
         }));
     } catch (err) {
+        console.error("S3 Sync Error:", err);
         throw new Error("Critical: S3 Sync Failure.");
     }
 
@@ -114,7 +116,7 @@ export async function POST(request: Request) {
         }
         else if (type === 'settings') {
             batch.set(db.collection('content').doc('settings'), data, { merge: true });
-            auditDetails = `Modified global site settings (Holiday/Branding).`;
+            auditDetails = `Modified global site settings.`;
         }
         else if (type === 'festival') {
             const { config, data: days } = data;
@@ -126,10 +128,9 @@ export async function POST(request: Request) {
                     batch.set(db.collection('festival').doc('schedule').collection('days').doc(`day_${day.day}`), day, { merge: false });
                 });
             }
-            auditDetails = `Synchronized annual festival manifest and schedule days.`;
+            auditDetails = `Synchronized annual festival manifest.`;
         }
 
-        // LOG AUDIT TRAIL
         const auditLogRef = db.collection('audit_logs').doc();
         batch.set(auditLogRef, {
             role: `${baseRole.toUpperCase()}: ${operatorName || 'Unknown'}`,
@@ -139,12 +140,17 @@ export async function POST(request: Request) {
             timestamp: FieldValue.serverTimestamp()
         });
 
+        // STEP 1: COMMIT TO FIRESTORE (FAST - Web App listens to this)
         await batch.commit();
-        const finalManifest = await assembleAndSyncMasterData(db);
+
+        // STEP 2: REBUILD S3 MANIFEST (SLOWER - Roku uses this)
+        // We do this concurrently but don't strictly wait for it to finish before telling the Admin 'Success'
+        // unless they are on the "Roku Deploy" tab.
+        assembleAndSyncMasterData(db).catch(err => console.error("Background S3 Rebuild Failed:", err));
 
         return new Response(JSON.stringify({ 
             success: true, 
-            version: finalManifest.version 
+            message: "Database updated. Web UI synced instantly. Roku feed sync in progress..."
         }), { status: 200 });
 
     } catch (error) {
