@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Movie, FestivalDay, FestivalConfig, FilmBlock } from '../types';
 
@@ -84,6 +85,18 @@ interface FestivalEditorProps {
     isSaving: boolean;
 }
 
+const formatISOForInput = (isoString?: string): string => {
+    if (!isoString) return '';
+    try {
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) return '';
+        const tzoffset = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
+    } catch (e) {
+        return '';
+    }
+};
+
 const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies, onDataChange, onConfigChange, onSave, isSaving }) => {
   const [editingBlock, setEditingBlock] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -106,6 +119,15 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
     newData[dayIndex].blocks[blockIndex].movieKeys = newMovieKeys;
     onDataChange(newData);
     setEditingBlock(null);
+  };
+
+  const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setIsDirty(true);
+    const { name, value, type } = e.target;
+    let finalValue: any = value;
+    if (type === 'datetime-local') finalValue = value ? new Date(value).toISOString() : '';
+    else if (type === 'checkbox') finalValue = (e.target as HTMLInputElement).checked;
+    onConfigChange({ ...config, [name]: finalValue });
   };
 
   const addDay = () => {
@@ -169,15 +191,31 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
                   <label className="form-label">Festival Title</label>
-                  <input type="text" value={config.title || ''} onChange={e => onConfigChange({...config, title: e.target.value})} className="form-input bg-black/40 font-black uppercase italic" />
+                  <input type="text" name="title" value={config.title || ''} onChange={handleConfigChange} className="form-input bg-black/40 font-black uppercase italic" />
               </div>
-              <div className="flex items-center justify-between gap-4 bg-black/20 p-6 rounded-2xl border border-white/5">
+              <div>
+                  <label className="form-label">Sub-Heading (Tagline)</label>
+                  <input type="text" name="subheader" value={config.subheader || ''} onChange={handleConfigChange} className="form-input bg-black/40" placeholder="e.g. 12th Annual Official Selections" />
+              </div>
+              <div className="md:col-span-2">
+                  <label className="form-label">Mission / Description</label>
+                  <textarea name="description" value={config.description || ''} onChange={handleConfigChange} className="form-input bg-black/40 h-24" placeholder="Brief overview of this festival cycle..." />
+              </div>
+              <div>
+                  <label className="form-label">Festival Start Date (Calendar)</label>
+                  <input type="datetime-local" name="startDate" value={formatISOForInput(config.startDate)} onChange={handleConfigChange} className="form-input bg-black/40" />
+              </div>
+              <div>
+                  <label className="form-label">Festival End Date (Calendar)</label>
+                  <input type="datetime-local" name="endDate" value={formatISOForInput(config.endDate)} onChange={handleConfigChange} className="form-input bg-black/40" />
+              </div>
+              <div className="flex items-center justify-between gap-4 bg-black/20 p-6 rounded-2xl border border-white/5 md:col-span-2">
                 <div>
-                    <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Portal Access</span>
-                    <p className="text-[8px] text-gray-700 uppercase font-bold mt-1">Show on live site</p>
+                    <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Portal Visibility</span>
+                    <p className="text-[8px] text-gray-700 uppercase font-bold mt-1">Make accessible to public web nodes</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={config.isFestivalLive} onChange={(e) => onConfigChange({...config, isFestivalLive: e.target.checked})} className="sr-only peer" />
+                    <input type="checkbox" name="isFestivalLive" checked={config.isFestivalLive} onChange={handleConfigChange} className="sr-only peer" />
                     <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-1 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                 </label>
               </div>
