@@ -18,20 +18,20 @@ const ZineStoryCard: React.FC<{ story: EditorialStory; onClick: () => void }> = 
             <img src={story.heroImage} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="" />
             <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
         </div>
-        <div className="flex-grow flex flex-col justify-center space-y-4">
+        <div className="flex-grow flex flex-col justify-center space-y-4 px-2">
             <div className="flex items-center gap-4">
-                <span className="text-red-600 font-black uppercase text-[9px] tracking-[0.4em]">{story.type}</span>
+                <span className="text-red-600 font-black uppercase text-[10px] tracking-[0.4em]">{story.type}</span>
                 <span className="w-1 h-1 rounded-full bg-gray-800"></span>
-                <span className="text-gray-500 font-bold uppercase text-[9px] tracking-widest">{story.author}</span>
+                <span className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">{story.author}</span>
             </div>
-            <h3 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter italic leading-none group-hover:text-red-500 transition-colors">
+            <h3 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter italic leading-[0.9] group-hover:text-red-500 transition-colors">
                 {story.title}
             </h3>
-            <p className="text-gray-400 text-lg font-medium max-w-xl leading-relaxed">
+            <p className="text-gray-400 text-lg md:text-xl font-medium max-w-xl leading-relaxed">
                 {story.subtitle}
             </p>
-            <div className="pt-2">
-                <span className="text-white font-black uppercase tracking-widest text-[10px] border-b-2 border-red-600 pb-1">Read Full Dispatch</span>
+            <div className="pt-4">
+                <span className="text-white font-black uppercase tracking-widest text-[10px] border-b-2 border-red-600 pb-1">Read Dispatch →</span>
             </div>
         </div>
     </div>
@@ -56,7 +56,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                 return;
             }
             try {
-                // RESTORED: Fixed the snap reference to load written stories
+                // RESTORED: Fixed logic to load all previous dispatches from 'editorial_stories'
                 const snap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').get();
                 const fetched: EditorialStory[] = [];
                 snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as EditorialStory));
@@ -119,32 +119,33 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
             <main className="flex-grow pt-24 pb-32">
                 {!activeStory ? (
                     <div className="space-y-32">
-                        {/* FEATURE DISPATCH: Tudum Hero Style */}
+                        {/* FEATURE DISPATCH: Tudum Hero */}
                         {stories.length > 0 && (
                             <section 
                                 onClick={() => handleNavigate(stories[0].id)}
-                                className="relative w-full h-[60vh] md:h-[80vh] cursor-pointer group overflow-hidden border-b border-white/5"
+                                className="relative w-full h-[70vh] md:h-[90vh] cursor-pointer group overflow-hidden border-b border-white/5"
                             >
                                 <img src={stories[0].heroImage} className="w-full h-full object-cover transition-transform duration-[3000ms] group-hover:scale-110" alt="" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
                                 <div className="absolute bottom-24 left-4 md:left-12 max-w-5xl space-y-6">
                                     <div className="flex items-center gap-3">
-                                        <span className="bg-red-600 text-white font-black px-4 py-1.5 rounded-full text-[10px] uppercase tracking-widest shadow-2xl">New Transmission</span>
+                                        <span className="bg-red-600 text-white font-black px-4 py-1.5 rounded-full text-[10px] uppercase tracking-widest shadow-2xl">New Dispatch</span>
+                                        <span className="text-white font-black uppercase text-[10px] tracking-[0.4em] drop-shadow-md">{stories[0].type}</span>
                                     </div>
                                     <h1 className="text-6xl md:text-[11rem] font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-2xl">{stories[0].title}</h1>
-                                    <p className="text-2xl md:text-4xl text-gray-300 font-medium max-w-3xl drop-shadow-xl leading-tight">{stories[0].subtitle}</p>
-                                    <div className="pt-4">
-                                        <span className="text-white font-black uppercase tracking-widest text-[11px] border-b-4 border-red-600 pb-2">Explore Investigation</span>
+                                    <p className="text-2xl md:text-4xl text-gray-200 font-medium max-w-3xl drop-shadow-xl leading-tight">{stories[0].subtitle}</p>
+                                    <div className="pt-6">
+                                        <span className="text-white font-black uppercase tracking-[0.3em] text-xs border-b-4 border-red-600 pb-2">Read Article</span>
                                     </div>
                                 </div>
                             </section>
                         )}
 
-                        {/* LIST: Minimalist News Feed */}
+                        {/* LIST: Minimalist Feed */}
                         <div className="max-w-[1600px] mx-auto px-4 md:px-12">
                             <div className="flex items-center justify-between border-b border-white/5 pb-8 mb-12">
-                                <h2 className="text-sm font-black uppercase tracking-[0.6em] text-gray-700">Chronicle // Records</h2>
-                                <p className="text-[10px] font-black text-gray-800 uppercase tracking-widest">Digital Archive Active</p>
+                                <h2 className="text-sm font-black uppercase tracking-[0.6em] text-gray-700">Chronicle // Dispatch Logs</h2>
+                                <p className="text-[10px] font-black text-gray-800 uppercase tracking-widest">Global Record Active</p>
                             </div>
                             <div className="divide-y divide-white/5">
                                 {stories.slice(1).map(story => (
@@ -153,16 +154,16 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </div>
                         </div>
 
-                        {/* NEWSLETTER HUB */}
+                        {/* SUBSCRIBE: Node Activation */}
                         <section className="max-w-4xl mx-auto px-4">
-                            <div className="bg-white/5 border border-white/10 p-12 md:p-20 rounded-[4rem] text-center space-y-8 relative overflow-hidden">
-                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.05)_0%,transparent_70%)] pointer-events-none"></div>
+                            <div className="bg-white/5 border border-white/10 p-12 md:p-20 rounded-[4rem] text-center space-y-8 relative overflow-hidden shadow-2xl">
+                                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.05)_0%,transparent_70%)] pointer-events-none"></div>
                                 <div className="relative z-10 space-y-6">
-                                    <h3 className="text-4xl md:text-7xl font-black uppercase tracking-tighter italic leading-none">Join the Dispatch.</h3>
+                                    <h3 className="text-4xl md:text-7xl font-black uppercase tracking-tighter italic leading-none">Join the List.</h3>
                                     <p className="text-gray-400 text-lg md:text-2xl font-medium max-w-2xl mx-auto leading-relaxed">The definitive record of the independent cinematic underground, delivered to your sector.</p>
                                     
                                     {subStatus === 'success' ? (
-                                        <div className="bg-green-600/10 border border-green-500/20 p-6 rounded-3xl inline-block px-12">
+                                        <div className="bg-green-600/10 border border-green-500/20 p-6 rounded-3xl inline-block px-12 animate-[fadeIn_0.4s_ease-out]">
                                             <p className="text-green-500 font-black uppercase text-xs tracking-widest">Uplink Secured ✓</p>
                                         </div>
                                     ) : (
@@ -180,7 +181,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                                 disabled={subStatus === 'loading'}
                                                 className="bg-red-600 hover:bg-red-700 text-white font-black py-6 px-12 rounded-2xl uppercase text-[11px] tracking-widest shadow-xl transition-all active:scale-95"
                                             >
-                                                Authorize Link
+                                                Activate Link
                                             </button>
                                         </form>
                                     )}
@@ -201,7 +202,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                     <div className="flex items-center gap-4">
                                         <span className="bg-red-600 text-white font-black px-4 py-1.5 rounded-full text-[10px] uppercase tracking-widest shadow-xl">{activeStory.type}</span>
                                         <span className="text-[10px] text-gray-700 font-black uppercase tracking-widest">
-                                            {activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString() : 'Active Dispatch'}
+                                            {activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString() : 'Active Transmission'}
                                         </span>
                                     </div>
                                     <h1 className="text-6xl md:text-[10rem] font-black uppercase tracking-tighter leading-[0.75] italic drop-shadow-2xl">{activeStory.title}</h1>

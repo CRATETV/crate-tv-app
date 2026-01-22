@@ -201,7 +201,6 @@ const EmbeddedChat: React.FC<{
 };
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    // FIX: Added 'unlockFestivalBlock' to the destructuring from useAuth to fix the 'Cannot find name' error on line 642.
     const { user, unlockedWatchPartyKeys, unlockWatchParty, unlockedFestivalBlockIds, hasFestivalAllAccess, rentals, unlockFestivalBlock } = useAuth();
     const { movies: allMovies, festivalData, isLoading: isFestivalLoading } = useFestival();
     
@@ -225,17 +224,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return null;
     }, [movieKey, allMovies, festivalData]);
 
-    // PRESTIGE ACCESS CHECK:
-    // 1. Full Festival Pass always works.
-    // 2. Block Pass/Ticket always works for the whole block.
-    // 3. Watch Party Ticket for this node always works.
     const hasFullSessionAccess = useMemo(() => {
         if (isBackstageDirector) return true;
         if (hasFestivalAllAccess) return true;
         if (unlockedWatchPartyKeys.has(movieKey)) return true;
         if (context?.type === 'block' && unlockedFestivalBlockIds.has(movieKey)) return true;
         
-        // If it's a single movie party and they have the block pass
         if (context?.type === 'movie') {
             const parentBlock = festivalData.flatMap(d => d.blocks).find(b => b.movieKeys.includes(movieKey));
             if (parentBlock && unlockedFestivalBlockIds.has(parentBlock.id)) return true;
@@ -244,12 +238,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return false;
     }, [context, movieKey, unlockedWatchPartyKeys, unlockedFestivalBlockIds, isBackstageDirector, hasFestivalAllAccess, festivalData]);
 
-    // ACCESS HANDSHAKE:
-    // Allows entry if they have ANY access (Full or single-movie rental).
     const hasAnyAccess = useMemo(() => {
         if (hasFullSessionAccess) return true;
-        
-        // Check if user has ANY rental for films in the target context
         if (context?.type === 'movie') {
             const exp = rentals[movieKey];
             return exp && new Date(exp) > new Date();
@@ -262,12 +252,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return false;
     }, [hasFullSessionAccess, context, rentals, movieKey]);
 
-    // ITEM ACCESS CHECK:
-    // Checks if the user is authorized to view the CURRENTLY playing film.
     const isCurrentItemAuthorized = useMemo(() => {
         if (hasFullSessionAccess) return true;
         if (!activeMovieKey) return false;
-        
         const exp = rentals[activeMovieKey];
         return !!(exp && new Date(exp) > new Date());
     }, [hasFullSessionAccess, activeMovieKey, rentals]);
@@ -329,26 +316,20 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     useEffect(() => {
         if (!hasAnyAccess || !partyState?.actualStartTime || partyState.status !== 'live') return;
-        
         const video = videoRef.current;
-        if (video && video.muted) {
-            setIsHardwareMuted(true);
-        }
+        if (video && video.muted) setIsHardwareMuted(true);
 
         const syncClock = setInterval(() => {
             if (!video) return;
-
             const serverStart = partyState.actualStartTime.toDate ? partyState.actualStartTime.toDate().getTime() : new Date(partyState.actualStartTime).getTime();
             const elapsedTotalSeconds = (Date.now() - serverStart) / 1000;
             const targetTime = Math.max(0, elapsedTotalSeconds);
 
             const applyGlobalSync = (time: number) => {
                 if (!video.src) return;
-
                 if (Math.abs(video.currentTime - time) > 1.5 && !video.seeking) {
                     video.currentTime = time;
                 }
-                
                 if (video.paused && !video.seeking) {
                     video.play().catch((error) => {
                         if (error.name === 'NotAllowedError') {
@@ -358,22 +339,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         }
                     });
                 }
-                
-                if (video.currentTime > 0.1 && !isVideoActuallyPlaying) {
-                    setIsVideoActuallyPlaying(true);
-                }
-                
-                if (video.muted && !isWaiting) {
-                    setIsHardwareMuted(true);
-                }
+                if (video.currentTime > 0.1 && !isVideoActuallyPlaying) setIsVideoActuallyPlaying(true);
+                if (video.muted && !isWaiting) setIsHardwareMuted(true);
             };
 
             if (context?.type === 'movie') {
-                if (context.movie.isLiveStream) {
-                    setIsVideoActuallyPlaying(true);
-                } else {
-                    applyGlobalSync(targetTime);
-                }
+                if (context.movie.isLiveStream) setIsVideoActuallyPlaying(true);
+                else applyGlobalSync(targetTime);
                 if (activeMovieKey !== movieKey) setActiveMovieKey(movieKey);
             } 
             else if (context?.type === 'block') {
@@ -383,7 +355,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     const m = allMovies[key];
                     if (!m) continue;
                     const duration = (m.durationInMinutes || 10) * 60;
-                    
                     if (targetTime >= accumulatedTime && targetTime < accumulatedTime + duration) {
                         const movieElapsed = targetTime - accumulatedTime;
                         if (activeMovieKey !== key) {
@@ -396,9 +367,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     }
                     accumulatedTime += duration;
                 }
-                if (!found && activeMovieKey) {
-                    setActiveMovieKey(null);
-                }
+                if (!found && activeMovieKey) setActiveMovieKey(null);
             }
         }, 1000); 
         return () => clearInterval(syncClock);
@@ -413,10 +382,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         }
     };
 
-    const handleGoHome = () => {
+    const handleGoHome = useCallback(() => {
         window.history.pushState({}, '', '/');
         window.dispatchEvent(new Event('pushstate'));
-    };
+    }, []);
 
     if (isFestivalLoading || !context) return <LoadingSpinner />;
 
@@ -452,7 +421,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         <div className="flex items-center gap-6">
                             <button onClick={() => setShowBackstageModal(true)} className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500 hover:text-white transition-colors">Director Entry</button>
                             <div className="w-px h-3 bg-white/10"></div>
-                            <button handleGoHome={handleGoHome} className="text-gray-600 font-black uppercase tracking-[0.4em] text-[10px] hover:text-white transition-colors">Return to Library</button>
+                            {/* FIXED build error: handleGoHome is now properly assigned to onClick */}
+                            <button onClick={handleGoHome} className="text-gray-600 font-black uppercase tracking-[0.4em] text-[10px] hover:text-white transition-colors">Return to Library</button>
                         </div>
                     </div>
                 </div>
@@ -548,7 +518,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         )}
 
                         <div className="flex-grow flex items-center justify-center relative">
-                            {/* GRANULAR ACCESS WRAPPER */}
                             {isLive && !isCurrentItemAuthorized ? (
                                 <div className="absolute inset-0 z-40 bg-black flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.5s_ease-out]">
                                      <div className="max-w-md space-y-8">
