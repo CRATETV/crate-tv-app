@@ -2,23 +2,58 @@
 <component name="HomeScene" extends="Group">
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
     <children>
-        <!-- Hero Spotlight -->
+        <!-- TUDUM IMMERSIVE HERO -->
         <Group id="hero">
-            <Poster id="heroImage" width="1920" height="800" opacity="0.5" loadDisplayMode="scaleToFill" />
-            <Rectangle width="1920" height="400" translation="[0, 400]" gradientDirection="top-to-bottom" color="0x05050500" endColor="0x050505FF" />
-            <Label id="heroTitle" translation="[100, 500]" font="font:LargeBoldSystemFont" width="1000" />
+            <Poster 
+                id="heroImage" 
+                width="1920" 
+                height="1080" 
+                opacity="0.4" 
+                loadDisplayMode="scaleToFill" 
+            />
+            
+            <!-- Cinematic Vignette -->
+            <Rectangle width="1920" height="1080" color="0x00000000">
+                <Rectangle width="1920" height="400" translation="[0, 680]" gradientDirection="top-to-bottom" color="0x00000000" endColor="0x050505FF" />
+            </Rectangle>
+
+            <Group id="heroContent" translation="[100, 450]">
+                <Label id="heroTypeBadge" text="LATEST DISPATCH" font="font:SmallestBoldSystemFont" color="0xEF4444FF" />
+                
+                <Label 
+                    id="heroTitle" 
+                    translation="[0, 40]" 
+                    width="1400" 
+                    wrap="true" 
+                    color="0xFFFFFFFF"
+                >
+                    <font role="sans" size="120" weight="bold" />
+                </Label>
+                
+                <Label 
+                    id="heroSubtitle" 
+                    translation="[0, 180]" 
+                    width="1000" 
+                    wrap="true" 
+                    font="font:MediumSystemFont" 
+                    color="0xCCCCCCFF" 
+                />
+            </RowList>
         </Group>
 
+        <!-- HIGH DENSITY ROW LIST -->
         <RowList 
             id="rowList" 
-            translation="[0, 650]" 
+            translation="[0, 680]" 
             itemComponentName="MoviePosterItem" 
-            itemSize="[1920, 450]" 
+            itemSize="[1920, 480]" 
             numRows="3" 
+            rowHeights="[480]"
             rowItemSize="[ [300, 450] ]"
-            rowItemSpacing="[ [30, 0] ]"
+            rowItemSpacing="[ [40, 0] ]"
             rowLabelOffset="[ [100, 20] ]"
             focusXOffset="[ 100 ]"
+            rowFocusAnimationStyle="floatingFocus"
         />
         
         <Task id="loadTask" uri="pkg:/components/ContentTask.xml" />
