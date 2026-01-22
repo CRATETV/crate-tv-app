@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Movie, FestivalDay, FestivalConfig, FilmBlock } from '../types';
 import SquarePaymentModal from './SquarePaymentModal';
@@ -221,7 +220,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
                             <div className="p-8 md:p-12">
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                                     {blockMovies.map(movie => {
-                                        const isMovieUnlocked = isBlockUnlocked || (rentals[movie.key] && new Date(rentals[movie.key]) > new Date());
+                                        const isMovieUnlocked = isBlockUnlocked || !!(rentals[movie.key] && new Date(rentals[movie.key]) > new Date());
                                         const isMovieLive = activeParties[movie.key]?.status === 'live';
 
                                         return (
