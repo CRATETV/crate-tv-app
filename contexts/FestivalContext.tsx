@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo } from 'react';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
 import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData } from '../types';
@@ -59,11 +58,10 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 if (data.movies) setMovies(data.movies);
                 if (data.categories) setCategories(data.categories);
                 if (data.aboutData) setAboutData(data.aboutData);
-                // We will let the real-time listener handle settings/festival for "Instant" feel
                 setDataSource('live');
             }
         } catch (err) {
-            console.error("Live sync failed, using local fallback.", err);
+            console.error("Live manifest fetch failed, using local fallback.", err);
             setDataSource('fallback');
         } finally {
             setIsLoading(false);
@@ -77,7 +75,8 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             await initializeFirebaseAuth();
             const db = getDbInstance();
             if (db) {
-                // INSTANT SYNC: Listen directly to Firestore for high-frequency changes
+                // INSTANT SYNC LOGIC: Listen directly to Firestore collections
+                // This ensures that Admin changes appear on the live site IMMEDIATELY.
                 db.collection('content').doc('settings').onSnapshot(doc => {
                     if (doc.exists) setSettings(doc.data() as SiteSettings);
                 });
@@ -87,10 +86,14 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 });
 
                 db.collection('festival').doc('schedule').collection('days').onSnapshot(snap => {
-                    const days: FestivalDay[] = [];
-                    snap.forEach(doc => days.push(doc.data() as FestivalDay));
-                    if (days.length > 0) {
-                        setFestivalData(days.sort((a, b) => a.day - b.day));
+                    if (!snap.empty) {
+                        const days: FestivalDay[] = [];
+                        snap.forEach(doc => {
+                            const data = doc.data() as FestivalDay;
+                            days.push(data);
+                        });
+                        // Filter out any ghost/empty records and sort by day number
+                        setFestivalData(days.filter(d => d && d.day).sort((a, b) => a.day - b.day));
                     }
                 });
 

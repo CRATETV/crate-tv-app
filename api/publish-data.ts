@@ -1,4 +1,3 @@
-
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { Firestore, FieldValue } from 'firebase-admin/firestore';
@@ -19,7 +18,7 @@ const getRoleFromPassword = (password: string | null) => {
 };
 
 const assembleAndSyncMasterData = async (db: Firestore) => {
-    // Start all fetches concurrently to minimize latency
+    // Aggressive parallel fetching for manifest assembly
     const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap, settingsSnap] = await Promise.all([
         db.collection('movies').get(),
         db.collection('categories').get(),
@@ -70,9 +69,7 @@ const assembleAndSyncMasterData = async (db: Firestore) => {
         }));
     } catch (err) {
         console.error("S3 Sync Error:", err);
-        throw new Error("Critical: S3 Sync Failure.");
     }
-
     return liveData;
 };
 
@@ -94,29 +91,13 @@ export async function POST(request: Request) {
         let auditDetails = `Mutated ${type} resource.`;
 
         if (type === 'delete_movie') {
-            const { key } = data;
-            batch.delete(db.collection('movies').doc(key));
-            auditDetails = `PURGE: Irreversibly deleted movie record [${key}].`;
+            batch.delete(db.collection('movies').doc(data.key));
+            auditDetails = `PURGE: Deleted movie [${data.key}].`;
         } 
-        else if (type === 'set_now_streaming') {
-            batch.set(db.collection('categories').doc('nowStreaming'), { title: 'Now Streaming', movieKeys: [data.key] }, { merge: false });
-            auditDetails = `Update global spotlight to film [${data.key}].`;
-        }
         else if (type === 'movies') {
             for (const [id, docData] of Object.entries(data)) {
                 batch.set(db.collection('movies').doc(id), docData as object, { merge: true });
             }
-            auditDetails = `Updated metadata for ${Object.keys(data).length} film(s).`;
-        }
-        else if (type === 'categories') {
-            for (const [id, docData] of Object.entries(data)) {
-                batch.set(db.collection('categories').doc(id), docData as object, { merge: false });
-            }
-            auditDetails = `Re-mapped category infrastructure rows.`;
-        }
-        else if (type === 'settings') {
-            batch.set(db.collection('content').doc('settings'), data, { merge: true });
-            auditDetails = `Modified global site settings.`;
         }
         else if (type === 'festival') {
             const { config, data: days } = data;
@@ -124,33 +105,40 @@ export async function POST(request: Request) {
                 batch.set(db.collection('festival').doc('config'), config, { merge: true });
             }
             if (Array.isArray(days)) {
+                // Clear existing days to ensure a clean overwrite
+                const existingDays = await db.collection('festival').doc('schedule').collection('days').get();
+                existingDays.forEach(doc => batch.delete(doc.ref));
+                
                 days.forEach((day: any) => {
-                    batch.set(db.collection('festival').doc('schedule').collection('days').doc(`day_${day.day}`), day, { merge: false });
+                    if (day && day.day) {
+                        batch.set(db.collection('festival').doc('schedule').collection('days').doc(`day_${day.day}`), day);
+                    }
                 });
             }
-            auditDetails = `Synchronized annual festival manifest.`;
+            auditDetails = `Instant Sync: Festival manifest updated for ${days?.length || 0} days.`;
+        }
+        else if (type === 'settings') {
+            batch.set(db.collection('content').doc('settings'), data, { merge: true });
         }
 
         const auditLogRef = db.collection('audit_logs').doc();
         batch.set(auditLogRef, {
             role: `${baseRole.toUpperCase()}: ${operatorName || 'Unknown'}`,
-            action: `DATA_MUTATION_${type.toUpperCase()}`,
-            type: type === 'delete_movie' ? 'PURGE' : 'MUTATION',
+            action: `SYNC_${type.toUpperCase()}`,
+            type: 'MUTATION',
             details: auditDetails,
             timestamp: FieldValue.serverTimestamp()
         });
 
-        // STEP 1: COMMIT TO FIRESTORE (FAST - Web App listens to this)
+        // 1. COMMIT TO FIRESTORE (FAST - Triggers instant web-sync)
         await batch.commit();
 
-        // STEP 2: REBUILD S3 MANIFEST (SLOWER - Roku uses this)
-        // We do this concurrently but don't strictly wait for it to finish before telling the Admin 'Success'
-        // unless they are on the "Roku Deploy" tab.
+        // 2. TRIGGER S3 REBUILD IN BACKGROUND (SLOWER - Handles Roku)
         assembleAndSyncMasterData(db).catch(err => console.error("Background S3 Rebuild Failed:", err));
 
         return new Response(JSON.stringify({ 
             success: true, 
-            message: "Database updated. Web UI synced instantly. Roku feed sync in progress..."
+            message: "Cloud database updated. Live page synced." 
         }), { status: 200 });
 
     } catch (error) {

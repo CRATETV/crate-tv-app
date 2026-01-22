@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Movie, FestivalDay, FestivalConfig, FilmBlock } from '../types';
 import SquarePaymentModal from './SquarePaymentModal';
@@ -56,20 +55,15 @@ const FestivalView: React.FC<FestivalViewProps> = ({
   };
 
   const navigateToMovie = (movieKey: string) => {
-    const movie = allMovies[movieKey];
-    if (movie && (movie.fullMovie.startsWith('http://') || movie.fullMovie.startsWith('https://'))) {
-        window.open(movie.fullMovie, '_blank', 'noopener,noreferrer');
-    } else {
-        const path = `/movie/${movieKey}?play=true`;
-        window.history.pushState({}, '', path);
-        window.dispatchEvent(new Event('pushstate'));
-    }
+    const path = `/movie/${movieKey}?play=true`;
+    window.history.pushState({}, '', path);
+    window.dispatchEvent(new Event('pushstate'));
   };
 
   if (!festivalData || festivalData.length === 0) {
       return (
           <div className="py-32 text-center border-2 border-dashed border-white/5 rounded-[4rem] mx-4">
-              <p className="text-gray-700 font-black uppercase tracking-[0.5em]">Global programming manifest pending synchronization...</p>
+              <p className="text-gray-700 font-black uppercase tracking-[0.5em]">Programming manifest pending sync...</p>
           </div>
       );
   }
@@ -77,9 +71,9 @@ const FestivalView: React.FC<FestivalViewProps> = ({
   const currentDayData = festivalData.find(d => d.day === activeDay) || festivalData[0];
 
   return (
-    <div className="font-sans bg-gray-950 text-gray-200">
+    <div className="font-sans bg-transparent">
       {showHero && (
-        <div className="relative bg-gradient-to-br from-[#111] via-[#050505] to-[#111] text-center py-12 sm:py-24 px-4 overflow-hidden border-b border-white/5">
+        <div className="relative text-center py-12 sm:py-24 px-4 overflow-hidden mb-12">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.05)_0%,transparent_70%)]"></div>
             <div className="relative z-10 max-w-4xl mx-auto animate-fadeInHeroContent">
                 <div className="space-y-4 mb-8">
@@ -105,7 +99,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
         </div>
       )}
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="mb-16 flex justify-center">
             <div className="inline-flex p-1 bg-black border border-white/5 rounded-2xl shadow-2xl overflow-x-auto scrollbar-hide max-w-full">
                 {festivalData.map(day => (
@@ -153,30 +147,24 @@ const FestivalView: React.FC<FestivalViewProps> = ({
                                </div>
                             </div>
                             <div className="p-8 md:p-12">
-                                <div className="flex overflow-x-auto space-x-8 pb-8 scrollbar-hide -mx-2 px-2 snap-x">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                                     {blockMovies.map(movie => (
-                                        <div key={movie.key} className="flex-shrink-0 w-[55vw] sm:w-[35vw] md:w-[25vw] lg:w-[18vw] snap-start">
-                                            <FilmBlockCard
-                                                movie={movie}
-                                                isUnlocked={isBlockUnlocked}
-                                                onWatch={() => navigateToMovie(movie.key)}
-                                                onUnlock={() => handlePurchaseClick('movie', movie)}
-                                            />
-                                        </div>
+                                        <FilmBlockCard
+                                            key={movie.key}
+                                            movie={movie}
+                                            isUnlocked={isBlockUnlocked}
+                                            onWatch={() => navigateToMovie(movie.key)}
+                                            onUnlock={() => handlePurchaseClick('movie', movie)}
+                                        />
                                     ))}
                                     {blockMovies.length === 0 && (
-                                        <p className="text-gray-700 font-black uppercase tracking-widest text-xs italic py-10 px-4">Selections pending synchronization...</p>
+                                        <p className="col-span-full text-center text-gray-700 font-black uppercase tracking-widest text-xs italic py-10">No films programmed for this block yet.</p>
                                     )}
                                 </div>
                             </div>
                           </div>
                       )
                   })}
-                  {currentDayData.blocks.length === 0 && (
-                      <div className="py-32 text-center border-2 border-dashed border-white/5 rounded-[4rem]">
-                          <p className="text-gray-700 font-black uppercase tracking-[0.5em]">No blocks programmed for Day {activeDay}</p>
-                      </div>
-                  )}
               </div>
           </div>
       </div>
