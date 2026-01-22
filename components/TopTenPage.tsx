@@ -1,4 +1,3 @@
-
 import React, { useMemo, useRef, useState } from 'react';
 import Header from './Header';
 import CollapsibleFooter from './CollapsibleFooter';
@@ -123,10 +122,19 @@ const TopTenPage: React.FC = () => {
                         <button 
                             onClick={handleExport}
                             disabled={isGenerating}
-                            className="bg-white text-black font-black px-8 py-4 rounded-2xl uppercase tracking-widest text-[10px] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50"
+                            className={`bg-white text-black font-black px-8 py-4 rounded-2xl uppercase tracking-widest text-[10px] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50 ${isGenerating ? 'animate-pulse' : ''}`}
                         >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            {isGenerating ? 'Synthesizing...' : 'Download Social Asset'}
+                            {isGenerating ? (
+                                <>
+                                    <div className="w-3 h-3 border-2 border-black/20 border-t-black rounded-full animate-spin"></div>
+                                    Synthesizing...
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                    Download Social Asset
+                                </>
+                            )}
                         </button>
                     </div>
 

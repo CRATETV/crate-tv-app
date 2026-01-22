@@ -1,7 +1,7 @@
-
 import React, { useMemo, useState, useEffect } from 'react';
 import { Movie } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useFestival } from '../contexts/FestivalContext';
 import Countdown from './Countdown';
 
 interface LiveWatchPartyBannerProps {
@@ -10,6 +10,8 @@ interface LiveWatchPartyBannerProps {
 }
 
 const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onClose }) => {
+    const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys } = useAuth();
+    const { festivalData } = useFestival();
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
@@ -23,7 +25,18 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
     const isLive = now >= startTime;
     const isUpcoming = now < startTime;
     
-    // Threshold calculation for detailed messaging
+    // Authorization check for the banner button
+    const alreadyHasAccess = useMemo(() => {
+        if (hasFestivalAllAccess) return true;
+        if (unlockedWatchPartyKeys.has(movie.key)) return true;
+        
+        // Check if this movie belongs to any unlocked block
+        const parentBlock = festivalData.flatMap(d => d.blocks).find(b => b.movieKeys.includes(movie.key));
+        if (parentBlock && unlockedFestivalBlockIds.has(parentBlock.id)) return true;
+        
+        return false;
+    }, [hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys, movie.key, festivalData]);
+
     const diff = startTime.getTime() - now.getTime();
     const isUnderOneHour = diff < 60 * 60 * 1000;
 
@@ -38,7 +51,7 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
 
     return (
         <div 
-            className={`fixed top-0 left-0 right-0 z-50 p-2 md:p-3 flex items-center justify-between gap-2 md:gap-4 shadow-2xl h-12 border-b border-white/10 animate-[slideInDown:0.4s_ease-out] transition-all ${movie.isWatchPartyPaid ? 'bg-gradient-to-r from-red-600 via-amber-600 to-indigo-900' : 'bg-gradient-to-r from-red-600 via-pink-600 to-indigo-900'}`}
+            className={`fixed top-0 left-0 right-0 z-50 p-2 md:p-3 flex items-center justify-between gap-2 md:gap-4 shadow-2xl h-12 border-b border-white/10 animate-[slideInDown:0.4s_ease-out] transition-all ${movie.isWatchPartyPaid && !alreadyHasAccess ? 'bg-gradient-to-r from-red-600 via-amber-600 to-indigo-900' : 'bg-gradient-to-r from-red-600 via-pink-600 to-indigo-900'}`}
             style={{ top: topOffset }}
         >
             <div className="flex items-center gap-2 md:gap-4 ml-1 md:ml-8">
@@ -47,7 +60,7 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
                     <span className={`relative inline-flex rounded-full h-2.5 w-2.5 bg-white ${isLive ? 'shadow-[0_0_10px_white]' : ''}`}></span>
                 </span>
                 <span className="font-black text-[9px] md:text-[10px] uppercase tracking-widest md:tracking-[0.3em] whitespace-nowrap">
-                    {movie.isWatchPartyPaid ? 'TICKETED EVENT' : (isLive ? 'LIVE NOW' : 'UPCOMING SESSION')}
+                    {movie.isWatchPartyPaid && !alreadyHasAccess ? 'TICKETED EVENT' : (isLive ? 'LIVE NOW' : 'UPCOMING SESSION')}
                 </span>
             </div>
             

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { EditorialStory, Movie, ZineSection } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -23,31 +22,31 @@ const ZineProof: React.FC<{ title: string; subtitle: string; sections: ZineSecti
     <div className="bg-white rounded-[3rem] shadow-inner overflow-hidden flex flex-col h-full border-[12px] border-black">
         <div className="p-4 bg-gray-100 border-b flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-red-600"></div>
-            <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest">Live Dispatch Proof</span>
+            <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest">Tudum Live Proofing Core</span>
         </div>
-        <div className="flex-grow overflow-y-auto p-10 md:p-16 bg-white scrollbar-hide">
-            <div className="max-w-xl mx-auto space-y-12 text-black">
-                <div className="border-b-4 border-black pb-8">
-                    <h1 className="text-6xl font-black italic tracking-tighter leading-[0.8] mb-4">{title || 'THE_HEADLINE'}</h1>
-                    <p className="text-xl font-bold text-gray-400 uppercase tracking-tight">{subtitle || 'Sub-narrative manifest placeholder...'}</p>
+        <div className="flex-grow overflow-y-auto p-10 md:p-20 bg-white scrollbar-hide">
+            <div className="max-w-xl mx-auto space-y-12 text-black text-left">
+                <div className="border-b-4 border-black pb-10">
+                    <h1 className="text-6xl font-black italic tracking-tighter leading-[0.8] mb-6 uppercase">{title || 'THE_HEADLINE'}</h1>
+                    <p className="text-2xl font-bold text-gray-400 leading-tight">{subtitle || 'Sub-narrative manifest placeholder...'}</p>
                 </div>
 
                 {heroImage && (
-                    <div className="aspect-video rounded-3xl overflow-hidden shadow-2xl">
+                    <div className="aspect-video rounded-[2.5rem] overflow-hidden shadow-2xl mx-auto border-4 border-gray-100">
                         <img src={heroImage} className="w-full h-full object-cover" alt="" />
                     </div>
                 )}
 
-                <div className="space-y-10">
+                <div className="space-y-12">
                     {(sections || []).map((s, idx) => {
-                        if (s.type === 'header') return <h3 key={s.id} className="text-3xl font-black uppercase tracking-tighter italic border-l-4 border-red-600 pl-4">{s.content}</h3>;
-                        if (s.type === 'quote') return <div key={s.id} className="bg-gray-50 border-l-8 border-black p-8 text-2xl font-black uppercase italic tracking-tight">"{s.content}"</div>;
-                        if (s.type === 'image') return <div key={s.id} className="rounded-2xl overflow-hidden shadow-xl border border-gray-100"><img src={s.content} className="w-full h-auto" alt="" /></div>;
+                        if (s.type === 'header') return <h3 key={s.id} className="text-4xl font-black uppercase tracking-tighter italic border-l-8 border-red-600 pl-6 mt-16">{s.content}</h3>;
+                        if (s.type === 'quote') return <div key={s.id} className="bg-gray-50 border-l-8 border-black p-10 text-2xl font-black uppercase italic tracking-tight">"{s.content}"</div>;
+                        if (s.type === 'image') return <div key={s.id} className="rounded-[2rem] overflow-hidden shadow-xl border border-gray-100"><img src={s.content} className="w-full h-auto" alt="" /></div>;
                         return (
                             <div key={s.id} className="relative">
-                                {idx === 0 && <span className="float-left text-7xl font-black italic leading-[0.7] mr-3 mt-2 text-red-600">{s.content.charAt(0)}</span>}
-                                <p className="text-lg text-gray-700 font-medium leading-relaxed">
-                                    {idx === 0 ? s.content.slice(1) : s.content}
+                                {idx === 0 && s.content && <span className="float-left text-9xl font-black italic leading-[0.7] mr-4 mt-4 text-red-600 drop-shadow-lg">{s.content.charAt(0)}</span>}
+                                <p className="text-xl text-gray-800 font-medium leading-relaxed">
+                                    {idx === 0 && s.content ? s.content.slice(1) : s.content}
                                 </p>
                             </div>
                         );
@@ -139,7 +138,7 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
 
     const handleDelete = async () => {
         if (!selectedStory) return;
-        if (!window.confirm("PURGE PROTOCOL: Permanently erase this dispatch from the Crate record?")) return;
+        if (!window.confirm("PURGE PROTOCOL: Permanently erase this dispatch?")) return;
         
         setIsDeleting(true);
         const password = sessionStorage.getItem('adminPassword');
@@ -161,24 +160,6 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
         }
     };
 
-    const handleDownload = () => {
-        if (!selectedStory) return;
-        const storyData = {
-            ...selectedStory,
-            exportedAt: new Date().toISOString(),
-            platform: 'Crate TV V4'
-        };
-        const blob = new Blob([JSON.stringify(storyData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `CRATE_ZINE_${selectedStory.title.replace(/\s+/g, '_')}_ARCHIVE.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
-
     if (isLoading) return <LoadingSpinner />;
 
     return (
@@ -191,14 +172,9 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                 <div className="flex gap-4">
                     <button onClick={() => { setSelectedStory(null); setFormData(emptyStory); }} className="bg-white/5 text-gray-500 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 transition-all">Clear Canvas</button>
                     {selectedStory && (
-                        <>
-                            <button onClick={handleDownload} className="bg-white/10 text-white border border-white/20 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all">
-                                Download Archive
-                            </button>
-                            <button onClick={handleDelete} disabled={isDeleting} className="bg-black text-red-600 border border-red-900/30 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all">
-                                {isDeleting ? 'Erasing...' : 'Purge Dispatch'}
-                            </button>
-                        </>
+                        <button onClick={handleDelete} disabled={isDeleting} className="bg-black text-red-600 border border-red-900/30 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all">
+                            {isDeleting ? 'Erasing...' : 'Purge Dispatch'}
+                        </button>
                     )}
                     <button onClick={handleSave} disabled={isSaving} className="bg-red-600 hover:bg-red-700 text-white px-10 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl transition-all active:scale-95">
                         {isSaving ? 'Syncing...' : selectedStory ? 'Update Record' : 'Publish Dispatch'}
@@ -236,9 +212,10 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                                 <div>
                                     <label className="text-[9px] font-black text-gray-600 uppercase">Dispatch Type</label>
                                     <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as any})} className="form-input bg-black/40 border-white/10 text-xs uppercase font-black">
-                                        <option value="SPOTLIGHT">Spotlight</option>
-                                        <option value="INTERVIEW">Interview</option>
                                         <option value="NEWS">News</option>
+                                        <option value="INTERVIEW">Interview</option>
+                                        <option value="SPOTLIGHT">Spotlight</option>
+                                        <option value="DEEP_DIVE">Deep Dive</option>
                                     </select>
                                 </div>
                                 <div>

@@ -1,4 +1,3 @@
-
 import { Type } from '@google/genai';
 import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
@@ -13,33 +12,27 @@ export async function POST(request: Request) {
     }
 
     const systemInstruction = `
-        You are a World-Class Roku Developer and SceneGraph Architect.
-        Your task is to help build the "Crate TV" Roku Channel. 
+        You are a Specialized Roku SDK Compiler Core. 
+        Your task is to translate standard Web App code (HTML5/React/JS) into Roku SceneGraph (XML/BrightScript).
         
-        AESTHETIC GUIDELINES:
-        - Primary: Pure Black (#050505).
-        - Accents: Crate Red (#EF4444).
-        - Typography: High contrast, uppercase for titles, bold and prestigious.
-        - Depth: Use radial gradients and subtle overlays for cinematic atmosphere.
+        MAPPING PROTOCOLS:
+        1. UI Mapping: Map CSS Flexbox/Grid layouts to Roku RowList or MarkupGrid.
+        2. Networking: Convert JavaScript fetch() or Axios calls to Roku's roUrlTransfer object.
+        3. Media: Convert HTML5 Video API to Roku Video node field observers.
+        4. Focus: Automatically inject Focus Management logic (e.g., m.top.setFocus(true)) for remote control navigation.
+        5. Storage: Translate localStorage into Roku's Registry.
         
-        INFRASTRUCTURE CONTEXT:
-        - The API Endpoint is: /api/roku-feed (for content) and /api/roku-movie-details (for specifics).
-        - Watch parties use canonical server time for Global Sync.
-        - Layouts usually involve a large Hero component and multiple RowLists.
+        TONE: Prestigious, authoritative, and technical.
         
-        CODE REQUIREMENTS:
-        - BrightScript: Use modern, safe object patterns. Prefer associative arrays.
-        - SceneGraph XML: Follow strict hierarchical structure. Use Rectangle for gradients.
-        
-        Respond with exactly TWO parts in JSON:
-        1. "xml": The SceneGraph component code.
-        2. "brs": The corresponding script logic.
-        3. "explanation": A brief high-level technical summary.
+        Respond with exactly THREE parts in JSON:
+        1. "xml": The SceneGraph XML component code.
+        2. "brs": The corresponding BrightScript logic.
+        3. "explanation": A summary of the semantic translation (e.g. "Mapped web carousel to RowList with lazy loading").
     `;
 
     const response = await generateContentWithRetry({
       model: 'gemini-3-pro-preview',
-      contents: [{ parts: [{ text: `Generate a Roku component for: ${prompt}. Component Type: ${componentType}` }] }],
+      contents: [{ parts: [{ text: `TRANSPILATION TARGET: ${prompt}. TASK: Generate Roku compliant SDK files.` }] }],
       config: {
         systemInstruction,
         responseMimeType: "application/json",
@@ -61,7 +54,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error("Roku Forge Error:", error);
+    console.error("Roku Logic Error:", error);
     return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
   }
 }

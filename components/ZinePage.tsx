@@ -1,56 +1,49 @@
-
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';
 import BottomNavBar from './BottomNavBar';
 import SEO from './SEO';
-import { EditorialStory, Movie, ZineSection } from '../types';
+import { EditorialStory } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
-import { useFestival } from '../contexts/FestivalContext';
 import { useAuth } from '../contexts/AuthContext';
-import ZineTrailerPark from './ZineTrailerPark';
-import ZineSentiment from './ZineSentiment';
-
-interface ZinePageProps {
-    storyId?: string;
-}
 
 const ZineStoryCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ story, onClick }) => (
     <div 
         onClick={onClick}
-        className="group cursor-pointer bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] overflow-hidden hover:border-red-600/30 transition-all duration-500 shadow-2xl flex flex-col h-full"
+        className="group cursor-pointer bg-black border-b border-white/5 py-12 md:py-16 flex flex-col md:flex-row gap-8 md:gap-16 hover:bg-white/[0.01] transition-all duration-500"
     >
-        <div className="aspect-[16/10] relative overflow-hidden bg-gray-900">
-            <img src={story.heroImage} className="w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-700" alt="" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-40"></div>
-            <div className="absolute top-4 left-4">
-                <span className="bg-red-600 text-white font-black px-3 py-1 rounded-full text-[8px] uppercase tracking-widest">{story.type}</span>
-            </div>
+        <div className="w-full md:w-[40%] aspect-video relative overflow-hidden rounded-2xl bg-gray-900">
+            <img src={story.heroImage} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="" />
+            <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
         </div>
-        <div className="p-8 space-y-4 flex-grow">
-            <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none group-hover:text-red-500 transition-colors">
+        <div className="flex-grow flex flex-col justify-center space-y-4">
+            <div className="flex items-center gap-4">
+                <span className="text-red-600 font-black uppercase text-[9px] tracking-[0.4em]">{story.type}</span>
+                <span className="w-1 h-1 rounded-full bg-gray-800"></span>
+                <span className="text-gray-500 font-bold uppercase text-[9px] tracking-widest">{story.author}</span>
+            </div>
+            <h3 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter italic leading-none group-hover:text-red-500 transition-colors">
                 {story.title}
             </h3>
-            <p className="text-gray-400 text-sm font-medium line-clamp-3 leading-relaxed">
+            <p className="text-gray-400 text-lg font-medium max-w-xl leading-relaxed">
                 {story.subtitle}
             </p>
-        </div>
-        <div className="p-8 pt-0 border-t border-white/5 flex justify-between items-center mt-auto">
-            <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">By {story.author}</span>
-            <span className="text-red-500 text-[9px] font-black uppercase tracking-widest group-hover:translate-x-1 transition-transform">Read Dispatch →</span>
+            <div className="pt-2">
+                <span className="text-white font-black uppercase tracking-widest text-[10px] border-b-2 border-red-600 pb-1">Read Full Dispatch</span>
+            </div>
         </div>
     </div>
 );
 
-const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
-    const { movies } = useFestival();
+const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     const { authInitialized } = useAuth();
     const [stories, setStories] = useState<EditorialStory[]>([]);
     const [activeStory, setActiveStory] = useState<EditorialStory | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isExporting, setIsExporting] = useState(false);
+    const [email, setEmail] = useState('');
+    const [subStatus, setSubStatus] = useState<'idle' | 'loading' | 'success'>('idle');
     const articleRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
@@ -63,12 +56,18 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
                 return;
             }
             try {
+                // RESTORED: Fixed the snap reference to load written stories
                 const snap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').get();
                 const fetched: EditorialStory[] = [];
                 snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as EditorialStory));
                 setStories(fetched);
-                if (storyId) setActiveStory(fetched.find(s => s.id === storyId) || null);
-                else setActiveStory(null);
+                
+                if (storyId) {
+                    const found = fetched.find(s => s.id === storyId);
+                    setActiveStory(found || null);
+                } else {
+                    setActiveStory(null);
+                }
             } catch (e) {
                 console.error("Zine Narrative Sync Error:", e);
             } finally {
@@ -78,36 +77,30 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
         fetchStories();
     }, [storyId, authInitialized]);
 
+    const handleSubscribe = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubStatus('loading');
+        const db = getDbInstance();
+        if (db) {
+            try {
+                await db.collection('zine_subscriptions').doc(email.toLowerCase().trim()).set({
+                    email: email.toLowerCase().trim(),
+                    timestamp: new Date(),
+                    status: 'active'
+                });
+                setSubStatus('success');
+                setEmail('');
+            } catch (e) {
+                setSubStatus('idle');
+            }
+        }
+    };
+
     const handleNavigate = (id: string | null) => {
         const path = id ? `/zine/${id}` : '/zine';
         window.history.pushState({}, '', path);
         window.dispatchEvent(new Event('pushstate'));
         window.scrollTo(0, 0);
-    };
-
-    const handleExportImage = async () => {
-        if (!articleRef.current || isExporting) return;
-        setIsExporting(true);
-        try {
-            const { default: html2canvas } = await import('html2canvas');
-            const canvas = await html2canvas(articleRef.current, {
-                useCORS: true,
-                backgroundColor: '#000000',
-                scale: 2,
-                logging: false,
-                windowWidth: 1000, 
-            });
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-            const link = document.createElement('a');
-            link.download = `Crate_Dispatch_${activeStory?.title.replace(/\s+/g, '_')}.jpg`;
-            link.href = dataUrl;
-            link.click();
-        } catch (err) {
-            console.error("Export failure:", err);
-            alert("Narrative synthesis for image failed.");
-        } finally {
-            setIsExporting(false);
-        }
     };
 
     if (isLoading) return <LoadingSpinner />;
@@ -124,102 +117,139 @@ const ZinePage: React.FC<ZinePageProps> = ({ storyId }) => {
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
 
             <main className="flex-grow pt-24 pb-32">
-                <div className="max-w-[1600px] mx-auto px-4 md:px-12">
-                    {!activeStory ? (
-                        <div className="space-y-24">
-                            <header className="flex flex-col md:flex-row justify-between items-end border-b border-white/5 pb-16 gap-8">
-                                <div className="space-y-4">
-                                    <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Global Dispatch Active</span>
+                {!activeStory ? (
+                    <div className="space-y-32">
+                        {/* FEATURE DISPATCH: Tudum Hero Style */}
+                        {stories.length > 0 && (
+                            <section 
+                                onClick={() => handleNavigate(stories[0].id)}
+                                className="relative w-full h-[60vh] md:h-[80vh] cursor-pointer group overflow-hidden border-b border-white/5"
+                            >
+                                <img src={stories[0].heroImage} className="w-full h-full object-cover transition-transform duration-[3000ms] group-hover:scale-110" alt="" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+                                <div className="absolute bottom-24 left-4 md:left-12 max-w-5xl space-y-6">
+                                    <div className="flex items-center gap-3">
+                                        <span className="bg-red-600 text-white font-black px-4 py-1.5 rounded-full text-[10px] uppercase tracking-widest shadow-2xl">New Transmission</span>
                                     </div>
-                                    <h1 className="text-7xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">
-                                        CRATE <span className="text-gray-500">ZINE.</span>
-                                    </h1>
-                                    <p className="text-xl text-gray-400 font-medium max-w-xl leading-relaxed">The authoritative record of independent cinema culture, curation, and the creators who move us.</p>
+                                    <h1 className="text-6xl md:text-[11rem] font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-2xl">{stories[0].title}</h1>
+                                    <p className="text-2xl md:text-4xl text-gray-300 font-medium max-w-3xl drop-shadow-xl leading-tight">{stories[0].subtitle}</p>
+                                    <div className="pt-4">
+                                        <span className="text-white font-black uppercase tracking-widest text-[11px] border-b-4 border-red-600 pb-2">Explore Investigation</span>
+                                    </div>
                                 </div>
-                                <div className="hidden md:block">
-                                    <ZineSentiment />
-                                </div>
-                            </header>
+                            </section>
+                        )}
 
-                            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                                {stories.map(story => (
+                        {/* LIST: Minimalist News Feed */}
+                        <div className="max-w-[1600px] mx-auto px-4 md:px-12">
+                            <div className="flex items-center justify-between border-b border-white/5 pb-8 mb-12">
+                                <h2 className="text-sm font-black uppercase tracking-[0.6em] text-gray-700">Chronicle // Records</h2>
+                                <p className="text-[10px] font-black text-gray-800 uppercase tracking-widest">Digital Archive Active</p>
+                            </div>
+                            <div className="divide-y divide-white/5">
+                                {stories.slice(1).map(story => (
                                     <ZineStoryCard key={story.id} story={story} onClick={() => handleNavigate(story.id)} />
                                 ))}
-                            </section>
-
-                            <section className="bg-white/[0.02] border border-white/5 rounded-[4rem] p-8 md:p-16 shadow-2xl overflow-hidden relative">
-                                <ZineTrailerPark movies={Object.values(movies).slice(0, 10)} />
-                            </section>
-                        </div>
-                    ) : (
-                        <div className="max-w-4xl mx-auto animate-[fadeIn_0.6s_ease-out]">
-                            <div className="flex justify-between items-center mb-12">
-                                <button onClick={() => handleNavigate(null)} className="flex items-center gap-3 text-gray-500 hover:text-white transition-colors uppercase font-black text-[10px] tracking-widest group">
-                                    <svg className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                                    Back to All Dispatches
-                                </button>
-                                <button 
-                                    onClick={handleExportImage}
-                                    disabled={isExporting}
-                                    className="bg-white/5 hover:bg-white text-gray-500 hover:text-black px-6 py-2.5 rounded-xl border border-white/10 transition-all uppercase text-[10px] font-black tracking-widest flex items-center gap-2 shadow-2xl disabled:opacity-50"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                    {isExporting ? 'Synthesizing Jpeg...' : 'Export as Image'}
-                                </button>
                             </div>
+                        </div>
 
-                            <article ref={articleRef} className="space-y-16 p-8 bg-black rounded-[3rem] border border-white/5">
-                                <header className="space-y-6">
+                        {/* NEWSLETTER HUB */}
+                        <section className="max-w-4xl mx-auto px-4">
+                            <div className="bg-white/5 border border-white/10 p-12 md:p-20 rounded-[4rem] text-center space-y-8 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.05)_0%,transparent_70%)] pointer-events-none"></div>
+                                <div className="relative z-10 space-y-6">
+                                    <h3 className="text-4xl md:text-7xl font-black uppercase tracking-tighter italic leading-none">Join the Dispatch.</h3>
+                                    <p className="text-gray-400 text-lg md:text-2xl font-medium max-w-2xl mx-auto leading-relaxed">The definitive record of the independent cinematic underground, delivered to your sector.</p>
+                                    
+                                    {subStatus === 'success' ? (
+                                        <div className="bg-green-600/10 border border-green-500/20 p-6 rounded-3xl inline-block px-12">
+                                            <p className="text-green-500 font-black uppercase text-xs tracking-widest">Uplink Secured ✓</p>
+                                        </div>
+                                    ) : (
+                                        <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto pt-8">
+                                            <input 
+                                                type="email" 
+                                                placeholder="email@sector.node" 
+                                                value={email}
+                                                onChange={e => setEmail(e.target.value)}
+                                                className="flex-grow bg-black/40 border border-white/10 p-6 rounded-2xl text-white text-lg outline-none focus:border-red-600 transition-all font-medium"
+                                                required
+                                            />
+                                            <button 
+                                                type="submit" 
+                                                disabled={subStatus === 'loading'}
+                                                className="bg-red-600 hover:bg-red-700 text-white font-black py-6 px-12 rounded-2xl uppercase text-[11px] tracking-widest shadow-xl transition-all active:scale-95"
+                                            >
+                                                Authorize Link
+                                            </button>
+                                        </form>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                ) : (
+                    <div className="max-w-[1600px] mx-auto px-4 md:px-12 animate-[fadeIn_0.6s_ease-out]">
+                        <div className="max-w-4xl mx-auto">
+                            <button onClick={() => handleNavigate(null)} className="mb-12 flex items-center gap-3 text-gray-500 hover:text-white transition-colors uppercase font-black text-[10px] tracking-widest group">
+                                <svg className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                                Back to All Records
+                            </button>
+
+                            <article ref={articleRef} className="space-y-16">
+                                <header className="space-y-10">
                                     <div className="flex items-center gap-4">
-                                        <span className="bg-red-600 text-white font-black px-3 py-1 rounded-full text-[9px] uppercase tracking-widest shadow-xl">{activeStory.type}</span>
-                                        <span className="text-[10px] text-gray-600 font-black uppercase tracking-widest">{activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Active Dispatch'}</span>
+                                        <span className="bg-red-600 text-white font-black px-4 py-1.5 rounded-full text-[10px] uppercase tracking-widest shadow-xl">{activeStory.type}</span>
+                                        <span className="text-[10px] text-gray-700 font-black uppercase tracking-widest">
+                                            {activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString() : 'Active Dispatch'}
+                                        </span>
                                     </div>
-                                    <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-2xl">{activeStory.title}</h1>
-                                    <p className="text-2xl md:text-3xl text-gray-400 font-medium leading-tight">{activeStory.subtitle}</p>
-                                    <div className="pt-6 border-b border-white/10 pb-8 flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-red-600/10 rounded-full flex items-center justify-center border border-red-500/20 text-red-500 font-black text-xs">C</div>
-                                        <p className="text-xs font-black uppercase tracking-widest text-gray-500">By {activeStory.author}</p>
+                                    <h1 className="text-6xl md:text-[10rem] font-black uppercase tracking-tighter leading-[0.75] italic drop-shadow-2xl">{activeStory.title}</h1>
+                                    <p className="text-3xl md:text-5xl text-gray-400 font-medium leading-none">{activeStory.subtitle}</p>
+                                    <div className="pt-8 border-b border-white/5 pb-10 flex items-center gap-6">
+                                        <div className="w-12 h-12 bg-red-600/10 rounded-full flex items-center justify-center border border-red-500/20 text-red-500 font-black text-sm">C</div>
+                                        <p className="text-sm font-black uppercase tracking-widest text-gray-500">Dispatch Authored By {activeStory.author}</p>
                                     </div>
                                 </header>
 
-                                <div className="space-y-12">
+                                <div className="space-y-20">
                                     {activeStory.heroImage && (
-                                        <div className="aspect-video rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl">
+                                        <div className="aspect-video rounded-[3.5rem] overflow-hidden border border-white/10 shadow-2xl">
                                             <img src={activeStory.heroImage} className="w-full h-full object-cover" alt="" />
                                         </div>
                                     )}
 
-                                    {(activeStory.sections || []).map((section, idx) => (
-                                        <div key={section.id}>
-                                            {section.type === 'header' && <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic text-red-600 border-l-8 border-white pl-8 mt-16 mb-8">{section.content}</h3>}
-                                            {section.type === 'quote' && <div className="bg-white/5 border-l-8 border-red-600 p-12 text-3xl font-black uppercase italic tracking-tight text-white my-12 rounded-r-3xl shadow-xl">"{section.content}"</div>}
-                                            {section.type === 'image' && <div className="rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl my-14"><img src={section.content} className="w-full h-auto" alt="" /></div>}
-                                            {section.type === 'text' && (
-                                                <div className="relative">
-                                                    {idx === 0 && (
-                                                        <span className="float-left text-[8rem] md:text-[11rem] font-black italic leading-[0.9] pr-12 mr-2 mt-2 text-red-600 drop-shadow-2xl select-none">
-                                                            {section.content.charAt(0)}
-                                                        </span>
-                                                    )}
-                                                    <p className="text-xl md:text-3xl text-gray-400 font-medium leading-relaxed">
-                                                        {idx === 0 ? section.content.slice(1) : section.content}
-                                                    </p>
-                                                    <div className="clear-both"></div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                    <div className="max-w-3xl mx-auto space-y-12">
+                                        {(activeStory.sections || []).map((section, idx) => (
+                                            <div key={section.id}>
+                                                {section.type === 'header' && <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic text-red-600 mt-24 mb-10 border-l-8 border-red-600 pl-8">{section.content}</h3>}
+                                                {section.type === 'quote' && <div className="bg-white/5 border-l-8 border-white p-12 text-3xl font-black uppercase italic tracking-tight text-white my-16 rounded-r-3xl shadow-xl">"{section.content}"</div>}
+                                                {section.type === 'image' && <div className="rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl my-20"><img src={section.content} className="w-full h-auto" alt="" /></div>}
+                                                {section.type === 'text' && (
+                                                    <div className="relative">
+                                                        {idx === 0 && (
+                                                            <span className="float-left text-[9rem] md:text-[13rem] font-black italic leading-[0.75] pr-12 mr-2 mt-4 text-red-600 drop-shadow-2xl select-none">
+                                                                {section.content.charAt(0)}
+                                                            </span>
+                                                        )}
+                                                        <p className="text-xl md:text-3xl text-gray-300 font-medium leading-relaxed">
+                                                            {idx === 0 ? section.content.slice(1) : section.content}
+                                                        </p>
+                                                        <div className="clear-both"></div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                                <div className="pt-20 border-t border-white/5 text-center flex flex-col items-center gap-4">
-                                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-32 opacity-20 invert" alt="" />
-                                    <p className="text-[10px] font-black text-gray-800 uppercase tracking-[1em] mr-[-1em]">WWW.CRATETV.NET</p>
+                                <div className="pt-32 border-t border-white/5 text-center flex flex-col items-center gap-6">
+                                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-40 opacity-20 invert" alt="" />
+                                    <p className="text-[11px] font-black text-gray-800 uppercase tracking-[1.5em] mr-[-1.5em]">WWW.CRATETV.NET</p>
                                 </div>
                             </article>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </main>
 
             <Footer />

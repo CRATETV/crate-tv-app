@@ -72,7 +72,7 @@ const ZineGameEmoji: React.FC = () => {
                             value={guess}
                             onChange={e => setGuess(e.target.value)}
                             placeholder="FILM TITLE..."
-                            className={`w-full bg-black/60 border-2 ${status === 'fail' ? 'border-red-500 animate-shake' : 'border-white/10'} rounded-2xl p-5 text-center font-black tracking-widest text-white focus:border-red-600 outline-none transition-all placeholder:text-gray-800 text-sm uppercase shadow-2xl`}
+                            className={`w-full bg-black/60 border-2 ${status === 'fail' ? 'border-red-500 animate-shake' : 'border-white/10'} rounded-2xl p-5 text-center font-black tracking-widest text-white focus:border-red-600 outline-none transition-all placeholder:text-gray-700 text-sm uppercase shadow-2xl`}
                         />
                         <div className="grid grid-cols-2 gap-4">
                             <button 

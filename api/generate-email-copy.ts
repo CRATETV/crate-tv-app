@@ -3,16 +3,7 @@ import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
 export async function POST(request: Request) {
   try {
-    const { 
-        password, 
-        templatePrompt, 
-        festivalTitle, 
-        filmContext, 
-        storyContext,
-        blockContext,
-        isReengagement,
-        daysSinceLastVisit
-    } = await request.json();
+    const { password, templatePrompt, storyContext } = await request.json();
 
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
@@ -20,31 +11,22 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    const context = `
-        BRAND: Crate TV (Powered by Crate TV Infrastructure)
-        STRATEGIC MODE: ${isReengagement ? 'RE-ENGAGEMENT (Dormant Node)' : 'PUBLIC DISPATCH (Active Viral Feed)'}
-        UPLINK_RECENCY: ${daysSinceLastVisit || 'Unknown'} days
-        FESTIVAL: ${festivalTitle || 'Crate Fest'}
-        
-        AMPLIFIED CONTENT:
-        ${filmContext ? `FILM_MASTER: "${filmContext.title}" by ${filmContext.director}.` : ''}
-        ${storyContext ? `EDITORIAL_PIECE: "${storyContext.title}".` : ''}
-        ${blockContext ? `POWER_BLOCK: "${blockContext.title}" containing ${blockContext.films.join(', ')}.` : ''}
-    `;
+    const context = storyContext 
+        ? `STORY_TITLE: "${storyContext.title}"\nSUBTITLE: "${storyContext.subtitle}"\nSUMMARY: ${JSON.stringify(storyContext.sections)}`
+        : 'General Platform Update';
 
     const prompt = `
         You are the Editor-in-Chief of Crate Zine. 
         Draft a prestigious, high-impact dispatch.
         
-        SPECIAL THEME: If requested in the objective, treat the content release like an "Amazon Parcel Delivery." 
-        Use phrases like "Parcel successfully routed," "Delivery to Sector X," and "Secure Package Contents."
+        TONE: Prestigious, authoritative, filmmaker-first. Use industry terminology (e.g., "Aesthetic continuity," "Kinetic frames").
         
-        Tone: Prestigious, authoritative, and sophisticated.
+        OBJECTIVE: "${templatePrompt}"
         
-        Objective: "${templatePrompt}"
-        Technical Context: ${context}
+        NARRATIVE CONTEXT:
+        ${context}
         
-        Format your response as a JSON object: { "subject": "Headline", "htmlBody": "Text-based HTML" }.
+        Format your response as a JSON object: { "subject": "Headline", "htmlBody": "Text-based HTML with high-end formatting tags (<p>, <strong>, etc.)" }.
     `;
 
     const response = await generateContentWithRetry({
@@ -68,7 +50,7 @@ export async function POST(request: Request) {
         headers: { 'Content-Type': 'application/json' } 
     });
   } catch (error) {
-    console.error("Crate Synthesis Error:", error);
+    console.error("Dispatch Synthesis Error:", error);
     return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
   }
 }

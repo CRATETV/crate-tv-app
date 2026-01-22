@@ -201,7 +201,8 @@ const EmbeddedChat: React.FC<{
 };
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user, unlockedWatchPartyKeys, unlockWatchParty, unlockedFestivalBlockIds } = useAuth();
+    // FIX: Added 'unlockFestivalBlock' to the destructuring from useAuth to fix the 'Cannot find name' error on line 642.
+    const { user, unlockedWatchPartyKeys, unlockWatchParty, unlockedFestivalBlockIds, hasFestivalAllAccess, rentals, unlockFestivalBlock } = useAuth();
     const { movies: allMovies, festivalData, isLoading: isFestivalLoading } = useFestival();
     
     const [partyState, setPartyState] = useState<WatchPartyState>();
@@ -224,16 +225,52 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return null;
     }, [movieKey, allMovies, festivalData]);
 
-    const hasAccess = useMemo(() => {
+    // PRESTIGE ACCESS CHECK:
+    // 1. Full Festival Pass always works.
+    // 2. Block Pass/Ticket always works for the whole block.
+    // 3. Watch Party Ticket for this node always works.
+    const hasFullSessionAccess = useMemo(() => {
         if (isBackstageDirector) return true;
+        if (hasFestivalAllAccess) return true;
+        if (unlockedWatchPartyKeys.has(movieKey)) return true;
+        if (context?.type === 'block' && unlockedFestivalBlockIds.has(movieKey)) return true;
+        
+        // If it's a single movie party and they have the block pass
         if (context?.type === 'movie') {
-            if (!context.movie.isWatchPartyPaid) return true;
-            return unlockedWatchPartyKeys.has(movieKey);
+            const parentBlock = festivalData.flatMap(d => d.blocks).find(b => b.movieKeys.includes(movieKey));
+            if (parentBlock && unlockedFestivalBlockIds.has(parentBlock.id)) return true;
+        }
+        
+        return false;
+    }, [context, movieKey, unlockedWatchPartyKeys, unlockedFestivalBlockIds, isBackstageDirector, hasFestivalAllAccess, festivalData]);
+
+    // ACCESS HANDSHAKE:
+    // Allows entry if they have ANY access (Full or single-movie rental).
+    const hasAnyAccess = useMemo(() => {
+        if (hasFullSessionAccess) return true;
+        
+        // Check if user has ANY rental for films in the target context
+        if (context?.type === 'movie') {
+            const exp = rentals[movieKey];
+            return exp && new Date(exp) > new Date();
         } else if (context?.type === 'block') {
-            return unlockedFestivalBlockIds.has(movieKey);
+            return context.block.movieKeys.some(k => {
+                const exp = rentals[k];
+                return exp && new Date(exp) > new Date();
+            });
         }
         return false;
-    }, [context, movieKey, unlockedWatchPartyKeys, unlockedFestivalBlockIds, isBackstageDirector]);
+    }, [hasFullSessionAccess, context, rentals, movieKey]);
+
+    // ITEM ACCESS CHECK:
+    // Checks if the user is authorized to view the CURRENTLY playing film.
+    const isCurrentItemAuthorized = useMemo(() => {
+        if (hasFullSessionAccess) return true;
+        if (!activeMovieKey) return false;
+        
+        const exp = rentals[activeMovieKey];
+        return !!(exp && new Date(exp) > new Date());
+    }, [hasFullSessionAccess, activeMovieKey, rentals]);
 
     const directorsList = useMemo(() => {
         if (context?.type === 'movie') return context.movie.director.toLowerCase().split(',').map(d => d.trim());
@@ -291,7 +328,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     };
 
     useEffect(() => {
-        if (!hasAccess || !partyState?.actualStartTime || partyState.status !== 'live') return;
+        if (!hasAnyAccess || !partyState?.actualStartTime || partyState.status !== 'live') return;
         
         const video = videoRef.current;
         if (video && video.muted) {
@@ -341,6 +378,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             } 
             else if (context?.type === 'block') {
                 let accumulatedTime = 0;
+                let found = false;
                 for (const key of context.block.movieKeys) {
                     const m = allMovies[key];
                     if (!m) continue;
@@ -353,14 +391,18 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             setIsVideoActuallyPlaying(false);
                         }
                         applyGlobalSync(movieElapsed);
+                        found = true;
                         break;
                     }
                     accumulatedTime += duration;
                 }
+                if (!found && activeMovieKey) {
+                    setActiveMovieKey(null);
+                }
             }
         }, 1000); 
         return () => clearInterval(syncClock);
-    }, [partyState, hasAccess, context, activeMovieKey, allMovies, movieKey, isVideoActuallyPlaying]);
+    }, [partyState, hasAnyAccess, context, activeMovieKey, allMovies, movieKey, isVideoActuallyPlaying]);
 
     const logSentiment = async (emoji: string) => {
         const db = getDbInstance();
@@ -382,7 +424,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const isLive = partyState?.status === 'live';
     const isWaiting = (startTimeStr && !isLive && !isFestivalLoading) || (isLive && !isVideoActuallyPlaying);
 
-    if (!hasAccess) {
+    if (!hasAnyAccess) {
         const poster = context.type === 'movie' ? context.movie.poster : '';
         const price = context.type === 'movie' ? context.movie.watchPartyPrice : 10.00;
         
@@ -410,7 +452,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         <div className="flex items-center gap-6">
                             <button onClick={() => setShowBackstageModal(true)} className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500 hover:text-white transition-colors">Director Entry</button>
                             <div className="w-px h-3 bg-white/10"></div>
-                            <button onClick={handleGoHome} className="text-gray-600 font-black uppercase tracking-[0.4em] text-[10px] hover:text-white transition-colors">Return to Library</button>
+                            <button handleGoHome={handleGoHome} className="text-gray-600 font-black uppercase tracking-[0.4em] text-[10px] hover:text-white transition-colors">Return to Library</button>
                         </div>
                     </div>
                 </div>
@@ -506,6 +548,30 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         )}
 
                         <div className="flex-grow flex items-center justify-center relative">
+                            {/* GRANULAR ACCESS WRAPPER */}
+                            {isLive && !isCurrentItemAuthorized ? (
+                                <div className="absolute inset-0 z-40 bg-black flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.5s_ease-out]">
+                                     <div className="max-w-md space-y-8">
+                                        <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto border border-white/10 shadow-2xl">
+                                            <svg className="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Restricted Node.</h3>
+                                            <p className="text-gray-500 text-sm mt-2 font-medium leading-relaxed">You are currently in a multi-film party. Your access only covers specific films in this manifest. Upgrade your session to view this segment.</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => setShowPaywall(true)}
+                                            className="bg-white text-black font-black px-8 py-4 rounded-xl uppercase tracking-widest text-[10px] shadow-2xl hover:scale-105 transition-all"
+                                        >
+                                            Unlock Entire Party // $10.00
+                                        </button>
+                                        {activeMovieKey && (
+                                            <p className="text-[10px] text-gray-700 font-black uppercase tracking-[0.3em]">Currently Airing: {allMovies[activeMovieKey]?.title}</p>
+                                        )}
+                                     </div>
+                                </div>
+                            ) : null}
+
                             {isLiveStream ? (
                                 <div 
                                     className="w-full h-full p-4 md:p-8 flex items-center justify-center bg-black"
@@ -565,6 +631,19 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         <button type="submit" className="w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-widest text-sm shadow-xl active:scale-95">Open Secure Link</button>
                     </form>
                 </div>
+            )}
+
+            {showPaywall && (
+                <SquarePaymentModal 
+                    movie={context.type === 'movie' ? context.movie : undefined} 
+                    paymentType={context.type === 'movie' ? "watchPartyTicket" : "block"} 
+                    onClose={() => setShowPaywall(false)} 
+                    onPaymentSuccess={() => { 
+                        if (context.type === 'movie') unlockWatchParty(movieKey); 
+                        else if (context.type === 'block') unlockFestivalBlock(movieKey);
+                        setShowPaywall(false); 
+                    }} 
+                />
             )}
         </div>
     );

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -8,6 +7,7 @@ import WatchPartyManager from './components/WatchPartyManager';
 import SecurityTerminal from './components/SecurityTerminal';
 import DailyPulse from './components/DailyPulse';
 import StudioMail from './components/StudioMail';
+import CommunicationsTerminal from './components/CommunicationsTerminal';
 import SaveStatusToast from './components/SaveStatusToast';
 import LaurelManager from './components/LaurelManager';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
@@ -31,10 +31,11 @@ import UserIntelligenceTab from './components/UserIntelligenceTab';
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
     mail: '✉️ Studio Mail',
+    dispatch: '🛰️ Dispatch',
     intel: '🧠 User Intel',
     editorial: '✍️ Editorial Lab',
     watchParty: '🍿 Watch Party',
-    discovery: '🛰️ Research Lab',
+    discovery: '🔬 Research Lab',
     movies: '🎞️ Catalog',
     pipeline: '📥 Pipeline',
     jury: '⚖️ Jury Hub',
@@ -317,6 +318,7 @@ const AdminPage: React.FC = () => {
                 <div className="animate-[fadeIn_0.4s_ease-out]">
                     {activeTab === 'pulse' && <DailyPulse pipeline={pipeline} analytics={analytics} movies={movies} categories={categories} />}
                     {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
+                    {activeTab === 'dispatch' && <CommunicationsTerminal movies={movies} />}
                     {activeTab === 'intel' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={() => {}} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
                     {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}
