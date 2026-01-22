@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie, Actor, Category, Episode } from '../types';
 import Countdown from './Countdown';
@@ -245,7 +244,11 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                 paymentType="movie"
                 movie={movie}
                 onClose={() => setShowPurchaseModal(false)}
-                onPaymentSuccess={async () => { await purchaseMovie(movie.key); setShowPurchaseModal(false); }}
+                onPaymentSuccess={async () => { 
+                    await purchaseMovie(movie.key); 
+                    setShowPurchaseModal(false); 
+                    if (onPlayMovie) onPlayMovie(movie);
+                }}
             />
         )}
       </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, Actor, Category } from '../types';
 import ActorBioModal from './ActorBioModal';
@@ -144,6 +143,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const handlePurchaseSuccess = async () => {
       await purchaseMovie(movieKey);
       setIsPurchaseModalOpen(false);
+      setPlayerMode('full'); // Start playing immediately after successful handshake
   };
 
   useEffect(() => {

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Movie, FestivalDay, FestivalConfig, FilmBlock } from '../types';
 
@@ -41,7 +40,7 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
           </div>
           <input
             type="text"
-            placeholder="Search catalog..."
+            placeholder="Scan catalog manifest..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 text-white focus:outline-none focus:border-red-600 transition-all text-sm"
@@ -67,8 +66,8 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
             ))}
         </div>
         <div className="p-8 border-t border-white/5 flex justify-end gap-4 bg-white/[0.01]">
-          <button onClick={onClose} className="text-[10px] font-black uppercase text-gray-500 hover:text-white transition-colors">Abort</button>
-          <button onClick={handleSave} className="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-xl text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all">Apply Selections</button>
+          <button onClick={onClose} className="text-[10px] font-black uppercase text-gray-500 hover:text-white transition-colors">Discard</button>
+          <button onClick={handleSave} className="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-xl text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all">Save Selections</button>
         </div>
       </div>
     </div>
@@ -137,7 +136,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
   };
 
   const removeDay = (index: number) => {
-      if (!window.confirm("Remove this day from schedule?")) return;
+      if (!window.confirm("Remove this session day?")) return;
       setIsDirty(true);
       const filtered = data.filter((_, i) => i !== index);
       const reindexed = filtered.map((d, i) => ({ ...d, day: i + 1 }));
@@ -148,7 +147,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
     setIsDirty(true);
     const newBlock: FilmBlock = {
       id: `block_${Date.now()}`,
-      title: 'New Feature Block',
+      title: 'New Official Block',
       time: '7:00 PM',
       movieKeys: [],
       price: 10.00
@@ -178,7 +177,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                 disabled={isSaving || !isDirty} 
                 className={`font-black py-4 px-12 rounded-2xl uppercase tracking-widest text-xs shadow-2xl transition-all active:scale-95 ${isDirty ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}
             >
-                {isSaving ? 'Syncing...' : 'Sync Live Network'}
+                {isSaving ? 'Syncing Cluster...' : 'Sync Live Network'}
             </button>
         </div>
       </div>
@@ -186,7 +185,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
       <div className="bg-[#0f0f0f] p-10 rounded-[3rem] border border-white/5 space-y-10 shadow-xl">
           <div className="flex items-center gap-3 border-b border-white/5 pb-6">
               <span className="w-2 h-2 rounded-full bg-red-600"></span>
-              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">01. Global Config</h3>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">01. Global Identity</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
@@ -195,11 +194,11 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
               </div>
               <div>
                   <label className="form-label">Sub-Heading (Tagline)</label>
-                  <input type="text" name="subheader" value={config.subheader || ''} onChange={handleConfigChange} className="form-input bg-black/40" placeholder="e.g. 12th Annual Official Selections" />
+                  <input type="text" name="subheader" value={config.subheader || ''} onChange={handleConfigChange} className="form-input bg-black/40" />
               </div>
               <div className="md:col-span-2">
-                  <label className="form-label">Mission / Description</label>
-                  <textarea name="description" value={config.description || ''} onChange={handleConfigChange} className="form-input bg-black/40 h-24" placeholder="Brief overview of this festival cycle..." />
+                  <label className="form-label">Description Brief</label>
+                  <textarea name="description" value={config.description || ''} onChange={handleConfigChange} className="form-input bg-black/40 h-24" />
               </div>
               <div>
                   <label className="form-label">Festival Start Date (Calendar)</label>
@@ -211,8 +210,8 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
               </div>
               <div className="flex items-center justify-between gap-4 bg-black/20 p-6 rounded-2xl border border-white/5 md:col-span-2">
                 <div>
-                    <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Portal Visibility</span>
-                    <p className="text-[8px] text-gray-700 uppercase font-bold mt-1">Make accessible to public web nodes</p>
+                    <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Portal Access</span>
+                    <p className="text-[8px] text-gray-700 uppercase font-bold mt-1">Make visible to public web nodes</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" name="isFestivalLive" checked={config.isFestivalLive} onChange={handleConfigChange} className="sr-only peer" />
@@ -229,7 +228,7 @@ const FestivalEditor: React.FC<FestivalEditorProps> = ({ data, config, allMovies
                 onClick={addDay} 
                 className="bg-white/5 hover:bg-white text-gray-500 hover:text-black font-black px-6 py-2 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all"
             >
-                + Add Session Day
+                + Append Session Day
             </button>
         </div>
 

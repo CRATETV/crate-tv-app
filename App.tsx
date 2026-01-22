@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -9,7 +8,7 @@ import ActorBioModal from './components/ActorBioModal';
 import SearchOverlay from './components/SearchOverlay';
 import SmartInstallPrompt from './components/SmartInstallPrompt';
 import SEO from './components/SEO';
-import { Movie, Actor, Category, WatchPartyState } from './types';
+import { Movie, Actor, Category } from './types';
 import { isMovieReleased } from './constants';
 import { useAuth } from './contexts/AuthContext';
 import { useFestival } from './contexts/FestivalContext';
@@ -44,39 +43,15 @@ const MaintenanceScreen: React.FC = () => (
     </div>
 );
 
-const FestivalActiveBanner: React.FC<{ onClose: () => void }> = ({ onClose }) => (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-3 flex items-center justify-center gap-4 shadow-lg h-12">
-        <div className="flex items-center gap-2">
-            <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
-            </span>
-            <span className="font-black uppercase text-[10px] tracking-widest">Festival Active</span>
-        </div>
-        <p className="text-xs font-bold hidden sm:block">Explore the Official Selections in the Festival Portal</p>
-        <button 
-            onClick={() => {
-                window.history.pushState({}, '', '/festival');
-                window.dispatchEvent(new Event('pushstate'));
-            }}
-            className="bg-white text-indigo-600 font-black px-4 py-1 rounded-full text-[10px] uppercase tracking-widest hover:bg-gray-100 transition-colors"
-        >
-            Enter Portal
-        </button>
-        <button onClick={onClose} className="text-white/50 hover:text-white">&times;</button>
-    </div>
-);
-
 const App: React.FC = () => {
     const { user, hasCrateFestPass, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
-    const { isLoading, movies, categories, isFestivalLive, settings, analytics, festivalConfig } = useFestival();
+    const { isLoading, movies, categories, isFestivalLive, settings, analytics, festivalConfig, activeParties, livePartyMovie } = useFestival();
     
     const [heroIndex, setHeroIndex] = useState(0);
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
     const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-    const [activeParties, setActiveParties] = useState<Record<string, WatchPartyState>>({});
     const [isFestivalBannerDismissed, setIsFestivalBannerDismissed] = useState(false);
     
     useEffect(() => {
@@ -101,22 +76,6 @@ const App: React.FC = () => {
         };
     }, [user]);
 
-    useEffect(() => {
-        const db = getDbInstance();
-        if (!db) return;
-        const unsubscribe = db.collection('watch_parties').onSnapshot(snapshot => {
-            const states: Record<string, WatchPartyState> = {};
-            snapshot.forEach(doc => {
-                const data = doc.data() as WatchPartyState;
-                if (data.status === 'live') {
-                    states[doc.id] = data;
-                }
-            });
-            setActiveParties(states);
-        });
-        return () => unsubscribe();
-    }, []);
-
     const heroMovies = useMemo(() => {
         const featuredCategory = categories.featured;
         let spotlightMovies: Movie[] = [];
@@ -139,36 +98,8 @@ const App: React.FC = () => {
             .filter((m: Movie) => !!m && m.isForSale === true && isMovieReleased(m) && !m.isUnlisted);
     }, [movies]);
 
-    // NEW: Expanded logic to find the active OR upcoming party movie within a 7-day window
-    const livePartyMovie = useMemo(() => {
-        const now = new Date();
-        const movieArray = Object.values(movies) as Movie[];
-        
-        // Priority 1: A session currently marked as "live" in Firestore
-        const liveKey = Object.keys(activeParties).find(key => {
-            const m = movies[key];
-            return m && m.isWatchPartyEnabled && !m.isUnlisted;
-        });
-        if (liveKey) return movies[liveKey];
-
-        // Priority 2: The next upcoming party within a 7-day window
-        const upcomingParties = movieArray
-            .filter(m => m.isWatchPartyEnabled && m.watchPartyStartTime && !m.isUnlisted)
-            .filter(m => {
-                const start = new Date(m.watchPartyStartTime!);
-                const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
-                // Allow a 4-hour window past start time to catch events that just finished but are still "relevant"
-                const fourHoursAgo = 4 * 60 * 60 * 1000;
-                return start.getTime() > (now.getTime() - fourHoursAgo) && 
-                       start.getTime() < (now.getTime() + sevenDaysInMs);
-            })
-            .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
-
-        return upcomingParties[0] || null;
-    }, [activeParties, movies]);
-
     const activeBannerType = useMemo(() => {
-        if (livePartyMovie) return 'WATCH_PARTY';
+        if (livePartyMovie && !isFestivalBannerDismissed) return 'WATCH_PARTY';
         const config = settings.crateFestConfig;
         const isCrateFestWindow = config?.isActive && config?.startDate && config?.endDate && 
                                 (new Date() >= new Date(config.startDate) && new Date() <= new Date(config.endDate));
@@ -265,7 +196,6 @@ const App: React.FC = () => {
     if (isLoading) return <LoadingSpinner />;
     if (settings.maintenanceMode) return <MaintenanceScreen />;
 
-    // Sync header offset with current active banner
     const headerTop = activeBannerType !== 'NONE' ? '3rem' : '0px';
 
     return (
@@ -277,7 +207,24 @@ const App: React.FC = () => {
                 <LiveWatchPartyBanner movie={livePartyMovie!} onClose={() => setIsFestivalBannerDismissed(true)} />
             )}
             {activeBannerType === 'CRATE_FEST' && settings.crateFestConfig && <CrateFestBanner config={settings.crateFestConfig} hasPass={hasCrateFestPass} />}
-            {activeBannerType === 'GENERAL_FESTIVAL' && <FestivalActiveBanner onClose={() => setIsFestivalBannerDismissed(true)} />}
+            {activeBannerType === 'GENERAL_FESTIVAL' && (
+                <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-3 flex items-center justify-center gap-4 shadow-lg h-12">
+                    <div className="flex items-center gap-2">
+                        <span className="relative flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                        </span>
+                        <span className="font-black uppercase text-[10px] tracking-widest">Festival Active</span>
+                    </div>
+                    <button 
+                        onClick={() => { window.history.pushState({}, '', '/festival'); window.dispatchEvent(new Event('pushstate')); }}
+                        className="bg-white text-indigo-600 font-black px-4 py-1 rounded-full text-[10px] uppercase tracking-widest hover:bg-gray-100 transition-colors"
+                    >
+                        Enter Portal
+                    </button>
+                    <button onClick={() => setIsFestivalBannerDismissed(true)} className="text-white/50 hover:text-white">&times;</button>
+                </div>
+            )}
 
             <Header searchQuery={searchQuery} onSearch={onSearch} onMobileSearchClick={handleSearchClick} topOffset={headerTop} isLiveSpotlight={isNowStreamingLive} />
 

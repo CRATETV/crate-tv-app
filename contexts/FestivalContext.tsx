@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo } from 'react';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
-import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData } from '../types';
+import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData, WatchPartyState } from '../types';
 import { moviesData, categoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
 
 interface FestivalContextType {
@@ -16,6 +16,8 @@ interface FestivalContextType {
     settings: SiteSettings;
     pipeline: MoviePipelineEntry[];
     analytics: AnalyticsData | null;
+    activeParties: Record<string, WatchPartyState>;
+    livePartyMovie: Movie | null;
     refreshData: () => Promise<void>;
 }
 
@@ -40,6 +42,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [settings, setSettings] = useState<SiteSettings>({ isHolidayModeActive: false });
     const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+    const [activeParties, setActiveParties] = useState<Record<string, WatchPartyState>>({});
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
 
     const isFestivalLive = useMemo(() => {
@@ -49,6 +52,33 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         const end = new Date(festivalConfig.endDate).getTime();
         return now >= start && now < end;
     }, [festivalConfig]);
+
+    // Global selector for the currently active or upcoming Watch Party
+    const livePartyMovie = useMemo(() => {
+        const now = new Date();
+        const movieArray = Object.values(movies) as Movie[];
+        
+        // Priority 1: A session currently marked as "live" in Firestore
+        const liveKey = Object.keys(activeParties).find(key => {
+            const m = movies[key];
+            return m && m.isWatchPartyEnabled && !m.isUnlisted;
+        });
+        if (liveKey) return movies[liveKey];
+
+        // Priority 2: The next upcoming party within a 7-day window
+        const upcomingParties = movieArray
+            .filter(m => m.isWatchPartyEnabled && m.watchPartyStartTime && !m.isUnlisted)
+            .filter(m => {
+                const start = new Date(m.watchPartyStartTime!);
+                const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+                const fourHoursAgo = 4 * 60 * 60 * 1000;
+                return start.getTime() > (now.getTime() - fourHoursAgo) && 
+                       start.getTime() < (now.getTime() + sevenDaysInMs);
+            })
+            .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
+
+        return upcomingParties[0] || null;
+    }, [activeParties, movies]);
 
     const fetchData = async (forceNoCache = false) => {
         try {
@@ -75,8 +105,6 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             await initializeFirebaseAuth();
             const db = getDbInstance();
             if (db) {
-                // INSTANT SYNC LOGIC: Listen directly to Firestore collections
-                // This ensures that Admin changes appear on the live site IMMEDIATELY.
                 db.collection('content').doc('settings').onSnapshot(doc => {
                     if (doc.exists) setSettings(doc.data() as SiteSettings);
                 });
@@ -92,7 +120,6 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                             const data = doc.data() as FestivalDay;
                             days.push(data);
                         });
-                        // Filter out any ghost/empty records and sort by day number
                         setFestivalData(days.filter(d => d && d.day).sort((a, b) => a.day - b.day));
                     }
                 });
@@ -103,6 +130,18 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                         entries.push({ id: doc.id, ...doc.data() } as MoviePipelineEntry);
                     });
                     setPipeline(entries);
+                });
+
+                // GLOBAL WATCH PARTY LISTENER
+                db.collection('watch_parties').onSnapshot(snapshot => {
+                    const states: Record<string, WatchPartyState> = {};
+                    snapshot.forEach(doc => {
+                        const data = doc.data() as WatchPartyState;
+                        if (data.status === 'live') {
+                            states[doc.id] = data;
+                        }
+                    });
+                    setActiveParties(states);
                 });
             }
         };
@@ -122,6 +161,8 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         settings,
         pipeline,
         analytics,
+        activeParties,
+        livePartyMovie,
         refreshData: () => fetchData(true)
     };
 

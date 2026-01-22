@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
-// FIX: Corrected import path
 import Footer from './Footer';
 import BackToTopButton from './BackToTopButton';
 import LoadingSpinner from './LoadingSpinner';
@@ -9,9 +8,8 @@ import FestivalView from './FestivalView';
 import { useFestival } from '../contexts/FestivalContext';
 import BottomNavBar from './BottomNavBar';
 import SearchOverlay from './SearchOverlay';
-// FIX: Corrected import path
 import { Movie } from '../types';
-
+import LiveWatchPartyBanner from './LiveWatchPartyBanner';
 
 const FestivalPage: React.FC = () => {
     const { 
@@ -20,12 +18,14 @@ const FestivalPage: React.FC = () => {
         festivalData, 
         festivalConfig, 
         isFestivalLive, 
-        dataSource 
+        dataSource,
+        livePartyMovie
     } = useFestival();
     
     const [isStaging, setIsStaging] = useState(false);
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isBannerDismissed, setIsBannerDismissed] = useState(false);
     
     useEffect(() => {
         const isStagingActive = sessionStorage.getItem('crateTvStaging') === 'true';
@@ -36,7 +36,6 @@ const FestivalPage: React.FC = () => {
 
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
-        // FIX: Cast movie to Movie type to resolve properties.
         return (Object.values(movies) as Movie[]).filter(movie =>
             movie && (
                 (movie.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -55,7 +54,6 @@ const FestivalPage: React.FC = () => {
     const exitStaging = () => {
         sessionStorage.removeItem('crateTvStaging');
         setIsStaging(false);
-        // A full reload is best here to ensure non-staging data is fetched cleanly
         window.location.reload();
     };
 
@@ -69,26 +67,46 @@ const FestivalPage: React.FC = () => {
                 <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
                 <main className="flex-grow flex items-center justify-center text-center p-4">
                     <div>
-                        <h1 className="text-4xl font-bold mb-4">The Festival is Not Currently Live</h1>
-                        <p className="text-gray-400">Please check back later for updates on our next event.</p>
+                        <h1 className="text-4xl font-bold mb-4 uppercase tracking-tighter italic">Sector Inactive</h1>
+                        <p className="text-gray-400 font-medium">Please check back later for updates on our next festival session.</p>
                     </div>
                 </main>
                 <Footer />
             </div>
         );
     }
+
+    const showPartyBanner = !!livePartyMovie && !isBannerDismissed;
+    const headerTop = showPartyBanner ? '3rem' : '0px';
+    const mainPaddingTop = showPartyBanner ? '3rem' : '0px';
     
     return (
-        <div className="flex flex-col min-h-screen text-white">
+        <div className="flex flex-col min-h-screen text-white bg-black">
             {isStaging && <StagingBanner onExit={exitStaging} isOffline={dataSource === 'fallback'} />}
-            <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => setIsMobileSearchOpen(true)} showSearch={false} />
             
-            <main className="flex-grow pt-16 pb-24 md:pb-0">
+            {showPartyBanner && (
+                <LiveWatchPartyBanner 
+                    movie={livePartyMovie!} 
+                    onClose={() => setIsBannerDismissed(true)} 
+                />
+            )}
+
+            <Header 
+                searchQuery="" 
+                onSearch={() => {}} 
+                isScrolled={true} 
+                onMobileSearchClick={() => setIsMobileSearchOpen(true)} 
+                showSearch={false} 
+                topOffset={headerTop}
+            />
+            
+            <main className="flex-grow transition-all duration-500 pb-24 md:pb-0" style={{ paddingTop: mainPaddingTop }}>
                  <div className="max-w-7xl mx-auto p-4 sm:p-8 md:p-12">
                      <FestivalView 
                         festivalData={festivalData}
                         festivalConfig={festivalConfig}
                         allMovies={movies}
+                        showHero={true}
                      />
                  </div>
             </main>

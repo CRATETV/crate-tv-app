@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
@@ -17,36 +16,12 @@ import LiveWatchPartyBanner from './LiveWatchPartyBanner';
 
 const CrateFestPage: React.FC = () => {
     const { hasCrateFestPass, grantCrateFestPass, unlockedFestivalBlockIds, rentals, purchaseMovie, unlockFestivalBlock } = useAuth();
-    const { isLoading, movies, settings, pipeline } = useFestival();
+    const { isLoading, movies, settings, pipeline, livePartyMovie } = useFestival();
     const [paymentItem, setPaymentItem] = useState<{ type: 'crateFestPass' | 'block' | 'movie', block?: FilmBlock, movie?: Movie } | null>(null);
-    const [activeParties, setActiveParties] = useState<Record<string, WatchPartyState>>({});
+    const [isBannerDismissed, setIsBannerDismissed] = useState(false);
 
     const config = settings.crateFestConfig;
     
-    useEffect(() => {
-        const db = getDbInstance();
-        if (!db) return;
-        const unsubscribe = db.collection('watch_parties').onSnapshot(snapshot => {
-            const states: Record<string, WatchPartyState> = {};
-            snapshot.forEach(doc => {
-                const data = doc.data() as WatchPartyState;
-                if (data.status === 'live') {
-                    states[doc.id] = data;
-                }
-            });
-            setActiveParties(states);
-        });
-        return () => unsubscribe();
-    }, []);
-
-    const livePartyMovie = useMemo(() => {
-        const liveKey = Object.keys(activeParties).find(key => {
-            const m = movies[key];
-            return m && m.isWatchPartyEnabled && !m.isUnlisted;
-        });
-        return liveKey ? movies[liveKey] : null;
-    }, [activeParties, movies]);
-
     const resolveMovie = (key: string): Movie | null => {
         if (movies[key]) return movies[key];
         const sub = pipeline.find(p => p.id === key);
@@ -61,7 +36,6 @@ const CrateFestPage: React.FC = () => {
                 cast: [],
                 trailer: '',
                 tvPoster: sub.posterUrl,
-                // Fix: Added missing 'likes' property to ensure compliance with the Movie interface.
                 likes: 0,
             };
         }
@@ -83,7 +57,6 @@ const CrateFestPage: React.FC = () => {
 
     const checkAccess = (movieKey: string, blockId: string) => {
         if (hasCrateFestPass) return true;
-        // FIX: Use .has() for Set compatibility
         if (unlockedFestivalBlockIds.has(blockId)) return true;
         const exp = rentals[movieKey];
         if (exp && new Date(exp) > new Date()) return true;
@@ -93,20 +66,17 @@ const CrateFestPage: React.FC = () => {
     if (isLoading) return <LoadingSpinner />;
     if (!config) return <div className="h-screen bg-black flex items-center justify-center font-black uppercase text-gray-800">System Core Offline</div>;
 
-    const headerTop = (livePartyMovie || isCrateFestActive) ? '3rem' : '0px';
+    const showPartyBanner = !!livePartyMovie && !isBannerDismissed;
+    const headerTop = (showPartyBanner || isCrateFestActive) ? '3rem' : '0px';
 
     return (
         <div className="flex flex-col min-h-screen text-white bg-black selection:bg-red-600 selection:text-white relative">
             <SEO title={config.title} description={config.tagline} />
             
-            {livePartyMovie ? (
+            {showPartyBanner ? (
                 <LiveWatchPartyBanner 
-                    movie={livePartyMovie} 
-                    onClose={() => setActiveParties(prev => {
-                        const next = { ...prev };
-                        delete next[livePartyMovie.key];
-                        return next;
-                    })} 
+                    movie={livePartyMovie!} 
+                    onClose={() => setIsBannerDismissed(true)} 
                 />
             ) : isCrateFestActive ? (
                 <CrateFestBanner config={config} hasPass={hasCrateFestPass} />
@@ -114,8 +84,7 @@ const CrateFestPage: React.FC = () => {
             
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} topOffset={headerTop} />
             
-            <main className="flex-grow transition-all duration-500" style={{ paddingTop: (livePartyMovie || isCrateFestActive) ? '3rem' : '0px' }}>
-                {/* Hero */}
+            <main className="flex-grow transition-all duration-500" style={{ paddingTop: (showPartyBanner || isCrateFestActive) ? '3rem' : '0px' }}>
                 <div className="relative h-[80vh] flex flex-col items-center justify-center text-center px-4 overflow-hidden">
                     <div className="absolute inset-0 bg-black">
                         <div className="absolute inset-0 bg-[url('https://cratetelevision.s3.us-east-1.amazonaws.com/filmmaker-bg.jpg')] opacity-20 blur-xl animate-[pulse_10s_infinite]"></div>
@@ -137,7 +106,6 @@ const CrateFestPage: React.FC = () => {
 
                 <div className="max-w-[1600px] mx-auto p-6 md:p-16 space-y-32 pb-48">
                     {config.movieBlocks.map((block, idx) => {
-                        // FIX: Use .has() for Set compatibility
                         const isBlockUnlocked = hasCrateFestPass || (unlockedFestivalBlockIds && unlockedFestivalBlockIds.has(block.id));
                         return (
                             <section key={block.id} className="space-y-12">
@@ -179,6 +147,7 @@ const CrateFestPage: React.FC = () => {
             </main>
 
             <Footer />
+            <BackToTopButton />
             <BottomNavBar onSearchClick={() => {}} />
             
             {paymentItem && (
