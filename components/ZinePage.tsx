@@ -255,8 +255,8 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                 </div>
                             </article>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </main>
 
             <Footer />
