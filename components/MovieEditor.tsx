@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Movie, Actor, MoviePipelineEntry } from '../types';
 import S3Uploader from './S3Uploader';
@@ -270,14 +269,32 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                         </label>
                                     </div>
 
-                                    <div className="p-4 bg-red-600/5 rounded-2xl border border-red-600/20">
-                                        <label className="flex items-center gap-3 cursor-pointer">
-                                            <input type="checkbox" name="isLiveStream" checked={formData.isLiveStream} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600" />
+                                    <div className="p-6 bg-red-600/5 rounded-3xl border border-red-600/20">
+                                        <label className="flex items-center gap-4 cursor-pointer group mb-4">
+                                            <div className="relative">
+                                                <input type="checkbox" name="isLiveStream" checked={formData.isLiveStream} onChange={handleChange} className="sr-only peer" />
+                                                <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-red-600 transition-all"></div>
+                                                <div className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-7"></div>
+                                            </div>
                                             <div className="min-w-0">
-                                                <span className="text-xs font-black uppercase text-red-500 tracking-widest">Live Broadcast Mode</span>
-                                                <p className="text-[8px] text-gray-600 uppercase font-bold mt-0.5">Swaps master file for a Restream embed node.</p>
+                                                <span className="text-sm font-black uppercase text-red-500 tracking-widest">Live Broadcast Relay Active</span>
+                                                <p className="text-[9px] text-gray-600 uppercase font-bold mt-0.5">Disables master file for a high-velocity relay node (Oscars, etc).</p>
                                             </div>
                                         </label>
+                                        {formData.isLiveStream && (
+                                            <div className="space-y-4 animate-[fadeIn_0.4s_ease-out]">
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Relay Identity (YouTube/Vimeo Live Link)</p>
+                                                <input 
+                                                    type="text"
+                                                    name="liveStreamEmbed"
+                                                    value={formData.liveStreamEmbed}
+                                                    onChange={handleChange}
+                                                    placeholder="https://www.youtube.com/live/..."
+                                                    className="form-input !bg-black border-red-500/20 font-mono text-xs"
+                                                />
+                                                <p className="text-[8px] text-gray-700 uppercase font-black">System will automatically synthesize the required iframe manifest.</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </section>
@@ -328,47 +345,6 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                         />
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    <label className="form-label">Auto-Release Date (Becomes Free)</label>
-                                                    <input 
-                                                        type="datetime-local" 
-                                                        name="autoReleaseDate" 
-                                                        value={formData.autoReleaseDate?.slice(0, 16)} 
-                                                        onChange={handleChange} 
-                                                        className="form-input bg-black/40 border-white/10 text-xs" 
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-4 border-t border-white/5 pt-6">
-                                        <label className="flex items-center gap-4 cursor-pointer group">
-                                            <div className="relative">
-                                                <input type="checkbox" name="isWatchPartyPaid" checked={formData.isWatchPartyPaid} onChange={handleChange} className="sr-only peer" />
-                                                <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-pink-600 transition-all"></div>
-                                                <div className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-7"></div>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-black text-white uppercase tracking-tight">Paid Watch Party Admission</p>
-                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Requires ticket for live screening</p>
-                                            </div>
-                                        </label>
-
-                                        {formData.isWatchPartyPaid && (
-                                            <div className="pl-18 animate-[fadeIn_0.3s_ease-out]">
-                                                <label className="form-label !text-pink-400">Ticket Price (USD)</label>
-                                                <div className="relative max-w-[200px]">
-                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
-                                                    <input 
-                                                        type="number" 
-                                                        name="watchPartyPrice" 
-                                                        value={formData.watchPartyPrice} 
-                                                        onChange={handleChange} 
-                                                        className="form-input !pl-8 bg-black/40 text-pink-500 font-black text-2xl" 
-                                                        step="0.01"
-                                                    />
-                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -380,26 +356,11 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                              <section className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">03. Master Media</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
-                                    {!formData.isLiveStream ? (
-                                        <div className="space-y-2 animate-[fadeIn_0.3s_ease-out]">
-                                            <label className="form-label">High-Bitrate Master</label>
-                                            <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="form-input bg-black/40" placeholder="https://..." />
-                                            <S3Uploader label="Ingest New Stream" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2 animate-[fadeIn_0.3s_ease-out]">
-                                            <label className="form-label !text-red-500">Restream / Embed Payload</label>
-                                            <textarea 
-                                                name="liveStreamEmbed" 
-                                                value={formData.liveStreamEmbed} 
-                                                onChange={handleChange} 
-                                                className="form-input !bg-black/40 border-red-500/20 font-mono text-[10px]" 
-                                                placeholder="Paste iframe embed code from Restream here..." 
-                                                rows={4}
-                                            />
-                                            <p className="text-[8px] text-gray-600 uppercase font-black tracking-widest mt-1">Accepts standard HTML &lt;iframe&gt; manifest.</p>
-                                        </div>
-                                    )}
+                                    <div className="space-y-2">
+                                        <label className="form-label">High-Bitrate Master</label>
+                                        <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="form-input bg-black/40" placeholder="https://..." />
+                                        <S3Uploader label="Ingest New Stream" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
+                                    </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="form-label">Key Art (2:3)</label>
@@ -443,71 +404,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                         </div>
                     </div>
 
-                    <div className="space-y-8">
-                        <div className="flex justify-between items-center">
-                            <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">05. Talent Manifest</h4>
-                            <button onClick={handleAddActor} className="bg-white/5 hover:bg-white text-gray-400 hover:text-black font-black px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all">+ Add Lead Talent</button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {formData.cast.map((actor, idx) => (
-                                <div key={idx} className="bg-black/60 p-6 rounded-3xl border border-white/5 space-y-6 group">
-                                    <div className="flex justify-between items-start border-b border-white/5 pb-4">
-                                        <input 
-                                            value={actor.name} 
-                                            onChange={(e) => handleCastChange(idx, { name: e.target.value })} 
-                                            className="bg-transparent text-white font-black text-xl uppercase tracking-tight focus:outline-none placeholder:text-gray-800" 
-                                            placeholder="Actor Name"
-                                        />
-                                        <button onClick={() => handleRemoveActor(idx)} className="text-gray-700 hover:text-red-500 text-[9px] font-black uppercase tracking-widest transition-colors">Erase Node</button>
-                                    </div>
-                                    <textarea 
-                                        value={actor.bio} 
-                                        onChange={(e) => handleCastChange(idx, { bio: e.target.value })} 
-                                        placeholder="Talent Biography..." 
-                                        className="form-input !bg-transparent border-white/5 h-24 text-xs font-medium"
-                                    />
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-3">
-                                            <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Headshot URL</p>
-                                            <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 mb-2 bg-black">
-                                                <img src={actor.photo} className="w-full h-full object-cover" alt="" />
-                                            </div>
-                                            <input 
-                                                type="text" 
-                                                value={actor.photo} 
-                                                onChange={(e) => handleCastChange(idx, { photo: e.target.value })} 
-                                                placeholder="https://..." 
-                                                className="form-input !py-1.5 !px-3 text-[10px] bg-white/5 border-white/5"
-                                            />
-                                        </div>
-                                        <div className="space-y-3">
-                                            <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Bio Art URL (High Res)</p>
-                                            <div className="w-16 h-16 rounded-lg overflow-hidden border border-white/10 mb-2 bg-black">
-                                                <img src={actor.highResPhoto} className="w-full h-full object-cover" alt="" />
-                                            </div>
-                                            <input 
-                                                type="text" 
-                                                value={actor.highResPhoto} 
-                                                onChange={(e) => handleCastChange(idx, { highResPhoto: e.target.value })} 
-                                                placeholder="https://..." 
-                                                className="form-input !py-1.5 !px-3 text-[10px] bg-white/5 border-white/5"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
                     <div className="pt-12 border-t border-white/5 flex flex-col items-center gap-6">
                         <button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-black py-6 px-24 rounded-[2rem] uppercase tracking-[0.3em] shadow-[0_30px_60px_rgba(239,68,68,0.3)] transition-all transform active:scale-95 disabled:opacity-20 text-sm">
                             {isSaving ? 'Synchronizing Cluster...' : 'Push Global Manifest'}
-                        </button>
-                        <button 
-                            onClick={() => { if(window.confirm("PURGE PROTOCOL: Irreversibly erase this record?")) onDeleteMovie(formData.key); }}
-                            className="text-[10px] text-gray-700 font-black uppercase tracking-widest hover:text-red-600 transition-colors"
-                        >
-                            Purge Data Stream
                         </button>
                     </div>
                 </div>
