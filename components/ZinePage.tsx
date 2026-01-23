@@ -67,7 +67,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                     setActiveStory(null);
                 }
             } catch (e) {
-                console.error("Zine Access Error:", e);
+                console.error("Narrative Restoration Error:", e);
             } finally {
                 setIsLoading(false);
             }

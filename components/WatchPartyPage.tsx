@@ -69,7 +69,7 @@ const DirectorStage: React.FC<{ name: string }> = ({ name }) => (
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-red-600 animate-pulse"></div>
             </div>
             <div>
-                <p className="text-[10px] font-black uppercase text-red-100 tracking-[0.3em] leading-none">STAGE_ACTIVE // LIVE RELAY</p>
+                <p className="text-[10px] font-black uppercase text-red-100 tracking-[0.3em] font-mono leading-none">STAGE_ACTIVE // LIVE RELAY</p>
                 <h4 className="text-lg font-black text-white uppercase tracking-tight mt-1">{name} is hosting</h4>
             </div>
         </div>
