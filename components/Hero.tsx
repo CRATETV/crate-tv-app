@@ -38,7 +38,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
   }, [currentIndex, currentMovie.trailer]);
 
   return (
-    <div className="relative w-full h-[60vh] md:h-[40vw] md:max-h-[75vh] min-h-[450px] md:min-h-[600px] bg-black overflow-hidden">
+    <div className="relative w-full h-[65vh] md:h-[28vw] md:max-h-[520px] min-h-[450px] bg-black overflow-hidden">
       <div className="absolute inset-0 overflow-hidden">
         {/* Poster Image */}
         <img
@@ -51,7 +51,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
 
         {/* Award Overlay Priority Logic for Hero */}
         {!showVideo && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[80%] md:max-w-sm pointer-events-none transition-opacity duration-1000">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[80%] md:max-w-xs pointer-events-none transition-opacity duration-1000">
                 {currentMovie.customLaurelUrl ? (
                     <img src={currentMovie.customLaurelUrl} alt="Award" className="w-full h-auto drop-shadow-2xl" />
                 ) : (currentMovie.awardName && currentMovie.awardYear) ? (
@@ -85,43 +85,45 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
 
       {/* Main Content (Title/Synop/Buttons) */}
       {!hideContent && (
-        <div className="relative z-10 flex flex-col justify-end md:justify-center h-full px-4 md:px-12 pb-16 md:pb-24 text-white pointer-events-none">
-            <h1 className="text-3xl md:text-6xl lg:text-7xl font-black mb-3 md:mb-4 max-w-2xl animate-[fadeInHeroContent_0.8s_ease-out] drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] leading-tight">
-            {currentMovie.title}
-            </h1>
-            <p className="hidden sm:block text-sm md:text-lg lg:text-xl max-w-xl mb-8 animate-[fadeInHeroContent_1s_ease-out] line-clamp-3 text-gray-100 leading-relaxed font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-            {currentMovie.synopsis.replace(/<[^>]+>/g, '')}
-            </p>
-            
-            <div className="flex flex-row flex-wrap items-center gap-2 md:gap-4 animate-[fadeInHeroContent_1.2s_ease-out] pointer-events-auto">
-                <button
-                    onClick={() => onPlayMovie(currentMovie)}
-                    className="flex items-center justify-center h-10 md:h-12 px-6 md:px-8 bg-white text-black font-bold rounded hover:bg-gray-200 transition-all transform hover:scale-105 shadow-2xl text-sm md:text-lg"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mr-1.5 md:mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-                    Play
-                </button>
-                <button
-                    onClick={() => onMoreInfo(currentMovie)}
-                    className="flex items-center justify-center h-10 md:h-12 px-6 md:px-8 bg-gray-500/40 backdrop-blur-md border border-white/20 text-white font-bold rounded hover:bg-gray-500/60 transition-all transform hover:scale-105 shadow-2xl text-sm md:text-lg"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mr-1.5 md:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    Info
-                </button>
-                
-                {showVideo && (
-                    <button 
-                        onClick={() => setIsMuted(!isMuted)}
-                        className="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 bg-white/10 hover:bg-white/20 rounded border border-white/20 transition-all backdrop-blur-md"
-                        aria-label={isMuted ? "Unmute" : "Mute"}
-                    >
-                        {isMuted ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-                        ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M12 5l-4 4H5v6h3l4 4V5z" /></svg>
-                        )}
-                    </button>
-                )}
+        <div className="relative z-10 flex flex-col justify-end md:justify-center h-full px-4 md:px-12 pb-16 md:pb-12 text-white pointer-events-none">
+            <div className="max-w-4xl">
+              <h1 className="text-3xl md:text-5xl lg:text-6xl font-black mb-3 md:mb-4 max-w-2xl animate-[fadeInHeroContent_0.8s_ease-out] drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] leading-tight uppercase italic tracking-tighter">
+              {currentMovie.title}
+              </h1>
+              <p className="hidden sm:block text-sm md:text-base lg:text-lg max-w-xl mb-6 animate-[fadeInHeroContent_1s_ease-out] line-clamp-2 text-gray-200 leading-relaxed font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+              {currentMovie.synopsis.replace(/<[^>]+>/g, '')}
+              </p>
+              
+              <div className="flex flex-row flex-wrap items-center gap-2 md:gap-4 animate-[fadeInHeroContent_1.2s_ease-out] pointer-events-auto">
+                  <button
+                      onClick={() => onPlayMovie(currentMovie)}
+                      className="flex items-center justify-center h-10 md:h-12 px-6 md:px-8 bg-white text-black font-bold rounded hover:bg-gray-200 transition-all transform hover:scale-105 shadow-2xl text-sm md:text-lg uppercase tracking-widest"
+                  >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mr-1.5 md:mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                      Play
+                  </button>
+                  <button
+                      onClick={() => onMoreInfo(currentMovie)}
+                      className="flex items-center justify-center h-10 md:h-12 px-6 md:px-8 bg-gray-500/40 backdrop-blur-md border border-white/20 text-white font-bold rounded hover:bg-gray-500/60 transition-all transform hover:scale-105 shadow-2xl text-sm md:text-lg uppercase tracking-widest"
+                  >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mr-1.5 md:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      Details
+                  </button>
+                  
+                  {showVideo && (
+                      <button 
+                          onClick={() => setIsMuted(!isMuted)}
+                          className="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 bg-white/10 hover:bg-white/20 rounded border border-white/20 transition-all backdrop-blur-md"
+                          aria-label={isMuted ? "Unmute" : "Mute"}
+                      >
+                          {isMuted ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                          ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M12 5l-4 4H5v6h3l4 4V5z" /></svg>
+                          )}
+                      </button>
+                  )}
+              </div>
             </div>
         </div>
       )}

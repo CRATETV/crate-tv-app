@@ -51,19 +51,34 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     const articleRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
-        const db = getDbInstance();
         const fetchStories = async () => {
+            const db = getDbInstance();
             if (!db) {
-                setIsLoading(false);
+                // Wait for DB initialization
+                setTimeout(fetchStories, 500);
                 return;
             }
             try {
-                const snap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').get();
+                // Try fetch with order first
+                let snap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').get();
+                
+                // Fallback for missing index
+                if (snap.empty) {
+                    snap = await db.collection('editorial_stories').get();
+                }
+
                 const fetched: EditorialStory[] = [];
                 snap.forEach(doc => {
                     fetched.push({ id: doc.id, ...doc.data() } as EditorialStory);
                 });
                 
+                // Sort manually if index failed/missing
+                fetched.sort((a, b) => {
+                    const dateA = a.publishedAt?.seconds || 0;
+                    const dateB = b.publishedAt?.seconds || 0;
+                    return dateB - dateA;
+                });
+
                 setStories(fetched);
                 
                 if (storyId) {
@@ -74,6 +89,13 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                 }
             } catch (e) {
                 console.error("Zine Downlink Error:", e);
+                // Last resort: Check if collection exists without order
+                try {
+                    const basicSnap = await db.collection('editorial_stories').get();
+                    const basicFetched: EditorialStory[] = [];
+                    basicSnap.forEach(doc => basicFetched.push({ id: doc.id, ...doc.data() } as EditorialStory));
+                    setStories(basicFetched);
+                } catch (e2) {}
             } finally {
                 setIsLoading(false);
             }
@@ -83,7 +105,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
 
     const handleSubscribe = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (hpValue) return; // Silent block for bots
+        if (hpValue) return; 
         
         setSubStatus('loading');
         try {
@@ -126,41 +148,52 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
             <main className="flex-grow pt-24 pb-32">
                 {!activeStory ? (
                     <div className="space-y-12">
-                        {stories.length > 0 && (
-                            <section 
-                                onClick={() => handleNavigate(stories[0].id)}
-                                className="relative w-full h-[55vh] md:h-[70vh] cursor-pointer group overflow-hidden border-[12px] border-red-600 bg-black"
-                            >
-                                <img 
-                                    src={stories[0].heroImage} 
-                                    className="w-full h-full object-cover transition-transform duration-[6000ms] group-hover:scale-110" 
-                                    alt="" 
-                                    crossOrigin="anonymous"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-                                <div className="absolute bottom-10 left-6 md:left-16 max-w-5xl space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <span className="bg-red-600 text-white font-black uppercase text-[10px] px-3 py-1 rounded-lg tracking-[0.2em] shadow-2xl">{stories[0].type}</span>
-                                        <span className="text-white/40 font-black uppercase text-[10px] tracking-[0.4em]">Current Feature</span>
+                        {stories.length > 0 ? (
+                            <>
+                                <section 
+                                    onClick={() => handleNavigate(stories[0].id)}
+                                    className="relative w-full h-[55vh] md:h-[70vh] cursor-pointer group overflow-hidden border-[12px] border-red-600 bg-black"
+                                >
+                                    <img 
+                                        src={stories[0].heroImage} 
+                                        className="w-full h-full object-cover transition-transform duration-[6000ms] group-hover:scale-110" 
+                                        alt="" 
+                                        crossOrigin="anonymous"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                                    <div className="absolute bottom-10 left-6 md:left-16 max-w-5xl space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            <span className="bg-red-600 text-white font-black uppercase text-[10px] px-3 py-1 rounded-lg tracking-[0.2em] shadow-2xl">{stories[0].type}</span>
+                                            <span className="text-white/40 font-black uppercase text-[10px] tracking-[0.4em]">Current Feature</span>
+                                        </div>
+                                        <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-[0.85] italic drop-shadow-2xl">{stories[0].title}</h1>
+                                        <p className="text-lg md:text-2xl text-gray-200 font-medium max-w-2xl drop-shadow-xl leading-snug">{stories[0].subtitle}</p>
                                     </div>
-                                    <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-[0.85] italic drop-shadow-2xl">{stories[0].title}</h1>
-                                    <p className="text-lg md:text-2xl text-gray-200 font-medium max-w-2xl drop-shadow-xl leading-snug">{stories[0].subtitle}</p>
-                                </div>
-                            </section>
-                        )}
+                                </section>
 
-                        <div className="max-w-[1400px] mx-auto px-6 md:px-12">
-                            <div className="divide-y divide-white/5">
-                                {stories.slice(1).map(story => (
-                                    <ZineStoryCard key={story.id} story={story} onClick={() => handleNavigate(story.id)} />
-                                ))}
-                                {stories.length === 0 && (
-                                    <div className="py-32 text-center border-2 border-dashed border-white/5 rounded-[3rem] opacity-20">
-                                        <p className="text-sm font-black uppercase tracking-[0.5em] text-gray-500">Awaiting Dispatch Manifest...</p>
+                                <div className="max-w-[1400px] mx-auto px-6 md:px-12">
+                                    <div className="divide-y divide-white/5">
+                                        {/* Show remaining stories or show empty state if only 1 exists */}
+                                        {stories.length > 1 ? stories.slice(1).map(story => (
+                                            <ZineStoryCard key={story.id} story={story} onClick={() => handleNavigate(story.id)} />
+                                        )) : (
+                                            <div className="py-20 text-center opacity-30 border-t border-white/5 mt-10">
+                                                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-600">End of Dispatch Log</p>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="max-w-4xl mx-auto py-48 text-center px-6">
+                                <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full mb-6">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Network Synchronizing</span>
+                                </div>
+                                <h2 className="text-4xl font-black uppercase tracking-tighter italic text-white mb-4">Awaiting Dispatch Manifest...</h2>
+                                <p className="text-gray-500 max-w-md mx-auto">Connecting to the editorial archive. Please stand by for narrative uplink.</p>
                             </div>
-                        </div>
+                        )}
 
                         <section className="max-w-4xl mx-auto px-6 pt-20">
                             <div className="bg-white/5 border border-white/10 p-10 md:p-20 rounded-[3.5rem] text-center space-y-8 relative overflow-hidden shadow-2xl">
@@ -175,7 +208,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                         </div>
                                     ) : (
                                         <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-4 max-w-lg mx-auto pt-6">
-                                            {/* Honeypot field */}
                                             <div style={{ display: 'none' }} aria-hidden="true">
                                                 <input type="text" value={hpValue} onChange={e => setHpValue(e.target.value)} tabIndex={-1} autoComplete="off" />
                                             </div>

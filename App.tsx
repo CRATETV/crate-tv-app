@@ -236,7 +236,7 @@ const App: React.FC = () => {
                 )}
                 
                 <div className="px-4 md:px-12 relative z-10 w-full overflow-x-hidden">
-                    <div className="mt-16 md:mt-24 lg:mt-32 space-y-12 md:space-y-16">
+                    <div className="mt-8 md:mt-12 lg:mt-16 space-y-12 md:space-y-16">
                         {searchQuery ? (
                             <MovieCarousel title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`} movies={searchResults} onSelectMovie={handlePlayMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />
                         ) : (
@@ -244,11 +244,9 @@ const App: React.FC = () => {
                             {topTenMovies.length > 0 && (
                                 <MovieCarousel 
                                     title={
-                                        <div className="flex items-center justify-between gap-4 group/topten">
-                                            <h2 className="text-lg md:text-2xl font-black uppercase italic tracking-tighter text-white px-2 border-l-4 border-red-600 pl-4">
-                                                Top Ten Today
-                                            </h2>
-                                        </div>
+                                        <h2 className="text-xl md:text-3xl font-black uppercase italic tracking-tighter text-white px-2 border-l-4 border-red-600 pl-4">
+                                            Top Ten Today
+                                        </h2>
                                     } 
                                     movies={topTenMovies} 
                                     onSelectMovie={handlePlayMovie} 
