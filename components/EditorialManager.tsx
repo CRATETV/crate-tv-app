@@ -36,7 +36,7 @@ const ZineProof: React.FC<{ title: string; subtitle: string; sections: ZineSecti
 
                 {heroImage && (
                     <div className="aspect-video rounded-[3rem] overflow-hidden shadow-2xl mx-auto border-[10px] border-gray-50">
-                        <img src={heroImage} className="w-full h-full object-cover" alt="" />
+                        <img src={heroImage} className="w-full h-full object-cover" alt="" crossOrigin="anonymous" />
                     </div>
                 )}
 
@@ -44,7 +44,7 @@ const ZineProof: React.FC<{ title: string; subtitle: string; sections: ZineSecti
                     {(sections || []).map((s, idx) => {
                         if (s.type === 'header') return <h3 key={s.id} className="text-5xl font-black uppercase tracking-tighter italic border-l-[12px] border-red-600 pl-8 mt-24">{s.content}</h3>;
                         if (s.type === 'quote') return <div key={s.id} className="bg-gray-50 border-l-[16px] border-black p-12 text-3xl font-black uppercase italic tracking-tight shadow-xl">"{s.content}"</div>;
-                        if (s.type === 'image') return <div key={s.id} className="rounded-[3rem] overflow-hidden shadow-2xl border-4 border-gray-100"><img src={s.content} className="w-full h-auto" alt="" /></div>;
+                        if (s.type === 'image') return <div key={s.id} className="rounded-[3rem] overflow-hidden shadow-2xl border-4 border-gray-100"><img src={s.content} className="w-full h-auto" alt="" crossOrigin="anonymous" /></div>;
                         return (
                             <div key={s.id} className="relative">
                                 {idx === 0 && s.content && <span className="float-left text-[13rem] font-black italic leading-[0.7] mr-6 mt-6 text-red-600 drop-shadow-2xl">{s.content.charAt(0)}</span>}
@@ -190,7 +190,7 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                 <div className="lg:col-span-4 flex flex-col gap-6 overflow-y-auto scrollbar-hide pr-2">
                     <section className="bg-black/40 border border-white/5 p-6 rounded-3xl space-y-4 shadow-xl">
                         <h4 className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Historical Dispatches</h4>
-                        <div className="space-y-2 max-h-[250px] overflow-y-auto scrollbar-hide">
+                        <div className="space-y-2 max-h-[350px] overflow-y-auto scrollbar-hide">
                             {stories.map(s => (
                                 <button 
                                     key={s.id} 
@@ -203,6 +203,9 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                                     </div>
                                 </button>
                             ))}
+                            {stories.length === 0 && (
+                                <p className="text-[10px] text-gray-700 uppercase font-black text-center py-10 italic">Archive Empty</p>
+                            )}
                         </div>
                     </section>
 

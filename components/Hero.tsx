@@ -38,7 +38,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
   }, [currentIndex, currentMovie.trailer]);
 
   return (
-    <div className="relative w-full h-[60vh] md:h-[56.25vw] md:max-h-[95vh] min-h-[450px] md:min-h-[600px] bg-black overflow-hidden">
+    <div className="relative w-full h-[60vh] md:h-[40vw] md:max-h-[75vh] min-h-[450px] md:min-h-[600px] bg-black overflow-hidden">
       <div className="absolute inset-0 overflow-hidden">
         {/* Poster Image */}
         <img
