@@ -87,7 +87,6 @@ const CollapsibleFooter: React.FC<CollapsibleFooterProps> = ({ showPortalNotice 
                     <h3 className="font-bold text-white mb-4">Community</h3>
                     <ul className="space-y-2">
                         <li><a href="/jury" onClick={(e) => handleNavigate(e, '/jury')} className="hover:text-emerald-400 transition font-black text-emerald-500 uppercase tracking-widest text-[10px]">The Grand Jury</a></li>
-                        <li><a href="/public-access" onClick={(e) => handleNavigate(e, '/public-access')} className="hover:text-indigo-400 transition font-black text-indigo-500 uppercase tracking-widest text-[10px]">The Commons</a></li>
                         <li><a href="/submit" onClick={(e) => handleNavigate(e, '/submit')} className="hover:text-white transition">For Filmmakers</a></li>
                     </ul>
                 </div>

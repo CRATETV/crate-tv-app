@@ -15,26 +15,26 @@ interface WatchPartyPageProps {
 
 const REACTION_TYPES = ['🔥', '😲', '❤️', '👏', '😢'] as const;
 
-// Helper to convert plain YouTube/Vimeo URLs into valid iframe embed code if needed
+// Enhanced Helper to convert any YouTube/Vimeo URL into a cinematic embed
 const processLiveEmbed = (input: string): string => {
     const trimmed = input.trim();
     if (trimmed.startsWith('<iframe')) return trimmed;
 
-    // YouTube Live URL Handler
+    // YouTube Parser (Handles watch, share, live, and embed URLs)
     const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const ytMatch = trimmed.match(ytRegex);
     if (ytMatch && ytMatch[1]) {
-        return `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
+        return `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1&controls=1&showinfo=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
     }
 
-    // Vimeo Live Handler
+    // Vimeo Parser
     const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
     const vimeoMatch = trimmed.match(vimeoRegex);
     if (vimeoMatch && vimeoMatch[1]) {
-        return `<iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&color=ef4444&title=0&byline=0&portrait=0" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+        return `<iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&color=ef4444&title=0&byline=0&portrait=0" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
     }
 
-    return trimmed; // Fallback to raw input
+    return `<div class="flex items-center justify-center h-full text-gray-500 font-mono text-xs uppercase p-10 text-center">Invalid Relay Node: ${trimmed}<br/>Use standard YouTube or Vimeo URL.</div>`;
 };
 
 const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({ emoji, onComplete }) => {
@@ -190,6 +190,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const hasAccess = useMemo(() => {
         if (!movie) return false;
         if (unlockedWatchPartyKeys.has(movieKey)) return true;
+        if (!movie.isWatchPartyPaid) return true;
         const exp = rentals[movieKey];
         return exp && new Date(exp) > new Date();
     }, [movie, rentals, movieKey, unlockedWatchPartyKeys]);
@@ -239,7 +240,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         ) : (
                             movie.isLiveStream ? (
                                 <div className="w-full h-full p-2 md:p-6 lg:p-12 flex items-center justify-center bg-black">
-                                    <div className="w-full h-full bg-gray-900 rounded-[2rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-white/5" dangerouslySetInnerHTML={{ __html: processedEmbed }} />
+                                    <div className="w-full h-full bg-gray-900 rounded-[2rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-white/5 relative" dangerouslySetInnerHTML={{ __html: processedEmbed }} />
                                 </div>
                             ) : (
                                 <video ref={videoRef} src={movie.fullMovie} className="w-full h-full object-contain" autoPlay muted />

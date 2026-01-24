@@ -404,6 +404,59 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                         </div>
                     </div>
 
+                    <div className="pt-12 border-t border-white/5">
+                        <div className="flex justify-between items-center mb-8">
+                            <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">05. Talent Manifest</h4>
+                            <button onClick={handleAddActor} className="bg-white/5 hover:bg-white text-gray-500 hover:text-black font-black px-6 py-2 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all">+ Add Talent</button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {formData.cast.map((actor, idx) => (
+                                <div key={idx} className="bg-white/[0.02] border border-white/5 p-8 rounded-[2.5rem] space-y-6 relative group hover:border-white/10 transition-all">
+                                    <button 
+                                        onClick={() => handleRemoveActor(idx)} 
+                                        className="absolute top-6 right-6 text-gray-700 hover:text-red-500 transition-colors"
+                                        title="Remove actor"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                    
+                                    <div className="flex gap-6">
+                                        <div className="w-20 h-20 rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl flex-shrink-0">
+                                            <img src={actor.photo} className="w-full h-full object-cover" alt="" />
+                                        </div>
+                                        <div className="flex-grow space-y-4">
+                                            <input 
+                                                value={actor.name} 
+                                                onChange={e => handleCastChange(idx, { name: e.target.value })} 
+                                                placeholder="Professional Name" 
+                                                className="form-input !bg-black/40 !py-2 text-sm font-black uppercase tracking-tight italic" 
+                                            />
+                                            <input 
+                                                value={actor.photo} 
+                                                onChange={e => handleCastChange(idx, { photo: e.target.value, highResPhoto: e.target.value })} 
+                                                placeholder="Profile Photo URL" 
+                                                className="form-input !bg-black/40 !py-2 text-[9px] font-mono" 
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    <textarea 
+                                        value={actor.bio} 
+                                        onChange={e => handleCastChange(idx, { bio: e.target.value })} 
+                                        placeholder="Biographical data..." 
+                                        className="form-input !bg-black/40 text-xs leading-relaxed" 
+                                        rows={3} 
+                                    />
+                                </div>
+                            ))}
+                            {formData.cast.length === 0 && (
+                                <div className="col-span-full py-12 text-center border-2 border-dashed border-white/5 rounded-[2.5rem]">
+                                    <p className="text-gray-700 font-black uppercase text-[10px] tracking-[0.5em]">Talent Manifest Empty</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="pt-12 border-t border-white/5 flex flex-col items-center gap-6">
                         <button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-black py-6 px-24 rounded-[2rem] uppercase tracking-[0.3em] shadow-[0_30px_60px_rgba(239,68,68,0.3)] transition-all transform active:scale-95 disabled:opacity-20 text-sm">
                             {isSaving ? 'Synchronizing Cluster...' : 'Push Global Manifest'}
