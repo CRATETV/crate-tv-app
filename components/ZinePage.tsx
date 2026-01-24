@@ -13,9 +13,9 @@ const ZineStoryCard: React.FC<{ story: EditorialStory; onClick: () => void }> = 
         onClick={onClick}
         className="group cursor-pointer bg-black border-b border-white/5 py-8 md:py-12 flex flex-col md:flex-row gap-8 md:gap-12 hover:bg-white/[0.01] transition-all duration-500"
     >
-        <div className="w-full md:w-[35%] aspect-video relative overflow-hidden rounded-2xl bg-gray-900 shadow-2xl">
+        <div className="w-full md:w-[35%] aspect-video relative overflow-hidden rounded-2xl bg-[#0a0a0a] shadow-2xl">
             <img 
-                src={story.heroImage} 
+                src={`/api/proxy-image?url=${encodeURIComponent(story.heroImage)}`} 
                 className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
                 alt="" 
                 crossOrigin="anonymous"
@@ -155,7 +155,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                     className="relative w-full h-[55vh] md:h-[70vh] cursor-pointer group overflow-hidden border-[12px] border-red-600 bg-black"
                                 >
                                     <img 
-                                        src={stories[0].heroImage} 
+                                        src={`/api/proxy-image?url=${encodeURIComponent(stories[0].heroImage)}`} 
                                         className="w-full h-full object-cover transition-transform duration-[6000ms] group-hover:scale-110" 
                                         alt="" 
                                         crossOrigin="anonymous"
@@ -261,8 +261,8 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
 
                                 <div className="space-y-16">
                                     {activeStory.heroImage && (
-                                        <div className="aspect-video rounded-[3rem] overflow-hidden border border-white/10 shadow-[0_50px_100px_rgba(0,0,0,0.5)]">
-                                            <img src={activeStory.heroImage} className="w-full h-full object-cover" alt="" crossOrigin="anonymous" />
+                                        <div className="aspect-video rounded-[3rem] overflow-hidden border border-white/10 shadow-[0_50px_100px_rgba(0,0,0,0.5)] bg-[#050505]">
+                                            <img src={`/api/proxy-image?url=${encodeURIComponent(activeStory.heroImage)}`} className="w-full h-full object-cover" alt="" crossOrigin="anonymous" />
                                         </div>
                                     )}
 
@@ -272,16 +272,16 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                                 <div key={section.id}>
                                                     {section.type === 'header' && <h3 className="text-3xl md:text-5xl font-black uppercase tracking-tighter italic text-red-600 mt-20 mb-8 border-l-[8px] border-red-600 pl-8 leading-none">{section.content}</h3>}
                                                     {section.type === 'quote' && <div className="bg-white/5 border-l-[12px] border-white p-10 text-2xl md:text-4xl font-black uppercase italic tracking-tight text-white my-16 rounded-r-3xl shadow-2xl leading-tight">"{section.content}"</div>}
-                                                    {section.type === 'image' && <div className="rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl my-14"><img src={section.content} className="w-full h-auto" alt="" crossOrigin="anonymous" /></div>}
+                                                    {section.type === 'image' && <div className="rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl my-14 bg-[#050505]"><img src={`/api/proxy-image?url=${encodeURIComponent(section.content)}`} className="w-full h-auto" alt="" crossOrigin="anonymous" /></div>}
                                                     {section.type === 'text' && (
                                                         <div className="relative">
-                                                            {idx === 0 && (
+                                                            {idx === 0 && section.content && (
                                                                 <span className="float-left text-[8rem] md:text-[11rem] font-black italic leading-[0.6] pr-6 mr-4 mt-6 text-red-600 drop-shadow-2xl select-none">
                                                                     {section.content.charAt(0)}
                                                                 </span>
                                                             )}
                                                             <p className="text-xl md:text-2xl text-gray-300 font-medium leading-relaxed tracking-tight">
-                                                                {idx === 0 ? section.content.slice(1) : section.content}
+                                                                {idx === 0 && section.content ? section.content.slice(1) : section.content}
                                                             </p>
                                                             <div className="clear-both"></div>
                                                         </div>

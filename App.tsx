@@ -236,7 +236,7 @@ const App: React.FC = () => {
                 )}
                 
                 <div className="px-4 md:px-12 relative z-10 w-full overflow-x-hidden">
-                    <div className="mt-8 md:mt-12 lg:mt-16 space-y-12 md:space-y-16">
+                    <div className="-mt-12 md:-mt-20 lg:-mt-32 space-y-12 md:space-y-16 relative z-20">
                         {searchQuery ? (
                             <MovieCarousel title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`} movies={searchResults} onSelectMovie={handlePlayMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />
                         ) : (
@@ -244,7 +244,7 @@ const App: React.FC = () => {
                             {topTenMovies.length > 0 && (
                                 <MovieCarousel 
                                     title={
-                                        <h2 className="text-xl md:text-3xl font-black uppercase italic tracking-tighter text-white px-2 border-l-4 border-red-600 pl-4">
+                                        <h2 className="text-xl md:text-3xl font-black uppercase italic tracking-tighter text-white px-2 border-l-4 border-red-600 pl-4 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
                                             Top Ten Today
                                         </h2>
                                     } 

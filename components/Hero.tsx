@@ -85,7 +85,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
 
       {/* Main Content (Title/Synop/Buttons) */}
       {!hideContent && (
-        <div className="relative z-10 flex flex-col justify-end md:justify-center h-full px-4 md:px-12 pb-16 md:pb-12 text-white pointer-events-none">
+        <div className="relative z-10 flex flex-col justify-end md:justify-center h-full px-4 md:px-12 pb-24 md:pb-32 text-white pointer-events-none">
             <div className="max-w-4xl">
               <h1 className="text-3xl md:text-5xl lg:text-6xl font-black mb-3 md:mb-4 max-w-2xl animate-[fadeInHeroContent_0.8s_ease-out] drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] leading-tight uppercase italic tracking-tighter">
               {currentMovie.title}
