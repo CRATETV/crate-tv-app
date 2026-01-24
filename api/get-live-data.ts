@@ -1,4 +1,3 @@
-
 import { getApiData } from './_lib/data.js';
 import { Movie, Category } from '../types.js';
 
@@ -15,6 +14,7 @@ export async function GET(request: Request) {
             
             const movieArray = Object.values(data.movies) as Movie[];
             
+            // Prioritize movies with assets
             movieArray.sort((a, b) => {
                 const aScore = (a.fullMovie ? 100 : 0) + (a.poster ? 50 : 0) + (a.synopsis?.length > 10 ? 10 : 0);
                 const bScore = (b.fullMovie ? 100 : 0) + (b.poster ? 50 : 0) + (b.synopsis?.length > 10 ? 10 : 0);
@@ -24,15 +24,18 @@ export async function GET(request: Request) {
             movieArray.forEach((m: Movie) => {
                 if (!m || !m.title || !m.key) return;
                 
-                const fingerprint = m.title
-                    .toLowerCase()
+                // CRITICAL FIX: Relaxed the title filter to only block generic "Untitled" placeholders, 
+                // ensuring movies like "Just Cuz" aren't caught in an over-aggressive normalization.
+                const lowerTitle = m.title.toLowerCase().trim();
+                if (lowerTitle === 'untitled' || lowerTitle === 'untitled film' || lowerTitle === 'draft master' || lowerTitle === '') return;
+                
+                const fingerprint = lowerTitle
                     .replace(/gemeni/g, 'gemini')
                     .replace(/[^a-z0-9]/g, '')
                     .trim();
                 
-                // STABILIZATION: Do not serve drafts or untitled placeholder nodes to Roku/Web
-                if (fingerprint.includes('untitled') || fingerprint === 'draftmaster' || fingerprint === '') return;
-                if (processedFingerprints.has(fingerprint)) return;
+                // If the key is specific (not a generic movie_ timestamp), keep it regardless of fingerprint
+                if (processedFingerprints.has(fingerprint) && m.key.startsWith('movie_')) return;
                 
                 processedFingerprints.add(fingerprint);
                 finalMovies[m.key] = m;
@@ -43,7 +46,6 @@ export async function GET(request: Request) {
 
         if (data.categories) {
             const finalCategories: Record<string, Category> = {};
-            const protectedKeys = ['nowStreaming', 'featured', 'publicDomainIndie'];
 
             Object.entries(data.categories).forEach(([key, category]) => {
                 const cat = category as Category;

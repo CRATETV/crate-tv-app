@@ -122,8 +122,8 @@ const App: React.FC = () => {
     }, [movies]);
 
     const topTenMovies = useMemo(() => {
-        return (Object.values(movies) as Movie[])
-            .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
+        // FIX: Corrected malformed return statement by adding .filter() call and fixing type assertion.
+        return (Object.values(movies) as (Movie | undefined)[]).filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
             .sort((a, b) => (analytics?.viewCounts?.[b.key] || 0) - (analytics?.viewCounts?.[a.key] || 0))
             .slice(0, 10);
     }, [movies, analytics]);
@@ -236,7 +236,7 @@ const App: React.FC = () => {
                 )}
                 
                 <div className="px-4 md:px-12 relative z-10 w-full overflow-x-hidden">
-                    <div className="-mt-12 md:-mt-20 lg:-mt-32 space-y-12 md:space-y-16 relative z-20">
+                    <div className="-mt-6 md:-mt-10 lg:-mt-14 space-y-12 md:space-y-16 relative z-20">
                         {searchQuery ? (
                             <MovieCarousel title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`} movies={searchResults} onSelectMovie={handlePlayMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />
                         ) : (
@@ -260,6 +260,35 @@ const App: React.FC = () => {
                                 />
                             )}
                             
+                            {/* ZINE SPOTLIGHT ROW */}
+                            <div className="relative group/zine-row py-4">
+                                <div className="bg-gradient-to-r from-red-600/10 via-transparent to-transparent border-l-4 border-red-600 p-8 rounded-r-3xl flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl">
+                                    <div className="space-y-4 max-w-2xl">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-red-500 text-xs font-black uppercase tracking-[0.4em]">Official Dispatch</span>
+                                            <div className="w-1 h-1 rounded-full bg-gray-800"></div>
+                                            <span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Magazine & Intel</span>
+                                        </div>
+                                        <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter italic leading-none">The <span className="text-red-600">Zine.</span></h2>
+                                        <p className="text-gray-400 text-lg md:text-xl font-medium leading-tight">Your terminal for community dispatches, festival intel, and new cinema reveals. Stay synced with the underground.</p>
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row gap-4 flex-shrink-0">
+                                        <button 
+                                            onClick={() => { window.history.pushState({}, '', '/zine'); window.dispatchEvent(new Event('pushstate')); }}
+                                            className="bg-white text-black font-black px-10 py-4 rounded-2xl uppercase tracking-widest text-xs hover:bg-gray-200 transition-all shadow-xl active:scale-95"
+                                        >
+                                            Read Dispatches
+                                        </button>
+                                        <button 
+                                            onClick={() => { window.history.pushState({}, '', '/zine'); window.dispatchEvent(new Event('pushstate')); }}
+                                            className="bg-red-600 text-white font-black px-10 py-4 rounded-2xl uppercase tracking-widest text-xs hover:bg-red-700 transition-all shadow-xl active:scale-95"
+                                        >
+                                            Subscribe Now
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             {vaultMovies.length > 0 && (
                                 <CrateVaultRow 
                                     movies={vaultMovies} 

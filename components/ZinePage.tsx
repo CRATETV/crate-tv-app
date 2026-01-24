@@ -1,41 +1,42 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import LoadingSpinner from './LoadingSpinner';
 import BackToTopButton from './BackToTopButton';
 import BottomNavBar from './BottomNavBar';
 import SEO from './SEO';
-import { EditorialStory } from '../types';
+import { EditorialStory, ZineSection } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 
-const ZineStoryCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ story, onClick }) => (
+const ZineCard: React.FC<{ story: EditorialStory; isLarge?: boolean; onClick: () => void }> = ({ story, isLarge, onClick }) => (
     <div 
         onClick={onClick}
-        className="group cursor-pointer bg-black border-b border-white/5 py-8 md:py-12 flex flex-col md:flex-row gap-8 md:gap-12 hover:bg-white/[0.01] transition-all duration-500"
+        className={`group cursor-pointer flex flex-col gap-4 transition-all duration-500 hover:-translate-y-1 ${isLarge ? 'md:col-span-2' : ''}`}
     >
-        <div className="w-full md:w-[35%] aspect-video relative overflow-hidden rounded-2xl bg-[#0a0a0a] shadow-2xl">
+        <div className={`relative overflow-hidden rounded-[2rem] bg-[#0a0a0a] shadow-2xl border border-white/5 aspect-video ${isLarge ? 'md:aspect-auto md:h-[450px]' : ''}`}>
             <img 
                 src={`/api/proxy-image?url=${encodeURIComponent(story.heroImage)}`} 
-                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
+                className="w-full h-full object-cover transition-transform duration-[2000ms] group-hover:scale-110" 
                 alt="" 
                 crossOrigin="anonymous"
             />
-            <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
-        </div>
-        <div className="flex-grow flex flex-col justify-center space-y-4 px-2">
-            <div className="flex items-center gap-3">
-                <span className="text-red-600 font-black uppercase text-[9px] tracking-[0.4em]">{story.type || 'DISPATCH'}</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-800"></span>
-                <span className="text-gray-500 font-bold uppercase text-[9px] tracking-widest">{story.author}</span>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+            <div className="absolute top-6 left-6">
+                <span className="bg-red-600 text-white font-black uppercase text-[8px] px-3 py-1 rounded-full tracking-[0.2em] shadow-xl">
+                    {story.type || 'DISPATCH'}
+                </span>
             </div>
-            <h3 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tighter italic leading-none group-hover:text-red-500 transition-colors">
+        </div>
+        <div className="px-2 space-y-2">
+            <h3 className={`font-black text-white uppercase tracking-tighter italic leading-none transition-colors group-hover:text-red-500 ${isLarge ? 'text-3xl md:text-5xl' : 'text-2xl'}`}>
                 {story.title}
             </h3>
-            <p className="text-gray-400 text-base md:text-lg font-medium max-w-2xl leading-snug">
+            <p className="text-gray-400 text-sm md:text-base font-medium line-clamp-2 leading-snug">
                 {story.subtitle}
             </p>
-            <div className="pt-2">
-                <span className="text-white font-black uppercase tracking-widest text-[10px] border-b-2 border-red-600 pb-1 transition-all group-hover:tracking-[0.2em] group-hover:text-red-500">Read Dispatch →</span>
+            <div className="pt-2 flex items-center gap-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-gray-800"></div>
+                <span className="text-gray-600 font-bold uppercase text-[9px] tracking-widest">{story.author}</span>
             </div>
         </div>
     </div>
@@ -45,40 +46,24 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     const [stories, setStories] = useState<EditorialStory[]>([]);
     const [activeStory, setActiveStory] = useState<EditorialStory | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [activeFilter, setActiveFilter] = useState('ALL');
     const [email, setEmail] = useState('');
-    const [hpValue, setHpValue] = useState('');
     const [subStatus, setSubStatus] = useState<'idle' | 'loading' | 'success'>('idle');
     const articleRef = useRef<HTMLElement>(null);
+
+    const filters = ['ALL', 'NEWS', 'INTERVIEW', 'DEEP_DIVE', 'SPOTLIGHT'];
 
     useEffect(() => {
         const fetchStories = async () => {
             const db = getDbInstance();
             if (!db) {
-                // Wait for DB initialization
                 setTimeout(fetchStories, 500);
                 return;
             }
             try {
-                // Try fetch with order first
-                let snap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').get();
-                
-                // Fallback for missing index
-                if (snap.empty) {
-                    snap = await db.collection('editorial_stories').get();
-                }
-
+                const snap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').get();
                 const fetched: EditorialStory[] = [];
-                snap.forEach(doc => {
-                    fetched.push({ id: doc.id, ...doc.data() } as EditorialStory);
-                });
-                
-                // Sort manually if index failed/missing
-                fetched.sort((a, b) => {
-                    const dateA = a.publishedAt?.seconds || 0;
-                    const dateB = b.publishedAt?.seconds || 0;
-                    return dateB - dateA;
-                });
-
+                snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as EditorialStory));
                 setStories(fetched);
                 
                 if (storyId) {
@@ -89,13 +74,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                 }
             } catch (e) {
                 console.error("Zine Downlink Error:", e);
-                // Last resort: Check if collection exists without order
-                try {
-                    const basicSnap = await db.collection('editorial_stories').get();
-                    const basicFetched: EditorialStory[] = [];
-                    basicSnap.forEach(doc => basicFetched.push({ id: doc.id, ...doc.data() } as EditorialStory));
-                    setStories(basicFetched);
-                } catch (e2) {}
             } finally {
                 setIsLoading(false);
             }
@@ -103,10 +81,20 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
         fetchStories();
     }, [storyId]);
 
+    const filteredStories = useMemo(() => {
+        if (activeFilter === 'ALL') return stories;
+        return stories.filter(s => s.type === activeFilter);
+    }, [stories, activeFilter]);
+
+    const handleNavigate = (id: string | null) => {
+        const path = id ? `/zine/${id}` : '/zine';
+        window.history.pushState({}, '', path);
+        window.dispatchEvent(new Event('pushstate'));
+        window.scrollTo(0, 0);
+    };
+
     const handleSubscribe = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (hpValue) return; 
-        
         setSubStatus('loading');
         try {
             const res = await fetch('/api/subscribe-newsletter', {
@@ -120,25 +108,16 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
             } else {
                 setSubStatus('idle');
             }
-        } catch (e) {
-            setSubStatus('idle');
-        }
-    };
-
-    const handleNavigate = (id: string | null) => {
-        const path = id ? `/zine/${id}` : '/zine';
-        window.history.pushState({}, '', path);
-        window.dispatchEvent(new Event('pushstate'));
-        window.scrollTo(0, 0);
+        } catch (e) { setSubStatus('idle'); }
     };
 
     if (isLoading) return <LoadingSpinner />;
 
     return (
-        <div className="flex flex-col min-h-screen text-white bg-black selection:bg-red-600">
+        <div className="flex flex-col min-h-screen text-white bg-[#050505] selection:bg-red-600">
             <SEO 
                 title={activeStory ? activeStory.title : "Crate Zine"} 
-                description={activeStory ? activeStory.subtitle : "Editorial dispatches from the independent cinematic underground."} 
+                description={activeStory ? activeStory.subtitle : "The official dispatch from independent cinema's distribution afterlife."} 
                 image={activeStory?.heroImage}
                 type={activeStory ? "article" : "website"}
             />
@@ -147,82 +126,114 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
 
             <main className="flex-grow pt-24 pb-32">
                 {!activeStory ? (
-                    <div className="space-y-12">
-                        {stories.length > 0 ? (
-                            <>
-                                <section 
-                                    onClick={() => handleNavigate(stories[0].id)}
-                                    className="relative w-full h-[55vh] md:h-[70vh] cursor-pointer group overflow-hidden border-[12px] border-red-600 bg-black"
-                                >
-                                    <img 
-                                        src={`/api/proxy-image?url=${encodeURIComponent(stories[0].heroImage)}`} 
-                                        className="w-full h-full object-cover transition-transform duration-[6000ms] group-hover:scale-110" 
-                                        alt="" 
-                                        crossOrigin="anonymous"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-                                    <div className="absolute bottom-10 left-6 md:left-16 max-w-5xl space-y-4">
-                                        <div className="flex items-center gap-3">
-                                            <span className="bg-red-600 text-white font-black uppercase text-[10px] px-3 py-1 rounded-lg tracking-[0.2em] shadow-2xl">{stories[0].type}</span>
-                                            <span className="text-white/40 font-black uppercase text-[10px] tracking-[0.4em]">Current Feature</span>
-                                        </div>
-                                        <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter leading-[0.85] italic drop-shadow-2xl">{stories[0].title}</h1>
-                                        <p className="text-lg md:text-2xl text-gray-200 font-medium max-w-2xl drop-shadow-xl leading-snug">{stories[0].subtitle}</p>
+                    <div className="space-y-20">
+                        {/* THE ZINE MISSION HEADER */}
+                        <div className="max-w-[1800px] mx-auto px-6 md:px-20 pt-10 md:pt-16 pb-10 border-b border-white/5">
+                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-10">
+                                <div className="max-w-4xl space-y-6">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse shadow-[0_0_10px_#ef4444]"></span>
+                                        <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px]">Official Editorial Record</p>
                                     </div>
-                                </section>
-
-                                <div className="max-w-[1400px] mx-auto px-6 md:px-12">
-                                    <div className="divide-y divide-white/5">
-                                        {/* Show remaining stories or show empty state if only 1 exists */}
-                                        {stories.length > 1 ? stories.slice(1).map(story => (
-                                            <ZineStoryCard key={story.id} story={story} onClick={() => handleNavigate(story.id)} />
-                                        )) : (
-                                            <div className="py-20 text-center opacity-30 border-t border-white/5 mt-10">
-                                                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-600">End of Dispatch Log</p>
-                                            </div>
-                                        )}
-                                    </div>
+                                    <h1 className="text-6xl md:text-[10rem] font-black uppercase tracking-tighter leading-[0.75] italic text-white drop-shadow-2xl">
+                                        The <span className="text-red-600">Zine.</span>
+                                    </h1>
+                                    <p className="text-2xl md:text-4xl text-gray-400 font-medium leading-tight max-w-3xl mt-8">
+                                        A premium magazine for the underground. Cinematic news, live event dispatches, and the pulse of independent distribution.
+                                    </p>
                                 </div>
-                            </>
-                        ) : (
-                            <div className="max-w-4xl mx-auto py-48 text-center px-6">
-                                <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full mb-6">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
-                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Network Synchronizing</span>
+                                <div className="hidden lg:block text-right pb-4">
+                                    <p className="text-[12px] font-black text-gray-800 uppercase tracking-[1.5em] mr-[-1.5em]">EST. 2024</p>
+                                    <p className="text-[10px] font-bold text-gray-700 uppercase tracking-widest mt-2">Continuous Pipeline Sync</p>
                                 </div>
-                                <h2 className="text-4xl font-black uppercase tracking-tighter italic text-white mb-4">Awaiting Dispatch Manifest...</h2>
-                                <p className="text-gray-500 max-w-md mx-auto">Connecting to the editorial archive. Please stand by for narrative uplink.</p>
                             </div>
+                        </div>
+
+                        {/* FEATURED HERO (TUDUM STYLE) */}
+                        {stories.length > 0 && (
+                            <section 
+                                onClick={() => handleNavigate(stories[0].id)}
+                                className="relative w-full h-[70vh] md:h-[85vh] cursor-pointer group overflow-hidden"
+                            >
+                                <img 
+                                    src={`/api/proxy-image?url=${encodeURIComponent(stories[0].heroImage)}`} 
+                                    className="w-full h-full object-cover transition-transform duration-[6000ms] group-hover:scale-110" 
+                                    alt="" 
+                                    crossOrigin="anonymous"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent"></div>
+                                <div className="absolute bottom-20 left-6 md:left-20 max-w-6xl space-y-6">
+                                    <div className="flex items-center gap-4">
+                                        <span className="bg-red-600 text-white font-black uppercase text-[10px] px-4 py-1.5 rounded-lg tracking-[0.2em] shadow-2xl">FEATURED DISPATCH</span>
+                                        <span className="text-white/40 font-black uppercase text-[10px] tracking-[0.4em]">Volume 04</span>
+                                    </div>
+                                    <h2 className="text-6xl md:text-[10rem] font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-2xl">{stories[0].title}</h2>
+                                    <p className="text-xl md:text-3xl text-gray-200 font-medium max-w-4xl drop-shadow-xl leading-tight">{stories[0].subtitle}</p>
+                                    <div className="pt-4">
+                                        <span className="bg-white text-black font-black px-10 py-4 rounded-2xl uppercase tracking-widest text-xs shadow-2xl group-hover:scale-105 transition-transform inline-block">Read the record</span>
+                                    </div>
+                                </div>
+                            </section>
                         )}
 
-                        <section className="max-w-4xl mx-auto px-6 pt-20">
-                            <div className="bg-white/5 border border-white/10 p-10 md:p-20 rounded-[3.5rem] text-center space-y-8 relative overflow-hidden shadow-2xl">
-                                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.06)_0%,transparent_70%)] pointer-events-none"></div>
+                        <div className="max-w-[1800px] mx-auto px-6 md:px-20 space-y-16">
+                            {/* FILTER BAR */}
+                            <div className="sticky top-20 z-40 py-6 bg-[#050505]/80 backdrop-blur-xl border-y border-white/5 flex items-center justify-center gap-4 md:gap-10 overflow-x-auto scrollbar-hide">
+                                {filters.map(f => (
+                                    <button 
+                                        key={f} 
+                                        onClick={() => setActiveFilter(f)}
+                                        className={`whitespace-nowrap font-black uppercase text-[10px] md:text-xs tracking-[0.3em] transition-all pb-1 border-b-2 ${activeFilter === f ? 'text-red-600 border-red-600' : 'text-gray-600 border-transparent hover:text-white'}`}
+                                    >
+                                        {f.replace('_', ' ')}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* DIVERSE GRID */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-20">
+                                {filteredStories.length > 1 ? filteredStories.slice(1).map((story, idx) => (
+                                    <ZineCard 
+                                        key={story.id} 
+                                        story={story} 
+                                        isLarge={idx % 4 === 0} 
+                                        onClick={() => handleNavigate(story.id)} 
+                                    />
+                                )) : (
+                                    <div className="col-span-full py-20 text-center opacity-30 italic">
+                                        <p className="text-gray-500 uppercase font-black tracking-widest">Awaiting next dispatch manifest...</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* STAY IN THE LOOP (NEWSLETTER) */}
+                        <section className="max-w-7xl mx-auto px-6 pt-20 pb-20">
+                            <div className="bg-[#0f0f0f] border border-white/5 p-12 md:p-24 rounded-[4rem] text-center space-y-10 relative overflow-hidden shadow-2xl">
+                                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.08)_0%,transparent_70%)] pointer-events-none"></div>
                                 <div className="relative z-10 space-y-6">
-                                    <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter italic leading-none">Sign up for newsletter.</h2>
-                                    <p className="text-gray-400 text-lg md:text-xl font-medium max-w-xl mx-auto leading-relaxed">Stay up to date on what's happening at Crate.</p>
+                                    <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px]">Crate Zine Subscription Terminal</p>
+                                    <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">The Pulse Dispatch.</h2>
+                                    <p className="text-gray-400 text-xl md:text-2xl font-medium max-w-2xl mx-auto leading-relaxed">Join the list for weekly dispatches on new cinema arrivals, festival schedules, and live watch party reveals.</p>
                                     
                                     {subStatus === 'success' ? (
-                                        <div className="bg-green-600/10 border border-green-500/20 p-6 rounded-3xl inline-block px-12 animate-[fadeIn_0.5s_ease-out]">
-                                            <p className="text-green-500 font-black uppercase text-xs tracking-[0.3em]">Uplink Secured ✓</p>
+                                        <div className="bg-green-600/10 border border-green-500/20 p-8 rounded-3xl inline-block px-16 animate-[fadeIn_0.5s_ease-out]">
+                                            <p className="text-green-500 font-black uppercase text-sm tracking-[0.3em]">UPLINK ESTABLISHED ✓</p>
                                         </div>
                                     ) : (
-                                        <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-4 max-w-lg mx-auto pt-6">
-                                            <div style={{ display: 'none' }} aria-hidden="true">
-                                                <input type="text" value={hpValue} onChange={e => setHpValue(e.target.value)} tabIndex={-1} autoComplete="off" />
-                                            </div>
+                                        <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto pt-10">
                                             <input 
                                                 type="email" 
-                                                placeholder="email@sector.node" 
+                                                placeholder="ENTER_EMAIL_NODE" 
                                                 value={email}
                                                 onChange={e => setEmail(e.target.value)}
-                                                className="flex-grow bg-black/60 border-2 border-white/10 p-4 rounded-2xl text-white text-lg outline-none focus:border-red-600 transition-all font-medium placeholder:text-gray-800"
+                                                className="flex-grow bg-black/40 border-2 border-white/10 p-6 rounded-[2rem] text-white text-xl outline-none focus:border-red-600 transition-all font-black uppercase placeholder:text-gray-800"
                                                 required
                                             />
                                             <button 
                                                 type="submit" 
                                                 disabled={subStatus === 'loading'}
-                                                className="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-2xl uppercase text-xs tracking-widest shadow-2xl transition-all active:scale-95 disabled:opacity-50"
+                                                className="bg-white text-black font-black py-6 px-14 rounded-[2rem] uppercase text-xs tracking-widest shadow-2xl transition-all active:scale-95 disabled:opacity-50"
                                             >
                                                 Authorize Link
                                             </button>
@@ -233,76 +244,75 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                         </section>
                     </div>
                 ) : (
-                    <div className="max-w-[1400px] mx-auto px-6 md:px-12 animate-[fadeIn_0.6s_ease-out]">
-                        <div className="max-w-4xl mx-auto">
-                            <button onClick={() => handleNavigate(null)} className="mb-12 flex items-center gap-3 text-gray-500 hover:text-white transition-colors uppercase font-black text-[10px] tracking-widest group">
-                                <svg className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                                Back to All Records
-                            </button>
-
-                            <article ref={articleRef} className="space-y-16">
-                                <header className="space-y-8">
-                                    <div className="flex items-center gap-6">
-                                        <span className="bg-red-600 text-white font-black px-4 py-1.5 rounded-xl text-[10px] uppercase tracking-widest shadow-xl">{activeStory.type}</span>
-                                        <span className="text-[10px] text-gray-700 font-black uppercase tracking-[0.4em]">
-                                            {activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Active Dispatch'}
-                                        </span>
-                                    </div>
+                    <div className="animate-[fadeIn_0.6s_ease-out]">
+                        {/* ARTICLE HERO */}
+                        <div className="relative w-full h-[60vh] md:h-[70vh] mb-20 overflow-hidden">
+                            <img src={`/api/proxy-image?url=${encodeURIComponent(activeStory.heroImage)}`} className="w-full h-full object-cover blur-sm opacity-30 scale-110" alt="" crossOrigin="anonymous" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] to-transparent"></div>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center max-w-6xl mx-auto space-y-8">
+                                <button onClick={() => handleNavigate(null)} className="flex items-center gap-3 text-gray-500 hover:text-white transition-colors uppercase font-black text-[10px] tracking-widest group">
+                                    <svg className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                                    Return to records
+                                </button>
+                                <div className="space-y-4">
+                                    <span className="bg-red-600 text-white font-black px-4 py-1 rounded-xl text-[10px] uppercase tracking-widest shadow-xl">{activeStory.type}</span>
                                     <h1 className="text-5xl md:text-9xl font-black uppercase tracking-tighter leading-[0.85] italic drop-shadow-2xl">{activeStory.title}</h1>
-                                    <p className="text-2xl md:text-4xl text-gray-400 font-medium leading-tight tracking-tighter">{activeStory.subtitle}</p>
-                                    <div className="pt-8 border-b border-white/5 pb-10 flex items-center gap-6">
-                                        <div className="w-14 h-14 bg-red-600/10 rounded-2xl flex items-center justify-center border border-red-500/20 text-red-500 font-black text-xl">C</div>
-                                        <div>
-                                            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-600">Dispatch Author</p>
-                                            <p className="text-lg font-bold uppercase tracking-widest text-white">{activeStory.author}</p>
-                                        </div>
-                                    </div>
-                                </header>
-
-                                <div className="space-y-16">
-                                    {activeStory.heroImage && (
-                                        <div className="aspect-video rounded-[3rem] overflow-hidden border border-white/10 shadow-[0_50px_100px_rgba(0,0,0,0.5)] bg-[#050505]">
-                                            <img src={`/api/proxy-image?url=${encodeURIComponent(activeStory.heroImage)}`} className="w-full h-full object-cover" alt="" crossOrigin="anonymous" />
-                                        </div>
-                                    )}
-
-                                    <div className="max-w-3xl mx-auto space-y-14">
-                                        {activeStory.sections && activeStory.sections.length > 0 ? (
-                                            activeStory.sections.map((section, idx) => (
-                                                <div key={section.id}>
-                                                    {section.type === 'header' && <h3 className="text-3xl md:text-5xl font-black uppercase tracking-tighter italic text-red-600 mt-20 mb-8 border-l-[8px] border-red-600 pl-8 leading-none">{section.content}</h3>}
-                                                    {section.type === 'quote' && <div className="bg-white/5 border-l-[12px] border-white p-10 text-2xl md:text-4xl font-black uppercase italic tracking-tight text-white my-16 rounded-r-3xl shadow-2xl leading-tight">"{section.content}"</div>}
-                                                    {section.type === 'image' && <div className="rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl my-14 bg-[#050505]"><img src={`/api/proxy-image?url=${encodeURIComponent(section.content)}`} className="w-full h-auto" alt="" crossOrigin="anonymous" /></div>}
-                                                    {section.type === 'text' && (
-                                                        <div className="relative">
-                                                            {idx === 0 && section.content && (
-                                                                <span className="float-left text-[8rem] md:text-[11rem] font-black italic leading-[0.6] pr-6 mr-4 mt-6 text-red-600 drop-shadow-2xl select-none">
-                                                                    {section.content.charAt(0)}
-                                                                </span>
-                                                            )}
-                                                            <p className="text-xl md:text-2xl text-gray-300 font-medium leading-relaxed tracking-tight">
-                                                                {idx === 0 && section.content ? section.content.slice(1) : section.content}
-                                                            </p>
-                                                            <div className="clear-both"></div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="prose prose-invert max-w-none">
-                                                <p className="text-xl md:text-2xl text-gray-300 font-medium leading-relaxed tracking-tight whitespace-pre-wrap">
-                                                    {activeStory.content}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
+                                    <p className="text-2xl md:text-4xl text-gray-400 font-medium leading-tight max-w-4xl mx-auto">{activeStory.subtitle}</p>
                                 </div>
-                                <div className="pt-32 border-t border-white/5 text-center flex flex-col items-center gap-8">
-                                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-48 opacity-20 invert" alt="" />
-                                    <p className="text-[11px] font-black text-gray-800 uppercase tracking-[1.5em] mr-[-1.5em]">WWW.CRATETV.NET</p>
+                                <div className="flex items-center gap-6 pt-6 text-gray-500 font-black uppercase text-[10px] tracking-widest">
+                                    <span>By {activeStory.author}</span>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-800"></span>
+                                    <span>{activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Recently Released'}</span>
                                 </div>
-                            </article>
+                            </div>
                         </div>
+
+                        {/* ARTICLE CONTENT */}
+                        <article ref={articleRef} className="max-w-[1000px] mx-auto px-6 pb-48">
+                            <div className="space-y-20">
+                                {activeStory.sections && activeStory.sections.length > 0 ? (
+                                    activeStory.sections.map((section, idx) => (
+                                        <div key={section.id}>
+                                            {section.type === 'header' && <h3 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic text-red-600 mb-10 leading-none">{section.content}</h3>}
+                                            {section.type === 'quote' && <div className="bg-white/5 border-l-[16px] border-white p-12 text-3xl md:text-5xl font-black uppercase italic tracking-tight text-white my-20 rounded-r-[3rem] shadow-2xl leading-none">"{section.content}"</div>}
+                                            {section.type === 'image' && (
+                                                <div className="rounded-[4rem] overflow-hidden border border-white/5 shadow-[0_50px_100px_rgba(0,0,0,0.5)] my-20 bg-[#0a0a0a]">
+                                                    <img src={`/api/proxy-image?url=${encodeURIComponent(section.content)}`} className="w-full h-auto" alt="" crossOrigin="anonymous" />
+                                                </div>
+                                            )}
+                                            {section.type === 'text' && (
+                                                <div className="relative">
+                                                    {idx === 0 && section.content && (
+                                                        <span className="float-left text-[10rem] md:text-[14rem] font-black italic leading-[0.6] pr-8 mr-6 mt-8 text-red-600 drop-shadow-2xl select-none">
+                                                            {section.content.charAt(0)}
+                                                        </span>
+                                                    )}
+                                                    <p className="text-2xl md:text-3xl text-gray-300 font-medium leading-[1.3] tracking-tight text-justify">
+                                                        {idx === 0 && section.content ? section.content.slice(1) : section.content}
+                                                    </p>
+                                                    <div className="clear-both"></div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="prose prose-invert max-w-none">
+                                        <p className="text-2xl text-gray-300 font-medium leading-relaxed tracking-tight whitespace-pre-wrap">
+                                            {activeStory.content}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* SIGN-OFF */}
+                            <div className="mt-40 pt-20 border-t border-white/5 text-center flex flex-col items-center gap-10">
+                                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-64 opacity-20 invert" alt="" />
+                                <div className="space-y-4">
+                                    <p className="text-[14px] font-black text-gray-800 uppercase tracking-[2em] mr-[-2em]">OFFICIAL RECORD</p>
+                                    <button onClick={() => handleNavigate(null)} className="bg-white text-black font-black px-12 py-5 rounded-2xl uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-2xl">Explore more dispatches</button>
+                                </div>
+                            </div>
+                        </article>
                     </div>
                 )}
             </main>

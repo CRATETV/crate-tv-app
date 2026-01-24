@@ -33,7 +33,8 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
     return null;
   }
   
-  const carouselClasses = `flex overflow-x-auto space-x-4 pb-8 pt-4 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8 group/carousel-list snap-x snap-proximity overscroll-x-contain`;
+  // Increased pt-4 to pt-10 to provide clearance for ranked numbers
+  const carouselClasses = `flex overflow-x-auto space-x-4 pb-8 pt-10 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8 group/carousel-list snap-x snap-proximity overscroll-x-contain`;
 
   // Robustly render the title. React nodes can be strings, numbers, elements, or arrays.
   const renderTitle = () => {
@@ -81,19 +82,20 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                       onClick={() => onSelectMovie(movie)}
                       style={{ '--rank-color': color } as React.CSSProperties}
                   >
-                      <div className="relative aspect-[16/9] rounded-lg bg-transparent overflow-hidden">
+                      {/* Removed overflow-hidden to prevent clipping of high-impact rank numbers */}
+                      <div className="relative aspect-[16/9] rounded-lg bg-transparent">
                           <img 
                               src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
                               alt={movie.title}
-                              className="absolute top-0 right-0 h-full w-[55%] object-contain object-center group-hover/ranked:scale-105 transition-transform duration-300"
+                              className="absolute top-0 right-0 h-full w-[55%] object-contain object-center group-hover/ranked:scale-105 transition-transform duration-300 rounded-r-lg"
                               onContextMenu={(e) => e.preventDefault()}
                               crossOrigin="anonymous"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent"></div>
+                          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent rounded-lg"></div>
       
                           <div className="absolute bottom-0 left-0 p-4 w-full h-full flex items-start flex-col justify-between">
                               <span 
-                                  className="font-black text-8xl lg:text-9xl leading-none select-none -ml-2"
+                                  className="font-black text-8xl lg:text-9xl leading-none select-none -ml-2 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
                                   style={{ color: 'transparent', WebkitTextStroke: `2px ${color}` }}
                               >
                                   {rank}

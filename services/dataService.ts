@@ -1,4 +1,3 @@
-
 import { Movie, Category, FestivalDay, FestivalConfig, AboutData, AdConfig } from '../types';
 
 interface LiveData {
@@ -18,16 +17,20 @@ interface FetchResult {
 // In-memory cache
 let cachedData: LiveData | null = null;
 let lastFetchTimestamp = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+// CRITICAL FIX: Reduced cache duration from 5 minutes to 30 seconds for smoother updates.
+const CACHE_DURATION = 30 * 1000; 
 
 export const fetchAndCacheLiveData = async (options: { force?: boolean } = {}): Promise<FetchResult> => {
     const now = Date.now();
+    // Allow bypassing cache if 'force' is true
     if (!options.force && cachedData && (now - lastFetchTimestamp < CACHE_DURATION)) {
         return { data: cachedData, source: 'live' };
     }
 
     try {
-        const response = await fetch('/api/get-live-data');
+        // Append a timestamp and noCache flag to ensure we hit the fresh S3/DB state
+        const url = `/api/get-live-data?t=${now}${options.force ? '&noCache=true' : ''}`;
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error('Failed to fetch live data from API.');
         }
@@ -39,10 +42,6 @@ export const fetchAndCacheLiveData = async (options: { force?: boolean } = {}): 
         return { data, source: 'live' };
     } catch (error) {
         console.error("Live data fetch failed, using fallback:", error);
-        // As a fallback, you might want to import from constants.ts, but that can be complex.
-        // The robust fallback is already handled server-side in the API.
-        // For the client, if the API fails, it might be better to show an error.
-        // However, to keep the app running, we'll simulate a fallback.
         const { moviesData, categoriesData, festivalData, festivalConfigData, aboutData } = await import('../constants');
         const fallbackData = {
             movies: moviesData,
