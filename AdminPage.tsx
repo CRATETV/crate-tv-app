@@ -25,7 +25,6 @@ import JuryRoomTab from './components/JuryRoomTab';
 import AcademyIntelTab from './components/AcademyIntelTab';
 import OneTimePayoutTerminal from './components/OneTimePayoutTerminal';
 import AdminPayoutsTab from './components/AdminPayoutsTab';
-import ContractsTab from './components/ContractsTab';
 import UserIntelligenceTab from './components/UserIntelligenceTab';
 
 const ALL_TABS: Record<string, string> = {
@@ -40,7 +39,6 @@ const ALL_TABS: Record<string, string> = {
     pipeline: '📥 Pipeline',
     jury: '⚖️ Jury Hub',
     payouts: '💰 Payouts',
-    vault: '📁 Legal Vault',
     festival: '🎪 Festival Manager',
     cratefest: '🎪 Crate Fest Config',
     vouchers: '🎫 Promo Codes',
@@ -345,7 +343,6 @@ const AdminPage: React.FC = () => {
                         </div>
                     )}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
-                    {activeTab === 'vault' && <ContractsTab />}
                     {activeTab === 'festival' && (
                         <FestivalEditor 
                             data={festivalData} 

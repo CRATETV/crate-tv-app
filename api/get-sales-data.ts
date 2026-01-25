@@ -1,5 +1,6 @@
+
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { AnalyticsData, Movie, User, FilmmakerPayout } from '../types.js';
+import { AnalyticsData, Movie, User, FilmmakerPayout, CrateFestConfig } from '../types.js';
 
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z'; 
 
@@ -15,7 +16,7 @@ interface SquarePayment {
 const PARTNER_SHARE = 0.70;
 const CRATE_SHARE = 0.30;
 
-const parseNote = (note: string | undefined): { type: string, title?: string, director?: string, blockTitle?: string } => {
+const parseNote = (note: string | undefined, crateFestBlocks: string[]): { type: string, title?: string, director?: string, blockTitle?: string, isCrateFest?: boolean } => {
     if (!note) return { type: 'unknown' };
     
     // Watch Party Ticket Regex
@@ -27,10 +28,16 @@ const parseNote = (note: string | undefined): { type: string, title?: string, di
     if (donationMatch) return { type: 'donation', title: donationMatch[1].trim() };
 
     if (note.includes('All-Access Pass')) return { type: 'pass' };
-    if (note.includes('Crate Fest')) return { type: 'crateFestPass' };
+    
+    if (note.includes('Crate Fest All-Access')) return { type: 'crateFestPass', isCrateFest: true };
     
     const blockMatch = note.match(/Unlock Block: (.*)/);
-    if (blockMatch) return { type: 'block', blockTitle: blockMatch[1].trim() };
+    if (blockMatch) {
+        const blockTitle = blockMatch[1].trim();
+        // Cross-reference with Crate Fest block names
+        const isCrateFest = crateFestBlocks.some(b => b.toLowerCase() === blockTitle.toLowerCase());
+        return { type: 'block', blockTitle, isCrateFest };
+    }
     
     if (note.includes('Purchase Film:') || note.includes('VOD Rental:')) return { type: 'movie' };
     return { type: 'other' };
@@ -83,6 +90,11 @@ export async function POST(request: Request) {
 
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
+        // Fetch Crate Fest config to differentiate blocks
+        const settingsDoc = await db.collection('content').doc('settings').get();
+        const crateFestConfig = settingsDoc.data()?.crateFestConfig as CrateFestConfig | undefined;
+        const crateFestBlockTitles = crateFestConfig?.movieBlocks.map(b => b.title) || [];
+
         const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot, presenceSnapshot] = await Promise.all([
             accessToken ? fetchAllSquarePayments(accessToken, locationId) : Promise.resolve([]),
             db.collection('movies').get(),
@@ -100,13 +112,19 @@ export async function POST(request: Request) {
         
         let totalDonations = 0;
         let totalSales = 0;
-        let festivalRevenue = 0;
+        let filmFestivalRevenue = 0;
         let crateFestRevenue = 0;
+        
         const salesByBlock: Record<string, { units: number, revenue: number }> = {};
         const revenueByFilm: Record<string, { donations: number, tickets: number }> = {};
 
+        const filmFestivalPassSales = { units: 0, revenue: 0 };
+        const filmFestivalBlockSales = { units: 0, revenue: 0 };
+        const crateFestPassSales = { units: 0, revenue: 0 };
+        const crateFestBlockSales = { units: 0, revenue: 0 };
+
         allPayments.forEach(p => {
-            const details = parseNote(p.note);
+            const details = parseNote(p.note, crateFestBlockTitles);
             const amount = p.amount_money.amount;
             
             if (details.type === 'donation' && details.title) {
@@ -114,29 +132,42 @@ export async function POST(request: Request) {
                 if (!revenueByFilm[details.title]) revenueByFilm[details.title] = { donations: 0, tickets: 0 };
                 revenueByFilm[details.title].donations += amount;
             } else if (details.type === 'watchPartyTicket' && details.title) {
-                // If it's a watch party, it counts toward festival or film specific revenue
                 totalSales += amount;
                 if (!revenueByFilm[details.title]) revenueByFilm[details.title] = { donations: 0, tickets: 0 };
                 revenueByFilm[details.title].tickets += amount;
-                festivalRevenue += amount; // Watch parties are inherently "Festival-Style"
+                // Currently watch parties are lumped into the main festival for ledger purposes
+                filmFestivalRevenue += amount; 
             } else if (details.type === 'block' && details.blockTitle) {
-                festivalRevenue += amount; 
                 if (!salesByBlock[details.blockTitle]) salesByBlock[details.blockTitle] = { units: 0, revenue: 0 };
                 salesByBlock[details.blockTitle].units++;
                 salesByBlock[details.blockTitle].revenue += amount;
+
+                if (details.isCrateFest) {
+                    crateFestRevenue += amount;
+                    crateFestBlockSales.units++;
+                    crateFestBlockSales.revenue += amount;
+                } else {
+                    filmFestivalRevenue += amount;
+                    filmFestivalBlockSales.units++;
+                    filmFestivalBlockSales.revenue += amount;
+                }
             } else if (details.type === 'pass') {
-                festivalRevenue += amount;
+                filmFestivalRevenue += amount;
+                filmFestivalPassSales.units++;
+                filmFestivalPassSales.revenue += amount;
             } else if (details.type === 'crateFestPass') {
                 crateFestRevenue += amount;
+                crateFestPassSales.units++;
+                crateFestPassSales.revenue += amount;
             } else {
                 totalSales += amount;
             }
         });
 
         const totalAdminPayouts = payoutHistorySnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
-        const totalRevenue = totalDonations + totalSales + festivalRevenue + crateFestRevenue;
+        const totalRevenue = totalDonations + totalSales + filmFestivalRevenue + crateFestRevenue;
         
-        const totalCrateTvRevenue = (totalDonations * CRATE_SHARE) + (festivalRevenue * CRATE_SHARE) + totalSales + (crateFestRevenue * CRATE_SHARE);
+        const totalCrateTvRevenue = (totalDonations * CRATE_SHARE) + (filmFestivalRevenue * CRATE_SHARE) + totalSales + (crateFestRevenue * CRATE_SHARE);
 
         const filmmakerPayouts: FilmmakerPayout[] = Object.values(allMovies).map(movie => {
             const filmRev = revenueByFilm[movie.title] || { donations: 0, tickets: 0 };
@@ -171,11 +202,12 @@ export async function POST(request: Request) {
             totalMerchRevenue: 0, 
             totalAdRevenue: totalSales, 
             crateTvMerchCut: 0, merchSales: {},
-            totalFestivalRevenue: festivalRevenue, 
+            totalFestivalRevenue: filmFestivalRevenue, 
             totalCrateFestRevenue: crateFestRevenue,
-            festivalPassSales: { units: 0, revenue: 0 }, 
-            festivalBlockSales: { units: 0, revenue: 0 },
-            crateFestPassSales: { units: 0, revenue: 0 },
+            festivalPassSales: filmFestivalPassSales, 
+            festivalBlockSales: filmFestivalBlockSales,
+            crateFestPassSales: crateFestPassSales,
+            crateFestBlockSales: crateFestBlockSales,
             salesByBlock, 
             festivalUsers: [],
             crateFestRevenue, 

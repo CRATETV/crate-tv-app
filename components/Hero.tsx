@@ -85,13 +85,13 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
 
       {/* Main Content (Title/Synop/Buttons) */}
       {!hideContent && (
-        <div className="relative z-10 flex flex-col justify-end h-full px-4 md:px-12 pb-6 md:pb-10 text-white pointer-events-none">
+        <div className="relative z-10 flex flex-col justify-end h-full px-4 md:px-12 pb-24 md:pb-10 text-white pointer-events-none">
             <div className="max-w-4xl">
-              <h1 className="text-3xl md:text-5xl lg:text-6xl font-black mb-3 md:mb-4 max-w-2xl animate-[fadeInHeroContent_0.8s_ease-out] drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] leading-tight uppercase italic tracking-tighter">
-              {currentMovie.title}
+              <h1 className="hidden sm:block text-3xl md:text-5xl lg:text-6xl font-black mb-3 md:mb-4 max-w-2xl animate-[fadeInHeroContent_0.8s_ease-out] drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] leading-tight uppercase italic tracking-tighter">
+                {currentMovie.title}
               </h1>
               <p className="hidden sm:block text-sm md:text-base lg:text-lg max-w-xl mb-6 animate-[fadeInHeroContent_1s_ease-out] line-clamp-2 text-gray-200 leading-relaxed font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-              {currentMovie.synopsis.replace(/<[^>]+>/g, '')}
+                {currentMovie.synopsis.replace(/<[^>]+>/g, '')}
               </p>
               
               <div className="flex flex-row flex-wrap items-center gap-2 md:gap-4 animate-[fadeInHeroContent_1.2s_ease-out] pointer-events-auto">

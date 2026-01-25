@@ -297,6 +297,7 @@ export interface AnalyticsData {
   festivalPassSales: { units: number; revenue: number };
   festivalBlockSales: { units: number; revenue: number };
   crateFestPassSales: { units: number; revenue: number };
+  crateFestBlockSales: { units: number; revenue: number };
   salesByBlock: Record<string, { units: number; revenue: number }>;
   festivalUsers: string[];
   crateFestRevenue: number;
