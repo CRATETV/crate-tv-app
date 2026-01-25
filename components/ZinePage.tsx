@@ -202,35 +202,38 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </div>
                         </div>
 
-                        {/* JOIN NEWSLETTER */}
-                        <section className="max-w-7xl mx-auto px-6 pt-20 pb-20">
-                            <div className="bg-[#0f0f0f] border border-white/5 p-12 md:p-24 rounded-[4rem] text-center space-y-10 relative overflow-hidden shadow-2xl">
-                                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.08)_0%,transparent_70%)] pointer-events-none"></div>
-                                <div className="relative z-10 space-y-6">
-                                    <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px]">Crate Zine Subscription Terminal</p>
-                                    <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic leading-none">Join our newsletter.</h2>
-                                    <p className="text-gray-400 text-xl md:text-2xl font-medium max-w-2xl mx-auto leading-relaxed">Join the list for dispatches on new arrivals, festival schedules, and live watch party reveals.</p>
+                        {/* JOIN NEWSLETTER - REDESIGNED WITH COLORFUL GRADIENT OUTLINE */}
+                        <section className="max-w-4xl mx-auto px-6 pt-28 pb-20">
+                            <div className="relative p-[1px] bg-gradient-to-r from-red-600 via-purple-600 to-indigo-600 rounded-[3rem] shadow-[0_30px_100px_rgba(239,68,68,0.1)] group">
+                                <div className="bg-[#050505] rounded-[3rem] p-10 md:p-16 text-center space-y-8 relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.04)_0%,transparent_70%)] pointer-events-none"></div>
+                                    
+                                    <div className="relative z-10 space-y-4">
+                                        <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[9px] mb-2">Editorial Dispatch</p>
+                                        <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic leading-none text-white">Join the fold.</h2>
+                                        <p className="text-gray-400 text-base md:text-lg font-medium max-w-xl mx-auto leading-relaxed">Exclusive dispatches on new arrivals, festival schedules, and live watch party reveals.</p>
+                                    </div>
                                     
                                     {subStatus === 'success' ? (
-                                        <div className="bg-green-600/10 border border-green-500/20 p-8 rounded-3xl inline-block px-16 animate-[fadeIn_0.5s_ease-out]">
-                                            <p className="text-green-500 font-black uppercase text-sm tracking-[0.3em]">UPLINK ESTABLISHED ✓</p>
+                                        <div className="bg-green-600/10 border border-green-500/20 p-6 rounded-2xl inline-block px-12 animate-[fadeIn_0.5s_ease-out]">
+                                            <p className="text-green-500 font-black uppercase text-[10px] tracking-[0.3em]">UPLINK ESTABLISHED ✓</p>
                                         </div>
                                     ) : (
-                                        <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto pt-10">
+                                        <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto pt-4 relative z-10">
                                             <input 
                                                 type="email" 
                                                 placeholder="ENTER_EMAIL_NODE" 
                                                 value={email}
                                                 onChange={e => setEmail(e.target.value)}
-                                                className="flex-grow bg-black/40 border-2 border-white/10 p-6 rounded-[2rem] text-white text-xl outline-none focus:border-red-600 transition-all font-black uppercase placeholder:text-gray-800"
+                                                className="flex-grow bg-white/5 border border-white/10 p-4 rounded-xl text-white text-sm outline-none focus:border-red-600 transition-all font-black uppercase placeholder:text-gray-800"
                                                 required
                                             />
                                             <button 
                                                 type="submit" 
                                                 disabled={subStatus === 'loading'}
-                                                className="bg-white text-black font-black py-6 px-14 rounded-[2rem] uppercase text-xs tracking-widest shadow-2xl transition-all active:scale-95 disabled:opacity-50"
+                                                className="bg-white text-black font-black py-4 px-10 rounded-xl uppercase text-[10px] tracking-widest shadow-2xl transition-all hover:bg-gray-200 active:scale-95 disabled:opacity-50"
                                             >
-                                                Authorize Link
+                                                {subStatus === 'loading' ? 'Syncing...' : 'Authorize Link'}
                                             </button>
                                         </form>
                                     )}
@@ -246,7 +249,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             <div className="absolute inset-0 bg-gradient-to-t from-[#050505] to-transparent"></div>
                             <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center max-w-6xl mx-auto space-y-8">
                                 <button onClick={() => handleNavigate(null)} className="flex items-center gap-3 text-gray-500 hover:text-white transition-colors uppercase font-black text-[10px] tracking-widest group">
-                                    <svg className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                                    <svg className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                                     Return to records
                                 </button>
                                 <div className="space-y-4">

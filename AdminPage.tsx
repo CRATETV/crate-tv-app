@@ -26,6 +26,7 @@ import AcademyIntelTab from './components/AcademyIntelTab';
 import OneTimePayoutTerminal from './components/OneTimePayoutTerminal';
 import AdminPayoutsTab from './components/AdminPayoutsTab';
 import UserIntelligenceTab from './components/UserIntelligenceTab';
+import AnalyticsPage from './components/AnalyticsPage';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
@@ -39,10 +40,10 @@ const ALL_TABS: Record<string, string> = {
     pipeline: '📥 Pipeline',
     jury: '⚖️ Jury Hub',
     payouts: '💰 Payouts',
-    festival: '🎪 Festival Manager',
-    cratefest: '🎪 Crate Fest Config',
+    festHub: '🎪 Festival Hub',
+    crateFestHub: '🎟️ Crate Fest Hub',
     vouchers: '🎫 Promo Codes',
-    festIntel: '📊 Fest Analytics',
+    analytics: '📊 Platform Stats',
     categories: '📂 Categories',
     laurels: '🏆 Laurel Forge',
     roku: '📺 Roku Deploy',
@@ -343,27 +344,30 @@ const AdminPage: React.FC = () => {
                         </div>
                     )}
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
-                    {activeTab === 'festival' && (
-                        <FestivalEditor 
-                            data={festivalData} 
-                            config={festivalConfig || { isFestivalLive: false, title: '', description: '', startDate: '', endDate: '' }} 
-                            allMovies={movies}
-                            onDataChange={(d) => setFestivalData(d)}
-                            onConfigChange={(c) => setFestivalConfig(c)}
-                            onSave={() => handleSaveData('festival', { config: festivalConfig, data: festivalData })}
-                            isSaving={isSaving}
-                        />
+                    {activeTab === 'festHub' && (
+                        <div className="space-y-16">
+                            <FestivalAnalytics analytics={analytics} festivalData={festivalData} config={festivalConfig} />
+                            <FestivalEditor 
+                                data={festivalData} 
+                                config={festivalConfig || { isFestivalLive: false, title: '', description: '', startDate: '', endDate: '' }} 
+                                allMovies={movies}
+                                onDataChange={(d) => setFestivalData(d)}
+                                onConfigChange={(c) => setFestivalConfig(c)}
+                                onSave={() => handleSaveData('festival', { config: festivalConfig, data: festivalData })}
+                                isSaving={isSaving}
+                            />
+                        </div>
                     )}
-                    {activeTab === 'cratefest' && <CrateFestEditor config={crateFestConfig || { isActive: false, title: '', tagline: '', startDate: '', endDate: '', passPrice: 15, movieBlocks: [] }} allMovies={movies} pipeline={pipeline} onSave={(c) => handleSaveData('settings', { crateFestConfig: c })} isSaving={isSaving} />}
+                    {activeTab === 'crateFestHub' && (
+                        <div className="space-y-16">
+                            <CrateFestAnalytics analytics={analytics} config={crateFestConfig} />
+                            <CrateFestEditor config={crateFestConfig || { isActive: false, title: '', tagline: '', startDate: '', endDate: '', passPrice: 15, movieBlocks: [] }} allMovies={movies} pipeline={pipeline} onSave={(c) => handleSaveData('settings', { crateFestConfig: c })} isSaving={isSaving} />
+                        </div>
+                    )}
                     {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => setActiveTab('movies')} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'discovery' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(c) => handleSaveData('categories', c)} />}
-                    {activeTab === 'festIntel' && (
-                        <div className="space-y-16">
-                            <FestivalAnalytics analytics={analytics} festivalData={festivalData} config={festivalConfig} />
-                            <CrateFestAnalytics analytics={analytics} config={crateFestConfig} />
-                        </div>
-                    )}
+                    {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'vouchers' && (
                         <PromoCodeManager 
                             isAdmin={true} 
