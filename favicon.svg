@@ -1,11 +1,12 @@
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="32" height="32" rx="8" fill="#050505"/>
   <defs>
-    <linearGradient id="crate_logic_grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+    <linearGradient id="crate_zinc_grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
       <stop stop-color="#EF4444"/>
       <stop offset="0.5" stop-color="#8B5CF6"/>
       <stop offset="1" stop-color="#6366F1"/>
     </linearGradient>
   </defs>
-  <path d="M25 7V11.5H12.5V20.5H25V25H8V7H25Z" fill="url(#crate_logic_grad)"/>
+  <!-- Thin minimalist 'C' path -->
+  <path d="M22 8C20.5 7.3 18.5 7 16.5 7C11.2 7 7 11.2 7 16.5C7 21.8 11.2 26 16.5 26C18.5 26 20.5 25.7 22 25" stroke="url(#crate_zinc_grad)" stroke-width="2.5" stroke-linecap="round"/>
 </svg>

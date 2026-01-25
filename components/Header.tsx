@@ -65,7 +65,7 @@ const Header: React.FC<HeaderProps> = ({
         setIsProfileMenuOpen(false);
     };
 
-    const headerClasses = `fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${isScrolled || isScrolledProp ? 'bg-black/85 backdrop-blur-xl border-b border-white/5 py-3' : 'bg-transparent py-5'}`;
+    const headerClasses = `sticky top-0 z-40 transition-all duration-500 ${isScrolled || isScrolledProp ? 'bg-black/85 backdrop-blur-xl border-b border-white/5 py-3' : 'bg-transparent py-5'}`;
     
     const navLinks = [
         { path: '/', label: 'Home' }, 
@@ -78,7 +78,7 @@ const Header: React.FC<HeaderProps> = ({
         : nowStreamingMovie ? `/movie/${nowStreamingMovie.key}?play=true` : '/';
 
     return (
-        <header className={headerClasses} style={{ top: topOffset, paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
+        <header className={headerClasses} style={{ marginTop: topOffset, paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
             <div className="max-w-[1800px] mx-auto px-4 md:px-12 flex items-center justify-between">
                 <div className="flex items-center gap-10">
                     <div className="flex items-center gap-4">
