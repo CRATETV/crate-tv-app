@@ -130,7 +130,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
             <main className="flex-grow pb-32">
                 {!activeStory ? (
                     <div className="space-y-0">
-                        {/* 1. SPOTLIGHT HERO: THE PRIMARY ENTRY POINT */}
+                        {/* SPOTLIGHT HERO: THE PRIMARY LANDING POINT */}
                         {spotlightHero && (
                             <section 
                                 onClick={() => handleNavigate(spotlightHero.id)}
@@ -162,8 +162,8 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </section>
                         )}
 
-                        {/* 2. STICKY FILTER NAVIGATION: REORDERED PER SPEC */}
-                        <div className="sticky top-0 z-40 py-6 bg-[#050505]/95 backdrop-blur-3xl border-b border-white/5 flex items-center justify-center gap-6 md:gap-14 overflow-x-auto scrollbar-hide px-6 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                        {/* STICKY FILTER NAVIGATION: REORDERED */}
+                        <div className="sticky top-0 z-40 py-6 bg-[#050505]/95 backdrop-blur-3xl border-b border-white/5 flex items-center justify-center gap-6 md:gap-14 overflow-x-auto scrollbar-hide px-6">
                             {filters.map(f => (
                                 <button 
                                     key={f} 
@@ -175,7 +175,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             ))}
                         </div>
 
-                        {/* 3. CONTENT GRID: WITH GRADIENT BRANDING */}
+                        {/* CONTENT HUB */}
                         <div className="max-w-[1800px] mx-auto px-6 md:px-20 pt-24 space-y-32">
                             {/* GRADIENT BRAND HEADER */}
                             <div className="text-center space-y-6">
@@ -183,7 +183,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                     Crate Zine.
                                 </h1>
                                 <div className="h-px w-24 bg-red-600 mx-auto opacity-50"></div>
-                                <p className="text-gray-500 font-black uppercase tracking-[0.8em] text-[10px] md:text-xs">The Digital Record of Independent Cinema</p>
+                                <p className="text-gray-500 font-black uppercase tracking-[0.8em] text-[10px] md:text-xs text-center">The Pulse of Crate TV</p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-24">
@@ -204,7 +204,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </div>
                         </div>
 
-                        {/* 4. JOIN NEWSLETTER: RAZOR-THIN GRADIENT OUTLINE */}
+                        {/* JOIN NEWSLETTER */}
                         <section className="max-w-4xl mx-auto px-6 pt-40 pb-20">
                             <div className="relative p-[1px] bg-gradient-to-r from-red-600 via-purple-600 to-indigo-600 rounded-[3rem] shadow-[0_40px_120px_rgba(239,68,68,0.15)] group transition-all duration-700 hover:shadow-[0_40px_120px_rgba(239,68,68,0.25)]">
                                 <div className="bg-[#050505] rounded-[3rem] p-10 md:p-20 text-center space-y-10 relative overflow-hidden">
@@ -224,7 +224,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                         <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-4 max-w-lg mx-auto pt-4 relative z-10">
                                             <input 
                                                 type="email" 
-                                                placeholder="ENTER_EMAIL_NODE" 
+                                                placeholder="Email Address" 
                                                 value={email}
                                                 onChange={e => setEmail(e.target.value)}
                                                 className="flex-grow bg-white/5 border border-white/10 p-5 rounded-2xl text-white text-sm outline-none focus:border-red-600 transition-all font-black uppercase tracking-widest placeholder:text-gray-900 shadow-inner"
