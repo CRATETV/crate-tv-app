@@ -21,7 +21,7 @@ const AboutPage: React.FC = () => {
         <div className="flex flex-col min-h-screen text-white bg-[#050505] selection:bg-red-600">
             <SEO 
                 title="The Manifesto" 
-                description="Discover the soul of Crate TV: The distribution afterlife for independent cinema and a sanctuary for authentic storytelling." 
+                description="Discover the mission of Crate TV: A sanctuary for authentic storytelling and independent cinema." 
             />
             
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} showNavLinks={false} />
@@ -30,7 +30,7 @@ const AboutPage: React.FC = () => {
                 {/* HERO SECTION: THE HOOK */}
                 <section className="relative h-[60vh] md:h-[70vh] flex flex-col items-center justify-center text-center px-6 overflow-hidden">
                     <div className="absolute inset-0 z-0">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.1)_0%,transparent:70%)]"></div>
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.1)_0%,transparent_70%)]"></div>
                         <div className="absolute inset-0 bg-black/40"></div>
                     </div>
                     
@@ -39,8 +39,8 @@ const AboutPage: React.FC = () => {
                         <h1 className="text-5xl md:text-[9rem] font-black uppercase tracking-tighter leading-[0.85] italic text-white drop-shadow-2xl">
                             Imagination <br/>Unbound.
                         </h1>
-                        <div className="space-y-8 max-w-4xl mx-auto pt-6">
-                            <p className="text-xl md:text-3xl text-gray-200 font-medium leading-tight italic opacity-90">
+                        <div className="space-y-8 max-w-4xl mx-auto pt-6 border-t border-white/5">
+                            <p className="text-xl md:text-3xl text-gray-200 font-medium leading-relaxed italic opacity-90">
                                 "At Crate TV, we believe no great story should have an expiration date. Our mission is to liberate independent film from the festival circuit, creating a raw, authentic connection between the world's most daring creators and the viewers who seek them."
                             </p>
                         </div>
@@ -72,7 +72,7 @@ const AboutPage: React.FC = () => {
                                     </div>
                                     <div className="flex items-start gap-4">
                                         <div className="w-1.5 h-1.5 rounded-full bg-gray-700 mt-2"></div>
-                                        <p className="text-gray-500 text-lg leading-relaxed">By choosing Crate, you are directly sustaining the artists. We maintain the infrastructure; you provide the fuel for their next masterpiece.</p>
+                                        <p className="text-gray-500 text-lg leading-relaxed">By choosing Crate, you are directly sustaining the artists. We maintain the infrastructure; you provide the fuel for their next masterpiece. No gatekeeping, no hidden fees—just the work.</p>
                                     </div>
                                 </div>
                                 <div className="pt-10 border-t border-white/5">
@@ -102,24 +102,6 @@ const AboutPage: React.FC = () => {
                             >
                                 Start the Escape
                             </button>
-                        </div>
-                    </section>
-
-                    {/* FOUNDER BLOCK */}
-                    <section className="border-t border-white/5 pt-32 grid grid-cols-1 md:grid-cols-3 gap-16 items-center">
-                        <div className="md:col-span-1">
-                            <div className="aspect-square rounded-[3rem] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl border border-white/5 group">
-                                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/SalomeDenoon.png" alt="Salome Denoon" className="w-full h-full object-cover transition-transform duration-[3000ms] group-hover:scale-110" />
-                            </div>
-                        </div>
-                        <div className="md:col-span-2 space-y-6">
-                            <div>
-                                <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic">Salome Denoon</h3>
-                                <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px] mt-1">Founder & Architect</p>
-                            </div>
-                            <p className="text-gray-400 text-xl leading-relaxed font-medium italic">
-                                "Crate TV was born from a simple observation: there is too much noise and not enough signal. I wanted to build a place where independent filmmakers weren't just content providers, but partners in a sustainable ecosystem. Crate is for the films that matter—the ones that stick with you long after the screen goes dark."
-                            </p>
                         </div>
                     </section>
                 </div>
