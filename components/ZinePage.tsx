@@ -85,10 +85,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
         return stories.filter(s => s.type === activeFilter);
     }, [stories, activeFilter]);
 
-    const spotlightHero = useMemo(() => {
-        return stories.find(s => s.type === 'SPOTLIGHT') || stories[0];
-    }, [stories]);
-
     const handleNavigate = (id: string | null) => {
         const path = id ? `/zine/${id}` : '/zine';
         window.history.pushState({}, '', path);
@@ -130,40 +126,21 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
             <main className="flex-grow pb-32">
                 {!activeStory ? (
                     <div className="space-y-0">
-                        {/* SPOTLIGHT HERO: THE PRIMARY LANDING POINT */}
-                        {spotlightHero && (
-                            <section 
-                                onClick={() => handleNavigate(spotlightHero.id)}
-                                className="relative w-full h-[80vh] md:h-[85vh] cursor-pointer group overflow-hidden border-b border-white/5"
-                            >
-                                <img 
-                                    src={`/api/proxy-image?url=${encodeURIComponent(spotlightHero.heroImage)}`} 
-                                    className="w-full h-full object-cover transition-transform duration-[10000ms] group-hover:scale-110" 
-                                    alt="" 
-                                    crossOrigin="anonymous"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent"></div>
-                                <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-transparent to-transparent"></div>
-                                
-                                <div className="absolute bottom-20 left-6 md:left-20 max-w-6xl space-y-6">
-                                    <div className="flex items-center gap-3">
-                                        <span className="relative flex h-3 w-3">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-600 opacity-75"></span>
-                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600 shadow-[0_0_15px_rgba(239,68,68,0.5)]"></span>
-                                        </span>
-                                        <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[11px]">Primary Dispatch Spotlight</p>
-                                    </div>
-                                    <h2 className="text-6xl md:text-[10rem] font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-2xl">{spotlightHero.title}</h2>
-                                    <p className="text-xl md:text-3xl text-gray-200 font-medium max-w-4xl drop-shadow-xl leading-tight opacity-90">{spotlightHero.subtitle}</p>
-                                    <div className="pt-8">
-                                        <span className="bg-white text-black font-black px-14 py-5 rounded-2xl uppercase tracking-[0.2em] text-xs shadow-2xl group-hover:scale-105 transition-transform inline-block">Read dispatch</span>
-                                    </div>
-                                </div>
-                            </section>
-                        )}
+                        {/* BRAND HEADER: NOW AT THE VERY TOP */}
+                        <div className="max-w-[1800px] mx-auto px-6 md:px-20 pt-32 pb-16 space-y-6 text-center md:text-left relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-[600px] h-[300px] bg-red-600/5 blur-[120px] pointer-events-none rounded-full"></div>
+                            
+                            <h1 className="text-7xl md:text-[9rem] font-black uppercase tracking-tighter leading-none italic bg-gradient-to-r from-red-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent drop-shadow-2xl py-2">
+                                Crate Zine.
+                            </h1>
+                            <div className="h-px w-24 bg-red-600 mx-auto md:mx-0 opacity-50"></div>
+                            <p className="text-xl md:text-2xl text-gray-500 font-medium max-w-3xl leading-relaxed">
+                                The official record of the independent cinematic underground. Deep dives into vision, technique, and the afterlife of the frame.
+                            </p>
+                        </div>
 
-                        {/* STICKY FILTER NAVIGATION: REORDERED */}
-                        <div className="sticky top-0 z-40 py-6 bg-[#050505]/95 backdrop-blur-3xl border-b border-white/5 flex items-center justify-center gap-6 md:gap-14 overflow-x-auto scrollbar-hide px-6">
+                        {/* STICKY FILTER NAVIGATION */}
+                        <div className="sticky top-0 z-40 py-6 bg-[#050505]/95 backdrop-blur-3xl border-y border-white/5 flex items-center justify-center gap-6 md:gap-14 overflow-x-auto scrollbar-hide px-6">
                             {filters.map(f => (
                                 <button 
                                     key={f} 
@@ -177,15 +154,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
 
                         {/* CONTENT HUB */}
                         <div className="max-w-[1800px] mx-auto px-6 md:px-20 pt-24 space-y-32">
-                            {/* GRADIENT BRAND HEADER */}
-                            <div className="text-center space-y-6">
-                                <h1 className="text-7xl md:text-[9rem] font-black uppercase tracking-tighter leading-none italic bg-gradient-to-r from-red-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent drop-shadow-2xl py-2">
-                                    Crate Zine.
-                                </h1>
-                                <div className="h-px w-24 bg-red-600 mx-auto opacity-50"></div>
-                                <p className="text-gray-500 font-black uppercase tracking-[0.8em] text-[10px] md:text-xs text-center">The Pulse of Crate TV</p>
-                            </div>
-
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-24">
                                 {filteredStories.length > 0 ? (
                                     filteredStories.map((story, idx) => (
@@ -212,7 +180,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                     
                                     <div className="relative z-10 space-y-4">
                                         <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-2">Editorial Dispatch</p>
-                                        <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic leading-none text-white drop-shadow-2xl">Join the fold.</h2>
+                                        <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic leading-none text-white drop-shadow-2xl">Join our newsletter.</h2>
                                         <p className="text-gray-400 text-lg md:text-xl font-medium max-w-xl mx-auto leading-relaxed">Exclusive dispatches on new arrivals, festival schedules, and live watch party reveals.</p>
                                     </div>
                                     
@@ -235,7 +203,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                                 disabled={subStatus === 'loading'}
                                                 className="bg-white text-black font-black py-5 px-10 rounded-2xl uppercase text-[11px] tracking-widest shadow-[0_15px_35px_rgba(255,255,255,0.2)] transition-all hover:bg-gray-200 active:scale-95 disabled:opacity-50"
                                             >
-                                                {subStatus === 'loading' ? 'Syncing...' : 'Authorize Link'}
+                                                {subStatus === 'loading' ? 'Syncing...' : 'Join Newsletter'}
                                             </button>
                                         </form>
                                     )}
