@@ -17,8 +17,8 @@ interface FetchResult {
 // In-memory cache
 let cachedData: LiveData | null = null;
 let lastFetchTimestamp = 0;
-// CRITICAL FIX: Reduced cache duration from 5 minutes to 30 seconds for smoother updates.
-const CACHE_DURATION = 30 * 1000; 
+// CRITICAL FIX: Reduced cache duration to 5 seconds for near-instant reactivity.
+const CACHE_DURATION = 5 * 1000; 
 
 export const fetchAndCacheLiveData = async (options: { force?: boolean } = {}): Promise<FetchResult> => {
     const now = Date.now();
@@ -30,7 +30,14 @@ export const fetchAndCacheLiveData = async (options: { force?: boolean } = {}): 
     try {
         // Append a timestamp and noCache flag to ensure we hit the fresh S3/DB state
         const url = `/api/get-live-data?t=${now}${options.force ? '&noCache=true' : ''}`;
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            cache: 'no-store', // CRITICAL: Explicitly tell browser not to use its internal disk/memory cache
+            headers: {
+                'Pragma': 'no-cache',
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
         if (!response.ok) {
             throw new Error('Failed to fetch live data from API.');
         }

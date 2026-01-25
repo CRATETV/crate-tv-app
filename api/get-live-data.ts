@@ -6,15 +6,15 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const noCache = searchParams.get('noCache') === 'true';
 
+        // Fetch fresh data from S3, bypassing any server-side cache if noCache is true
         const data = await getApiData({ noCache });
 
         if (data && data.movies) {
             const finalMovies: Record<string, Movie> = {};
-            const processedFingerprints = new Set<string>();
             
             const movieArray = Object.values(data.movies) as Movie[];
             
-            // Prioritize movies with assets
+            // Prioritize movies with assets for the manifest
             movieArray.sort((a, b) => {
                 const aScore = (a.fullMovie ? 100 : 0) + (a.poster ? 50 : 0) + (a.synopsis?.length > 10 ? 10 : 0);
                 const bScore = (b.fullMovie ? 100 : 0) + (b.poster ? 50 : 0) + (b.synopsis?.length > 10 ? 10 : 0);
@@ -24,20 +24,14 @@ export async function GET(request: Request) {
             movieArray.forEach((m: Movie) => {
                 if (!m || !m.title || !m.key) return;
                 
-                // CRITICAL FIX: Relaxed the title filter to only block generic "Untitled" placeholders, 
-                // ensuring movies like "Just Cuz" aren't caught in an over-aggressive normalization.
                 const lowerTitle = m.title.toLowerCase().trim();
-                if (lowerTitle === 'untitled' || lowerTitle === 'untitled film' || lowerTitle === 'draft master' || lowerTitle === '') return;
                 
-                const fingerprint = lowerTitle
-                    .replace(/gemeni/g, 'gemini')
-                    .replace(/[^a-z0-9]/g, '')
-                    .trim();
+                // CORE FIX: Removed title-based fingerprinting.
+                // We strictly rely on the unique database key to determine uniqueness.
+                // This allows movies like "Just Cuz" to exist in the global catalog even 
+                // if other nodes share common keywords in metadata.
+                if (lowerTitle === '' || (lowerTitle === 'untitled' && m.key.startsWith('movie_'))) return;
                 
-                // If the key is specific (not a generic movie_ timestamp), keep it regardless of fingerprint
-                if (processedFingerprints.has(fingerprint) && m.key.startsWith('movie_')) return;
-                
-                processedFingerprints.add(fingerprint);
                 finalMovies[m.key] = m;
             });
 
@@ -52,9 +46,10 @@ export async function GET(request: Request) {
                 if (!cat || !cat.title) return;
                 
                 if (Array.isArray(cat.movieKeys)) {
-                    // Filter out non-existent or unverified movies
+                    // Only include movies that survived the drafting filter
                     let validKeys = cat.movieKeys.filter((k: string) => !!data.movies[k]);
 
+                    // Primary sorting by release date within categories
                     validKeys.sort((a, b) => {
                         const movieA = data.movies[a];
                         const movieB = data.movies[b];
@@ -75,11 +70,16 @@ export async function GET(request: Request) {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
-                'Cache-Control': noCache ? 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0' : 'public, s-maxage=1, stale-while-revalidate=5',
+                // CRITICAL: Force non-cacheable response headers to ensure instant propagation of manifest updates
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+                'Pragma': 'no-cache',
+                'Expires': '0',
+                'Surrogate-Control': 'no-store',
+                'X-Crate-Version': Date.now().toString()
             },
         });
     } catch (error) {
-        return new Response(JSON.stringify({ error: 'System processing...' }), {
+        return new Response(JSON.stringify({ error: 'Manifest re-syncing...' }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         });

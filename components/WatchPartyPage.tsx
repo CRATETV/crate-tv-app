@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Movie, WatchPartyState, ChatMessage, FilmBlock } from '../types';
+import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import { getDbInstance } from '../services/firebaseClient';
@@ -7,7 +7,6 @@ import firebase from 'firebase/compat/app';
 import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
 import SquarePaymentModal from './SquarePaymentModal';
-import Countdown from './Countdown';
 
 interface WatchPartyPageProps {
   movieKey: string;
@@ -15,32 +14,37 @@ interface WatchPartyPageProps {
 
 const REACTION_TYPES = ['🔥', '😲', '❤️', '👏', '😢'] as const;
 
-// Enhanced Helper to convert any YouTube/Vimeo URL into a cinematic embed
-const processLiveEmbed = (input: string): string => {
+/**
+ * STRATEGIC EMBED ENGINE V4.5
+ * Injects global start-time offsets into 3rd party players for synchronized events.
+ */
+const processLiveEmbed = (input: string, startTimeOffset: number = 0): string => {
     const trimmed = input.trim();
+    const startSec = Math.max(0, Math.floor(startTimeOffset));
+
+    // If it's already a raw iframe, we can only pass the string back.
     if (trimmed.startsWith('<iframe')) return trimmed;
 
-    // YouTube Parser (Handles watch, share, live, and embed URLs)
     const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const ytMatch = trimmed.match(ytRegex);
     if (ytMatch && ytMatch[1]) {
-        return `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1&controls=1&showinfo=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
+        // YouTube uses '&start=X' for offsets
+        return `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1&controls=1&showinfo=0${startSec > 0 ? `&start=${startSec}` : ''}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
     }
 
-    // Vimeo Parser
     const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
     const vimeoMatch = trimmed.match(vimeoRegex);
     if (vimeoMatch && vimeoMatch[1]) {
-        return `<iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&color=ef4444&title=0&byline=0&portrait=0" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
+        // Vimeo uses '#t=Xs' for offsets
+        return `<iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&color=ef4444&title=0&byline=0&portrait=0${startSec > 0 ? `#t=${startSec}s` : ''}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
     }
 
-    return `<div class="flex items-center justify-center h-full text-gray-500 font-mono text-xs uppercase p-10 text-center">Invalid Relay Node: ${trimmed}<br/>Use standard YouTube or Vimeo URL.</div>`;
+    return `<div class="flex items-center justify-center h-full text-gray-500 font-mono text-xs uppercase p-10 text-center">Invalid Relay Node: ${trimmed}</div>`;
 };
 
 const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({ emoji, onComplete }) => {
     const randomLeft = useMemo(() => Math.floor(Math.random() * 80) + 10, []); 
     const randomDuration = useMemo(() => 3.5 + Math.random() * 1.5, []); 
-    const randomRotate = useMemo(() => Math.floor(Math.random() * 40) - 20, []);
 
     useEffect(() => {
         const timer = setTimeout(onComplete, randomDuration * 1000);
@@ -49,40 +53,20 @@ const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({
 
     return (
         <div 
-            className="absolute bottom-24 pointer-events-none z-[120] animate-emoji-float"
+            className="absolute bottom-24 pointer-events-none z-[120] animate-emoji-float text-6xl drop-shadow-2xl"
             style={{ left: `${randomLeft}%`, animationDuration: `${randomDuration}s` }}
         >
-            <div className="text-6xl drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" style={{ transform: `rotate(${randomRotate}deg)` }}>
-                {emoji}
-            </div>
+            {emoji}
         </div>
     );
 };
-
-const DirectorStage: React.FC<{ name: string }> = ({ name }) => (
-    <div className="bg-red-600 border-2 border-red-400 p-5 rounded-2xl flex items-center justify-between mb-6 shadow-[0_0_40px_rgba(239,68,68,0.4)] animate-[slideInDown_0.5s_ease-out]">
-        <div className="flex items-center gap-4">
-            <div className="relative">
-                <div className="w-14 h-14 rounded-full border-2 border-white overflow-hidden bg-gray-900 shadow-2xl">
-                    <div className="w-full h-full p-2" dangerouslySetInnerHTML={{ __html: avatars['fox'] }} />
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-red-600 animate-pulse"></div>
-            </div>
-            <div>
-                <p className="text-[10px] font-black uppercase text-red-100 tracking-[0.3em] font-mono leading-none">STAGE_ACTIVE // LIVE RELAY</p>
-                <h4 className="text-lg font-black text-white uppercase tracking-tight mt-1">{name} is hosting</h4>
-            </div>
-        </div>
-    </div>
-);
 
 const EmbeddedChat: React.FC<{ 
     partyKey: string; 
     directors: string[];
     isQALive?: boolean;
-    isBackstageDirector?: boolean;
     user: { name?: string; email: string | null; avatar?: string; } | null 
-}> = ({ partyKey, directors, isQALive, isBackstageDirector, user }) => {
+}> = ({ partyKey, directors, isQALive, user }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -116,8 +100,7 @@ const EmbeddedChat: React.FC<{
                     movieKey: partyKey, 
                     userName: user.name || user.email, 
                     userAvatar: user.avatar || 'fox', 
-                    text: newMessage,
-                    isVerifiedDirector: isBackstageDirector 
+                    text: newMessage
                 }),
             });
             setNewMessage('');
@@ -130,26 +113,16 @@ const EmbeddedChat: React.FC<{
 
     return (
         <div className="w-full h-full flex flex-col bg-[#0a0a0a] md:bg-gray-900 border-t md:border-t-0 md:border-l border-gray-800 overflow-hidden min-h-0">
-            <div className="hidden md:flex p-4 text-lg font-bold border-b border-gray-700 flex-shrink-0">
-                <h2 className="text-sm uppercase tracking-widest text-gray-400">Live Reaction Log</h2>
-            </div>
-            
             <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide min-h-0">
-                {isQALive && directors.length > 0 && <DirectorStage name={directors[0]} />}
-                {messages.map(msg => {
-                    const isDirector = directors.includes(msg.userName.toLowerCase().trim()) || (msg as any).isVerifiedDirector;
-                    return (
-                        <div key={msg.id} className={`flex items-start gap-3 animate-[fadeIn_0.2s_ease-out] ${isDirector ? 'bg-red-600/5 p-4 rounded-3xl border border-red-500/20' : ''}`}>
-                            <div className={`w-8 h-8 rounded-full flex-shrink-0 p-1 border ${isDirector ? 'border-red-500 bg-red-600/20' : 'border-white/5 bg-gray-800'}`} dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
-                            <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <p className={`font-black text-[11px] uppercase tracking-tighter ${isDirector ? 'text-white' : 'text-red-500'}`}>{msg.userName}</p>
-                                </div>
-                                <p className={`text-sm break-words leading-snug ${isDirector ? 'text-white font-medium' : 'text-gray-300'}`}>{msg.text}</p>
-                            </div>
+                {messages.map(msg => (
+                    <div key={msg.id} className="flex items-start gap-3 animate-[fadeIn_0.2s_ease-out]">
+                        <div className="w-8 h-8 rounded-full flex-shrink-0 p-1 border border-white/5 bg-gray-800" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
+                        <div className="min-w-0">
+                            <p className="font-black text-[11px] uppercase tracking-tighter text-red-500">{msg.userName}</p>
+                            <p className="text-sm break-words leading-snug text-gray-300">{msg.text}</p>
                         </div>
-                    );
-                })}
+                    </div>
+                ))}
                 <div ref={messagesEndRef} />
             </div>
             <form onSubmit={handleSendMessage} className="p-3 bg-black/60 backdrop-blur-xl border-t border-white/5 flex-shrink-0">
@@ -172,6 +145,48 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
 
     const movie = useMemo(() => allMovies[movieKey], [movieKey, allMovies]);
+
+    // Calculate time offset since actualStartTime
+    const currentOffset = useMemo(() => {
+        if (!partyState?.actualStartTime) return 0;
+        try {
+            const serverStart = (partyState.actualStartTime as any).toDate().getTime();
+            const now = Date.now();
+            return (now - serverStart) / 1000;
+        } catch (e) { return 0; }
+    }, [partyState?.actualStartTime]);
+
+    // FRAME-ACCURATE SYNC LOGIC (FOR NATIVE VIDEO)
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !partyState?.actualStartTime || movie?.isLiveStream) return;
+
+        const syncClock = () => {
+            const targetPosition = currentOffset;
+
+            // If the movie should have ended, stop it.
+            const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : 3600;
+            if (targetPosition > movieDuration) {
+                video.pause();
+                return;
+            }
+
+            // High precision drift correction (threshold: 2 seconds)
+            // Hard realignment ensures all global viewers are within the same 2-second window
+            if (Math.abs(video.currentTime - targetPosition) > 2) {
+                video.currentTime = targetPosition;
+            }
+
+            // Ensure play state parity across cluster
+            if (partyState.isPlaying && video.paused) video.play().catch(() => {});
+            else if (!partyState.isPlaying && !video.paused) video.pause();
+        };
+
+        const interval = setInterval(syncClock, 3000); 
+        syncClock(); 
+
+        return () => clearInterval(interval);
+    }, [partyState, movie, currentOffset]);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -202,8 +217,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     if (isFestivalLoading || !movie) return <LoadingSpinner />;
 
-    const processedEmbed = movie.isLiveStream && movie.liveStreamEmbed ? processLiveEmbed(movie.liveStreamEmbed) : '';
-
     return (
         <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden">
             <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full">
@@ -213,10 +226,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                         </button>
                         <div className="text-center">
-                            <div className="flex items-center justify-center gap-2">
-                                <span className="text-red-500 font-black text-[9px] uppercase tracking-widest animate-pulse">Live Transmission Active</span>
-                                {movie.isLiveStream && <span className="bg-indigo-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">Relay Node</span>}
-                            </div>
+                            <span className="text-red-500 font-black text-[9px] uppercase tracking-widest animate-pulse">Live Transmission Active</span>
                             <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{movie.title}</h2>
                         </div>
                         <div className="w-10"></div>
@@ -231,16 +241,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
                         {!hasAccess ? (
                              <div className="text-center p-8 space-y-10 animate-[fadeIn_0.8s_ease-out]">
-                                <div className="space-y-4">
-                                    <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">Admission<br/>Required.</h2>
-                                    <p className="text-gray-500 text-sm font-bold uppercase tracking-widest">Global screening license not found for this node.</p>
-                                </div>
-                                <button onClick={() => setShowPaywall(true)} className="bg-white text-black px-16 py-6 rounded-[2.5rem] font-black uppercase tracking-tighter text-xl shadow-[0_30px_80px_rgba(255,255,255,0.1)] hover:scale-105 active:scale-95 transition-all">Unlock Admission // ${movie.watchPartyPrice?.toFixed(2)}</button>
+                                <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">Admission Required.</h2>
+                                <button onClick={() => setShowPaywall(true)} className="bg-white text-black px-16 py-6 rounded-[2.5rem] font-black uppercase tracking-tighter text-xl shadow-2xl hover:scale-105 active:scale-95 transition-all">Unlock Admission // ${movie.watchPartyPrice?.toFixed(2)}</button>
                              </div>
                         ) : (
                             movie.isLiveStream ? (
                                 <div className="w-full h-full p-2 md:p-6 lg:p-12 flex items-center justify-center bg-black">
-                                    <div className="w-full h-full bg-gray-900 rounded-[2rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-white/5 relative" dangerouslySetInnerHTML={{ __html: processedEmbed }} />
+                                    <div className="w-full h-full bg-gray-900 rounded-[2rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-white/5 relative" dangerouslySetInnerHTML={{ __html: processLiveEmbed(movie.liveStreamEmbed!, currentOffset) }} />
                                 </div>
                             ) : (
                                 <video ref={videoRef} src={movie.fullMovie} className="w-full h-full object-contain" autoPlay muted />

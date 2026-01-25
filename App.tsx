@@ -45,7 +45,7 @@ const MaintenanceScreen: React.FC = () => (
 
 const App: React.FC = () => {
     const { user, hasCrateFestPass, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
-    const { isLoading, movies, categories, isFestivalLive, settings, analytics, festivalConfig, activeParties, livePartyMovie } = useFestival();
+    const { isLoading, movies, categories, isFestivalLive, settings, analytics, activeParties, livePartyMovie } = useFestival();
     
     const [heroIndex, setHeroIndex] = useState(0);
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
@@ -229,7 +229,7 @@ const App: React.FC = () => {
 
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500" style={{ paddingTop: activeBannerType !== 'NONE' ? '3rem' : '0px' }}>
                 {isFestivalLive && activeBannerType !== 'CRATE_FEST' ? (
-                    <FestivalHero festivalConfig={festivalConfig} />
+                    <FestivalHero festivalConfig={settings.crateFestConfig as any} />
                 ) : (
                     heroMovies.length > 0 && <Hero movies={heroMovies} currentIndex={heroIndex} onSetCurrentIndex={setHeroIndex} onPlayMovie={handlePlayMovie} onMoreInfo={handleSelectMovie} />
                 )}
@@ -258,35 +258,6 @@ const App: React.FC = () => {
                                     showRankings={true}
                                 />
                             )}
-                            
-                            {/* ZINE SPOTLIGHT ROW */}
-                            <div className="relative group/zine-row py-4">
-                                <div className="bg-gradient-to-r from-red-600/10 via-transparent to-transparent border-l-4 border-red-600 p-8 rounded-r-3xl flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl">
-                                    <div className="space-y-4 max-w-2xl">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-red-500 text-xs font-black uppercase tracking-[0.4em]">Official Dispatch</span>
-                                            <div className="w-1 h-1 rounded-full bg-gray-800"></div>
-                                            <span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Magazine & Intel</span>
-                                        </div>
-                                        <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter italic leading-none">Crate <span className="text-red-600">Zine.</span></h2>
-                                        <p className="text-gray-400 text-lg md:text-xl font-medium leading-tight">Stay up to date on all that's happening on Crate.</p>
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row gap-4 flex-shrink-0">
-                                        <button 
-                                            onClick={() => { window.history.pushState({}, '', '/zine'); window.dispatchEvent(new Event('pushstate')); }}
-                                            className="bg-white text-black font-black px-10 py-4 rounded-2xl uppercase tracking-widest text-xs hover:bg-gray-200 transition-all shadow-xl active:scale-95"
-                                        >
-                                            Read story
-                                        </button>
-                                        <button 
-                                            onClick={() => { window.history.pushState({}, '', '/zine'); window.dispatchEvent(new Event('pushstate')); }}
-                                            className="bg-red-600 text-white font-black px-10 py-4 rounded-2xl uppercase tracking-widest text-xs hover:bg-red-700 transition-all shadow-xl active:scale-95"
-                                        >
-                                            Subscribe Now
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
 
                             {vaultMovies.length > 0 && (
                                 <CrateVaultRow 
@@ -306,8 +277,10 @@ const App: React.FC = () => {
                             
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as any;
-                                if (['featured', 'nowStreaming', 'publicAccess', 'publicDomainIndie'].includes(key)) return null;
+                                // EXCLUSION HUB: Prevent Zine or non-movie rows from appearing in the movie catalog feed
+                                if (['featured', 'nowStreaming', 'publicAccess', 'publicDomainIndie', 'zine', 'editorial'].includes(key)) return null;
                                 if ((key === 'cratemas' || (typedCategory.title || '').toLowerCase() === 'cratemas') && !settings.isHolidayModeActive) return null;
+                                
                                 const categoryMovies = typedCategory.movieKeys.map((movieKey: string) => movies[movieKey]).filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m));
                                 if (categoryMovies.length === 0) return null;
                                 

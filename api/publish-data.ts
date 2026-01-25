@@ -18,7 +18,7 @@ const getRoleFromPassword = (password: string | null) => {
 };
 
 const assembleAndSyncMasterData = async (db: Firestore) => {
-    // Aggressive parallel fetching for manifest assembly
+    // Parallel fetching for manifest assembly
     const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap, settingsSnap] = await Promise.all([
         db.collection('movies').get(),
         db.collection('categories').get(),
@@ -60,6 +60,7 @@ const assembleAndSyncMasterData = async (db: Firestore) => {
             },
         });
 
+        // CRITICAL: Block until S3 update is finished to guarantee next-fetch consistency
         await s3Client.send(new PutObjectCommand({
             Bucket: bucketName,
             Key: 'live-data.json',
@@ -91,6 +92,7 @@ export async function POST(request: Request) {
         let auditDetails = `Mutated ${type} resource.`;
 
         if (type === 'delete_movie') {
+            // IRREVERSIBLE PURGE: Remove document from DB
             batch.delete(db.collection('movies').doc(data.key));
             auditDetails = `PURGE: Deleted movie [${data.key}].`;
         } 
@@ -105,7 +107,6 @@ export async function POST(request: Request) {
                 batch.set(db.collection('festival').doc('config'), config, { merge: true });
             }
             if (Array.isArray(days)) {
-                // Clear existing days to ensure a clean overwrite
                 const existingDays = await db.collection('festival').doc('schedule').collection('days').get();
                 existingDays.forEach(doc => batch.delete(doc.ref));
                 
@@ -120,6 +121,12 @@ export async function POST(request: Request) {
         else if (type === 'settings') {
             batch.set(db.collection('content').doc('settings'), data, { merge: true });
         }
+        else if (type === 'categories') {
+            for (const [id, docData] of Object.entries(data)) {
+                batch.set(db.collection('categories').doc(id), docData as object, { merge: true });
+            }
+            auditDetails = `Modified category logic for ${Object.keys(data).length} rows.`;
+        }
 
         const auditLogRef = db.collection('audit_logs').doc();
         batch.set(auditLogRef, {
@@ -130,15 +137,15 @@ export async function POST(request: Request) {
             timestamp: FieldValue.serverTimestamp()
         });
 
-        // 1. COMMIT TO FIRESTORE (FAST - Triggers instant web-sync)
+        // 1. COMMIT TO FIRESTORE
         await batch.commit();
 
-        // 2. TRIGGER S3 REBUILD IN BACKGROUND (SLOWER - Handles Roku)
-        assembleAndSyncMasterData(db).catch(err => console.error("Background S3 Rebuild Failed:", err));
+        // 2. TRIGGER S3 REBUILD AND WAIT (CRITICAL: Ensures Roku & Web see changes simultaneously)
+        await assembleAndSyncMasterData(db);
 
         return new Response(JSON.stringify({ 
             success: true, 
-            message: "Cloud database updated. Live page synced." 
+            message: "Global manifest synchronized. All devices updated." 
         }), { status: 200 });
 
     } catch (error) {
