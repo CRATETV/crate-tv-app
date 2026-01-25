@@ -57,6 +57,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [selectedMovieKey, setSelectedMovieKey] = useState<string>('');
     const [formData, setFormData] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [isSettingSpotlight, setIsSettingSpotlight] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -138,6 +139,22 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             alert("Save failed.");
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!formData || isDeleting) return;
+        if (!window.confirm(`PURGE RECORD: Irreversibly erase "${formData.title}" from the global catalog?`)) return;
+        
+        setIsDeleting(true);
+        try {
+            await onDeleteMovie(formData.key);
+            setSelectedMovieKey('');
+            setFormData(null);
+        } catch (err) {
+            alert("Delete sequence failed.");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -244,6 +261,11 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             )}
                         </div>
                         <div className="flex gap-4">
+                            {isSavedRecord && (
+                                <button onClick={handleDelete} disabled={isDeleting} className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white px-6 py-3 rounded-xl uppercase text-[10px] font-black border border-red-500/20 transition-all">
+                                    {isDeleting ? 'Purging...' : 'Purge Record'}
+                                </button>
+                            )}
                             <button onClick={() => setSelectedMovieKey('')} className="bg-white/5 text-gray-400 px-6 py-3 rounded-xl uppercase text-[10px] font-black">Close</button>
                             <button onClick={handleSave} disabled={isSaving} className="bg-white text-black px-8 py-3 rounded-xl uppercase text-[10px] font-black shadow-xl hover:bg-gray-200 transition-all">{isSaving ? 'Syncing...' : 'Push Global Manifest'}</button>
                         </div>

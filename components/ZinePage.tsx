@@ -136,15 +136,14 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                         <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px]">Official Editorial Record</p>
                                     </div>
                                     <h1 className="text-6xl md:text-[10rem] font-black uppercase tracking-tighter leading-[0.75] italic text-white drop-shadow-2xl">
-                                        The <span className="text-red-600">Zine.</span>
+                                        Crate <span className="text-red-600">Zine.</span>
                                     </h1>
                                     <p className="text-2xl md:text-4xl text-gray-400 font-medium leading-tight max-w-3xl mt-8">
-                                        A premium magazine for the underground. Cinematic news, live event dispatches, and the pulse of independent distribution.
+                                        Stay up to date on all that's happening on Crate.
                                     </p>
                                 </div>
                                 <div className="hidden lg:block text-right pb-4">
                                     <p className="text-[12px] font-black text-gray-800 uppercase tracking-[1.5em] mr-[-1.5em]">EST. 2024</p>
-                                    <p className="text-[10px] font-bold text-gray-700 uppercase tracking-widest mt-2">Continuous Pipeline Sync</p>
                                 </div>
                             </div>
                         </div>
@@ -170,7 +169,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                     <h2 className="text-6xl md:text-[10rem] font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-2xl">{stories[0].title}</h2>
                                     <p className="text-xl md:text-3xl text-gray-200 font-medium max-w-4xl drop-shadow-xl leading-tight">{stories[0].subtitle}</p>
                                     <div className="pt-4">
-                                        <span className="bg-white text-black font-black px-10 py-4 rounded-2xl uppercase tracking-widest text-xs shadow-2xl group-hover:scale-105 transition-transform inline-block">Read the record</span>
+                                        <span className="bg-white text-black font-black px-10 py-4 rounded-2xl uppercase tracking-widest text-xs shadow-2xl group-hover:scale-105 transition-transform inline-block">Read story</span>
                                     </div>
                                 </div>
                             </section>
@@ -213,8 +212,8 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                 <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.08)_0%,transparent_70%)] pointer-events-none"></div>
                                 <div className="relative z-10 space-y-6">
                                     <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px]">Crate Zine Subscription Terminal</p>
-                                    <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">The Pulse Dispatch.</h2>
-                                    <p className="text-gray-400 text-xl md:text-2xl font-medium max-w-2xl mx-auto leading-relaxed">Join the list for weekly dispatches on new cinema arrivals, festival schedules, and live watch party reveals.</p>
+                                    <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">Join our newsletter.</h2>
+                                    <p className="text-gray-400 text-xl md:text-2xl font-medium max-w-2xl mx-auto leading-relaxed">Join the list for dispatches on new arrivals, festival schedules, and live watch party reveals.</p>
                                     
                                     {subStatus === 'success' ? (
                                         <div className="bg-green-600/10 border border-green-500/20 p-8 rounded-3xl inline-block px-16 animate-[fadeIn_0.5s_ease-out]">

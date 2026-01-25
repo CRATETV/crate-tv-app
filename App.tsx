@@ -122,7 +122,6 @@ const App: React.FC = () => {
     }, [movies]);
 
     const topTenMovies = useMemo(() => {
-        // FIX: Corrected malformed return statement by adding .filter() call and fixing type assertion.
         return (Object.values(movies) as (Movie | undefined)[]).filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
             .sort((a, b) => (analytics?.viewCounts?.[b.key] || 0) - (analytics?.viewCounts?.[a.key] || 0))
             .slice(0, 10);
@@ -269,15 +268,15 @@ const App: React.FC = () => {
                                             <div className="w-1 h-1 rounded-full bg-gray-800"></div>
                                             <span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Magazine & Intel</span>
                                         </div>
-                                        <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter italic leading-none">The <span className="text-red-600">Zine.</span></h2>
-                                        <p className="text-gray-400 text-lg md:text-xl font-medium leading-tight">Your terminal for community dispatches, festival intel, and new cinema reveals. Stay synced with the underground.</p>
+                                        <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter italic leading-none">Crate <span className="text-red-600">Zine.</span></h2>
+                                        <p className="text-gray-400 text-lg md:text-xl font-medium leading-tight">Stay up to date on all that's happening on Crate.</p>
                                     </div>
                                     <div className="flex flex-col sm:flex-row gap-4 flex-shrink-0">
                                         <button 
                                             onClick={() => { window.history.pushState({}, '', '/zine'); window.dispatchEvent(new Event('pushstate')); }}
                                             className="bg-white text-black font-black px-10 py-4 rounded-2xl uppercase tracking-widest text-xs hover:bg-gray-200 transition-all shadow-xl active:scale-95"
                                         >
-                                            Read Dispatches
+                                            Read story
                                         </button>
                                         <button 
                                             onClick={() => { window.history.pushState({}, '', '/zine'); window.dispatchEvent(new Event('pushstate')); }}

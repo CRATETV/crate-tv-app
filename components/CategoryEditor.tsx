@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Category, Movie, SiteSettings } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
@@ -27,9 +26,9 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
 
   const filteredMovies = allMovies
     .filter(movie => {
-        const isExcluded = excludedKeys.includes(movie.key) && !selectedKeys.has(movie.key);
+        // FIXED: Allow admin to see all movies regardless of exclusion to enable multi-row placement (e.g. Just Cuz in Comedy).
         const matchesSearch = (movie.title || '').toLowerCase().includes(searchTerm.toLowerCase());
-        return !isExcluded && matchesSearch;
+        return matchesSearch;
     })
     .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
@@ -153,12 +152,6 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
   };
 
   const PROTECTED_KEYS = ['featured', 'nowStreaming', 'publicAccess', 'publicDomainIndie'];
-  
-  const isolatedKeys = useMemo(() => {
-    const accessKeys = categories.publicAccess?.movieKeys || [];
-    const vintageKeys = categories.publicDomainIndie?.movieKeys || [];
-    return Array.from(new Set([...accessKeys, ...vintageKeys]));
-  }, [categories.publicAccess, categories.publicDomainIndie]);
 
   return (
     <div className="space-y-16 pb-20">
@@ -285,7 +278,6 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
         <MovieSelectorModal 
             allMovies={allMovies} 
             initialSelectedKeys={categories[editingCategoryKey].movieKeys || []} 
-            excludedKeys={PROTECTED_KEYS.includes(editingCategoryKey) ? [] : isolatedKeys}
             title={`Curate: ${categories[editingCategoryKey].title}`}
             onSave={(newKeys) => handleMovieSelectionSave(editingCategoryKey, newKeys)} 
             onClose={() => setEditingCategoryKey(null)} 
