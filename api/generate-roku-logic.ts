@@ -3,7 +3,7 @@ import { generateContentWithRetry } from './_lib/geminiRetry.js';
 
 export async function POST(request: Request) {
   try {
-    const { password, prompt } = await request.json();
+    const { password, prompt, debugLog, projectStructure } = await request.json();
 
     const primaryAdminPassword = process.env.ADMIN_PASSWORD;
     const masterPassword = process.env.ADMIN_MASTER_PASSWORD;
@@ -12,28 +12,37 @@ export async function POST(request: Request) {
     }
 
     const systemInstruction = `
-        You are the "Crate TV" Specialized Roku SDK Architect. 
-        Your primary objective is to take an EXISTING Roku project and refactor it into a "Tudum-style" app that is IDENTICAL in feature set and aesthetic to the Crate TV Web App.
+        You are the "Crate TV" Elite Roku SDK Architect and Debugger. 
+        Your goal is to take a provided Roku project structure and its associated TELNET DEBUG LOGS, then generate corrected BrightScript and XML files that solve any crashes and integrate missing web-app features.
         
-        REFACTORING PROTOCOLS:
-        1. Watch Party Sync: You MUST inject logic that polls the /api/get-live-data endpoint. Map 'actualStartTime' to the Roku Video node's play position for global synchronization.
-        2. Zine Integration: Ensure the app can render the 'editorial_stories' feed in an immersive article view.
-        3. Aesthetic Parity: 
-            - Force strictly #EF4444 (Crate Red) for all focus borders and accents. 
-            - Use massive Hero headers (120pt+), italicized and bold (mirroring the Inter Black web font).
-            - Set background colors to a deep #050505.
-        4. Focus Management: Every interactive node must have m.top.setFocus(true) and handle remote control navigation loops.
-        5. Deep Cleaning: Remove any "ghost codes" or malformed Unicode characters found in the source.
+        DEBUGGING PROTOCOL:
+        1. Parse the "TELNET_DEBUG_LOG" for specific line numbers and error types (e.g. 'Type Mismatch', 'Dot Operator on Invalid', 'Member Function call on Invalid').
+        2. In the resulting BrightScript, implement robust "Invalid" checks for all API responses.
+        3. Solve thread-access crashes by ensuring Task nodes communicate via fields, never by direct UI node manipulation.
 
-        Respond strictly with a JSON object containing:
-        - "xml": The refactored HomeScene.xml or relevant visual component.
-        - "brs": The refactored BrightScript logic (HomeScene.brs).
-        - "explanation": A one-sentence technical analysis of how parity was integrated.
+        PARITY PROTOCOL:
+        1. Aesthetic: Use strictly #EF4444 (Crate Red) for focus and high-impact italicized headers.
+        2. Sync Logic: If the logs show "Watch Party" issues, ensure 'actualStartTime' is used as the epoch for video seeking.
+        3. Data Types: Ensure movie ratings and view counts are cast explicitly using 'val()' or 'toStr()'.
+
+        Respond STRICTLY with a JSON object containing:
+        - "xml": The fully corrected visual component (usually HomeScene.xml).
+        - "brs": The fully corrected logic file (usually HomeScene.brs).
+        - "explanation": A one-sentence summary of the specific fixes applied based on the logs.
+    `;
+
+    const userPrompt = `
+        ACTION: FORGE REPAIR AND REFACTOR.
+        INSTRUCTIONS: ${prompt}
+        
+        DATA CONTEXT:
+        [SOURCE_FILES]: ${projectStructure}
+        [TELNET_LOGS]: ${debugLog}
     `;
 
     const response = await generateContentWithRetry({
       model: 'gemini-3-pro-preview',
-      contents: [{ parts: [{ text: `FULL PROJECT REFACTORING TARGET: ${prompt}.` }] }],
+      contents: [{ parts: [{ text: userPrompt }] }],
       config: {
         systemInstruction,
         responseMimeType: "application/json",
@@ -55,7 +64,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error("Roku refactoring error:", error);
+    console.error("Roku Forge error:", error);
     return new Response(JSON.stringify({ error: (error as Error).message }), { status: 500 });
   }
 }

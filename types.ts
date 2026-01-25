@@ -248,7 +248,7 @@ export interface PayoutRequest {
     amount: number;
     payoutMethod: string;
     payoutDetails: string;
-    status: 'pending' | 'completed';
+    status: 'pending' | 'completed' | 'ACTIVE';
     requestDate: any;
     completionDate?: any;
 }

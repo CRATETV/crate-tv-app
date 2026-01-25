@@ -10,13 +10,6 @@ const FestivalHero: React.FC<FestivalHeroProps> = ({ config }) => {
     return <div className="w-full h-[56.25vw] bg-gray-900 animate-pulse"></div>;
   }
 
-  const handleNavigate = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    const path = ('movieBlocks' in config) ? '/cratefest' : '/festival';
-    window.history.pushState({}, '', path);
-    window.dispatchEvent(new Event('pushstate'));
-  };
-
   const title = config.title || 'Official Event';
   const subheader = ('tagline' in config) ? (config as CrateFestConfig).tagline : (config as FestivalConfig).subheader;
   const description = ('description' in config) ? (config as FestivalConfig).description : (config as CrateFestConfig).tagline;
@@ -48,32 +41,15 @@ const FestivalHero: React.FC<FestivalHeroProps> = ({ config }) => {
             {/* PRISMATIC HEADLINE */}
             <div className="relative">
                 <div className="absolute inset-0 blur-3xl bg-red-600/20 scale-110 opacity-50 -z-10 animate-pulse"></div>
-                <h1 className="text-6xl md:text-8xl lg:text-[9.5rem] font-black max-w-6xl drop-shadow-[0_15px_40px_rgba(0,0,0,0.8)] uppercase tracking-tighter italic leading-[0.8] bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-gray-400">
+                <h1 className="text-5xl md:text-7xl lg:text-[8rem] font-black max-w-6xl drop-shadow-[0_15px_40px_rgba(0,0,0,0.8)] uppercase tracking-tighter italic leading-[0.85] bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-gray-400">
                     {title}
                 </h1>
             </div>
         </div>
         
-        <p className="text-lg md:text-2xl lg:text-3xl max-w-3xl mb-14 animate-[slideInUp_0.9s_ease-out] text-gray-300 font-medium leading-tight italic drop-shadow-2xl">
+        <p className="text-lg md:text-xl lg:text-2xl max-w-3xl mb-14 animate-[slideInUp_0.9s_ease-out] text-gray-300 font-medium leading-tight italic drop-shadow-2xl">
           {description}
         </p>
-
-        <div className="animate-[slideInUp_1.1s_ease-out] flex flex-col sm:flex-row gap-6">
-          <button
-            onClick={handleNavigate}
-            className="group relative flex items-center justify-center px-16 py-6 bg-white text-black font-black rounded-[2rem] hover:scale-105 active:scale-95 transition-all text-sm uppercase tracking-[0.3em] shadow-[0_30px_60px_rgba(255,255,255,0.1)] overflow-hidden"
-          >
-            <span className="relative z-10">Enter Portal</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-purple-600 translate-y-full group-hover:translate-y-0 transition-transform duration-500 opacity-10"></div>
-          </button>
-          
-          <button
-            onClick={() => window.scrollTo({ top: window.innerHeight * 0.85, behavior: 'smooth' })}
-            className="flex items-center justify-center px-16 py-6 bg-white/5 border border-white/10 text-white font-black rounded-[2.5rem] hover:bg-white/10 transition-all transform hover:scale-105 active:scale-95 text-sm uppercase tracking-[0.3em] backdrop-blur-md"
-          >
-            Explore Catalog
-          </button>
-        </div>
       </div>
 
       {/* Cinematic Fog Overlay */}

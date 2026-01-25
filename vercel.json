@@ -11,6 +11,14 @@
   ],
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/api/robots"
+    },
+    {
       "source": "/.well-known/apple-developer-merchantid-domain-association",
       "destination": "/api/apple-developer-merchantid-domain-association"
     },

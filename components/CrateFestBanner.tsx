@@ -37,10 +37,9 @@ const CrateFestBanner: React.FC<CrateFestBannerProps> = ({ config, hasPass }) =>
             </div>
 
             <div className="flex items-center gap-6 relative z-10">
-                <span className="hidden md:block text-[9px] font-black uppercase tracking-[0.3em] text-white/50 italic">Limited Availability</span>
-                <button className="bg-white text-black font-black px-6 py-1.5 rounded-full text-[10px] uppercase tracking-tighter group-hover:scale-105 transition-transform shadow-xl">
-                    {hasPass ? 'Enter Portal' : 'Get Digital Pass'}
-                </button>
+                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/50 italic">
+                    {hasPass ? 'Authorized Access Active' : 'Limited Passes Available'}
+                </span>
             </div>
         </div>
     );

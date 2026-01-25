@@ -1,4 +1,3 @@
-
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
@@ -30,6 +29,7 @@ export async function POST(request: Request) {
 
         let role = '';
         let targetDirector = '';
+        let payoutType = '';
         let jobTitle = '';
 
         // 1. Check Hardcoded Roles
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
             }
         }
         
-        // 2. Check Director Payout Keys (PAY-XXXX)
+        // 2. Check Restricted Payout Keys (PAY-XXXX)
         if (!role && password.startsWith('PAY-')) {
             const keySnap = await db.collection('director_payout_keys')
                 .where('accessKey', '==', password.trim())
@@ -53,7 +53,8 @@ export async function POST(request: Request) {
                 const data = doc.data();
                 role = 'director_payout';
                 targetDirector = data.directorName;
-                jobTitle = 'Filmmaker Payout Terminal';
+                payoutType = data.payoutMethod || 'filmmaker';
+                jobTitle = `${payoutType.toUpperCase()} Payout Terminal`;
             }
         }
 
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
                 role: `${role.toUpperCase()}: ${name || targetDirector || 'Unknown'}`,
                 action: 'NODE_AUTH_SUCCESS',
                 type: 'LOGIN',
-                details: `Successful uplink from ${name || targetDirector} at IP: ${ip || 'Unknown'}`,
+                details: `Successful uplink from ${name || targetDirector} at IP: ${ip || 'Unknown'}. Node Type: ${payoutType || 'Standard'}`,
                 timestamp: FieldValue.serverTimestamp(),
                 ip
             });
@@ -87,7 +88,8 @@ export async function POST(request: Request) {
                 success: true, 
                 role, 
                 jobTitle,
-                targetDirector // Only populated for filmmaker payout logins
+                targetDirector, 
+                payoutType
             }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },

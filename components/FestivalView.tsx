@@ -100,14 +100,14 @@ const FestivalView: React.FC<FestivalViewProps> = ({
         <div className="relative text-center py-12 sm:py-24 px-4 overflow-hidden mb-12">
             <div className="relative z-10 max-w-4xl mx-auto animate-fadeInHeroContent">
                 <div className="space-y-4 mb-8">
-                    <h1 className="text-5xl sm:text-6xl md:text-8xl font-black text-white tracking-tighter uppercase italic leading-none">{festivalConfig.title}</h1>
+                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-white tracking-tighter uppercase italic leading-none">{festivalConfig.title}</h1>
                     {festivalConfig.subheader && (
                         <p className="text-red-500 font-black uppercase tracking-[0.6em] text-xs md:text-sm drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]">
                             {festivalConfig.subheader}
                         </p>
                     )}
                 </div>
-                <p className="text-base sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 font-medium leading-relaxed">
+                <p className="text-base sm:text-lg text-gray-400 max-w-2xl mx-auto mb-10 font-medium leading-relaxed">
                     {festivalConfig.description}
                 </p>
                 {!hasFestivalAllAccess && (
@@ -161,7 +161,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
                     <button
                         key={day.day}
                         onClick={() => setActiveDay(day.day)}
-                        className={`flex-shrink-0 whitespace-nowrap px-12 py-5 text-sm font-black uppercase tracking-[0.2em] transition-all rounded-2xl ${activeDay === day.day ? 'bg-gradient-to-r from-red-600 to-purple-600 text-white shadow-[0_10px_30px_rgba(239,68,68,0.4)] scale-105' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`flex-shrink-0 whitespace-nowrap px-12 py-5 text-sm font-black uppercase tracking-[0.2em] transition-all rounded-2xl ${activeDay === day.day ? 'bg-gradient-to-r from-red-600 to-purple-600 text-white shadow-[0_10px_30px_rgba(239,68,68,0.4)]' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         Day 0{day.day}
                     </button>
@@ -171,7 +171,7 @@ const FestivalView: React.FC<FestivalViewProps> = ({
 
           <div className="space-y-20 animate-[fadeIn_0.5s_ease-out]">
               <div className="text-center mb-16">
-                   <h2 className="text-7xl sm:text-9xl font-black text-white uppercase italic tracking-tighter leading-none mb-4 drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                   <h2 className="text-6xl sm:text-7xl font-black text-white uppercase italic tracking-tighter leading-none mb-4 drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
                        Day 0{currentDayData.day}.
                    </h2>
                    <p className="text-red-500 font-black uppercase tracking-[0.6em] text-sm drop-shadow-[0_0_10px_rgba(239,68,68,0.3)]">

@@ -91,11 +91,11 @@ const CrateFestPage: React.FC = () => {
                         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black to-black"></div>
                     </div>
                     <div className="relative z-10 max-w-7xl space-y-10 animate-[fadeIn_1.2s_ease-out]">
-                        <h1 className="text-6xl md:text-[11rem] font-black uppercase tracking-tighter leading-[0.75] italic drop-shadow-2xl">
+                        <h1 className="text-5xl md:text-[7rem] font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-2xl">
                             {config.title.split(' ')[0]}<br/>
                             <span className="text-red-600 drop-shadow-[0_0_80px_rgba(239,68,68,0.3)]">{config.title.split(' ').slice(1).join(' ')}</span>
                         </h1>
-                        <p className="text-xl md:text-3xl text-gray-300 font-medium max-w-3xl mx-auto leading-tight">{config.tagline}</p>
+                        <p className="text-xl md:text-2xl text-gray-300 font-medium max-w-3xl mx-auto leading-tight">{config.tagline}</p>
                         {!hasCrateFestPass && (
                             <button onClick={() => setPaymentItem({ type: 'crateFestPass' })} className="bg-white text-black font-black px-12 py-6 rounded-2xl text-2xl uppercase tracking-tighter hover:scale-105 transition-all shadow-2xl">
                                 Full Session Pass - ${config.passPrice}

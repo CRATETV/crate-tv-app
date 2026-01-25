@@ -10,7 +10,7 @@ interface SquarePayment {
 const PARTNER_SHARE = 0.70;
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z';
 
-async function fetchDirectorTotal(accessToken: string, locationId: string, directorName: string): Promise<number> {
+async function fetchYieldTotal(accessToken: string, locationId: string, targetName: string, type: string): Promise<number> {
     const squareUrlBase = process.env.VERCEL_ENV === 'production' ? 'https://connect.squareup.com' : 'https://connect.squareupsandbox.com';
     let allPayments: SquarePayment[] = [];
     let cursor: string | undefined = undefined;
@@ -29,15 +29,21 @@ async function fetchDirectorTotal(accessToken: string, locationId: string, direc
         cursor = data.cursor;
     } while (cursor);
 
-    // Calculate gross for this director
-    // This is a simplified calculation logic mirroring get-filmmaker-analytics.ts
-    const target = directorName.trim().toLowerCase();
     let grossInCents = 0;
+    const target = targetName.trim().toLowerCase();
 
     allPayments.forEach(p => {
         const note = (p.note || '').toLowerCase();
-        if (note.includes(target)) {
-            grossInCents += p.amount_money.amount;
+        if (type === 'festival') {
+            // Institutional partner gets 70% of EVERYTHING tagged as pass, block, or watch party
+            if (note.includes('pass') || note.includes('block') || note.includes('watch party')) {
+                grossInCents += p.amount_money.amount;
+            }
+        } else {
+            // Filmmaker only gets 70% of revenue explicitly containing their name
+            if (note.includes(target)) {
+                grossInCents += p.amount_money.amount;
+            }
         }
     });
 
@@ -46,7 +52,7 @@ async function fetchDirectorTotal(accessToken: string, locationId: string, direc
 
 export async function POST(request: Request) {
     try {
-        const { password, directorName } = await request.json();
+        const { password, targetName, type } = await request.json();
 
         const initError = getInitializationError();
         if (initError) throw new Error(initError);
@@ -60,35 +66,35 @@ export async function POST(request: Request) {
             .limit(1)
             .get();
         
-        if (keySnap.empty) throw new Error("Invalid or Expired Authorization.");
+        if (keySnap.empty) throw new Error("Invalid or Expired Authorization Token.");
         const keyDoc = keySnap.docs[0];
         const keyData = keyDoc.data();
 
-        if (keyData.directorName !== directorName) throw new Error("Identity Mismatch.");
+        if (keyData.directorName !== targetName) throw new Error("Security Identity Mismatch.");
 
-        // 2. Fetch Payout Destination (Simplified for MVP, assuming global recipient for now or specific linking)
+        // 2. Fetch Payout Destination
         const configDoc = await db.collection('festival').doc('config').get();
         const config = configDoc.data();
         const recipientId = config?.payoutRecipientId; 
 
-        if (!recipientId) throw new Error("Payout destination not linked to terminal.");
+        if (!recipientId) throw new Error("No payout destination linked to this terminal cluster.");
 
         const isProduction = process.env.VERCEL_ENV === 'production';
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
         const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
 
-        if (!accessToken || !locationId) throw new Error("Server config fail.");
+        if (!accessToken || !locationId) throw new Error("Server configuration missing.");
 
-        // 3. Final Calculations
-        const partnerTotalEntitlement = await fetchDirectorTotal(accessToken, locationId, directorName);
-        const historySnap = await db.collection('payout_history').where('recipient', '==', directorName).get();
+        // 3. Final Precise Calculations
+        const partnerTotalEntitlement = await fetchYieldTotal(accessToken, locationId, targetName, type);
+        const historySnap = await db.collection('payout_history').where('recipient', '==', targetName).get();
         const totalPaid = historySnap.docs.reduce((s, doc) => s + (doc.data().amount || 0), 0);
         
         const eligibleAmount = partnerTotalEntitlement - totalPaid;
 
-        if (eligibleAmount < 100) throw new Error("Insufficient terminal balance.");
+        if (eligibleAmount < 100) throw new Error("Insufficient node balance for dispatch.");
 
-        // 4. Square Dispatch
+        // 4. Square Dispatch Handshake
         const idempotencyKey = randomUUID();
         const squareUrl = isProduction ? 'https://connect.squareup.com/v2/payouts' : 'https://connect.squareupsandbox.com/v2/payouts';
 
@@ -98,38 +104,36 @@ export async function POST(request: Request) {
             body: JSON.stringify({
                 idempotency_key: idempotencyKey,
                 location_id: locationId,
-                recipient: { id: recipientId, type: 'CUSTOMER' }, // Assuming the director links a customer node
+                recipient: { id: recipientId, type: 'CUSTOMER' },
                 amount_money: { amount: eligibleAmount, currency: 'USD' },
             }),
         });
 
         const payoutData = await payoutResponse.json();
-        if (!payoutResponse.ok) throw new Error(payoutData.errors?.[0]?.detail || 'Square Payout Failure.');
+        if (!payoutResponse.ok) throw new Error(payoutData.errors?.[0]?.detail || 'Square Handshake Rejection.');
 
-        // 5. Audit, Log, and PURGE AUTH
+        // 5. Audit, Log, and PURGE AUTH PERMANENTLY
         const batch = db.batch();
-        
-        // FIX: Firestore WriteBatch does not have an .add() method. 
-        // We use .doc() to generate a reference and .set() to add the data.
         const historyRef = db.collection('payout_history').doc();
         batch.set(historyRef, {
-            recipient: directorName,
+            recipient: targetName,
             amount: eligibleAmount,
             status: 'SUCCESS',
             processedAt: FieldValue.serverTimestamp(),
-            method: 'ONE_TIME_HANDSHAKE'
+            method: 'ONE_TIME_HANDSHAKE',
+            type: type
         });
 
         const logRef = db.collection('audit_logs').doc();
         batch.set(logRef, {
             role: 'director_payout',
-            action: 'ONE_TIME_PAYOUT_SUCCESS',
+            action: `ONE_TIME_${type.toUpperCase()}_PAYOUT_SUCCESS`,
             type: 'MUTATION',
-            details: `Authorized final payout for ${directorName}: $${(eligibleAmount/100).toFixed(2)}. Authorization key invalidated.`,
+            details: `Authorized final yield for ${targetName}: $${(eligibleAmount/100).toFixed(2)}. Access key purged.`,
             timestamp: FieldValue.serverTimestamp()
         });
 
-        // IRREVERSIBLE ACTION: Delete the access key
+        // IRREVERSIBLE: Kill the voucher node
         batch.delete(keyDoc.ref);
 
         await batch.commit();

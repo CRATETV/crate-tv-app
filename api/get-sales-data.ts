@@ -29,7 +29,7 @@ const parseNote = (note: string | undefined): { type: string, title?: string, di
     if (note.includes('All-Access Pass')) return { type: 'pass' };
     if (note.includes('Crate Fest')) return { type: 'crateFestPass' };
     
-    const blockMatch = note.match(/Unlock Block: "(.*)"/);
+    const blockMatch = note.match(/Unlock Block: (.*)/);
     if (blockMatch) return { type: 'block', blockTitle: blockMatch[1].trim() };
     
     if (note.includes('Purchase Film:') || note.includes('VOD Rental:')) return { type: 'movie' };
@@ -101,6 +101,7 @@ export async function POST(request: Request) {
         let totalDonations = 0;
         let totalSales = 0;
         let festivalRevenue = 0;
+        let crateFestRevenue = 0;
         const salesByBlock: Record<string, { units: number, revenue: number }> = {};
         const revenueByFilm: Record<string, { donations: number, tickets: number }> = {};
 
@@ -113,27 +114,29 @@ export async function POST(request: Request) {
                 if (!revenueByFilm[details.title]) revenueByFilm[details.title] = { donations: 0, tickets: 0 };
                 revenueByFilm[details.title].donations += amount;
             } else if (details.type === 'watchPartyTicket' && details.title) {
+                // If it's a watch party, it counts toward festival or film specific revenue
                 totalSales += amount;
                 if (!revenueByFilm[details.title]) revenueByFilm[details.title] = { donations: 0, tickets: 0 };
                 revenueByFilm[details.title].tickets += amount;
+                festivalRevenue += amount; // Watch parties are inherently "Festival-Style"
             } else if (details.type === 'block' && details.blockTitle) {
                 festivalRevenue += amount; 
                 if (!salesByBlock[details.blockTitle]) salesByBlock[details.blockTitle] = { units: 0, revenue: 0 };
                 salesByBlock[details.blockTitle].units++;
                 salesByBlock[details.blockTitle].revenue += amount;
-            } else if (details.type === 'pass' || details.type === 'crateFestPass') {
+            } else if (details.type === 'pass') {
                 festivalRevenue += amount;
+            } else if (details.type === 'crateFestPass') {
+                crateFestRevenue += amount;
             } else {
                 totalSales += amount;
             }
         });
 
         const totalAdminPayouts = payoutHistorySnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
-        const totalRevenue = totalDonations + totalSales + festivalRevenue;
+        const totalRevenue = totalDonations + totalSales + festivalRevenue + crateFestRevenue;
         
-        // Crate TV retains 30% of donations and festival revenue. 
-        // 100% of standard VOD sales go to platform currently, but we can refine.
-        const totalCrateTvRevenue = (totalDonations * CRATE_SHARE) + (festivalRevenue * CRATE_SHARE) + totalSales;
+        const totalCrateTvRevenue = (totalDonations * CRATE_SHARE) + (festivalRevenue * CRATE_SHARE) + totalSales + (crateFestRevenue * CRATE_SHARE);
 
         const filmmakerPayouts: FilmmakerPayout[] = Object.values(allMovies).map(movie => {
             const filmRev = revenueByFilm[movie.title] || { donations: 0, tickets: 0 };
@@ -143,7 +146,7 @@ export async function POST(request: Request) {
             return {
                 movieTitle: movie.title,
                 totalDonations: filmRev.donations,
-                totalAdRevenue: filmRev.tickets, // Re-using ad field for tickets
+                totalAdRevenue: filmRev.tickets,
                 crateTvCut: gross * CRATE_SHARE,
                 filmmakerDonationPayout: filmRev.donations * PARTNER_SHARE,
                 filmmakerAdPayout: filmRev.tickets * PARTNER_SHARE,
@@ -169,13 +172,13 @@ export async function POST(request: Request) {
             totalAdRevenue: totalSales, 
             crateTvMerchCut: 0, merchSales: {},
             totalFestivalRevenue: festivalRevenue, 
-            totalCrateFestRevenue: 0,
+            totalCrateFestRevenue: crateFestRevenue,
             festivalPassSales: { units: 0, revenue: 0 }, 
             festivalBlockSales: { units: 0, revenue: 0 },
             crateFestPassSales: { units: 0, revenue: 0 },
             salesByBlock, 
             festivalUsers: [],
-            crateFestRevenue: 0, 
+            crateFestRevenue, 
             liveNodes: presenceSnapshot.size,
             recentSpikes: [],
             billSavingsPotTotal: 0,
