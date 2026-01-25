@@ -45,7 +45,7 @@ const MaintenanceScreen: React.FC = () => (
 
 const App: React.FC = () => {
     const { user, hasCrateFestPass, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
-    const { isLoading, movies, categories, isFestivalLive, settings, analytics, activeParties, livePartyMovie } = useFestival();
+    const { isLoading, movies, categories, isFestivalLive, festivalConfig, settings, analytics, activeParties, livePartyMovie } = useFestival();
     
     const [heroIndex, setHeroIndex] = useState(0);
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
@@ -107,6 +107,13 @@ const App: React.FC = () => {
         if (isFestivalLive && !isFestivalBannerDismissed) return 'GENERAL_FESTIVAL';
         return 'NONE';
     }, [livePartyMovie, settings.crateFestConfig, isFestivalLive, isFestivalBannerDismissed]);
+
+    // Strategic selector for the Homepage Hero Branding
+    const currentLiveHeroConfig = useMemo(() => {
+        if (activeBannerType === 'CRATE_FEST') return settings.crateFestConfig;
+        if (isFestivalLive) return festivalConfig;
+        return null;
+    }, [activeBannerType, isFestivalLive, settings.crateFestConfig, festivalConfig]);
 
     const crateFestMovies = useMemo(() => {
         const config = settings.crateFestConfig;
@@ -228,8 +235,8 @@ const App: React.FC = () => {
             <Header searchQuery={searchQuery} onSearch={onSearch} onMobileSearchClick={handleSearchClick} topOffset={headerTop} isLiveSpotlight={isNowStreamingLive} />
 
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500" style={{ paddingTop: activeBannerType !== 'NONE' ? '3rem' : '0px' }}>
-                {isFestivalLive && activeBannerType !== 'CRATE_FEST' ? (
-                    <FestivalHero festivalConfig={settings.crateFestConfig as any} />
+                {currentLiveHeroConfig ? (
+                    <FestivalHero config={currentLiveHeroConfig} />
                 ) : (
                     heroMovies.length > 0 && <Hero movies={heroMovies} currentIndex={heroIndex} onSetCurrentIndex={setHeroIndex} onPlayMovie={handlePlayMovie} onMoreInfo={handleSelectMovie} />
                 )}
