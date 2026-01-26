@@ -1,17 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import LoadingSpinner from './LoadingSpinner';
-import { Movie } from '../types';
+import MovieCarousel from './MovieCarousel';
+import { Movie, Category } from '../types';
 import { fetchAndCacheLiveData } from '../services/dataService';
 import AuthModal from './AuthModal';
 import CollapsibleFooter from './CollapsibleFooter';
 import SEO from './SEO';
 
-const FeatureBlock: React.FC<{ title: string; desc: string; icon: string }> = ({ title, desc, icon }) => (
-    <div className="p-10 rounded-[3rem] border border-white/10 bg-white/5 space-y-6 transition-all hover:scale-[1.02] hover:bg-white/10 shadow-2xl">
-        <div className="text-5xl">{icon}</div>
-        <h3 className="text-2xl font-black uppercase tracking-tighter italic text-white">{title}</h3>
-        <p className="text-gray-400 text-lg leading-relaxed font-medium">{desc}</p>
+const ReasonCard: React.FC<{ title: string; desc: string; icon: string }> = ({ title, desc, icon }) => (
+    <div className="bg-gradient-to-br from-gray-900 to-[#0c0c1a] border border-white/10 p-10 rounded-[2.5rem] flex flex-col justify-between min-h-[320px] transition-all hover:scale-[1.02] hover:border-red-600/30 shadow-2xl relative overflow-hidden group">
+        <div className="space-y-4 relative z-10">
+            <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter leading-none italic">{title}</h3>
+            <p className="text-gray-400 text-sm md:text-base font-medium leading-relaxed">{desc}</p>
+        </div>
+        <div className="absolute bottom-6 right-6 text-6xl opacity-20 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500">
+            {icon}
+        </div>
     </div>
 );
 
@@ -38,6 +43,8 @@ const FaqItem: React.FC<{ question: string; answer: React.ReactNode }> = ({ ques
 const LandingPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [movies, setMovies] = useState<Record<string, Movie>>({});
+    const [categories, setCategories] = useState<Record<string, Category>>({});
+    const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [initialAuthView, setInitialAuthView] = useState<'login' | 'signup'>('login');
     const [email, setEmail] = useState('');
@@ -46,7 +53,9 @@ const LandingPage: React.FC = () => {
         const loadData = async () => {
             try {
                 const { data } = await fetchAndCacheLiveData();
-                setMovies(data.movies);
+                setMovies(data.movies || {});
+                setCategories(data.categories || {});
+                if ((data as any).viewCounts) setViewCounts((data as any).viewCounts);
             } catch (error) {
                 console.error("Landing Load Fail:", error);
             } finally {
@@ -56,9 +65,23 @@ const LandingPage: React.FC = () => {
         loadData();
     }, []);
 
-    const posters = useMemo(() => {
-        return Object.values(movies).map(m => m.poster).filter(Boolean).slice(0, 18);
-    }, [movies]);
+    // STRICT: Filter out Vintage collection for the "Modern Content Wall"
+    const modernPosters = useMemo(() => {
+        const vintageKeys = new Set(categories.publicDomainIndie?.movieKeys || []);
+        return Object.values(movies)
+            .filter(m => !!m.poster && !vintageKeys.has(m.key))
+            .map(m => m.poster)
+            .slice(0, 24);
+    }, [movies, categories]);
+
+    // STRICT: Calculate Top 10 from Modern Collection only
+    const topTenMovies = useMemo(() => {
+        const vintageKeys = new Set(categories.publicDomainIndie?.movieKeys || []);
+        return Object.values(movies)
+            .filter(m => !!m.poster && !m.isUnlisted && !vintageKeys.has(m.key))
+            .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
+            .slice(0, 10);
+    }, [movies, viewCounts, categories]);
 
     const openAuthModal = (view: 'login' | 'signup') => {
         setInitialAuthView(view);
@@ -88,22 +111,23 @@ const LandingPage: React.FC = () => {
             />
             
             <main className="flex-grow">
-                {/* SECTION 1: THE CINEMATIC POSTER WALL */}
+                {/* SECTION 1: THE VIBRANT CONTENT WALL HERO */}
                 <section className="relative h-[95vh] flex flex-col items-center justify-center overflow-hidden border-b border-white/10">
-                    <div className="absolute inset-0 z-0 grid grid-cols-3 md:grid-cols-6 gap-4 opacity-20 scale-110 rotate-[-5deg] pointer-events-none">
-                        {posters.concat(posters).map((url, i) => (
+                    {/* Full Color Animated Grid (No grayscale) */}
+                    <div className="absolute inset-0 z-0 grid grid-cols-3 md:grid-cols-6 gap-4 opacity-30 scale-110 rotate-[-5deg] pointer-events-none animate-slow-pan">
+                        {modernPosters.concat(modernPosters).map((url, i) => (
                             <div key={i} className="aspect-[2/3] rounded-xl overflow-hidden bg-gray-900 shadow-2xl">
-                                <img src={url} className="w-full h-full object-cover grayscale" alt="" />
+                                <img src={url} className="w-full h-full object-cover" alt="" />
                             </div>
                         ))}
                     </div>
                     
-                    <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-[#050505]"></div>
-                    <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.12)_0%,transparent_70%)]"></div>
+                    <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#050505] via-[#050505]/60 to-[#050505]"></div>
+                    <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.15)_0%,transparent_70%)]"></div>
 
                     <div className="relative z-20 max-w-5xl px-6 text-center space-y-12 animate-[fadeIn_1s_ease-out]">
                         <div className="space-y-4">
-                            <p className="text-red-500 font-black uppercase tracking-[0.6em] text-xs md:text-sm">Philadelphia Independent Core</p>
+                            <p className="text-red-500 font-black uppercase tracking-[0.6em] text-xs md:text-sm">Official Distribution Afterlife</p>
                             <h1 className="text-6xl md:text-[10rem] font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-[0_20px_50px_rgba(0,0,0,1)]">
                                 Cinema <br/><span className="text-red-600">Unbound.</span>
                             </h1>
@@ -135,61 +159,58 @@ const LandingPage: React.FC = () => {
                     </div>
                 </section>
 
-                {/* SECTION 2: THE LIGHT BREAK (Addressing the 'Too Dark' feedback) */}
-                <section className="bg-white py-40 px-6">
-                    <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
-                        <div className="space-y-10 order-2 lg:order-1">
-                            <div className="space-y-4">
-                                <span className="bg-red-600 text-white font-black px-4 py-1 rounded-full text-[10px] uppercase tracking-widest">Universal Casting</span>
-                                <h2 className="text-5xl md:text-[5.5rem] font-black text-black uppercase tracking-tighter leading-[0.9] italic">Watch on your TV.</h2>
-                            </div>
-                            <p className="text-xl md:text-2xl text-gray-600 leading-relaxed font-medium max-w-xl">
-                                Install our native app on the **Roku Channel Store**, or use our built-in **Cast Hub** to beam 4K masters directly to Apple TV, Chromecast, and Smart TVs with one tap.
-                            </p>
-                            <div className="flex flex-wrap gap-8 pt-4 grayscale opacity-40">
-                                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/ruko+logo+.webp" className="h-12 w-auto" alt="Roku" />
-                                <span className="text-black font-black text-2xl border-l-2 border-black/10 pl-8">APPLE TV</span>
-                                <span className="text-black font-black text-2xl border-l-2 border-black/10 pl-8">CHROMECAST</span>
-                            </div>
-                        </div>
-                        <div className="relative order-1 lg:order-2">
-                            <div className="absolute -inset-20 bg-red-600/10 blur-[120px] rounded-full animate-pulse"></div>
-                            <img 
-                                src="https://cratetelevision.s3.us-east-1.amazonaws.com/ruko+logo+.webp" 
-                                className="relative z-10 w-full max-w-md mx-auto drop-shadow-[0_40px_80px_rgba(0,0,0,0.3)] transform hover:rotate-3 transition-transform duration-700" 
-                                alt="Roku App" 
+                {/* SECTION 2: TOP 10 TODAY (Vibrant Ranking) */}
+                {topTenMovies.length > 0 && (
+                    <section className="py-32 px-4 md:px-12 bg-black">
+                        <div className="max-w-[1800px] mx-auto">
+                            <MovieCarousel 
+                                title={
+                                    <h2 className="text-3xl md:text-5xl font-black uppercase italic tracking-tighter text-white mb-8 border-l-8 border-red-600 pl-8">
+                                        Top 10 Today
+                                    </h2>
+                                } 
+                                movies={topTenMovies} 
+                                onSelectMovie={() => openAuthModal('signup')} 
+                                watchedMovies={new Set()} 
+                                watchlist={new Set()} 
+                                likedMovies={new Set()} 
+                                onToggleLike={() => {}} 
+                                onToggleWatchlist={() => {}} 
+                                onSupportMovie={() => {}} 
+                                showRankings={true}
                             />
                         </div>
-                    </div>
-                </section>
+                    </section>
+                )}
 
-                {/* SECTION 3: THE VALUE GRID */}
-                <section className="py-40 px-6 max-w-7xl mx-auto">
-                    <div className="text-center space-y-4 mb-24">
-                        <h2 className="text-4xl md:text-7xl font-black uppercase tracking-tighter italic">Why Crate TV?</h2>
-                        <div className="h-2 w-24 bg-red-600 mx-auto rounded-full"></div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <FeatureBlock 
-                            icon="💎" 
-                            title="70/30 Patronage" 
-                            desc="We bypass the gatekeepers. 70% of every ticket and donation goes directly into the hands of the filmmakers." 
+                {/* SECTION 3: MORE REASONS TO JOIN (Dark Card Grid) */}
+                <section className="py-40 px-6 max-w-[1600px] mx-auto">
+                    <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-12 text-white italic">More reasons to join</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <ReasonCard 
+                            title="Enjoy on your TV" 
+                            desc="Install the native Roku app, or use our high-bitrate casting to stream on Apple TV and Chromecast."
+                            icon="📺"
                         />
-                        <FeatureBlock 
-                            icon="🛰️" 
-                            title="Live Events" 
-                            desc="Synchronized global watch parties with real-time director talkbacks. Cinema as a communal experience." 
+                        <ReasonCard 
+                            title="Direct Support" 
+                            desc="Bypass the gatekeepers. 70% of every ticket goes directly to the filmmakers."
+                            icon="💎"
                         />
-                        <FeatureBlock 
-                            icon="🍿" 
+                        <ReasonCard 
+                            title="Watch Everywhere" 
+                            desc="Optimized for mobile, tablet, and desktop. Zero installation required for instant playback."
+                            icon="🛰️"
+                        />
+                        <ReasonCard 
                             title="Crate Zine" 
-                            desc="Expert curatorial dispatches and interviews. We don't just stream films; we document the culture." 
+                            desc="Access deep-dive interviews and curatorial dispatches from the cinematic underground."
+                            icon="🍿"
                         />
                     </div>
                 </section>
 
-                {/* SECTION 4: THE FAQ SECTION (Trust Building) */}
+                {/* SECTION 4: THE FAQ SECTION */}
                 <section className="py-40 px-6 bg-black border-y border-white/5">
                     <div className="max-w-4xl mx-auto">
                         <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic text-center mb-20">Frequently Asked Questions</h2>
@@ -200,11 +221,11 @@ const LandingPage: React.FC = () => {
                             />
                             <FaqItem 
                                 question="How much does it cost?" 
-                                answer={<p>Browsing the catalog and reading the Zine is completely free. Most films are free to stream, while certain "Live Premieres" or "Vault Masters" require a small one-time ticket or rental fee. You only pay for what you watch—no recurring monthly subscriptions.</p>}
+                                answer={<p>Browsing the catalog and reading the Zine is completely free. Most films are free to stream, while certain "Live Premieres" or premium rentals require a small one-time fee. You only pay for what you watch—no monthly subscriptions.</p>}
                             />
                             <FaqItem 
                                 question="Where can I watch?" 
-                                answer={<p>You can watch on any web browser at cratetv.net. We also have a custom app available on the Roku Channel Store for the big-screen experience, and support casting to Apple TV and Chromecast devices.</p>}
+                                answer={<p>Watch on any web browser at cratetv.net. We also have a custom app available on the Roku Channel Store for the big-screen experience, and support casting to Apple TV and Chromecast devices.</p>}
                             />
                             <FaqItem 
                                 question="How do I submit my film?" 
@@ -228,7 +249,7 @@ const LandingPage: React.FC = () => {
                 <section className="relative py-48 px-6 text-center overflow-hidden">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.1)_0%,transparent_70%)]"></div>
                     <div className="relative z-10 max-w-4xl mx-auto space-y-12">
-                        <h2 className="text-6xl md:text-9xl font-black uppercase tracking-tighter italic leading-none">The work is waiting.</h2>
+                        <h2 className="text-6xl md:text-[10rem] font-black uppercase tracking-tighter italic leading-none">The work is waiting.</h2>
                         <p className="text-gray-400 text-xl font-medium">Ready to watch? Enter your email to create your free account.</p>
                         <form onSubmit={(e) => { e.preventDefault(); openAuthModal('signup'); }} className="flex flex-col md:flex-row gap-4 max-w-2xl mx-auto">
                             <input
