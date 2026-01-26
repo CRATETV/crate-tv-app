@@ -15,7 +15,7 @@ const FeatureBlock: React.FC<{ title: string; desc: string; icon: string }> = ({
     </div>
 );
 
-const FaqItem: React.FC<{ question: string; answer: string }> = ({ question, answer }) => {
+const FaqItem: React.FC<{ question: string; answer: React.ReactNode }> = ({ question, answer }) => {
     const [isOpen, setIsOpen] = useState(false);
     return (
         <div className="border-b border-white/10">
@@ -27,7 +27,9 @@ const FaqItem: React.FC<{ question: string; answer: string }> = ({ question, ans
                 <span className={`text-3xl transition-transform duration-300 ${isOpen ? 'rotate-45' : ''}`}>+</span>
             </button>
             <div className={`overflow-hidden transition-all duration-500 ${isOpen ? 'max-h-96 pb-8' : 'max-h-0'}`}>
-                <p className="text-gray-400 text-lg md:text-xl leading-relaxed">{answer}</p>
+                <div className="text-gray-400 text-lg md:text-xl leading-relaxed space-y-4">
+                    {answer}
+                </div>
             </div>
         </div>
     );
@@ -61,6 +63,12 @@ const LandingPage: React.FC = () => {
     const openAuthModal = (view: 'login' | 'signup') => {
         setInitialAuthView(view);
         setIsAuthModalOpen(true);
+    };
+
+    const handleNavigate = (path: string) => {
+        window.history.pushState({}, '', path);
+        window.dispatchEvent(new Event('pushstate'));
+        window.scrollTo(0,0);
     };
 
     if (isLoading) return <LoadingSpinner />;
@@ -102,7 +110,7 @@ const LandingPage: React.FC = () => {
                         </div>
                         
                         <p className="text-2xl md:text-4xl text-gray-200 font-medium max-w-3xl mx-auto leading-tight tracking-tight">
-                            Unlimited independent stories. <br className="hidden md:block"/> Watch anywhere. Cancel anytime.
+                            Unlimited independent stories. <br className="hidden md:block"/> Zero subscriptions. Pure cinema.
                         </p>
 
                         <div className="w-full max-w-2xl mx-auto pt-8">
@@ -127,21 +135,21 @@ const LandingPage: React.FC = () => {
                     </div>
                 </section>
 
-                {/* SECTION 2: THE LIGHT BREAK (Solving the "Too Dark" Issue) */}
+                {/* SECTION 2: THE LIGHT BREAK (Addressing the 'Too Dark' feedback) */}
                 <section className="bg-white py-40 px-6">
                     <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
                         <div className="space-y-10 order-2 lg:order-1">
                             <div className="space-y-4">
-                                <span className="bg-red-600 text-white font-black px-4 py-1 rounded-full text-[10px] uppercase tracking-widest">Big Screen Ready</span>
+                                <span className="bg-red-600 text-white font-black px-4 py-1 rounded-full text-[10px] uppercase tracking-widest">Universal Casting</span>
                                 <h2 className="text-5xl md:text-[5.5rem] font-black text-black uppercase tracking-tighter leading-[0.9] italic">Watch on your TV.</h2>
                             </div>
                             <p className="text-xl md:text-2xl text-gray-600 leading-relaxed font-medium max-w-xl">
-                                Stream on Roku, Apple TV, Chromecast, and more. Our custom Roku SDK brings the independent cinematic underground directly to your living room in stunning 4K bitrate.
+                                Install our native app on the **Roku Channel Store**, or use our built-in **Cast Hub** to beam 4K masters directly to Apple TV, Chromecast, and Smart TVs with one tap.
                             </p>
                             <div className="flex flex-wrap gap-8 pt-4 grayscale opacity-40">
                                 <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/ruko+logo+.webp" className="h-12 w-auto" alt="Roku" />
                                 <span className="text-black font-black text-2xl border-l-2 border-black/10 pl-8">APPLE TV</span>
-                                <span className="text-black font-black text-2xl border-l-2 border-black/10 pl-8">MOBILE</span>
+                                <span className="text-black font-black text-2xl border-l-2 border-black/10 pl-8">CHROMECAST</span>
                             </div>
                         </div>
                         <div className="relative order-1 lg:order-2">
@@ -155,7 +163,7 @@ const LandingPage: React.FC = () => {
                     </div>
                 </section>
 
-                {/* SECTION 3: VALUE PROP GRID */}
+                {/* SECTION 3: THE VALUE GRID */}
                 <section className="py-40 px-6 max-w-7xl mx-auto">
                     <div className="text-center space-y-4 mb-24">
                         <h2 className="text-4xl md:text-7xl font-black uppercase tracking-tighter italic">Why Crate TV?</h2>
@@ -181,32 +189,42 @@ const LandingPage: React.FC = () => {
                     </div>
                 </section>
 
-                {/* SECTION 4: THE FAQ (Building Trust) */}
+                {/* SECTION 4: THE FAQ SECTION (Trust Building) */}
                 <section className="py-40 px-6 bg-black border-y border-white/5">
                     <div className="max-w-4xl mx-auto">
                         <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic text-center mb-20">Frequently Asked Questions</h2>
                         <div className="space-y-4">
                             <FaqItem 
                                 question="What is Crate TV?" 
-                                answer="Crate TV is a specialized streaming infrastructure for independent cinema. We provide a 'Distribution Afterlife' for films, ensuring great stories live on long after the festival circuit."
+                                answer={<p>Crate TV is a specialized streaming infrastructure for independent cinema. We provide a "Distribution Afterlife" for films, ensuring great stories live on long after the festival circuit.</p>}
                             />
                             <FaqItem 
                                 question="How much does it cost?" 
-                                answer="Browsing the catalog and reading the Zine is free. Most films are free to stream, while premium 'Live Premiere' events and VOD master files require a small ticket fee ($5.00), with 70% going directly to the filmmaker."
+                                answer={<p>Browsing the catalog and reading the Zine is completely free. Most films are free to stream, while certain "Live Premieres" or "Vault Masters" require a small one-time ticket or rental fee. You only pay for what you watch—no recurring monthly subscriptions.</p>}
                             />
                             <FaqItem 
                                 question="Where can I watch?" 
-                                answer="You can watch on any web browser at cratetv.net. We also have a custom app available on the Roku Channel Store for the big-screen experience."
+                                answer={<p>You can watch on any web browser at cratetv.net. We also have a custom app available on the Roku Channel Store for the big-screen experience, and support casting to Apple TV and Chromecast devices.</p>}
                             />
                             <FaqItem 
                                 question="How do I submit my film?" 
-                                answer="We are always looking for bold new voices. You can submit your work directly through our 'Submit' portal or via FilmFreeway."
+                                answer={
+                                    <div className="space-y-6">
+                                        <p>We are always looking for bold new voices. You can submit your work directly through our creator portal.</p>
+                                        <button 
+                                            onClick={() => handleNavigate('/submit')}
+                                            className="bg-white text-black font-black px-8 py-3 rounded-xl uppercase text-xs tracking-widest hover:bg-gray-200 transition-all shadow-xl active:scale-95"
+                                        >
+                                            Submit Your Work
+                                        </button>
+                                    </div>
+                                }
                             />
                         </div>
                     </div>
                 </section>
 
-                {/* SECTION 5: FINAL CALL TO ACTION */}
+                {/* SECTION 5: FINAL CALL */}
                 <section className="relative py-48 px-6 text-center overflow-hidden">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.1)_0%,transparent_70%)]"></div>
                     <div className="relative z-10 max-w-4xl mx-auto space-y-12">
