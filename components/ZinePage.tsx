@@ -8,12 +8,12 @@ import SEO from './SEO';
 import { EditorialStory, ZineSection } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 
-const ZineCard: React.FC<{ story: EditorialStory; isLarge?: boolean; onClick: () => void }> = ({ story, isLarge, onClick }) => (
+const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ story, onClick }) => (
     <div 
         onClick={onClick}
-        className={`group cursor-pointer flex flex-col gap-4 transition-all duration-500 hover:-translate-y-1 ${isLarge ? 'md:col-span-2' : ''}`}
+        className="group cursor-pointer flex flex-col gap-4 transition-all duration-500 hover:-translate-y-1"
     >
-        <div className={`relative overflow-hidden rounded-[2rem] bg-[#0a0a0a] shadow-2xl border border-white/5 aspect-video ${isLarge ? 'md:aspect-auto md:h-[450px]' : ''}`}>
+        <div className="relative overflow-hidden rounded-[2rem] bg-[#0a0a0a] shadow-2xl border border-white/5 aspect-video">
             <img 
                 src={`/api/proxy-image?url=${encodeURIComponent(story.heroImage)}`} 
                 className="w-full h-full object-cover transition-transform duration-[2000ms] group-hover:scale-110" 
@@ -28,7 +28,7 @@ const ZineCard: React.FC<{ story: EditorialStory; isLarge?: boolean; onClick: ()
             </div>
         </div>
         <div className="px-2 space-y-2">
-            <h3 className={`font-black text-white uppercase tracking-tighter italic leading-none transition-colors group-hover:text-red-500 ${isLarge ? 'text-3xl md:text-5xl' : 'text-2xl'}`}>
+            <h3 className="font-black text-white uppercase tracking-tighter italic leading-none transition-colors group-hover:text-red-500 text-2xl">
                 {story.title}
             </h3>
             <p className="text-gray-400 text-sm md:text-base font-medium line-clamp-2 leading-snug">
@@ -46,12 +46,13 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     const [stories, setStories] = useState<EditorialStory[]>([]);
     const [activeStory, setActiveStory] = useState<EditorialStory | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeFilter, setActiveFilter] = useState('SPOTLIGHT');
+    const [activeFilter, setActiveFilter] = useState('NEWS'); 
     const [email, setEmail] = useState('');
     const [subStatus, setSubStatus] = useState<'idle' | 'loading' | 'success'>('idle');
     const articleRef = useRef<HTMLElement>(null);
 
-    const filters = ['SPOTLIGHT', 'NEWS', 'INTERVIEW', 'DEEP_DIVE'];
+    // Removed 'SPOTLIGHT' from filters as requested
+    const filters = ['NEWS', 'INTERVIEW', 'DEEP_DIVE'];
 
     useEffect(() => {
         const fetchStories = async () => {
@@ -126,8 +127,8 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
             <main className="flex-grow pb-32">
                 {!activeStory ? (
                     <div className="space-y-0">
-                        {/* BRAND HEADER: NOW AT THE VERY TOP */}
-                        <div className="max-w-[1800px] mx-auto px-6 md:px-20 pt-32 pb-16 space-y-6 text-center md:text-left relative overflow-hidden">
+                        {/* BRAND HEADER */}
+                        <div className="max-w-[1800px] mx-auto px-6 md:px-20 pt-32 pb-12 space-y-6 text-center md:text-left relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-[600px] h-[300px] bg-red-600/5 blur-[120px] pointer-events-none rounded-full"></div>
                             
                             <h1 className="text-7xl md:text-[9rem] font-black uppercase tracking-tighter leading-none italic bg-gradient-to-r from-red-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent drop-shadow-2xl py-2">
@@ -154,25 +155,24 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
 
                         {/* CONTENT HUB */}
                         <div className="max-w-[1800px] mx-auto px-6 md:px-20 pt-24 space-y-32">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-24">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16">
                                 {filteredStories.length > 0 ? (
-                                    filteredStories.map((story, idx) => (
+                                    filteredStories.map((story) => (
                                         <ZineCard 
                                             key={story.id} 
                                             story={story} 
-                                            isLarge={idx % 4 === 0 && activeFilter !== 'SPOTLIGHT'} 
                                             onClick={() => handleNavigate(story.id)} 
                                         />
                                     ))
                                 ) : (
                                     <div className="col-span-full py-32 text-center opacity-30 italic">
-                                        <p className="text-gray-600 uppercase font-black tracking-[0.5em] text-xs">Scanning digital archives for next {activeFilter} manifest...</p>
+                                        <p className="text-gray-600 uppercase font-black tracking-[0.5em] text-xs">Scanning digital archives for manifest...</p>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* JOIN NEWSLETTER */}
+                        {/* JOIN NEWSLETTER SECTION */}
                         <section className="max-w-4xl mx-auto px-6 pt-40 pb-20">
                             <div className="relative p-[1px] bg-gradient-to-r from-red-600 via-purple-600 to-indigo-600 rounded-[3rem] shadow-[0_40px_120px_rgba(239,68,68,0.15)] group transition-all duration-700 hover:shadow-[0_40px_120px_rgba(239,68,68,0.25)]">
                                 <div className="bg-[#050505] rounded-[3rem] p-10 md:p-20 text-center space-y-10 relative overflow-hidden">
@@ -203,7 +203,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                                 disabled={subStatus === 'loading'}
                                                 className="bg-white text-black font-black py-5 px-10 rounded-2xl uppercase text-[11px] tracking-widest shadow-[0_15px_35px_rgba(255,255,255,0.2)] transition-all hover:bg-gray-200 active:scale-95 disabled:opacity-50"
                                             >
-                                                {subStatus === 'loading' ? 'Syncing...' : 'Join Newsletter'}
+                                                {subStatus === 'loading' ? 'Joining...' : 'Join Newsletter'}
                                             </button>
                                         </form>
                                     )}

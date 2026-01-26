@@ -120,6 +120,14 @@
       .animate-emoji-float {
         animation: emoji-float 4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
       }
+      
+      @keyframes slowPan {
+        from { transform: translateX(0) translateY(0); }
+        to { transform: translateX(-5%) translateY(-5%); }
+      }
+      .animate-slow-pan {
+        animation: slowPan 30s linear infinite alternate;
+      }
     </style>
     <script type="importmap">
 {

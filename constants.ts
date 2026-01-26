@@ -1,4 +1,3 @@
-
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData, PromoCode } from './types';
 
 // Utility function to robustly check if a movie is past its release time.
@@ -23,8 +22,12 @@ export const promoCodesData: Record<string, Partial<PromoCode>> = {
 
 export const categoriesData: Record<string, Category> = {
   "featured": {
-    "title": "Featured Films",
-    "movieKeys": ["fighter"]
+    "title": "Spotlight Selection",
+    "movieKeys": ["meridian", "fighter", "gemini", "autumn"]
+  },
+  "publicAccess": {
+    "title": "The Square",
+    "movieKeys": ["trip_to_moon", "the_cook", "time_service"]
   }
 };
 
@@ -46,14 +49,121 @@ export const moviesData: Record<string, Movie> = {
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fighter+Short+Film.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fighter+.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fighter+.webp",
-    "likes": 0,
-    "publishedAt": new Date().toISOString()
+    "likes": 1240,
+    "publishedAt": "2025-01-10T12:00:00Z"
+  },
+  "meridian": {
+    "key": "meridian",
+    "title": "Meridian",
+    "synopsis": "A group of technical specialists investigate a series of mysterious disappearances in a high-contrast cinematic environment. This film serves as a master-class in technical lighting and high-bitrate composition.",
+    "cast": [
+      {
+        "name": "S. Denoon",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Leading figure in experimental technical performance.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Netflix Open Source",
+    "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Trailer.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Full_4K.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Poster.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Poster.webp",
+    "likes": 850,
+    "durationInMinutes": 12,
+    "publishedAt": "2025-02-15T10:00:00Z"
+  },
+  "the_cook": {
+    "key": "the_cook",
+    "title": "The Cook",
+    "synopsis": "A chaotic kitchen becomes the stage for comedic genius in this 1918 classic. Fatty Arbuckle and Buster Keaton demonstrate the absolute origins of physical cinema.",
+    "cast": [
+      {
+        "name": "Buster Keaton",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "The Great Stone Face.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Roscoe Arbuckle",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/The_Cook_Restored.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/TheCook_Poster.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/TheCook_Poster.webp",
+    "likes": 420,
+    "publishedAt": "2025-01-05T09:00:00Z"
+  },
+  "autumn": {
+    "key": "autumn",
+    "title": "Autumn",
+    "synopsis": "A moody, atmospheric exploration of isolation and the changing of seasons. Shot entirely on 16mm, this indie short focuses on the kinetic beauty of decay.",
+    "cast": [],
+    "director": "Independent Visionary",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn_Short.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn_Art.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn_Art.webp",
+    "likes": 310,
+    "publishedAt": "2025-03-01T15:00:00Z"
+  },
+  "gemini": {
+    "key": "gemini",
+    "title": "Gemini",
+    "synopsis": "Dual natures collide in this sci-fi thriller about identity and the blurred lines between artificial and human intelligence. A tense, dialogue-driven performance piece.",
+    "cast": [
+      {
+        "name": "Marcus Kane",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Specialist in psychological tension.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "The Collective",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini_Short.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini_Poster.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini_Poster.webp",
+    "likes": 560,
+    "publishedAt": "2025-04-12T18:00:00Z"
+  },
+  "time_service": {
+    "key": "time_service",
+    "title": "Time Service",
+    "synopsis": "A mesmerizing technical record of how time was measured and broadcast in the mid-century. A preservation of both history and the mechanical pulse of the era.",
+    "cast": [],
+    "director": "U.S. Naval Observatory (Archive)",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/TimeService_Archive.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/TimeService_Poster.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/TimeService_Poster.webp",
+    "likes": 280,
+    "publishedAt": "2025-02-20T11:00:00Z"
+  },
+  "trip_to_moon": {
+    "key": "trip_to_moon",
+    "title": "A Trip to the Moon",
+    "synopsis": "The 1902 sci-fi masterpiece by Georges Méliès. Witness the first iconic image of space travel and the birth of special effects in cinema history.",
+    "cast": [
+      {
+        "name": "Georges Méliès",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "The father of cinematic magic.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Georges Méliès",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/TripToTheMoon_1902.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
+    "likes": 2100,
+    "publishedAt": "2025-01-01T00:00:00Z"
   }
 };
 
 export const aboutData: AboutData = {
-  missionStatement: "Championing the bold and the unique in independent cinema.",
-  story: "Crate TV was born out of a desire to provide a permanent home for films that often disappear after their festival run.",
+  missionStatement: "At Crate TV, we believe no great story should have an expiration date. Our mission is to liberate independent film from the festival circuit, creating a raw, authentic connection between the world's most daring creators and the viewers who seek them.",
+  story: "Crate was born from the independent spirit of Philadelphia, providing a permanent distribution afterlife for films that deserve more than a weekend screening.",
   belief1Title: "Art First",
   belief1Body: "We believe in curation over algorithms.",
   belief2Title: "Direct Support",
