@@ -36,27 +36,26 @@ const CrateVaultRow: React.FC<CrateVaultRowProps> = ({
 
     return (
         <div className="relative my-4 md:my-6">
-            {/* 1. THE GRADIENT PERIMETER */}
+            {/* THE GRADIENT PERIMETER */}
             <div className="relative p-[1px] bg-gradient-to-r from-red-600 via-purple-600 to-indigo-600 rounded-[2.5rem] shadow-[0_20px_60px_rgba(239,68,68,0.1)] group transition-all duration-700 hover:shadow-[0_40px_100px_rgba(239,68,68,0.15)]">
                 
-                {/* 2. INTERNAL CONTAINER */}
+                {/* INTERNAL CONTAINER */}
                 <div className="bg-[#020202] rounded-[2.5rem] overflow-hidden p-4 md:p-6 relative">
-                    
-                    {/* Atmospheric Overlays */}
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.02] pointer-events-none"></div>
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.02)_0%,transparent_70%)] pointer-events-none"></div>
 
                     {/* Header Unit */}
-                    <div className="relative z-10 mb-4 md:mb-6 pl-4 border-l-[4px] border-red-600 animate-[fadeIn_1s_ease-out]">
-                        <div className="flex items-center gap-3 mb-1">
-                            <span className="text-[7px] font-black text-red-500 uppercase tracking-[0.5em] leading-none">Restricted Access</span>
+                    <div className="relative z-10 mb-4 md:mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                        <div className="pl-4 border-l-[4px] border-red-600 animate-[fadeIn_1s_ease-out]">
+                            <div className="flex items-center gap-3 mb-1">
+                                <span className="text-[7px] font-black text-red-500 uppercase tracking-[0.5em] leading-none">Restricted Access</span>
+                            </div>
+                            <h2 className="text-xl md:text-3xl font-black uppercase tracking-tighter text-white italic leading-none drop-shadow-2xl">
+                                The Crate <span className="text-gray-600">Vault.</span>
+                            </h2>
                         </div>
-                        <h2 className="text-xl md:text-3xl font-black uppercase tracking-tighter text-white italic leading-none drop-shadow-2xl">
-                            The Crate <span className="text-gray-600">Vault.</span>
-                        </h2>
                     </div>
 
-                    {/* Carousel Unit */}
                     <div className="relative group/carousel-container z-10">
                         <div 
                             ref={scrollRef} 
@@ -65,12 +64,10 @@ const CrateVaultRow: React.FC<CrateVaultRowProps> = ({
                             {movies.map((movie) => (
                                 <div key={movie.key} className="flex-shrink-0 w-[34vw] sm:w-[24vw] md:w-[18vw] lg:w-[12vw] snap-start relative">
                                     <div className="relative group/vault-card">
-                                        {/* Premium Identifier */}
                                         <div className="absolute -top-2.5 left-2.5 z-[60] bg-white text-black font-black px-1.5 py-0.5 rounded-lg text-[5px] uppercase tracking-widest shadow-2xl opacity-0 group-hover/vault-card:opacity-100 transition-opacity">
                                             VOD Node
                                         </div>
 
-                                        {/* Sharp Pricing Overlay */}
                                         <div className="absolute top-2 right-2 z-[60] opacity-0 translate-y-[-5px] group-hover/vault-card:opacity-100 group-hover/vault-card:translate-y-0 bg-red-600 text-white font-black px-1.5 py-0.5 rounded-lg text-[7px] uppercase shadow-2xl border border-white/20 transition-all duration-300">
                                             ${movie.salePrice?.toFixed(2) || '5.00'}
                                         </div>
@@ -89,7 +86,6 @@ const CrateVaultRow: React.FC<CrateVaultRowProps> = ({
                             ))}
                         </div>
 
-                        {/* Professional Navigation Anchors */}
                         <button
                             onClick={() => scroll('left')}
                             className="absolute left-0 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-red-600 text-white p-3 rounded-full opacity-0 group-hover/carousel-container:opacity-100 transition-all z-30 hidden md:block backdrop-blur-2xl border border-white/10 -ml-4 shadow-2xl active:scale-90"
@@ -110,7 +106,6 @@ const CrateVaultRow: React.FC<CrateVaultRowProps> = ({
                         </button>
                     </div>
 
-                    {/* Industrial Footer Label */}
                     <div className="mt-4 pt-4 border-t border-white/5 flex justify-end items-center text-[6px] font-black text-gray-800 uppercase tracking-[0.4em]">
                         <span>© Studio V4.0</span>
                     </div>

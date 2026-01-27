@@ -14,7 +14,6 @@ const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ st
         className="group cursor-pointer flex flex-col gap-6 transition-all duration-700 hover:-translate-y-3"
     >
         <div className="relative overflow-hidden rounded-[2.5rem] bg-black shadow-2xl border border-white/5 aspect-[16/10] backdrop-blur-sm">
-            {/* VIBRANT HOVER GLOW */}
             <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-purple-600 rounded-[2.5rem] blur opacity-0 group-hover:opacity-30 transition-opacity duration-700"></div>
             
             <img 
@@ -59,14 +58,17 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     const [subStatus, setSubStatus] = useState<'idle' | 'loading' | 'success'>('idle');
     const articleRef = useRef<HTMLElement>(null);
 
-    // RESTORED FILTERS Manifest
     const filters = ['ALL', 'SPOTLIGHT', 'NEWS', 'INTERVIEW', 'DEEP_DIVE'];
 
     useEffect(() => {
         const fetchStories = async () => {
             const db = getDbInstance();
-            if (!db) return;
+            if (!db) {
+                setIsLoading(false);
+                return;
+            }
             try {
+                // Ensure we query the correct collection and order for restoration
                 const snap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').get();
                 const fetched: EditorialStory[] = [];
                 snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as EditorialStory));
@@ -79,7 +81,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                     setActiveStory(null);
                 }
             } catch (e) {
-                console.error("Zine Downlink Error:", e);
+                console.error("Zine Restoration Fault:", e);
             } finally {
                 setIsLoading(false);
             }
@@ -128,7 +130,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                 type={activeStory ? "article" : "website"}
             />
 
-            {/* NEBULA BACKGROUND - Strictly z-0 to avoid interference with Fixed Header */}
             <div className="fixed top-[-10%] right-[-10%] w-[70%] h-[70%] bg-red-600/5 blur-[180px] rounded-full pointer-events-none z-0"></div>
             <div className="fixed bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/5 blur-[180px] rounded-full pointer-events-none z-0"></div>
 
@@ -137,7 +138,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
             <main className="flex-grow pb-32 relative z-10">
                 {!activeStory ? (
                     <div className="space-y-0">
-                        {/* VIBRANT BRAND HEADER */}
                         <div className="relative pt-60 pb-24 px-6 md:px-20 text-center space-y-10">
                             <div className="space-y-4">
                                 <div className="inline-flex items-center gap-3 bg-red-600/10 border border-red-600/20 px-6 py-2 rounded-full mb-4 mx-auto shadow-2xl">
@@ -153,7 +153,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </p>
                         </div>
 
-                        {/* STICKY FILTER NAVIGATION - Offset for Fixed Header visibility */}
                         <div className="sticky top-[72px] z-40 py-8 bg-[#050505]/80 backdrop-blur-3xl border-y border-white/5 flex items-center justify-center gap-6 md:gap-14 overflow-x-auto scrollbar-hide px-6 shadow-2xl">
                             {filters.map(f => (
                                 <button 
@@ -166,7 +165,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             ))}
                         </div>
 
-                        {/* CONTENT GRID */}
                         <div className="max-w-[1800px] mx-auto px-6 md:px-20 pt-24 pb-40">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-12 gap-y-24">
                                 {filteredStories.length > 0 ? (
@@ -179,24 +177,21 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                     ))
                                 ) : (
                                     <div className="col-span-full py-48 text-center opacity-30">
-                                        <p className="text-gray-600 uppercase font-black tracking-[0.8em] text-xs">Awaiting Narrative Sync: {activeFilter}</p>
+                                        <p className="text-gray-600 uppercase font-black tracking-[0.8em] text-xs">Scanning archives for Node: {activeFilter}</p>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* HIGH-COLOR NEWSLETTER SECTION */}
                         <section className="max-w-6xl mx-auto px-6 pb-40">
                             <div className="relative p-[1px] bg-gradient-to-r from-red-600 via-purple-600 to-indigo-600 rounded-[4rem] shadow-[0_40px_120px_rgba(239,68,68,0.25)] group transition-all duration-1000">
                                 <div className="bg-[#050505] rounded-[4rem] p-12 md:p-24 text-center space-y-12 relative overflow-hidden">
                                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.12)_0%,transparent_70%)] pointer-events-none"></div>
-                                    
                                     <div className="relative z-10 space-y-4">
                                         <p className="text-red-500 font-black uppercase tracking-[0.8em] text-[10px] mb-4">Frequency Connection</p>
                                         <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none text-white drop-shadow-2xl">Join the Dispatch.</h2>
                                         <p className="text-gray-400 text-lg md:text-2xl font-medium max-w-2xl mx-auto leading-tight italic">Exclusive deep dives, festival maps, and live watch party reveals.</p>
                                     </div>
-                                    
                                     {subStatus === 'success' ? (
                                         <div className="bg-green-600/10 border border-green-500/20 p-10 rounded-3xl inline-block px-20 animate-bounce">
                                             <p className="text-green-500 font-black uppercase text-sm tracking-[0.5em]">CONNECTION ESTABLISHED ✓</p>
@@ -226,7 +221,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                     </div>
                 ) : (
                     <div className="animate-[fadeIn_0.8s_ease-out]">
-                        {/* VIBRANT ARTICLE VIEW */}
                         <div className="relative w-full h-[65vh] md:h-[85vh] mb-20 overflow-hidden bg-black shadow-[0_50px_100px_rgba(0,0,0,1)]">
                             <img src={`/api/proxy-image?url=${encodeURIComponent(activeStory.heroImage)}`} className="w-full h-full object-cover blur-2xl opacity-40 scale-125" alt="" crossOrigin="anonymous" />
                             <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/40"></div>

@@ -66,7 +66,6 @@ const Header: React.FC<HeaderProps> = ({
     };
 
     // FIXED GLOBAL HEADER CSS
-    // Strictly fixed at the top with a high z-index and background blur
     const headerClasses = `fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${isScrolled || isScrolledProp ? 'py-3 bg-black/80 backdrop-blur-2xl border-b border-white/5 shadow-2xl' : 'py-8 bg-transparent'}`;
     
     const navLinks = [
@@ -103,20 +102,18 @@ const Header: React.FC<HeaderProps> = ({
                         )}
                     </div>
 
-                    {showNavLinks && user && (
-                        <nav className="hidden md:flex items-center gap-10">
-                            {navLinks.map(link => (
-                                <a 
-                                    key={link.path} 
-                                    href={link.path} 
-                                    onClick={(e) => handleNavigate(e, link.path)} 
-                                    className={`transition-all duration-300 text-[11px] font-black uppercase tracking-[0.25em] ${window.location.pathname === link.path ? 'text-white' : 'text-gray-500 hover:text-white'}`}
-                                >
-                                    {link.label}
-                                </a>
-                            ))}
-                        </nav>
-                    )}
+                    <nav className="hidden md:flex items-center gap-10">
+                        {navLinks.map(link => (
+                            <a 
+                                key={link.path} 
+                                href={link.path} 
+                                onClick={(e) => handleNavigate(e, link.path)} 
+                                className={`transition-all duration-300 text-[11px] font-black uppercase tracking-[0.25em] ${window.location.pathname === link.path ? 'text-white' : 'text-gray-500 hover:text-white'}`}
+                            >
+                                {link.label}
+                            </a>
+                        ))}
+                    </nav>
                 </div>
 
                 <div className="flex items-center gap-6">
@@ -158,7 +155,7 @@ const Header: React.FC<HeaderProps> = ({
                             )}
                         </div>
                     ) : onSignInClick && (
-                        <button onClick={onSignInClick} className="bg-red-600 hover:bg-red-700 text-white font-black py-2 px-6 rounded-full text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-xl">Secure Login</button>
+                        <button onClick={onSignInClick} className="bg-red-600 hover:bg-red-700 text-white font-black py-2 px-6 rounded-full text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-xl">Login</button>
                     )}
                 </div>
             </div>

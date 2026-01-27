@@ -9,13 +9,15 @@ import CollapsibleFooter from './CollapsibleFooter';
 import SEO from './SEO';
 
 const ReasonCard: React.FC<{ title: string; desc: string; icon: string }> = ({ title, desc, icon }) => (
-    <div className="bg-gradient-to-br from-gray-900 to-[#0c0c1a] border border-white/10 p-10 rounded-[2.5rem] flex flex-col justify-between min-h-[320px] transition-all hover:scale-[1.02] hover:border-red-600/30 shadow-2xl relative overflow-hidden group">
-        <div className="space-y-4 relative z-10">
-            <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter leading-none italic">{title}</h3>
-            <p className="text-gray-400 text-sm md:text-base font-medium leading-relaxed">{desc}</p>
-        </div>
-        <div className="absolute bottom-6 right-6 text-6xl opacity-20 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500">
-            {icon}
+    <div className="relative p-[1px] bg-gradient-to-br from-red-600 via-purple-600 to-indigo-600 rounded-[2.5rem] shadow-2xl group transition-all duration-700 hover:shadow-[0_20px_80px_rgba(239,68,68,0.2)] hover:-translate-y-2">
+        <div className="bg-[#050505] p-10 rounded-[2.5rem] flex flex-col justify-between min-h-[320px] relative overflow-hidden h-full">
+            <div className="space-y-4 relative z-10">
+                <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter leading-none italic">{title}</h3>
+                <p className="text-gray-400 text-sm md:text-base font-medium leading-relaxed">{desc}</p>
+            </div>
+            <div className="absolute bottom-6 right-6 text-6xl opacity-10 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500">
+                {icon}
+            </div>
         </div>
     </div>
 );
@@ -65,20 +67,16 @@ const LandingPage: React.FC = () => {
         loadData();
     }, []);
 
-    // STRICT: Filter out Vintage collection for the "Modern Content Wall"
     const modernPosters = useMemo(() => {
         const vintageKeys = new Set(categories.publicDomainIndie?.movieKeys || []);
-        // FIX: Explicitly cast Object.values(movies) to Movie[] to resolve TypeScript errors for 'poster' and 'key' properties on 'unknown' type.
         return (Object.values(movies) as Movie[])
             .filter(m => !!m.poster && !vintageKeys.has(m.key))
             .map(m => m.poster)
             .slice(0, 24);
     }, [movies, categories]);
 
-    // STRICT: Calculate Top 10 from Modern Collection only
     const topTenMovies = useMemo(() => {
         const vintageKeys = new Set(categories.publicDomainIndie?.movieKeys || []);
-        // FIX: Explicitly cast Object.values(movies) to Movie[] to resolve TypeScript errors for 'poster', 'isUnlisted', and 'key' properties on 'unknown' type.
         return (Object.values(movies) as Movie[])
             .filter(m => !!m.poster && !m.isUnlisted && !vintageKeys.has(m.key))
             .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
@@ -88,12 +86,6 @@ const LandingPage: React.FC = () => {
     const openAuthModal = (view: 'login' | 'signup') => {
         setInitialAuthView(view);
         setIsAuthModalOpen(true);
-    };
-
-    const handleNavigate = (path: string) => {
-        window.history.pushState({}, '', path);
-        window.dispatchEvent(new Event('pushstate'));
-        window.scrollTo(0,0);
     };
 
     if (isLoading) return <LoadingSpinner />;
@@ -113,9 +105,8 @@ const LandingPage: React.FC = () => {
             />
             
             <main className="flex-grow">
-                {/* SECTION 1: THE VIBRANT CONTENT WALL HERO */}
+                {/* SECTION 1: HERO */}
                 <section className="relative h-[95vh] flex flex-col items-center justify-center overflow-hidden border-b border-white/10">
-                    {/* Full Color Animated Grid (No grayscale) */}
                     <div className="absolute inset-0 z-0 grid grid-cols-3 md:grid-cols-6 gap-4 opacity-30 scale-110 rotate-[-5deg] pointer-events-none animate-slow-pan">
                         {modernPosters.concat(modernPosters).map((url, i) => (
                             <div key={i} className="aspect-[2/3] rounded-xl overflow-hidden bg-gray-900 shadow-2xl">
@@ -161,7 +152,7 @@ const LandingPage: React.FC = () => {
                     </div>
                 </section>
 
-                {/* SECTION 2: TOP 10 TODAY (Vibrant Ranking) */}
+                {/* SECTION 2: TOP 10 */}
                 {topTenMovies.length > 0 && (
                     <section className="py-32 px-4 md:px-12 bg-black">
                         <div className="max-w-[1800px] mx-auto">
@@ -185,10 +176,10 @@ const LandingPage: React.FC = () => {
                     </section>
                 )}
 
-                {/* SECTION 3: MORE REASONS TO JOIN (Dark Card Grid) */}
+                {/* SECTION 3: REASONS (CHROMATIC BORDERS) */}
                 <section className="py-40 px-6 max-w-[1600px] mx-auto">
                     <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-12 text-white italic">More reasons to join</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                         <ReasonCard 
                             title="Enjoy on your TV" 
                             desc="Install the native Roku app, or use our high-bitrate casting to stream on Apple TV and Chromecast."
@@ -212,7 +203,7 @@ const LandingPage: React.FC = () => {
                     </div>
                 </section>
 
-                {/* SECTION 4: THE FAQ SECTION */}
+                {/* SECTION 4: FAQ */}
                 <section className="py-40 px-6 bg-black border-y border-white/5">
                     <div className="max-w-4xl mx-auto">
                         <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic text-center mb-20">Frequently Asked Questions</h2>
@@ -235,7 +226,7 @@ const LandingPage: React.FC = () => {
                                     <div className="space-y-6">
                                         <p>We are always looking for bold new voices. You can submit your work directly through our creator portal.</p>
                                         <button 
-                                            onClick={() => handleNavigate('/submit')}
+                                            onClick={() => { window.location.href='/submit'; }}
                                             className="bg-white text-black font-black px-8 py-3 rounded-xl uppercase text-xs tracking-widest hover:bg-gray-200 transition-all shadow-xl active:scale-95"
                                         >
                                             Submit Your Work
