@@ -97,14 +97,14 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
               <div className="flex flex-row flex-wrap items-center gap-2 md:gap-4 animate-[fadeInHeroContent_1.2s_ease-out] pointer-events-auto">
                   <button
                       onClick={() => onPlayMovie(currentMovie)}
-                      className="flex items-center justify-center h-10 md:h-12 px-6 md:px-8 bg-white text-black font-bold rounded hover:bg-gray-200 transition-all transform hover:scale-105 shadow-2xl text-sm md:text-lg uppercase tracking-widest"
+                      className="flex items-center justify-center h-10 md:h-12 px-6 md:px-8 bg-white text-black font-bold rounded-full hover:bg-gray-200 transition-all transform hover:scale-105 shadow-2xl text-sm md:text-lg uppercase tracking-widest"
                   >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mr-1.5 md:mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                       Play
                   </button>
                   <button
                       onClick={() => onMoreInfo(currentMovie)}
-                      className="flex items-center justify-center h-10 md:h-12 px-6 md:px-8 bg-gray-500/40 backdrop-blur-md border border-white/20 text-white font-bold rounded hover:bg-gray-500/60 transition-all transform hover:scale-105 shadow-2xl text-sm md:text-lg uppercase tracking-widest"
+                      className="flex items-center justify-center h-10 md:h-12 px-6 md:px-8 bg-gray-500/40 backdrop-blur-md border border-white/20 text-white font-bold rounded-full hover:bg-gray-500/60 transition-all transform hover:scale-105 shadow-2xl text-sm md:text-lg uppercase tracking-widest"
                   >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 mr-1.5 md:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       Details
@@ -113,7 +113,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
                   {showVideo && (
                       <button 
                           onClick={() => setIsMuted(!isMuted)}
-                          className="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 bg-white/10 hover:bg-white/20 rounded border border-white/20 transition-all backdrop-blur-md"
+                          className="flex items-center justify-center h-10 w-10 md:h-12 md:w-12 bg-white/10 hover:bg-white/20 rounded-full border border-white/20 transition-all backdrop-blur-md"
                           aria-label={isMuted ? "Unmute" : "Mute"}
                       >
                           {isMuted ? (

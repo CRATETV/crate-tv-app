@@ -68,7 +68,8 @@ const LandingPage: React.FC = () => {
     // STRICT: Filter out Vintage collection for the "Modern Content Wall"
     const modernPosters = useMemo(() => {
         const vintageKeys = new Set(categories.publicDomainIndie?.movieKeys || []);
-        return Object.values(movies)
+        // FIX: Explicitly cast Object.values(movies) to Movie[] to resolve TypeScript errors for 'poster' and 'key' properties on 'unknown' type.
+        return (Object.values(movies) as Movie[])
             .filter(m => !!m.poster && !vintageKeys.has(m.key))
             .map(m => m.poster)
             .slice(0, 24);
@@ -77,7 +78,8 @@ const LandingPage: React.FC = () => {
     // STRICT: Calculate Top 10 from Modern Collection only
     const topTenMovies = useMemo(() => {
         const vintageKeys = new Set(categories.publicDomainIndie?.movieKeys || []);
-        return Object.values(movies)
+        // FIX: Explicitly cast Object.values(movies) to Movie[] to resolve TypeScript errors for 'poster', 'isUnlisted', and 'key' properties on 'unknown' type.
+        return (Object.values(movies) as Movie[])
             .filter(m => !!m.poster && !m.isUnlisted && !vintageKeys.has(m.key))
             .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
             .slice(0, 10);

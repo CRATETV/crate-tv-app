@@ -22,20 +22,17 @@ const processLiveEmbed = (input: string, startTimeOffset: number = 0): string =>
     const trimmed = input.trim();
     const startSec = Math.max(0, Math.floor(startTimeOffset));
 
-    // If it's already a raw iframe, we can only pass the string back.
     if (trimmed.startsWith('<iframe')) return trimmed;
 
     const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const ytMatch = trimmed.match(ytRegex);
     if (ytMatch && ytMatch[1]) {
-        // YouTube uses '&start=X' for offsets
         return `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1&controls=1&showinfo=0${startSec > 0 ? `&start=${startSec}` : ''}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
     }
 
     const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
     const vimeoMatch = trimmed.match(vimeoRegex);
     if (vimeoMatch && vimeoMatch[1]) {
-        // Vimeo uses '#t=Xs' for offsets
         return `<iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&color=ef4444&title=0&byline=0&portrait=0${startSec > 0 ? `#t=${startSec}s` : ''}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
     }
 
@@ -146,40 +143,48 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     const movie = useMemo(() => allMovies[movieKey], [movieKey, allMovies]);
 
-    // Calculate time offset since actualStartTime
+    // Calculate time offset since actualStartTime with drift protection
     const currentOffset = useMemo(() => {
         if (!partyState?.actualStartTime) return 0;
         try {
             const serverStart = (partyState.actualStartTime as any).toDate().getTime();
             const now = Date.now();
-            return (now - serverStart) / 1000;
+            return Math.max(0, (now - serverStart) / 1000);
         } catch (e) { return 0; }
     }, [partyState?.actualStartTime]);
 
-    // FRAME-ACCURATE SYNC LOGIC (FOR NATIVE VIDEO)
+    // BUG FIX: RESILIENT SYNC LOGIC
+    // Prevents "End of Stream" loop glitches and stalls
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !partyState?.actualStartTime || movie?.isLiveStream) return;
 
         const syncClock = () => {
             const targetPosition = currentOffset;
+            const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
 
-            // If the movie should have ended, stop it.
-            const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : 3600;
-            if (targetPosition > movieDuration) {
-                video.pause();
+            // STALL GUARD: If target is beyond duration, don't glitch seek, just stop at the end.
+            if (targetPosition >= movieDuration) {
+                if (!video.paused && !video.ended) {
+                    video.pause();
+                    video.currentTime = movieDuration;
+                }
                 return;
             }
 
-            // High precision drift correction (threshold: 2 seconds)
-            // Hard realignment ensures all global viewers are within the same 2-second window
-            if (Math.abs(video.currentTime - targetPosition) > 2) {
+            // DRIFT PROTECTION: Only seek if the difference is substantial (> 4s) to avoid "jitter".
+            if (Math.abs(video.currentTime - targetPosition) > 4) {
                 video.currentTime = targetPosition;
             }
 
-            // Ensure play state parity across cluster
-            if (partyState.isPlaying && video.paused) video.play().catch(() => {});
-            else if (!partyState.isPlaying && !video.paused) video.pause();
+            // PLAY STATE SYNC
+            if (partyState.isPlaying && video.paused && !video.ended) {
+                video.play().catch(() => {
+                    // Browser likely blocked autoplay. User must interact.
+                });
+            } else if (!partyState.isPlaying && !video.paused) {
+                video.pause();
+            }
         };
 
         const interval = setInterval(syncClock, 3000); 
