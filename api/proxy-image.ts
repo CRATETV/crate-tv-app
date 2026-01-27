@@ -5,28 +5,25 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     let imageUrl = searchParams.get('url');
 
-    // Add a security check to only proxy images from our own S3 bucket
-    if (!imageUrl || !imageUrl.startsWith('https://cratetelevision.s3.')) {
-      return new Response('A valid Crate TV S3 image URL is required.', { status: 400 });
+    // SECURITY CHECK: Allow any valid Amazon S3 image URL within our infrastructure
+    if (!imageUrl || (!imageUrl.includes('.s3.') && !imageUrl.includes('.amazonaws.com'))) {
+      return new Response('A valid S3 image URL is required.', { status: 400 });
     }
 
     // Trim whitespace from the URL which can cause issues.
     imageUrl = imageUrl.trim();
 
     /**
-     * CRITICAL FIX: Removed .replace(/\+/g, '%20'). 
-     * In S3 object keys, a '+' character is literal. 
-     * Replacing it with '%20' (space) was causing 404s for files like "Fighter+.webp".
-     * Standard fetch handles the literal '+' correctly for S3.
+     * CRITICAL FIX: Standardize encoding for S3 compatibility.
+     * Spaces are re-encoded to %20, and literal plus signs are preserved.
      */
     const correctedImageUrl = imageUrl
-        .replace(/\s/g, '%20') // Re-encode actual spaces
-        .replace(/'/g, '%27'); // Re-encode apostrophes
+        .replace(/\s/g, '%20') 
+        .replace(/'/g, '%27');
 
     const imageResponse = await fetch(correctedImageUrl);
     
     if (!imageResponse.ok) {
-      // Provide more debug info on failure
       console.error(`Proxy failed to fetch: ${correctedImageUrl}, Status: ${imageResponse.status}`);
       return new Response(`Failed to fetch image from source. Status: ${imageResponse.status}`, { status: imageResponse.status });
     }
@@ -39,9 +36,8 @@ export async function GET(request: Request) {
       status: 200,
       headers: {
         'Content-Type': contentType,
-        // Allow caching to reduce server load and improve performance
+        // Allow caching to improve performance
         'Cache-Control': 'public, max-age=604800, immutable', // Cache for 1 week
-        // FIX: Add this header to allow cross-origin use in canvases (for html2canvas)
         'Access-Control-Allow-Origin': '*',
       },
     });

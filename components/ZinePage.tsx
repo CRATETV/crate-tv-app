@@ -6,7 +6,7 @@ import BackToTopButton from './BackToTopButton';
 import BottomNavBar from './BottomNavBar';
 import SEO from './SEO';
 import { EditorialStory, ZineSection } from '../types';
-import { getDbInstance } from '../services/firebaseClient';
+import { useFestival } from '../contexts/FestivalContext';
 
 const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ story, onClick }) => (
     <div 
@@ -14,7 +14,6 @@ const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ st
         className="group cursor-pointer flex flex-col gap-6 transition-all duration-700 hover:-translate-y-3"
     >
         <div className="relative overflow-hidden rounded-[2.5rem] bg-black shadow-2xl border border-white/5 aspect-[16/10] backdrop-blur-sm">
-            {/* VIBRANT CHROMATIC HOVER GLOW */}
             <div className="absolute -inset-1 bg-gradient-to-r from-red-600 via-purple-600 to-emerald-500 rounded-[2.5rem] blur opacity-0 group-hover:opacity-40 transition-opacity duration-700"></div>
             
             <img 
@@ -51,9 +50,8 @@ const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ st
 );
 
 const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
-    const [stories, setStories] = useState<EditorialStory[]>([]);
+    const { zineStories: stories, isLoading } = useFestival();
     const [activeStory, setActiveStory] = useState<EditorialStory | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState('ALL'); 
     const [email, setEmail] = useState('');
     const [subStatus, setSubStatus] = useState<'idle' | 'loading' | 'success'>('idle');
@@ -62,34 +60,13 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     const filters = ['ALL', 'SPOTLIGHT', 'NEWS', 'INTERVIEW', 'DEEP_DIVE'];
 
     useEffect(() => {
-        const fetchStories = async () => {
-            const db = getDbInstance();
-            if (!db) {
-                // Ensure loading resolves even if DB isn't ready initially
-                setIsLoading(false);
-                return;
-            }
-            try {
-                // RESTORATION LOGIC: Targeting 'editorial_stories'
-                const snap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').get();
-                const fetched: EditorialStory[] = [];
-                snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as EditorialStory));
-                setStories(fetched);
-                
-                if (storyId) {
-                    const found = fetched.find(s => s.id === storyId);
-                    setActiveStory(found || null);
-                } else {
-                    setActiveStory(null);
-                }
-            } catch (e) {
-                console.error("Zine Restoration Fault:", e);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchStories();
-    }, [storyId]);
+        if (storyId && stories.length > 0) {
+            const found = stories.find(s => s.id === storyId);
+            setActiveStory(found || null);
+        } else {
+            setActiveStory(null);
+        }
+    }, [storyId, stories]);
 
     const filteredStories = useMemo(() => {
         if (activeFilter === 'ALL') return stories;
@@ -132,7 +109,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                 type={activeStory ? "article" : "website"}
             />
 
-            {/* ENHANCED CHROMATIC NEBULA BACKGROUND */}
             <div className="fixed top-[-10%] right-[-10%] w-[70%] h-[70%] bg-red-600/10 blur-[180px] rounded-full pointer-events-none z-0 animate-pulse"></div>
             <div className="fixed bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/10 blur-[180px] rounded-full pointer-events-none z-0"></div>
             <div className="fixed top-[20%] left-[-5%] w-[40%] h-[40%] bg-emerald-600/5 blur-[150px] rounded-full pointer-events-none z-0"></div>
@@ -142,7 +118,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
             <main className="flex-grow pb-32 relative z-10">
                 {!activeStory ? (
                     <div className="space-y-0">
-                        {/* VIBRANT BRAND HEADER */}
                         <div className="relative pt-60 pb-24 px-6 md:px-20 text-center space-y-12">
                             <div className="space-y-4">
                                 <div className="inline-flex items-center gap-3 bg-red-600/10 border border-red-600/20 px-6 py-2 rounded-full mb-4 mx-auto shadow-2xl backdrop-blur-md">
@@ -159,7 +134,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </p>
                         </div>
 
-                        {/* VIBRANT STICKY FILTER NAVIGATION */}
                         <div className="sticky top-[72px] z-40 py-10 bg-[#050505]/80 backdrop-blur-3xl border-y border-white/5 flex items-center justify-center gap-6 md:gap-14 overflow-x-auto scrollbar-hide px-6 shadow-2xl">
                             {filters.map(f => (
                                 <button 
@@ -172,7 +146,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             ))}
                         </div>
 
-                        {/* CONTENT GRID */}
                         <div className="max-w-[1800px] mx-auto px-6 md:px-20 pt-24 pb-40">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-12 gap-y-24">
                                 {filteredStories.length > 0 ? (
@@ -191,7 +164,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </div>
                         </div>
 
-                        {/* NEWSLETTER SECTION */}
                         <section className="max-w-6xl mx-auto px-6 pb-40">
                             <div className="relative p-[1px] bg-gradient-to-r from-red-600 via-purple-600 to-emerald-500 rounded-[4rem] shadow-[0_40px_120px_rgba(239,68,68,0.25)] group transition-all duration-1000">
                                 <div className="bg-[#050505] rounded-[4rem] p-12 md:p-24 text-center space-y-12 relative overflow-hidden">

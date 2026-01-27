@@ -1,7 +1,7 @@
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { Firestore, FieldValue } from 'firebase-admin/firestore';
-import { Movie } from '../types.js';
+import { Movie, EditorialStory } from '../types.js';
 
 const getRoleFromPassword = (password: string | null) => {
     if (!password) return 'unknown';
@@ -18,14 +18,15 @@ const getRoleFromPassword = (password: string | null) => {
 };
 
 const assembleAndSyncMasterData = async (db: Firestore) => {
-    // Parallel fetching for manifest assembly
-    const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap, settingsSnap] = await Promise.all([
+    // Parallel fetching for manifest assembly - ADDED editorial_stories
+    const [moviesSnap, categoriesSnap, aboutSnap, festivalConfigSnap, festivalDaysSnap, settingsSnap, storiesSnap] = await Promise.all([
         db.collection('movies').get(),
         db.collection('categories').get(),
         db.collection('content').doc('about').get(),
         db.collection('festival').doc('config').get(),
         db.collection('festival').doc('schedule').collection('days').get(),
-        db.collection('content').doc('settings').get()
+        db.collection('content').doc('settings').get(),
+        db.collection('editorial_stories').orderBy('publishedAt', 'desc').get()
     ]);
 
     const moviesData: Record<string, Movie> = {};
@@ -36,9 +37,13 @@ const assembleAndSyncMasterData = async (db: Firestore) => {
     const categoriesData: Record<string, any> = {};
     categoriesSnap.forEach(doc => categoriesData[doc.id] = doc.data());
 
+    const storiesData: EditorialStory[] = [];
+    storiesSnap.forEach(doc => storiesData.push({ id: doc.id, ...doc.data() } as EditorialStory));
+
     const liveData = {
         movies: moviesData,
         categories: categoriesData,
+        zineStories: storiesData, // NEW: Include zine stories in manifest
         aboutData: aboutSnap.exists ? aboutSnap.data() : null,
         festivalConfig: festivalConfigSnap.exists ? festivalConfigSnap.data() : null,
         festivalData: festivalDaysSnap.docs.map(d => d.data()).sort((a, b) => a.day - b.day),
@@ -134,6 +139,13 @@ export async function POST(request: Request) {
                 batch.set(db.collection('categories').doc(id), docData as object, { merge: true });
             }
             auditDetails = `Modified category logic for ${Object.keys(data).length} rows.`;
+        }
+        else if (type === 'editorial') {
+             // Handle zine saves if triggered from AdminPage wrapper
+             for (const [id, docData] of Object.entries(data)) {
+                batch.set(db.collection('editorial_stories').doc(id), docData as object, { merge: true });
+            }
+            auditDetails = `Editorial manifest updated.`;
         }
 
         const auditLogRef = db.collection('audit_logs').doc();

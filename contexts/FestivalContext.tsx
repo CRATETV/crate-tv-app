@@ -1,12 +1,13 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode, useMemo } from 'react';
 import { initializeFirebaseAuth, getDbInstance } from '../services/firebaseClient';
-import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData, WatchPartyState } from '../types';
+import { Movie, Category, FestivalConfig, FestivalDay, AboutData, AdConfig, SiteSettings, MoviePipelineEntry, AnalyticsData, WatchPartyState, EditorialStory } from '../types';
 import { moviesData, categoriesData, festivalData as initialFestivalData, festivalConfigData as initialFestivalConfig, aboutData as initialAboutData } from '../constants';
 
 interface FestivalContextType {
     isLoading: boolean;
     movies: Record<string, Movie>;
     categories: Record<string, Category>;
+    zineStories: EditorialStory[];
     festivalConfig: FestivalConfig | null;
     festivalData: FestivalDay[];
     aboutData: AboutData | null;
@@ -35,6 +36,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [isLoading, setIsLoading] = useState(true);
     const [movies, setMovies] = useState<Record<string, Movie>>(moviesData);
     const [categories, setCategories] = useState<Record<string, Category>>(categoriesData);
+    const [zineStories, setZineStories] = useState<EditorialStory[]>([]);
     const [festivalConfig, setFestivalConfig] = useState<FestivalConfig | null>(initialFestivalConfig);
     const [festivalData, setFestivalData] = useState<FestivalDay[]>(initialFestivalData);
     const [aboutData, setAboutData] = useState<AboutData | null>(initialAboutData);
@@ -87,6 +89,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                 const data = await res.json();
                 if (data.movies) setMovies(data.movies);
                 if (data.categories) setCategories(data.categories);
+                if (data.zineStories) setZineStories(data.zineStories);
                 if (data.aboutData) setAboutData(data.aboutData);
                 setDataSource('live');
             }
@@ -152,6 +155,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         isLoading,
         movies,
         categories,
+        zineStories,
         festivalConfig,
         festivalData,
         aboutData,

@@ -109,6 +109,16 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
         });
     };
 
+    const triggerGlobalSync = async (type: string, data: any) => {
+        const password = sessionStorage.getItem('adminPassword');
+        const name = sessionStorage.getItem('operatorName');
+        await fetch('/api/publish-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password, operatorName: name, type, data }),
+        });
+    };
+
     const handleSave = async () => {
         if (!formData.title) return alert("Headline required.");
         setIsSaving(true);
@@ -121,6 +131,9 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                 lastModified: firebase.firestore.FieldValue.serverTimestamp()
             };
 
+            const storyId = selectedStory ? selectedStory.id : `story_${Date.now()}`;
+            
+            // 1. SAVE TO FIRESTORE
             if (selectedStory) {
                 await db.collection('editorial_stories').doc(selectedStory.id).update(payload);
             } else {
@@ -129,9 +142,14 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                     publishedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
             }
+
+            // 2. TRIGGER GLOBAL MANIFEST REBUILD
+            await triggerGlobalSync('editorial', { [storyId]: payload });
+
             setSelectedStory(null);
             setFormData(emptyStory);
             fetchStories();
+            alert("Dispatch synchronized with global manifest.");
         } catch (e) {
             alert("Manifest synchronization failed.");
         } finally {
@@ -152,6 +170,8 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                 body: JSON.stringify({ password, id: selectedStory.id }),
             });
             if (res.ok) {
+                // Re-sync manifest after deletion
+                await triggerGlobalSync('editorial_delete', { id: selectedStory.id });
                 setSelectedStory(null);
                 setFormData(emptyStory);
                 fetchStories();
