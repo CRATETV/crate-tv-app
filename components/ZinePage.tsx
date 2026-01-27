@@ -11,32 +11,40 @@ import { getDbInstance } from '../services/firebaseClient';
 const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ story, onClick }) => (
     <div 
         onClick={onClick}
-        className="group cursor-pointer flex flex-col gap-4 transition-all duration-500 hover:-translate-y-1"
+        className="group cursor-pointer flex flex-col gap-6 transition-all duration-700 hover:-translate-y-3"
     >
-        <div className="relative overflow-hidden rounded-[2rem] bg-[#0a0a0a] shadow-2xl border border-white/5 aspect-video">
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-black shadow-2xl border border-white/5 aspect-[16/10] backdrop-blur-sm">
+            {/* VIBRANT HOVER GLOW */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-purple-600 rounded-[2.5rem] blur opacity-0 group-hover:opacity-30 transition-opacity duration-700"></div>
+            
             <img 
                 src={`/api/proxy-image?url=${encodeURIComponent(story.heroImage)}`} 
-                className="w-full h-full object-cover transition-transform duration-[2000ms] group-hover:scale-110" 
+                className="relative w-full h-full object-cover transition-transform duration-[4000ms] group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0" 
                 alt="" 
                 crossOrigin="anonymous"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+            
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80"></div>
+            
             <div className="absolute top-6 left-6">
-                <span className="bg-red-600 text-white font-black uppercase text-[8px] px-3 py-1 rounded-full tracking-[0.2em] shadow-xl">
+                <span className={`${story.type === 'SPOTLIGHT' ? 'bg-red-600 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-white/10 backdrop-blur-md'} text-white font-black uppercase text-[9px] px-4 py-1.5 rounded-full tracking-[0.2em] shadow-2xl border border-white/10`}>
                     {story.type || 'DISPATCH'}
                 </span>
             </div>
+
+            <div className="absolute bottom-6 left-6 right-6 translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+                <h3 className="font-black text-white uppercase tracking-tighter italic leading-none text-2xl md:text-3xl drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+                    {story.title}
+                </h3>
+            </div>
         </div>
-        <div className="px-2 space-y-2">
-            <h3 className="font-black text-white uppercase tracking-tighter italic leading-none transition-colors group-hover:text-red-500 text-2xl">
-                {story.title}
-            </h3>
-            <p className="text-gray-400 text-sm md:text-base font-medium line-clamp-2 leading-snug">
+        <div className="px-2 space-y-3">
+            <p className="text-gray-400 text-sm font-medium line-clamp-2 leading-relaxed opacity-60 group-hover:opacity-100 transition-opacity">
                 {story.subtitle}
             </p>
-            <div className="pt-2 flex items-center gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-gray-800"></div>
-                <span className="text-gray-600 font-bold uppercase text-[9px] tracking-widest">{story.author}</span>
+            <div className="flex items-center gap-3">
+                <div className="w-8 h-px bg-red-600 group-hover:w-12 transition-all duration-500"></div>
+                <span className="text-gray-600 font-black uppercase text-[10px] tracking-widest">{story.author}</span>
             </div>
         </div>
     </div>
@@ -46,21 +54,18 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     const [stories, setStories] = useState<EditorialStory[]>([]);
     const [activeStory, setActiveStory] = useState<EditorialStory | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeFilter, setActiveFilter] = useState('NEWS'); 
+    const [activeFilter, setActiveFilter] = useState('ALL'); 
     const [email, setEmail] = useState('');
     const [subStatus, setSubStatus] = useState<'idle' | 'loading' | 'success'>('idle');
     const articleRef = useRef<HTMLElement>(null);
 
-    // RESTORED: Added 'SPOTLIGHT' back to the primary filter manifest.
-    const filters = ['NEWS', 'INTERVIEW', 'SPOTLIGHT', 'DEEP_DIVE'];
+    // RESTORED FILTERS Manifest
+    const filters = ['ALL', 'SPOTLIGHT', 'NEWS', 'INTERVIEW', 'DEEP_DIVE'];
 
     useEffect(() => {
         const fetchStories = async () => {
             const db = getDbInstance();
-            if (!db) {
-                setTimeout(fetchStories, 500);
-                return;
-            }
+            if (!db) return;
             try {
                 const snap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').get();
                 const fetched: EditorialStory[] = [];
@@ -83,6 +88,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     }, [storyId]);
 
     const filteredStories = useMemo(() => {
+        if (activeFilter === 'ALL') return stories;
         return stories.filter(s => s.type === activeFilter);
     }, [stories, activeFilter]);
 
@@ -114,48 +120,55 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     if (isLoading) return <LoadingSpinner />;
 
     return (
-        <div className="flex flex-col min-h-screen text-white bg-[#050505] selection:bg-red-600">
+        <div className="flex flex-col min-h-screen text-white bg-[#050505] selection:bg-red-600 relative overflow-x-hidden">
             <SEO 
                 title={activeStory ? activeStory.title : "Crate Zine"} 
-                description={activeStory ? activeStory.subtitle : "The official dispatch from independent cinema's distribution afterlife."} 
+                description={activeStory ? activeStory.subtitle : "Dispatches from the cinematic underground."} 
                 image={activeStory?.heroImage}
                 type={activeStory ? "article" : "website"}
             />
 
+            {/* NEBULA BACKGROUND - Strictly z-0 to avoid interference with Fixed Header */}
+            <div className="fixed top-[-10%] right-[-10%] w-[70%] h-[70%] bg-red-600/5 blur-[180px] rounded-full pointer-events-none z-0"></div>
+            <div className="fixed bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/5 blur-[180px] rounded-full pointer-events-none z-0"></div>
+
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
 
-            <main className="flex-grow pb-32">
+            <main className="flex-grow pb-32 relative z-10">
                 {!activeStory ? (
                     <div className="space-y-0">
-                        {/* BRAND HEADER */}
-                        <div className="max-w-[1800px] mx-auto px-6 md:px-20 pt-32 pb-12 space-y-6 text-center md:text-left relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-[600px] h-[300px] bg-red-600/5 blur-[120px] pointer-events-none rounded-full"></div>
-                            
-                            <h1 className="text-7xl md:text-[9rem] font-black uppercase tracking-tighter leading-none italic bg-gradient-to-r from-red-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent drop-shadow-2xl py-2">
-                                Crate Zine.
-                            </h1>
-                            <div className="h-px w-24 bg-red-600 mx-auto md:mx-0 opacity-50"></div>
-                            <p className="text-xl md:text-2xl text-gray-500 font-medium max-w-3xl leading-relaxed">
-                                The official record of the independent cinematic underground. Deep dives into vision, technique, and the afterlife of the frame.
+                        {/* VIBRANT BRAND HEADER */}
+                        <div className="relative pt-60 pb-24 px-6 md:px-20 text-center space-y-10">
+                            <div className="space-y-4">
+                                <div className="inline-flex items-center gap-3 bg-red-600/10 border border-red-600/20 px-6 py-2 rounded-full mb-4 mx-auto shadow-2xl">
+                                    <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+                                    <p className="text-red-500 font-black uppercase tracking-[0.5em] text-[10px]">Official Dispatch Center</p>
+                                </div>
+                                <h1 className="text-7xl md:text-[12rem] font-black uppercase tracking-tighter leading-[0.8] italic bg-gradient-to-r from-white via-white to-gray-700 bg-clip-text text-transparent drop-shadow-[0_20px_60px_rgba(0,0,0,1)] py-2">
+                                    Crate Zine.
+                                </h1>
+                            </div>
+                            <p className="text-xl md:text-3xl text-gray-400 font-medium max-w-3xl mx-auto leading-tight italic drop-shadow-lg">
+                                The definitive record of independent cinematic vision. <br className="hidden md:block" /> Technique, insight, and the afterlife of the frame.
                             </p>
                         </div>
 
-                        {/* STICKY FILTER NAVIGATION */}
-                        <div className="sticky top-0 z-40 py-6 bg-[#050505]/95 backdrop-blur-3xl border-y border-white/5 flex items-center justify-center gap-6 md:gap-14 overflow-x-auto scrollbar-hide px-6">
+                        {/* STICKY FILTER NAVIGATION - Offset for Fixed Header visibility */}
+                        <div className="sticky top-[72px] z-40 py-8 bg-[#050505]/80 backdrop-blur-3xl border-y border-white/5 flex items-center justify-center gap-6 md:gap-14 overflow-x-auto scrollbar-hide px-6 shadow-2xl">
                             {filters.map(f => (
                                 <button 
                                     key={f} 
                                     onClick={() => setActiveFilter(f)}
-                                    className={`whitespace-nowrap font-black uppercase text-[10px] md:text-xs tracking-[0.4em] transition-all pb-2 border-b-2 ${activeFilter === f ? 'text-red-600 border-red-600' : 'text-gray-600 border-transparent hover:text-white'}`}
+                                    className={`whitespace-nowrap font-black uppercase text-[10px] md:text-xs tracking-[0.4em] transition-all pb-2 border-b-2 ${activeFilter === f ? 'text-red-600 border-red-600 drop-shadow-[0_0_12px_rgba(239,68,68,0.6)]' : 'text-gray-700 border-transparent hover:text-white'}`}
                                 >
                                     {f.replace('_', ' ')}
                                 </button>
                             ))}
                         </div>
 
-                        {/* CONTENT HUB */}
-                        <div className="max-w-[1800px] mx-auto px-6 md:px-20 pt-24 space-y-32">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16">
+                        {/* CONTENT GRID */}
+                        <div className="max-w-[1800px] mx-auto px-6 md:px-20 pt-24 pb-40">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-12 gap-y-24">
                                 {filteredStories.length > 0 ? (
                                     filteredStories.map((story) => (
                                         <ZineCard 
@@ -165,45 +178,45 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                         />
                                     ))
                                 ) : (
-                                    <div className="col-span-full py-32 text-center opacity-30 italic">
-                                        <p className="text-gray-600 uppercase font-black tracking-[0.5em] text-xs">Scanning digital archives for manifest...</p>
+                                    <div className="col-span-full py-48 text-center opacity-30">
+                                        <p className="text-gray-600 uppercase font-black tracking-[0.8em] text-xs">Awaiting Narrative Sync: {activeFilter}</p>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* JOIN NEWSLETTER SECTION */}
-                        <section className="max-w-4xl mx-auto px-6 pt-40 pb-20">
-                            <div className="relative p-[1px] bg-gradient-to-r from-red-600 via-purple-600 to-indigo-600 rounded-[3rem] shadow-[0_40px_120px_rgba(239,68,68,0.15)] group transition-all duration-700 hover:shadow-[0_40px_120px_rgba(239,68,68,0.25)]">
-                                <div className="bg-[#050505] rounded-[3rem] p-10 md:p-20 text-center space-y-10 relative overflow-hidden">
-                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.06)_0%,transparent_70%)] pointer-events-none"></div>
+                        {/* HIGH-COLOR NEWSLETTER SECTION */}
+                        <section className="max-w-6xl mx-auto px-6 pb-40">
+                            <div className="relative p-[1px] bg-gradient-to-r from-red-600 via-purple-600 to-indigo-600 rounded-[4rem] shadow-[0_40px_120px_rgba(239,68,68,0.25)] group transition-all duration-1000">
+                                <div className="bg-[#050505] rounded-[4rem] p-12 md:p-24 text-center space-y-12 relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.12)_0%,transparent_70%)] pointer-events-none"></div>
                                     
                                     <div className="relative z-10 space-y-4">
-                                        <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px] mb-2">Editorial Dispatch</p>
-                                        <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic leading-none text-white drop-shadow-2xl">Join our newsletter.</h2>
-                                        <p className="text-gray-400 text-lg md:text-xl font-medium max-w-xl mx-auto leading-relaxed">Exclusive dispatches on new arrivals, festival schedules, and live watch party reveals.</p>
+                                        <p className="text-red-500 font-black uppercase tracking-[0.8em] text-[10px] mb-4">Frequency Connection</p>
+                                        <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none text-white drop-shadow-2xl">Join the Dispatch.</h2>
+                                        <p className="text-gray-400 text-lg md:text-2xl font-medium max-w-2xl mx-auto leading-tight italic">Exclusive deep dives, festival maps, and live watch party reveals.</p>
                                     </div>
                                     
                                     {subStatus === 'success' ? (
-                                        <div className="bg-green-600/10 border border-green-500/20 p-8 rounded-[2rem] inline-block px-16 animate-[fadeIn_0.5s_ease-out] shadow-2xl">
-                                            <p className="text-green-500 font-black uppercase text-xs tracking-[0.4em]">UPLINK ESTABLISHED ✓</p>
+                                        <div className="bg-green-600/10 border border-green-500/20 p-10 rounded-3xl inline-block px-20 animate-bounce">
+                                            <p className="text-green-500 font-black uppercase text-sm tracking-[0.5em]">CONNECTION ESTABLISHED ✓</p>
                                         </div>
                                     ) : (
-                                        <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-4 max-w-lg mx-auto pt-4 relative z-10">
+                                        <form onSubmit={handleSubscribe} className="flex flex-col md:flex-row gap-4 max-w-xl mx-auto relative z-10">
                                             <input 
                                                 type="email" 
-                                                placeholder="Email Address" 
+                                                placeholder="NODE@EMAIL.ADDRESS" 
                                                 value={email}
                                                 onChange={e => setEmail(e.target.value)}
-                                                className="flex-grow bg-white/5 border border-white/10 p-5 rounded-2xl text-white text-sm outline-none focus:border-red-600 transition-all font-black uppercase tracking-widest placeholder:text-gray-900 shadow-inner"
+                                                className="flex-grow bg-white/5 border-2 border-white/10 p-6 rounded-2xl text-white text-lg outline-none focus:border-red-600 transition-all font-black uppercase tracking-widest placeholder:text-gray-800 shadow-inner"
                                                 required
                                             />
                                             <button 
                                                 type="submit" 
                                                 disabled={subStatus === 'loading'}
-                                                className="bg-white text-black font-black py-5 px-10 rounded-2xl uppercase text-[11px] tracking-widest shadow-[0_15px_35px_rgba(255,255,255,0.2)] transition-all hover:bg-gray-200 active:scale-95 disabled:opacity-50"
+                                                className="bg-white text-black font-black py-6 px-12 rounded-2xl uppercase text-xs tracking-[0.2em] shadow-2xl transition-all hover:bg-red-600 hover:text-white active:scale-95 disabled:opacity-50"
                                             >
-                                                {subStatus === 'loading' ? 'Joining...' : 'Join Newsletter'}
+                                                {subStatus === 'loading' ? 'UPLINKING...' : 'DISPATCH ME'}
                                             </button>
                                         </form>
                                     )}
@@ -212,52 +225,60 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                         </section>
                     </div>
                 ) : (
-                    <div className="animate-[fadeIn_0.6s_ease-out]">
-                        {/* ARTICLE VIEW */}
-                        <div className="relative w-full h-[50vh] md:h-[65vh] mb-16 overflow-hidden">
-                            <img src={`/api/proxy-image?url=${encodeURIComponent(activeStory.heroImage)}`} className="w-full h-full object-cover blur-sm opacity-30 scale-110" alt="" crossOrigin="anonymous" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] to-transparent"></div>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center max-w-6xl mx-auto space-y-10">
-                                <button onClick={() => handleNavigate(null)} className="flex items-center gap-4 text-gray-500 hover:text-white transition-colors uppercase font-black text-[11px] tracking-widest group">
+                    <div className="animate-[fadeIn_0.8s_ease-out]">
+                        {/* VIBRANT ARTICLE VIEW */}
+                        <div className="relative w-full h-[65vh] md:h-[85vh] mb-20 overflow-hidden bg-black shadow-[0_50px_100px_rgba(0,0,0,1)]">
+                            <img src={`/api/proxy-image?url=${encodeURIComponent(activeStory.heroImage)}`} className="w-full h-full object-cover blur-2xl opacity-40 scale-125" alt="" crossOrigin="anonymous" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/40"></div>
+                            
+                            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center max-w-6xl mx-auto space-y-12">
+                                <button onClick={() => handleNavigate(null)} className="flex items-center gap-4 text-gray-500 hover:text-white transition-all uppercase font-black text-[11px] tracking-widest group bg-black/40 px-8 py-3 rounded-full border border-white/10 backdrop-blur-md shadow-2xl">
                                     <svg className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                                    Return to records
+                                    Return to Archive
                                 </button>
-                                <div className="space-y-6">
-                                    <span className="bg-red-600 text-white font-black px-5 py-1.5 rounded-xl text-[10px] uppercase tracking-widest shadow-2xl">{activeStory.type}</span>
-                                    <h1 className="text-6xl md:text-[9rem] font-black uppercase tracking-tighter leading-[0.85] italic drop-shadow-2xl">{activeStory.title}</h1>
-                                    <p className="text-2xl md:text-4xl text-gray-400 font-medium leading-tight max-w-4xl mx-auto">{activeStory.subtitle}</p>
+                                <div className="space-y-8">
+                                    <div className="flex justify-center gap-3">
+                                        <span className={`${activeStory.type === 'SPOTLIGHT' ? 'bg-red-600' : 'bg-white/10'} text-white font-black px-5 py-1.5 rounded-full text-[10px] uppercase tracking-widest shadow-2xl`}>{activeStory.type}</span>
+                                        <span className="bg-white/10 backdrop-blur-md text-white font-black px-5 py-1.5 rounded-full text-[10px] uppercase tracking-widest border border-white/10">{activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString() : 'Active Record'}</span>
+                                    </div>
+                                    <h1 className="text-6xl md:text-[12rem] font-black uppercase tracking-tighter leading-[0.8] italic text-white drop-shadow-[0_20px_80px_rgba(0,0,0,1)]">{activeStory.title}</h1>
+                                    <p className="text-2xl md:text-5xl text-gray-400 font-bold tracking-tighter leading-tight max-w-5xl mx-auto opacity-90 italic">"{activeStory.subtitle}"</p>
                                 </div>
-                                <div className="flex items-center gap-8 pt-6 text-gray-500 font-black uppercase text-[11px] tracking-widest">
-                                    <span className="flex items-center gap-3">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-red-600"></div>
-                                        By {activeStory.author}
+                                <div className="flex items-center gap-8 pt-10 border-t border-white/5 w-full justify-center">
+                                    <span className="flex items-center gap-3 text-red-500 font-black uppercase text-[12px] tracking-widest">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-red-600 shadow-[0_0_15px_red]"></div>
+                                        Dispatch by {activeStory.author}
                                     </span>
-                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-800"></span>
-                                    <span>{activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Recently Released'}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <article ref={articleRef} className="max-w-[950px] mx-auto px-6 pb-48">
-                            <div className="space-y-20">
+                        <article ref={articleRef} className="max-w-[1050px] mx-auto px-6 pb-60">
+                            <div className="space-y-24">
                                 {activeStory.sections && activeStory.sections.length > 0 ? (
                                     activeStory.sections.map((section, idx) => (
                                         <div key={section.id}>
-                                            {section.type === 'header' && <h3 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic text-red-600 mb-10 leading-none">{section.content}</h3>}
-                                            {section.type === 'quote' && <div className="bg-white/5 border-l-[16px] border-white p-12 text-3xl md:text-5xl font-black uppercase italic tracking-tight text-white my-20 rounded-r-[3rem] shadow-2xl leading-[1.1]">"{section.content}"</div>}
+                                            {section.type === 'header' && <h3 className="text-5xl md:text-[10rem] font-black uppercase tracking-tighter italic text-red-600 mb-12 leading-[0.9] drop-shadow-2xl">{section.content}</h3>}
+                                            {section.type === 'quote' && (
+                                                <div className="bg-white/5 border-l-[24px] border-red-600 p-12 md:p-24 text-3xl md:text-6xl font-black uppercase italic tracking-tighter text-white my-32 rounded-r-[4rem] shadow-[0_40px_120px_rgba(239,68,68,0.2)] leading-[0.95] relative overflow-hidden group">
+                                                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+                                                    <span className="relative z-10">"{section.content}"</span>
+                                                </div>
+                                            )}
                                             {section.type === 'image' && (
-                                                <div className="rounded-[3.5rem] overflow-hidden border border-white/5 shadow-[0_50px_100px_rgba(0,0,0,0.8)] my-20 bg-[#0a0a0a]">
-                                                    <img src={`/api/proxy-image?url=${encodeURIComponent(section.content)}`} className="w-full h-auto" alt="" crossOrigin="anonymous" />
+                                                <div className="rounded-[4.5rem] overflow-hidden border border-white/10 shadow-[0_80px_160px_rgba(0,0,0,0.9)] my-24 bg-black group relative">
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-red-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+                                                    <img src={`/api/proxy-image?url=${encodeURIComponent(section.content)}`} className="w-full h-auto transition-transform duration-[6000ms] group-hover:scale-105" alt="" crossOrigin="anonymous" />
                                                 </div>
                                             )}
                                             {section.type === 'text' && (
                                                 <div className="relative">
                                                     {idx === 0 && section.content && (
-                                                        <span className="float-left text-[12rem] md:text-[15rem] font-black italic leading-[0.65] pr-10 mr-8 mt-10 text-red-600 drop-shadow-[0_15px_30px_rgba(239,68,68,0.4)] select-none">
+                                                        <span className="float-left text-[16rem] md:text-[22rem] font-black italic leading-[0.4] pr-12 mr-12 mt-20 text-red-600 drop-shadow-[0_25px_60px_rgba(239,68,68,0.6)] select-none animate-pulse">
                                                             {section.content.charAt(0)}
                                                         </span>
                                                     )}
-                                                    <p className="text-2xl md:text-3xl text-gray-300 font-medium leading-[1.4] tracking-tight">
+                                                    <p className="text-2xl md:text-5xl text-gray-300 font-medium leading-[1.3] tracking-tighter italic md:not-italic drop-shadow-lg">
                                                         {idx === 0 && section.content ? section.content.slice(1) : section.content}
                                                     </p>
                                                     <div className="clear-both"></div>
@@ -274,11 +295,14 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                 )}
                             </div>
 
-                            <div className="mt-60 pt-24 border-t border-white/5 text-center flex flex-col items-center gap-14">
-                                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-56 opacity-10 invert" alt="" />
-                                <div className="space-y-6">
-                                    <p className="text-[14px] font-black text-gray-800 uppercase tracking-[2.5em] mr-[-2.5em]">OFFICIAL RECORD</p>
-                                    <button onClick={() => handleNavigate(null)} className="bg-white text-black font-black px-16 py-6 rounded-[2rem] uppercase tracking-[0.2em] text-sm hover:scale-105 active:scale-95 transition-all shadow-[0_20px_50px_rgba(255,255,255,0.1)]">Explore more dispatches</button>
+                            <div className="mt-80 pt-32 border-t border-white/10 text-center flex flex-col items-center gap-20">
+                                <div className="relative">
+                                    <div className="absolute inset-0 blur-[100px] bg-red-600/30 scale-150 rounded-full animate-pulse"></div>
+                                    <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-96 invert relative z-10 opacity-90" alt="Crate TV" />
+                                </div>
+                                <div className="space-y-10">
+                                    <p className="text-[20px] font-black text-gray-800 uppercase tracking-[3.5em] mr-[-3.5em]">END OF DISPATCH</p>
+                                    <button onClick={() => handleNavigate(null)} className="bg-white text-black font-black px-24 py-8 rounded-[3rem] uppercase tracking-[0.5em] text-sm hover:bg-red-600 hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-[0_20px_100px_rgba(255,255,255,0.2)]">Return to Hub</button>
                                 </div>
                             </div>
                         </article>
