@@ -96,6 +96,14 @@ export async function POST(request: Request) {
             batch.delete(db.collection('movies').doc(data.key));
             auditDetails = `PURGE: Deleted movie [${data.key}].`;
         } 
+        else if (type === 'set_now_streaming') {
+            // PROMOTE TO SPOTLIGHT
+            batch.set(db.collection('categories').doc('nowStreaming'), {
+                title: 'Now Streaming',
+                movieKeys: [data.key]
+            });
+            auditDetails = `PROMOTION: Set [${data.key}] as Global Spotlight Selection.`;
+        }
         else if (type === 'movies') {
             for (const [id, docData] of Object.entries(data)) {
                 batch.set(db.collection('movies').doc(id), docData as object, { merge: true });

@@ -150,7 +150,7 @@ const Header: React.FC<HeaderProps> = ({
                                         <p className="text-sm font-black text-white truncate uppercase italic">{user.name || user.email}</p>
                                     </div>
                                     <a href="/account" onClick={(e) => handleNavigate(e, '/account')} className="block px-5 py-2.5 text-xs font-bold text-gray-400 hover:bg-white/5 hover:text-white transition-colors uppercase tracking-widest">Account Hub</a>
-                                    <button onClick={logout} className="w-full text-left block px-5 py-2.5 text-xs font-bold text-gray-400 hover:bg-white/5 hover:text-red-500 transition-colors uppercase tracking-widest">Terminate Session</button>
+                                    <button onClick={logout} className="w-full text-left block px-5 py-2.5 text-xs font-bold text-gray-400 hover:bg-white/5 hover:text-red-500 transition-colors uppercase tracking-widest">Logout</button>
                                 </div>
                             )}
                         </div>

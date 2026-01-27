@@ -14,25 +14,26 @@ const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ st
         className="group cursor-pointer flex flex-col gap-6 transition-all duration-700 hover:-translate-y-3"
     >
         <div className="relative overflow-hidden rounded-[2.5rem] bg-black shadow-2xl border border-white/5 aspect-[16/10] backdrop-blur-sm">
-            <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-purple-600 rounded-[2.5rem] blur opacity-0 group-hover:opacity-30 transition-opacity duration-700"></div>
+            {/* VIBRANT CHROMATIC HOVER GLOW */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-red-600 via-purple-600 to-emerald-500 rounded-[2.5rem] blur opacity-0 group-hover:opacity-40 transition-opacity duration-700"></div>
             
             <img 
                 src={`/api/proxy-image?url=${encodeURIComponent(story.heroImage)}`} 
-                className="relative w-full h-full object-cover transition-transform duration-[4000ms] group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0" 
+                className="relative w-full h-full object-cover transition-transform duration-[4000ms] group-hover:scale-110 grayscale-[20%] group-hover:grayscale-0" 
                 alt="" 
                 crossOrigin="anonymous"
             />
             
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent opacity-90"></div>
             
             <div className="absolute top-6 left-6">
-                <span className={`${story.type === 'SPOTLIGHT' ? 'bg-red-600 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-white/10 backdrop-blur-md'} text-white font-black uppercase text-[9px] px-4 py-1.5 rounded-full tracking-[0.2em] shadow-2xl border border-white/10`}>
+                <span className={`${story.type === 'SPOTLIGHT' ? 'bg-red-600 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.6)]' : 'bg-white/10 backdrop-blur-md'} text-white font-black uppercase text-[9px] px-4 py-1.5 rounded-full tracking-[0.2em] shadow-2xl border border-white/10`}>
                     {story.type || 'DISPATCH'}
                 </span>
             </div>
 
-            <div className="absolute bottom-6 left-6 right-6 translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
-                <h3 className="font-black text-white uppercase tracking-tighter italic leading-none text-2xl md:text-3xl drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+            <div className="absolute bottom-8 left-8 right-8 translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
+                <h3 className="font-black text-white uppercase tracking-tighter italic leading-none text-2xl md:text-3xl drop-shadow-[0_4px_12px_rgba(0,0,0,1)]">
                     {story.title}
                 </h3>
             </div>
@@ -64,11 +65,12 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
         const fetchStories = async () => {
             const db = getDbInstance();
             if (!db) {
+                // Ensure loading resolves even if DB isn't ready initially
                 setIsLoading(false);
                 return;
             }
             try {
-                // Ensure we query the correct collection and order for restoration
+                // RESTORATION LOGIC: Targeting 'editorial_stories'
                 const snap = await db.collection('editorial_stories').orderBy('publishedAt', 'desc').get();
                 const fetched: EditorialStory[] = [];
                 snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as EditorialStory));
@@ -125,35 +127,40 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
         <div className="flex flex-col min-h-screen text-white bg-[#050505] selection:bg-red-600 relative overflow-x-hidden">
             <SEO 
                 title={activeStory ? activeStory.title : "Crate Zine"} 
-                description={activeStory ? activeStory.subtitle : "Dispatches from the cinematic underground."} 
+                description={activeStory ? activeStory.subtitle : "Stay up to date with all that's happening at crate: watch parties, film festivals new releases."} 
                 image={activeStory?.heroImage}
                 type={activeStory ? "article" : "website"}
             />
 
-            <div className="fixed top-[-10%] right-[-10%] w-[70%] h-[70%] bg-red-600/5 blur-[180px] rounded-full pointer-events-none z-0"></div>
-            <div className="fixed bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/5 blur-[180px] rounded-full pointer-events-none z-0"></div>
+            {/* ENHANCED CHROMATIC NEBULA BACKGROUND */}
+            <div className="fixed top-[-10%] right-[-10%] w-[70%] h-[70%] bg-red-600/10 blur-[180px] rounded-full pointer-events-none z-0 animate-pulse"></div>
+            <div className="fixed bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/10 blur-[180px] rounded-full pointer-events-none z-0"></div>
+            <div className="fixed top-[20%] left-[-5%] w-[40%] h-[40%] bg-emerald-600/5 blur-[150px] rounded-full pointer-events-none z-0"></div>
 
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
 
             <main className="flex-grow pb-32 relative z-10">
                 {!activeStory ? (
                     <div className="space-y-0">
-                        <div className="relative pt-60 pb-24 px-6 md:px-20 text-center space-y-10">
+                        {/* VIBRANT BRAND HEADER */}
+                        <div className="relative pt-60 pb-24 px-6 md:px-20 text-center space-y-12">
                             <div className="space-y-4">
-                                <div className="inline-flex items-center gap-3 bg-red-600/10 border border-red-600/20 px-6 py-2 rounded-full mb-4 mx-auto shadow-2xl">
-                                    <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
-                                    <p className="text-red-500 font-black uppercase tracking-[0.5em] text-[10px]">Official Dispatch Center</p>
+                                <div className="inline-flex items-center gap-3 bg-red-600/10 border border-red-600/20 px-6 py-2 rounded-full mb-4 mx-auto shadow-2xl backdrop-blur-md">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping"></span>
+                                    <p className="text-red-500 font-black uppercase tracking-[0.5em] text-[10px]">Active Dispatch Network</p>
                                 </div>
-                                <h1 className="text-7xl md:text-[12rem] font-black uppercase tracking-tighter leading-[0.8] italic bg-gradient-to-r from-white via-white to-gray-700 bg-clip-text text-transparent drop-shadow-[0_20px_60px_rgba(0,0,0,1)] py-2">
+                                <h1 className="text-7xl md:text-[12rem] font-black uppercase tracking-tighter leading-[0.8] italic bg-gradient-to-r from-white via-white to-gray-500 bg-clip-text text-transparent drop-shadow-[0_20px_60px_rgba(0,0,0,1)] py-2 animate-chroma">
                                     Crate Zine.
                                 </h1>
                             </div>
-                            <p className="text-xl md:text-3xl text-gray-400 font-medium max-w-3xl mx-auto leading-tight italic drop-shadow-lg">
-                                The definitive record of independent cinematic vision. <br className="hidden md:block" /> Technique, insight, and the afterlife of the frame.
+                            <p className="text-xl md:text-4xl text-gray-300 font-bold max-w-4xl mx-auto leading-tight italic drop-shadow-lg tracking-tight">
+                                Stay up to date with all that's happening at Crate: <br className="hidden md:block" /> 
+                                <span className="text-white">Watch parties, film festivals, and exclusive new releases.</span>
                             </p>
                         </div>
 
-                        <div className="sticky top-[72px] z-40 py-8 bg-[#050505]/80 backdrop-blur-3xl border-y border-white/5 flex items-center justify-center gap-6 md:gap-14 overflow-x-auto scrollbar-hide px-6 shadow-2xl">
+                        {/* VIBRANT STICKY FILTER NAVIGATION */}
+                        <div className="sticky top-[72px] z-40 py-10 bg-[#050505]/80 backdrop-blur-3xl border-y border-white/5 flex items-center justify-center gap-6 md:gap-14 overflow-x-auto scrollbar-hide px-6 shadow-2xl">
                             {filters.map(f => (
                                 <button 
                                     key={f} 
@@ -165,6 +172,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             ))}
                         </div>
 
+                        {/* CONTENT GRID */}
                         <div className="max-w-[1800px] mx-auto px-6 md:px-20 pt-24 pb-40">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-12 gap-y-24">
                                 {filteredStories.length > 0 ? (
@@ -183,15 +191,18 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </div>
                         </div>
 
+                        {/* NEWSLETTER SECTION */}
                         <section className="max-w-6xl mx-auto px-6 pb-40">
-                            <div className="relative p-[1px] bg-gradient-to-r from-red-600 via-purple-600 to-indigo-600 rounded-[4rem] shadow-[0_40px_120px_rgba(239,68,68,0.25)] group transition-all duration-1000">
+                            <div className="relative p-[1px] bg-gradient-to-r from-red-600 via-purple-600 to-emerald-500 rounded-[4rem] shadow-[0_40px_120px_rgba(239,68,68,0.25)] group transition-all duration-1000">
                                 <div className="bg-[#050505] rounded-[4rem] p-12 md:p-24 text-center space-y-12 relative overflow-hidden">
                                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.12)_0%,transparent_70%)] pointer-events-none"></div>
+                                    
                                     <div className="relative z-10 space-y-4">
                                         <p className="text-red-500 font-black uppercase tracking-[0.8em] text-[10px] mb-4">Frequency Connection</p>
                                         <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none text-white drop-shadow-2xl">Join the Dispatch.</h2>
-                                        <p className="text-gray-400 text-lg md:text-2xl font-medium max-w-2xl mx-auto leading-tight italic">Exclusive deep dives, festival maps, and live watch party reveals.</p>
+                                        <p className="text-gray-400 text-lg md:text-2xl font-medium max-w-2xl mx-auto leading-tight italic">Direct access to festival maps and live watch party reveals.</p>
                                     </div>
+                                    
                                     {subStatus === 'success' ? (
                                         <div className="bg-green-600/10 border border-green-500/20 p-10 rounded-3xl inline-block px-20 animate-bounce">
                                             <p className="text-green-500 font-black uppercase text-sm tracking-[0.5em]">CONNECTION ESTABLISHED ✓</p>
@@ -232,7 +243,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                 </button>
                                 <div className="space-y-8">
                                     <div className="flex justify-center gap-3">
-                                        <span className={`${activeStory.type === 'SPOTLIGHT' ? 'bg-red-600' : 'bg-white/10'} text-white font-black px-5 py-1.5 rounded-full text-[10px] uppercase tracking-widest shadow-2xl`}>{activeStory.type}</span>
+                                        <span className={`${activeStory.type === 'SPOTLIGHT' ? 'bg-red-600 shadow-[0_0_15px_red]' : 'bg-white/10'} text-white font-black px-5 py-1.5 rounded-full text-[10px] uppercase tracking-widest shadow-2xl`}>{activeStory.type}</span>
                                         <span className="bg-white/10 backdrop-blur-md text-white font-black px-5 py-1.5 rounded-full text-[10px] uppercase tracking-widest border border-white/10">{activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString() : 'Active Record'}</span>
                                     </div>
                                     <h1 className="text-6xl md:text-[12rem] font-black uppercase tracking-tighter leading-[0.8] italic text-white drop-shadow-[0_20px_80px_rgba(0,0,0,1)]">{activeStory.title}</h1>
@@ -307,6 +318,17 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
             <Footer />
             <BackToTopButton />
             <BottomNavBar onSearchClick={() => handleNavigate(null)} />
+            
+            <style>{`
+                @keyframes chroma {
+                    0% { filter: hue-rotate(0deg); }
+                    50% { filter: hue-rotate(20deg); }
+                    100% { filter: hue-rotate(0deg); }
+                }
+                .animate-chroma {
+                    animation: chroma 8s ease-in-out infinite;
+                }
+            `}</style>
         </div>
     );
 };

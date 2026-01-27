@@ -101,7 +101,7 @@ const OneTimePayoutTerminal: React.FC<OneTimePayoutTerminalProps> = ({ targetNam
                     <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter italic leading-none">Yield Summary.</h1>
                     <p className="text-gray-500 mt-4 text-sm font-bold uppercase tracking-widest">Authorized node for: <span className="text-white">{targetName}</span></p>
                 </div>
-                <button onClick={onLogout} className="bg-white/5 text-gray-500 hover:text-white px-8 py-3 rounded-xl uppercase text-[10px] font-black border border-white/5 transition-all">Terminate session</button>
+                <button onClick={onLogout} className="bg-white/5 text-gray-500 hover:text-white px-8 py-3 rounded-xl uppercase text-[10px] font-black border border-white/5 transition-all">Logout</button>
             </header>
 
             <div className={`${accentBg} border border-white/5 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-8`}>

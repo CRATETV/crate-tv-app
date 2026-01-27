@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
@@ -163,7 +162,7 @@ const AccountPage: React.FC = () => {
                                 {isSaving ? 'Syncing Network...' : 'Commit Settings'}
                             </button>
                             <button onClick={logout} className="bg-white/5 hover:bg-white/10 text-gray-500 hover:text-red-500 font-black px-12 py-5 rounded-2xl uppercase tracking-widest text-xs border border-white/5 transition-all w-full sm:w-auto">
-                                Terminate Session
+                                Logout
                             </button>
                         </div>
                     </div>
