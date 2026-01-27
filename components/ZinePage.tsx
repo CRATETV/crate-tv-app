@@ -51,8 +51,8 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
     const [subStatus, setSubStatus] = useState<'idle' | 'loading' | 'success'>('idle');
     const articleRef = useRef<HTMLElement>(null);
 
-    // Removed 'SPOTLIGHT' from filters as requested
-    const filters = ['NEWS', 'INTERVIEW', 'DEEP_DIVE'];
+    // RESTORED: Added 'SPOTLIGHT' back to the primary filter manifest.
+    const filters = ['NEWS', 'INTERVIEW', 'SPOTLIGHT', 'DEEP_DIVE'];
 
     useEffect(() => {
         const fetchStories = async () => {
@@ -121,7 +121,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                 image={activeStory?.heroImage}
                 type={activeStory ? "article" : "website"}
             />
-            
+
             <Header searchQuery="" onSearch={() => {}} isScrolled={true} onMobileSearchClick={() => {}} showSearch={false} />
 
             <main className="flex-grow pb-32">

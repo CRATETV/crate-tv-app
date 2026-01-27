@@ -65,9 +65,9 @@ const Header: React.FC<HeaderProps> = ({
         setIsProfileMenuOpen(false);
     };
 
-    // VISUAL REPAIR: GHOST HEADER
-    // Removed backdrop-blur and any bg tints for pure transparency as requested.
-    const headerClasses = `fixed top-0 left-0 right-0 z-40 transition-all duration-700 bg-transparent ${isScrolled || isScrolledProp ? 'py-3' : 'py-6'}`;
+    // VISUAL FIX: FIXED HEADER POSITIONING
+    // Strictly fixed top with high z-index to stay on top of all page content.
+    const headerClasses = `fixed top-0 left-0 right-0 z-[50] transition-all duration-300 bg-transparent ${isScrolled || isScrolledProp ? 'py-3' : 'py-6'}`;
     
     const navLinks = [
         { path: '/', label: 'Home' }, 
