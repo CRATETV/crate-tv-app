@@ -16,54 +16,37 @@ const REACTION_TYPES = ['🔥', '😲', '❤️', '👏', '😢'] as const;
 
 /**
  * STRATEGIC EMBED ENGINE V4.5
- * Injects global start-time offsets into 3rd party players for synchronized events.
  */
 const processLiveEmbed = (input: string, startTimeOffset: number = 0): string => {
     const trimmed = input.trim();
     const startSec = Math.max(0, Math.floor(startTimeOffset));
-
     if (trimmed.startsWith('<iframe')) return trimmed;
-
     const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const ytMatch = trimmed.match(ytRegex);
     if (ytMatch && ytMatch[1]) {
         return `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1&controls=1&showinfo=0${startSec > 0 ? `&start=${startSec}` : ''}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
     }
-
     const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
     const vimeoMatch = trimmed.match(vimeoRegex);
     if (vimeoMatch && vimeoMatch[1]) {
         return `<iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&color=ef4444&title=0&byline=0&portrait=0${startSec > 0 ? `#t=${startSec}s` : ''}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
     }
-
     return `<div class="flex items-center justify-center h-full text-gray-500 font-mono text-xs uppercase p-10 text-center">Invalid Relay Node: ${trimmed}</div>`;
 };
 
 const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({ emoji, onComplete }) => {
     const randomLeft = useMemo(() => Math.floor(Math.random() * 80) + 10, []); 
     const randomDuration = useMemo(() => 3.5 + Math.random() * 1.5, []); 
-
     useEffect(() => {
         const timer = setTimeout(onComplete, randomDuration * 1000);
         return () => clearTimeout(timer);
     }, [randomDuration, onComplete]);
-
     return (
-        <div 
-            className="absolute bottom-24 pointer-events-none z-[120] animate-emoji-float text-6xl drop-shadow-2xl"
-            style={{ left: `${randomLeft}%`, animationDuration: `${randomDuration}s` }}
-        >
-            {emoji}
-        </div>
+        <div className="absolute bottom-24 pointer-events-none z-[120] animate-emoji-float text-6xl drop-shadow-2xl" style={{ left: `${randomLeft}%`, animationDuration: `${randomDuration}s` }}>{emoji}</div>
     );
 };
 
-const EmbeddedChat: React.FC<{ 
-    partyKey: string; 
-    directors: string[];
-    isQALive?: boolean;
-    user: { name?: string; email: string | null; avatar?: string; } | null 
-}> = ({ partyKey, directors, isQALive, user }) => {
+const EmbeddedChat: React.FC<{ partyKey: string; directors: string[]; isQALive?: boolean; user: any }> = ({ partyKey, directors, isQALive, user }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -81,9 +64,7 @@ const EmbeddedChat: React.FC<{
         return () => unsubscribe();
     }, [partyKey]);
 
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+    useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -93,19 +74,10 @@ const EmbeddedChat: React.FC<{
             await fetch('/api/send-chat-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    movieKey: partyKey, 
-                    userName: user.name || user.email, 
-                    userAvatar: user.avatar || 'fox', 
-                    text: newMessage
-                }),
+                body: JSON.stringify({ movieKey: partyKey, userName: user.name || user.email, userAvatar: user.avatar || 'fox', text: newMessage }),
             });
             setNewMessage('');
-        } catch (error) {
-            console.error("Chat send error:", error);
-        } finally {
-            setIsSending(false);
-        }
+        } catch (error) { console.error("Chat error:", error); } finally { setIsSending(false); }
     };
 
     return (
@@ -135,63 +107,60 @@ const EmbeddedChat: React.FC<{
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const { user, unlockedWatchPartyKeys, unlockWatchParty, rentals } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading } = useFestival();
-    
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     const [showPaywall, setShowPaywall] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const lastSeekTimeRef = useRef<number>(0);
 
     const movie = useMemo(() => allMovies[movieKey], [movieKey, allMovies]);
 
-    // Calculate time offset since actualStartTime with drift protection
-    const currentOffset = useMemo(() => {
-        if (!partyState?.actualStartTime) return 0;
-        try {
-            const serverStart = (partyState.actualStartTime as any).toDate().getTime();
-            const now = Date.now();
-            return Math.max(0, (now - serverStart) / 1000);
-        } catch (e) { return 0; }
-    }, [partyState?.actualStartTime]);
-
-    // BUG FIX: RESILIENT SYNC LOGIC
-    // Prevents "End of Stream" loop glitches and stalls
+    // RESILIENT SYNC ENGINE V3
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !partyState?.actualStartTime || movie?.isLiveStream) return;
 
         const syncClock = () => {
-            const targetPosition = currentOffset;
-            const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
+            const now = Date.now();
+            
+            // Cooldown: Don't fight the browser if it just sought 15s ago
+            if (now - lastSeekTimeRef.current < 15000) return;
 
-            // STALL GUARD: If target is beyond duration, don't glitch seek, just stop at the end.
-            if (targetPosition >= movieDuration) {
-                if (!video.paused && !video.ended) {
-                    video.pause();
-                    video.currentTime = movieDuration;
+            try {
+                // Calculate Dynamic Target based on local wall clock vs server epoch
+                const serverStart = (partyState.actualStartTime as any).toDate().getTime();
+                const targetPosition = Math.max(0, (now - serverStart) / 1000);
+                const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
+
+                if (targetPosition >= movieDuration) {
+                    if (!video.paused && !video.ended) { video.pause(); video.currentTime = movieDuration; }
+                    return;
                 }
-                return;
-            }
 
-            // DRIFT PROTECTION: Only seek if the difference is substantial (> 4s) to avoid "jitter".
-            if (Math.abs(video.currentTime - targetPosition) > 4) {
-                video.currentTime = targetPosition;
-            }
+                // Guards: Buffering or Seeking
+                if (video.seeking || video.readyState < 3) return;
 
-            // PLAY STATE SYNC
-            if (partyState.isPlaying && video.paused && !video.ended) {
-                video.play().catch(() => {
-                    // Browser likely blocked autoplay. User must interact.
-                });
-            } else if (!partyState.isPlaying && !video.paused) {
-                video.pause();
-            }
+                // Threshold Check: 30 seconds drift tolerance for high stability
+                const drift = Math.abs(video.currentTime - targetPosition);
+                if (drift > 30) {
+                    console.log(`[Sync] Rescuing playback node. Drift: ${Math.round(drift)}s`);
+                    lastSeekTimeRef.current = now;
+                    video.currentTime = targetPosition;
+                }
+
+                // Play/Pause Sync
+                if (partyState.isPlaying && video.paused && !video.ended) {
+                    video.play().catch(() => {});
+                } else if (!partyState.isPlaying && !video.paused) {
+                    video.pause();
+                }
+            } catch (e) { console.error("Sync calculation error:", e); }
         };
 
-        const interval = setInterval(syncClock, 3000); 
+        const interval = setInterval(syncClock, 8000);
         syncClock(); 
-
         return () => clearInterval(interval);
-    }, [partyState, movie, currentOffset]);
+    }, [partyState, movie]);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -247,12 +216,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         {!hasAccess ? (
                              <div className="text-center p-8 space-y-10 animate-[fadeIn_0.8s_ease-out]">
                                 <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">Admission Required.</h2>
-                                <button onClick={() => setShowPaywall(true)} className="bg-white text-black px-16 py-6 rounded-[2.5rem] font-black uppercase tracking-tighter text-xl shadow-2xl hover:scale-105 active:scale-95 transition-all">Unlock Admission // ${movie.watchPartyPrice?.toFixed(2)}</button>
+                                <button onClick={() => setShowPaywall(true)} className="bg-white text-black px-16 py-6 rounded-full font-black uppercase tracking-tighter text-xl shadow-2xl hover:scale-105 active:scale-95 transition-all">Unlock Admission // ${movie.watchPartyPrice?.toFixed(2)}</button>
                              </div>
                         ) : (
                             movie.isLiveStream ? (
                                 <div className="w-full h-full p-2 md:p-6 lg:p-12 flex items-center justify-center bg-black">
-                                    <div className="w-full h-full bg-gray-900 rounded-[2rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-white/5 relative" dangerouslySetInnerHTML={{ __html: processLiveEmbed(movie.liveStreamEmbed!, currentOffset) }} />
+                                    <div className="w-full h-full bg-gray-900 rounded-[2rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-white/5 relative" dangerouslySetInnerHTML={{ __html: processLiveEmbed(movie.liveStreamEmbed!) }} />
                                 </div>
                             ) : (
                                 <video ref={videoRef} src={movie.fullMovie} className="w-full h-full object-contain" autoPlay muted />

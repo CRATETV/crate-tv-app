@@ -8,7 +8,7 @@ interface HeroProps {
   onSetCurrentIndex: (index: number) => void;
   onPlayMovie: (movie: Movie) => void;
   onMoreInfo: (movie: Movie) => void;
-  hideContent?: boolean; // Prop to hide overlay text for landing page use
+  hideContent?: boolean; 
 }
 
 const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, onPlayMovie, onMoreInfo, hideContent = false }) => {
@@ -25,22 +25,15 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
   useEffect(() => {
     setShowVideo(false);
     if (videoTimeoutRef.current) clearTimeout(videoTimeoutRef.current);
-
     if (currentMovie.trailer) {
-      videoTimeoutRef.current = setTimeout(() => {
-        setShowVideo(true);
-      }, 3000);
+      videoTimeoutRef.current = setTimeout(() => { setShowVideo(true); }, 3000);
     }
-
-    return () => {
-      if (videoTimeoutRef.current) clearTimeout(videoTimeoutRef.current);
-    };
+    return () => { if (videoTimeoutRef.current) clearTimeout(videoTimeoutRef.current); };
   }, [currentIndex, currentMovie.trailer]);
 
   return (
     <div className="relative w-full h-[65vh] md:h-[28vw] md:max-h-[520px] min-h-[450px] bg-black overflow-hidden">
       <div className="absolute inset-0 overflow-hidden">
-        {/* Poster Image */}
         <img
           key={`poster-${currentMovie.key}`}
           src={`/api/proxy-image?url=${encodeURIComponent(currentMovie.poster)}`}
@@ -49,22 +42,16 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
           crossOrigin="anonymous"
         />
 
-        {/* Award Overlay Priority Logic for Hero */}
         {!showVideo && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[80%] md:max-w-xs pointer-events-none transition-opacity duration-1000">
                 {currentMovie.customLaurelUrl ? (
                     <img src={currentMovie.customLaurelUrl} alt="Award" className="w-full h-auto drop-shadow-2xl" />
                 ) : (currentMovie.awardName && currentMovie.awardYear) ? (
-                    <LaurelPreview 
-                        awardName={currentMovie.awardName} 
-                        year={currentMovie.awardYear} 
-                        color="#FFFFFF" 
-                    />
+                    <LaurelPreview awardName={currentMovie.awardName} year={currentMovie.awardYear} color="#FFFFFF" />
                 ) : null}
             </div>
         )}
 
-        {/* Video Trailer */}
         {currentMovie.trailer && (
             <video
                 key={`video-${currentMovie.key}`}
@@ -77,13 +64,11 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
             />
         )}
 
-        {/* Cinematic Overlays */}
         <div className="absolute inset-0 hero-gradient-overlay"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-transparent to-black/20"></div>
         <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none"></div>
       </div>
 
-      {/* Main Content (Title/Synop/Buttons) */}
       {!hideContent && (
         <div className="relative z-10 flex flex-col justify-end h-full px-4 md:px-12 pb-24 md:pb-10 text-white pointer-events-none">
             <div className="max-w-4xl">
@@ -128,7 +113,6 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
         </div>
       )}
 
-      {/* Indicators */}
       <div className="absolute bottom-8 left-4 md:left-12 z-20 flex gap-2 md:gap-3">
         {movies.map((_, index) => (
           <button

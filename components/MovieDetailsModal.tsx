@@ -22,7 +22,7 @@ interface MovieDetailsModalProps {
 }
 
 const EpisodeRow: React.FC<{ episode: Episode; onPlay: () => void }> = ({ episode, onPlay }) => (
-    <div className="group flex items-center gap-4 bg-white/5 hover:bg-white/10 p-4 rounded-xl border border-white/5 transition-all">
+    <div className="group flex items-center gap-4 bg-white/5 hover:bg-white/10 p-4 rounded-full border border-white/5 transition-all px-6">
         <div className="flex-shrink-0 w-10 h-10 bg-red-600/20 text-red-500 rounded-full flex items-center justify-center font-black group-hover:bg-red-600 group-hover:text-white transition-colors cursor-pointer" onClick={onPlay}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
         </div>
@@ -104,23 +104,23 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                 {!movie.isSeries && (
                     <button 
                         onClick={() => handlePlayButtonClick()} 
-                        className={`flex items-center justify-center px-8 py-3.5 ${needsPurchase ? 'bg-indigo-600 text-white' : 'bg-white text-black'} font-black rounded-xl hover:opacity-90 transition-all transform hover:scale-105 active:scale-95 shadow-2xl uppercase tracking-widest text-xs`}
+                        className={`flex items-center justify-center px-10 py-3.5 ${needsPurchase ? 'bg-indigo-600 text-white' : 'bg-white text-black'} font-black rounded-full hover:opacity-90 transition-all transform hover:scale-105 active:scale-95 shadow-2xl uppercase tracking-widest text-xs`}
                     >
                         {needsPurchase ? 'Premium Rental' : 'Play Now'}
                     </button>
                 )}
                 {canCollectDonations && (
-                    <button onClick={() => onSupportMovie(movie)} className="flex items-center justify-center px-8 py-3.5 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-500 transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(16,185,129,0.3)] uppercase tracking-widest text-xs">
+                    <button onClick={() => onSupportMovie(movie)} className="flex items-center justify-center px-10 py-3.5 bg-emerald-600 text-white font-black rounded-full hover:bg-emerald-500 transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(16,185,129,0.3)] uppercase tracking-widest text-xs">
                         Support Creator
                     </button>
                 )}
-                <button onClick={() => onToggleLike(movie.key)} className={`flex items-center justify-center px-8 py-3.5 border-2 font-black rounded-xl transition-all transform hover:scale-105 active:scale-95 uppercase tracking-widest text-xs ${isLiked ? 'bg-red-600 border-red-600 text-white' : 'bg-transparent border-red-600 text-white hover:bg-red-600 hover:text-white'}`}>
+                <button onClick={() => onToggleLike(movie.key)} className={`flex items-center justify-center px-10 py-3.5 border-2 font-black rounded-full transition-all transform hover:scale-105 active:scale-95 uppercase tracking-widest text-xs ${isLiked ? 'bg-red-600 border-red-600 text-white' : 'bg-transparent border-red-600 text-white hover:bg-red-600 hover:text-white'}`}>
                     {isLiked ? '❤️ Liked' : '🤍 Like Film'}
                 </button>
             </>
         ) : (
-            <div className="bg-blue-600 text-white font-black px-8 py-4 rounded-xl shadow-lg flex items-center gap-4">
-                <span className="uppercase text-xs tracking-widest bg-white/20 px-2 py-0.5 rounded">Premieres Soon</span>
+            <div className="bg-blue-600 text-white font-black px-10 py-4 rounded-full shadow-lg flex items-center gap-4">
+                <span className="uppercase text-xs tracking-widest bg-white/20 px-3 py-0.5 rounded-full">Premieres Soon</span>
                 <Countdown targetDate={movie.releaseDateTime!} onEnd={() => setReleased(true)} className="text-lg font-mono" />
             </div>
         )}
@@ -134,7 +134,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[100] p-0 md:p-4 animate-[fadeIn_0.3s_ease-out]" onClick={onClose}>
       <div 
-        className="bg-[#0a0a0a] md:rounded-3xl shadow-2xl w-full max-w-5xl h-full md:h-auto md:max-h-[92vh] overflow-y-auto relative scrollbar-hide border border-white/10"
+        className="bg-[#0a0a0a] md:rounded-[3rem] shadow-2xl w-full max-w-5xl h-full md:h-auto md:max-h-[92vh] overflow-y-auto relative scrollbar-hide border border-white/10"
         onClick={(e) => e.stopPropagation()}
         ref={modalContentRef}
       >
@@ -154,7 +154,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                 <div className="flex items-center gap-4 mb-6">
                    <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none drop-shadow-2xl">{movie.title}</h2>
                    {movie.isEpisode && (
-                        <div className="bg-amber-600 text-white px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg">
+                        <div className="bg-amber-600 text-white px-4 py-1 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg">
                             Episode
                         </div>
                    )}
@@ -169,7 +169,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                 <div>
                     <h2 className="text-4xl font-black uppercase tracking-tighter leading-tight text-white">{movie.title}</h2>
                     {movie.isEpisode && (
-                        <span className="inline-block bg-amber-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest mt-2">Episode</span>
+                        <span className="inline-block bg-amber-600 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest mt-2">Episode</span>
                     )}
                 </div>
                 <ActionButtons />
@@ -231,7 +231,7 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({
                             <p className="text-white font-black text-xl tracking-tighter uppercase">{movie.producers}</p>
                         </div>
                     )}
-                    <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
+                    <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10">
                         <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-4">Official Accreditation</p>
                         <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-20 opacity-20" alt="Crate Official" />
                     </div>

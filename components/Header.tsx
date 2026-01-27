@@ -65,8 +65,9 @@ const Header: React.FC<HeaderProps> = ({
         setIsProfileMenuOpen(false);
     };
 
-    // VISUAL UPDATE: Increased transparency (10% opacity) and kept high blur for premium frosted feel.
-    const headerClasses = `sticky top-0 z-40 transition-all duration-700 ${isScrolled || isScrolledProp ? 'bg-black/10 backdrop-blur-[40px] border-b border-white/5 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.3)]' : 'bg-transparent py-5'}`;
+    // VISUAL UPDATE: ULTIMATE TRANSPARENCY
+    // Removed all background tints (bg-transparent) and shadows to make the area completely transparent.
+    const headerClasses = `sticky top-0 z-40 transition-all duration-700 ${isScrolled || isScrolledProp ? 'bg-transparent backdrop-blur-xl py-3' : 'bg-transparent py-5'}`;
     
     const navLinks = [
         { path: '/', label: 'Home' }, 
@@ -86,7 +87,7 @@ const Header: React.FC<HeaderProps> = ({
                         {nowStreamingMovie && (
                             <button 
                                 onClick={(e) => handleNavigate(e, spotlightPath)}
-                                className={`group flex items-center gap-3 ${isLiveSpotlight ? 'bg-red-600' : 'bg-red-600/10 border border-red-600/20'} hover:bg-red-600 transition-all px-4 py-2 rounded-xl shadow-lg`}
+                                className={`group flex items-center gap-3 ${isLiveSpotlight ? 'bg-red-600' : 'bg-red-600/5 border border-red-600/10'} hover:bg-red-600 transition-all px-4 py-2 rounded-full shadow-lg`}
                             >
                                 <div className="flex items-center gap-1.5">
                                     <span className="relative flex h-2 w-2">
@@ -109,7 +110,7 @@ const Header: React.FC<HeaderProps> = ({
                                     key={link.path} 
                                     href={link.path} 
                                     onClick={(e) => handleNavigate(e, link.path)} 
-                                    className={`transition-all duration-300 text-sm font-black uppercase tracking-[0.2em] opacity-50 hover:opacity-100 ${link.label === 'Creator Hub' ? 'text-red-500 hover:text-white' : link.label === 'Public Square' ? 'text-emerald-400 hover:text-white' : 'text-gray-300 hover:text-white'}`}
+                                    className={`transition-all duration-300 text-sm font-black uppercase tracking-[0.2em] opacity-40 hover:opacity-100 ${link.label === 'Creator Hub' ? 'text-red-500 hover:text-white' : link.label === 'Public Square' ? 'text-emerald-400 hover:text-white' : 'text-gray-300 hover:text-white'}`}
                                 >
                                     {link.label}
                                 </a>
@@ -128,9 +129,9 @@ const Header: React.FC<HeaderProps> = ({
                                     value={searchQuery}
                                     onChange={(e) => onSearch(e.target.value)}
                                     placeholder="Titles, people, genres"
-                                    className="bg-white/5 border border-white/10 text-white placeholder-gray-600 px-4 py-1.5 pl-10 rounded-full text-xs w-48 focus:w-64 focus:border-red-500/50 focus:outline-none transition-all duration-300 shadow-inner"
+                                    className="bg-white/5 border border-white/5 text-white placeholder-gray-600 px-4 py-1.5 pl-10 rounded-full text-xs w-48 focus:w-64 focus:border-red-500/30 focus:outline-none transition-all duration-300 shadow-inner"
                                 />
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-red-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-700 group-focus-within:text-red-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
                             </form>
