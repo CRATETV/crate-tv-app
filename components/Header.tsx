@@ -65,9 +65,9 @@ const Header: React.FC<HeaderProps> = ({
         setIsProfileMenuOpen(false);
     };
 
-    // VISUAL UPDATE: ULTIMATE TRANSPARENCY
-    // Removed all background tints (bg-transparent) and shadows to make the area completely transparent.
-    const headerClasses = `sticky top-0 z-40 transition-all duration-700 ${isScrolled || isScrolledProp ? 'bg-transparent backdrop-blur-xl py-3' : 'bg-transparent py-5'}`;
+    // VISUAL REPAIR: GHOST HEADER
+    // Removed backdrop-blur and any bg tints for pure transparency as requested.
+    const headerClasses = `fixed top-0 left-0 right-0 z-40 transition-all duration-700 bg-transparent ${isScrolled || isScrolledProp ? 'py-3' : 'py-6'}`;
     
     const navLinks = [
         { path: '/', label: 'Home' }, 
@@ -87,7 +87,7 @@ const Header: React.FC<HeaderProps> = ({
                         {nowStreamingMovie && (
                             <button 
                                 onClick={(e) => handleNavigate(e, spotlightPath)}
-                                className={`group flex items-center gap-3 ${isLiveSpotlight ? 'bg-red-600' : 'bg-red-600/5 border border-red-600/10'} hover:bg-red-600 transition-all px-4 py-2 rounded-full shadow-lg`}
+                                className={`group flex items-center gap-3 ${isLiveSpotlight ? 'bg-red-600' : 'bg-red-600/10 border border-red-600/20'} hover:bg-red-600 transition-all px-4 py-2 rounded-full shadow-lg backdrop-blur-md`}
                             >
                                 <div className="flex items-center gap-1.5">
                                     <span className="relative flex h-2 w-2">
@@ -129,7 +129,7 @@ const Header: React.FC<HeaderProps> = ({
                                     value={searchQuery}
                                     onChange={(e) => onSearch(e.target.value)}
                                     placeholder="Titles, people, genres"
-                                    className="bg-white/5 border border-white/5 text-white placeholder-gray-600 px-4 py-1.5 pl-10 rounded-full text-xs w-48 focus:w-64 focus:border-red-500/30 focus:outline-none transition-all duration-300 shadow-inner"
+                                    className="bg-white/5 border border-white/10 text-white placeholder-gray-600 px-4 py-1.5 pl-10 rounded-full text-xs w-48 focus:w-64 focus:border-red-500/30 focus:outline-none transition-all duration-300 shadow-inner"
                                 />
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-700 group-focus-within:text-red-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -158,7 +158,7 @@ const Header: React.FC<HeaderProps> = ({
                             )}
                         </div>
                     ) : onSignInClick && (
-                        <button onClick={onSignInClick} className="bg-red-600 hover:bg-red-700 text-white font-bold py-1.5 px-5 rounded text-sm transition-transform active:scale-95 shadow-lg">Sign In</button>
+                        <button onClick={onSignInClick} className="bg-red-600 hover:bg-red-700 text-white font-black py-1.5 px-5 rounded-full text-sm transition-transform active:scale-95 shadow-lg">Sign In</button>
                     )}
                 </div>
             </div>

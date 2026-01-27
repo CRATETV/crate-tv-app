@@ -110,24 +110,40 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     const [showPaywall, setShowPaywall] = useState(false);
+    const [needsInitialSync, setNeedsInitialSync] = useState(true);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
 
     const movie = useMemo(() => allMovies[movieKey], [movieKey, allMovies]);
 
-    // RESILIENT SYNC ENGINE V3
+    // RESILIENT SYNC ENGINE V4: RESOLVES "REPLAY" GLITCH
+    const handleInitialSync = () => {
+        const video = videoRef.current;
+        if (!video || !partyState?.actualStartTime) return;
+        
+        try {
+            const serverStart = (partyState.actualStartTime as any).toDate().getTime();
+            const targetPosition = Math.max(0, (Date.now() - serverStart) / 1000);
+            video.currentTime = targetPosition;
+            video.play().catch(() => {
+                // Audio fallback handled by the splash screen interaction
+            });
+            setNeedsInitialSync(false);
+            lastSeekTimeRef.current = Date.now();
+        } catch (e) { console.error("Initial sync error:", e); }
+    };
+
     useEffect(() => {
         const video = videoRef.current;
-        if (!video || !partyState?.actualStartTime || movie?.isLiveStream) return;
+        if (!video || !partyState?.actualStartTime || movie?.isLiveStream || needsInitialSync) return;
 
         const syncClock = () => {
             const now = Date.now();
             
-            // Cooldown: Don't fight the browser if it just sought 15s ago
-            if (now - lastSeekTimeRef.current < 15000) return;
+            // Cooldown: Don't fight the buffer if we just sought 12s ago
+            if (now - lastSeekTimeRef.current < 12000) return;
 
             try {
-                // Calculate Dynamic Target based on local wall clock vs server epoch
                 const serverStart = (partyState.actualStartTime as any).toDate().getTime();
                 const targetPosition = Math.max(0, (now - serverStart) / 1000);
                 const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
@@ -137,30 +153,27 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     return;
                 }
 
-                // Guards: Buffering or Seeking
-                if (video.seeking || video.readyState < 3) return;
-
-                // Threshold Check: 30 seconds drift tolerance for high stability
+                // DRIFT TOLERANCE: Increased to 20s to stop the "Aggressive Replay" glitch.
+                // Minor internet jitter won't trigger a snap-back anymore.
                 const drift = Math.abs(video.currentTime - targetPosition);
-                if (drift > 30) {
-                    console.log(`[Sync] Rescuing playback node. Drift: ${Math.round(drift)}s`);
+                if (drift > 20 && !video.seeking && video.readyState >= 3) {
+                    console.log(`[Sync] Rescuing node. Drift: ${Math.round(drift)}s`);
                     lastSeekTimeRef.current = now;
                     video.currentTime = targetPosition;
                 }
 
-                // Play/Pause Sync
+                // PLAY STATE SYNC
                 if (partyState.isPlaying && video.paused && !video.ended) {
                     video.play().catch(() => {});
                 } else if (!partyState.isPlaying && !video.paused) {
                     video.pause();
                 }
-            } catch (e) { console.error("Sync calculation error:", e); }
+            } catch (e) { console.error("Heartbeat error:", e); }
         };
 
         const interval = setInterval(syncClock, 8000);
-        syncClock(); 
         return () => clearInterval(interval);
-    }, [partyState, movie]);
+    }, [partyState, movie, needsInitialSync]);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -224,7 +237,29 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     <div className="w-full h-full bg-gray-900 rounded-[2rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-white/5 relative" dangerouslySetInnerHTML={{ __html: processLiveEmbed(movie.liveStreamEmbed!) }} />
                                 </div>
                             ) : (
-                                <video ref={videoRef} src={movie.fullMovie} className="w-full h-full object-contain" autoPlay muted />
+                                <div className="relative w-full h-full">
+                                    <video ref={videoRef} src={movie.fullMovie} className="w-full h-full object-contain" />
+                                    
+                                    {/* AUDIO GATE SPLASH: Resolves Sound Issues & Autoplay Blocks */}
+                                    {needsInitialSync && (
+                                        <div className="absolute inset-0 z-[140] flex flex-col items-center justify-center bg-black/90 backdrop-blur-3xl animate-[fadeIn_0.5s_ease-out] text-center p-6">
+                                            <div className="max-w-md space-y-8">
+                                                <div className="space-y-2">
+                                                    <p className="text-red-500 font-black uppercase tracking-[0.6em] text-[10px]">Transmission Established</p>
+                                                    <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic leading-none">Ready for Sync.</h3>
+                                                </div>
+                                                <button 
+                                                    onClick={handleInitialSync}
+                                                    className="bg-white text-black font-black px-12 py-6 rounded-full text-xl uppercase tracking-tighter shadow-[0_0_80px_rgba(255,255,255,0.2)] hover:scale-105 active:scale-95 transition-all flex items-center gap-4 mx-auto"
+                                                >
+                                                    Synchronize Uplink
+                                                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                                </button>
+                                                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest leading-relaxed">This action snapshot corrects global drift and authorizes unmuted audio playback.</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             )
                         )}
                     </div>
