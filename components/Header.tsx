@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
@@ -31,7 +32,7 @@ const Header: React.FC<HeaderProps> = ({
     isLiveSpotlight = false,
 }) => {
     const { user, logout } = useAuth();
-    const { categories, movies } = useFestival();
+    const { categories, movies, activeParties, livePartyMovie } = useFestival();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -65,7 +66,6 @@ const Header: React.FC<HeaderProps> = ({
         setIsProfileMenuOpen(false);
     };
 
-    // FIXED GLOBAL HEADER CSS
     const headerClasses = `fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${isScrolled || isScrolledProp ? 'py-3 bg-black/80 backdrop-blur-2xl border-b border-white/5 shadow-2xl' : 'py-8 bg-transparent'}`;
     
     const navLinks = [
@@ -74,30 +74,33 @@ const Header: React.FC<HeaderProps> = ({
     ];
     if (user && (user.isActor || user.isFilmmaker)) navLinks.push({ path: '/portal', label: 'Creator Hub' });
     
-    const spotlightPath = isLiveSpotlight && nowStreamingMovie 
-        ? `/watchparty/${nowStreamingMovie.key}`
-        : nowStreamingMovie ? `/movie/${nowStreamingMovie.key}?play=true` : '/';
+    const activeNotificationMovie = livePartyMovie || nowStreamingMovie;
+    const isActuallyLive = !!livePartyMovie && !!activeParties[livePartyMovie.key];
+    
+    const spotlightPath = isActuallyLive 
+        ? `/watchparty/${livePartyMovie?.key}`
+        : activeNotificationMovie ? `/movie/${activeNotificationMovie.key}?play=true` : '/';
 
     return (
         <header className={headerClasses} style={{ marginTop: topOffset, paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
             <div className="max-w-[1800px] mx-auto px-6 md:px-12 flex items-center justify-between">
                 <div className="flex items-center gap-12">
                     <div className="flex items-center gap-4">
-                        {nowStreamingMovie && (
+                        {activeNotificationMovie && (
                             <button 
                                 onClick={(e) => handleNavigate(e, spotlightPath)}
-                                className={`group flex items-center gap-3 ${isLiveSpotlight ? 'bg-red-600' : 'bg-red-600/10 border border-red-600/20'} hover:bg-red-600 transition-all px-4 py-2 rounded-full shadow-lg backdrop-blur-md`}
+                                className={`group flex items-center gap-3 ${isActuallyLive ? 'bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-red-600/10 border border-red-600/20'} hover:bg-red-600 transition-all px-4 py-2 rounded-full shadow-lg backdrop-blur-md`}
                             >
                                 <div className="flex items-center gap-1.5">
                                     <span className="relative flex h-2 w-2">
-                                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isLiveSpotlight ? 'bg-white' : 'bg-red-400'} opacity-75`}></span>
-                                        <span className={`relative inline-flex rounded-full h-2 w-2 ${isLiveSpotlight ? 'bg-white' : 'bg-red-600'}`}></span>
+                                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isActuallyLive ? 'bg-white' : 'bg-red-400'} opacity-75`}></span>
+                                        <span className={`relative inline-flex rounded-full h-2 w-2 ${isActuallyLive ? 'bg-white shadow-[0_0_5px_white]' : 'bg-red-600'}`}></span>
                                     </span>
-                                    <span className={`text-[10px] font-black uppercase tracking-widest ${isLiveSpotlight ? 'text-white' : 'text-red-500'} group-hover:text-white transition-colors`}>
-                                        {isLiveSpotlight ? 'Join Live Party' : 'Now Streaming'}
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${isActuallyLive ? 'text-white' : 'text-red-500'} group-hover:text-white transition-colors`}>
+                                        {isActuallyLive ? 'Live Hub Active' : 'Featured Stream'}
                                     </span>
                                 </div>
-                                <span className="text-white font-black text-xs uppercase tracking-tighter hidden sm:inline">{nowStreamingMovie.title}</span>
+                                <span className="text-white font-black text-xs uppercase tracking-tighter hidden lg:inline">{activeNotificationMovie.title}</span>
                             </button>
                         )}
                     </div>

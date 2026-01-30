@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -18,7 +19,6 @@ import CollapsibleFooter from './components/CollapsibleFooter';
 import BottomNavBar from './components/BottomNavBar';
 import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
-import NowStreamingBanner from './components/NowPlayingBanner';
 import CrateFestBanner from './components/CrateFestBanner';
 import CrateVaultRow from './components/CrateVaultRow';
 import firebase from 'firebase/compat/app';
@@ -108,7 +108,6 @@ const App: React.FC = () => {
         return 'NONE';
     }, [livePartyMovie, settings.crateFestConfig, isFestivalLive, isFestivalBannerDismissed]);
 
-    // Strategic selector for the Homepage Hero Branding
     const currentLiveHeroConfig = useMemo(() => {
         if (activeBannerType === 'CRATE_FEST') return settings.crateFestConfig;
         if (isFestivalLive) return festivalConfig;
@@ -282,11 +281,12 @@ const App: React.FC = () => {
 
                             {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => window.location.href='/cratefest'} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />}
                             {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} />}
-                            {nowStreamingMovie && !settings.isHolidayModeActive && <NowStreamingBanner movie={nowStreamingMovie} onSelectMovie={handleSelectMovie} onPlayMovie={handlePlayMovie} isLive={isNowStreamingLive} />}
+                            
+                            {/* FIX: Removed the big NowStreamingBanner to make room for the Header notification hub */}
                             
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as any;
-                                // EXCLUSION HUB: Prevent Zine or non-movie rows from appearing in the movie catalog feed
+                                // EXCLUSION HUB: Strictly exclude Public Domain and Spotlight rows from main page
                                 if (['featured', 'nowStreaming', 'publicAccess', 'publicDomainIndie', 'zine', 'editorial'].includes(key)) return null;
                                 if ((key === 'cratemas' || (typedCategory.title || '').toLowerCase() === 'cratemas') && !settings.isHolidayModeActive) return null;
                                 

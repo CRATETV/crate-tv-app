@@ -27,7 +27,7 @@ export interface UserRecord extends User {
 }
 
 // ═══════════════════════════════════════════════════════════
-// ROKU SPECIFICATION TYPES (V6 STABLE)
+// ROKU SPECIFICATION TYPES (V7 PRODUCTION STABLE)
 // ═══════════════════════════════════════════════════════════
 
 export interface RokuHeroItem {
@@ -68,7 +68,7 @@ export interface RokuConfig {
     hidden: string[];
     order: string[];
     customTitles: Record<string, string>;
-    separateSection: string[]; // Isolated segments like "publicAccess"
+    separateSection: string[]; 
   };
   
   content: {
@@ -93,23 +93,24 @@ export interface RokuAsset {
 }
 
 export interface RokuMovie extends Movie {
-  id: string;
+  id: string; // BRIGHTSCRIPT: Required for node mapping
   description: string;
-  hdPosterUrl: string;
+  hdPosterUrl: string; // BRIGHTSCRIPT: The primary poster key
   heroImage: string;
-  streamUrl: string;
+  streamUrl: string; // BRIGHTSCRIPT: The primary stream key
   streamFormat: 'mp4' | 'hls' | 'dash';
   year: string;
   runtime: string;
   isFree: boolean;
   live: boolean;
-  rank?: number; // Visual rank for Top 10 row
+  rank?: number; 
 }
 
 export interface RokuFeed {
   version: number;
   timestamp: string;
   heroItems: RokuMovie[];
+  // BRIGHTSCRIPT: Root array MUST be named 'categories'
   categories: { 
     title: string; 
     type?: 'standard' | 'ranked' | 'live';

@@ -4,6 +4,24 @@ import { Movie, Category, RokuConfig, RokuFeed, RokuMovie, RokuAsset } from '../
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 
 // ============================================================
+// PRODUCTION POSTER OVERRIDES (VERIFIED ASSETS)
+// ============================================================
+
+const POSTER_URL_FIXES: Record<string, string> = {
+  'lifeless': 'https://cratetelevision.s3.us-east-1.amazonaws.com/Lifeless+poster+remake+.jpg',
+  'hair': 'https://cratetelevision.s3.us-east-1.amazonaws.com/Hair+poster+209+X+209++(2).jpg',
+  'you-vs-them': 'https://cratetelevision.s3.us-east-1.amazonaws.com/you+vs+them+poster+.png',
+  'street-eats-the-boot': 'https://cratetelevision.s3.us-east-1.amazonaws.com/Street%2BEats%2Bgthe%2BBoot%2Bposter(2).jpeg',
+  'finally-caught': 'https://cratetelevision.s3.us-east-1.amazonaws.com/finally+caught+poster+.png',
+  'crossroads': 'https://cratetelevision.s3.us-east-1.amazonaws.com/crossroads(Mobile+Video).jpg',
+  'almas-vows': "https://cratetelevision.s3.us-east-1.amazonaws.com/Alma's+vows+poster+remake+.png",
+  'its-in-you': "https://cratetelevision.s3.us-east-1.amazonaws.com/it's+in+you+poster+jpeg",
+  'silent-love': 'https://cratetelevision.s3.us-east-1.amazonaws.com/silent+Love++poster+remake+.jpg'
+};
+
+const POSTER_FALLBACK = 'https://cratetv.net/images/poster-placeholder.png';
+
+// ============================================================
 // BULLETPROOF FALLBACK DEFAULTS
 // ============================================================
 
@@ -14,7 +32,7 @@ const DEFAULT_ROKU_CONFIG: RokuConfig = {
   hero: { mode: 'auto', items: [] },
   topTen: { enabled: true, mode: 'auto', title: 'Top 10 Today', movieKeys: [], showNumbers: true },
   nowStreaming: { enabled: true, title: 'Now Streaming', mode: 'auto', movieKeys: [], daysBack: 30 },
-  categories: { mode: 'all', hidden: [], order: [], customTitles: {}, separateSection: ['publicAccess'] },
+  categories: { mode: 'all', hidden: [], order: [], customTitles: {}, separateSection: ['publicAccess', 'publicDomainIndie'] },
   content: { hiddenMovies: [], featuredMovies: [] },
   features: {
     liveStreaming: false,
@@ -24,19 +42,18 @@ const DEFAULT_ROKU_CONFIG: RokuConfig = {
   },
 };
 
-const POSTER_FALLBACK = 'https://cratetv.net/images/poster-placeholder.png';
-
 // ============================================================
 // HELPERS
 // ============================================================
 
-function encodeImageUrl(url: string): string {
-    if (!url) return POSTER_FALLBACK;
-    // Don't double-encode
+function sanitizeUrl(url: string): string {
+    if (!url) return '';
+    // Preserve already encoded URLs
     if (url.includes('%20')) return url;
     
-    // Scrub specific characters known to break Roku's internal poster parsing
+    // Explicit cleaning for Roku internal parser
     return url
+        .trim()
         .replace(/ /g, '%20')
         .replace(/'/g, '%27')
         .replace(/\(/g, '%28')
@@ -48,46 +65,35 @@ function isValidUrl(url: string): boolean {
   return url.startsWith('http://') || url.startsWith('https://');
 }
 
-function extractYear(date: string | undefined): string {
-  if (!date) return '2025';
-  try {
-    return new Date(date).getFullYear().toString();
-  } catch {
-    return '2025';
-  }
-}
-
-function detectFormat(url: string): 'mp4' | 'hls' | 'dash' {
-  if (url.includes('.m3u8')) return 'hls';
-  if (url.includes('.mpd')) return 'dash';
-  return 'mp4';
-}
-
 function formatMovieForRoku(movie: Movie, asset?: RokuAsset): RokuMovie {
-  const streamUrl = asset?.rokuStreamUrl || movie.rokuStreamUrl || movie.fullMovie || '';
+  const movieKey = movie.key?.toLowerCase() || '';
   
-  // Sanitization Logic for Broken Posters
-  let posterUrl = asset?.tvPoster || movie.tvPoster || movie.poster || '';
-  if (!isValidUrl(posterUrl)) {
+  // 1. Determine optimized stream source
+  const streamUrl = sanitizeUrl(asset?.rokuStreamUrl || movie.rokuStreamUrl || movie.fullMovie || '');
+  
+  // 2. Resolve Poster Art with hardcoded high-priority overrides
+  let posterUrl = POSTER_URL_FIXES[movieKey] || asset?.tvPoster || movie.tvPoster || movie.poster || '';
+  
+  if (!isValidUrl(posterUrl) || posterUrl.includes('broken')) {
       posterUrl = POSTER_FALLBACK;
   } else {
-      posterUrl = encodeImageUrl(posterUrl);
+      posterUrl = sanitizeUrl(posterUrl);
   }
 
-  // Hero art sanitization
+  // 3. Resolve Hero Image
   let heroUrl = asset?.heroImage || movie.rokuHeroImage || movie.tvPoster || movie.poster || '';
-  heroUrl = isValidUrl(heroUrl) ? encodeImageUrl(heroUrl) : posterUrl;
+  heroUrl = isValidUrl(heroUrl) ? sanitizeUrl(heroUrl) : posterUrl;
   
   return {
     ...movie,
-    id: movie.key,
+    id: movie.key, // BRIGHTSCRIPT: maps to 'id'
     title: movie.title || 'Untitled',
     description: (movie.synopsis || '').replace(/<[^>]+>/g, '').trim(),
     hdPosterUrl: posterUrl,
     heroImage: heroUrl,
     streamUrl: streamUrl,
-    streamFormat: detectFormat(streamUrl),
-    year: extractYear(movie.publishedAt),
+    streamFormat: streamUrl.includes('.m3u8') ? 'hls' : streamUrl.includes('.mpd') ? 'dash' : 'mp4',
+    year: movie.publishedAt ? new Date(movie.publishedAt).getFullYear().toString() : '2025',
     runtime: movie.durationInMinutes ? `${movie.durationInMinutes} min` : '',
     isFree: !movie.isForSale,
     live: movie.liveStreamStatus === 'live',
@@ -128,7 +134,7 @@ export async function GET(request: Request) {
             }
             const assetsSnap = await db.collection('roku_assets').get();
             assetsSnap.forEach(doc => { assets[doc.id] = doc.data() as RokuAsset; });
-        } catch (e) { console.warn('⚠️ [ROKU_INFRA] Config fetch failed'); }
+        } catch (e) { console.warn('⚠️ [ROKU_FEED] Config load failed'); }
     }
 
     const visibleMovies = Object.fromEntries(
@@ -138,51 +144,46 @@ export async function GET(request: Request) {
     // ⚠️ CRITICAL: The Roku app expects the key "categories" at the top level
     const categories: RokuFeed['categories'] = [];
 
-    // 1. Build "Now Streaming" Priority Row (Position 0)
+    // 1. NOW STREAMING (Pos 0)
     if (config.nowStreaming?.enabled) {
-        let nsKeys = [];
+        let keys = [];
         if (config.nowStreaming.mode === 'manual') {
-            nsKeys = config.nowStreaming.movieKeys || [];
+            keys = config.nowStreaming.movieKeys || [];
         } else {
             const cutoff = new Date();
             cutoff.setDate(cutoff.getDate() - (config.nowStreaming.daysBack || 30));
-            nsKeys = Object.values(visibleMovies)
+            keys = Object.values(visibleMovies)
                 .filter(m => new Date(m.publishedAt || 0) >= cutoff)
                 .sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime())
                 .map(m => m.key);
         }
-        const children = nsKeys.filter(k => visibleMovies[k]).map(k => formatMovieForRoku(visibleMovies[k], assets[k]));
+        const children = keys.filter(k => visibleMovies[k]).map(k => formatMovieForRoku(visibleMovies[k], assets[k]));
         if (children.length > 0) {
             categories.push({ title: config.nowStreaming.title || 'Now Streaming', type: 'standard', children });
         }
     }
 
-    // 2. Build "Top 10 Today" Ranked Row (Position 1)
+    // 2. TOP 10 TODAY (Pos 1)
     if (config.topTen?.enabled) {
-        let ttKeys = [];
+        let keys = [];
         if (config.topTen.mode === 'manual') {
-            ttKeys = config.topTen.movieKeys || [];
+            keys = config.topTen.movieKeys || [];
         } else {
-            ttKeys = Object.values(visibleMovies)
+            keys = Object.values(visibleMovies)
                 .sort((a, b) => (b.likes || 0) - (a.likes || 0))
                 .slice(0, 10)
                 .map(m => m.key);
         }
-        const children = ttKeys.filter(k => visibleMovies[k]).map((k, i) => ({
+        const children = keys.filter(k => visibleMovies[k]).map((k, i) => ({
             ...formatMovieForRoku(visibleMovies[k], assets[k]),
             rank: i + 1
         }));
         if (children.length > 0) {
-            categories.push({ 
-                title: config.topTen.title || 'Top 10 Today', 
-                type: 'ranked', 
-                showNumbers: config.topTen.showNumbers,
-                children 
-            });
+            categories.push({ title: config.topTen.title || 'Top 10 Today', type: 'ranked', showNumbers: config.topTen.showNumbers, children });
         }
     }
 
-    // 3. Regular Curation Rows
+    // 3. STANDALONE CURATION
     const separateSet = new Set(config.categories.separateSection || []);
     const hiddenSet = new Set(config.categories.hidden || []);
     
@@ -203,12 +204,10 @@ export async function GET(request: Request) {
 
     categoryList.forEach(cat => {
         const children = cat.movieKeys.filter((k: string) => visibleMovies[k]).map((k: string) => formatMovieForRoku(visibleMovies[k], assets[k]));
-        if (children.length > 0) {
-            categories.push({ title: cat.title, type: 'standard', children });
-        }
+        if (children.length > 0) categories.push({ title: cat.title, type: 'standard', children });
     });
 
-    // 4. Public Square (Isolated Segment)
+    // 4. PUBLIC SQUARE (Isolated)
     const publicSquare = Array.from(separateSet).map(key => {
         const cat = categoriesObj[key];
         if (!cat) return null;
@@ -218,7 +217,7 @@ export async function GET(request: Request) {
         };
     }).filter((c): c is any => c !== null && c.children.length > 0);
 
-    // 5. Hero Carousel Items
+    // 5. HERO
     let heroItems: RokuMovie[] = [];
     if (config.hero?.mode === 'manual' && config.hero?.items?.length > 0) {
         heroItems = config.hero.items
@@ -228,37 +227,34 @@ export async function GET(request: Request) {
                 const m = formatMovieForRoku(visibleMovies[h.movieKey], assets[h.movieKey]);
                 if (h.customTitle) m.title = h.customTitle;
                 return m;
-            })
-            .slice(0, 5);
+            }).slice(0, 5);
     }
     if (heroItems.length === 0 && categories.length > 0) {
         heroItems = categories[0].children.slice(0, 5);
     }
 
-    // Safety: Response structure must be precise
-    const feedResponse: RokuFeed = {
+    const response: RokuFeed = {
         version: config._version || 1,
         timestamp: new Date().toISOString(),
         heroItems,
-        categories: categories, // ⚠️ THIS IS THE KEY THE ROKU APP IS LOOKING FOR
+        categories: categories, // ⚠️ KEY FOR ROKU
         publicSquare,
         liveNow: [],
     };
 
-    return new Response(JSON.stringify(feedResponse), {
+    return new Response(JSON.stringify(response), {
         status: 200,
         headers: { 
             'Content-Type': 'application/json', 
-            'Cache-Control': 's-maxage=60, stale-while-revalidate=300',
+            'Cache-Control': 's-maxage=60',
             'Access-Control-Allow-Origin': '*' 
         },
     });
 
   } catch (error) {
-    console.error("CRITICAL ROKU FEED FAILURE:", error);
+    console.error("CRITICAL_ROKU_FEED_FAILURE:", error);
     return new Response(JSON.stringify({ 
         categories: [{ title: 'Syncing Nodes...', children: [] }], 
-        heroItems: [], 
         version: -1 
     }), { status: 200 });
   }
