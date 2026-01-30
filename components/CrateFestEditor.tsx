@@ -135,7 +135,6 @@ const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig
         } else if (type === 'number') {
             finalValue = parseFloat(value);
         } else if (type === 'datetime-local') {
-            // CRITICAL: Ensure local picker strings are converted back to UTC ISO for storage
             finalValue = value ? new Date(value).toISOString() : '';
         }
         

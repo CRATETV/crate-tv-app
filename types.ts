@@ -26,11 +26,87 @@ export interface UserRecord extends User {
     lastSignIn?: any;
 }
 
+// ═══════════════════════════════════════════════════════════
+// ROKU SPECIFICATION TYPES (V4 BULLETPROOF)
+// ═══════════════════════════════════════════════════════════
+
+export interface RokuHeroItem {
+  movieKey: string;
+  order: number;
+  customTitle?: string;
+  customSubtitle?: string;
+}
+
+// Renamed from RokuCategoryOverride to match usage in components and fix import errors
+export interface RokuCategoryConfig {
+  categoryKey: string;
+  order: number;
+  isVisible: boolean;
+  customTitle?: string;
+}
+
 export interface RokuConfig {
-    featuredKeys: string[];
-    visibleCategoryKeys: string[];
-    categoryOrder: string[];
-    isFestivalModeActive: boolean;
+  _version: number;
+  _lastUpdated: any;
+  _updatedBy: string;
+  
+  hero: {
+    mode: 'auto' | 'manual';
+    items: RokuHeroItem[];
+  };
+  
+  categories: {
+    mode: 'all' | 'custom';
+    hidden: string[];
+    order: string[];
+    customTitles: Record<string, string>;
+  };
+  
+  content: {
+    hiddenMovies: string[];
+    featuredMovies: string[];
+  };
+  
+  features: {
+    liveStreaming: boolean;
+    watchParties: boolean;
+    paidContent: boolean;
+    festivalMode: boolean;
+  };
+
+  // Added for compatibility with legacy Roku management components
+  isFestivalModeActive?: boolean;
+}
+
+export interface RokuAsset {
+  movieKey: string;
+  heroImage?: string;
+  tvPoster?: string;
+  rokuStreamUrl?: string; // Moved from Movie to RokuAsset for spec compliance
+  lastUpdated: any;
+}
+
+export interface RokuMovie extends Movie {
+  id: string;
+  // Added description to satisfy Roku feed requirement and fix type error in api/roku-feed.ts
+  description: string;
+  hdPosterUrl: string;
+  heroImage: string;
+  streamUrl: string;
+  streamFormat: 'mp4' | 'hls' | 'dash';
+  year: string;
+  runtime: string;
+  isFree: boolean;
+  live: boolean;
+}
+
+export interface RokuFeed {
+  version: number;
+  timestamp: string;
+  heroItems: RokuMovie[];
+  categories: { title: string; children: RokuMovie[] }[];
+  liveNow: any[];
+  watchParties: any[];
 }
 
 export interface Movie {
@@ -69,16 +145,11 @@ export interface Movie {
   isCratemas?: boolean;
   isLiveStream?: boolean;
   liveStreamEmbed?: string;
-  // Roku Specifics
+  // Legacy Roku fields (Keep for migration)
   rokuHeroImage?: string;
-  rokuStreamUrl?: string;        // Alternative stream for Roku compatibility
-  liveStreamUrl?: string;        // HLS stream URL (.m3u8)
+  rokuStreamUrl?: string;
+  liveStreamUrl?: string;
   liveStreamStatus?: 'offline' | 'live' | 'scheduled';
-  liveStreamScheduledTime?: string;
-  liveStreamTitle?: string;
-  rokuProductId?: string;        // Product ID from Roku Dashboard
-  isRokuPremium?: boolean;
-  rentalDurationHours?: number;  // 24 or 48
 }
 
 export interface Actor {
@@ -125,7 +196,7 @@ export interface FestivalConfig {
   description: string;
   startDate: string;
   endDate: string;
-  payoutRecipientId?: string; // Square Customer ID for partner payouts
+  payoutRecipientId?: string; 
   payoutCardId?: string;
   payoutLastLinked?: any;
 }
@@ -170,7 +241,7 @@ export interface WatchPartyState {
   isQALive?: boolean;
   activeBlockId?: string;
   activeMovieIndex?: number;
-  actualStartTime?: any; // Precise server timestamp when the session hit 0:00
+  actualStartTime?: any; 
   type: 'movie' | 'block';
 }
 
@@ -440,6 +511,16 @@ export interface JuryVerdict {
 }
 
 export interface AuditEntry {
+  id: string;
+  role: string;
+  action: string;
+  type: 'PURGE' | 'MUTATION' | 'LOGIN' | 'SECURITY';
+  details: string;
+  timestamp: any;
+  ip?: string;
+}
+
+export interface AuditRecord {
   id: string;
   role: string;
   action: string;

@@ -137,7 +137,6 @@ export async function POST(request: Request) {
                 totalSales += amount;
                 if (!revenueByFilm[details.title]) revenueByFilm[details.title] = { donations: 0, tickets: 0 };
                 revenueByFilm[details.title].tickets += amount;
-                // Currently watch parties are lumped into the main festival for ledger purposes
                 filmFestivalRevenue += amount; 
             } else if (details.type === 'block' && details.blockTitle) {
                 if (!salesByBlock[details.blockTitle]) salesByBlock[details.blockTitle] = { units: 0, revenue: 0 };
@@ -170,7 +169,6 @@ export async function POST(request: Request) {
         const totalAdminPayouts = pastAdminPayouts.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
         
         const totalRevenue = totalDonations + totalSales + filmFestivalRevenue + crateFestRevenue;
-        
         const totalCrateTvRevenue = (totalDonations * CRATE_SHARE) + (filmFestivalRevenue * CRATE_SHARE) + totalSales + (crateFestRevenue * CRATE_SHARE);
 
         const filmmakerPayouts: FilmmakerPayout[] = Object.values(allMovies).map(movie => {
@@ -196,7 +194,7 @@ export async function POST(request: Request) {
             totalRevenue, 
             totalCrateTvRevenue, 
             totalAdminPayouts, 
-            pastAdminPayouts, // Added missing property
+            pastAdminPayouts,
             totalUsers: usersSnapshot.size, 
             viewCounts, 
             movieLikes: {}, 
@@ -221,7 +219,7 @@ export async function POST(request: Request) {
             recentSpikes: [],
             billSavingsPotTotal,
             billSavingsTransactions,
-            viewLocations: {} // Added missing property
+            viewLocations: {}
         };
 
         return new Response(JSON.stringify({ analyticsData, errors }), { status: 200, headers: { 'Content-Type': 'application/json' } });
