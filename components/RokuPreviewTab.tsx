@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import LoadingSpinner from './LoadingSpinner';
-import { RokuFeed } from '../types';
+import { RokuFeed, RokuMovie } from '../types';
 
 const RokuPreviewTab: React.FC = () => {
     const [feed, setFeed] = useState<RokuFeed | null>(null);
@@ -34,7 +34,7 @@ const RokuPreviewTab: React.FC = () => {
         </div>
     );
 
-    const totalMovies = feed?.categories?.reduce((s, c) => s + c.children.length, 0) || 0;
+    const totalMovies = feed?.rows?.reduce((s: number, r) => s + r.children.length, 0) || 0;
     const isHealthy = totalMovies > 0;
 
     return (
@@ -42,7 +42,7 @@ const RokuPreviewTab: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="bg-[#0f0f0f] border border-white/5 p-8 rounded-[2.5rem] text-center shadow-xl">
                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Categorical Rows</p>
-                    <p className="text-4xl font-black text-white italic tracking-tighter">{feed?.categories?.length || 0}</p>
+                    <p className="text-4xl font-black text-white italic tracking-tighter">{feed?.rows?.length || 0}</p>
                 </div>
                 <div className="bg-[#0f0f0f] border border-white/5 p-8 rounded-[2.5rem] text-center shadow-xl">
                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Payload Weight</p>
@@ -75,14 +75,14 @@ const RokuPreviewTab: React.FC = () => {
             <div className="space-y-6">
                 <h3 className="text-[10px] font-black text-gray-700 uppercase tracking-[0.4em] px-4">Categorical Depth Map</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {feed?.categories?.map((cat, i) => (
+                    {feed?.rows?.map((row, i: number) => (
                         <div key={i} className="bg-white/[0.02] border border-white/5 p-8 rounded-[2.5rem] flex flex-col justify-between group hover:border-white/20 transition-all">
                             <div className="flex justify-between items-start mb-6">
-                                <h4 className="text-xl font-black text-white uppercase tracking-tight italic">{cat.title}</h4>
-                                <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">{cat.children.length} Nodes</span>
+                                <h4 className="text-xl font-black text-white uppercase tracking-tight italic">{row.title}</h4>
+                                <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">{row.children.length} Nodes</span>
                             </div>
                             <div className="flex -space-x-4 overflow-hidden py-2">
-                                {cat.children.slice(0, 8).map((m, j) => (
+                                {row.children.slice(0, 8).map((m: RokuMovie, j: number) => (
                                     <div key={j} className="w-12 h-16 rounded-lg border-2 border-black overflow-hidden shadow-2xl flex-shrink-0 relative group/poster">
                                         <img src={m.poster} className="w-full h-full object-cover" alt="" />
                                         <div className="absolute inset-0 bg-black/80 opacity-0 group-hover/poster:opacity-100 transition-opacity flex items-center justify-center p-1">
@@ -90,8 +90,8 @@ const RokuPreviewTab: React.FC = () => {
                                         </div>
                                     </div>
                                 ))}
-                                {cat.children.length > 8 && (
-                                    <div className="w-12 h-16 rounded-lg border-2 border-black bg-white/5 flex items-center justify-center text-[10px] font-black text-gray-500">+ {cat.children.length - 8}</div>
+                                {row.children.length > 8 && (
+                                    <div className="w-12 h-16 rounded-lg border-2 border-black bg-white/5 flex items-center justify-center text-[10px] font-black text-gray-500">+ {row.children.length - 8}</div>
                                 )}
                             </div>
                         </div>

@@ -13,6 +13,7 @@ const RokuCategoryManager: React.FC<RokuCategoryManagerProps> = ({ config, onSav
     const [hiddenSet, setHiddenSet] = useState<Set<string>>(new Set());
     const [order, setOrder] = useState<string[]>([]);
     const [customTitles, setCustomTitles] = useState<Record<string, string>>({});
+    const [separateSection, setSeparateSection] = useState<string[]>([]);
     const [mode, setMode] = useState<'all' | 'custom'>('all');
 
     useEffect(() => {
@@ -20,6 +21,7 @@ const RokuCategoryManager: React.FC<RokuCategoryManagerProps> = ({ config, onSav
             setHiddenSet(new Set(config.categories.hidden || []));
             setOrder(config.categories.order || []);
             setCustomTitles(config.categories.customTitles || {});
+            setSeparateSection(config.categories.separateSection || []);
             setMode(config.categories.mode || 'all');
         }
     }, [config]);
@@ -41,7 +43,8 @@ const RokuCategoryManager: React.FC<RokuCategoryManagerProps> = ({ config, onSav
                 mode,
                 hidden: Array.from(hiddenSet),
                 order,
-                customTitles
+                customTitles,
+                separateSection
             }
         });
         alert("Category manifest synchronized.");
@@ -56,7 +59,8 @@ const RokuCategoryManager: React.FC<RokuCategoryManagerProps> = ({ config, onSav
                 mode: 'all',
                 hidden: [],
                 order,
-                customTitles
+                customTitles,
+                separateSection
             }
         });
     };
