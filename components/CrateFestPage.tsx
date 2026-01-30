@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
@@ -105,7 +106,7 @@ const CrateFestPage: React.FC = () => {
                 </div>
 
                 <div className="max-w-[1600px] mx-auto p-6 md:p-16 space-y-32 pb-48">
-                    {config.movieBlocks.map((block, idx) => {
+                    {config.movieBlocks.map((block: FilmBlock, idx: number) => {
                         const isBlockUnlocked = hasCrateFestPass || (unlockedFestivalBlockIds && unlockedFestivalBlockIds.has(block.id));
                         return (
                             <section key={block.id} className="space-y-12">
@@ -115,13 +116,13 @@ const CrateFestPage: React.FC = () => {
                                         <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic text-white">{block.title}</h2>
                                     </div>
                                     {!isBlockUnlocked && (
-                                        <button onClick={() => setPaymentItem({ type: 'block', block: block as any })} className="bg-white/5 hover:bg-white/10 text-white font-black px-6 py-3 rounded-xl border border-white/10 transition-all uppercase text-[10px] tracking-widest">
+                                        <button onClick={() => setPaymentItem({ type: 'block', block: block })} className="bg-white/5 hover:bg-white/10 text-white font-black px-6 py-3 rounded-xl border border-white/10 transition-all uppercase text-[10px] tracking-widest">
                                             Unlock Entire Block - $10.00
                                         </button>
                                     )}
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8">
-                                    {block.movieKeys.map(key => {
+                                    {block.movieKeys.map((key: string) => {
                                         const movie = resolveMovie(key);
                                         if (!movie) return null;
                                         const access = checkAccess(movie.key, block.id);

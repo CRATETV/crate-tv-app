@@ -188,7 +188,6 @@ export interface SentimentPoint {
   serverTimestamp: any;
 }
 
-// Added missing interface for PromoCode
 export interface PromoCode {
   id: string;
   code: string;
@@ -203,7 +202,6 @@ export interface PromoCode {
   expiresAt?: string;
 }
 
-// Added missing interface for CrateFestConfig
 export interface CrateFestConfig {
   isActive: boolean;
   title: string;
@@ -215,19 +213,16 @@ export interface CrateFestConfig {
   featuredWatchPartyKey?: string;
 }
 
-// Added missing interface for AdConfig
 export interface AdConfig {
     [key: string]: any;
 }
 
-// Added missing interface for ZineSection
 export interface ZineSection {
   id: string;
   type: 'text' | 'header' | 'quote' | 'image';
   content: string;
 }
 
-// Added missing interface for EditorialStory
 export interface EditorialStory {
   id: string;
   title: string;
@@ -242,7 +237,6 @@ export interface EditorialStory {
   linkedBlockId?: string;
 }
 
-// Added missing interface for FilmmakerPayout
 export interface FilmmakerPayout {
   movieTitle: string;
   totalDonations: number;
@@ -253,7 +247,6 @@ export interface FilmmakerPayout {
   totalFilmmakerPayout: number;
 }
 
-// Added missing interface for SiteSettings
 export interface SiteSettings {
   isHolidayModeActive: boolean;
   holidayName?: string;
@@ -265,9 +258,9 @@ export interface SiteSettings {
   emailSignature?: string;
   pitchTargetCompany?: string;
   pitchDeckCustomMessage?: string;
+  crateFestConfig?: CrateFestConfig;
 }
 
-// Added missing interface for ActorSubmission
 export interface ActorSubmission {
   id: string;
   actorName: string;
@@ -281,7 +274,6 @@ export interface ActorSubmission {
   rejectionReason?: string;
 }
 
-// Added missing interface for ActorProfile
 export interface ActorProfile {
   name: string;
   slug: string;
@@ -294,7 +286,6 @@ export interface ActorProfile {
   isContactable?: boolean;
 }
 
-// Added missing interface for ActorPost
 export interface ActorPost {
   id: string;
   actorName: string;
@@ -305,7 +296,6 @@ export interface ActorPost {
   likes: string[];
 }
 
-// Added missing interface for PayoutRequest
 export interface PayoutRequest {
   id: string;
   directorName: string;
@@ -317,7 +307,6 @@ export interface PayoutRequest {
   completionDate?: any;
 }
 
-// Added missing interface for FilmmakerFilmPerformance
 export interface FilmmakerFilmPerformance {
   key: string;
   title: string;
@@ -332,7 +321,6 @@ export interface FilmmakerFilmPerformance {
   sentimentData?: SentimentPoint[];
 }
 
-// Added missing interface for FilmmakerAnalytics
 export interface FilmmakerAnalytics {
   totalDonations: number;
   totalAdRevenue: number;
@@ -341,7 +329,6 @@ export interface FilmmakerAnalytics {
   films: FilmmakerFilmPerformance[];
 }
 
-// Added missing interface for BillSavingsTransaction
 export interface BillSavingsTransaction {
   id: string;
   type: 'deposit' | 'withdrawal';
@@ -350,7 +337,6 @@ export interface BillSavingsTransaction {
   transactionDate: any;
 }
 
-// Added missing interface for AdminPayout
 export interface AdminPayout {
   id: string;
   amount: number;
@@ -358,13 +344,11 @@ export interface AdminPayout {
   payoutDate: any;
 }
 
-// Added missing interface for MonthlyDataPoint
 export interface MonthlyDataPoint {
   month: string;
   value: number;
 }
 
-// Added missing interface for GrowthAnalyticsData
 export interface GrowthAnalyticsData {
   historical: {
     users: MonthlyDataPoint[];
@@ -407,7 +391,6 @@ export interface GrowthAnalyticsData {
   };
 }
 
-// Added missing interface for AiGrowthAdvice
 export interface AiGrowthAdvice {
   userGrowth: string[];
   revenueGrowth: string[];
@@ -415,7 +398,6 @@ export interface AiGrowthAdvice {
   advertisingSuggestions?: string[];
 }
 
-// Added missing interface for SecurityEvent
 export interface SecurityEvent {
   id: string;
   type: string;
@@ -424,7 +406,6 @@ export interface SecurityEvent {
   details?: any;
 }
 
-// Added missing interface for SecurityReport
 export interface SecurityReport {
   totalEvents: number;
   eventsByType: Record<string, number>;
@@ -433,13 +414,11 @@ export interface SecurityReport {
   threatLevel: 'red' | 'yellow' | 'green';
 }
 
-// Added missing interface for AiSecurityAdvice
 export interface AiSecurityAdvice {
   summary: string;
   recommendations: string[];
 }
 
-// Added missing interface for ScoutReport
 export interface ScoutReport {
   potentialScore: number;
   marketFit: string;
@@ -448,7 +427,6 @@ export interface ScoutReport {
   comparables: string[];
 }
 
-// Added missing interface for JuryVerdict
 export interface JuryVerdict {
   userId: string;
   userName: string;
@@ -461,7 +439,6 @@ export interface JuryVerdict {
   timestamp: any;
 }
 
-// Added missing interface for AuditEntry
 export interface AuditEntry {
   id: string;
   role: string;
@@ -472,7 +449,6 @@ export interface AuditEntry {
   ip?: string;
 }
 
-// Added missing interface for GrantApplication
 export interface GrantApplication {
   id: string;
   organization: string;
@@ -482,7 +458,6 @@ export interface GrantApplication {
   notes?: string;
 }
 
-// Added missing interface for StudioMessage
 export interface StudioMessage {
   id: string;
   senderName: string;
@@ -494,17 +469,16 @@ export interface StudioMessage {
   status: string;
 }
 
-// Updated AnalyticsData to include missing properties and correct types
 export interface AnalyticsData {
   totalRevenue: number;
   totalCrateTvRevenue: number;
   totalAdminPayouts: number;
-  pastAdminPayouts: AdminPayout[]; // Added
+  pastAdminPayouts: AdminPayout[];
   totalUsers: number;
   viewCounts: Record<string, number>;
   movieLikes: Record<string, number>;
   watchlistCounts: Record<string, number>;
-  filmmakerPayouts: FilmmakerPayout[]; // Updated from any[]
+  filmmakerPayouts: FilmmakerPayout[];
   totalDonations: number;
   totalSales: number;
   totalMerchRevenue: number;
@@ -527,5 +501,5 @@ export interface AnalyticsData {
   crateTvMerchCut: number;
   festivalUsers: string[];
   crateFestRevenue: number;
-  viewLocations: Record<string, Record<string, number>>; // Added
+  viewLocations: Record<string, Record<string, number>>;
 }

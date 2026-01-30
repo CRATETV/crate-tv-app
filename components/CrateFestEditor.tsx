@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { CrateFestConfig, Movie, MoviePipelineEntry } from '../types';
+import { CrateFestConfig, Movie, MoviePipelineEntry, FilmBlock } from '../types';
 
 interface UnifiedSelectionItem {
     key: string;
@@ -75,7 +75,7 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ catalog, submis
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggleSelection(item.key)}
-                    className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500"
+                    className="h-5 w-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500"
                 />
                 <div className="flex items-center gap-3">
                     <img src={item.poster} className="w-10 h-14 object-cover rounded shadow-lg" alt="" />
@@ -148,7 +148,12 @@ const CrateFestEditor: React.FC<CrateFestEditorProps> = ({ config: initialConfig
     const addBlock = () => {
         setConfig(prev => ({
             ...prev,
-            movieBlocks: [...prev.movieBlocks, { id: 'block_' + Date.now(), title: 'New Category', movieKeys: [] }]
+            movieBlocks: [...prev.movieBlocks, { 
+                id: 'block_' + Date.now(), 
+                title: 'New Category', 
+                movieKeys: [],
+                time: '7:00 PM'
+            }]
         }));
     };
 
