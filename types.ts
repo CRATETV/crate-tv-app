@@ -27,7 +27,7 @@ export interface UserRecord extends User {
 }
 
 // ═══════════════════════════════════════════════════════════
-// ROKU SPECIFICATION TYPES (V5 ADVANCED CURATION)
+// ROKU SPECIFICATION TYPES (V6 STABLE)
 // ═══════════════════════════════════════════════════════════
 
 export interface RokuHeroItem {
@@ -35,13 +35,6 @@ export interface RokuHeroItem {
   order: number;
   customTitle?: string;
   customSubtitle?: string;
-}
-
-export interface RokuCategoryConfig {
-  categoryKey: string;
-  order: number;
-  isVisible: boolean;
-  customTitle?: string;
 }
 
 export interface RokuConfig {
@@ -75,10 +68,9 @@ export interface RokuConfig {
     hidden: string[];
     order: string[];
     customTitles: Record<string, string>;
-    separateSection: string[]; // Keys like "publicAccess" to isolate from main feed
+    separateSection: string[]; // Isolated segments like "publicAccess"
   };
   
-  // FIX: Added 'content' field to the RokuConfig interface to resolve property access errors in api/roku-feed.ts.
   content: {
     hiddenMovies: string[];
     featuredMovies: string[];
@@ -111,16 +103,16 @@ export interface RokuMovie extends Movie {
   runtime: string;
   isFree: boolean;
   live: boolean;
-  rank?: number; // For Top 10 Row
+  rank?: number; // Visual rank for Top 10 row
 }
 
 export interface RokuFeed {
   version: number;
   timestamp: string;
   heroItems: RokuMovie[];
-  rows: { 
+  categories: { 
     title: string; 
-    type: 'standard' | 'ranked' | 'live';
+    type?: 'standard' | 'ranked' | 'live';
     showNumbers?: boolean;
     children: RokuMovie[];
   }[];
