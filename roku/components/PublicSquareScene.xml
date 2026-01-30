@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="PublicSquareScene" extends="Group">
+    <interface>
+        <field id="content" type="node" />
+        <field id="itemSelected" type="node" alwaysNotify="true" />
+    </interface>
+    <script type="text/brightscript" uri="pkg:/components/PublicSquareScene.brs" />
+    <children>
+        <Rectangle width="1920" height="1080" color="0x050505FF" />
+        
+        <Group id="headerGroup" translation="[100, 60]">
+            <Label text="THE PUBLIC SQUARE" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+            <Label text="VINTAGE VISIONS &amp; COMMUNITY ARCHIVES" translation="[0, 60]" font="font:SmallestBoldSystemFont" color="0xEF4444FF" />
+        </Group>
+
+        <PosterGrid 
+            id="vintageGrid"
+            basePosterSize="[300, 450]"
+            itemSpacing="[40, 40]"
+            numColumns="5"
+            translation="[100, 200]"
+            focusBitmapUri="pkg:/images/focus_ring.png"
+        />
+        
+        <Label 
+            id="loadingLabel" 
+            text="ESTABLISHING ARCHIVE UPLINK..." 
+            width="1920" 
+            horizAlign="center" 
+            translation="[0, 500]" 
+            font="font:MediumBoldSystemFont" 
+            color="0x222222FF" 
+        />
+    </children>
+</component>

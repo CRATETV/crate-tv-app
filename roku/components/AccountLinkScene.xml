@@ -2,22 +2,119 @@
 <component name="AccountLinkScene" extends="Group">
     <script type="text/brightscript" uri="pkg:/components/AccountLinkScene.brs" />
     <children>
-        <Group translation="[960, 540]">
-            <Label text="LINK YOUR ACCOUNT" horizAlign="center" translation="[0, -200]">
-                <font role="sans" size="60" />
+        <!-- Industrial Black Background -->
+        <Rectangle width="1920" height="1080" color="0x050505FF" />
+        
+        <!-- Global Vertical Centering Hub (Anchored at Screen Center) -->
+        <Group id="contentHub" translation="[960, 540]">
+            
+            <!-- Brand Identity Unit - Combined to Single Line -->
+            <Label 
+                id="brandLabel"
+                text="CRATE TV"
+                width="1400"
+                horizAlign="center"
+                translation="[-700, -380]"
+                color="0xEF4444FF"
+            >
+                <font role="sans" size="120" weight="bold" />
             </Label>
-            <Label text="Visit cratetv.net/link-roku on your phone" horizAlign="center" translation="[0, -120]" color="#888888" />
             
-            <Rectangle width="400" height="120" color="#111111" translation="[-200, 0]" radius="10">
-                <Label id="codeLabel" text="--- ---" width="400" height="120" horizAlign="center" vertAlign="center" color="#EF4444">
-                    <font role="sans" size="80" />
-                </Label>
-            </Rectangle>
+            <Label 
+                text="PHILADELPHIA INDEPENDENT CINEMA"
+                width="1400"
+                horizAlign="center"
+                translation="[-700, -240]"
+                color="0x666666FF"
+                font="font:SmallBoldSystemFont"
+            />
+
+            <!-- Instructional Sector -->
+            <Label 
+                text="LINK YOUR DEVICE"
+                width="1400"
+                horizAlign="center"
+                translation="[-700, -100]"
+                color="0xFFFFFFFF"
+                font="font:MediumBoldSystemFont"
+            />
             
-            <Label id="statusLabel" text="Establishing Handshake..." horizAlign="center" translation="[0, 150]" color="#444444" />
+            <Label 
+                text="Visit cratetv.net/activate on your phone and enter this code:"
+                width="1000"
+                horizAlign="center"
+                wrap="true"
+                translation="[-500, -40]"
+                color="0x888888FF"
+                font="font:SmallSystemFont"
+            />
+
+            <!-- Activation Code Terminal (Mathematically Centered) -->
+            <Group id="codeGroup" translation="[0, 80]">
+                <!-- Outer Glow/Border - Offset by half width (-252) -->
+                <Rectangle 
+                    width="504" 
+                    height="144" 
+                    translation="[-252, -2]" 
+                    color="0xEF4444FF" 
+                    opacity="0.3" 
+                    radius="20" 
+                />
+                <!-- Inner Code Box - Offset by half width (-250) -->
+                <Rectangle 
+                    id="codeBox"
+                    width="500"
+                    height="140"
+                    translation="[-250, 0]"
+                    color="0x0A0A0AFF"
+                    radius="18"
+                >
+                    <Label 
+                        id="codeLabel"
+                        text="--- ---"
+                        width="500"
+                        height="140"
+                        horizAlign="center"
+                        vertAlign="center"
+                        color="0xFFFFFFFF"
+                    >
+                        <font role="sans" size="90" weight="bold" />
+                    </Label>
+                </Rectangle>
+            </Group>
+
+            <!-- Deployment Status Indicator -->
+            <Group id="statusGroup" translation="[0, 280]">
+                <Rectangle 
+                    id="statusDot" 
+                    width="10" 
+                    height="10" 
+                    color="0xEF4444FF" 
+                    radius="5" 
+                    translation="[-115, 6]" 
+                />
+                <Label 
+                    id="statusLabel"
+                    text="Waiting for activation..."
+                    width="600"
+                    horizAlign="center"
+                    translation="[-300, 0]"
+                    color="0x444444FF"
+                    font="font:SmallestSystemFont"
+                />
+            </Group>
+            
+            <Label 
+                text="Press OK to refresh code"
+                width="1000"
+                horizAlign="center"
+                translation="[-500, 340]"
+                color="0x222222FF"
+                font="font:SmallestBoldSystemFont"
+            />
         </Group>
         
         <Timer id="pollTimer" duration="5" repeat="true" />
-        <Task id="apiTask" uri="pkg:/components/ContentTask.xml" />
+        <Task id="loadTask" uri="pkg:/components/ContentTask.xml" />
     </children>
 </component>

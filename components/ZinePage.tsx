@@ -230,12 +230,12 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </div>
                         </div>
 
-                        <article ref={articleRef} className="max-w-[1050px] mx-auto px-6 pb-60">
-                            <div className="space-y-24">
+                        <article ref={articleRef} className="max-w-[1200px] mx-auto px-6 pb-60">
+                            <div className="space-y-32">
                                 {activeStory.sections && activeStory.sections.length > 0 ? (
                                     activeStory.sections.map((section, idx) => (
                                         <div key={section.id}>
-                                            {section.type === 'header' && <h3 className="text-5xl md:text-[10rem] font-black uppercase tracking-tighter italic text-red-600 mb-12 leading-[0.9] drop-shadow-2xl">{section.content}</h3>}
+                                            {section.type === 'header' && <h3 className="text-5xl md:text-[9rem] font-black uppercase tracking-tighter italic text-red-600 mb-12 leading-[0.9] drop-shadow-2xl">{section.content}</h3>}
                                             {section.type === 'quote' && (
                                                 <div className="bg-white/5 border-l-[24px] border-red-600 p-12 md:p-24 text-3xl md:text-6xl font-black uppercase italic tracking-tighter text-white my-32 rounded-r-[4rem] shadow-[0_40px_120px_rgba(239,68,68,0.2)] leading-[0.95] relative overflow-hidden group">
                                                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
@@ -249,13 +249,14 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                                 </div>
                                             )}
                                             {section.type === 'text' && (
-                                                <div className="relative">
+                                                <div className="relative group/text">
+                                                    {/* DROP CAP REFINEMENT FOR OUTLINE FIX */}
                                                     {idx === 0 && section.content && (
-                                                        <span className="float-left text-[16rem] md:text-[22rem] font-black italic leading-[0.4] pr-12 mr-12 mt-20 text-red-600 drop-shadow-[0_25px_60px_rgba(239,68,68,0.6)] select-none animate-pulse">
+                                                        <span className="float-left text-[14rem] md:text-[18rem] font-black italic leading-[0.75] pr-10 mr-10 mt-2 text-red-600 drop-shadow-[0_25px_60px_rgba(239,68,68,0.6)] select-none animate-pulse skew-x-[-6deg]">
                                                             {section.content.charAt(0)}
                                                         </span>
                                                     )}
-                                                    <p className="text-2xl md:text-5xl text-gray-300 font-medium leading-[1.3] tracking-tighter italic md:not-italic drop-shadow-lg">
+                                                    <p className="text-3xl md:text-5xl lg:text-6xl text-white font-black leading-[1.05] tracking-tighter italic uppercase drop-shadow-lg text-justify md:text-left">
                                                         {idx === 0 && section.content ? section.content.slice(1) : section.content}
                                                     </p>
                                                     <div className="clear-both"></div>
@@ -265,7 +266,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                     ))
                                 ) : (
                                     <div className="prose prose-invert max-w-none">
-                                        <p className="text-2xl text-gray-300 font-medium leading-relaxed tracking-tight whitespace-pre-wrap">
+                                        <p className="text-3xl md:text-6xl text-white font-black leading-tight tracking-tighter italic uppercase whitespace-pre-wrap">
                                             {activeStory.content}
                                         </p>
                                     </div>

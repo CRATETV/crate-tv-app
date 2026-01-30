@@ -1,37 +1,68 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="ErrorScene" extends="Scene">
-    <script type="text/brightscript" uri="pkg:/components/ErrorScene.brs" />
+    <script type="text/brightscript">
+        <![CDATA[
+        sub onMessageChange()
+            m.errorMessageLabel.text = m.top.message
+        end sub
+        ]]>
+    </script>
     <interface>
         <field id="message" type="string" onChange="onMessageChange" />
     </interface>
     <children>
-        <!-- Background -->
-        <Poster 
-            uri="pkg:/images/splash_hd.png" 
-            width="1920" 
-            height="1080"
-        />
-        <Rectangle color="0x000000B0" width="1920" height="1080" />
+        <!-- Full Screen Dark Overlay -->
+        <Rectangle width="1920" height="1080" color="0x000000CC" />
 
-        <!-- Centered Content Group -->
-        <Group translation="[960, 540]" horizAlign="center" vertAlign="center">
+        <!-- Centered Error Card (800x450) -->
+        <Group id="errorCard" translation="[560, 315]">
+            <Rectangle width="800" height="450" color="0x111111FF" radius="20" />
+            
+            <!-- Crate Red Accent Line -->
+            <Rectangle width="800" height="4" color="0xEF4444FF" />
+
             <Label 
-                text="An Error Occurred"
-                width="1200"
+                text="Playback Error"
+                width="800"
+                translation="[0, 60]"
                 horizAlign="center"
                 font="font:LargeBoldSystemFont"
-                color="0xFF8080FF"
+                color="0xFFFFFFFF"
             />
+
             <Label
                 id="errorMessageLabel"
-                text=""
-                width="1000"
+                text="Network connection error. Please check your uplink."
+                width="700"
+                translation="[50, 140]"
                 wrap="true"
                 horizAlign="center"
-                translation="[0, 100]"
                 font="font:SmallSystemFont"
+                color="0x888888FF"
             />
-            <!-- This is a valid XML comment -->
+
+            <!-- Back Button UI -->
+            <Group id="backButton" translation="[250, 320]">
+                <Rectangle width="300" height="80" color="0xEF4444FF" radius="10" />
+                <Label 
+                    text="BACK" 
+                    width="300" 
+                    height="80" 
+                    horizAlign="center" 
+                    vertAlign="center" 
+                    font="font:SmallBoldSystemFont" 
+                    color="0xFFFFFFFF" 
+                />
+            </Group>
+            
+            <Label 
+                text="Press OK or Back to continue"
+                width="800"
+                translation="[0, 410]"
+                horizAlign="center"
+                font="font:SmallestSystemFont"
+                color="0x444444FF"
+            />
         </Group>
     </children>
 </component>

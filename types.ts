@@ -26,69 +26,11 @@ export interface UserRecord extends User {
     lastSignIn?: any;
 }
 
-export interface AuditEntry {
-    id: string;
-    role: string;
-    action: string;
-    type: 'LOGIN' | 'MUTATION' | 'PURGE' | 'SECURITY';
-    details: string;
-    timestamp: any;
-    ip?: string;
-}
-
-export interface ZineSection {
-    id: string;
-    type: 'text' | 'header' | 'quote' | 'image' | 'video';
-    content: string;
-}
-
-export interface EditorialStory {
-    id: string;
-    title: string;
-    subtitle: string;
-    content: string; // Fallback for legacy stories
-    sections?: ZineSection[];
-    heroImage: string;
-    author: string;
-    linkedMovieKey?: string;
-    linkedBlockId?: string;
-    type: 'NEWS' | 'INTERVIEW' | 'DEEP_DIVE' | 'SPOTLIGHT' | 'FESTIVAL_HYPE' | 'TRIES';
-    publishedAt: any;
-}
-
-export interface JuryVerdict {
-    userId: string;
-    userName: string;
-    narrative: number;
-    technique: number;
-    impact: number;
-    comment: string;
-    timestamp: any;
-}
-
-export interface GrantApplication {
-    id: string;
-    organization: string;
-    amount: number;
-    status: 'pending' | 'submitted' | 'awarded' | 'declined';
-    dateApplied: any;
-    notes: string;
-}
-
-export interface Actor {
-  name: string;
-  photo: string;
-  bio: string;
-  highResPhoto: string;
-  isAvailableForCasting?: boolean;
-}
-
-export interface Episode {
-  id: string;
-  title: string;
-  synopsis: string;
-  url: string;
-  duration?: number;
+export interface RokuConfig {
+    featuredKeys: string[];
+    visibleCategoryKeys: string[];
+    categoryOrder: string[];
+    isFestivalModeActive: boolean;
 }
 
 export interface Movie {
@@ -127,6 +69,32 @@ export interface Movie {
   isCratemas?: boolean;
   isLiveStream?: boolean;
   liveStreamEmbed?: string;
+  // Roku Specifics
+  rokuHeroImage?: string;
+  rokuStreamUrl?: string;        // Alternative stream for Roku compatibility
+  liveStreamUrl?: string;        // HLS stream URL (.m3u8)
+  liveStreamStatus?: 'offline' | 'live' | 'scheduled';
+  liveStreamScheduledTime?: string;
+  liveStreamTitle?: string;
+  rokuProductId?: string;        // Product ID from Roku Dashboard
+  isRokuPremium?: boolean;
+  rentalDurationHours?: number;  // 24 or 48
+}
+
+export interface Actor {
+  name: string;
+  photo: string;
+  bio: string;
+  highResPhoto: string;
+  isAvailableForCasting?: boolean;
+}
+
+export interface Episode {
+  id: string;
+  title: string;
+  synopsis: string;
+  url: string;
+  duration?: number;
 }
 
 export interface Category {
@@ -220,6 +188,136 @@ export interface SentimentPoint {
   serverTimestamp: any;
 }
 
+// Added missing interface for PromoCode
+export interface PromoCode {
+  id: string;
+  code: string;
+  type: 'discount' | 'one_time_access';
+  discountValue: number;
+  maxUses: number;
+  usedCount: number;
+  internalName?: string;
+  itemId?: string;
+  createdBy?: string;
+  createdAt?: any;
+  expiresAt?: string;
+}
+
+// Added missing interface for CrateFestConfig
+export interface CrateFestConfig {
+  isActive: boolean;
+  title: string;
+  tagline: string;
+  startDate: string;
+  endDate: string;
+  passPrice: number;
+  movieBlocks: FilmBlock[];
+  featuredWatchPartyKey?: string;
+}
+
+// Added missing interface for AdConfig
+export interface AdConfig {
+    [key: string]: any;
+}
+
+// Added missing interface for ZineSection
+export interface ZineSection {
+  id: string;
+  type: 'text' | 'header' | 'quote' | 'image';
+  content: string;
+}
+
+// Added missing interface for EditorialStory
+export interface EditorialStory {
+  id: string;
+  title: string;
+  subtitle: string;
+  content: string;
+  sections?: ZineSection[];
+  heroImage: string;
+  author: string;
+  type: 'NEWS' | 'INTERVIEW' | 'SPOTLIGHT' | 'DEEP_DIVE';
+  publishedAt?: any;
+  linkedMovieKey?: string;
+  linkedBlockId?: string;
+}
+
+// Added missing interface for FilmmakerPayout
+export interface FilmmakerPayout {
+  movieTitle: string;
+  totalDonations: number;
+  totalAdRevenue: number;
+  crateTvCut: number;
+  filmmakerDonationPayout: number;
+  filmmakerAdPayout: number;
+  totalFilmmakerPayout: number;
+}
+
+// Added missing interface for SiteSettings
+export interface SiteSettings {
+  isHolidayModeActive: boolean;
+  holidayName?: string;
+  holidayTagline?: string;
+  holidayTheme?: 'christmas' | 'valentines' | 'gold' | 'generic';
+  maintenanceMode?: boolean;
+  businessEmail?: string;
+  technicalEmail?: string;
+  emailSignature?: string;
+  pitchTargetCompany?: string;
+  pitchDeckCustomMessage?: string;
+}
+
+// Added missing interface for ActorSubmission
+export interface ActorSubmission {
+  id: string;
+  actorName: string;
+  email: string;
+  bio: string;
+  photoUrl: string;
+  highResPhotoUrl: string;
+  imdbUrl?: string;
+  submissionDate: any;
+  status: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+}
+
+// Added missing interface for ActorProfile
+export interface ActorProfile {
+  name: string;
+  slug: string;
+  bio: string;
+  photo: string;
+  highResPhoto: string;
+  imdbUrl?: string;
+  email?: string;
+  isAvailableForCasting?: boolean;
+  isContactable?: boolean;
+}
+
+// Added missing interface for ActorPost
+export interface ActorPost {
+  id: string;
+  actorName: string;
+  actorPhoto: string;
+  content: string;
+  imageUrl?: string;
+  timestamp: any;
+  likes: string[];
+}
+
+// Added missing interface for PayoutRequest
+export interface PayoutRequest {
+  id: string;
+  directorName: string;
+  amount: number;
+  payoutMethod: string;
+  payoutDetails: string;
+  status: 'pending' | 'completed' | 'ACTIVE';
+  requestDate: any;
+  completionDate?: any;
+}
+
+// Added missing interface for FilmmakerFilmPerformance
 export interface FilmmakerFilmPerformance {
   key: string;
   title: string;
@@ -234,6 +332,7 @@ export interface FilmmakerFilmPerformance {
   sentimentData?: SentimentPoint[];
 }
 
+// Added missing interface for FilmmakerAnalytics
 export interface FilmmakerAnalytics {
   totalDonations: number;
   totalAdRevenue: number;
@@ -242,69 +341,7 @@ export interface FilmmakerAnalytics {
   films: FilmmakerFilmPerformance[];
 }
 
-export interface PayoutRequest {
-    id: string;
-    directorName: string;
-    amount: number;
-    payoutMethod: string;
-    payoutDetails: string;
-    status: 'pending' | 'completed' | 'ACTIVE';
-    requestDate: any;
-    completionDate?: any;
-}
-
-export interface AdminPayout {
-  id: string;
-  amount: number;
-  reason: string;
-  payoutDate: any;
-}
-
-export interface FilmmakerPayout {
-  movieTitle: string;
-  totalDonations: number;
-  crateTvCut: number;
-  filmmakerDonationPayout: number;
-  totalAdRevenue: number;
-  filmmakerAdPayout: number;
-  totalFilmmakerPayout: number;
-}
-
-export interface AnalyticsData {
-  totalRevenue: number;
-  totalCrateTvRevenue: number;
-  totalAdminPayouts: number;
-  pastAdminPayouts: AdminPayout[];
-  billSavingsPotTotal: number;
-  billSavingsTransactions: BillSavingsTransaction[];
-  totalUsers: number;
-  viewCounts: Record<string, number>;
-  movieLikes: Record<string, number>;
-  watchlistCounts: Record<string, number>;
-  filmmakerPayouts: FilmmakerPayout[];
-  viewLocations: Record<string, Record<string, number>>;
-  allUsers: { email: string }[];
-  actorUsers: { email: string }[];
-  filmmakerUsers: { email: string }[];
-  totalDonations: number;
-  totalSales: number;
-  totalMerchRevenue: number;
-  totalAdRevenue: number;
-  crateTvMerchCut: number;
-  merchSales: Record<string, number>;
-  totalFestivalRevenue: number; 
-  totalCrateFestRevenue: number;
-  festivalPassSales: { units: number; revenue: number };
-  festivalBlockSales: { units: number; revenue: number };
-  crateFestPassSales: { units: number; revenue: number };
-  crateFestBlockSales: { units: number; revenue: number };
-  salesByBlock: Record<string, { units: number; revenue: number }>;
-  festivalUsers: string[];
-  crateFestRevenue: number;
-  liveNodes: number;
-  recentSpikes: { movieKey: string; title: string; count: number }[];
-}
-
+// Added missing interface for BillSavingsTransaction
 export interface BillSavingsTransaction {
   id: string;
   type: 'deposit' | 'withdrawal';
@@ -313,15 +350,52 @@ export interface BillSavingsTransaction {
   transactionDate: any;
 }
 
+// Added missing interface for AdminPayout
+export interface AdminPayout {
+  id: string;
+  amount: number;
+  reason: string;
+  payoutDate: any;
+}
+
+// Added missing interface for MonthlyDataPoint
 export interface MonthlyDataPoint {
   month: string;
   value: number;
 }
 
+// Added missing interface for GrowthAnalyticsData
 export interface GrowthAnalyticsData {
-  historical: { users: MonthlyDataPoint[]; revenue: MonthlyDataPoint[] };
-  projections: { users: MonthlyDataPoint[]; revenue: MonthlyDataPoint[] };
-  keyMetrics: any;
+  historical: {
+    users: MonthlyDataPoint[];
+    revenue: MonthlyDataPoint[];
+  };
+  projections: {
+    users: MonthlyDataPoint[];
+    revenue: MonthlyDataPoint[];
+  };
+  keyMetrics: {
+    totalVisitors: number;
+    totalUsers: number;
+    conversionRate: number;
+    dailyActiveUsers: number;
+    weeklyActiveUsers: number;
+    totalRevenue: number;
+    projectedUsersYtd: number;
+    projectedRevenueYtd: number;
+    totalViews: number;
+    totalLikes: number;
+    totalWatchlistAdds: number;
+    totalFilms: number;
+    mostViewedFilm: { title: string; views: number };
+    mostLikedFilm: { title: string; likes: number };
+    avgRevenuePerUser: number;
+    totalDonations: number;
+    totalSales: number;
+    audienceBreakdown: { total: number; actors: number; filmmakers: number };
+    topCountries: any[];
+    topEarningFilms: any[];
+  };
   aboutData?: AboutData;
   avgMoMUserGrowth: number;
   fundingProfile: {
@@ -333,12 +407,15 @@ export interface GrowthAnalyticsData {
   };
 }
 
+// Added missing interface for AiGrowthAdvice
 export interface AiGrowthAdvice {
   userGrowth: string[];
   revenueGrowth: string[];
   communityEngagement: string[];
+  advertisingSuggestions?: string[];
 }
 
+// Added missing interface for SecurityEvent
 export interface SecurityEvent {
   id: string;
   type: string;
@@ -347,6 +424,7 @@ export interface SecurityEvent {
   details?: any;
 }
 
+// Added missing interface for SecurityReport
 export interface SecurityReport {
   totalEvents: number;
   eventsByType: Record<string, number>;
@@ -355,60 +433,56 @@ export interface SecurityReport {
   threatLevel: 'red' | 'yellow' | 'green';
 }
 
+// Added missing interface for AiSecurityAdvice
 export interface AiSecurityAdvice {
   summary: string;
   recommendations: string[];
 }
 
-export interface ActorSubmission {
-  id: string;
-  actorName: string;
-  email: string;
-  bio: string;
-  photoUrl: string;
-  highResPhotoUrl: string;
-  imdbUrl?: string;
-  submissionDate: any;
-  status: 'pending' | 'approved' | 'rejected';
-  rejectionReason?: string;
+// Added missing interface for ScoutReport
+export interface ScoutReport {
+  potentialScore: number;
+  marketFit: string;
+  performanceDna: string[];
+  acquisitionStrategy: string;
+  comparables: string[];
 }
 
-export interface ActorProfile {
-  name: string;
-  slug: string;
-  bio: string;
-  photo: string;
-  highResPhoto: string;
-  imdbUrl?: string;
-  email: string;
-  isAvailableForCasting?: boolean;
-  isContactable?: boolean;
-}
-
-export interface ActorPost {
-  id: string;
-  actorName: string;
-  actorPhoto: string;
-  content: string;
-  imageUrl?: string;
+// Added missing interface for JuryVerdict
+export interface JuryVerdict {
+  userId: string;
+  userName: string;
+  filmId: string;
+  filmTitle: string;
+  narrative: number;
+  technique: number;
+  impact: number;
+  comment: string;
   timestamp: any;
-  likes: string[];
 }
 
-export interface PromoCode {
+// Added missing interface for AuditEntry
+export interface AuditEntry {
   id: string;
-  code: string;
-  internalName?: string;
-  type: 'one_time_access' | 'discount';
-  discountValue: number;
-  maxUses: number;
-  usedCount: number;
-  itemId?: string;
-  createdBy: string;
-  createdAt: any;
-  expiresAt?: any;
+  role: string;
+  action: string;
+  type: 'PURGE' | 'MUTATION' | 'LOGIN' | 'SECURITY';
+  details: string;
+  timestamp: any;
+  ip?: string;
 }
 
+// Added missing interface for GrantApplication
+export interface GrantApplication {
+  id: string;
+  organization: string;
+  status: 'pending' | 'awarded' | 'rejected';
+  amount: number;
+  dateApplied: any;
+  notes?: string;
+}
+
+// Added missing interface for StudioMessage
 export interface StudioMessage {
   id: string;
   senderName: string;
@@ -420,38 +494,38 @@ export interface StudioMessage {
   status: string;
 }
 
-export interface AdConfig {
-}
-
-export interface CrateFestConfig {
-  isActive: boolean;
-  title: string;
-  tagline: string;
-  startDate: string;
-  endDate: string;
-  passPrice: number;
-  featuredWatchPartyKey?: string;
-  movieBlocks: { id: string; title: string; movieKeys: string[] }[];
-}
-
-export interface SiteSettings {
-  isHolidayModeActive?: boolean;
-  holidayName?: string;
-  holidayTagline?: string;
-  holidayTheme?: 'christmas' | 'valentines' | 'gold' | 'generic';
-  maintenanceMode?: boolean;
-  pitchTargetCompany?: string;
-  pitchDeckCustomMessage?: string;
-  crateFestConfig?: CrateFestConfig;
-  businessEmail?: string;
-  technicalEmail?: string;
-  emailSignature?: string;
-}
-
-export interface ScoutReport {
-  potentialScore: number;
-  marketFit: string;
-  performanceDna: string[];
-  acquisitionStrategy: string;
-  comparables: string[];
+// Updated AnalyticsData to include missing properties and correct types
+export interface AnalyticsData {
+  totalRevenue: number;
+  totalCrateTvRevenue: number;
+  totalAdminPayouts: number;
+  pastAdminPayouts: AdminPayout[]; // Added
+  totalUsers: number;
+  viewCounts: Record<string, number>;
+  movieLikes: Record<string, number>;
+  watchlistCounts: Record<string, number>;
+  filmmakerPayouts: FilmmakerPayout[]; // Updated from any[]
+  totalDonations: number;
+  totalSales: number;
+  totalMerchRevenue: number;
+  totalAdRevenue: number;
+  totalFestivalRevenue: number; 
+  totalCrateFestRevenue: number;
+  festivalPassSales: { units: number; revenue: number };
+  festivalBlockSales: { units: number; revenue: number };
+  crateFestPassSales: { units: number; revenue: number };
+  crateFestBlockSales: { units: number; revenue: number };
+  salesByBlock: Record<string, { units: number; revenue: number }>;
+  liveNodes: number;
+  recentSpikes: { movieKey: string; title: string; count: number }[];
+  billSavingsPotTotal: number;
+  billSavingsTransactions: BillSavingsTransaction[];
+  allUsers: { email: string }[];
+  actorUsers: { email: string }[];
+  filmmakerUsers: { email: string }[];
+  merchSales: Record<string, number>;
+  crateTvMerchCut: number;
+  festivalUsers: string[];
+  crateFestRevenue: number;
+  viewLocations: Record<string, Record<string, number>>; // Added
 }

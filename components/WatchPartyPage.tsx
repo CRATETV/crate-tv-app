@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,9 +15,6 @@ interface WatchPartyPageProps {
 
 const REACTION_TYPES = ['🔥', '😲', '❤️', '👏', '😢'] as const;
 
-/**
- * STRATEGIC EMBED ENGINE V4.5
- */
 const processLiveEmbed = (input: string, startTimeOffset: number = 0): string => {
     const trimmed = input.trim();
     const startSec = Math.max(0, Math.floor(startTimeOffset));
@@ -46,7 +44,7 @@ const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({
     );
 };
 
-const EmbeddedChat: React.FC<{ partyKey: string; directors: string[]; isQALive?: boolean; user: any }> = ({ partyKey, directors, isQALive, user }) => {
+const EmbeddedChat: React.FC<{ partyKey: string; directors: string[]; isQALive?: boolean; user: any; isMobileController?: boolean }> = ({ partyKey, directors, isQALive, user, isMobileController }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -81,7 +79,13 @@ const EmbeddedChat: React.FC<{ partyKey: string; directors: string[]; isQALive?:
     };
 
     return (
-        <div className="w-full h-full flex flex-col bg-[#0a0a0a] md:bg-gray-900 border-t md:border-t-0 md:border-l border-gray-800 overflow-hidden min-h-0">
+        <div className={`w-full h-full flex flex-col ${isMobileController ? 'bg-black' : 'bg-[#0a0a0a] md:bg-gray-900 border-t md:border-t-0 md:border-l border-gray-800'} overflow-hidden min-h-0`}>
+            {isMobileController && (
+                <div className="p-4 bg-red-600/10 border-b border-red-500/20 flex items-center justify-between">
+                    <p className="text-[10px] font-black uppercase text-red-500">Roku Controller Node</p>
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                </div>
+            )}
             <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide min-h-0">
                 {messages.map(msg => (
                     <div key={msg.id} className="flex items-start gap-3 animate-[fadeIn_0.2s_ease-out]">
@@ -111,26 +115,28 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     const [showPaywall, setShowPaywall] = useState(false);
     const [isEnded, setIsEnded] = useState(false);
+    const [isControllerMode, setIsControllerMode] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
 
     const movie = useMemo(() => allMovies[movieKey], [movieKey, allMovies]);
 
-    // CORE FIX: SILENT GLIDE SYNC ENGINE
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('mode') === 'controller') setIsControllerMode(true);
+    }, []);
+
     useEffect(() => {
         const video = videoRef.current;
-        if (!video || !partyState?.actualStartTime || movie?.isLiveStream) return;
+        if (!video || !partyState?.actualStartTime || movie?.isLiveStream || isControllerMode) return;
 
         const syncClock = () => {
             const now = Date.now();
             if (now - lastSeekTimeRef.current < 10000) return;
-
             try {
                 const serverStart = (partyState.actualStartTime as any).toDate().getTime();
                 const targetPosition = Math.max(0, (now - serverStart) / 1000);
                 const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
-
-                // 1. END STATE: Trigger the 'Thank You' sequence
                 if (targetPosition >= movieDuration) {
                     if (!isEnded) {
                         setIsEnded(true);
@@ -139,29 +145,22 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     }
                     return;
                 }
-
-                // 2. DRIFT TOLERANCE: 20s window prevents the "replay loop"
                 const drift = Math.abs(video.currentTime - targetPosition);
                 if (drift > 20 && !video.seeking && video.readyState >= 3) {
                     lastSeekTimeRef.current = now;
                     video.currentTime = targetPosition;
                 }
-
-                // 3. PLAY STATE SYNC
                 if (partyState.isPlaying && video.paused && !video.ended) {
-                    video.play().catch(() => {
-                        // Standard browser fallback: silent play or user click requirement
-                    });
+                    video.play().catch(() => {});
                 } else if (!partyState.isPlaying && !video.paused) {
                     video.pause();
                 }
             } catch (e) { console.error("Sync heartbeat failure:", e); }
         };
-
         const interval = setInterval(syncClock, 8000);
         syncClock(); 
         return () => clearInterval(interval);
-    }, [partyState, movie, isEnded]);
+    }, [partyState, movie, isEnded, isControllerMode]);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -178,12 +177,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [movieKey]);
 
     const hasAccess = useMemo(() => {
+        if (isControllerMode) return true;
         if (!movie) return false;
         if (unlockedWatchPartyKeys.has(movieKey)) return true;
         if (!movie.isWatchPartyPaid) return true;
         const exp = rentals[movieKey];
         return exp && new Date(exp) > new Date();
-    }, [movie, rentals, movieKey, unlockedWatchPartyKeys]);
+    }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode]);
 
     const logSentiment = async (emoji: string) => {
         const db = getDbInstance();
@@ -191,6 +191,25 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     };
 
     if (isFestivalLoading || !movie) return <LoadingSpinner />;
+
+    if (isControllerMode) {
+        return (
+            <div className="fixed inset-0 bg-black flex flex-col z-[500]">
+                <div className="p-4 bg-red-600 flex justify-between items-center">
+                    <h1 className="font-black uppercase tracking-widest text-xs">Crate Remote</h1>
+                    <button onClick={() => window.location.href = '/'} className="text-[10px] font-bold">EXIT</button>
+                </div>
+                <div className="flex-grow flex flex-col overflow-hidden">
+                    <EmbeddedChat partyKey={movieKey} directors={[]} isQALive={partyState?.isQALive} user={user} isMobileController={true} />
+                </div>
+                <div className="p-4 bg-white/5 grid grid-cols-5 gap-2 border-t border-white/10">
+                    {REACTION_TYPES.map(emoji => (
+                        <button key={emoji} onClick={() => logSentiment(emoji)} className="text-3xl py-4 hover:scale-125 transition-transform">{emoji}</button>
+                    ))}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden">
@@ -227,8 +246,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             ) : (
                                 <div className="relative w-full h-full">
                                     <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} autoPlay muted={false} />
-                                    
-                                    {/* TRANSMISSION COMPLETE: THANK YOU OVERLAY */}
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
                                             <div className="max-w-2xl space-y-10">

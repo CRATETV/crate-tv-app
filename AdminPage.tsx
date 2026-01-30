@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -16,7 +17,7 @@ import FestivalEditor from './components/FestivalEditor';
 import PromoCodeManager from './components/PromoCodeManager';
 import PermissionsManager from './components/PermissionsManager';
 import EditorialManager from './components/EditorialManager';
-import RokuDeployTab from './components/RokuDeployTab';
+import RokuManagementTab from './components/RokuManagementTab';
 import RokuForge from './components/RokuForge';
 import DiscoveryEngine from './components/DiscoveryEngine';
 import CrateFestAnalytics from './components/CrateFestAnalytics';
@@ -46,7 +47,7 @@ const ALL_TABS: Record<string, string> = {
     analytics: '📊 Platform Stats',
     categories: '📂 Categories',
     laurels: '🏆 Laurel Forge',
-    roku: '📺 Roku Deploy',
+    roku: '📺 Roku Control',
     rokuForge: '🔮 Roku Forge AI',
     permissions: '🔑 Permissions',
     security: '🛡️ Security'
@@ -201,6 +202,7 @@ const AdminPage: React.FC = () => {
         } catch (err) {
             setSaveMessage("Sync failed.");
         } finally {
+            setIsLoading(false);
             setIsSaving(false);
         }
     };
@@ -377,7 +379,7 @@ const AdminPage: React.FC = () => {
                     )}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />}
                     {activeTab === 'laurels' && < LaurelManager allMovies={Object.values(movies) as Movie[]} />}
-                    {activeTab === 'roku' && <RokuDeployTab />}
+                    {activeTab === 'roku' && <RokuManagementTab allMovies={Object.values(movies) as Movie[]} onSaveMovie={(m) => handleSaveData('movies', { [m.key]: m })} />}
                     {activeTab === 'rokuForge' && <RokuForge />}
                     {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'security' && <SecurityTerminal />}

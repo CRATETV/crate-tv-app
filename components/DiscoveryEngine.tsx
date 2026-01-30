@@ -9,6 +9,8 @@ import LegalStrategist from './LegalStrategist';
 import RightsAuditor from './RightsAuditor';
 import FundStrategist from './FundStrategist';
 import ArchiveScoutTab from './ArchiveScoutTab';
+import StrategicCommand from './StrategicCommand';
+import DeepHorizonScraper from './DeepHorizonScraper';
 
 interface DiscoveryEngineProps {
     analytics: AnalyticsData | null;
@@ -64,7 +66,7 @@ const GrantLedger: React.FC = () => {
 };
 
 const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({ analytics, movies, categories, onUpdateCategories }) => {
-    const [activeSection, setActiveSection] = useState<'scout' | 'auditor' | 'strategist' | 'fund' | 'partners' | 'grantwriter' | 'ledger'>('scout');
+    const [activeSection, setActiveSection] = useState<'command' | 'scout' | 'horizon' | 'auditor' | 'strategist' | 'fund' | 'partners' | 'grantwriter' | 'ledger'>('command');
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -76,16 +78,18 @@ const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({ analytics, movies, ca
     return (
         <div className="space-y-12 pb-20 animate-[fadeIn_0.4s_ease-out]">
             <div className="flex flex-wrap gap-4 p-1.5 bg-black border border-white/5 rounded-2xl w-max mx-auto shadow-2xl">
-                <button onClick={() => setActiveSection('scout')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'scout' ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-600 hover:text-white'}`}>Modern Scout</button>
-                <button onClick={() => setActiveSection('auditor')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'auditor' ? 'bg-red-600 text-white' : 'text-gray-600 hover:text-white'}`}>Rights Auditor</button>
+                <button onClick={() => setActiveSection('command')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'command' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>🎯 Strategic Command</button>
+                <button onClick={() => setActiveSection('horizon')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'horizon' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>📡 Deep Horizon</button>
+                <button onClick={() => setActiveSection('scout')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'scout' ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>Modern Scout</button>
+                <button onClick={() => setActiveSection('auditor')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'auditor' ? 'bg-white text-black' : 'text-gray-600 hover:text-white'}`}>Rights Auditor</button>
                 <button onClick={() => setActiveSection('fund')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'fund' ? 'bg-amber-600 text-white shadow-lg' : 'text-gray-600 hover:text-white'}`}>Fund Strategist</button>
-                <button onClick={() => setActiveSection('strategist')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'strategist' ? 'bg-white text-black shadow-lg' : 'text-gray-600 hover:text-white'}`}>Legal Strategist</button>
                 <button onClick={() => setActiveSection('partners')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'partners' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-600 hover:text-white'}`}>Grant Research</button>
                 <button onClick={() => setActiveSection('grantwriter')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'grantwriter' ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-600 hover:text-white'}`}>Grant Architect</button>
-                <button onClick={() => setActiveSection('ledger')} className={`px-8 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${activeSection === 'ledger' ? 'bg-gray-600 text-white shadow-lg' : 'text-gray-600 hover:text-white'}`}>Grant Ledger</button>
             </div>
 
             <div className="animate-[fadeIn_0.5s_ease-out]">
+                {activeSection === 'command' && <StrategicCommand />}
+                {activeSection === 'horizon' && <DeepHorizonScraper />}
                 {activeSection === 'scout' && <ArchiveScoutTab />}
                 {activeSection === 'auditor' && <RightsAuditor />}
                 {activeSection === 'fund' && <FundStrategist />}

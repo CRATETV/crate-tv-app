@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="SearchScene" extends="Group">
+    <interface>
+        <field id="masterContent" type="node" />
+        <field id="itemSelected" type="node" alwaysNotify="true" />
+    </interface>
+
+    <script type="text/brightscript" uri="pkg:/components/SearchScene.brs" />
+    
+    <children>
+        <Rectangle width="1920" height="1080" color="0x050505FF" />
+        
+        <Group id="keyboardGroup" translation="[100, 150]">
+            <Label 
+                text="SEARCH ARCHIVE" 
+                width="650"
+                horizAlign="center"
+                color="0xEF4444FF" 
+                font="font:SmallBoldSystemFont" 
+                translation="[0, 20]" 
+            />
+            <Rectangle 
+                width="400" 
+                height="2" 
+                translation="[125, 60]" 
+                color="0xEF4444FF" 
+                opacity="0.6"
+            />
+            
+            <Keyboard 
+                id="keyboard" 
+                translation="[40, 100]"
+                keyColor="0xFFFFFFFF" 
+                focusedKeyColor="0xEF4444FF"
+                textEditBoxBitmapUri="" 
+                textEditBoxFocusBitmapUri=""
+                buttonsBitmapUri=""
+                buttonsFocusBitmapUri=""
+            />
+        </Group>
+        
+        <Group id="resultsGroup" translation="[900, 150]">
+            <Label 
+                id="resultsHeader"
+                text="TOP 10 TODAY"
+                color="0x444444FF"
+                font="font:SmallBoldSystemFont"
+                translation="[20, 0]"
+            />
+            
+            <PosterGrid 
+                id="resultsGrid"
+                basePosterSize="[240, 360]"
+                itemSpacing="[30, 40]"
+                numColumns="4"
+                translation="[0, 70]"
+                focusBitmapUri="pkg:/images/focus_ring.png"
+            />
+            
+            <Label 
+                id="emptyLabel"
+                text="ZERO MATCHES IN TERMINAL."
+                translation="[0, 300]"
+                width="1000"
+                horizAlign="center"
+                color="0x222222FF"
+                visible="false"
+                font="font:MediumBoldSystemFont"
+            />
+        </Group>
+    </children>
+</component>

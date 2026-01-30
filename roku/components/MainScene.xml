@@ -5,11 +5,13 @@
         <field id="authStatus" type="string" />
     </interface>
     <children>
+        <!-- Industrial Black Canvas -->
         <Rectangle width="1920" height="1080" color="#050505" />
         
-        <!-- Persistent Global Navigation (Netflix Style) -->
+        <!-- Expanded Global Navigation -->
         <Header id="navBar" translation="[0, 0]" />
         
+        <!-- Screen Content Area -->
         <Group id="viewport" translation="[0, 120]" />
     </children>
 </component>

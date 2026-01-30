@@ -1,6 +1,6 @@
 
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { AnalyticsData, Movie, User, FilmmakerPayout, CrateFestConfig } from '../types.js';
+import { AnalyticsData, Movie, User, FilmmakerPayout, CrateFestConfig, AdminPayout, BillSavingsTransaction } from '../types.js';
 
 const SYSTEM_RESET_DATE = '2025-05-24T00:00:00Z'; 
 
@@ -95,13 +95,15 @@ export async function POST(request: Request) {
         const crateFestConfig = settingsDoc.data()?.crateFestConfig as CrateFestConfig | undefined;
         const crateFestBlockTitles = crateFestConfig?.movieBlocks.map(b => b.title) || [];
 
-        const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot, presenceSnapshot] = await Promise.all([
+        const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot, presenceSnapshot, adminPayoutsSnapshot, billSavingsSnapshot] = await Promise.all([
             accessToken ? fetchAllSquarePayments(accessToken, locationId) : Promise.resolve([]),
             db.collection('movies').get(),
             db.collection('view_counts').get(),
             db.collection('users').get(),
             db.collection('payout_history').get(),
-            db.collection('presence').where('lastActive', '>=', fiveMinutesAgo).get()
+            db.collection('presence').where('lastActive', '>=', fiveMinutesAgo).get(),
+            db.collection('admin_payouts').orderBy('payoutDate', 'desc').get(),
+            db.collection('bill_savings_transactions').orderBy('transactionDate', 'desc').get()
         ]);
 
         const allMovies: Record<string, Movie> = {};
@@ -164,7 +166,9 @@ export async function POST(request: Request) {
             }
         });
 
-        const totalAdminPayouts = payoutHistorySnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+        const pastAdminPayouts: AdminPayout[] = adminPayoutsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AdminPayout));
+        const totalAdminPayouts = pastAdminPayouts.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+        
         const totalRevenue = totalDonations + totalSales + filmFestivalRevenue + crateFestRevenue;
         
         const totalCrateTvRevenue = (totalDonations * CRATE_SHARE) + (filmFestivalRevenue * CRATE_SHARE) + totalSales + (crateFestRevenue * CRATE_SHARE);
@@ -185,17 +189,19 @@ export async function POST(request: Request) {
             };
         });
 
+        const billSavingsTransactions: BillSavingsTransaction[] = billSavingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BillSavingsTransaction));
+        const billSavingsPotTotal = billSavingsTransactions.reduce((sum, t) => t.type === 'deposit' ? sum + t.amount : sum - t.amount, 0);
+
         const analyticsData: AnalyticsData = {
             totalRevenue, 
             totalCrateTvRevenue, 
             totalAdminPayouts, 
-            pastAdminPayouts: [],
+            pastAdminPayouts, // Added missing property
             totalUsers: usersSnapshot.size, 
             viewCounts, 
             movieLikes: {}, 
             watchlistCounts: {}, 
             filmmakerPayouts, 
-            viewLocations: {}, 
             allUsers: [], actorUsers: [], filmmakerUsers: [],
             totalDonations, 
             totalSales, 
@@ -213,8 +219,9 @@ export async function POST(request: Request) {
             crateFestRevenue, 
             liveNodes: presenceSnapshot.size,
             recentSpikes: [],
-            billSavingsPotTotal: 0,
-            billSavingsTransactions: []
+            billSavingsPotTotal,
+            billSavingsTransactions,
+            viewLocations: {} // Added missing property
         };
 
         return new Response(JSON.stringify({ analyticsData, errors }), { status: 200, headers: { 'Content-Type': 'application/json' } });
