@@ -27,7 +27,7 @@ export interface UserRecord extends User {
 }
 
 // ═══════════════════════════════════════════════════════════
-// ROKU SPECIFICATION TYPES (V4 BULLETPROOF)
+// ROKU SPECIFICATION TYPES (V5 ADVANCED CURATION)
 // ═══════════════════════════════════════════════════════════
 
 export interface RokuHeroItem {
@@ -35,6 +35,13 @@ export interface RokuHeroItem {
   order: number;
   customTitle?: string;
   customSubtitle?: string;
+}
+
+export interface RokuCategoryConfig {
+  categoryKey: string;
+  order: number;
+  isVisible: boolean;
+  customTitle?: string;
 }
 
 export interface RokuConfig {
@@ -46,14 +53,32 @@ export interface RokuConfig {
     mode: 'auto' | 'manual';
     items: RokuHeroItem[];
   };
+
+  topTen: {
+    enabled: boolean;
+    mode: 'auto' | 'manual';
+    title: string;
+    movieKeys: string[];
+    showNumbers: boolean;
+  };
+
+  nowStreaming: {
+    enabled: boolean;
+    title: string;
+    mode: 'auto' | 'manual';
+    movieKeys: string[];
+    daysBack?: number;
+  };
   
   categories: {
     mode: 'all' | 'custom';
     hidden: string[];
     order: string[];
     customTitles: Record<string, string>;
+    separateSection: string[]; // Keys like "publicAccess" to isolate from main feed
   };
   
+  // FIX: Added 'content' field to the RokuConfig interface to resolve property access errors in api/roku-feed.ts.
   content: {
     hiddenMovies: string[];
     featuredMovies: string[];
@@ -65,8 +90,6 @@ export interface RokuConfig {
     paidContent: boolean;
     festivalMode: boolean;
   };
-
-  isFestivalModeActive?: boolean;
 }
 
 export interface RokuAsset {
@@ -88,15 +111,21 @@ export interface RokuMovie extends Movie {
   runtime: string;
   isFree: boolean;
   live: boolean;
+  rank?: number; // For Top 10 Row
 }
 
 export interface RokuFeed {
   version: number;
   timestamp: string;
   heroItems: RokuMovie[];
-  categories: { title: string; children: RokuMovie[] }[];
+  rows: { 
+    title: string; 
+    type: 'standard' | 'ranked' | 'live';
+    showNumbers?: boolean;
+    children: RokuMovie[];
+  }[];
+  publicSquare: { title: string; children: RokuMovie[] }[];
   liveNow: any[];
-  watchParties: any[];
 }
 
 export interface Movie {

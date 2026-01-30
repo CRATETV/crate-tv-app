@@ -9,7 +9,8 @@ const DEFAULT_CONFIG: RokuConfig = {
   _lastUpdated: null,
   _updatedBy: 'system',
   hero: { mode: 'auto', items: [] },
-  categories: { mode: 'all', hidden: [], order: [], customTitles: {} },
+  // FIX: Added 'separateSection' property to categories to satisfy the RokuConfig interface requirements.
+  categories: { mode: 'all', hidden: [], order: [], customTitles: {}, separateSection: [] },
   content: { hiddenMovies: [], featuredMovies: [] },
   features: {
     liveStreaming: false,
