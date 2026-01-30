@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { useRokuConfig } from '../hooks/useRokuConfig';
 import { useFestival } from '../contexts/FestivalContext';
@@ -11,7 +10,9 @@ const RokuRowManager: React.FC = () => {
     const [hiddenSet, setHiddenSet] = useState<Set<string>>(new Set());
 
     useEffect(() => {
-        setHiddenSet(new Set(config.categories?.hidden || []));
+        if (config.categories) {
+            setHiddenSet(new Set(config.categories.hidden || []));
+        }
     }, [config]);
 
     const toggleVisibility = (key: string) => {
@@ -51,7 +52,6 @@ const RokuRowManager: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
-                    {/* FIX: Cast Object.entries(sourceCategories) to [string, Category][] to ensure proper typing for 'cat' and resolve 'unknown' property access errors. */}
                     {(Object.entries(sourceCategories) as [string, Category][]).map(([key, cat]) => {
                         const isHidden = hiddenSet.has(key);
                         const customTitle = config.categories?.customTitles?.[key] || '';
@@ -62,7 +62,6 @@ const RokuRowManager: React.FC = () => {
                                     <div className={`w-2 h-2 rounded-full ${isHidden ? 'bg-gray-800' : 'bg-green-500 animate-pulse shadow-[0_0_10px_#22c55e]'}`}></div>
                                     <div className="flex-grow max-w-md">
                                         <div className="flex items-baseline gap-2">
-                                            {/* cat.title is now correctly typed */}
                                             <p className="font-black text-white uppercase tracking-tight italic">{cat.title}</p>
                                             <span className="text-[8px] font-mono text-gray-700">NODE: {key}</span>
                                         </div>
@@ -77,7 +76,6 @@ const RokuRowManager: React.FC = () => {
                                 </div>
                                 
                                 <div className="flex items-center gap-6">
-                                    {/* cat.movieKeys is now correctly typed */}
                                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest">{(cat.movieKeys || []).length} Films</p>
                                     <button 
                                         onClick={() => toggleVisibility(key)}

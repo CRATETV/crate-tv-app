@@ -1,6 +1,6 @@
 
 import { getApiData } from './_lib/data.js';
-import { Movie, Category, User, RokuConfig, RokuFeed, RokuMovie, RokuAsset } from '../types.js';
+import { Movie, Category, RokuConfig, RokuFeed, RokuMovie, RokuAsset } from '../types.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 
 // ============================================================
@@ -42,7 +42,6 @@ function detectFormat(url: string): 'mp4' | 'hls' | 'dash' {
 }
 
 function formatMovieForRoku(movie: Movie, asset?: RokuAsset): RokuMovie {
-  // PRIORITY: Roku optimized stream -> Standard movie file
   const streamUrl = asset?.rokuStreamUrl || movie.rokuStreamUrl || movie.fullMovie || '';
   
   return {
@@ -66,8 +65,6 @@ function formatMovieForRoku(movie: Movie, asset?: RokuAsset): RokuMovie {
 // ============================================================
 
 function buildEmergencyFeed(movies: Record<string, Movie>, categories: Record<string, Category>): RokuFeed {
-  console.warn('⚠️ [ROKU_INFRA] BUILDING EMERGENCY FEED - All config ignored');
-  
   const allCategories = Object.entries(categories).map(([key, cat]) => ({
     title: cat.title,
     children: (cat.movieKeys || [])
@@ -86,7 +83,6 @@ function buildEmergencyFeed(movies: Record<string, Movie>, categories: Record<st
 }
 
 function buildMinimalFeed(): RokuFeed {
-  console.error('🚨 [ROKU_INFRA] BUILDING MINIMAL FEED - Database unavailable');
   return {
     version: -999,
     timestamp: new Date().toISOString(),
@@ -106,7 +102,6 @@ function buildMinimalFeed(): RokuFeed {
 
 export async function GET(request: Request) {
   try {
-    // 1. Get Source Data (The Sacred Data)
     const apiData = await getApiData();
     const moviesObj = apiData.movies || {};
     const categoriesObj = apiData.categories || {};
@@ -114,7 +109,6 @@ export async function GET(request: Request) {
     const db = getAdminDb();
     const initError = getInitializationError();
 
-    // 2. Get Roku Overrides (with Safe Defaults)
     let config = { ...DEFAULT_ROKU_CONFIG };
     const assets: Record<string, RokuAsset> = {};
 
@@ -142,7 +136,6 @@ export async function GET(request: Request) {
         }
     }
 
-    // 3. APPLY FILTERS SAFELY (Explicit HIDE)
     const hiddenMovieSet = new Set(config.content?.hiddenMovies || []);
     const visibleMovies = Object.fromEntries(
         Object.entries(moviesObj).filter(([key]) => !hiddenMovieSet.has(key))
@@ -152,6 +145,7 @@ export async function GET(request: Request) {
     const categoryOrder = config.categories?.order || [];
     const customTitles = config.categories?.customTitles || {};
 
+    // 1. Build list of candidates
     let categoryList = Object.entries(categoriesObj)
         .filter(([key]) => !hiddenCategorySet.has(key))
         .map(([key, cat]: [string, any]) => ({
@@ -161,7 +155,7 @@ export async function GET(request: Request) {
             order: categoryOrder.indexOf(key),
         }));
 
-    // Sort: Config order first, others to end
+    // 2. Sort by config order
     categoryList.sort((a, b) => {
         if (a.order === -1 && b.order === -1) return a.title.localeCompare(b.title);
         if (a.order === -1) return 1;
@@ -169,7 +163,7 @@ export async function GET(request: Request) {
         return a.order - b.order;
     });
 
-    // 4. Build Categories
+    // 3. Construct final rows
     const feedCategories = categoryList.map(cat => ({
         title: cat.title,
         children: cat.movieKeys
@@ -177,7 +171,7 @@ export async function GET(request: Request) {
             .map((key: string) => formatMovieForRoku(visibleMovies[key], assets[key])),
     })).filter(cat => cat.children.length > 0);
 
-    // 5. Build Hero Items
+    // 4. Hero items
     let heroItems: RokuMovie[] = [];
     if (config.hero?.mode === 'manual' && config.hero?.items?.length > 0) {
         heroItems = config.hero.items
@@ -191,12 +185,10 @@ export async function GET(request: Request) {
             .slice(0, 5);
     }
 
-    // Hero Fallback: First row
     if (heroItems.length === 0 && feedCategories.length > 0) {
         heroItems = feedCategories[0].children.slice(0, 5);
     }
 
-    // 6. VALIDATE & RESPOND
     if (feedCategories.length === 0) {
         return new Response(JSON.stringify(buildEmergencyFeed(moviesObj, categoriesObj)), { status: 200 });
     }
@@ -206,8 +198,8 @@ export async function GET(request: Request) {
         timestamp: new Date().toISOString(),
         heroItems,
         categories: feedCategories,
-        liveNow: [], // Future expansion
-        watchParties: [], // Future expansion
+        liveNow: [],
+        watchParties: [],
     } as RokuFeed), {
         status: 200,
         headers: { 

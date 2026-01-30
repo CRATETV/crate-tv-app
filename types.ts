@@ -37,14 +37,6 @@ export interface RokuHeroItem {
   customSubtitle?: string;
 }
 
-// Renamed from RokuCategoryOverride to match usage in components and fix import errors
-export interface RokuCategoryConfig {
-  categoryKey: string;
-  order: number;
-  isVisible: boolean;
-  customTitle?: string;
-}
-
 export interface RokuConfig {
   _version: number;
   _lastUpdated: any;
@@ -74,7 +66,6 @@ export interface RokuConfig {
     festivalMode: boolean;
   };
 
-  // Added for compatibility with legacy Roku management components
   isFestivalModeActive?: boolean;
 }
 
@@ -82,13 +73,12 @@ export interface RokuAsset {
   movieKey: string;
   heroImage?: string;
   tvPoster?: string;
-  rokuStreamUrl?: string; // Moved from Movie to RokuAsset for spec compliance
+  rokuStreamUrl?: string; 
   lastUpdated: any;
 }
 
 export interface RokuMovie extends Movie {
   id: string;
-  // Added description to satisfy Roku feed requirement and fix type error in api/roku-feed.ts
   description: string;
   hdPosterUrl: string;
   heroImage: string;
@@ -145,7 +135,6 @@ export interface Movie {
   isCratemas?: boolean;
   isLiveStream?: boolean;
   liveStreamEmbed?: string;
-  // Legacy Roku fields (Keep for migration)
   rokuHeroImage?: string;
   rokuStreamUrl?: string;
   liveStreamUrl?: string;
