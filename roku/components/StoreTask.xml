@@ -1,0 +1,14 @@
+
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="StoreTask" extends="Task">
+    <interface>
+        <!-- Commands: "checkPurchases", "doOrder" -->
+        <field id="command" type="string" />
+        <field id="targetProductId" type="string" />
+        <!-- Results -->
+        <field id="isAuthorized" type="boolean" value="false" />
+        <field id="purchaseSuccess" type="boolean" value="false" />
+        <field id="purchasedIds" type="stringarray" />
+    </interface>
+    <script type="text/brightscript" uri="pkg:/components/StoreTask.brs" />
+</component>

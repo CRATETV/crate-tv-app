@@ -7,6 +7,7 @@ import RokuContentFilter from './RokuContentFilter';
 import RokuAssetManager from './RokuAssetManager';
 import RokuPreviewTab from './RokuPreviewTab';
 import RokuDeployTab from './RokuDeployTab';
+import RokuDiagnostics from './RokuDiagnostics';
 import { useRokuConfig } from '../hooks/useRokuConfig';
 
 interface RokuManagementTabProps {
@@ -15,7 +16,7 @@ interface RokuManagementTabProps {
 }
 
 const RokuManagementTab: React.FC<RokuManagementTabProps> = ({ allMovies, onSaveMovie }) => {
-    const [activeTab, setActiveTab] = useState<'rows' | 'hero' | 'content' | 'assets' | 'preview' | 'deploy'>('rows');
+    const [activeTab, setActiveTab] = useState<'rows' | 'hero' | 'content' | 'assets' | 'preview' | 'deploy' | 'diag'>('rows');
     const { config, loading, error, saveConfig, showAllContent } = useRokuConfig();
 
     if (loading) return <div className="h-64 flex items-center justify-center"><div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div></div>;
@@ -49,6 +50,7 @@ const RokuManagementTab: React.FC<RokuManagementTabProps> = ({ allMovies, onSave
                     { id: 'rows', label: '📂 Row Manager', color: 'bg-indigo-600' },
                     { id: 'hero', label: '⭐ Hero Carousel', color: 'bg-red-600' },
                     { id: 'content', label: '🛡️ Content Rules', color: 'bg-amber-600' },
+                    { id: 'diag', label: '🩺 Diagnostics', color: 'bg-red-800' },
                     { id: 'assets', label: '🖼️ Assets & Overrides', color: 'bg-purple-600' },
                     { id: 'preview', label: '🧪 Feed Preview', color: 'bg-emerald-600' },
                     { id: 'deploy', label: '🚀 Deployment', color: 'bg-white text-black' }
@@ -74,6 +76,7 @@ const RokuManagementTab: React.FC<RokuManagementTabProps> = ({ allMovies, onSave
                 {activeTab === 'rows' && <RokuRowManager />}
                 {activeTab === 'hero' && <RokuHeroManager allMovies={allMovies} />}
                 {activeTab === 'content' && <RokuContentFilter allMovies={allMovies} />}
+                {activeTab === 'diag' && <RokuDiagnostics />}
                 {activeTab === 'assets' && <RokuAssetManager allMovies={allMovies} />}
                 {activeTab === 'preview' && <RokuPreviewTab />}
                 {activeTab === 'deploy' && <RokuDeployTab />}

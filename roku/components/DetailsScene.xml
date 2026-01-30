@@ -1,31 +1,36 @@
+
 <?xml version="1.0" encoding="utf-8" ?>
-<component name="DetailsScene" extends="Scene">
+<component name="DetailsScene" extends="Group">
     <script type="text/brightscript" uri="pkg:/components/DetailsScene.brs" />
     <interface>
         <field id="content" type="node" onChange="onContentChange" />
+        <field id="command" type="assocarray" alwaysNotify="true" />
     </interface>
     <children>
-        <Rectangle color="0x050505FF" width="1920" height="1080" />
-        <Poster id="backgroundPoster" width="1920" height="1080" opacity="0.2" />
+        <Rectangle width="1920" height="1080" color="#050505" />
         
-        <Group id="detailsGroup" translation="[150, 200]">
-            <Poster id="itemPoster" width="400" height="600" radius="20" />
+        <Group id="contentHub" translation="[150, 150]">
+            <Poster id="itemPoster" width="450" height="675" />
             
-            <Group id="infoGroup" translation="[480, 0]">
-                <Label text="CRATE OFFICIAL SELECTION" font="font:ExtraSmallBoldSystemFont" color="0xEF4444FF" />
-                <Label id="titleLabel" width="1000" wrap="true" font="font:LargeBoldSystemFont" translation="[0, 40]" />
+            <Group id="info" translation="[550, 0]">
+                <Label id="titleLabel" width="1000" font="font:LargeBoldSystemFont" color="#FFFFFF" />
+                <Label id="synopsisLabel" width="1000" translation="[0, 100]" wrap="true" maxLines="10" font="font:SmallSystemFont" color="#AAAAAA" />
                 
-                <Label id="metadataLabel" translation="[0, 140]" font="font:SmallSystemFont" color="0x888888FF" />
+                <Rectangle id="playBtn" width="350" height="90" translation="[0, 500]" color="#FFFFFF" visible="false">
+                    <Label text="PLAY FILM" width="350" height="90" horizAlign="center" vertAlign="center" color="#000000" font="font:SmallBoldSystemFont" />
+                </Rectangle>
                 
-                <Group id="actionButtons" translation="[0, 200]">
-                    <Rectangle id="playBtn" width="300" height="80" color="0xFFFFFFFF" radius="10">
-                        <Label text="WATCH FILM" width="300" height="80" horizAlign="center" vertAlign="center" color="0x000000FF" font="font:SmallBoldSystemFont" />
+                <!-- PAYWALL SECTOR -->
+                <Group id="paywallGroup" translation="[0, 500]" visible="false">
+                    <Label text="VERIFIED PURCHASE REQUIRED" color="#EF4444" font="font:SmallBoldSystemFont" />
+                    <Label text="Scan the code on your phone to unlock this selection." translation="[0, 40]" font="font:SmallestSystemFont" color="#666666" />
+                    
+                    <Rectangle width="220" height="220" translation="[0, 100]" color="#FFFFFF" radius="10">
+                        <Poster id="qrCode" width="200" height="200" translation="[10, 10]" />
                     </Rectangle>
+                    
+                    <Label text="100% of revenue goes to the creator." translation="[250, 180]" font="font:SmallestBoldSystemFont" color="#444444" />
                 </Group>
-                
-                <Label id="synopsisLabel" width="900" wrap="true" maxLines="8" translation="[0, 320]" font="font:SmallSystemFont" color="0xCCCCCCFF" />
-                
-                <Label id="directorLabel" width="800" translation="[0, 560]" font="font:ExtraSmallBoldSystemFont" color="0x666666FF" />
             </Group>
         </Group>
     </children>

@@ -1,4 +1,3 @@
-
 export interface User {
   uid: string;
   email: string;
@@ -92,6 +91,7 @@ export interface RokuAsset {
   lastUpdated: any;
 }
 
+// FIX: Added isUnlocked and purchaseUrl to satisfy the RokuMovie interface requirements in feed generation (api/roku-feed.ts)
 export interface RokuMovie extends Movie {
   id: string; // BRIGHTSCRIPT: Required for node mapping
   description: string;
@@ -104,6 +104,8 @@ export interface RokuMovie extends Movie {
   isFree: boolean;
   live: boolean;
   rank?: number; 
+  isUnlocked?: boolean;
+  purchaseUrl?: string;
 }
 
 export interface RokuFeed {
@@ -130,6 +132,7 @@ export interface Movie {
   producers?: string;
   trailer: string;
   fullMovie: string;
+  rokuStreamUrl?: string; // ADDED: Hardware-specific override
   poster: string;
   tvPoster: string;
   likes: number;
@@ -158,7 +161,6 @@ export interface Movie {
   isLiveStream?: boolean;
   liveStreamEmbed?: string;
   rokuHeroImage?: string;
-  rokuStreamUrl?: string;
   liveStreamUrl?: string;
   liveStreamStatus?: 'offline' | 'live' | 'scheduled';
 }
@@ -531,6 +533,7 @@ export interface AuditEntry {
   ip?: string;
 }
 
+// FIX: Removed duplicate AuditRecord definitions to resolve namespace pollution
 export interface AuditRecord {
   id: string;
   role: string;

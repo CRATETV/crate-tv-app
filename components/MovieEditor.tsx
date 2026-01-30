@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Movie, Actor, MoviePipelineEntry } from '../types';
 import S3Uploader from './S3Uploader';
@@ -21,6 +22,7 @@ const emptyMovie: Movie = {
     producers: '',
     trailer: '',
     fullMovie: '',
+    rokuStreamUrl: '',
     poster: '',
     tvPoster: '',
     likes: 0,
@@ -60,6 +62,10 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSettingSpotlight, setIsSettingSpotlight] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    
+    // Roku Probe State
+    const [isProbing, setIsProbing] = useState(false);
+    const [probeResult, setProbeResult] = useState<any>(null);
 
     useEffect(() => {
         if (movieToCreate) {
@@ -92,6 +98,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             const movieData = allMovies[selectedMovieKey];
             if (movieData) setFormData({ ...movieData });
             else if (selectedMovieKey.startsWith('movie_')) setFormData({ ...emptyMovie, key: selectedMovieKey });
+            setProbeResult(null);
         } else setFormData(null);
     }, [selectedMovieKey, allMovies]);
 
@@ -102,31 +109,26 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         setFormData({ ...formData, [name]: type === 'checkbox' ? target.checked : (type === 'number' ? parseFloat(value) : value) });
     };
 
-    const handleCastChange = (idx: number, updates: Partial<Actor>) => {
-        if (!formData) return;
-        const newCast = [...formData.cast];
-        newCast[idx] = { ...newCast[idx], ...updates };
-        setFormData({ ...formData, cast: newCast });
-    };
-
-    const handleAddActor = () => {
-        if (!formData) return;
-        setFormData({
-            ...formData,
-            cast: [...formData.cast, {
-                name: 'New Actor',
-                bio: '',
-                photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
-                highResPhoto: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png'
-            }]
-        });
-    };
-
-    const handleRemoveActor = (idx: number) => {
-        if (!formData) return;
-        const newCast = [...formData.cast];
-        newCast.splice(idx, 1);
-        setFormData({ ...formData, cast: newCast });
+    const handleRunProbe = async (url: string) => {
+        if (!url) return;
+        setIsProbing(true);
+        setProbeResult(null);
+        try {
+            const res = await fetch('/api/probe-roku-compatibility', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    url, 
+                    password: sessionStorage.getItem('adminPassword') 
+                })
+            });
+            const data = await res.json();
+            setProbeResult(data);
+        } catch (e) {
+            alert("Probe Failed. Check CORS settings.");
+        } finally {
+            setIsProbing(false);
+        }
     };
 
     const handleSave = async () => {
@@ -158,27 +160,11 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         }
     };
 
-    const handleSetSpotlight = async () => {
-        if (!formData || isSettingSpotlight) return;
-        if (!window.confirm(`PROMOTE TO SPOTLIGHT: Set "${formData.title}" as the global Now Streaming film?`)) return;
-        
-        setIsSettingSpotlight(true);
-        try {
-            await onSetNowStreaming(formData.key);
-            alert(`"${formData.title}" is now the global spotlight.`);
-        } catch (err) {
-            alert("Spotlight update failed.");
-        } finally {
-            setIsSettingSpotlight(false);
-        }
-    };
-
     const filteredMovies = (Object.values(allMovies) as Movie[])
         .filter(m => (m.title || '').toLowerCase().includes(searchTerm.toLowerCase()))
         .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
     const isSavedRecord = formData && allMovies[formData.key] !== undefined;
-    const totalCount = Object.keys(allMovies).length;
 
     return (
         <div className="space-y-6 pb-20">
@@ -187,7 +173,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                     <div className="p-8 bg-white/[0.02] flex flex-col sm:flex-row justify-between items-center gap-6 border-b border-white/5">
                         <div className="flex items-center gap-4">
                             <h3 className="text-xl font-black text-white uppercase tracking-widest">Catalog Records</h3>
-                            <span className="bg-red-600/10 text-red-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{totalCount} Films Total</span>
+                            <span className="bg-red-600/10 text-red-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{Object.keys(allMovies).length} Films Total</span>
                         </div>
                         <div className="flex gap-3">
                             <input type="text" placeholder="Filter..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="form-input !py-3 text-xs bg-black/40 border-white/10" />
@@ -205,17 +191,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                     <img src={movie.poster || 'https://via.placeholder.com/100x150'} className="w-full h-full object-cover" alt="" />
                                                 </div>
                                                 <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-black text-white uppercase text-lg tracking-tighter">{movie.title || 'Untitled'}</span>
-                                                        {movie.isLiveStream && <span className="bg-red-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest animate-pulse">LIVE</span>}
-                                                    </div>
+                                                    <span className="font-black text-white uppercase text-lg tracking-tighter">{movie.title || 'Untitled'}</span>
                                                     <p className="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-tighter">Dir. {movie.director}</p>
-                                                    <div className="flex gap-2 mt-2">
-                                                        {movie.isEpisode && <span className="text-[7px] bg-amber-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">EPISODE</span>}
-                                                        {movie.isSeries && <span className="text-[7px] bg-indigo-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">SERIES</span>}
-                                                        {movie.isSupportEnabled && <span className="text-[7px] bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">TIPS ACTIVE</span>}
-                                                        {movie.isForSale && <span className="text-[7px] bg-blue-600 text-white px-2 py-0.5 rounded-full uppercase font-black tracking-widest">VOD: ${movie.salePrice?.toFixed(2)}</span>}
-                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
@@ -231,34 +208,9 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
             ) : (
                 <div className="bg-[#0f0f0f] rounded-[2.5rem] border border-white/5 p-8 md:p-12 space-y-12 animate-[fadeIn_0.3s_ease-out]">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/5 pb-10 gap-6">
-                        <div className="flex items-center gap-6">
-                            <div>
-                                <h3 className="text-4xl font-black text-white uppercase tracking-tighter">{formData.title || 'Draft Master'}</h3>
-                                <div className="flex items-center gap-3 mt-2">
-                                    <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.4em]">UUID: {formData.key}</p>
-                                    {isSavedRecord ? (
-                                        <span className="text-[8px] font-black text-green-500 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 uppercase tracking-widest">Live in Database</span>
-                                    ) : (
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[8px] font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 uppercase tracking-widest">Draft (Unsaved Changes)</span>
-                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            {isSavedRecord && (
-                                <button 
-                                    onClick={handleSetSpotlight}
-                                    disabled={isSettingSpotlight}
-                                    className="bg-red-600/10 hover:bg-red-600 border border-red-500/20 text-red-500 hover:text-white font-black px-6 py-3 rounded-2xl flex items-center gap-2 transition-all group shadow-xl"
-                                >
-                                    <span className="relative flex h-2 w-2">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600 group-hover:bg-white"></span>
-                                    </span>
-                                    <span className="text-[10px] uppercase tracking-widest">{isSettingSpotlight ? 'Pulsing...' : 'Set as Global Spotlight'}</span>
-                                </button>
-                            )}
+                        <div>
+                            <h3 className="text-4xl font-black text-white uppercase tracking-tighter">{formData.title || 'Draft Master'}</h3>
+                            <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.4em] mt-2">UUID: {formData.key}</p>
                         </div>
                         <div className="flex gap-4">
                             {isSavedRecord && (
@@ -274,101 +226,59 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
                         <div className="space-y-12">
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">01. Content Structure</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">01. Master Metadata</h4>
                                 <div className="space-y-4">
                                     <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Film/Series Title" className="form-input bg-black/40" />
                                     <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Director(s)" className="form-input bg-black/40" />
                                     <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={4} placeholder="Synopsis Treatment" className="form-input bg-black/40" />
-                                    
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <label className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer">
-                                            <input type="checkbox" name="isSeries" checked={formData.isSeries} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
-                                            <span className="text-xs font-black uppercase text-gray-300">Mark as Series</span>
-                                        </label>
-                                        <label className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer">
-                                            <input type="checkbox" name="isEpisode" checked={formData.isEpisode} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-amber-600 focus:ring-amber-500" />
-                                            <span className="text-xs font-black uppercase text-gray-300">Mark as Episode</span>
-                                        </label>
-                                    </div>
-
-                                    <div className="p-6 bg-red-600/5 rounded-3xl border border-red-600/20">
-                                        <label className="flex items-center gap-4 cursor-pointer group mb-4">
-                                            <div className="relative">
-                                                <input type="checkbox" name="isLiveStream" checked={formData.isLiveStream} onChange={handleChange} className="sr-only peer" />
-                                                <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-red-600 transition-all"></div>
-                                                <div className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-7"></div>
-                                            </div>
-                                            <div className="min-w-0">
-                                                <span className="text-sm font-black uppercase text-red-500 tracking-widest">Live Broadcast Relay Active</span>
-                                                <p className="text-[9px] text-gray-600 uppercase font-bold mt-0.5">Disables master file for a high-velocity relay node (Oscars, etc).</p>
-                                            </div>
-                                        </label>
-                                        {formData.isLiveStream && (
-                                            <div className="space-y-4 animate-[fadeIn_0.4s_ease-out]">
-                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Relay Identity (YouTube/Vimeo Live Link)</p>
-                                                <input 
-                                                    type="text"
-                                                    name="liveStreamEmbed"
-                                                    value={formData.liveStreamEmbed}
-                                                    onChange={handleChange}
-                                                    placeholder="https://www.youtube.com/live/..."
-                                                    className="form-input !bg-black border-red-500/20 font-mono text-xs"
-                                                />
-                                                <p className="text-[8px] text-gray-700 uppercase font-black">System will automatically synthesize the required iframe manifest.</p>
-                                            </div>
-                                        )}
-                                    </div>
                                 </div>
                             </section>
 
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Revenue Logic</h4>
-                                <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-8">
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Hardware Pre-Flight</h4>
+                                <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
                                     <div className="space-y-4">
-                                        <label className="flex items-center gap-4 cursor-pointer group">
-                                            <div className="relative">
-                                                <input type="checkbox" name="isSupportEnabled" checked={formData.isSupportEnabled} onChange={handleChange} className="sr-only peer" />
-                                                <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-emerald-600 transition-all"></div>
-                                                <div className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-7"></div>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-black text-white uppercase tracking-tight">Allow Community Support (Tips)</p>
-                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Enables the "Support Creator" button</p>
-                                            </div>
-                                        </label>
-                                    </div>
-                                    
-                                    <div className="space-y-4 border-t border-white/5 pt-6">
-                                        <label className="flex items-center gap-4 cursor-pointer group">
-                                            <div className="relative">
-                                                <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="sr-only peer" />
-                                                <div className="w-14 h-7 bg-gray-700 rounded-full peer peer-checked:bg-blue-600 transition-all"></div>
-                                                <div className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-7"></div>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-black text-white uppercase tracking-tight">VOD Paywall Authorization</p>
-                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Requires paid rental for access</p>
-                                            </div>
-                                        </label>
+                                        <div className="flex gap-2">
+                                            <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="form-input bg-black/40 flex-grow" placeholder="Master File URL (MP4/HLS)" />
+                                            <button 
+                                                onClick={() => handleRunProbe(formData.fullMovie)}
+                                                disabled={isProbing || !formData.fullMovie}
+                                                className="bg-red-600 text-white font-black px-6 rounded-2xl uppercase text-[10px] tracking-widest disabled:opacity-30"
+                                            >
+                                                {isProbing ? 'Probing...' : 'Check Roku'}
+                                            </button>
+                                        </div>
                                         
-                                        {formData.isForSale && (
-                                            <div className="pl-18 animate-[fadeIn_0.3s_ease-out] space-y-4">
-                                                <div>
-                                                    <label className="form-label !text-blue-400">VOD Rental Price (USD)</label>
-                                                    <div className="relative max-w-[200px]">
-                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
-                                                        <input 
-                                                            type="number" 
-                                                            name="salePrice" 
-                                                            value={formData.salePrice} 
-                                                            onChange={handleChange} 
-                                                            className="form-input !pl-8 bg-black/40 text-blue-500 font-black text-2xl" 
-                                                            step="0.01"
-                                                        />
-                                                    </div>
+                                        {probeResult && (
+                                            <div className={`p-4 rounded-xl border transition-all animate-[fadeIn_0.3s_ease-out] ${probeResult.status === 'OPTIMAL' ? 'bg-green-500/10 border-green-500/20' : 'bg-red-600/10 border-red-500/20'}`}>
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className={`text-[9px] font-black uppercase tracking-widest ${probeResult.status === 'OPTIMAL' ? 'text-green-500' : 'text-red-500'}`}>
+                                                        {probeResult.status} Affinity: {probeResult.score}%
+                                                    </span>
                                                 </div>
+                                                {probeResult.findings.map((f: string, i: number) => (
+                                                    <p key={i} className="text-[10px] text-gray-400 italic">! {f}</p>
+                                                ))}
+                                                {probeResult.ffmpegHint && (
+                                                    <div className="mt-3">
+                                                        <p className="text-[8px] font-black text-gray-600 uppercase mb-1">Recommended Correction:</p>
+                                                        <code className="block bg-black p-2 rounded text-[9px] text-red-400 overflow-x-auto select-all">{probeResult.ffmpegHint}</code>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
+                                    </div>
+
+                                    <div className="p-4 bg-purple-600/5 border border-purple-500/20 rounded-2xl">
+                                        <label className="form-label !text-purple-500">Roku Specific Override (HLS Recommended)</label>
+                                        <input 
+                                            type="text" 
+                                            name="rokuStreamUrl" 
+                                            value={formData.rokuStreamUrl || ''} 
+                                            onChange={handleChange} 
+                                            className="form-input bg-black/60 border-purple-500/20 text-xs font-mono" 
+                                            placeholder="https://.../roku_optimized.m3u8" 
+                                        />
                                     </div>
                                 </div>
                             </section>
@@ -376,24 +286,18 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
 
                         <div className="space-y-12">
                              <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">03. Master Media</h4>
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">03. Key Art & Promotional</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="form-label">High-Bitrate Master</label>
-                                        <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="form-input bg-black/40" placeholder="https://..." />
-                                        <S3Uploader label="Ingest New Stream" onUploadSuccess={(url) => setFormData({...formData, fullMovie: url})} />
-                                    </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="form-label">Key Art (2:3)</label>
+                                            <label className="form-label">Poster (2:3)</label>
                                             <div className="aspect-[2/3] bg-black rounded-xl border border-white/10 overflow-hidden mb-2">
                                                 <img src={formData.poster} className="w-full h-full object-cover" alt="" />
                                             </div>
-                                            <input type="text" name="poster" value={formData.poster} onChange={handleChange} className="form-input bg-black/40 mb-2 !py-2 text-xs" placeholder="Poster URL" />
                                             <S3Uploader label="Upload Art" onUploadSuccess={(url) => setFormData({...formData, poster: url, tvPoster: url})} />
                                         </div>
                                         <div className="space-y-4">
-                                            <label className="form-label">Promotional Teaser</label>
+                                            <label className="form-label">Teaser/Trailer</label>
                                             <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} className="form-input bg-black/40" placeholder="Trailer URL" />
                                             <S3Uploader label="Ingest Teaser" onUploadSuccess={(url) => setFormData({...formData, trailer: url})} />
                                         </div>
@@ -402,80 +306,19 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                             </section>
 
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">04. Visibility Window</h4>
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">04. Access & Monetization</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="form-label">Official Release</label>
-                                            <input type="datetime-local" name="releaseDateTime" value={formData.releaseDateTime?.slice(0, 16)} onChange={handleChange} className="form-input bg-black/40 border-white/10" />
-                                        </div>
-                                        <div>
-                                            <label className="form-label">Vault Expiry (Urgency)</label>
-                                            <input type="datetime-local" name="mainPageExpiry" value={formData.mainPageExpiry?.slice(0, 16)} onChange={handleChange} className="form-input bg-black/40 border-white/10" />
-                                        </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <label className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer">
+                                            <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
+                                            <span className="text-xs font-black uppercase text-gray-300">Enable VOD Paywall</span>
+                                        </label>
+                                        {formData.isForSale && (
+                                            <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} className="form-input bg-black/40" step="0.01" />
+                                        )}
                                     </div>
-                                    <label className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer">
-                                        <input type="checkbox" name="isUnlisted" checked={formData.isUnlisted} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-gray-500 focus:ring-gray-400" />
-                                        <div className="min-w-0">
-                                            <span className="text-xs font-black uppercase text-gray-300">Unlist from Public Catalog</span>
-                                            <p className="text-[8px] text-gray-600 uppercase font-bold mt-1">Requires direct link for discovery.</p>
-                                        </div>
-                                    </label>
                                 </div>
                             </section>
-                        </div>
-                    </div>
-
-                    <div className="pt-12 border-t border-white/5">
-                        <div className="flex justify-between items-center mb-8">
-                            <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">05. Talent Manifest</h4>
-                            <button onClick={handleAddActor} className="bg-white/5 hover:bg-white text-gray-500 hover:text-black font-black px-6 py-2 rounded-xl text-[10px] uppercase tracking-widest border border-white/10 transition-all">+ Add Talent</button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {formData.cast.map((actor, idx) => (
-                                <div key={idx} className="bg-white/[0.02] border border-white/5 p-8 rounded-[2.5rem] space-y-6 relative group hover:border-white/10 transition-all">
-                                    <button 
-                                        onClick={() => handleRemoveActor(idx)} 
-                                        className="absolute top-6 right-6 text-gray-700 hover:text-red-500 transition-colors"
-                                        title="Remove actor"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-                                    </button>
-                                    
-                                    <div className="flex gap-6">
-                                        <div className="w-20 h-20 rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl flex-shrink-0">
-                                            <img src={actor.photo} className="w-full h-full object-cover" alt="" />
-                                        </div>
-                                        <div className="flex-grow space-y-4">
-                                            <input 
-                                                value={actor.name} 
-                                                onChange={e => handleCastChange(idx, { name: e.target.value })} 
-                                                placeholder="Professional Name" 
-                                                className="form-input !bg-black/40 !py-2 text-sm font-black uppercase tracking-tight italic" 
-                                            />
-                                            <input 
-                                                value={actor.photo} 
-                                                onChange={e => handleCastChange(idx, { photo: e.target.value, highResPhoto: e.target.value })} 
-                                                placeholder="Profile Photo URL" 
-                                                className="form-input !bg-black/40 !py-2 text-[9px] font-mono" 
-                                            />
-                                        </div>
-                                    </div>
-                                    
-                                    <textarea 
-                                        value={actor.bio} 
-                                        onChange={e => handleCastChange(idx, { bio: e.target.value })} 
-                                        placeholder="Biographical data..." 
-                                        className="form-input !bg-black/40 text-xs leading-relaxed" 
-                                        rows={3} 
-                                    />
-                                </div>
-                            ))}
-                            {formData.cast.length === 0 && (
-                                <div className="col-span-full py-12 text-center border-2 border-dashed border-white/5 rounded-[2.5rem]">
-                                    <p className="text-gray-700 font-black uppercase text-[10px] tracking-[0.5em]">Talent Manifest Empty</p>
-                                </div>
-                            )}
                         </div>
                     </div>
 

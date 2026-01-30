@@ -1,0 +1,23 @@
+
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="VideoPlayer" extends="Group">
+    <interface>
+        <field id="content" type="node" onChange="onContentChange" />
+        <field id="state" type="string" />
+    </interface>
+    <script type="text/brightscript" uri="pkg:/components/VideoPlayer.brs" />
+    <children>
+        <Rectangle width="1920" height="1080" color="0x000000FF" />
+        <Video id="video" width="1920" height="1080" visible="true" />
+        
+        <!-- Paywall Overlay -->
+        <Group id="paywall" visible="false">
+            <Rectangle width="1920" height="1080" color="0x000000CC" />
+            <Label text="PREMIUM ACCESS REQUIRED" translation="[0, 400]" width="1920" horizAlign="center" font="font:LargeBoldSystemFont" color="0xEF4444FF" />
+            <Label id="priceLabel" text="One-time Purchase via Roku Pay" translation="[0, 500]" width="1920" horizAlign="center" font="font:MediumSystemFont" />
+            <Rectangle id="buyBtn" translation="[810, 650]" width="300" height="80" color="0xFFFFFFFF" radius="10">
+                <Label text="UNLOCK NOW" width="300" height="80" horizAlign="center" vertAlign="center" color="0x000000FF" font="font:SmallBoldSystemFont" />
+            </Rectangle>
+        </Group>
+    </children>
+</component>
