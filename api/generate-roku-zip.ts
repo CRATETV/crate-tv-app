@@ -20,16 +20,37 @@ async function readDirectory(dirPath: string): Promise<string[]> {
 }
 
 /**
- * CRITICAL CLEANER: Purges "Ghost Codes"
- * Strips zero-width spaces, non-breaking spaces, and BOMs that often 
- * appear from copy-pasting from AI.
+ * CRITICAL CHARACTER PURGE V2
+ * Prevents &h02 Line 1 Syntax Errors.
+ * 1. Checks for physical BOM bytes (0xEF, 0xBB, 0xBF).
+ * 2. Normalizes line endings.
+ * 3. Prepends a safety comment for .brs files.
  */
-function purgeGhostCharacters(text: string): string {
-    return text
-        .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '') // Strip ZWSP, ZWNJ, ZWJ, BOM, NBSP
-        .replace(/\r\n/g, '\n')                     // Normalize to Unix LF
-        .replace(/[ \t]+\n/g, '\n')                  // Strip trailing whitespace per line
-        .trim() + '\n';                              // Roku requires trailing newline
+function cleanBrightScript(buffer: Buffer, isConfig: boolean = false, apiUrl?: string): string {
+    let startOffset = 0;
+    // Physical check for UTF-8 BOM
+    if (buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) {
+        startOffset = 3;
+    }
+
+    let text = buffer.toString('utf8', startOffset);
+    
+    // Global artifact strip
+    text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
+    
+    if (isConfig && apiUrl) {
+        text = text.replace('API_URL_PLACEHOLDER', apiUrl);
+    }
+
+    // Normalize and trim
+    text = text.replace(/\r\n/g, '\n').trim();
+
+    // Ensure it starts with a comment to "defrost" the Roku parser on line 1
+    if (!text.startsWith("'")) {
+        text = "' [CRATE_TV_FORGE_V4]\n" + text;
+    }
+
+    return text + "\n";
 }
 
 export async function POST(request: Request) {
@@ -50,7 +71,6 @@ export async function POST(request: Request) {
     } catch (e) {}
 
     if (host?.startsWith('localhost') || host?.startsWith('127.0.0.1')) isAuthenticated = true;
-    
     if (!isAuthenticated) return new Response(JSON.stringify({ error: 'Unauthorized Infrastructure Access' }), { status: 401 });
 
     const rokuDir = path.join((process as any).cwd(), 'roku');
@@ -59,31 +79,18 @@ export async function POST(request: Request) {
 
     if (filesToInclude.length === 0) throw new Error("Roku source directory is empty or missing.");
 
-    // CHECK: Manifest must exist for a valid Roku app
-    const hasManifest = filesToInclude.some(f => f.endsWith('manifest'));
-    if (!hasManifest) throw new Error("CRITICAL_FAILURE: 'manifest' file missing from /roku folder.");
-
     for (const file of filesToInclude) {
         const contentBuffer = await fs.readFile(file);
         let zipPath = path.relative(rokuDir, file).replace(/\\/g, '/');
         let finalContent: string | Buffer = contentBuffer;
 
-        // Clean text-based Roku files
-        if (zipPath.endsWith('.brs') || zipPath.endsWith('.xml') || zipPath === 'manifest') {
-            let textContent = contentBuffer.toString('utf-8');
-            
-            // Deep clean artifacts
-            textContent = purgeGhostCharacters(textContent);
-
-            // Dynamic Config Binding
-            if (zipPath === 'source/Config.brs') {
-                textContent = textContent.replace('API_URL_PLACEHOLDER', apiUrl);
-            }
-
-            finalContent = textContent;
+        if (zipPath.endsWith('.brs')) {
+            finalContent = cleanBrightScript(contentBuffer, zipPath === 'source/Config.brs', apiUrl);
+        } else if (zipPath.endsWith('.xml') || zipPath === 'manifest') {
+            let text = contentBuffer.toString('utf-8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+            finalContent = text.trim() + "\n";
         }
 
-        // Add to zip with Unix permissions
         zip.file(zipPath, finalContent, { 
             unixPermissions: 0o644,
             date: new Date()
@@ -101,8 +108,7 @@ export async function POST(request: Request) {
         status: 200,
         headers: {
             'Content-Type': 'application/zip',
-            'Content-Disposition': `attachment; filename="cratetv-production-source-v4.zip"`,
-            'X-Crate-API-Target': apiUrl
+            'Content-Disposition': `attachment; filename="cratetv-production-sdk.zip"`,
         },
     });
 

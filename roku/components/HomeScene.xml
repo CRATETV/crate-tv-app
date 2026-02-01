@@ -2,60 +2,55 @@
 <component name="HomeScene" extends="Group">
     <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
     <children>
-        <!-- TUDUM IMMERSIVE HERO -->
+        <!-- HERO SECTION -->
         <Group id="hero">
             <Poster 
                 id="heroImage" 
                 width="1920" 
-                height="1080" 
-                opacity="0.4" 
+                height="800" 
                 loadDisplayMode="scaleToFill" 
             />
             
-            <!-- Cinematic Vignette -->
-            <Rectangle width="1920" height="1080" color="0x00000000">
-                <Rectangle width="1920" height="400" translation="[0, 680]" gradientDirection="top-to-bottom" color="0x00000000" endColor="0x050505FF" />
-            </Rectangle>
+            <!-- Side Legibility Film (Darkens text area) -->
+            <Rectangle 
+                width="1200" 
+                height="800" 
+                color="0x050505FF" 
+                gradientDirection="left-to-right" 
+                endColor="0x00000000" 
+            />
+            
+            <!-- Bottom Legibility Film (Blends Hero into Rows) -->
+            <Rectangle 
+                width="1920" 
+                height="400" 
+                translation="[0, 400]"
+                color="0x050505FF" 
+                gradientDirection="bottom-to-top" 
+                endColor="0x00000000" 
+            />
 
-            <Group id="heroContent" translation="[100, 450]">
-                <Label id="heroTypeBadge" text="LATEST DISPATCH" font="font:SmallestBoldSystemFont" color="0xEF4444FF" />
-                
-                <Label 
-                    id="heroTitle" 
-                    translation="[0, 40]" 
-                    width="1400" 
-                    wrap="true" 
-                    color="0xFFFFFFFF"
-                >
-                    <font role="sans" size="120" weight="bold" />
+            <Group id="heroContent" translation="[100, 150]">
+                <Label id="heroBadge" text="SPOTLIGHT SELECTION" font="font:SmallestBoldSystemFont" color="0xEF4444FF" />
+                <Label id="heroTitle" translation="[0, 40]" width="1000" wrap="true" color="0xFFFFFFFF">
+                    <font role="sans" size="90" weight="bold" />
                 </Label>
-                
-                <Label 
-                    id="heroSubtitle" 
-                    translation="[0, 180]" 
-                    width="1000" 
-                    wrap="true" 
-                    font="font:MediumSystemFont" 
-                    color="0xCCCCCCFF" 
-                />
-            </RowList>
+                <Label id="heroSynopsis" translation="[0, 160]" width="800" wrap="true" maxLines="4" font="font:MediumSystemFont" color="0xCCCCCCFF" />
+            </Group>
         </Group>
 
-        <!-- HIGH DENSITY ROW LIST -->
+        <!-- CONTENT ROWS -->
         <RowList 
             id="rowList" 
-            translation="[0, 680]" 
+            translation="[0, 750]" 
             itemComponentName="MoviePosterItem" 
-            itemSize="[1920, 480]" 
-            numRows="3" 
-            rowHeights="[480]"
-            rowItemSize="[ [300, 450] ]"
-            rowItemSpacing="[ [40, 0] ]"
+            itemSize="[1920, 400]" 
+            rowHeights="[400]"
+            rowItemSize="[ [240, 360] ]"
+            rowItemSpacing="[ [30, 0] ]"
             rowLabelOffset="[ [100, 20] ]"
             focusXOffset="[ 100 ]"
             rowFocusAnimationStyle="floatingFocus"
         />
-        
-        <Task id="loadTask" uri="pkg:/components/ContentTask.xml" />
     </children>
 </component>

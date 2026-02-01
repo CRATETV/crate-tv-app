@@ -2,67 +2,38 @@
 <component name="Header" extends="Group">
     <interface>
         <field id="itemSelected" type="integer" alwaysNotify="true" />
-        <field id="focusedIndex" type="integer" alwaysNotify="true" />
     </interface>
     
     <script type="text/brightscript">
-        <![CDATA[
         sub init()
-            m.items = ["HOME", "THE PUBLIC SQUARE", "SEARCH", "ACCOUNT"]
-            m.labels = []
-            
-            xPos = 150
-            for i = 0 to m.items.Count() - 1
-                itemGroup = m.top.createChild("Group")
-                itemGroup.translation = [xPos, 40]
-                
-                lbl = itemGroup.createChild("Label")
-                lbl.text = m.items[i]
-                lbl.font = "font:MediumBoldSystemFont"
-                lbl.width = 500 
-                lbl.horizAlign = "center"
-                lbl.color = "0x888888FF"
-                m.labels.Push(lbl)
-                
-                xPos += 420 
-            end for
-            
-            m.top.focusedIndex = 0
-            updateFocus()
+            m.menu = m.top.findNode("menu")
+            m.menu.observeField("itemSelected", "onSelect")
         end sub
-
-        sub updateFocus()
-            idx = m.top.focusedIndex
-            for i = 0 to m.labels.Count() - 1
-                if i = idx
-                    m.labels[i].color = "0xFFFFFFFF"
-                else
-                    m.labels[i].color = "0x888888FF"
-                end if
-            end for
+        sub onSelect()
+            m.top.itemSelected = m.menu.itemSelected
         end sub
-
-        function onKeyEvent(key as String, press as Boolean) as Boolean
-            if press
-                if key = "right"
-                    if m.top.focusedIndex < m.labels.Count() - 1
-                        m.top.focusedIndex++
-                        updateFocus()
-                        return true
-                    end if
-                else if key = "left"
-                    if m.top.focusedIndex > 0
-                        m.top.focusedIndex--
-                        updateFocus()
-                        return true
-                    end if
-                else if key = "OK"
-                    m.top.itemSelected = m.top.focusedIndex
-                    return true
-                end if
-            end if
-            return false
-        end function
-        ]]>
     </script>
+    
+    <children>
+        <!-- Spaced Menu: 300px per item creates the elite airy look -->
+        <LabelList 
+            id="menu" 
+            translation="[100, 0]" 
+            itemSize="[300, 60]" 
+            orientation="horizontal" 
+            textSelectedColor="0xFFFFFFFF"
+            textColor="0x666666FF"
+        >
+            <content>
+                <ContentNode>
+                    <ContentNode title="HOME" />
+                    <ContentNode title="THE SQUARE" />
+                    <ContentNode title="SEARCH" />
+                    <ContentNode title="MY ACCOUNT" />
+                </ContentNode>
+            </content>
+        </LabelList>
+
+        <Label text="CRATE TV" translation="[1650, 0]" color="0xEF4444FF" font="font:LargeBoldSystemFont" />
+    </children>
 </component>

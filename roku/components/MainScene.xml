@@ -1,17 +1,23 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="MainScene" extends="Scene">
-    <script type="text/brightscript" uri="pkg:/components/MainScene.brs" />
     <interface>
-        <field id="authStatus" type="string" />
+        <!-- The configuration manifest passed from Main() -->
+        <field id="config" type="assocarray" />
     </interface>
+    
+    <script type="text/brightscript" uri="pkg:/components/MainScene.brs" />
+    
     <children>
-        <!-- Industrial Black Canvas -->
-        <Rectangle width="1920" height="1080" color="#050505" />
-        
-        <!-- Expanded Global Navigation -->
-        <Header id="navBar" translation="[0, 0]" />
-        
-        <!-- Screen Content Area -->
-        <Group id="viewport" translation="[0, 120]" />
+        <!-- Pure Black Cinematic Base -->
+        <Rectangle width="1920" height="1080" color="0x050505FF" />
+
+        <!-- Global Header: Fixed Top Navigation -->
+        <Header id="navBar" translation="[0, 40]" />
+
+        <!-- The Viewport: Dynamic Scene Container -->
+        <!-- Translated down 160px to provide permanent clearance for the Header -->
+        <Group id="viewport" translation="[0, 160]" />
+
+        <LoadingIndicator id="spinner" visible="false" translation="[960, 540]" />
     </children>
 </component>

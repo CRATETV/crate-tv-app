@@ -1,72 +1,49 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="SearchScene" extends="Group">
-    <interface>
-        <field id="masterContent" type="node" />
-        <field id="itemSelected" type="node" alwaysNotify="true" />
-    </interface>
-
     <script type="text/brightscript" uri="pkg:/components/SearchScene.brs" />
-    
     <children>
-        <Rectangle width="1920" height="1080" color="0x050505FF" />
-        
-        <Group id="keyboardGroup" translation="[100, 150]">
-            <Label 
-                text="SEARCH ARCHIVE" 
-                width="650"
-                horizAlign="center"
-                color="0xEF4444FF" 
-                font="font:SmallBoldSystemFont" 
-                translation="[0, 20]" 
-            />
-            <Rectangle 
-                width="400" 
-                height="2" 
-                translation="[125, 60]" 
-                color="0xEF4444FF" 
-                opacity="0.6"
-            />
+        <Group translation="[100, 40]">
+            <!-- Left Panel (1/3): Keyboard & Categories -->
+            <Group id="leftPanel">
+                <Keyboard id="keyboard" keyColor="0xFFFFFFFF" focusedKeyColor="0xEF4444FF" />
+                
+                <Label text="CATEGORIES" translation="[0, 440]" font="font:SmallestBoldSystemFont" color="0x444444FF" />
+                <LabelList 
+                    id="genreShortcuts" 
+                    translation="[0, 480]" 
+                    itemSize="[500, 50]" 
+                    textColor="0x666666FF"
+                    textFocusedColor="0xFFFFFFFF"
+                >
+                    <content>
+                        <ContentNode>
+                            <ContentNode title="Love Is in the Air" />
+                            <ContentNode title="Comedies" />
+                            <ContentNode title="Action" />
+                            <ContentNode title="Kids &amp; Family" />
+                        </ContentNode>
+                    </content>
+                </LabelList>
+            </Group>
             
-            <Keyboard 
-                id="keyboard" 
-                translation="[40, 100]"
-                keyColor="0xFFFFFFFF" 
-                focusedKeyColor="0xEF4444FF"
-                textEditBoxBitmapUri="" 
-                textEditBoxFocusBitmapUri=""
-                buttonsBitmapUri=""
-                buttonsFocusBitmapUri=""
-            />
-        </Group>
-        
-        <Group id="resultsGroup" translation="[900, 150]">
-            <Label 
-                id="resultsHeader"
-                text="TOP 10 TODAY"
-                color="0x444444FF"
-                font="font:SmallBoldSystemFont"
-                translation="[20, 0]"
-            />
-            
-            <PosterGrid 
-                id="resultsGrid"
-                basePosterSize="[240, 360]"
-                itemSpacing="[30, 40]"
-                numColumns="4"
-                translation="[0, 70]"
-                focusBitmapUri="pkg:/images/focus_ring.png"
-            />
-            
-            <Label 
-                id="emptyLabel"
-                text="ZERO MATCHES IN TERMINAL."
-                translation="[0, 300]"
-                width="1000"
-                horizAlign="center"
-                color="0x222222FF"
-                visible="false"
-                font="font:MediumBoldSystemFont"
-            />
+            <!-- Right Panel (2/3): Recommendations Grid -->
+            <Group id="resultsGroup" translation="[700, 0]">
+                <Label 
+                    id="resultsHeader" 
+                    text="Your Search Recommendations" 
+                    font="font:MediumBoldSystemFont" 
+                    color="0xFFFFFFFF" 
+                />
+                
+                <PosterGrid 
+                    id="resultsGrid" 
+                    translation="[0, 80]" 
+                    basePosterSize="[240, 360]" 
+                    numColumns="4" 
+                    itemSpacing="[30, 30]" 
+                    captionDisplayMode="none"
+                />
+            </Group>
         </Group>
     </children>
 </component>
