@@ -60,8 +60,8 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [formData, setFormData] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [isSettingSpotlight, setIsSettingSpotlight] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [newActorName, setNewActorName] = useState('');
     
     // Roku Probe State
     const [isProbing, setIsProbing] = useState(false);
@@ -107,6 +107,25 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         const target = e.target as HTMLInputElement;
         const { name, value, type } = target;
         setFormData({ ...formData, [name]: type === 'checkbox' ? target.checked : (type === 'number' ? parseFloat(value) : value) });
+    };
+
+    const handleAddActor = () => {
+        if (!formData || !newActorName.trim()) return;
+        const actor: Actor = {
+            name: newActorName.trim(),
+            photo: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png',
+            bio: 'Biographical data pending.',
+            highResPhoto: 'https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png'
+        };
+        setFormData({ ...formData, cast: [...formData.cast, actor] });
+        setNewActorName('');
+    };
+
+    const handleRemoveActor = (index: number) => {
+        if (!formData) return;
+        const nextCast = [...formData.cast];
+        nextCast.splice(index, 1);
+        setFormData({ ...formData, cast: nextCast });
     };
 
     const handleRunProbe = async (url: string) => {
@@ -231,54 +250,47 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Film/Series Title" className="form-input bg-black/40" />
                                     <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Director(s)" className="form-input bg-black/40" />
                                     <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={4} placeholder="Synopsis Treatment" className="form-input bg-black/40" />
+                                    
+                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-black text-white uppercase tracking-widest">Episodic Series</p>
+                                            <p className="text-[9px] text-gray-500 uppercase">Enable episodic navigation for this node</p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" name="isSeries" checked={formData.isSeries} onChange={handleChange} className="sr-only peer" />
+                                            <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-red-600 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                        </label>
+                                    </div>
                                 </div>
                             </section>
 
                             <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Hardware Pre-Flight</h4>
+                                <h4 className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">02. Verified Cast Manifest</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
-                                    <div className="space-y-4">
-                                        <div className="flex gap-2">
-                                            <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="form-input bg-black/40 flex-grow" placeholder="Master File URL (MP4/HLS)" />
-                                            <button 
-                                                onClick={() => handleRunProbe(formData.fullMovie)}
-                                                disabled={isProbing || !formData.fullMovie}
-                                                className="bg-red-600 text-white font-black px-6 rounded-2xl uppercase text-[10px] tracking-widest disabled:opacity-30"
-                                            >
-                                                {isProbing ? 'Probing...' : 'Check Roku'}
-                                            </button>
-                                        </div>
-                                        
-                                        {probeResult && (
-                                            <div className={`p-4 rounded-xl border transition-all animate-[fadeIn_0.3s_ease-out] ${probeResult.status === 'OPTIMAL' ? 'bg-green-500/10 border-green-500/20' : 'bg-red-600/10 border-red-500/20'}`}>
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <span className={`text-[9px] font-black uppercase tracking-widest ${probeResult.status === 'OPTIMAL' ? 'text-green-500' : 'text-red-500'}`}>
-                                                        {probeResult.status} Affinity: {probeResult.score}%
-                                                    </span>
-                                                </div>
-                                                {probeResult.findings.map((f: string, i: number) => (
-                                                    <p key={i} className="text-[10px] text-gray-400 italic">! {f}</p>
-                                                ))}
-                                                {probeResult.ffmpegHint && (
-                                                    <div className="mt-3">
-                                                        <p className="text-[8px] font-black text-gray-600 uppercase mb-1">Recommended Correction:</p>
-                                                        <code className="block bg-black p-2 rounded text-[9px] text-red-400 overflow-x-auto select-all">{probeResult.ffmpegHint}</code>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="p-4 bg-purple-600/5 border border-purple-500/20 rounded-2xl">
-                                        <label className="form-label !text-purple-500">Roku Specific Override (HLS Recommended)</label>
+                                    <div className="flex gap-2">
                                         <input 
                                             type="text" 
-                                            name="rokuStreamUrl" 
-                                            value={formData.rokuStreamUrl || ''} 
-                                            onChange={handleChange} 
-                                            className="form-input bg-black/60 border-purple-500/20 text-xs font-mono" 
-                                            placeholder="https://.../roku_optimized.m3u8" 
+                                            value={newActorName} 
+                                            onChange={e => setNewActorName(e.target.value)} 
+                                            placeholder="Actor name..." 
+                                            className="form-input bg-black/40 flex-grow"
+                                            onKeyDown={e => e.key === 'Enter' && handleAddActor()}
                                         />
+                                        <button 
+                                            onClick={handleAddActor}
+                                            className="bg-white text-black font-black px-6 rounded-xl uppercase text-[10px] tracking-widest"
+                                        >
+                                            Add
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 min-h-[50px]">
+                                        {formData.cast.map((actor, idx) => (
+                                            <div key={idx} className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg flex items-center gap-3">
+                                                <span className="text-xs font-bold text-gray-300">{actor.name}</span>
+                                                <button onClick={() => handleRemoveActor(idx)} className="text-red-500 font-black hover:text-red-400">×</button>
+                                            </div>
+                                        ))}
+                                        {formData.cast.length === 0 && <p className="text-[9px] text-gray-700 uppercase font-black italic">No actors assigned</p>}
                                     </div>
                                 </div>
                             </section>
@@ -286,19 +298,31 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
 
                         <div className="space-y-12">
                              <section className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">03. Key Art & Promotional</h4>
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">03. High-Bitrate Assets</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="form-label">Poster (2:3)</label>
-                                            <div className="aspect-[2/3] bg-black rounded-xl border border-white/10 overflow-hidden mb-2">
-                                                <img src={formData.poster} className="w-full h-full object-cover" alt="" />
-                                            </div>
-                                            <S3Uploader label="Upload Art" onUploadSuccess={(url) => setFormData({...formData, poster: url, tvPoster: url})} />
+                                    <div className="space-y-4">
+                                        <label className="form-label">Main Feature URL (AWS S3)</label>
+                                        <div className="flex gap-2">
+                                            <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="form-input bg-black/40 flex-grow text-xs font-mono" placeholder="https://..." />
+                                            <button 
+                                                onClick={() => handleRunProbe(formData.fullMovie)}
+                                                disabled={isProbing || !formData.fullMovie}
+                                                className="bg-red-600 text-white font-black px-6 rounded-2xl uppercase text-[10px] tracking-widest disabled:opacity-30"
+                                            >
+                                                {isProbing ? '...' : 'Probe'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="space-y-4">
+                                            <label className="form-label">Poster URL (2:3)</label>
+                                            <input type="text" name="poster" value={formData.poster} onChange={handleChange} className="form-input bg-black/40 text-[10px] font-mono" />
+                                            <S3Uploader label="Ingest Art" onUploadSuccess={(url) => setFormData({...formData, poster: url, tvPoster: url})} />
                                         </div>
                                         <div className="space-y-4">
-                                            <label className="form-label">Teaser/Trailer</label>
-                                            <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} className="form-input bg-black/40" placeholder="Trailer URL" />
+                                            <label className="form-label">Teaser/Teaser (URL)</label>
+                                            <input type="text" name="trailer" value={formData.trailer} onChange={handleChange} className="form-input bg-black/40 text-[10px] font-mono" />
                                             <S3Uploader label="Ingest Teaser" onUploadSuccess={(url) => setFormData({...formData, trailer: url})} />
                                         </div>
                                     </div>
@@ -309,13 +333,26 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">04. Access & Monetization</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
                                     <div className="grid grid-cols-2 gap-4">
-                                        <label className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer">
-                                            <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
-                                            <span className="text-xs font-black uppercase text-gray-300">Enable VOD Paywall</span>
-                                        </label>
-                                        {formData.isForSale && (
-                                            <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} className="form-input bg-black/40" step="0.01" />
-                                        )}
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                                                <span className="text-[10px] font-black uppercase text-gray-300">VOD Paywall</span>
+                                                <input type="checkbox" name="isForSale" checked={formData.isForSale} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500" />
+                                            </div>
+                                            {formData.isForSale && (
+                                                <div className="relative">
+                                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                                                    <input type="number" name="salePrice" value={formData.salePrice} onChange={handleChange} className="form-input !pl-8 bg-black/40" step="0.01" />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                                                <span className="text-[10px] font-black uppercase text-gray-300">Creator Support</span>
+                                                <input type="checkbox" name="isSupportEnabled" checked={formData.isSupportEnabled} onChange={handleChange} className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-emerald-600 focus:ring-emerald-500" />
+                                            </div>
+                                            <p className="text-[8px] text-gray-600 uppercase px-2 font-bold">Enables community tips/donations</p>
+                                        </div>
                                     </div>
                                 </div>
                             </section>
