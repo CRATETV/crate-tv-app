@@ -48,6 +48,48 @@ const emptyMovie: Movie = {
     liveStreamEmbed: ''
 };
 
+const ActorEditorModal: React.FC<{ actor: Actor, onSave: (updated: Actor) => void, onClose: () => void }> = ({ actor, onSave, onClose }) => {
+    const [editActor, setEditActor] = useState<Actor>({ ...actor });
+
+    return (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-[fadeIn_0.2s_ease-out]">
+            <div className="bg-[#111] border border-white/10 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden">
+                <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                    <div>
+                        <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Edit Actor Profile</h3>
+                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1">{editActor.name}</p>
+                    </div>
+                </div>
+                <div className="p-8 space-y-6">
+                    <div className="space-y-4">
+                        <label className="form-label">Professional Biography</label>
+                        <textarea 
+                            value={editActor.bio} 
+                            onChange={e => setEditActor({...editActor, bio: e.target.value})}
+                            className="form-input bg-black/40 border-white/10 h-40 text-sm leading-relaxed"
+                            placeholder="Write the actor's bio here..."
+                        />
+                    </div>
+                    <div className="space-y-4">
+                        <label className="form-label">Headshot URL (AWS S3)</label>
+                        <input 
+                            type="text" 
+                            value={editActor.photo} 
+                            onChange={e => setEditActor({...editActor, photo: e.target.value, highResPhoto: e.target.value})}
+                            className="form-input bg-black/40 border-white/10 text-xs font-mono"
+                        />
+                        <S3Uploader label="Upload New Headshot" onUploadSuccess={(url) => setEditActor({...editActor, photo: url, highResPhoto: url})} />
+                    </div>
+                </div>
+                <div className="p-8 border-t border-white/5 flex gap-4 bg-black/40">
+                    <button onClick={onClose} className="flex-1 text-gray-500 font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors">Discard</button>
+                    <button onClick={() => onSave(editActor)} className="flex-[2] bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest shadow-xl hover:bg-gray-200 transition-all">Save Profile</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const MovieEditor: React.FC<MovieEditorProps> = ({ 
     allMovies, 
     onSave, 
@@ -62,6 +104,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [isDeleting, setIsDeleting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [newActorName, setNewActorName] = useState('');
+    const [editingActorIdx, setEditingActorIdx] = useState<number | null>(null);
     
     // Roku Probe State
     const [isProbing, setIsProbing] = useState(false);
@@ -119,6 +162,14 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         };
         setFormData({ ...formData, cast: [...formData.cast, actor] });
         setNewActorName('');
+    };
+
+    const handleUpdateActor = (idx: number, updatedActor: Actor) => {
+        if (!formData) return;
+        const nextCast = [...formData.cast];
+        nextCast[idx] = updatedActor;
+        setFormData({ ...formData, cast: nextCast });
+        setEditingActorIdx(null);
     };
 
     const handleRemoveActor = (index: number) => {
@@ -283,14 +334,30 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             Add
                                         </button>
                                     </div>
-                                    <div className="flex flex-wrap gap-2 min-h-[50px]">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         {formData.cast.map((actor, idx) => (
-                                            <div key={idx} className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg flex items-center gap-3">
-                                                <span className="text-xs font-bold text-gray-300">{actor.name}</span>
-                                                <button onClick={() => handleRemoveActor(idx)} className="text-red-500 font-black hover:text-red-400">×</button>
+                                            <div key={idx} className="bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center justify-between group/actor">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border border-white/10">
+                                                        <img src={actor.photo} className="w-full h-full object-cover" alt="" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <span className="text-xs font-black text-white uppercase truncate block">{actor.name}</span>
+                                                        <p className="text-[8px] text-gray-500 uppercase truncate">Bio: {actor.bio ? 'Synced' : 'Missing'}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button 
+                                                        onClick={() => setEditingActorIdx(idx)}
+                                                        className="text-white/40 hover:text-white transition-colors"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                    </button>
+                                                    <button onClick={() => handleRemoveActor(idx)} className="text-red-500 font-black hover:text-red-400">×</button>
+                                                </div>
                                             </div>
                                         ))}
-                                        {formData.cast.length === 0 && <p className="text-[9px] text-gray-700 uppercase font-black italic">No actors assigned</p>}
+                                        {formData.cast.length === 0 && <p className="col-span-2 text-[9px] text-gray-700 uppercase font-black italic text-center py-4">No actors assigned</p>}
                                     </div>
                                 </div>
                             </section>
@@ -365,6 +432,14 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                         </button>
                     </div>
                 </div>
+            )}
+            
+            {editingActorIdx !== null && formData && (
+                <ActorEditorModal 
+                    actor={formData.cast[editingActorIdx]} 
+                    onClose={() => setEditingActorIdx(null)}
+                    onSave={(updated) => handleUpdateActor(editingActorIdx, updated)}
+                />
             )}
         </div>
     );
