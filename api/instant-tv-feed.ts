@@ -1,26 +1,30 @@
-// This is a Vercel Serverless Function
-// It will be accessible at the path /api/instant-tv-feed
-
 import { getApiData } from './_lib/data.js';
 import { Movie, Category } from '../types.js';
+import { getAdminDb } from './_lib/firebaseAdmin.js';
 
-// Helper to check if a movie is released and not expired
 const isMovieVisible = (movie: Movie | undefined | null): boolean => {
-    if (!movie) return false;
+    if (!movie || movie.isUnlisted) return false;
     const now = new Date();
-    
     const isReleased = !movie.releaseDateTime || new Date(movie.releaseDateTime) <= now;
-    const isNotExpired = !movie.mainPageExpiry || new Date(movie.mainPageExpiry) > now;
-    
-    return isReleased && isNotExpired && !!movie.fullMovie;
+    return isReleased && !!movie.fullMovie && !!movie.poster;
 };
 
-// Main function to generate the Direct Publisher / Instant TV Channel feed
 export async function GET(request: Request) {
   try {
-    const { movies: moviesData, categories: categoriesData } = await getApiData();
+    const apiData = await getApiData();
+    const moviesData = apiData.movies || {};
+    const categoriesData = apiData.categories || {};
     
-    // Create a map to associate movie keys with their genres
+    const db = getAdminDb();
+    const viewCounts: Record<string, number> = {};
+
+    if (db) {
+        const viewsSnap = await db.collection('view_counts').get();
+        viewsSnap.forEach(doc => {
+            viewCounts[doc.id] = Number(doc.data().count || 0);
+        });
+    }
+
     const movieGenreMap = new Map<string, string[]>();
     const visibleMovies: Record<string, Movie> = {};
 
@@ -43,7 +47,6 @@ export async function GET(request: Request) {
         }
     });
     
-    // Transform the application's movie data into the format Roku requires
     const rokuCategories = Object.values(categoriesData)
       .map((category: any) => {
           const cat = category as Category;
@@ -52,11 +55,13 @@ export async function GET(request: Request) {
           const items = cat.movieKeys
             .map(key => visibleMovies[key])
             .filter((m): m is Movie => !!m)
+            // SORT BY LIVE VIEW COUNTS
+            .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
             .map((movie: Movie) => {
                 return {
                     title: movie.title,
-                    description: movie.synopsis.replace(/<br\s*\/?>/gi, ' ').trim(),
-                    streamUrl: movie.fullMovie,
+                    description: (movie.synopsis || '').replace(/<[^>]+>/gi, ' ').trim(),
+                    streamUrl: movie.rokuStreamUrl || movie.fullMovie,
                     HDPosterUrl: movie.poster,
                     genres: movieGenreMap.get(movie.key) || ['Independent'],
                     director: movie.director,
@@ -71,7 +76,6 @@ export async function GET(request: Request) {
             children: items,
         };
       })
-      // FIX: The type predicate `c is object` was too generic and caused a type error. Using `NonNullable<typeof c>` provides a correct and specific type guard to filter out nulls.
       .filter((c): c is NonNullable<typeof c> => c !== null);
 
 
@@ -79,7 +83,7 @@ export async function GET(request: Request) {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 's-maxage=3600, stale-while-revalidate', // Cache for 1 hour
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
     });
   } catch (error) {

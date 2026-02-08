@@ -11,27 +11,10 @@ export async function GET(request: Request) {
 
         if (data && data.movies) {
             const finalMovies: Record<string, Movie> = {};
-            
             const movieArray = Object.values(data.movies) as Movie[];
             
-            // Prioritize movies with assets for the manifest
-            movieArray.sort((a, b) => {
-                const aScore = (a.fullMovie ? 100 : 0) + (a.poster ? 50 : 0) + (a.synopsis?.length > 10 ? 10 : 0);
-                const bScore = (b.fullMovie ? 100 : 0) + (b.poster ? 50 : 0) + (b.synopsis?.length > 10 ? 10 : 0);
-                return bScore - aScore;
-            });
-
             movieArray.forEach((m: Movie) => {
                 if (!m || !m.title || !m.key) return;
-                
-                const lowerTitle = m.title.toLowerCase().trim();
-                
-                // CORE FIX: Removed title-based fingerprinting.
-                // We strictly rely on the unique database key to determine uniqueness.
-                // This allows movies like "Just Cuz" to exist in the global catalog even 
-                // if other nodes share common keywords in metadata.
-                if (lowerTitle === '' || (lowerTitle === 'untitled' && m.key.startsWith('movie_'))) return;
-                
                 finalMovies[m.key] = m;
             });
 
@@ -46,19 +29,7 @@ export async function GET(request: Request) {
                 if (!cat || !cat.title) return;
                 
                 if (Array.isArray(cat.movieKeys)) {
-                    // Only include movies that survived the drafting filter
-                    let validKeys = cat.movieKeys.filter((k: string) => !!data.movies[k]);
-
-                    // Primary sorting by release date within categories
-                    validKeys.sort((a, b) => {
-                        const movieA = data.movies[a];
-                        const movieB = data.movies[b];
-                        const dateA = new Date(movieA.releaseDateTime || movieA.publishedAt || 0).getTime();
-                        const dateB = new Date(movieB.releaseDateTime || movieB.publishedAt || 0).getTime();
-                        return dateB - dateA; 
-                    });
-
-                    cat.movieKeys = validKeys;
+                    cat.movieKeys = cat.movieKeys.filter((k: string) => !!data.movies[k]);
                 }
                 finalCategories[key] = cat;
             });
@@ -70,12 +41,9 @@ export async function GET(request: Request) {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
-                // CRITICAL: Force non-cacheable response headers to ensure instant propagation of manifest updates
                 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
                 'Pragma': 'no-cache',
-                'Expires': '0',
-                'Surrogate-Control': 'no-store',
-                'X-Crate-Version': Date.now().toString()
+                'Expires': '0'
             },
         });
     } catch (error) {

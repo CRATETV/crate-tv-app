@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -45,7 +44,7 @@ const MaintenanceScreen: React.FC = () => (
 
 const App: React.FC = () => {
     const { user, hasCrateFestPass, likedMovies: likedMoviesArray, toggleLikeMovie, watchlist: watchlistArray, toggleWatchlist, watchedMovies: watchedMoviesArray } = useAuth();
-    const { isLoading, movies, categories, isFestivalLive, festivalConfig, settings, analytics, activeParties, livePartyMovie } = useFestival();
+    const { isLoading, movies, categories, isFestivalLive, festivalConfig, settings, analytics, activeParties, livePartyMovie, viewCounts } = useFestival();
     
     const [heroIndex, setHeroIndex] = useState(0);
     const [detailsMovie, setDetailsMovie] = useState<Movie | null>(null);
@@ -87,11 +86,11 @@ const App: React.FC = () => {
         if (spotlightMovies.length === 0) {
             spotlightMovies = (Object.values(movies) as Movie[])
                 .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !!m.title && !!m.poster && !m.isUnlisted)
-                .sort((a, b) => (analytics?.viewCounts?.[b.key] || 0) - (analytics?.viewCounts?.[a.key] || 0))
+                .sort((a, b) => (viewCounts?.[b.key] || 0) - (viewCounts?.[a.key] || 0))
                 .slice(0, 4);
         }
         return spotlightMovies;
-    }, [movies, categories.featured, analytics]);
+    }, [movies, categories.featured, viewCounts]);
 
     const vaultMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
@@ -129,9 +128,9 @@ const App: React.FC = () => {
 
     const topTenMovies = useMemo(() => {
         return (Object.values(movies) as (Movie | undefined)[]).filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
-            .sort((a, b) => (analytics?.viewCounts?.[b.key] || 0) - (analytics?.viewCounts?.[a.key] || 0))
+            .sort((a, b) => (viewCounts?.[b.key] || 0) - (viewCounts?.[a.key] || 0))
             .slice(0, 10);
-    }, [movies, analytics]);
+    }, [movies, viewCounts]);
 
     const nowStreamingMovie = useMemo(() => {
         const keys = categories.nowStreaming?.movieKeys || [];
@@ -282,11 +281,8 @@ const App: React.FC = () => {
                             {crateFestMovies.length > 0 && <MovieCarousel title={<span className="text-xl md:text-3xl font-black italic tracking-tighter uppercase text-red-600">{settings.crateFestConfig?.title}</span>} movies={crateFestMovies} onSelectMovie={(m) => window.location.href='/cratefest'} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />}
                             {comingSoonMovies.length > 0 && <MovieCarousel title="Premiering Soon" movies={comingSoonMovies} onSelectMovie={handleSelectMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} isComingSoonCarousel={true} />}
                             
-                            {/* FIX: Removed the big NowStreamingBanner to make room for the Header notification hub */}
-                            
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as any;
-                                // EXCLUSION HUB: Strictly exclude Public Domain and Spotlight rows from main page
                                 if (['featured', 'nowStreaming', 'publicAccess', 'publicDomainIndie', 'zine', 'editorial'].includes(key)) return null;
                                 if ((key === 'cratemas' || (typedCategory.title || '').toLowerCase() === 'cratemas') && !settings.isHolidayModeActive) return null;
                                 

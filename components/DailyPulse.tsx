@@ -1,7 +1,7 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Movie, AnalyticsData, MoviePipelineEntry, Category, AuditEntry } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
+import { useFestival } from '../contexts/FestivalContext';
 import LoadingSpinner from './LoadingSpinner';
 import firebase from 'firebase/compat/app';
 
@@ -30,6 +30,7 @@ const PulseMetric: React.FC<{ label: string; value: string | number; color?: str
 );
 
 const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, categories }) => {
+    const { viewCounts: liveViewCounts } = useFestival();
     const [liveNodes, setLiveNodes] = useState(analytics?.liveNodes || 0);
     const [recentAudits, setRecentAudits] = useState<AuditEntry[]>([]);
     const [aiStatus, setAiStatus] = useState<'nominal' | 'throttled'>('nominal');
@@ -80,19 +81,18 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
     }, []);
 
     const catalogAudit = useMemo(() => {
-        // FIX: Cast Object.values to Movie[] to prevent TypeScript unknown type errors when mapping movies.
         return (Object.values(movies) as Movie[]).map(m => ({
             key: m.key,
             title: m.title || 'Untitled Node',
-            views: analytics?.viewCounts?.[m.key] || 0,
+            views: liveViewCounts[m.key] || 0,
             hasStream: !!m.fullMovie,
             isUnlisted: m.isUnlisted === true
         })).sort((a, b) => b.views - a.views);
-    }, [movies, analytics]);
+    }, [movies, liveViewCounts]);
 
     const totalViews = useMemo(() => {
-        return (Object.values(analytics?.viewCounts || {}) as number[]).reduce((s, c) => s + (c || 0), 0);
-    }, [analytics]);
+        return (Object.values(liveViewCounts) as number[]).reduce((s, c) => s + (c || 0), 0);
+    }, [liveViewCounts]);
 
     const totalUsers = analytics?.totalUsers || 0;
     const pendingPipeline = pipeline.filter(p => p.status === 'pending');

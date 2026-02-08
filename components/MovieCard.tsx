@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Movie } from '../types';
 import LaurelPreview from './LaurelPreview';
@@ -130,15 +131,15 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
       {/* ATMOSPHERIC ORNAMENTS LAYER (Rendered outside the overflow-hidden container) */}
       {!showPreview && theme === 'valentines' && (
           <div className="absolute inset-0 pointer-events-none z-20 overflow-visible">
-              <div className="absolute -left-7 top-1/4 text-3xl animate-heart-beat drop-shadow-xl">❤️</div>
-              <div className="absolute -right-7 top-2/3 text-2xl animate-heart-beat drop-shadow-xl" style={{ animationDelay: '1s' }}>💖</div>
-              <div className="absolute left-1/2 -bottom-4 -translate-x-1/2 text-lg animate-heart-beat" style={{ animationDelay: '0.5s' }}>🌹</div>
+              <div className="absolute -left-9 top-1/4 text-4xl animate-heart-beat drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]">❤️</div>
+              <div className="absolute -right-9 top-2/3 text-3xl animate-heart-beat drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]" style={{ animationDelay: '1s' }}>💖</div>
+              <div className="absolute left-1/2 -bottom-6 -translate-x-1/2 text-2xl animate-heart-beat drop-shadow-xl" style={{ animationDelay: '0.5s' }}>🌹</div>
           </div>
       )}
       {!showPreview && theme === 'christmas' && (
           <div className="absolute inset-0 pointer-events-none z-20 overflow-visible">
-              <div className="absolute -left-10 bottom-2 text-4xl animate-tree-sway drop-shadow-2xl">🎄</div>
-              <div className="absolute -right-10 top-2 text-3xl animate-tree-sway drop-shadow-2xl" style={{ animationDelay: '1.5s' }}>🎄</div>
+              <div className="absolute -left-10 bottom-2 text-5xl animate-tree-sway drop-shadow-2xl">🎄</div>
+              <div className="absolute -right-10 top-2 text-4xl animate-tree-sway drop-shadow-2xl" style={{ animationDelay: '1.5s' }}>🎄</div>
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity animate-twinkle bg-white/5 pointer-events-none rounded-lg"></div>
           </div>
       )}
@@ -205,7 +206,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
                     aria-label={isMuted ? "Unmute" : "Mute"}
                 >
                     {isMuted ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
                     ) : (
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M12 5l-4 4H5v6h3l4 4V5z" /></svg>
                     )}
@@ -229,7 +230,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
                         {isOnWatchlist ? (
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                         ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
                         )}
                     </button>
                     <button onClick={handleToggleLike} className={`p-1.5 rounded-full bg-white/10 hover:bg-red-600/40 border border-white/10 transition-all shadow-lg ${isAnimatingLike ? 'animate-heartbeat' : ''}`}>

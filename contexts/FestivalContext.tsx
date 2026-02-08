@@ -17,6 +17,7 @@ interface FestivalContextType {
     settings: SiteSettings;
     pipeline: MoviePipelineEntry[];
     analytics: AnalyticsData | null;
+    viewCounts: Record<string, number>;
     activeParties: Record<string, WatchPartyState>;
     livePartyMovie: Movie | null;
     refreshData: () => Promise<void>;
@@ -44,6 +45,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [settings, setSettings] = useState<SiteSettings>({ isHolidayModeActive: false });
     const [pipeline, setPipeline] = useState<MoviePipelineEntry[]>([]);
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+    const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
     const [activeParties, setActiveParties] = useState<Record<string, WatchPartyState>>({});
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
 
@@ -55,19 +57,16 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         return now >= start && now < end;
     }, [festivalConfig]);
 
-    // Global selector for the currently active or upcoming Watch Party
     const livePartyMovie = useMemo(() => {
         const now = new Date();
         const movieArray = Object.values(movies) as Movie[];
         
-        // Priority 1: A session currently marked as "live" in Firestore
         const liveKey = Object.keys(activeParties).find(key => {
             const m = movies[key];
             return m && m.isWatchPartyEnabled && !m.isUnlisted;
         });
         if (liveKey) return movies[liveKey];
 
-        // Priority 2: The next upcoming party within a 7-day window
         const upcomingParties = movieArray
             .filter(m => m.isWatchPartyEnabled && m.watchPartyStartTime && !m.isUnlisted)
             .filter(m => {
@@ -108,6 +107,15 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             await initializeFirebaseAuth();
             const db = getDbInstance();
             if (db) {
+                // REAL-TIME VIEW COUNT LISTENER
+                db.collection('view_counts').onSnapshot(snapshot => {
+                    const counts: Record<string, number> = {};
+                    snapshot.forEach(doc => {
+                        counts[doc.id] = doc.data().count || 0;
+                    });
+                    setViewCounts(counts);
+                });
+
                 db.collection('content').doc('settings').onSnapshot(doc => {
                     if (doc.exists) setSettings(doc.data() as SiteSettings);
                 });
@@ -135,7 +143,6 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
                     setPipeline(entries);
                 });
 
-                // GLOBAL WATCH PARTY LISTENER
                 db.collection('watch_parties').onSnapshot(snapshot => {
                     const states: Record<string, WatchPartyState> = {};
                     snapshot.forEach(doc => {
@@ -165,6 +172,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         settings,
         pipeline,
         analytics,
+        viewCounts,
         activeParties,
         livePartyMovie,
         refreshData: () => fetchData(true)

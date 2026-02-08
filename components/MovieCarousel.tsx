@@ -1,3 +1,4 @@
+
 import React, { useRef, isValidElement } from 'react';
 import { Movie, Category } from '../types';
 import { MovieCard } from './MovieCard';
@@ -45,7 +46,8 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
   
   const activeTheme = isHolidayRow ? settings.holidayTheme : undefined;
 
-  const carouselClasses = `flex overflow-x-auto space-x-4 pb-8 pt-10 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8 group/carousel-list snap-x snap-proximity overscroll-x-contain`;
+  // Add extra padding and overflow-visible for holiday rows to show ornaments
+  const carouselClasses = `flex overflow-x-auto space-x-4 pb-12 pt-12 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8 group/carousel-list snap-x snap-proximity overscroll-x-contain ${isHolidayRow ? 'overflow-y-visible' : ''}`;
 
   const renderTitle = () => {
     if (typeof title === 'string' || typeof title === 'number') {
@@ -64,7 +66,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
   };
 
   return (
-    <div className="mb-8 md:mb-12">
+    <div className={`mb-8 md:mb-12 ${isHolidayRow ? 'relative z-10' : ''}`}>
       {renderTitle()}
       <div className="relative group/carousel-container">
         <div ref={scrollRef} className={carouselClasses}>

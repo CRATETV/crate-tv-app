@@ -1,4 +1,3 @@
-
 import { getApiData } from './_lib/data.js';
 import { Movie, Category, RokuConfig, RokuFeed, RokuMovie, RokuAsset } from '../types.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
@@ -10,7 +9,6 @@ function sanitizeUrl(url: string): string {
 }
 
 function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean = true): RokuMovie {
-    // Hardware Priority: Override Link > Roku Field > Web Master
     const streamUrl = sanitizeUrl(asset?.rokuStreamUrl || movie.rokuStreamUrl || movie.fullMovie || '');
     const isHls = streamUrl.toLowerCase().includes('.m3u8');
     const posterUrl = sanitizeUrl(asset?.tvPoster || movie.tvPoster || movie.poster || '');
@@ -39,6 +37,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const deviceId = searchParams.get('deviceId');
     
+    // Fetch base manifest from S3
     const apiData = await getApiData({ noCache: true });
     const moviesObj = apiData.movies || {};
     const categoriesObj = apiData.categories || {};
@@ -69,7 +68,12 @@ export async function GET(request: Request) {
 
         if (configDoc.exists) config = { ...config, ...configDoc.data() };
         assetsSnap.forEach(doc => { assets[doc.id] = doc.data() as RokuAsset; });
-        viewsSnap.forEach(doc => { viewCounts[doc.id] = doc.data().count || 0; });
+        
+        // CRITICAL: Ensure view counts are treated as numbers for accurate sorting
+        viewsSnap.forEach(doc => { 
+            const d = doc.data();
+            viewCounts[doc.id] = Number(d.count || 0); 
+        });
 
         if (deviceId) {
             const linkDoc = await db.collection('roku_links').doc(deviceId).get();
@@ -90,15 +94,23 @@ export async function GET(request: Request) {
     const categories: RokuFeed['categories'] = [];
     const publicSquare: RokuFeed['categories'] = [];
 
-    // CORE FILTER: Verify movie has content and is intended for public consumption
-    const isValidForRoku = (m: Movie) => !!m && !m.isUnlisted && isMovieReleased(m) && (!!m.rokuStreamUrl || !!m.fullMovie);
+    // Valid movies must have a title, poster, not be unlisted, and have a stream
+    const isValidForRoku = (m: Movie) => !!m && !!m.title && !!m.poster && !m.isUnlisted && isMovieReleased(m) && (!!m.rokuStreamUrl || !!m.fullMovie);
 
-    // 1. DYNAMIC TOP 10 CALCULATION
-    if (config.topTen?.enabled) {
-        const topMovies = (Object.values(moviesObj) as Movie[])
+    // 1. TOP 10 TODAY (DYNAMNIC SORTING)
+    if (config.topTen?.enabled !== false) {
+        const mode = config.topTen?.mode || 'auto';
+        let topMoviesKeys = (mode === 'manual' && config.topTen?.movieKeys?.length) 
+            ? config.topTen.movieKeys 
+            : (Object.values(moviesObj) as Movie[])
+                .filter(isValidForRoku)
+                .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
+                .slice(0, 10)
+                .map(m => m.key);
+
+        const topMovies = topMoviesKeys
+            .map(k => moviesObj[k])
             .filter(isValidForRoku)
-            .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
-            .slice(0, 10)
             .map(m => {
                 const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || !m.isForSale;
                 return formatMovieForRoku(m, assets[m.key], isUnlocked);
@@ -106,39 +118,35 @@ export async function GET(request: Request) {
 
         if (topMovies.length > 0) {
             categories.push({
-                title: config.topTen.title || "Top 10 Today",
+                title: config.topTen?.title || "Top 10 Today",
                 type: 'ranked',
                 children: topMovies
             });
         }
     }
 
-    // 2. STANDARD CATEGORY MAPPING
+    // 2. CATEGORIES
     Object.entries(categoriesObj).forEach(([key, cat]: [string, any]) => {
-        if (key === 'topTen' || key === 'featured' || (config.categories.hidden || []).includes(key)) return;
+        if (key === 'topTen' || key === 'featured' || (config.categories?.hidden || []).includes(key)) return;
         
         const children = (cat.movieKeys || [])
             .map((k: string) => moviesObj[k])
-            .filter((m: Movie) => m && isValidForRoku(m) && !(config.content.hiddenMovies || []).includes(m.key))
+            .filter((m: Movie) => m && isValidForRoku(m) && !(config.content?.hiddenMovies || []).includes(m.key))
             .map((movie: Movie) => {
                 const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(movie.key) || !movie.isForSale;
                 return formatMovieForRoku(movie, assets[movie.key], isUnlocked);
             });
         
         if (children.length > 0) {
-            const rowTitle = config.categories.customTitles?.[key] || cat.title;
-            const isRanked = rowTitle.toLowerCase().includes('top 10');
-
+            const rowTitle = config.categories?.customTitles?.[key] || cat.title;
             const row = { 
                 title: rowTitle, 
-                type: isRanked ? 'ranked' : (key.toLowerCase().includes('watch') ? 'live' : 'standard') as any, 
+                type: (key.toLowerCase().includes('watch') ? 'live' : 'standard') as any, 
                 children 
             };
 
-            const isExplicitPublic = (key === 'publicAccess' || key === 'publicDomainIndie');
-            const isProjectIndie = key.toLowerCase().includes('project') || cat.title?.toLowerCase().includes('project indie');
-            
-            if (isExplicitPublic && !isProjectIndie) {
+            const isExplicitPublic = (key === 'publicAccess' || key === 'publicSquare' || key === 'publicDomainIndie');
+            if (isExplicitPublic || (config.categories?.separateSection || []).includes(key)) {
                 publicSquare.push(row);
             } else {
                 categories.push(row);
@@ -147,7 +155,7 @@ export async function GET(request: Request) {
     });
 
     const response: RokuFeed = {
-        version: config._version || 1,
+        version: Date.now(), // Force Roku cache bust by changing version on every hit
         timestamp: new Date().toISOString(),
         heroItems: categories[0]?.children.slice(0, 5) || [],
         categories,
@@ -157,7 +165,12 @@ export async function GET(request: Request) {
 
     return new Response(JSON.stringify(response), {
         status: 200,
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        headers: { 
+            'Content-Type': 'application/json', 
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        },
     });
 
   } catch (error) {
