@@ -368,7 +368,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                 <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">03. High-Bitrate Assets</h4>
                                 <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5 space-y-6">
                                     <div className="space-y-4">
-                                        <label className="form-label">Main Feature URL (AWS S3)</label>
+                                        <label className="form-label">Primary Master URL (AWS S3)</label>
                                         <div className="flex gap-2">
                                             <input type="text" name="fullMovie" value={formData.fullMovie} onChange={handleChange} className="form-input bg-black/40 flex-grow text-xs font-mono" placeholder="https://..." />
                                             <button 
@@ -379,6 +379,21 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                                 {isProbing ? '...' : 'Probe'}
                                             </button>
                                         </div>
+                                    </div>
+
+                                    <div className="space-y-4 pt-4 border-t border-white/5">
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_5px_cyan]"></span>
+                                            <label className="form-label !text-cyan-500">Roku Optimized Override (HLS/MP4)</label>
+                                        </div>
+                                        <input 
+                                            type="text" 
+                                            name="rokuStreamUrl" 
+                                            value={formData.rokuStreamUrl || ''} 
+                                            onChange={handleChange} 
+                                            className="form-input bg-black/60 border-cyan-500/20 text-xs font-mono text-cyan-400" 
+                                            placeholder="Optional: Hardware-specific link" 
+                                        />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-6">
@@ -421,6 +436,36 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             <p className="text-[8px] text-gray-600 uppercase px-2 font-bold">Enables community tips/donations</p>
                                         </div>
                                     </div>
+                                </div>
+                            </section>
+
+                            <section className="space-y-4">
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500">05. Live Broadcast Relay</h4>
+                                <div className="bg-indigo-900/5 border border-indigo-500/20 p-8 rounded-3xl space-y-6">
+                                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-black text-white uppercase tracking-widest">Enable Live Mode</p>
+                                            <p className="text-[9px] text-gray-500 uppercase">Use external URL for Watch Parties (Bypasses S3 file)</p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" name="isLiveStream" checked={formData.isLiveStream} onChange={handleChange} className="sr-only peer" />
+                                            <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-indigo-600 transition-all after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                        </label>
+                                    </div>
+                                    
+                                    {formData.isLiveStream && (
+                                        <div className="space-y-4 animate-[fadeIn_0.3s_ease-out]">
+                                            <label className="form-label">Live Relay URL (YouTube / Restream / Vimeo)</label>
+                                            <input 
+                                                type="text" 
+                                                name="liveStreamEmbed" 
+                                                value={formData.liveStreamEmbed} 
+                                                onChange={handleChange} 
+                                                className="form-input bg-black/40 border-indigo-500/30 text-xs font-mono" 
+                                                placeholder="e.g. https://restream.io/player/..." 
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </section>
                         </div>

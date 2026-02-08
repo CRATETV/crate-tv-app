@@ -56,7 +56,7 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
 
         const unsubAudit = db.collection('audit_logs')
             .orderBy('timestamp', 'desc')
-            .limit(3)
+            .limit(5)
             .onSnapshot(snap => {
                 const audits: AuditEntry[] = [];
                 snap.forEach(doc => audits.push({ id: doc.id, ...doc.data() } as AuditEntry));
@@ -79,6 +79,17 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
         };
     }, []);
 
+    const catalogAudit = useMemo(() => {
+        // FIX: Cast Object.values to Movie[] to prevent TypeScript unknown type errors when mapping movies.
+        return (Object.values(movies) as Movie[]).map(m => ({
+            key: m.key,
+            title: m.title || 'Untitled Node',
+            views: analytics?.viewCounts?.[m.key] || 0,
+            hasStream: !!m.fullMovie,
+            isUnlisted: m.isUnlisted === true
+        })).sort((a, b) => b.views - a.views);
+    }, [movies, analytics]);
+
     const totalViews = useMemo(() => {
         return (Object.values(analytics?.viewCounts || {}) as number[]).reduce((s, c) => s + (c || 0), 0);
     }, [analytics]);
@@ -97,66 +108,69 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
+                    {/* Catalog Integrity Audit */}
+                    <div className="bg-[#0f0f0f] border border-white/5 p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden">
+                        <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-4">
+                            <div>
+                                <h3 className="text-xl font-black uppercase tracking-tighter italic">Catalog Integrity Audit</h3>
+                                <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-1">Verification of all live database nodes</p>
+                            </div>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-[11px] font-mono">
+                                <thead className="text-gray-700 uppercase font-black">
+                                    <tr>
+                                        <th className="pb-4">Film Node / Title</th>
+                                        <th className="pb-4 text-center">Views</th>
+                                        <th className="pb-4 text-center">Asset</th>
+                                        <th className="pb-4 text-right">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {catalogAudit.map(film => (
+                                        <tr key={film.key} className="group hover:bg-white/[0.01]">
+                                            <td className="py-4">
+                                                <p className="text-white font-black uppercase tracking-tight">{film.title}</p>
+                                                <p className="text-[8px] text-gray-700 mt-1">UUID: {film.key}</p>
+                                            </td>
+                                            <td className="py-4 text-center font-bold text-red-500">
+                                                {film.views.toLocaleString()}
+                                            </td>
+                                            <td className="py-4 text-center">
+                                                <span className={`text-[8px] px-1.5 py-0.5 rounded ${film.hasStream ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                                    {film.hasStream ? 'CONNECTED' : 'MISSING'}
+                                                </span>
+                                            </td>
+                                            <td className="py-4 text-right">
+                                                <span className={`text-[8px] font-black uppercase ${film.isUnlisted ? 'text-gray-600' : 'text-indigo-400'}`}>
+                                                    {film.isUnlisted ? 'UNLISTED' : 'LIVE'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <div className={`bg-[#0f0f0f] border ${aiStatus === 'throttled' ? 'border-red-600/50 shadow-[0_0_50px_rgba(239,68,68,0.1)]' : 'border-white/5'} p-8 rounded-[2.5rem] relative overflow-hidden transition-all duration-700`}>
                         <div className="flex justify-between items-center mb-6">
                             <div className="flex items-center gap-3">
                                 <div className={`w-2 h-2 rounded-full ${aiStatus === 'nominal' ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-red-600 animate-pulse shadow-[0_0_10px_#ef4444]'}`}></div>
-                                <h3 className="text-xl font-black uppercase tracking-tighter text-white">Infrastructure Health</h3>
-                            </div>
-                            <span className="text-[8px] font-black text-gray-700 uppercase tracking-widest">Global Ops Sync</span>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-4">
-                            <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
-                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Intelligence Core</p>
-                                <p className={`text-lg font-bold ${aiStatus === 'nominal' ? 'text-white' : 'text-red-500'}`}>
-                                    {aiStatus === 'nominal' ? 'NOMINAL // READY' : 'THROTTLED // ERROR 8'}
-                                </p>
-                                <p className="text-[9px] text-gray-600 mt-2 font-medium">
-                                    {aiStatus === 'nominal' ? 'Processing dispatches at standard frequency.' : 'Requests per minute exceeded.'}
-                                </p>
+                                <h3 className="text-xl font-black uppercase tracking-tighter text-white">Intelligence Core Health</h3>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="bg-[#0f0f0f] border border-white/5 p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
-                            <svg className="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                        </div>
-                        <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-4">
-                            <div>
-                                <h3 className="text-xl font-black uppercase tracking-tighter italic">Traffic Velocity</h3>
-                                <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-1">Real-time engagement heatmap</p>
-                            </div>
-                        </div>
-                        <div className="space-y-6">
-                            {analytics?.recentSpikes && analytics.recentSpikes.length > 0 ? (
-                                analytics.recentSpikes.map((spike, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-6 bg-white/[0.02] rounded-2xl border border-white/5 group hover:border-red-600/30 transition-all cursor-pointer" onClick={() => window.location.href=`/movie/${spike.movieKey}`}>
-                                        <div className="flex items-center gap-6">
-                                            <span className="text-4xl font-black text-gray-800 italic group-hover:text-red-600/40 transition-colors">#0{idx+1}</span>
-                                            <div>
-                                                <p className="font-black text-white uppercase text-xl tracking-tight leading-none mb-1 group-hover:text-red-500 transition-colors">{spike.title}</p>
-                                                <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">Active Stream Node // Sector {idx + 1}</p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-2xl font-black text-white">{spike.count}</p>
-                                            <p className="text-[8px] text-green-500 font-black uppercase tracking-tighter">Views / 60m</p>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-3xl opacity-20">
-                                    <p className="text-gray-500 font-black uppercase tracking-[0.5em]">Scanning Traffic Nodes...</p>
-                                </div>
-                            )}
+                        <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Status Report</p>
+                            <p className={`text-lg font-bold ${aiStatus === 'nominal' ? 'text-white' : 'text-red-500'}`}>
+                                {aiStatus === 'nominal' ? 'NOMINAL // READY' : 'THROTTLED // LIMIT_BREACH'}
+                            </p>
                         </div>
                     </div>
                 </div>
 
                 <div className="space-y-6">
-                    <div className="bg-black border border-white/5 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+                    <div className="bg-black border border-white/5 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden h-fit">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.08)_0%,transparent_70%)]"></div>
                         <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500 mb-8 flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
@@ -166,7 +180,7 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                             {recentAudits.map(log => (
                                 <div key={log.id} className="p-4 bg-white/5 rounded-xl border border-white/5">
                                     <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">{log.action}</p>
-                                    <p className="text-[10px] text-gray-300 line-clamp-2">{log.details}</p>
+                                    <p className="text-[10px] text-gray-300 line-clamp-2 italic">"{log.details}"</p>
                                 </div>
                             ))}
                         </div>

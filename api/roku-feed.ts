@@ -2,12 +2,7 @@
 import { getApiData } from './_lib/data.js';
 import { Movie, Category, RokuConfig, RokuFeed, RokuMovie, RokuAsset } from '../types.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-
-const MIME_TYPES = {
-    hls: 'application/vnd.apple.mpegurl',
-    dash: 'application/dash+xml',
-    mp4: 'video/mp4'
-};
+import { isMovieReleased } from '../constants.js';
 
 function sanitizeUrl(url: string): string {
     if (!url) return '';
@@ -15,6 +10,7 @@ function sanitizeUrl(url: string): string {
 }
 
 function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean = true): RokuMovie {
+    // Hardware Priority: Override Link > Roku Field > Web Master
     const streamUrl = sanitizeUrl(asset?.rokuStreamUrl || movie.rokuStreamUrl || movie.fullMovie || '');
     const isHls = streamUrl.toLowerCase().includes('.m3u8');
     const posterUrl = sanitizeUrl(asset?.tvPoster || movie.tvPoster || movie.poster || '');
@@ -32,8 +28,7 @@ function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean
         year: movie.publishedAt ? new Date(movie.publishedAt).getFullYear().toString() : '2025',
         runtime: movie.durationInMinutes ? `${movie.durationInMinutes} min` : '',
         isFree: !movie.isForSale,
-        live: movie.liveStreamStatus === 'live',
-        // Paywall metadata
+        live: movie.liveStreamStatus === 'live' || movie.isWatchPartyEnabled === true,
         isUnlocked: isUnlocked,
         purchaseUrl: `https://cratetv.net/movie/${movie.key}?action=buy`
     };
@@ -58,20 +53,24 @@ export async function GET(request: Request) {
         nowStreaming: { enabled: true, title: 'Now Streaming', mode: 'auto', movieKeys: [], daysBack: 30 },
         categories: { mode: 'all', hidden: [], order: [], customTitles: {}, separateSection: [] },
         content: { hiddenMovies: [], featuredMovies: [] },
-        features: { liveStreaming: false, watchParties: false, paidContent: true, festivalMode: false }
-    };
+        features: { liveStreaming: false, watchParties: true, paidContent: true, festivalMode: false }
+    } as any;
     
     const assets: Record<string, RokuAsset> = {};
+    const viewCounts: Record<string, number> = {};
     let unlockedMovies = new Set<string>();
 
     if (db) {
-        const configDoc = await db.collection('roku').doc('config').get();
-        if (configDoc.exists) config = { ...config, ...configDoc.data() };
-        
-        const assetsSnap = await db.collection('roku_assets').get();
-        assetsSnap.forEach(doc => { assets[doc.id] = doc.data() as RokuAsset; });
+        const [configDoc, assetsSnap, viewsSnap] = await Promise.all([
+            db.collection('roku').doc('config').get(),
+            db.collection('roku_assets').get(),
+            db.collection('view_counts').get()
+        ]);
 
-        // Check user link for VOD authorization
+        if (configDoc.exists) config = { ...config, ...configDoc.data() };
+        assetsSnap.forEach(doc => { assets[doc.id] = doc.data() as RokuAsset; });
+        viewsSnap.forEach(doc => { viewCounts[doc.id] = doc.data().count || 0; });
+
         if (deviceId) {
             const linkDoc = await db.collection('roku_links').doc(deviceId).get();
             if (linkDoc.exists) {
@@ -89,23 +88,61 @@ export async function GET(request: Request) {
     }
 
     const categories: RokuFeed['categories'] = [];
+    const publicSquare: RokuFeed['categories'] = [];
 
+    // CORE FILTER: Verify movie has content and is intended for public consumption
+    const isValidForRoku = (m: Movie) => !!m && !m.isUnlisted && isMovieReleased(m) && (!!m.rokuStreamUrl || !!m.fullMovie);
+
+    // 1. DYNAMIC TOP 10 CALCULATION
+    if (config.topTen?.enabled) {
+        const topMovies = (Object.values(moviesObj) as Movie[])
+            .filter(isValidForRoku)
+            .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
+            .slice(0, 10)
+            .map(m => {
+                const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || !m.isForSale;
+                return formatMovieForRoku(m, assets[m.key], isUnlocked);
+            });
+
+        if (topMovies.length > 0) {
+            categories.push({
+                title: config.topTen.title || "Top 10 Today",
+                type: 'ranked',
+                children: topMovies
+            });
+        }
+    }
+
+    // 2. STANDARD CATEGORY MAPPING
     Object.entries(categoriesObj).forEach(([key, cat]: [string, any]) => {
-        if ((config.categories.hidden || []).includes(key)) return;
+        if (key === 'topTen' || key === 'featured' || (config.categories.hidden || []).includes(key)) return;
+        
         const children = (cat.movieKeys || [])
-            .filter((k: string) => moviesObj[k] && !(config.content.hiddenMovies || []).includes(k))
-            .map((k: string) => {
-                const movie = moviesObj[k];
-                const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(k) || !movie.isForSale;
-                return formatMovieForRoku(movie, assets[k], isUnlocked);
+            .map((k: string) => moviesObj[k])
+            .filter((m: Movie) => m && isValidForRoku(m) && !(config.content.hiddenMovies || []).includes(m.key))
+            .map((movie: Movie) => {
+                const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(movie.key) || !movie.isForSale;
+                return formatMovieForRoku(movie, assets[movie.key], isUnlocked);
             });
         
         if (children.length > 0) {
-            categories.push({ 
-                title: config.categories.customTitles?.[key] || cat.title, 
-                type: key === 'topTen' ? 'ranked' : 'standard', 
+            const rowTitle = config.categories.customTitles?.[key] || cat.title;
+            const isRanked = rowTitle.toLowerCase().includes('top 10');
+
+            const row = { 
+                title: rowTitle, 
+                type: isRanked ? 'ranked' : (key.toLowerCase().includes('watch') ? 'live' : 'standard') as any, 
                 children 
-            });
+            };
+
+            const isExplicitPublic = (key === 'publicAccess' || key === 'publicDomainIndie');
+            const isProjectIndie = key.toLowerCase().includes('project') || cat.title?.toLowerCase().includes('project indie');
+            
+            if (isExplicitPublic && !isProjectIndie) {
+                publicSquare.push(row);
+            } else {
+                categories.push(row);
+            }
         }
     });
 
@@ -114,7 +151,7 @@ export async function GET(request: Request) {
         timestamp: new Date().toISOString(),
         heroItems: categories[0]?.children.slice(0, 5) || [],
         categories,
-        publicSquare: [],
+        publicSquare,
         liveNow: []
     };
 
@@ -124,6 +161,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
+    console.error("Feed generation failed:", error);
     return new Response(JSON.stringify({ error: "Feed generation failed." }), { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+
 export interface User {
   uid: string;
   email: string;
@@ -24,10 +25,6 @@ export interface UserRecord extends User {
     joinDate?: any;
     lastSignIn?: any;
 }
-
-// ═══════════════════════════════════════════════════════════
-// ROKU SPECIFICATION TYPES (V7 PRODUCTION STABLE)
-// ═══════════════════════════════════════════════════════════
 
 export interface RokuHeroItem {
   movieKey: string;
@@ -91,13 +88,12 @@ export interface RokuAsset {
   lastUpdated: any;
 }
 
-// FIX: Added isUnlocked and purchaseUrl to satisfy the RokuMovie interface requirements in feed generation (api/roku-feed.ts)
 export interface RokuMovie extends Movie {
-  id: string; // BRIGHTSCRIPT: Required for node mapping
+  id: string; 
   description: string;
-  hdPosterUrl: string; // BRIGHTSCRIPT: The primary poster key
+  hdPosterUrl: string; 
   heroImage: string;
-  streamUrl: string; // BRIGHTSCRIPT: The primary stream key
+  streamUrl: string; 
   streamFormat: 'mp4' | 'hls' | 'dash';
   year: string;
   runtime: string;
@@ -112,7 +108,6 @@ export interface RokuFeed {
   version: number;
   timestamp: string;
   heroItems: RokuMovie[];
-  // BRIGHTSCRIPT: Root array MUST be named 'categories'
   categories: { 
     title: string; 
     type?: 'standard' | 'ranked' | 'live';
@@ -132,7 +127,7 @@ export interface Movie {
   producers?: string;
   trailer: string;
   fullMovie: string;
-  rokuStreamUrl?: string; // ADDED: Hardware-specific override
+  rokuStreamUrl?: string;
   poster: string;
   tvPoster: string;
   likes: number;
@@ -533,7 +528,6 @@ export interface AuditEntry {
   ip?: string;
 }
 
-// FIX: Removed duplicate AuditRecord definitions to resolve namespace pollution
 export interface AuditRecord {
   id: string;
   role: string;

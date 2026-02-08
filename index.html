@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -129,6 +130,33 @@
       }
       .animate-slow-pan {
         animation: slowPan 30s linear infinite alternate;
+      }
+
+      /* SEASONAL ANIMATIONS */
+      @keyframes heart-beat {
+        0% { transform: scale(1) translateY(0); opacity: 0.6; }
+        50% { transform: scale(1.2) translateY(-10px); opacity: 1; }
+        100% { transform: scale(1) translateY(0); opacity: 0.6; }
+      }
+      .animate-heart-beat {
+        animation: heart-beat 3s ease-in-out infinite;
+      }
+
+      @keyframes tree-sway {
+        0% { transform: rotate(-5deg) scale(1); }
+        50% { transform: rotate(5deg) scale(1.1); }
+        100% { transform: rotate(-5deg) scale(1); }
+      }
+      .animate-tree-sway {
+        animation: tree-sway 4s ease-in-out infinite;
+      }
+
+      @keyframes twinkle {
+        0%, 100% { opacity: 0.4; }
+        50% { opacity: 1; filter: brightness(1.5); }
+      }
+      .animate-twinkle {
+        animation: twinkle 1s ease-in-out infinite;
       }
     </style>
     <script type="importmap">

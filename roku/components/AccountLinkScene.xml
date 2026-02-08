@@ -1,28 +1,32 @@
+
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="AccountLinkScene" extends="Group">
     <script type="text/brightscript" uri="pkg:/components/AccountLinkScene.brs" />
     <children>
         <Group id="linkingHub" translation="[960, 540]">
+            <!-- Title -->
             <Label 
+                id="userNameLabel"
                 text="LINK YOUR ACCOUNT" 
                 width="1400" 
                 horizAlign="center" 
-                translation="[-700, -300]" 
+                translation="[-700, -320]" 
                 font="font:LargeBoldSystemFont" 
                 color="0xFFFFFFFF" 
             />
             
+            <!-- Instructions: Increased spacing from title -->
             <Label 
                 text="Visit cratetv.net/link-roku and enter this code:" 
                 width="1000" 
                 horizAlign="center" 
-                translation="[-500, -200]" 
+                translation="[-500, -180]" 
                 font="font:SmallSystemFont" 
                 color="0x888888FF" 
             />
 
-            <!-- High-Impact Code Display -->
-            <Rectangle width="600" height="200" translation="[-300, -80]" color="0x111111FF" radius="20">
+            <!-- High-Impact Code Display: Centered in block -->
+            <Rectangle width="600" height="200" translation="[-300, -60]" color="0x111111FF" radius="20">
                 <Label 
                     id="codeLabel" 
                     text="--- ---" 
@@ -36,12 +40,13 @@
                 </Label>
             </Rectangle>
 
+            <!-- Status: Increased spacing from code block -->
             <Label 
                 id="statusLabel" 
                 text="Waiting for activation..." 
                 width="1000" 
                 horizAlign="center" 
-                translation="[-500, 180]" 
+                translation="[-500, 220]" 
                 font="font:SmallestSystemFont" 
                 color="0x444444FF" 
             />

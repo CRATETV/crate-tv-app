@@ -15,20 +15,45 @@ interface WatchPartyPageProps {
 
 const REACTION_TYPES = ['🔥', '😲', '❤️', '👏', '😢'] as const;
 
+/**
+ * LIVE RELAY ENGINE V4.5
+ * Automatically converts browser URLs from major platforms into secure full-screen iframes.
+ * Support Added: Restream.io Player
+ */
 const processLiveEmbed = (input: string, startTimeOffset: number = 0): string => {
     const trimmed = input.trim();
     const startSec = Math.max(0, Math.floor(startTimeOffset));
+    
+    // 1. RAW IFRAME PASSTHROUGH
     if (trimmed.startsWith('<iframe')) return trimmed;
+
+    // 2. YOUTUBE RECOGNITION
     const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const ytMatch = trimmed.match(ytRegex);
     if (ytMatch && ytMatch[1]) {
         return `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1&controls=1&showinfo=0${startSec > 0 ? `&start=${startSec}` : ''}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
     }
+
+    // 3. VIMEO RECOGNITION
     const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
     const vimeoMatch = trimmed.match(vimeoRegex);
     if (vimeoMatch && vimeoMatch[1]) {
         return `<iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&color=ef4444&title=0&byline=0&portrait=0${startSec > 0 ? `#t=${startSec}s` : ''}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
     }
+
+    // 4. RESTREAM.IO RECOGNITION
+    if (trimmed.includes('restream.io/player/')) {
+        const restreamId = trimmed.split('/player/')[1]?.split('?')[0];
+        if (restreamId) {
+            return `<iframe src="https://restream.io/player/${restreamId}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
+        }
+    }
+
+    // 5. GENERIC URL WRAPPER (FALLBACK)
+    if (trimmed.startsWith('http')) {
+        return `<iframe src="${trimmed}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>`;
+    }
+
     return `<div class="flex items-center justify-center h-full text-gray-500 font-mono text-xs uppercase p-10 text-center">Invalid Relay Node: ${trimmed}</div>`;
 };
 
@@ -79,7 +104,10 @@ const EmbeddedChat: React.FC<{ partyKey: string; directors: string[]; isQALive?:
     };
 
     return (
-        <div className={`w-full h-full flex flex-col ${isMobileController ? 'bg-black' : 'bg-[#0a0a0a] md:bg-gray-900 border-t md:border-t-0 md:border-l border-gray-800'} overflow-hidden min-h-0`}>
+        <div 
+            className={`w-full h-full flex flex-col ${isMobileController ? 'bg-black' : 'bg-[#0a0a0a] md:bg-gray-900 border-t md:border-t-0 md:border-l border-gray-800'} overflow-hidden min-h-0`}
+            onClick={(e) => e.stopPropagation()}
+        >
             {isMobileController && (
                 <div className="p-4 bg-red-600/10 border-b border-red-500/20 flex items-center justify-between">
                     <p className="text-[10px] font-black uppercase text-red-500">Roku Controller Node</p>
@@ -132,11 +160,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
         const syncClock = () => {
             const now = Date.now();
-            if (now - lastSeekTimeRef.current < 10000) return;
+            if (now - lastSeekTimeRef.current < 2000) return;
             try {
                 const serverStart = (partyState.actualStartTime as any).toDate().getTime();
                 const targetPosition = Math.max(0, (now - serverStart) / 1000);
                 const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
+                
                 if (targetPosition >= movieDuration) {
                     if (!isEnded) {
                         setIsEnded(true);
@@ -145,11 +174,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     }
                     return;
                 }
+
                 const drift = Math.abs(video.currentTime - targetPosition);
-                if (drift > 20 && !video.seeking && video.readyState >= 3) {
+                if (drift > 3 && !video.seeking && video.readyState >= 3) {
                     lastSeekTimeRef.current = now;
                     video.currentTime = targetPosition;
                 }
+
                 if (partyState.isPlaying && video.paused && !video.ended) {
                     video.play().catch(() => {});
                 } else if (!partyState.isPlaying && !video.paused) {
@@ -157,7 +188,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 }
             } catch (e) { console.error("Sync heartbeat failure:", e); }
         };
-        const interval = setInterval(syncClock, 8000);
+
+        const interval = setInterval(syncClock, 1000);
         syncClock(); 
         return () => clearInterval(interval);
     }, [partyState, movie, isEnded, isControllerMode]);
@@ -245,7 +277,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 </div>
                             ) : (
                                 <div className="relative w-full h-full">
-                                    <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} autoPlay muted={false} />
+                                    <video 
+                                        ref={videoRef} 
+                                        src={movie.fullMovie} 
+                                        className={`w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
+                                        autoPlay 
+                                        muted={false} 
+                                        playsInline
+                                        webkit-playsinline="true"
+                                        controls={false}
+                                    />
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
                                             <div className="max-w-2xl space-y-10">
@@ -269,9 +310,18 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         )}
                     </div>
 
-                    <div className="p-4 bg-black/40 border-y border-white/5 flex justify-center gap-6 md:gap-12 backdrop-blur-xl">
+                    <div 
+                        className="p-4 bg-black/40 border-y border-white/5 flex justify-center gap-6 md:gap-12 backdrop-blur-xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         {REACTION_TYPES.map(emoji => (
-                            <button key={emoji} onClick={() => logSentiment(emoji)} className="text-4xl md:text-5xl hover:scale-150 active:scale-90 transition-transform drop-shadow-lg">{emoji}</button>
+                            <button 
+                                key={emoji} 
+                                onClick={(e) => { e.stopPropagation(); logSentiment(emoji); }} 
+                                className="text-4xl md:text-5xl hover:scale-150 active:scale-90 transition-transform drop-shadow-lg"
+                            >
+                                {emoji}
+                            </button>
                         ))}
                     </div>
 

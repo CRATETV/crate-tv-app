@@ -1,6 +1,8 @@
+
 import React, { useRef, isValidElement } from 'react';
 import { Movie, Category } from '../types';
 import { MovieCard } from './MovieCard';
+import { useFestival } from '../contexts/FestivalContext';
 
 interface MovieCarouselProps {
   title: React.ReactNode;
@@ -19,6 +21,7 @@ interface MovieCarouselProps {
 
 const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, showRankings = false, watchedMovies, watchlist, likedMovies, onToggleLike, onToggleWatchlist, onSupportMovie, allCategories, isComingSoonCarousel = false }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { settings } = useFestival();
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -33,10 +36,13 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
     return null;
   }
   
-  // Increased pt-4 to pt-10 to provide clearance for ranked numbers
+  // Detect if this specific row is the active seasonal row
+  const titleStr = typeof title === 'string' ? title.toLowerCase() : '';
+  const isSeasonalRow = titleStr.includes('cratemas') || titleStr.includes('valentine') || (settings.isHolidayModeActive && titleStr.includes(settings.holidayName?.toLowerCase() || ''));
+  const currentTheme = isSeasonalRow ? settings.holidayTheme : undefined;
+
   const carouselClasses = `flex overflow-x-auto space-x-4 pb-8 pt-10 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8 group/carousel-list snap-x snap-proximity overscroll-x-contain`;
 
-  // Robustly render the title. React nodes can be strings, numbers, elements, or arrays.
   const renderTitle = () => {
     if (typeof title === 'string' || typeof title === 'number') {
       return (
@@ -82,7 +88,6 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                       onClick={() => onSelectMovie(movie)}
                       style={{ '--rank-color': color } as React.CSSProperties}
                   >
-                      {/* Removed overflow-hidden to prevent clipping of high-impact rank numbers */}
                       <div className="relative aspect-[16/9] rounded-lg bg-transparent">
                           <img 
                               src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
@@ -122,6 +127,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                     onToggleWatchlist={onToggleWatchlist}
                     onSupportMovie={onSupportMovie}
                     isComingSoon={isComingSoonCarousel}
+                    theme={currentTheme}
                   />
                 </div>
               );

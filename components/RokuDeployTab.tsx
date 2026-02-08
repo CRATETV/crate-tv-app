@@ -55,11 +55,11 @@ const RokuDeployTab: React.FC = () => {
                 <div className="max-w-2xl space-y-4 text-center lg:text-left">
                     <div className="flex items-center justify-center lg:justify-start gap-3">
                         <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
-                        <p className="text-purple-500 font-black uppercase tracking-[0.4em] text-[10px]">Crate TV OS // Roku SDK</p>
+                        <p className="text-purple-500 font-black uppercase tracking-[0.4em] text-[10px]">Crate TV OS // Step 1</p>
                     </div>
-                    <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter italic">Source Code.</h2>
+                    <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter italic">Download Source.</h2>
                     <p className="text-gray-400 text-lg font-medium leading-relaxed">
-                        Download the raw code package. This version is sanitized for the Roku Store and ready for hardware signing.
+                        Download the raw code package. This is the "source" you will upload to your TV to create the official store-ready <span className="text-white underline underline-offset-4">.pkg</span> file.
                     </p>
                 </div>
                 <button 
@@ -71,33 +71,44 @@ const RokuDeployTab: React.FC = () => {
                 </button>
             </div>
 
-            {/* 2. SIGNING GUIDE */}
-            <div className="bg-[#0f0f0f] border border-white/5 p-10 rounded-[3rem] shadow-2xl space-y-10">
-                <div className="space-y-2">
-                    <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic">Hardware Signing Protocol</h3>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Mandatory for Roku Store Approval</p>
+            {/* 2. THE STORE PROTOCOL */}
+            <div className="bg-[#0a0a0a] border border-white/5 p-10 rounded-[3.5rem] shadow-2xl space-y-12 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none">
+                     <svg className="w-96 h-96 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                </div>
+                
+                <div className="space-y-4 relative z-10">
+                    <h3 className="text-4xl font-black text-white uppercase tracking-tighter italic">Packaging Workflow</h3>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Follow these steps to sign and submit your channel</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 gap-4 relative z-10">
                     {[
-                        { step: "01", label: "Dev Mode", desc: "Press Home(3x), Up(2x), R, L, R, L, R on remote. Enable installer and set a dev password." },
-                        { step: "02", label: "Sideload", desc: "Go to your Roku IP in browser. Upload the ZIP from above. Install it to your TV." },
-                        { step: "03", label: "Package", desc: "Click 'Packager' in the Roku Dev UI. Enter your password to download the signed .pkg file." }
+                        { step: "01", label: "Enter Developer Mode", desc: "On your Roku remote, press: Home (3x), Up (2x), Right, Left, Right, Left, Right. Enable the installer and note your TV's IP address." },
+                        { step: "02", label: "Sideload the ZIP", desc: "Open your computer's browser to the TV IP (e.g. 192.168.1.5). Upload the ZIP from Step 1 and click 'Install'." },
+                        { step: "03", label: "Establish the Signing Key", desc: "If you haven't yet, use Telnet to access your Roku on port 8080 and run 'genkey'. Note the resulting Dev ID and password." },
+                        { step: "04", label: "The Packaging Portal", desc: "On the TV web page, click 'Packager' in the top-right. Enter the password you created and click 'Package'." },
+                        { step: "05", label: "Download the .PKG", desc: "A purple link will appear on the TV's web page. Click it to download your signed .pkg file. THIS is what Roku.com requires." },
+                        { step: "06", label: "Create Store Entry", desc: "Go to developer.roku.com -> Dashboard -> Add Channel -> Developer SDK. Name it 'Crate TV'." },
+                        { step: "07", label: "Upload the .PKG", desc: "In the 'Package Upload' tab of the Roku Dashboard, upload your .pkg file and enter your Dev ID password." },
+                        { step: "08", label: "Publish", desc: "Complete the Art and Content Ratings tabs, then submit for certification. Approval takes 24-72 hours." }
                     ].map(s => (
-                        <div key={s.step} className="bg-white/5 p-6 rounded-2xl border border-white/5 space-y-4">
-                            <span className="text-red-600 font-black text-2xl italic">{s.step}</span>
-                            <h4 className="text-white font-black uppercase text-sm">{s.label}</h4>
-                            <p className="text-gray-500 text-xs leading-relaxed">{s.desc}</p>
+                        <div key={s.step} className="bg-white/5 p-8 rounded-3xl border border-white/5 flex gap-8 items-start hover:bg-white/[0.08] transition-all group">
+                            <span className="text-red-600 font-black text-4xl italic group-hover:scale-110 transition-transform">0{s.step.slice(-1)}</span>
+                            <div className="space-y-2">
+                                <h4 className="text-white font-black uppercase text-xl italic tracking-tight">{s.label}</h4>
+                                <p className="text-gray-400 text-sm leading-relaxed max-w-4xl">{s.desc}</p>
+                            </div>
                         </div>
                     ))}
                 </div>
             </div>
 
             {/* 3. FEED ENDPOINT */}
-            <div className="bg-white/[0.02] border border-white/5 p-8 rounded-[2.5rem] shadow-xl space-y-6">
+            <div className="bg-white/[0.02] border border-white/5 p-10 rounded-[3rem] shadow-xl space-y-6">
                 <div>
-                    <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest">Production Feed Endpoint</h3>
-                    <p className="text-[10px] text-gray-700 uppercase font-black tracking-[0.4em] mt-1">Global Manifest Relay</p>
+                    <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest">Global Data Relay</h3>
+                    <p className="text-[10px] text-gray-700 uppercase font-black tracking-[0.4em] mt-1">This link must be provided in the 'Feed URL' section of your Roku developer portal.</p>
                 </div>
                 <div className="bg-black border border-white/10 p-6 rounded-2xl flex flex-col md:flex-row items-center gap-6 shadow-inner">
                     <code className="flex-grow font-mono text-xs text-purple-400 break-all select-all">{productionUrl}</code>
@@ -110,7 +121,7 @@ const RokuDeployTab: React.FC = () => {
                 </div>
             </div>
 
-            {error && <p className="text-red-500 font-black uppercase text-center">{error}</p>}
+            {error && <p className="text-red-500 font-black uppercase text-center bg-red-600/10 p-8 rounded-3xl border border-red-600/20">{error}</p>}
         </div>
     );
 };

@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="Header" extends="Group">
     <interface>
@@ -15,11 +16,11 @@
     </script>
     
     <children>
-        <!-- Spaced Menu: 300px per item creates the elite airy look -->
+        <!-- Spaced Menu: 600px per item ensures no truncation for long labels like THE PUBLIC SQUARE -->
         <LabelList 
             id="menu" 
-            translation="[100, 0]" 
-            itemSize="[300, 60]" 
+            translation="[80, 0]" 
+            itemSize="[600, 60]" 
             orientation="horizontal" 
             textSelectedColor="0xFFFFFFFF"
             textColor="0x666666FF"
@@ -27,13 +28,13 @@
             <content>
                 <ContentNode>
                     <ContentNode title="HOME" />
-                    <ContentNode title="THE SQUARE" />
+                    <ContentNode title="THE PUBLIC SQUARE" />
                     <ContentNode title="SEARCH" />
                     <ContentNode title="MY ACCOUNT" />
                 </ContentNode>
             </content>
         </LabelList>
 
-        <Label text="CRATE TV" translation="[1650, 0]" color="0xEF4444FF" font="font:LargeBoldSystemFont" />
+        <Label text="CRATE TV" translation="[1700, 0]" color="0xEF4444FF" font="font:LargeBoldSystemFont" />
     </children>
 </component>
