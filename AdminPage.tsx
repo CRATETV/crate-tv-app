@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -18,11 +17,8 @@ import PromoCodeManager from './components/PromoCodeManager';
 import PermissionsManager from './components/PermissionsManager';
 import EditorialManager from './components/EditorialManager';
 import DiscoveryEngine from './components/DiscoveryEngine';
-import CrateFestAnalytics from './components/CrateFestAnalytics';
-import FestivalAnalytics from './components/FestivalAnalytics';
 import JuryRoomTab from './components/JuryRoomTab';
 import AcademyIntelTab from './components/AcademyIntelTab';
-import OneTimePayoutTerminal from './components/OneTimePayoutTerminal';
 import AdminPayoutsTab from './components/AdminPayoutsTab';
 import UserIntelligenceTab from './components/UserIntelligenceTab';
 import AnalyticsPage from './components/AnalyticsPage';
@@ -59,8 +55,6 @@ const AdminPage: React.FC = () => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     
-    const [payoutContext, setPayoutContext] = useState<{ name: string; type: string; role: string } | null>(null);
-
     const [movies, setMovies] = useState<Record<string, Movie>>({});
     const [categories, setCategories] = useState<Record<string, Category>>({});
     const [festivalData, setFestivalData] = useState<FestivalDay[]>([]);
@@ -152,22 +146,11 @@ const AdminPage: React.FC = () => {
             const data = await response.json();
             if (data.success) {
                 sessionStorage.setItem('adminPassword', password);
-                sessionStorage.setItem('operatorName', loginName || (data.role === 'director_payout' ? data.targetDirector : 'ARCHITECT'));
+                sessionStorage.setItem('operatorName', loginName || 'ARCHITECT');
                 setRole(data.role);
                 setAssignedJobTitle(data.jobTitle || '');
-                
-                if (data.role === 'director_payout') {
-                    setPayoutContext({ name: data.targetDirector, type: data.payoutType || 'filmmaker', role: data.role });
-                    setIsAuthenticated(true);
-                    const liveDataRes = await fetch(`/api/get-live-data?t=${Date.now()}`);
-                    const liveData = await liveDataRes.json();
-                    setMovies(liveData.movies || {});
-                    setFestivalData(liveData.festivalData || []);
-                    setIsLoading(false);
-                } else {
-                    setIsAuthenticated(true);
-                    fetchAllData(password);
-                }
+                setIsAuthenticated(true);
+                fetchAllData(password);
             } else {
                 setError('Authentication Failed: Invalid Node Key.');
             }
@@ -266,25 +249,11 @@ const AdminPage: React.FC = () => {
     
     if (isLoading) return <LoadingSpinner />;
 
-    if (role === 'director_payout' && payoutContext) {
-        return (
-            <div className="min-h-screen bg-[#050505] text-white p-6 md:p-20">
-                <OneTimePayoutTerminal 
-                    targetName={payoutContext.name} 
-                    targetType={payoutContext.type}
-                    onLogout={() => { sessionStorage.clear(); window.location.reload(); }}
-                    movies={movies}
-                    festivalData={festivalData}
-                />
-            </div>
-        );
-    }
-
     return (
         <div className="min-h-screen bg-[#050505] text-white selection:bg-red-600 selection:text-white">
             <div className="max-w-[1800px] mx-auto p-4 md:p-10">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-12 border-b border-white/5 pb-10 gap-6">
-                    <div className="flex flex-col md:flex-row items-center gap-6">
+                    <div className="flex items-center gap-6">
                         <h1 className="text-4xl font-black uppercase tracking-tighter italic">Studio <span className="text-red-600">Command</span></h1>
                         <div className="flex flex-col gap-1">
                             <div className="bg-red-600/10 border border-red-500/20 px-3 py-1.5 rounded-xl flex items-center gap-3">
@@ -306,13 +275,6 @@ const AdminPage: React.FC = () => {
                         >
                             Disconnect Terminal
                         </button>
-                        <div className="flex items-center gap-3 bg-black/40 border border-white/5 px-6 py-3 rounded-2xl shadow-inner">
-                            <div className="flex flex-col items-end">
-                                <p className="text-[8px] font-black text-gray-600 uppercase tracking-[0.4em]">Perimeter Integrity</p>
-                                <p className="text-[10px] font-bold text-green-500 uppercase">System Nominal</p>
-                            </div>
-                            <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]"></div>
-                        </div>
                     </div>
                 </div>
                 
@@ -344,7 +306,6 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'payouts' && <AdminPayoutsTab />}
                     {activeTab === 'festHub' && (
                         <div className="space-y-16">
-                            <FestivalAnalytics analytics={analytics} festivalData={festivalData} config={festivalConfig} />
                             <FestivalEditor 
                                 data={festivalData} 
                                 config={festivalConfig || { isFestivalLive: false, title: '', description: '', startDate: '', endDate: '' }} 
@@ -358,7 +319,6 @@ const AdminPage: React.FC = () => {
                     )}
                     {activeTab === 'crateFestHub' && (
                         <div className="space-y-16">
-                            <CrateFestAnalytics analytics={analytics} config={crateFestConfig} />
                             <CrateFestEditor config={crateFestConfig || { isActive: false, title: '', tagline: '', startDate: '', endDate: '', passPrice: 15, movieBlocks: [] }} allMovies={movies} pipeline={pipeline} onSave={(c) => handleSaveData('settings', { crateFestConfig: c })} isSaving={isSaving} />
                         </div>
                     )}

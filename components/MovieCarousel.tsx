@@ -1,4 +1,3 @@
-
 import React, { useRef, isValidElement } from 'react';
 import { Movie, Category } from '../types';
 import { MovieCard } from './MovieCard';
@@ -38,8 +37,13 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
   
   // Detect if this specific row is the active seasonal row
   const titleStr = typeof title === 'string' ? title.toLowerCase() : '';
-  const isSeasonalRow = titleStr.includes('cratemas') || titleStr.includes('valentine') || (settings.isHolidayModeActive && titleStr.includes(settings.holidayName?.toLowerCase() || ''));
-  const currentTheme = isSeasonalRow ? settings.holidayTheme : undefined;
+  const isHolidayRow = settings.isHolidayModeActive && (
+      titleStr.includes('cratemas') || 
+      titleStr.includes('valentine') || 
+      titleStr.includes(settings.holidayName?.toLowerCase() || '')
+  );
+  
+  const activeTheme = isHolidayRow ? settings.holidayTheme : undefined;
 
   const carouselClasses = `flex overflow-x-auto space-x-4 pb-8 pt-10 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8 group/carousel-list snap-x snap-proximity overscroll-x-contain`;
 
@@ -127,7 +131,7 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
                     onToggleWatchlist={onToggleWatchlist}
                     onSupportMovie={onSupportMovie}
                     isComingSoon={isComingSoonCarousel}
-                    theme={currentTheme}
+                    theme={activeTheme}
                   />
                 </div>
               );

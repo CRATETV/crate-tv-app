@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -84,79 +83,32 @@
       }
       ::-webkit-scrollbar { display: none; }
       * { -ms-overflow-style: none; scrollbar-width: none; }
-      .secure-video-container { position: relative; overflow: hidden; }
       
-      @keyframes floatWatermark {
-        0% { transform: translate(5%, 5%); }
-        25% { transform: translate(70%, 15%); }
-        50% { transform: translate(40%, 80%); }
-        75% { transform: translate(10%, 60%); }
-        100% { transform: translate(5%, 5%); }
-      }
-      .dynamic-watermark {
-        animation: floatWatermark 20s linear infinite;
-        text-shadow: 0 0 4px rgba(0,0,0,0.5);
-      }
-
-      /* ZOOM-STYLE KINETIC REACTION PHYSICS */
-      @keyframes emoji-float {
-        0% { 
-          transform: translateY(0) translateX(0) scale(0); 
-          opacity: 0; 
-        }
-        15% { 
-          opacity: 1; 
-          transform: translateY(-40px) translateX(15px) scale(1.2);
-        }
-        40% {
-          transform: translateY(-120px) translateX(-20px) scale(1);
-        }
-        70% {
-          transform: translateY(-220px) translateX(20px) scale(1);
-          opacity: 1;
-        }
-        100% { 
-          transform: translateY(-350px) translateX(0) scale(0.6); 
-          opacity: 0; 
-        }
-      }
-      .animate-emoji-float {
-        animation: emoji-float 4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-      }
-      
-      @keyframes slowPan {
-        from { transform: translateX(0) translateY(0); }
-        to { transform: translateX(-5%) translateY(-5%); }
-      }
-      .animate-slow-pan {
-        animation: slowPan 30s linear infinite alternate;
-      }
-
       /* SEASONAL ANIMATIONS */
       @keyframes heart-beat {
-        0% { transform: scale(1) translateY(0); opacity: 0.6; }
-        50% { transform: scale(1.2) translateY(-10px); opacity: 1; }
-        100% { transform: scale(1) translateY(0); opacity: 0.6; }
+        0% { transform: scale(1) translateY(0) rotate(-5deg); opacity: 0.6; }
+        50% { transform: scale(1.4) translateY(-15px) rotate(5deg); opacity: 1; }
+        100% { transform: scale(1) translateY(0) rotate(-5deg); opacity: 0.6; }
       }
       .animate-heart-beat {
-        animation: heart-beat 3s ease-in-out infinite;
+        animation: heart-beat 3s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
       }
 
       @keyframes tree-sway {
-        0% { transform: rotate(-5deg) scale(1); }
-        50% { transform: rotate(5deg) scale(1.1); }
-        100% { transform: rotate(-5deg) scale(1); }
+        0% { transform: rotate(-8deg) scale(1) translateY(0); }
+        50% { transform: rotate(8deg) scale(1.1) translateY(-5px); }
+        100% { transform: rotate(-8deg) scale(1) translateY(0); }
       }
       .animate-tree-sway {
-        animation: tree-sway 4s ease-in-out infinite;
+        animation: tree-sway 4.5s ease-in-out infinite;
       }
 
       @keyframes twinkle {
         0%, 100% { opacity: 0.4; }
-        50% { opacity: 1; filter: brightness(1.5); }
+        50% { opacity: 1; filter: brightness(1.8) drop-shadow(0 0 12px white); }
       }
       .animate-twinkle {
-        animation: twinkle 1s ease-in-out infinite;
+        animation: twinkle 2s ease-in-out infinite;
       }
     </style>
     <script type="importmap">
