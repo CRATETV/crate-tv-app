@@ -37,7 +37,6 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const deviceId = searchParams.get('deviceId');
     
-    // Fetch base manifest from S3
     const apiData = await getApiData({ noCache: true });
     const moviesObj = apiData.movies || {};
     const categoriesObj = apiData.categories || {};
@@ -69,7 +68,6 @@ export async function GET(request: Request) {
         if (configDoc.exists) config = { ...config, ...configDoc.data() };
         assetsSnap.forEach(doc => { assets[doc.id] = doc.data() as RokuAsset; });
         
-        // CRITICAL: Ensure view counts are treated as numbers for accurate sorting
         viewsSnap.forEach(doc => { 
             const d = doc.data();
             viewCounts[doc.id] = Number(d.count || 0); 
@@ -91,13 +89,13 @@ export async function GET(request: Request) {
         }
     }
 
-    const categories: RokuFeed['categories'] = [];
-    const publicSquare: RokuFeed['categories'] = [];
+    const categories: any[] = [];
+    const publicSquare: any[] = [];
 
-    // Valid movies must have a title, poster, not be unlisted, and have a stream
     const isValidForRoku = (m: Movie) => !!m && !!m.title && !!m.poster && !m.isUnlisted && isMovieReleased(m) && (!!m.rokuStreamUrl || !!m.fullMovie);
 
-    // 1. TOP 10 TODAY (DYNAMNIC SORTING)
+    // 1. TOP 10 TODAY (CANONICAL ROW)
+    const topTenTitle = config.topTen?.title || "Top 10 Today";
     if (config.topTen?.enabled !== false) {
         const mode = config.topTen?.mode || 'auto';
         let topMoviesKeys = (mode === 'manual' && config.topTen?.movieKeys?.length) 
@@ -118,16 +116,21 @@ export async function GET(request: Request) {
 
         if (topMovies.length > 0) {
             categories.push({
-                title: config.topTen?.title || "Top 10 Today",
+                title: topTenTitle,
                 type: 'ranked',
+                categoryType: 'ranked',
                 children: topMovies
             });
         }
     }
 
-    // 2. CATEGORIES
+    // 2. CATEGORIES (Funneling into Public Square or Main Feed)
     Object.entries(categoriesObj).forEach(([key, cat]: [string, any]) => {
-        if (key === 'topTen' || key === 'featured' || (config.categories?.hidden || []).includes(key)) return;
+        const rowTitle = config.categories?.customTitles?.[key] || cat.title || '';
+        const normalizedTitle = rowTitle.toLowerCase();
+        
+        // Suppress duplicates and unneeded rows
+        if (normalizedTitle.includes('top 10') || key === 'featured' || (config.categories?.hidden || []).includes(key)) return;
         
         const children = (cat.movieKeys || [])
             .map((k: string) => moviesObj[k])
@@ -138,13 +141,15 @@ export async function GET(request: Request) {
             });
         
         if (children.length > 0) {
-            const rowTitle = config.categories?.customTitles?.[key] || cat.title;
+            const rowType = (key.toLowerCase().includes('watch') ? 'live' : 'standard');
             const row = { 
                 title: rowTitle, 
-                type: (key.toLowerCase().includes('watch') ? 'live' : 'standard') as any, 
+                type: rowType,
+                categoryType: rowType,
                 children 
             };
 
+            // CRITICAL ROUTING: Vintage Visions & Community Records -> Public Square
             const isExplicitPublic = (key === 'publicAccess' || key === 'publicSquare' || key === 'publicDomainIndie');
             if (isExplicitPublic || (config.categories?.separateSection || []).includes(key)) {
                 publicSquare.push(row);
@@ -155,7 +160,7 @@ export async function GET(request: Request) {
     });
 
     const response: RokuFeed = {
-        version: Date.now(), // Force Roku cache bust by changing version on every hit
+        version: Date.now(),
         timestamp: new Date().toISOString(),
         heroItems: categories[0]?.children.slice(0, 5) || [],
         categories,

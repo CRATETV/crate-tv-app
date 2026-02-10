@@ -179,6 +179,7 @@ export interface Episode {
 export interface Category {
   title: string;
   movieKeys: string[];
+  type?: string;
 }
 
 export interface FilmBlock {

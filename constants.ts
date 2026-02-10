@@ -1,3 +1,4 @@
+
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData, PromoCode } from './types';
 
 // Utility function to robustly check if a movie is past its release time.
@@ -23,11 +24,17 @@ export const promoCodesData: Record<string, Partial<PromoCode>> = {
 export const categoriesData: Record<string, Category> = {
   "featured": {
     "title": "Spotlight Selection",
-    "movieKeys": ["meridian", "fighter", "gemini", "autumn"]
+    "movieKeys": ["meridian", "fighter", "gemini", "autumn"],
+    "type": "featured"
   },
   "publicAccess": {
-    "title": "The Square",
-    "movieKeys": ["trip_to_moon", "the_cook", "time_service"]
+    "title": "Community Records",
+    "movieKeys": ["time_service"],
+    "type": "publicDomainIndie"
+  },
+  "publicDomainIndie": {
+    "title": "Vintage Visions",
+    "movieKeys": ["trip_to_moon", "the_cook", "a_fool_and_his_money", "suspense"]
   }
 };
 
@@ -153,10 +160,36 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Georges Méliès",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/TripToTheMoon_1902.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "likes": 2100,
+    "publishedAt": "2025-01-01T00:00:00Z"
+  },
+  "a_fool_and_his_money": {
+    "key": "a_fool_and_his_money",
+    "title": "A Fool and His Money",
+    "synopsis": "The 1912 silent comedy by Alice Guy-Blaché, the first female director in cinema history. A milestone of early African American cinema.",
+    "cast": [],
+    "director": "Alice Guy-Blaché",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/A_Fool_and_His_Money_1912.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+fool+and+his+money+.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+fool+and+his+money+.webp",
+    "likes": 980,
+    "publishedAt": "2025-01-01T00:00:00Z"
+  },
+  "suspense": {
+    "key": "suspense",
+    "title": "Suspense",
+    "synopsis": "Lois Weber's 1913 innovative thriller. Features early examples of split-screen techniques and a tense home-invasion narrative that influenced the genre for decades.",
+    "cast": [],
+    "director": "Lois Weber",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Suspense_1913.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/suspense+.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/suspense+.webp",
+    "likes": 750,
     "publishedAt": "2025-01-01T00:00:00Z"
   }
 };
