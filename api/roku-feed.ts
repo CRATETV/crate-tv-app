@@ -1,7 +1,7 @@
 import { getApiData } from './_lib/data.js';
 import { Movie, Category, RokuConfig, RokuFeed, RokuMovie, RokuAsset } from '../types.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
-import { isMovieReleased } from '../constants.js';
+import { isMovieReleased, moviesData as fallbackMovies, categoriesData as fallbackCategories } from '../constants.js';
 
 function sanitizeUrl(url: string): string {
     if (!url) return '';
@@ -37,9 +37,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const deviceId = searchParams.get('deviceId');
     
+    // 1. Fetch live data with noCache to ensure we see most recent S3 changes
     const apiData = await getApiData({ noCache: true });
-    const moviesObj = apiData.movies || {};
-    const categoriesObj = apiData.categories || {};
+    
+    // 2. FAIL-SAFE MERGE: If S3 is missing our critical public domain films, pull them from fallbacks
+    const moviesObj = { ...fallbackMovies, ...(apiData.movies || {}) };
+    const categoriesObj = { ...fallbackCategories, ...(apiData.categories || {}) };
 
     const db = getAdminDb();
     let config: RokuConfig = { 
