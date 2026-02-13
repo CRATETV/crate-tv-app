@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Movie } from '../types';
 import LaurelPreview from './LaurelPreview';
 
@@ -22,6 +23,19 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
 
   const currentMovie = movies[currentIndex];
 
+  /**
+   * DYNAMIC POSTER ROTATION ENGINE V1.0 (Hero Mirror)
+   */
+  const displayPoster = useMemo(() => {
+    if (!currentMovie.posterVariants || currentMovie.posterVariants.length === 0) return currentMovie.poster;
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const pastDaysOfYear = (now.getTime() - startOfYear.getTime()) / 86400000;
+    const weekNumber = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
+    const variantIndex = weekNumber % currentMovie.posterVariants.length;
+    return currentMovie.posterVariants[variantIndex];
+  }, [currentMovie]);
+
   useEffect(() => {
     setShowVideo(false);
     if (videoTimeoutRef.current) clearTimeout(videoTimeoutRef.current);
@@ -36,7 +50,7 @@ const Hero: React.FC<HeroProps> = ({ movies, currentIndex, onSetCurrentIndex, on
       <div className="absolute inset-0 overflow-hidden">
         <img
           key={`poster-${currentMovie.key}`}
-          src={`/api/proxy-image?url=${encodeURIComponent(currentMovie.poster)}`}
+          src={`/api/proxy-image?url=${encodeURIComponent(displayPoster)}`}
           alt="" 
           className={`w-full h-full object-cover transition-opacity duration-1000 ease-in-out animate-ken-burns scale-105 md:scale-110 ${showVideo ? 'opacity-0' : 'opacity-100'}`}
           crossOrigin="anonymous"

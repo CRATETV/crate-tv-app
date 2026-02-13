@@ -1,3 +1,4 @@
+
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData, PromoCode } from './types';
 
 // Utility function to robustly check if a movie is past its release time.
@@ -179,13 +180,12 @@ export const moviesData: Record<string, Movie> = {
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "likes": 2100,
     "publishedAt": "2025-01-01T00:00:00Z",
-    "isUnlisted": false
+    "isUnlisted": false,
+    "posterVariants": [
+       "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
+       "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Poster.webp"
+    ]
   },
-
-  // ========================================================================
-  // VINTAGE VISIONS - PUBLIC DOMAIN CLASSICS (8 FILMS)
-  // ========================================================================
-  
   "a_fool_and_his_money": {
     "key": "a_fool_and_his_money",
     "title": "A Fool and His Money",
@@ -208,7 +208,6 @@ export const moviesData: Record<string, Movie> = {
     "publishedAt": "2025-01-01T00:00:00Z",
     "isUnlisted": false
   },
-
   "brideless_groom": {
     "key": "brideless_groom",
     "title": "Brideless Groom",
@@ -231,7 +230,6 @@ export const moviesData: Record<string, Movie> = {
     "publishedAt": "2025-01-01T00:00:00Z",
     "isUnlisted": false
   },
-
   "meshes_of_the_afternoon": {
     "key": "meshes_of_the_afternoon",
     "title": "Meshes of the Afternoon",
@@ -254,7 +252,6 @@ export const moviesData: Record<string, Movie> = {
     "publishedAt": "2025-01-01T00:00:00Z",
     "isUnlisted": false
   },
-
   "un_chien_andalou": {
     "key": "un_chien_andalou",
     "title": "Un Chien Andalou",
@@ -277,7 +274,6 @@ export const moviesData: Record<string, Movie> = {
     "publishedAt": "2025-01-01T00:00:00Z",
     "isUnlisted": false
   },
-
   "house_of_usher": {
     "key": "house_of_usher",
     "title": "The Fall of the House of Usher",
@@ -300,7 +296,6 @@ export const moviesData: Record<string, Movie> = {
     "publishedAt": "2025-01-01T00:00:00Z",
     "isUnlisted": false
   },
-
   "chaplin_immigrant": {
     "key": "chaplin_immigrant",
     "title": "The Immigrant",
@@ -323,7 +318,6 @@ export const moviesData: Record<string, Movie> = {
     "publishedAt": "2025-01-01T00:00:00Z",
     "isUnlisted": false
   },
-
   "chaplin_pawnshop": {
     "key": "chaplin_pawnshop",
     "title": "The Pawnshop",
@@ -346,7 +340,6 @@ export const moviesData: Record<string, Movie> = {
     "publishedAt": "2025-01-01T00:00:00Z",
     "isUnlisted": false
   },
-
   "suspense": {
     "key": "suspense",
     "title": "Suspense",

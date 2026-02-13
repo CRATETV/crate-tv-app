@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Movie } from '../types';
 import LaurelPreview from './LaurelPreview';
 
@@ -28,10 +28,27 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
 
   const now = new Date();
   
+  /**
+   * DYNAMIC POSTER ROTATION ENGINE V1.0
+   * Calculates the current week number to serve as a rotation seed.
+   * Ensures all viewers see the same "Poster of the Week".
+   */
+  const currentPoster = useMemo(() => {
+    if (!movie.posterVariants || movie.posterVariants.length === 0) return movie.poster;
+    
+    // Calculate week of the year
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const pastDaysOfYear = (now.getTime() - startOfYear.getTime()) / 86400000;
+    const weekNumber = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
+    
+    const variantIndex = weekNumber % movie.posterVariants.length;
+    return movie.posterVariants[variantIndex];
+  }, [movie.poster, movie.posterVariants, now]);
+
   const releaseDate = movie.releaseDateTime ? new Date(movie.releaseDateTime) : null;
   const isActuallyComingSoon = releaseDate && releaseDate > now;
 
-  const isLeavingSoon = React.useMemo(() => {
+  const isLeavingSoon = useMemo(() => {
     if (!movie.publishedAt) return false;
     const published = new Date(movie.publishedAt);
     const expiry = new Date(published);
@@ -40,21 +57,21 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
     const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
     const timeToExpiry = expiry.getTime() - now.getTime();
     return timeToExpiry < thirtyDaysInMs && timeToExpiry > 0;
-  }, [movie.publishedAt]);
+  }, [movie.publishedAt, now]);
 
-  const isNew = React.useMemo(() => {
+  const isNew = useMemo(() => {
     if (!movie.releaseDateTime) return false;
     const release = new Date(movie.releaseDateTime);
     const fourteenDaysAgo = new Date();
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
     return release > fourteenDaysAgo && release <= now;
-  }, [movie.releaseDateTime]);
+  }, [movie.releaseDateTime, now]);
 
-  const willBeFreeSoon = React.useMemo(() => {
+  const willBeFreeSoon = useMemo(() => {
       if (!movie.autoReleaseDate) return false;
       const release = new Date(movie.autoReleaseDate);
       return release > now && (movie.isForSale || movie.isWatchPartyPaid);
-  }, [movie.autoReleaseDate, movie.isForSale, movie.isWatchPartyPaid]);
+  }, [movie.autoReleaseDate, movie.isForSale, movie.isWatchPartyPaid, now]);
 
   const handleToggleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -128,7 +145,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* ATMOSPHERIC ORNAMENTS LAYER (Rendered outside the overflow-hidden container) */}
+      {/* ATMOSPHERIC ORNAMENTS LAYER */}
       {!showPreview && theme === 'valentines' && (
           <div className="absolute inset-0 pointer-events-none z-20 overflow-visible">
               <div className="absolute -left-9 top-1/4 text-4xl animate-heart-beat drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]">❤️</div>
@@ -148,7 +165,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
           {!isImageLoaded && <div className="absolute inset-0 shimmer-bg"></div>}
           
           <img
-            src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`}
+            src={`/api/proxy-image?url=${encodeURIComponent(currentPoster)}`}
             alt={movie.title}
             className={`w-full h-full object-cover transition-opacity duration-700 ${isImageLoaded ? 'opacity-100' : 'opacity-0'} ${showPreview ? 'opacity-0 scale-110' : 'opacity-100 scale-100'}`}
             loading="lazy"

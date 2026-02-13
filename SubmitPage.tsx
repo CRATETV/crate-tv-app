@@ -8,7 +8,7 @@ import { useFestival } from './contexts/FestivalContext';
 
 const FilmFreewayButton: React.FC<{ className?: string }> = ({ className = "" }) => (
     <a 
-        href="https://filmfreeway.com" 
+        href="https://filmfreeway.com/CrateFest" 
         target="_blank"
         rel="noopener noreferrer"
         className={`inline-flex items-center gap-3 bg-[#2D3A44] hover:bg-[#3d4c58] text-white px-6 py-3 rounded-lg font-bold transition-all transform hover:scale-105 active:scale-95 shadow-xl border border-white/10 ${className}`}

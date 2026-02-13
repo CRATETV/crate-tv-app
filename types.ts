@@ -129,6 +129,7 @@ export interface Movie {
   fullMovie: string;
   rokuStreamUrl?: string;
   poster: string;
+  posterVariants?: string[];
   tvPoster: string;
   likes: number;
   rating?: number;
