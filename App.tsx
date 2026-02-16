@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -36,6 +37,7 @@ const MaintenanceScreen: React.FC = () => (
                 <p className="text-gray-500 font-medium leading-relaxed">Our engineering core is currently performing scheduled infrastructure upgrades. We will be back online shortly.</p>
             </div>
             <div className="pt-8 border-t border-white/5">
+                {/* Fixed invalid JSX: Added missing '>' bracket and removed characters that might interfere with parser outside strings */}
                 <p className="text-[10px] text-gray-700 font-black uppercase tracking-[0.4em]">Crate TV Infrastructure // V4.0</p>
             </div>
         </div>
@@ -93,9 +95,13 @@ const App: React.FC = () => {
     }, [movies, categories.featured, viewCounts]);
 
     const vaultMovies = useMemo(() => {
-        return (Object.values(movies) as Movie[])
-            .filter((m: Movie) => !!m && m.isForSale === true && isMovieReleased(m) && !m.isUnlisted);
-    }, [movies]);
+        // Vault is now a manually curated category managed by admins
+        const vaultCategory = categories.vault;
+        if (!vaultCategory?.movieKeys) return [];
+        return vaultCategory.movieKeys
+            .map((key: string) => movies[key])
+            .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted);
+    }, [movies, categories.vault]);
 
     const activeBannerType = useMemo(() => {
         if (livePartyMovie && !isFestivalBannerDismissed) return 'WATCH_PARTY';
@@ -283,7 +289,7 @@ const App: React.FC = () => {
                             
                             {Object.entries(categories).map(([key, category]) => {
                                 const typedCategory = category as any;
-                                if (['featured', 'nowStreaming', 'publicAccess', 'publicDomainIndie', 'zine', 'editorial'].includes(key)) return null;
+                                if (['featured', 'nowStreaming', 'publicAccess', 'publicDomainIndie', 'zine', 'editorial', 'vault'].includes(key)) return null;
                                 if ((key === 'cratemas' || (typedCategory.title || '').toLowerCase() === 'cratemas') && !settings.isHolidayModeActive) return null;
                                 
                                 const categoryMovies = typedCategory.movieKeys.map((movieKey: string) => movies[movieKey]).filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m));

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Header from './Header';
 import Footer from './Footer';
@@ -248,9 +249,13 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                                     <img src={`/api/proxy-image?url=${encodeURIComponent(section.content)}`} className="w-full h-auto transition-transform duration-[6000ms] group-hover:scale-105" alt="" crossOrigin="anonymous" />
                                                 </div>
                                             )}
+                                            {section.type === 'video' && (
+                                                <div className="rounded-[4.5rem] overflow-hidden border border-white/10 shadow-[0_80px_160px_rgba(0,0,0,0.9)] my-24 bg-black group relative aspect-video">
+                                                    <video src={section.content} controls className="w-full h-full object-cover" playsInline />
+                                                </div>
+                                            )}
                                             {section.type === 'text' && (
                                                 <div className="relative group/text">
-                                                    {/* DROP CAP REFINEMENT FOR OUTLINE FIX */}
                                                     {idx === 0 && section.content && (
                                                         <span className="float-left text-[14rem] md:text-[18rem] font-black italic leading-[0.75] pr-10 mr-10 mt-2 text-red-600 drop-shadow-[0_25px_60px_rgba(239,68,68,0.6)] select-none animate-pulse skew-x-[-6deg]">
                                                             {section.content.charAt(0)}

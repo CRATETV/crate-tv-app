@@ -24,7 +24,12 @@ export const categoriesData: Record<string, Category> = {
   "featured": {
     "title": "Spotlight Selection",
     "type": "featured",
-    "movieKeys": ["meridian", "fighter", "gemini", "autumn"]
+    "movieKeys": ["meridian", "fighter", "gemini", "autumn", "crossroads"]
+  },
+  "vault": {
+    "title": "The Vault",
+    "type": "vault",
+    "movieKeys": []
   },
   "publicAccess": {
     "title": "The Square",
@@ -48,6 +53,28 @@ export const categoriesData: Record<string, Category> = {
 };
 
 export const moviesData: Record<string, Movie> = {
+  "crossroads": {
+    "key": "crossroads",
+    "title": "Crossroads",
+    "synopsis": "Tensions boil over during a post-dinner conversation, revealing hidden truths and shifting the dynamics between lifelong friends. A study in dialogue and confined-space tension.",
+    "cast": [
+      {
+        "name": "Michelle Reale-Opalesky",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Specialist in high-tension dramatic performance.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Salome Denoon",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads+.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads+.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads+.webp",
+    "likes": 420,
+    "durationInMinutes": 8,
+    "publishedAt": "2025-03-10T12:00:00Z",
+    "isUnlisted": false
+  },
   "fighter": {
     "key": "fighter",
     "title": "Fighter",
@@ -175,7 +202,8 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Georges Méliès",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/TripToTheMoon_1902.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
+    // Fix: Added missing 'poster' property required by Movie interface
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "likes": 2100,

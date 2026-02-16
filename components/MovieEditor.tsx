@@ -102,11 +102,11 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     const [formData, setFormData] = useState<Movie | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isSpotlighting, setIsSpotlighting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [newActorName, setNewActorName] = useState('');
     const [editingActorIdx, setEditingActorIdx] = useState<number | null>(null);
     
-    // Roku Probe State
     const [isProbing, setIsProbing] = useState(false);
     const [probeResult, setProbeResult] = useState<any>(null);
 
@@ -214,6 +214,19 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
         }
     };
 
+    const handleSetSpotlight = async () => {
+        if (!formData) return;
+        setIsSpotlighting(true);
+        try {
+            await onSetNowStreaming(formData.key);
+            alert(`"${formData.title}" is now the Global Spotlight Selection.`);
+        } catch (err) {
+            alert("Spotlight update failed.");
+        } finally {
+            setIsSpotlighting(false);
+        }
+    };
+
     const handleDelete = async () => {
         if (!formData || isDeleting) return;
         if (!window.confirm(`PURGE RECORD: Irreversibly erase "${formData.title}" from the global catalog?`)) return;
@@ -279,7 +292,18 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                 <div className="bg-[#0f0f0f] rounded-[2.5rem] border border-white/5 p-8 md:p-12 space-y-12 animate-[fadeIn_0.3s_ease-out]">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/5 pb-10 gap-6">
                         <div>
-                            <h3 className="text-4xl font-black text-white uppercase tracking-tighter">{formData.title || 'Draft Master'}</h3>
+                            <div className="flex items-center gap-4">
+                                <h3 className="text-4xl font-black text-white uppercase tracking-tighter">{formData.title || 'Draft Master'}</h3>
+                                {isSavedRecord && (
+                                    <button 
+                                        onClick={handleSetSpotlight}
+                                        disabled={isSpotlighting}
+                                        className="bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-xl"
+                                    >
+                                        {isSpotlighting ? 'Spotlighting...' : 'Promote to Global Spotlight'}
+                                    </button>
+                                )}
+                            </div>
                             <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.4em] mt-2">UUID: {formData.key}</p>
                         </div>
                         <div className="flex gap-4">

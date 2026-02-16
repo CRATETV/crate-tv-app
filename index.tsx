@@ -100,12 +100,13 @@ const AppRouter: React.FC = () => {
 
   const movieMatch = route.match(/^\/movie\/([a-zA-Z0-9_-]+)/);
   if (movieMatch && movieMatch[1]) {
-    return user ? <MoviePage movieKey={movieMatch[1]} /> : <RedirectToLogin />;
+    return <MoviePage movieKey={movieMatch[1]} />;
   }
 
   const watchPartyMatch = route.match(/^\/watchparty\/([a-zA-Z0-9_-]+)/);
   if (watchPartyMatch && watchPartyMatch[1]) {
-    return user ? <WatchPartyPage movieKey={watchPartyMatch[1]} /> : <RedirectToLogin />;
+    // Watch Parties are live events that handle their own admission UI
+    return <WatchPartyPage movieKey={watchPartyMatch[1]} />;
   }
 
   const actorProfileMatch = route.match(/^\/actors-directory\/([a-zA-Z0-9_-]+)/);
@@ -133,13 +134,13 @@ const AppRouter: React.FC = () => {
     case '/link-roku':
       return user ? <LinkRokuPage /> : <RedirectToLogin />;
     case '/festival':
-       return user ? <FestivalPage /> : <RedirectToLogin />;
+       return <FestivalPage />;
     case '/cratefest':
-       return user ? <CrateFestPage /> : <RedirectToLogin />;
+       return <CrateFestPage />;
     case '/watchlist':
       return user ? <WatchlistPage /> : <RedirectToLogin />;
     case '/public-square':
-      return user ? <PublicSquarePage /> : <RedirectToLogin />;
+      return <PublicSquarePage />;
     case '/cratemas':
       return user ? <CratemasPage /> : <RedirectToLogin />;
     case '/top-ten':

@@ -2,6 +2,23 @@
 import React, { useState } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 
+const ComplianceItem: React.FC<{ rule: string; label: string; desc: string; status: 'pending' | 'verified' }> = ({ rule, label, desc, status }) => (
+    <div className="bg-white/5 border border-white/5 p-6 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-6 group hover:border-white/10 transition-all">
+        <div className="flex gap-6 items-start">
+            <span className="text-red-600 font-black text-xl italic mt-1">{rule}</span>
+            <div>
+                <h4 className="text-white font-black uppercase text-sm tracking-tight">{label}</h4>
+                <p className="text-gray-500 text-xs leading-relaxed max-w-xl mt-1">{desc}</p>
+            </div>
+        </div>
+        <div className="flex-shrink-0">
+            <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${status === 'verified' ? 'bg-green-600/10 border-green-500/30 text-green-500' : 'bg-amber-600/10 border-amber-500/30 text-amber-500'}`}>
+                {status === 'verified' ? 'System Verified' : 'Awaiting Audit'}
+            </span>
+        </div>
+    </div>
+);
+
 const RokuDeployTab: React.FC = () => {
     const [status, setStatus] = useState<'idle' | 'generating' | 'error'>('idle');
     const [error, setError] = useState('');
@@ -50,7 +67,36 @@ const RokuDeployTab: React.FC = () => {
 
     return (
         <div className="space-y-12 animate-[fadeIn_0.5s_ease-out] pb-24">
-            {/* 1. SOURCE PACKAGE */}
+            {/* Compliance Checklist */}
+            <div className="bg-[#0a0a0a] border border-white/5 p-10 rounded-[3.5rem] shadow-2xl space-y-10">
+                <div className="space-y-4">
+                    <h3 className="text-4xl font-black text-white uppercase tracking-tighter italic">Certification Track</h3>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Verify these critical Roku OS analysis rules before deployment</p>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4">
+                    <ComplianceItem 
+                        rule="3.6" 
+                        label="8-Second Initiation" 
+                        desc="Content must start playing within 8 seconds. Use HLS or MP4 +faststart flags." 
+                        status="pending"
+                    />
+                    <ComplianceItem 
+                        rule="4.1" 
+                        label="Persistent Identity" 
+                        desc="Updates must NOT sign users out. Use Roku roRegistry to store the Hardware ID token." 
+                        status="pending"
+                    />
+                    <ComplianceItem 
+                        rule="5.1" 
+                        label="Deep Linking Support" 
+                        desc="Must support external contentId/mediaType launch commands for all titles." 
+                        status="pending"
+                    />
+                </div>
+            </div>
+
+            {/* Source Package */}
             <div className="bg-purple-600/10 border border-purple-500/20 p-10 rounded-[3rem] shadow-2xl flex flex-col lg:flex-row justify-between items-center gap-10">
                 <div className="max-w-2xl space-y-4 text-center lg:text-left">
                     <div className="flex items-center justify-center lg:justify-start gap-3">
@@ -71,15 +117,14 @@ const RokuDeployTab: React.FC = () => {
                 </button>
             </div>
 
-            {/* 2. THE STORE PROTOCOL */}
+            {/* Packaging Workflow */}
             <div className="bg-[#0a0a0a] border border-white/5 p-10 rounded-[3.5rem] shadow-2xl space-y-12 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none">
                      <svg className="w-96 h-96 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
                 </div>
                 
                 <div className="space-y-4 relative z-10">
-                    <h3 className="text-4xl font-black text-white uppercase tracking-tighter italic">Packaging Workflow</h3>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Follow these steps to sign and submit your channel</p>
+                    <h3 className="text-4xl font-black text-white uppercase tracking-tighter italic">Submission Workflow</h3>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 relative z-10">
@@ -104,7 +149,7 @@ const RokuDeployTab: React.FC = () => {
                 </div>
             </div>
 
-            {/* 3. FEED ENDPOINT */}
+            {/* Feed Endpoint */}
             <div className="bg-white/[0.02] border border-white/5 p-10 rounded-[3rem] shadow-xl space-y-6">
                 <div>
                     <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest">Global Data Relay</h3>

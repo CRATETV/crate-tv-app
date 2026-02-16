@@ -300,7 +300,7 @@ export interface AdConfig {
 
 export interface ZineSection {
   id: string;
-  type: 'text' | 'header' | 'quote' | 'image';
+  type: 'text' | 'header' | 'quote' | 'image' | 'video';
   content: string;
 }
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { EditorialStory, Movie, ZineSection } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
@@ -45,6 +46,11 @@ const ZineProof: React.FC<{ title: string; subtitle: string; sections: ZineSecti
                         if (s.type === 'header') return <h3 key={s.id} className="text-5xl font-black uppercase tracking-tighter italic border-l-[12px] border-red-600 pl-8 mt-24">{s.content}</h3>;
                         if (s.type === 'quote') return <div key={s.id} className="bg-gray-50 border-l-[16px] border-black p-12 text-3xl font-black uppercase italic tracking-tight shadow-xl">"{s.content}"</div>;
                         if (s.type === 'image') return <div key={s.id} className="rounded-[3rem] overflow-hidden shadow-2xl border-4 border-gray-100"><img src={s.content} className="w-full h-auto" alt="" crossOrigin="anonymous" /></div>;
+                        if (s.type === 'video') return (
+                            <div key={s.id} className="rounded-[3rem] overflow-hidden shadow-2xl bg-black aspect-video border-[10px] border-gray-100">
+                                <video src={s.content} controls className="w-full h-full object-cover" />
+                            </div>
+                        );
                         return (
                             <div key={s.id} className="relative">
                                 {idx === 0 && s.content && <span className="float-left text-[13rem] font-black italic leading-[0.7] mr-6 mt-6 text-red-600 drop-shadow-2xl">{s.content.charAt(0)}</span>}
@@ -133,7 +139,6 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
 
             const storyId = selectedStory ? selectedStory.id : `story_${Date.now()}`;
             
-            // 1. SAVE TO FIRESTORE
             if (selectedStory) {
                 await db.collection('editorial_stories').doc(selectedStory.id).update(payload);
             } else {
@@ -143,7 +148,6 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                 });
             }
 
-            // 2. TRIGGER GLOBAL MANIFEST REBUILD
             await triggerGlobalSync('editorial', { [storyId]: payload });
 
             setSelectedStory(null);
@@ -170,7 +174,6 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                 body: JSON.stringify({ password, id: selectedStory.id }),
             });
             if (res.ok) {
-                // Re-sync manifest after deletion
                 await triggerGlobalSync('editorial_delete', { id: selectedStory.id });
                 setSelectedStory(null);
                 setFormData(emptyStory);
@@ -206,7 +209,6 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[calc(100vh-320px)] min-h-[800px]">
-                {/* Left: Component Selector & Editor */}
                 <div className="lg:col-span-4 flex flex-col gap-6 overflow-y-auto scrollbar-hide pr-2">
                     <section className="bg-black/40 border border-white/5 p-6 rounded-3xl space-y-4 shadow-xl">
                         <h4 className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Historical Dispatches</h4>
@@ -223,9 +225,6 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                                     </div>
                                 </button>
                             ))}
-                            {stories.length === 0 && (
-                                <p className="text-[10px] text-gray-700 uppercase font-black text-center py-10 italic">Archive Empty</p>
-                            )}
                         </div>
                     </section>
 
@@ -256,7 +255,7 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                         <div className="flex justify-between items-center border-b border-white/5 pb-4">
                             <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">02. Section Stack</h4>
                             <div className="flex gap-2">
-                                {(['text', 'header', 'quote', 'image'] as const).map(t => (
+                                {(['text', 'header', 'quote', 'image', 'video'] as const).map(t => (
                                     <button key={t} onClick={() => addSection(t)} className="w-8 h-8 bg-white/5 hover:bg-white text-gray-600 hover:text-black rounded-lg transition-all flex items-center justify-center text-[8px] font-black shadow-lg">
                                         {t.toUpperCase()}
                                     </button>
@@ -274,7 +273,7 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                                     <textarea 
                                         value={section.content}
                                         onChange={e => updateSection(section.id, e.target.value)}
-                                        placeholder="Section content..."
+                                        placeholder={`${section.type} payload...`}
                                         className="form-input bg-white/5 border-white/5 text-sm leading-relaxed"
                                         rows={section.type === 'text' ? 5 : 2}
                                     />
@@ -284,7 +283,6 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                     </section>
                 </div>
 
-                {/* Right: Live Preview */}
                 <div className="lg:col-span-8 flex flex-col">
                     <ZineProof title={formData.title} subtitle={formData.subtitle} sections={formData.sections || []} heroImage={formData.heroImage} />
                 </div>

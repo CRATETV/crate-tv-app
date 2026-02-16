@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
         if (!url) return new Response(JSON.stringify({ error: 'URL required' }), { status: 400 });
 
-        // 1. Perform a HEAD request to check for Byte-Range support (CRITICAL for Roku MP4s)
+        // 1. Perform a HEAD request to check for Byte-Range support (CRITICAL for Roku 8s start)
         const headRes = await fetch(url, {
             method: 'HEAD',
             headers: { 'Range': 'bytes=0-1024' }
@@ -21,30 +21,41 @@ export async function POST(request: Request) {
         const acceptRanges = headRes.headers.get('accept-ranges');
         const status = headRes.status;
 
-        // 2. Determine compatibility score
+        // 2. Perform a partial GET to check for moov atom (FastStart)
+        // If the moov atom isn't in the first 32kb, the app will hang while downloading the whole file.
+        const partialRes = await fetch(url, {
+            headers: { 'Range': 'bytes=0-32768' }
+        });
+        const buffer = await partialRes.arrayBuffer();
+        const headerHex = Array.from(new Uint8Array(buffer.slice(0, 100)))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+        
+        // '6d6f6f76' is hex for 'moov'
+        const hasMoovEarly = headerHex.includes('6d6f6f76');
+
+        // 3. Determine compatibility score
         let score = 100;
         let findings = [];
-        let needsTranscode = false;
 
         if (status !== 206 && url.toLowerCase().endsWith('.mp4')) {
             score -= 60;
-            findings.push("Server rejected Range request (Status " + status + "). Roku hardware will hang at 0%.");
+            findings.push("CRITICAL: Server rejected Range request (Status " + status + "). The Roku app will wait for the full download before playing, violating Requirement 3.6.");
         }
 
-        if (acceptRanges !== 'bytes' && url.toLowerCase().endsWith('.mp4')) {
-            score -= 20;
-            findings.push("Server does not explicitly advertise 'bytes' support.");
-        }
-
-        if (!url.startsWith('https://')) {
+        if (!hasMoovEarly && url.toLowerCase().endsWith('.mp4')) {
             score -= 40;
-            findings.push("Insecure protocol. Roku OS requires strict TLS handshakes.");
+            findings.push("WARNING: 'moov' atom not found in first 32kb. Roku hardware must download significant metadata before initiation, risking the 8-second limit.");
         }
 
-        // Suggestions for fixing
+        if (url.startsWith('http://')) {
+            score -= 40;
+            findings.push("SECURITY: Insecure protocol. Roku OS requires HTTPS for production HLS streams.");
+        }
+
         let ffmpegHint = "";
         if (score < 100) {
-            ffmpegHint = `ffmpeg -i input.mp4 -c:v libx264 -profile:v high -level:4.1 -pix_fmt yuv420p -movflags +faststart output_roku.mp4`;
+            ffmpegHint = `ffmpeg -i input.mp4 -c copy -movflags +faststart output.mp4`;
         }
 
         return new Response(JSON.stringify({
@@ -53,6 +64,7 @@ export async function POST(request: Request) {
             details: {
                 contentType,
                 byteRangeSupport: status === 206,
+                fastStartReady: hasMoovEarly,
                 protocol: url.startsWith('https') ? 'Secure' : 'Insecure'
             },
             findings,

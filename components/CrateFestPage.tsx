@@ -16,7 +16,7 @@ import { getDbInstance } from '../services/firebaseClient';
 import LiveWatchPartyBanner from './LiveWatchPartyBanner';
 
 const CrateFestPage: React.FC = () => {
-    const { hasCrateFestPass, grantCrateFestPass, unlockedFestivalBlockIds, rentals, purchaseMovie, unlockFestivalBlock } = useAuth();
+    const { user, hasCrateFestPass, grantCrateFestPass, unlockedFestivalBlockIds, rentals, purchaseMovie, unlockFestivalBlock } = useAuth();
     const { isLoading, movies, settings, pipeline, livePartyMovie } = useFestival();
     const [paymentItem, setPaymentItem] = useState<{ type: 'crateFestPass' | 'block' | 'movie', block?: FilmBlock, movie?: Movie } | null>(null);
     const [isBannerDismissed, setIsBannerDismissed] = useState(false);
@@ -48,6 +48,23 @@ const CrateFestPage: React.FC = () => {
         const now = new Date();
         return now >= new Date(config.startDate) && now <= new Date(config.endDate);
     }, [config]);
+
+    const handlePurchaseClick = (type: 'crateFestPass' | 'block' | 'movie', item?: FilmBlock | Movie) => {
+        if (!user) {
+            const currentPath = window.location.pathname + window.location.search;
+            window.history.pushState({}, '', `/login?redirect=${encodeURIComponent(currentPath)}`);
+            window.dispatchEvent(new Event('pushstate'));
+            return;
+        }
+
+        if (type === 'block') {
+            setPaymentItem({ type, block: item as FilmBlock });
+        } else if (type === 'movie') {
+            setPaymentItem({ type, movie: item as Movie });
+        } else {
+            setPaymentItem({ type });
+        }
+    };
 
     const handlePurchaseSuccess = async (details: any) => {
         if (details.paymentType === 'crateFestPass') await grantCrateFestPass();
@@ -98,7 +115,7 @@ const CrateFestPage: React.FC = () => {
                         </h1>
                         <p className="text-xl md:text-2xl text-gray-300 font-medium max-w-3xl mx-auto leading-tight">{config.tagline}</p>
                         {!hasCrateFestPass && (
-                            <button onClick={() => setPaymentItem({ type: 'crateFestPass' })} className="bg-white text-black font-black px-12 py-6 rounded-2xl text-2xl uppercase tracking-tighter hover:scale-105 transition-all shadow-2xl">
+                            <button onClick={() => handlePurchaseClick('crateFestPass')} className="bg-white text-black font-black px-12 py-6 rounded-2xl text-2xl uppercase tracking-tighter hover:scale-105 transition-all shadow-2xl">
                                 Full Session Pass - ${config.passPrice}
                             </button>
                         )}
@@ -116,7 +133,7 @@ const CrateFestPage: React.FC = () => {
                                         <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic text-white">{block.title}</h2>
                                     </div>
                                     {!isBlockUnlocked && (
-                                        <button onClick={() => setPaymentItem({ type: 'block', block: block })} className="bg-white/5 hover:bg-white/10 text-white font-black px-6 py-3 rounded-xl border border-white/10 transition-all uppercase text-[10px] tracking-widest">
+                                        <button onClick={() => handlePurchaseClick('block', block)} className="bg-white/5 hover:bg-white/10 text-white font-black px-6 py-3 rounded-xl border border-white/10 transition-all uppercase text-[10px] tracking-widest">
                                             Unlock Entire Block - $10.00
                                         </button>
                                     )}
@@ -131,11 +148,11 @@ const CrateFestPage: React.FC = () => {
                                                 <div className={`transition-all duration-700 ${!access ? 'opacity-30 grayscale' : 'hover:scale-105'}`}>
                                                     <MovieCard 
                                                         movie={movie} 
-                                                        onSelectMovie={(m) => access ? window.history.pushState({}, '', `/movie/${m.key}?play=true`) : setPaymentItem({ type: 'movie', movie: m })} 
+                                                        onSelectMovie={(m) => access ? window.history.pushState({}, '', `/movie/${m.key}?play=true`) : handlePurchaseClick('movie', m)} 
                                                     />
                                                 </div>
                                                 {!access && (
-                                                    <button onClick={() => setPaymentItem({ type: 'movie', movie })} className="w-full bg-white/5 hover:bg-red-600 text-gray-500 hover:text-white font-black py-2 rounded-lg text-[9px] uppercase tracking-widest transition-all">Rent Master File $5</button>
+                                                    <button onClick={() => handlePurchaseClick('movie', movie)} className="w-full bg-white/5 hover:bg-red-600 text-gray-500 hover:text-white font-black py-2 rounded-lg text-[9px] uppercase tracking-widest transition-all">Rent Master File $5</button>
                                                 )}
                                             </div>
                                         );
