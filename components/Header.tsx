@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
@@ -86,7 +85,8 @@ const Header: React.FC<HeaderProps> = ({
             <div className="max-w-[1800px] mx-auto px-6 md:px-12 flex items-center justify-between">
                 <div className="flex items-center gap-12">
                     <div className="flex items-center gap-4">
-                        {activeNotificationMovie && (
+                        {/* Only show Featured/Live stream button if user is logged in */}
+                        {user && activeNotificationMovie && (
                             <button 
                                 onClick={(e) => handleNavigate(e, spotlightPath)}
                                 className={`group flex items-center gap-3 ${isActuallyLive ? 'bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-red-600/10 border border-red-600/20'} hover:bg-red-600 transition-all px-4 py-2 rounded-full shadow-lg backdrop-blur-md`}
@@ -103,20 +103,30 @@ const Header: React.FC<HeaderProps> = ({
                                 <span className="text-white font-black text-xs uppercase tracking-tighter hidden lg:inline">{activeNotificationMovie.title}</span>
                             </button>
                         )}
+                        
+                        {/* Logo fallback for Landing Page */}
+                        {!user && (
+                             <a href="/" onClick={(e) => handleNavigate(e, '/')} className="block">
+                                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate" className="h-8 md:h-10 invert brightness-0" />
+                             </a>
+                        )}
                     </div>
 
-                    <nav className="hidden md:flex items-center gap-10">
-                        {navLinks.map(link => (
-                            <a 
-                                key={link.path} 
-                                href={link.path} 
-                                onClick={(e) => handleNavigate(e, link.path)} 
-                                className={`transition-all duration-300 text-[11px] font-black uppercase tracking-[0.25em] ${window.location.pathname === link.path ? 'text-white' : 'text-gray-500 hover:text-white'}`}
-                            >
-                                {link.label}
-                            </a>
-                        ))}
-                    </nav>
+                    {/* Only show Nav links if user is logged in AND showNavLinks is true */}
+                    {user && showNavLinks && (
+                        <nav className="hidden md:flex items-center gap-10">
+                            {navLinks.map(link => (
+                                <a 
+                                    key={link.path} 
+                                    href={link.path} 
+                                    onClick={(e) => handleNavigate(e, link.path)} 
+                                    className={`transition-all duration-300 text-[11px] font-black uppercase tracking-[0.25em] ${window.location.pathname === link.path ? 'text-white' : 'text-gray-500 hover:text-white'}`}
+                                >
+                                    {link.label}
+                                </a>
+                            ))}
+                        </nav>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-6">
