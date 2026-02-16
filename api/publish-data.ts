@@ -1,3 +1,4 @@
+
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { Firestore, FieldValue } from 'firebase-admin/firestore';
@@ -101,6 +102,11 @@ export async function POST(request: Request) {
             batch.delete(db.collection('movies').doc(data.key));
             auditDetails = `PURGE: Deleted movie [${data.key}].`;
         } 
+        else if (type === 'delete_category') {
+            // IRREVERSIBLE PURGE: Remove document from DB
+            batch.delete(db.collection('categories').doc(data.key));
+            auditDetails = `PURGE: Deleted category [${data.key}].`;
+        }
         else if (type === 'set_now_streaming') {
             // PROMOTE TO SPOTLIGHT
             batch.set(db.collection('categories').doc('nowStreaming'), {

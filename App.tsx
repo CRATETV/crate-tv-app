@@ -141,22 +141,39 @@ const App: React.FC = () => {
         if (!searchQuery) return [];
         const query = searchQuery.toLowerCase().trim();
 
-        // 1. Map category titles to their contained movie keys
+        // 1. Synonym Map for common typos and broader genre mapping
+        const synonyms: Record<string, string[]> = {
+            'romance': ['love', 'date', 'romantic'],
+            'drama': ['dramatic', 'serious'],
+            'documentary': ['documentry', 'doc', 'docu', 'true story', 'non-fiction'],
+            'horror': ['horr', 'scary', 'spooky', 'thrill'],
+            'comedy': ['funny', 'laugh', 'humor']
+        };
+
+        // Expand query if it matches a known synonym key
+        const expandedQueries = [query];
+        Object.entries(synonyms).forEach(([key, list]) => {
+            if (key === query || list.some(s => s === query)) {
+                expandedQueries.push(key, ...list);
+            }
+        });
+
+        // 2. Map category titles to their contained movie keys
         const matchingCategoryMovieKeys = new Set<string>();
-        // Fix: Explicitly type category object in searchResults mapping to avoid unknown type error on title and movieKeys properties.
         (Object.values(categories) as Category[]).forEach(cat => {
-            if (cat.title.toLowerCase().includes(query)) {
+            const title = cat.title.toLowerCase();
+            if (expandedQueries.some(q => title.includes(q))) {
                 cat.movieKeys.forEach(key => matchingCategoryMovieKeys.add(key));
             }
         });
 
-        // 2. Filter movies by metadata OR category match
+        // 3. Filter movies by metadata OR category match
         return (Object.values(movies) as Movie[]).filter((movie) =>
             movie && movie.poster && movie.title && !movie.isUnlisted && isMovieReleased(movie) &&
             (
-                (movie.title || '').toLowerCase().includes(query) ||
-                (movie.director || '').toLowerCase().includes(query) ||
-                (movie.cast || []).some(actor => (actor.name || '').toLowerCase().includes(query)) ||
+                expandedQueries.some(q => (movie.title || '').toLowerCase().includes(q)) ||
+                expandedQueries.some(q => (movie.director || '').toLowerCase().includes(q)) ||
+                movie.cast.some(actor => expandedQueries.some(q => (actor.name || '').toLowerCase().includes(q))) ||
                 matchingCategoryMovieKeys.has(movie.key)
             )
         );

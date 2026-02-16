@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Category, Movie, SiteSettings } from '../types';
 import { useFestival } from '../contexts/FestivalContext';
@@ -54,7 +55,7 @@ const MovieSelectorModal: React.FC<MovieSelectorModalProps> = ({ allMovies, init
                   type="checkbox"
                   checked={selectedKeys.has(movie.key)}
                   onChange={() => toggleSelection(movie.key)}
-                  className="h-5 w-5 rounded bg-gray-800 border-gray-700 text-red-600 focus:ring-red-500"
+                  className="h-5 w-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500"
                 />
                 <div className="flex items-center gap-3">
                     <img src={movie.poster} className="w-10 h-14 object-cover rounded-lg shadow-lg" alt="" />
@@ -120,10 +121,27 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
 
   const deleteCategory = async (key: string) => {
     if (!window.confirm(`PERMANENT ACTION: Erase row "${categories[key]?.title}"?`)) return;
-    const newCats = { ...categories };
-    delete newCats[key];
-    setCategories(newCats);
-    onSave(newCats);
+    
+    const password = sessionStorage.getItem('adminPassword');
+    const operatorName = sessionStorage.getItem('operatorName');
+    
+    try {
+        const response = await fetch('/api/publish-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password, operatorName, type: 'delete_category', data: { key } }),
+        });
+        
+        if (!response.ok) throw new Error("API rejection during category purge.");
+
+        const newCats = { ...categories };
+        delete newCats[key];
+        setCategories(newCats);
+        alert("Category record erased from global manifest.");
+    } catch (err) {
+        console.error(err);
+        alert("Erase sequence failed. Check system logs.");
+    }
   };
 
   const handleToggle = async (field: keyof SiteSettings, value: boolean) => {
@@ -218,7 +236,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ initialCategories, allM
                       <option value="gold">Anniversary Gold</option>
                       <option value="generic">Neutral Dark</option>
                   </select>
-                  <button onClick={saveIdentityDetails} className="w-full bg-red-600 hover:bg-red-500 text-white font-black py-4 rounded-xl shadow-lg transition-all uppercase text-[10px] tracking-widest">Commit Settings</button>
+                  <button onClick={saveIdentityDetails} className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl shadow-lg transition-all uppercase text-[10px] tracking-widest">Commit Settings</button>
               </div>
           </div>
 
