@@ -111,10 +111,11 @@ export interface RokuFeed {
   categories: { 
     title: string; 
     type?: 'standard' | 'ranked' | 'live';
+    categoryType?: string; // Identifier for row logic
     showNumbers?: boolean;
     children: RokuMovie[];
   }[];
-  publicSquare: { title: string; children: RokuMovie[] }[];
+  publicSquare: { title: string; categoryType?: string; children: RokuMovie[] }[];
   liveNow: any[];
 }
 

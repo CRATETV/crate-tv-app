@@ -23,7 +23,7 @@
             <font role="sans" size="240" weight="bold" />
         </Label>
 
-        <!-- Snug Focus Ring: Translated to align with poster which is at [100,0] -->
+        <!-- Snug Focus Ring: Translated to align with poster at [100,0] -->
         <Rectangle
             id="focusRing"
             width="250"

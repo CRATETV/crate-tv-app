@@ -104,7 +104,7 @@ const Header: React.FC<HeaderProps> = ({
                             </button>
                         )}
                         
-                        {/* Logo strictly removed from Landing Page (Hidden for logged-out users) */}
+                        {/* Logo ONLY for LOGGED IN users (when no stream is active) */}
                         {user && !activeNotificationMovie && (
                              <a href="/" onClick={(e) => handleNavigate(e, '/')} className="block transition-transform hover:scale-105 active:scale-95">
                                 <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate" className="h-6 md:h-8 invert brightness-0" />
@@ -112,7 +112,7 @@ const Header: React.FC<HeaderProps> = ({
                         )}
                     </div>
 
-                    {/* Nav links hidden for unauthenticated users */}
+                    {/* Only show Nav links if user is logged in */}
                     {user && showNavLinks && (
                         <nav className="hidden md:flex items-center gap-10">
                             {navLinks.map(link => (

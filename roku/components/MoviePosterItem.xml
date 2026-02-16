@@ -8,7 +8,7 @@
     <script type="text/brightscript" uri="pkg:/components/MoviePosterItem.brs" />
 
     <children>
-        <!-- CRATE RED SNUG FOCUS RING (240+10, 360+10) -->
+        <!-- V4 Snug Focus Ring: 240+10, 360+10 centered -->
         <Rectangle
             id="focusRing"
             width="250"
@@ -32,7 +32,6 @@
             loadDisplayMode="scaleToFill"
         />
         
-        <!-- Bottom Identity Tag (Visible on Focus) -->
         <Rectangle
             id="titleOverlay"
             width="240"
