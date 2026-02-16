@@ -94,7 +94,7 @@ const Header: React.FC<HeaderProps> = ({
                                 <div className="flex items-center gap-1.5">
                                     <span className="relative flex h-2 w-2">
                                         <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isActuallyLive ? 'bg-white' : 'bg-red-400'} opacity-75`}></span>
-                                        <span className={`relative inline-flex rounded-full h-2 w-2 ${isActuallyLive ? 'bg-white shadow-[0_0_5px_white]' : 'bg-red-600'}`}></span>
+                                        <span className={`relative inline-flex rounded-full h-2 w-2 ${isActuallyLive ? 'bg-white shadow-[0_0_10px_white]' : 'bg-red-600'}`}></span>
                                     </span>
                                     <span className={`text-[10px] font-black uppercase tracking-widest ${isActuallyLive ? 'text-white' : 'text-red-500'} group-hover:text-white transition-colors`}>
                                         {isActuallyLive ? 'Live Hub Active' : 'Featured Stream'}
@@ -104,15 +104,15 @@ const Header: React.FC<HeaderProps> = ({
                             </button>
                         )}
                         
-                        {/* Logo fallback for Landing Page */}
-                        {!user && (
-                             <a href="/" onClick={(e) => handleNavigate(e, '/')} className="block">
-                                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate" className="h-8 md:h-10 invert brightness-0" />
+                        {/* Logo strictly removed from Landing Page (Hidden for logged-out users) */}
+                        {user && !activeNotificationMovie && (
+                             <a href="/" onClick={(e) => handleNavigate(e, '/')} className="block transition-transform hover:scale-105 active:scale-95">
+                                <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" alt="Crate" className="h-6 md:h-8 invert brightness-0" />
                              </a>
                         )}
                     </div>
 
-                    {/* Only show Nav links if user is logged in AND showNavLinks is true */}
+                    {/* Nav links hidden for unauthenticated users */}
                     {user && showNavLinks && (
                         <nav className="hidden md:flex items-center gap-10">
                             {navLinks.map(link => (

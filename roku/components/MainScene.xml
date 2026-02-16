@@ -3,6 +3,8 @@
     <interface>
         <!-- The configuration manifest passed from Main() -->
         <field id="config" type="assocarray" />
+        <!-- Launch Arguments for Deep Linking (Requirement 5.1) -->
+        <field id="launchArgs" type="assocarray" />
     </interface>
     
     <script type="text/brightscript" uri="pkg:/components/MainScene.brs" />
@@ -15,7 +17,6 @@
         <Header id="navBar" translation="[0, 40]" />
 
         <!-- The Viewport: Dynamic Scene Container -->
-        <!-- Translated down 160px to provide permanent clearance for the Header -->
         <Group id="viewport" translation="[0, 160]" />
 
         <LoadingIndicator id="spinner" visible="false" translation="[960, 540]" />

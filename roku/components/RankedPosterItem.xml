@@ -9,7 +9,7 @@
     <script type="text/brightscript" uri="pkg:/components/RankedPosterItem.brs" />
 
     <children>
-        <!-- Massive Ranking Number (Studio V4 Style) -->
+        <!-- Background Ranking Number -->
         <Label 
             id="rankLabel" 
             text="0" 
@@ -23,11 +23,12 @@
             <font role="sans" size="240" weight="bold" />
         </Label>
 
+        <!-- Snug Focus Ring: Translated to align with poster which is at [100,0] -->
         <Rectangle
             id="focusRing"
             width="250"
             height="370"
-            translation="[-5, -5]"
+            translation="[95, -5]"
             color="#EF4444"
             visible="false"
         />
@@ -36,6 +37,7 @@
             id="poster"
             width="240"
             height="360"
+            translation="[100, 0]"
             loadDisplayMode="scaleToFill"
         />
 
@@ -43,7 +45,7 @@
             id="titleOverlay"
             width="240"
             height="60"
-            translation="[0, 300]"
+            translation="[100, 300]"
             color="#050505"
             opacity="0"
         >

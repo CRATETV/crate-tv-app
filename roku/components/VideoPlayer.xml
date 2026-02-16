@@ -1,14 +1,15 @@
-
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="VideoPlayer" extends="Group">
     <interface>
         <field id="content" type="node" onChange="onContentChange" />
         <field id="state" type="string" />
+        <!-- Buffering Status Monitor for Requirement 3.6 -->
+        <field id="bufferingStatus" type="assocarray" />
     </interface>
     <script type="text/brightscript" uri="pkg:/components/VideoPlayer.brs" />
     <children>
         <Rectangle width="1920" height="1080" color="0x000000FF" />
-        <Video id="video" width="1920" height="1080" visible="true" />
+        <Video id="video" width="1920" height="1080" visible="true" transportBarVisible="false" />
         
         <!-- Paywall Overlay -->
         <Group id="paywall" visible="false">

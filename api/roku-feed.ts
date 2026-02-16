@@ -37,24 +37,14 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const deviceId = searchParams.get('deviceId');
     
-    // 1. Fetch live data with noCache to ensure we see most recent S3 changes
     const apiData = await getApiData({ noCache: true });
-    
-    // 2. FAIL-SAFE MERGE: If S3 is missing our critical public domain films, pull them from fallbacks
     const moviesObj = { ...fallbackMovies, ...(apiData.movies || {}) };
     const categoriesObj = { ...fallbackCategories, ...(apiData.categories || {}) };
 
     const db = getAdminDb();
     let config: RokuConfig = { 
-        _version: 1, 
-        _lastUpdated: null, 
-        _updatedBy: 'system',
-        hero: { mode: 'auto', items: [] },
-        topTen: { enabled: true, mode: 'auto', title: 'Top 10 Today', movieKeys: [], showNumbers: true },
-        nowStreaming: { enabled: true, title: 'Now Streaming', mode: 'auto', movieKeys: [], daysBack: 30 },
-        categories: { mode: 'all', hidden: [], order: [], customTitles: {}, separateSection: [] },
-        content: { hiddenMovies: [], featuredMovies: [] },
-        features: { liveStreaming: false, watchParties: true, paidContent: true, festivalMode: false }
+        categories: { separateSection: [] },
+        topTen: { enabled: true, mode: 'auto' }
     } as any;
     
     const assets: Record<string, RokuAsset> = {};
@@ -70,11 +60,7 @@ export async function GET(request: Request) {
 
         if (configDoc.exists) config = { ...config, ...configDoc.data() };
         assetsSnap.forEach(doc => { assets[doc.id] = doc.data() as RokuAsset; });
-        
-        viewsSnap.forEach(doc => { 
-            const d = doc.data();
-            viewCounts[doc.id] = Number(d.count || 0); 
-        });
+        viewsSnap.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count || 0); });
 
         if (deviceId) {
             const linkDoc = await db.collection('roku_links').doc(deviceId).get();
@@ -97,64 +83,42 @@ export async function GET(request: Request) {
 
     const isValidForRoku = (m: Movie) => !!m && !!m.title && !!m.poster && !m.isUnlisted && isMovieReleased(m) && (!!m.rokuStreamUrl || !!m.fullMovie);
 
-    // 1. TOP 10 TODAY (CANONICAL ROW)
-    const topTenTitle = config.topTen?.title || "Top 10 Today";
+    // 1. TOP 10 TODAY
     if (config.topTen?.enabled !== false) {
-        const mode = config.topTen?.mode || 'auto';
-        let topMoviesKeys = (mode === 'manual' && config.topTen?.movieKeys?.length) 
-            ? config.topTen.movieKeys 
-            : (Object.values(moviesObj) as Movie[])
-                .filter(isValidForRoku)
-                .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
-                .slice(0, 10)
-                .map(m => m.key);
-
-        const topMovies = topMoviesKeys
-            .map(k => moviesObj[k])
+        const topMovies = (Object.values(moviesObj) as Movie[])
             .filter(isValidForRoku)
-            .map(m => {
-                const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || !m.isForSale;
-                return formatMovieForRoku(m, assets[m.key], isUnlocked);
-            });
+            .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
+            .slice(0, 10)
+            .map(m => formatMovieForRoku(m, assets[m.key], unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || !m.isForSale));
 
         if (topMovies.length > 0) {
             categories.push({
-                title: topTenTitle,
+                title: config.topTen?.title || "Top 10 Today",
                 type: 'ranked',
-                categoryType: 'ranked',
                 children: topMovies
             });
         }
     }
 
-    // 2. CATEGORIES (Funneling into Public Square or Main Feed)
+    // 2. CATEGORIES ROUTING
     Object.entries(categoriesObj).forEach(([key, cat]: [string, any]) => {
-        const rowTitle = config.categories?.customTitles?.[key] || cat.title || '';
-        const normalizedTitle = rowTitle.toLowerCase();
-        
-        // Suppress duplicates and unneeded rows
-        if (normalizedTitle.includes('top 10') || key === 'featured' || (config.categories?.hidden || []).includes(key)) return;
+        if (key === 'featured' || (config.categories?.hidden || []).includes(key)) return;
         
         const children = (cat.movieKeys || [])
             .map((k: string) => moviesObj[k])
             .filter((m: Movie) => m && isValidForRoku(m) && !(config.content?.hiddenMovies || []).includes(m.key))
-            .map((movie: Movie) => {
-                const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(movie.key) || !movie.isForSale;
-                return formatMovieForRoku(movie, assets[movie.key], isUnlocked);
-            });
+            .map((movie: Movie) => formatMovieForRoku(movie, assets[movie.key], unlockedMovies.has('ALL') || unlockedMovies.has(movie.key) || !movie.isForSale));
         
         if (children.length > 0) {
-            const rowType = (key.toLowerCase().includes('watch') ? 'live' : 'standard');
             const row = { 
-                title: rowTitle, 
-                type: rowType,
-                categoryType: rowType,
+                title: config.categories?.customTitles?.[key] || cat.title || '', 
+                type: 'standard',
                 children 
             };
 
-            // CRITICAL ROUTING: Vintage Visions & Community Records -> Public Square
-            const isExplicitPublic = (key === 'publicAccess' || key === 'publicSquare' || key === 'publicDomainIndie');
-            if (isExplicitPublic || (config.categories?.separateSection || []).includes(key)) {
+            // CRITICAL ROUTING: Vintage Visions (publicDomainIndie) and The Square (publicAccess) -> Public Square Array
+            const isExplicitPublicNode = (key === 'publicAccess' || key === 'publicDomainIndie' || (config.categories?.separateSection || []).includes(key));
+            if (isExplicitPublicNode) {
                 publicSquare.push(row);
             } else {
                 categories.push(row);
@@ -174,15 +138,13 @@ export async function GET(request: Request) {
     return new Response(JSON.stringify(response), {
         status: 200,
         headers: { 
-            'Content-Type': 'application/json', 
+            'Content-Type': 'application/json',
             'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
             'Pragma': 'no-cache',
             'Expires': '0'
         },
     });
-
   } catch (error) {
-    console.error("Feed generation failed:", error);
-    return new Response(JSON.stringify({ error: "Feed generation failed." }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Feed generation rejected by core." }), { status: 500 });
   }
 }
