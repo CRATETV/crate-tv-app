@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -86,7 +87,7 @@ const App: React.FC = () => {
         if (spotlightMovies.length === 0) {
             spotlightMovies = (Object.values(movies) as Movie[])
                 .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !!m.title && !!m.poster && !m.isUnlisted)
-                .sort((a, b) => (viewCounts?.[b.key] || 0) - (viewCounts?.[a.key] || 0))
+                .sort((a: Movie, b: Movie) => (viewCounts?.[b.key] || 0) - (viewCounts?.[a.key] || 0))
                 .slice(0, 4);
         }
         return spotlightMovies;
@@ -98,7 +99,7 @@ const App: React.FC = () => {
         return vaultCategory.movieKeys
             .map((key: string) => movies[key])
             .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted)
-            .sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
+            .sort((a: Movie, b: Movie) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
     }, [movies, categories.vault]);
 
     const activeBannerType = useMemo(() => {
@@ -127,12 +128,12 @@ const App: React.FC = () => {
     const comingSoonMovies = useMemo(() => {
         return (Object.values(movies) as Movie[])
             .filter((m: Movie) => !!m && !isMovieReleased(m) && !m.isUnlisted)
-            .sort((a, b) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
+            .sort((a: Movie, b: Movie) => new Date(a.releaseDateTime || 0).getTime() - new Date(b.releaseDateTime || 0).getTime());
     }, [movies]);
 
     const topTenMovies = useMemo(() => {
         return (Object.values(movies) as (Movie | undefined)[]).filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted && !!m.poster)
-            .sort((a, b) => (viewCounts?.[b.key] || 0) - (viewCounts?.[a.key] || 0))
+            .sort((a: Movie, b: Movie) => (viewCounts?.[b.key] || 0) - (viewCounts?.[a.key] || 0))
             .slice(0, 10);
     }, [movies, viewCounts]);
 
@@ -292,7 +293,7 @@ const App: React.FC = () => {
                                 const categoryMovies = typedCategory.movieKeys
                                     .map((movieKey: string) => movies[movieKey])
                                     .filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m))
-                                    .sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
+                                    .sort((a: Movie, b: Movie) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
 
                                 if (categoryMovies.length === 0) return null;
                                 
