@@ -28,7 +28,7 @@ const emptyMovie: Movie = {
     likes: 0,
     rating: 0,
     releaseDateTime: '',
-    publishedAt: new Date().toISOString(),
+    publishedAt: new Date().toISOString(), // Mandatory for automatic row promotion
     autoReleaseDate: '',
     mainPageExpiry: '',
     isUnlisted: false,

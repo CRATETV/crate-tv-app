@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -37,7 +36,6 @@ const MaintenanceScreen: React.FC = () => (
                 <p className="text-gray-500 font-medium leading-relaxed">Our engineering core is currently performing scheduled infrastructure upgrades. We will be back online shortly.</p>
             </div>
             <div className="pt-8 border-t border-white/5">
-                {/* Fixed invalid JSX: Added missing '>' bracket and removed characters that might interfere with parser outside strings */}
                 <p className="text-[10px] text-gray-700 font-black uppercase tracking-[0.4em]">Crate TV Infrastructure // V4.0</p>
             </div>
         </div>
@@ -95,12 +93,12 @@ const App: React.FC = () => {
     }, [movies, categories.featured, viewCounts]);
 
     const vaultMovies = useMemo(() => {
-        // Vault is now a manually curated category managed by admins
         const vaultCategory = categories.vault;
         if (!vaultCategory?.movieKeys) return [];
         return vaultCategory.movieKeys
             .map((key: string) => movies[key])
-            .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted);
+            .filter((m: Movie | undefined): m is Movie => !!m && isMovieReleased(m) && !m.isUnlisted)
+            .sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
     }, [movies, categories.vault]);
 
     const activeBannerType = useMemo(() => {
@@ -138,31 +136,30 @@ const App: React.FC = () => {
             .slice(0, 10);
     }, [movies, viewCounts]);
 
-    const nowStreamingMovie = useMemo(() => {
-        const keys = categories.nowStreaming?.movieKeys || [];
-        if (keys.length === 0) return null;
-        const m = movies[keys[0]];
-        return (m && isMovieReleased(m) && !m.isUnlisted) ? m : null;
-    }, [movies, categories.nowStreaming]);
-
-    const isNowStreamingLive = useMemo(() => {
-        if (!nowStreamingMovie) return false;
-        const partyState = activeParties[nowStreamingMovie.key];
-        return !!partyState && nowStreamingMovie.isWatchPartyEnabled === true;
-    }, [nowStreamingMovie, activeParties]);
-
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
         const query = searchQuery.toLowerCase().trim();
-        return (Object.values(movies) as Movie[]).filter((movie: Movie | undefined) =>
+
+        // 1. Map category titles to their contained movie keys
+        const matchingCategoryMovieKeys = new Set<string>();
+        // Fix: Explicitly type category object in searchResults mapping to avoid unknown type error on title and movieKeys properties.
+        (Object.values(categories) as Category[]).forEach(cat => {
+            if (cat.title.toLowerCase().includes(query)) {
+                cat.movieKeys.forEach(key => matchingCategoryMovieKeys.add(key));
+            }
+        });
+
+        // 2. Filter movies by metadata OR category match
+        return (Object.values(movies) as Movie[]).filter((movie) =>
             movie && movie.poster && movie.title && !movie.isUnlisted && isMovieReleased(movie) &&
             (
                 (movie.title || '').toLowerCase().includes(query) ||
                 (movie.director || '').toLowerCase().includes(query) ||
-                (movie.cast || []).some(actor => (actor.name || '').toLowerCase().includes(query))
+                (movie.cast || []).some(actor => (actor.name || '').toLowerCase().includes(query)) ||
+                matchingCategoryMovieKeys.has(movie.key)
             )
         );
-    }, [searchQuery, movies]);
+    }, [searchQuery, movies, categories]);
     
     const likedMovies = useMemo<Set<string>>(() => new Set(likedMoviesArray), [likedMoviesArray]);
     const watchlist = useMemo<Set<string>>(() => new Set(watchlistArray), [watchlistArray]);
@@ -238,7 +235,7 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            <Header searchQuery={searchQuery} onSearch={onSearch} onMobileSearchClick={handleSearchClick} topOffset={headerTop} isLiveSpotlight={isNowStreamingLive} />
+            <Header searchQuery={searchQuery} onSearch={onSearch} onMobileSearchClick={handleSearchClick} topOffset={headerTop} />
 
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500" style={{ paddingTop: activeBannerType !== 'NONE' ? '3rem' : '0px' }}>
                 {currentLiveHeroConfig ? (
@@ -248,7 +245,7 @@ const App: React.FC = () => {
                 )}
                 
                 <div className="px-4 md:px-12 relative z-10 w-full overflow-x-hidden">
-                    <div className="-mt-6 md:-mt-10 lg:-mt-14 space-y-12 md:space-y-16 relative z-20">
+                    <div className="-mt-6 md:-mt-10 lg:-mt-14 space-y-12 md:y-16 relative z-20">
                         {searchQuery ? (
                             <MovieCarousel title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`} movies={searchResults} onSelectMovie={handlePlayMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />
                         ) : (
@@ -292,7 +289,11 @@ const App: React.FC = () => {
                                 if (['featured', 'nowStreaming', 'publicAccess', 'publicDomainIndie', 'zine', 'editorial', 'vault'].includes(key)) return null;
                                 if ((key === 'cratemas' || (typedCategory.title || '').toLowerCase() === 'cratemas') && !settings.isHolidayModeActive) return null;
                                 
-                                const categoryMovies = typedCategory.movieKeys.map((movieKey: string) => movies[movieKey]).filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m));
+                                const categoryMovies = typedCategory.movieKeys
+                                    .map((movieKey: string) => movies[movieKey])
+                                    .filter((m: Movie | undefined): m is Movie => !!m && !m.isUnlisted && isMovieReleased(m))
+                                    .sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
+
                                 if (categoryMovies.length === 0) return null;
                                 
                                 return (
