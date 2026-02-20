@@ -8,12 +8,12 @@
     <script type="text/brightscript" uri="pkg:/components/MoviePosterItem.brs" />
 
     <children>
-        <!-- V4 Snug Focus Ring: 240+10, 360+10 centered -->
+        <!-- V4 Snug Focus Ring: 240+8, 360+8 centered -->
         <Rectangle
             id="focusRing"
-            width="250"
-            height="370"
-            translation="[-5, -5]"
+            width="248"
+            height="368"
+            translation="[-4, -4]"
             color="#EF4444"
             visible="false"
         />

@@ -51,14 +51,7 @@ const ArchiveScoutTab: React.FC = () => {
         }
     };
 
-    const handleQuickIngest = async (film: ScoutedFilm, index: number) => {
-        if (film.acquisitionMode === 'NEGOTIATE') {
-            // Special routing to Legal Strategist with pre-filled context
-            window.history.pushState({}, '', `/admin?tab=discovery&action=negotiate&title=${encodeURIComponent(film.title)}&director=${encodeURIComponent(film.director)}`);
-            window.dispatchEvent(new Event('pushstate'));
-            return;
-        }
-
+    const handlePushToJury = async (film: ScoutedFilm, index: number) => {
         setIngestingId(index);
         try {
             const res = await fetch('/api/send-submission', {
@@ -67,16 +60,20 @@ const ArchiveScoutTab: React.FC = () => {
                 body: JSON.stringify({
                     filmTitle: film.title,
                     directorName: film.director,
-                    email: 'auto-ingest@cratetv.net',
-                    cast: 'Unknown',
+                    email: 'scouted@cratetv.net',
+                    cast: 'Internal Scouting',
                     synopsis: film.synopsis,
                     posterUrl: 'https://cratetelevision.s3.us-east-1.amazonaws.com/placeholder-poster.png',
-                    movieUrl: film.sourceUrl
+                    movieUrl: film.sourceUrl,
+                    source: 'AI_SCOUTED',
+                    website_url_check: '' // Honeypot bypass
                 })
             });
-            if (res.ok) alert(`"${film.title}" successfully routed to Grand Jury pipeline.`);
+            if (res.ok) {
+                alert(`"${film.title}" pushed to Jury manifest as a SCOUTED target.`);
+            }
         } catch (e) {
-            alert("Ingest failure.");
+            alert("Uplink to pipeline failed.");
         } finally {
             setIngestingId(null);
         }
@@ -120,6 +117,11 @@ const ArchiveScoutTab: React.FC = () => {
                                 </div>
                             </div>
                         </div>
+                        
+                        <div className="bg-white/5 border border-white/10 p-8 rounded-3xl">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4">Strategy Advisory</h4>
+                            <p className="text-xs text-gray-400 leading-relaxed italic">"Directly inviting festival winners via 'Modern Scout' increases Crate's catalog prestige by 400% compared to open submissions alone."</p>
+                        </div>
                     </div>
 
                     <div className="flex-grow min-w-0 space-y-10">
@@ -133,11 +135,11 @@ const ArchiveScoutTab: React.FC = () => {
                         {results.length > 0 && !isScanning && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-[fadeIn_0.8s_ease-out]">
                                 {results.map((f, i) => (
-                                    <div key={i} className={`bg-[#0f0f0f] border ${f.acquisitionMode === 'NEGOTIATE' ? 'border-amber-500/20' : 'border-white/5'} p-10 rounded-[3.5rem] flex flex-col justify-between group hover:border-cyan-500/40 transition-all shadow-2xl relative overflow-hidden h-full`}>
+                                    <div key={i} className={`bg-[#0f0f0f] border ${f.acquisitionMode === 'NEGOTIATE' ? 'border-amber-500/20' : 'border-white/5'} p-10 rounded-[3.5rem] flex flex-col justify-between group hover:border-cyan-500/40 transition-all shadow-2xl h-full`}>
                                         <div className="space-y-8 relative z-10">
                                             <div className="flex justify-between items-start">
                                                 <span className={`text-[9px] font-black uppercase tracking-[0.4em] ${f.acquisitionMode === 'NEGOTIATE' ? 'text-amber-500' : 'text-cyan-500'}`}>
-                                                    {f.acquisitionMode === 'NEGOTIATE' ? 'Negotiation Required' : f.license}
+                                                    {f.acquisitionMode === 'NEGOTIATE' ? 'Negotiation Target' : f.license}
                                                 </span>
                                                 <span className="text-[10px] font-black text-gray-200 bg-cyan-600/20 px-3 py-1 rounded-full border border-cyan-500/20 shadow-lg">{f.year}</span>
                                             </div>
@@ -150,11 +152,11 @@ const ArchiveScoutTab: React.FC = () => {
 
                                         <div className="mt-12 pt-8 border-t border-white/5 flex flex-col gap-3 relative z-10">
                                             <button 
-                                                onClick={() => handleQuickIngest(f, i)}
+                                                onClick={() => handlePushToJury(f, i)}
                                                 disabled={ingestingId === i}
-                                                className={`text-white font-black py-5 rounded-2xl uppercase text-[11px] tracking-widest text-center shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 ${f.acquisitionMode === 'NEGOTIATE' ? 'bg-amber-600 hover:bg-amber-500' : 'bg-red-600 hover:bg-red-500'}`}
+                                                className={`text-white font-black py-5 rounded-2xl uppercase text-[11px] tracking-widest text-center shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 ${f.acquisitionMode === 'NEGOTIATE' ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-red-600 hover:bg-red-500'}`}
                                             >
-                                                {ingestingId === i ? 'Routing...' : f.acquisitionMode === 'NEGOTIATE' ? 'Open Negotiation Hub' : 'Route to Grand Jury'}
+                                                {ingestingId === i ? 'Routing...' : 'Push to Grand Jury'}
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                                             </button>
                                             <a 
@@ -162,7 +164,7 @@ const ArchiveScoutTab: React.FC = () => {
                                                 target="_blank" 
                                                 className="bg-white/5 hover:bg-white/10 text-white font-black py-4 rounded-xl uppercase text-[9px] tracking-widest text-center border border-white/10 transition-all"
                                             >
-                                                Review @ {f.sourceTitle}
+                                                Review Source @ {f.sourceTitle}
                                             </a>
                                         </div>
                                     </div>
@@ -177,7 +179,6 @@ const ArchiveScoutTab: React.FC = () => {
                          <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic">Street Heat Lab.</h2>
                          <p className="text-gray-400 max-w-xl mx-auto">Asset blueprints for the Summer Community Refresh campaign.</p>
                     </div>
-                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="bg-white/[0.02] border border-white/5 p-8 rounded-3xl space-y-6 shadow-xl">
                             <h3 className="text-lg font-black uppercase text-red-500 tracking-widest">Cold Water Labels</h3>
@@ -186,23 +187,6 @@ const ArchiveScoutTab: React.FC = () => {
                                 <p className="text-2xl font-black text-white uppercase italic tracking-tighter">REFRESH THE CULTURE.</p>
                                 <p className="text-[10px] font-black text-gray-600 uppercase pt-4">Call to Action</p>
                                 <p className="text-sm font-bold text-gray-300">Scan to watch the local collection on Crate TV. No paywall.</p>
-                                <div className="aspect-square w-32 bg-white p-2 rounded-xl mx-auto mt-4 flex items-center justify-center">
-                                    <div className="text-[8px] font-black text-black text-center uppercase">QR: CRATETV.NET</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white/[0.02] border border-white/5 p-8 rounded-3xl space-y-6 shadow-xl">
-                            <h3 className="text-lg font-black uppercase text-red-500 tracking-widest">Festival "Stipend" Apparel</h3>
-                            <div className="p-6 bg-black rounded-2xl border border-white/10 space-y-6">
-                                <div>
-                                    <p className="text-[10px] font-black text-gray-600 uppercase mb-2">Front (Pocket Area)</p>
-                                    <p className="text-xl font-black text-white italic">CRATE TV.</p>
-                                </div>
-                                <div className="pt-4 border-t border-white/5">
-                                    <p className="text-[10px] font-black text-gray-600 uppercase mb-2">Back (Massive Print)</p>
-                                    <p className="text-2xl font-black text-white leading-none uppercase tracking-tighter italic">WE PAY YOUR<br/><span className="text-red-600">ENTRY FEES.</span></p>
-                                </div>
                             </div>
                         </div>
                     </div>

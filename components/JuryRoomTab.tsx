@@ -191,7 +191,12 @@ const JuryRoomTab: React.FC<JuryRoomTabProps> = ({ pipeline }) => {
 
                         <div className="space-y-6">
                             <div className="bg-gray-900 border border-red-600/30 p-8 rounded-3xl shadow-2xl space-y-8">
-                                <h4 className="text-lg font-black text-white uppercase tracking-tighter border-b border-white/5 pb-4">Consensus Verdict</h4>
+                                <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                                    <h4 className="text-lg font-black text-white uppercase tracking-tighter italic">Consensus Verdict</h4>
+                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${selectedFilm.source === 'AI_SCOUTED' ? 'bg-cyan-600 text-white' : 'bg-red-600 text-white'}`}>
+                                        {selectedFilm.source || 'FFREEWAY'}
+                                    </span>
+                                </div>
                                 <div className="space-y-6">
                                     <RatingSlider label="Direction" value={vote.direction} onChange={(v) => setVote({...vote, direction: v})} />
                                     <RatingSlider label="Performance" value={vote.performance} onChange={(v) => setVote({...vote, performance: v})} />
@@ -214,12 +219,19 @@ const JuryRoomTab: React.FC<JuryRoomTabProps> = ({ pipeline }) => {
                     {pendingFilms.map(film => {
                         const isJudged = !!existingVotes[film.id];
                         const communityCount = communityVotes[film.id]?.length || 0;
+                        const isScouted = film.source === 'AI_SCOUTED';
                         return (
                             <div key={film.id} onClick={() => handleSelectFilm(film)} className="group cursor-pointer space-y-3">
                                 <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/5 transition-all duration-500 group-hover:scale-[1.03] group-hover:border-red-600/50 shadow-xl">
                                     <img src={film.posterUrl} alt={film.title} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" />
-                                    {isJudged && <div className="absolute top-2 right-2 bg-green-500 text-black font-black px-2 py-0.5 rounded text-[8px] uppercase tracking-tighter shadow-lg z-10">Vetted</div>}
+                                    
+                                    <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                                        {isScouted && <span className="bg-cyan-600 text-white font-black px-1.5 py-0.5 rounded text-[7px] uppercase tracking-tighter shadow-lg">Scouted Target</span>}
+                                        {isJudged && <span className="bg-green-500 text-black font-black px-1.5 py-0.5 rounded text-[7px] uppercase tracking-tighter shadow-lg">Vetted</span>}
+                                    </div>
+                                    
                                     {communityCount > 0 && <div className="absolute bottom-2 right-2 bg-emerald-600 text-white font-black px-2 py-0.5 rounded text-[8px] uppercase tracking-tighter shadow-lg z-10">{communityCount} Guest Votes</div>}
+                                    
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                         <div className="bg-white text-black font-black px-4 py-2 rounded-full text-[10px] uppercase tracking-widest shadow-2xl">Enter Deliberation</div>
                                     </div>

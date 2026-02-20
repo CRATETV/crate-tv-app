@@ -45,7 +45,8 @@ const emptyMovie: Movie = {
     isForSale: false,
     salePrice: 5.00,
     isLiveStream: false,
-    liveStreamEmbed: ''
+    liveStreamEmbed: '',
+    zineUrl: ''
 };
 
 const ActorEditorModal: React.FC<{ actor: Actor, onSave: (updated: Actor) => void, onClose: () => void }> = ({ actor, onSave, onClose }) => {
@@ -326,6 +327,18 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                     <input type="text" name="director" value={formData.director} onChange={handleChange} placeholder="Director(s)" className="form-input bg-black/40" />
                                     <textarea name="synopsis" value={formData.synopsis} onChange={handleChange} rows={4} placeholder="Synopsis Treatment" className="form-input bg-black/40" />
                                     
+                                    <div className="space-y-2">
+                                        <label className="form-label">Editorial / Zine URL</label>
+                                        <input 
+                                            type="text" 
+                                            name="zineUrl" 
+                                            value={formData.zineUrl || ''} 
+                                            onChange={handleChange} 
+                                            placeholder="https://cratetv.net/zine/..." 
+                                            className="form-input bg-black/40 text-xs font-mono" 
+                                        />
+                                    </div>
+
                                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                                         <div className="space-y-1">
                                             <p className="text-xs font-black text-white uppercase tracking-widest">Episodic Series</p>

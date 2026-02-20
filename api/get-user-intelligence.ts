@@ -1,3 +1,4 @@
+
 import { getAdminDb, getAdminAuth, getInitializationError } from './_lib/firebaseAdmin.js';
 import { UserRecord } from '../types.js';
 
@@ -18,7 +19,17 @@ export async function POST(request: Request) {
         if (!db || !auth) throw new Error("Infrastructure Offline");
 
         // 1. Fetch Auth data
-        const listUsersResult = await auth.listUsers(1000);
+        const listAllAuthUsers = async () => {
+            const allUsers = [];
+            let pageToken;
+            do {
+                const listUsersResult = await auth.listUsers(1000, pageToken);
+                allUsers.push(...listUsersResult.users);
+                pageToken = listUsersResult.pageToken;
+            } while (pageToken);
+            return allUsers;
+        };
+        const allAuthUsers = await listAllAuthUsers();
         
         // 2. Fetch all Firestore Profiles for merging
         const profilesSnapshot = await db.collection('users').get();
@@ -26,7 +37,7 @@ export async function POST(request: Request) {
         profilesSnapshot.forEach(doc => profileMap.set(doc.id, doc.data()));
 
         // 3. Assemble UserRecords using Auth as the primary source
-        const users: UserRecord[] = listUsersResult.users.map(u => {
+        const users: UserRecord[] = allAuthUsers.map(u => {
             const profile = profileMap.get(u.uid) || {};
             // CRITICAL FIX: Ensure watchedMovies and likedMovies are correctly extracted
             return {

@@ -7,6 +7,7 @@
     "dev": "vite --port 5373",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "lint": "tsc --noEmit",
     "build:roku": "node scripts/build-roku.mjs",
     "build:roku:local": "node scripts/build-roku.mjs --local",
     "deploy:roku": "roku-deploy",

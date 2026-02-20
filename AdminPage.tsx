@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Movie, Category, AboutData, FestivalDay, FestivalConfig, MoviePipelineEntry, CrateFestConfig, AnalyticsData } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -22,6 +23,7 @@ import AcademyIntelTab from './components/AcademyIntelTab';
 import AdminPayoutsTab from './components/AdminPayoutsTab';
 import UserIntelligenceTab from './components/UserIntelligenceTab';
 import AnalyticsPage from './components/AnalyticsPage';
+import RokuForge from './components/RokuForge';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
@@ -41,6 +43,7 @@ const ALL_TABS: Record<string, string> = {
     analytics: '📊 Platform Stats',
     categories: '📂 Categories',
     laurels: '🏆 Laurel Forge',
+    forge: '🔨 Roku Forge',
     permissions: '🔑 Permissions',
     security: '🛡️ Security'
 };
@@ -295,8 +298,11 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'mail' && <StudioMail analytics={analytics} festivalConfig={crateFestConfig} movies={movies} />}
                     {activeTab === 'dispatch' && <CommunicationsTerminal movies={movies} />}
                     {activeTab === 'intel' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={() => {}} />}
-                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
+                    {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
                     {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}
+                    {activeTab === 'discovery' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(c) => handleSaveData('categories', c)} />}
+                    {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
+                    {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => setActiveTab('movies')} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'jury' && (
                         <div className="space-y-16">
                             <JuryRoomTab pipeline={pipeline} />
@@ -322,9 +328,6 @@ const AdminPage: React.FC = () => {
                             <CrateFestEditor config={crateFestConfig || { isActive: false, title: '', tagline: '', startDate: '', endDate: '', passPrice: 15, movieBlocks: [] }} allMovies={movies} pipeline={pipeline} onSave={(c) => handleSaveData('settings', { crateFestConfig: c })} isSaving={isSaving} />
                         </div>
                     )}
-                    {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
-                    {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => setActiveTab('movies')} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
-                    {activeTab === 'discovery' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(c) => handleSaveData('categories', c)} />}
                     {activeTab === 'analytics' && <AnalyticsPage viewMode="full" />}
                     {activeTab === 'vouchers' && (
                         <PromoCodeManager 
@@ -335,6 +338,7 @@ const AdminPage: React.FC = () => {
                     )}
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />}
                     {activeTab === 'laurels' && < LaurelManager allMovies={Object.values(movies) as Movie[]} />}
+                    {activeTab === 'forge' && <RokuForge />}
                     {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'security' && <SecurityTerminal />}
                 </div>

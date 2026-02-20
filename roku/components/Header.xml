@@ -16,7 +16,7 @@
     </script>
     
     <children>
-        <!-- Spaced Menu: 600px per item ensures no truncation for long labels like THE PUBLIC SQUARE -->
+        <!-- V4 Smooth Loading: Elements hidden until parent authorizes visibility -->
         <LabelList 
             id="menu" 
             translation="[80, 0]" 
@@ -24,6 +24,7 @@
             orientation="horizontal" 
             textSelectedColor="0xFFFFFFFF"
             textColor="0x666666FF"
+            visible="false"
         >
             <content>
                 <ContentNode>
@@ -35,6 +36,13 @@
             </content>
         </LabelList>
 
-        <Label text="CRATE TV" translation="[1700, 0]" color="0xEF4444FF" font="font:LargeBoldSystemFont" />
+        <Label 
+            id="brandingLabel"
+            text="CRATE TV" 
+            translation="[1700, 0]" 
+            color="0xEF4444FF" 
+            font="font:LargeBoldSystemFont" 
+            visible="false"
+        />
     </children>
 </component>

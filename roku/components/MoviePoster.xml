@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="MoviePoster" extends="Group">
 
@@ -9,13 +10,13 @@
     </interface>
 
     <children>
-        <!-- CRATE RED FOCUS BORDER -->
+        <!-- V4 Snug Focus Ring: 4px border logic (Poster 240x360 + 8px = 248x368) -->
         <Rectangle 
             id="focusRing"
             color="0xEF4444FF"
-            width="252"
-            height="372"
-            translation="[-6, -6]"
+            width="248"
+            height="368"
+            translation="[-4, -4]"
             visible="false"
         />
         

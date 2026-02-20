@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { MoviePipelineEntry, JuryVerdict } from '../types';
 import { useAuth } from '../contexts/AuthContext';

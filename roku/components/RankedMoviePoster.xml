@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="RankedMoviePoster" extends="Group">
 
@@ -29,12 +30,13 @@
                 translation="[100, 0]"
             />
 
+            <!-- Snug Focus Ring: Centered for 4px border (X: 100-4=96, Y: 0-4=-4) -->
             <Rectangle 
                 id="focusRing"
                 color="0xEF4444FF"
-                width="252"
-                height="372"
-                translation="[94, -6]"
+                width="248"
+                height="368"
+                translation="[96, -4]"
                 visible="false"
             />
         </Group>

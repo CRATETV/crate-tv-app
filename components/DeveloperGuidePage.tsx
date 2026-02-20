@@ -61,6 +61,68 @@ const DeveloperGuidePage: React.FC = () => {
                     </div>
 
                     <div className="space-y-16">
+                        {/* Storefront Protocol Section */}
+                        <section className="bg-white/[0.02] border border-white/5 p-8 rounded-[2.5rem] shadow-2xl">
+                            <div className="flex items-center gap-4 mb-10">
+                                <div className="w-10 h-10 bg-amber-600/10 rounded-full flex items-center justify-center border border-amber-500/30">
+                                    <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                                </div>
+                                <h2 className="text-2xl font-black uppercase tracking-tight italic text-amber-500">Storefront Launch Protocol</h2>
+                            </div>
+                            
+                            <div className="space-y-8 text-gray-400 text-sm leading-relaxed">
+                                <p>To update the visual branding on the <strong>Roku Home Screen</strong> and <strong>Channel Store</strong>, follow this sequence on the Roku Developer Dashboard:</p>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="bg-black border border-white/5 p-6 rounded-2xl">
+                                        <h4 className="text-white font-bold mb-4 uppercase tracking-widest text-xs border-b border-white/5 pb-2">1. Identity Update</h4>
+                                        <ul className="space-y-3">
+                                            <li>• Navigate to <strong>Manage My Channels</strong>.</li>
+                                            <li>• Select <strong>Channel Store Info</strong>.</li>
+                                            <li>• Replace <strong>HD Poster</strong> (540x405 PNG).</li>
+                                            <li>• Replace <strong>SD Poster</strong> (290x218 PNG).</li>
+                                        </ul>
+                                    </div>
+                                    <div className="bg-black border border-white/5 p-6 rounded-2xl">
+                                        <h4 className="text-white font-bold mb-4 uppercase tracking-widest text-xs border-b border-white/5 pb-2">2. Manifest Push</h4>
+                                        <ul className="space-y-3">
+                                            <li>• Click <strong>Save</strong> at page bottom.</li>
+                                            <li>• Go to <strong>Preview and Publish</strong>.</li>
+                                            <li>• Click <strong>Submit for Metadata Update</strong> (Instant for Private, 24h for Public).</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Branding & Assets Section */}
+                        <section className="bg-white/[0.02] border border-white/5 p-8 rounded-[2.5rem] shadow-2xl">
+                            <div className="flex items-center gap-4 mb-10">
+                                <div className="w-10 h-10 bg-purple-600/10 rounded-full flex items-center justify-center border border-purple-500/30">
+                                    <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h14a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                </div>
+                                <h2 className="text-2xl font-black uppercase tracking-tight italic text-purple-500">Asset Dimensions</h2>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                                <div className="bg-black/40 p-6 rounded-2xl border border-white/5">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase mb-2">Home Screen Tile (HD)</p>
+                                    <p className="text-white font-bold mb-1">icon_hd.png</p>
+                                    <p className="text-xs text-gray-500">540 x 405 pixels</p>
+                                </div>
+                                <div className="bg-black/40 p-6 rounded-2xl border border-white/5">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase mb-2">Home Screen Tile (SD)</p>
+                                    <p className="text-white font-bold mb-1">icon_sd.png</p>
+                                    <p className="text-xs text-gray-500">290 x 218 pixels</p>
+                                </div>
+                                <div className="bg-black/40 p-6 rounded-2xl border border-white/5">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase mb-2">Loading/Splash</p>
+                                    <p className="text-white font-bold mb-1">splash_hd.png</p>
+                                    <p className="text-xs text-gray-500">1920 x 1080 pixels</p>
+                                </div>
+                            </div>
+                        </section>
+
                         {/* The PKG signing Section */}
                         <section className="bg-white/[0.02] border border-white/5 p-8 rounded-[2.5rem] shadow-2xl">
                             <div className="flex items-center gap-4 mb-10">

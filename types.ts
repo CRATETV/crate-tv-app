@@ -160,6 +160,7 @@ export interface Movie {
   rokuHeroImage?: string;
   liveStreamUrl?: string;
   liveStreamStatus?: 'offline' | 'live' | 'scheduled';
+  zineUrl?: string;
 }
 
 export interface Actor {

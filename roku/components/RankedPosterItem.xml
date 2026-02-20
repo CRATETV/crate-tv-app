@@ -26,9 +26,9 @@
         <!-- Snug Focus Ring: Translated to align with poster at [100,0] -->
         <Rectangle
             id="focusRing"
-            width="250"
-            height="370"
-            translation="[95, -5]"
+            width="248"
+            height="368"
+            translation="[96, -4]"
             color="#EF4444"
             visible="false"
         />

@@ -10,16 +10,17 @@
         
         <Group id="headerGroup" translation="[100, 60]">
             <Label text="THE PUBLIC SQUARE" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
-            <Label text="VINTAGE VISIONS &amp; COMMUNITY ARCHIVES" translation="[0, 60]" font="font:SmallestBoldSystemFont" color="0xEF4444FF" />
+            <Label text="VINTAGE VISIONS &amp; COMMUNITY ARCHIVES" translation="[0, 60]" font="font:SmallestBoldSystemFont" color="#EF4444" />
         </Group>
 
+        <!-- Standardized basePosterSize to [240, 380] to allow focus ring clearance -->
         <PosterGrid 
             id="vintageGrid"
-            basePosterSize="[300, 450]"
+            basePosterSize="[240, 380]"
             itemSpacing="[40, 40]"
-            numColumns="5"
+            numColumns="6"
             translation="[100, 200]"
-            focusBitmapUri="pkg:/images/focus_ring.png"
+            itemComponentName="MoviePoster"
         />
         
         <Label 

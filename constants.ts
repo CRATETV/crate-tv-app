@@ -40,6 +40,7 @@ export const categoriesData: Record<string, Category> = {
     "title": "Vintage Visions",
     "type": "publicDomainIndie",
     "movieKeys": [
+      "neighbours",
       "a_fool_and_his_money",
       "brideless_groom",
       "meshes_of_the_afternoon",
@@ -53,6 +54,34 @@ export const categoriesData: Record<string, Category> = {
 };
 
 export const moviesData: Record<string, Movie> = {
+  "neighbours": {
+    "key": "neighbours",
+    "title": "Neighbours",
+    "synopsis": "Two neighbors live peacefully until a flower grows on the border of their properties, sparking a violent and absurdist conflict. A landmark of stop-motion pixilation and a powerful anti-war allegory.",
+    "cast": [
+      {
+        "name": "Grant Munro",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Pioneer of the pixilation technique.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      },
+      {
+        "name": "Jean-Paul Ladouceur",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Frequent collaborator with Norman McLaren.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Norman McLaren",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Neighbours.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Neighbours_Poster.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Neighbours_Poster.webp",
+    "likes": 1540,
+    "durationInMinutes": 8,
+    "publishedAt": "2025-01-01T00:00:00Z",
+    "isUnlisted": false
+  },
   "crossroads": {
     "key": "crossroads",
     "title": "Crossroads",
@@ -116,7 +145,8 @@ export const moviesData: Record<string, Movie> = {
     "likes": 850,
     "durationInMinutes": 12,
     "publishedAt": "2025-02-15T10:00:00Z",
-    "isUnlisted": false
+    "isUnlisted": false,
+    "zineUrl": "https://cratetv.net/zine/meridian-technical-deep-dive"
   },
   "the_cook": {
     "key": "the_cook",
@@ -203,7 +233,6 @@ export const moviesData: Record<string, Movie> = {
     "director": "Georges Méliès",
     "trailer": "",
     "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
-    // Fix: Added missing 'poster' property required by Movie interface
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "likes": 2100,

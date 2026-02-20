@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="MainScene" extends="Scene">
     <interface>
@@ -13,12 +14,17 @@
         <!-- Pure Black Cinematic Base -->
         <Rectangle width="1920" height="1080" color="0x050505FF" />
 
-        <!-- Global Header: Fixed Top Navigation -->
-        <Header id="navBar" translation="[0, 40]" />
+        <!-- Initialized as hidden to prevent text flashes -->
+        <Header id="navBar" translation="[0, 40]" visible="false" />
 
-        <!-- The Viewport: Dynamic Scene Container -->
-        <Group id="viewport" translation="[0, 160]" />
+        <!-- Viewport hidden until data sync -->
+        <Group id="viewport" translation="[0, 160]" visible="false" />
 
-        <LoadingIndicator id="spinner" visible="false" translation="[960, 540]" />
+        <LoadingIndicator 
+            id="spinner" 
+            visible="true" 
+            translation="[960, 540]" 
+            fadeInterval="0.5"
+        />
     </children>
 </component>
