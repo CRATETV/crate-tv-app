@@ -57,7 +57,7 @@ const processLiveEmbed = (input: string, startTimeOffset: number = 0): string =>
     return `<div class="flex items-center justify-center h-full text-gray-500 font-mono text-xs uppercase p-10 text-center">Invalid Relay Node: ${trimmed}</div>`;
 };
 
-const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({ emoji, onComplete }) => {
+const FloatingReaction = React.memo<{ emoji: string; onComplete: () => void }>(({ emoji, onComplete }) => {
     const randomLeft = useMemo(() => Math.floor(Math.random() * 80) + 10, []); 
     const randomDuration = useMemo(() => 3.5 + Math.random() * 1.5, []); 
     useEffect(() => {
@@ -67,9 +67,9 @@ const FloatingReaction: React.FC<{ emoji: string; onComplete: () => void }> = ({
     return (
         <div className="absolute bottom-24 pointer-events-none z-[120] animate-emoji-float text-6xl drop-shadow-2xl" style={{ left: `${randomLeft}%`, animationDuration: `${randomDuration}s` }}>{emoji}</div>
     );
-};
+});
 
-const EmbeddedChat: React.FC<{ partyKey: string; directors: string[]; isQALive?: boolean; user: any; isMobileController?: boolean }> = ({ partyKey, directors, isQALive, user, isMobileController }) => {
+const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALive?: boolean; user: any; isMobileController?: boolean }>(({ partyKey, directors, isQALive, user, isMobileController }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -134,7 +134,7 @@ const EmbeddedChat: React.FC<{ partyKey: string; directors: string[]; isQALive?:
             </form>
         </div>
     );
-};
+});
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const { user, unlockedWatchPartyKeys, unlockWatchParty, rentals } = useAuth();
@@ -175,13 +175,27 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     return;
                 }
 
-                const drift = Math.abs(video.currentTime - targetPosition);
-                if (drift > 3 && !video.seeking && video.readyState >= 3) {
+                const drift = targetPosition - video.currentTime;
+                const absDrift = Math.abs(drift);
+
+                // 1. HARD SEEK: If drift is massive (> 5s), jump immediately
+                if (absDrift > 5 && !video.seeking && video.readyState >= 2) {
                     lastSeekTimeRef.current = now;
                     video.currentTime = targetPosition;
+                    video.playbackRate = 1.0; // Reset rate on jump
+                } 
+                // 2. SMOOTH SYNC: If drift is moderate (0.5s - 5s), adjust playback rate
+                else if (absDrift > 0.5 && absDrift <= 5 && video.readyState >= 3) {
+                    // If behind, speed up slightly. If ahead, slow down slightly.
+                    video.playbackRate = drift > 0 ? 1.06 : 0.94;
+                } 
+                // 3. IN SYNC: Reset to normal speed
+                else {
+                    video.playbackRate = 1.0;
                 }
 
-                if (partyState.isPlaying && video.paused && !video.ended) {
+                // Handle play/pause state from server
+                if (partyState.isPlaying && video.paused && !video.ended && video.readyState >= 2) {
                     video.play().catch(() => {});
                 } else if (!partyState.isPlaying && !video.paused) {
                     video.pause();
