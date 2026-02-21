@@ -165,14 +165,13 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             </div>
                         </div>
 
-                        <section className="max-w-6xl mx-auto px-6 pb-40">
+                        <section className="max-w-6xl mx-auto px-6 mt-60 pb-60">
                             <div className="relative p-[1px] bg-gradient-to-r from-red-600 via-purple-600 to-emerald-500 rounded-[4rem] shadow-[0_40px_120px_rgba(239,68,68,0.25)] group transition-all duration-1000">
                                 <div className="bg-[#050505] rounded-[4rem] p-12 md:p-24 text-center space-y-12 relative overflow-hidden">
                                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.12)_0%,transparent_70%)] pointer-events-none"></div>
                                     
                                     <div className="relative z-10 space-y-4">
-                                        <p className="text-red-500 font-black uppercase tracking-[0.8em] text-[10px] mb-4">Frequency Connection</p>
-                                        <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none text-white drop-shadow-2xl">Join the Dispatch.</h2>
+                                        <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter italic leading-none text-white drop-shadow-2xl">Join the Newsletter.</h2>
                                         <p className="text-gray-400 text-lg md:text-2xl font-medium max-w-2xl mx-auto leading-tight italic">Direct access to festival maps and live watch party reveals.</p>
                                     </div>
                                     
@@ -184,7 +183,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                         <form onSubmit={handleSubscribe} className="flex flex-col md:flex-row gap-4 max-w-xl mx-auto relative z-10">
                                             <input 
                                                 type="email" 
-                                                placeholder="NODE@EMAIL.ADDRESS" 
+                                                placeholder="EMAIL ADDRESS" 
                                                 value={email}
                                                 onChange={e => setEmail(e.target.value)}
                                                 className="flex-grow bg-white/5 border-2 border-white/10 p-6 rounded-2xl text-white text-lg outline-none focus:border-red-600 transition-all font-black uppercase tracking-widest placeholder:text-gray-800 shadow-inner"
@@ -195,7 +194,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                                 disabled={subStatus === 'loading'}
                                                 className="bg-white text-black font-black py-6 px-12 rounded-2xl uppercase text-xs tracking-[0.2em] shadow-2xl transition-all hover:bg-red-600 hover:text-white active:scale-95 disabled:opacity-50"
                                             >
-                                                {subStatus === 'loading' ? 'UPLINKING...' : 'DISPATCH ME'}
+                                                {subStatus === 'loading' ? 'UPLINKING...' : 'JOIN NEWSLETTER'}
                                             </button>
                                         </form>
                                     )}
@@ -257,11 +256,11 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                             {section.type === 'text' && (
                                                 <div className="relative group/text">
                                                     {idx === 0 && section.content && (
-                                                        <span className="float-left text-[14rem] md:text-[18rem] font-black italic leading-[0.75] pr-10 mr-10 mt-2 text-red-600 drop-shadow-[0_25px_60px_rgba(239,68,68,0.6)] select-none animate-pulse skew-x-[-6deg]">
+                                                        <span className="float-left text-[8rem] md:text-[10rem] font-black italic leading-[0.75] pr-10 mr-10 mt-2 text-red-600 drop-shadow-[0_25px_60px_rgba(239,68,68,0.6)] select-none animate-pulse skew-x-[-6deg]">
                                                             {section.content.charAt(0)}
                                                         </span>
                                                     )}
-                                                    <p className="text-3xl md:text-5xl lg:text-6xl text-white font-black leading-[1.05] tracking-tighter italic uppercase drop-shadow-lg text-justify md:text-left">
+                                                    <p className="text-xl md:text-3xl lg:text-4xl text-white font-black leading-[1.05] tracking-tighter italic uppercase drop-shadow-lg text-justify md:text-left">
                                                         {idx === 0 && section.content ? section.content.slice(1) : section.content}
                                                     </p>
                                                     <div className="clear-both"></div>
@@ -284,7 +283,6 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                     <img src="https://cratetelevision.s3.us-east-1.amazonaws.com/logo+with+background+removed+.png" className="w-96 invert relative z-10 opacity-90" alt="Crate TV" />
                                 </div>
                                 <div className="space-y-10">
-                                    <p className="text-[20px] font-black text-gray-800 uppercase tracking-[3.5em] mr-[-3.5em]">END OF DISPATCH</p>
                                     <button onClick={() => handleNavigate(null)} className="bg-white text-black font-black px-24 py-8 rounded-[3rem] uppercase tracking-[0.5em] text-sm hover:bg-red-600 hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-[0_20px_100px_rgba(255,255,255,0.2)]">Return to Hub</button>
                                 </div>
                             </div>

@@ -1,6 +1,8 @@
 {
   "short_name": "Crate TV",
-  "name": "Crate TV",
+  "name": "Crate TV | Independent Cinema",
+  "description": "The distribution afterlife for independent cinema. Stream award-winning shorts and join live watch parties.",
+  "categories": ["entertainment", "movies"],
   "icons": [
     {
       "src": "https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon-96x96.png",
@@ -18,7 +20,7 @@
        "src": "https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon-192x192.png",
        "sizes": "192x192",
        "type": "image/png",
-       "purpose": "maskable"
+       "purpose": "any maskable"
     },
     {
        "src": "https://cratetelevision.s3.us-east-1.amazonaws.com/favicons/favicon-512x512.png",
@@ -29,6 +31,7 @@
   ],
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#050505",
-  "background_color": "#050505"
+  "orientation": "portrait",
+  "theme_color": "#000000",
+  "background_color": "#000000"
 }

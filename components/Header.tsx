@@ -16,6 +16,7 @@ interface HeaderProps {
     isStaging?: boolean;
     autoFocus?: boolean;
     isLiveSpotlight?: boolean;
+    hideLiveSpotlight?: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -29,6 +30,7 @@ const Header: React.FC<HeaderProps> = ({
     showNavLinks = true,
     topOffset = '0px',
     isLiveSpotlight = false,
+    hideLiveSpotlight = false,
 }) => {
     const { user, logout } = useAuth();
     const { categories, movies, activeParties, livePartyMovie } = useFestival();
@@ -85,8 +87,8 @@ const Header: React.FC<HeaderProps> = ({
             <div className="max-w-[1800px] mx-auto px-6 md:px-12 flex items-center justify-between">
                 <div className="flex items-center gap-12">
                     <div className="flex items-center gap-4">
-                        {/* Only show Featured/Live stream button if user is logged in */}
-                        {user && activeNotificationMovie && (
+                        {/* Only show Featured/Live stream button if user is logged in and not hidden */}
+                        {user && activeNotificationMovie && !hideLiveSpotlight && (
                             <button 
                                 onClick={(e) => handleNavigate(e, spotlightPath)}
                                 className={`group flex items-center gap-3 ${isActuallyLive ? 'bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-red-600/10 border border-red-600/20'} hover:bg-red-600 transition-all px-4 py-2 rounded-full shadow-lg backdrop-blur-md`}

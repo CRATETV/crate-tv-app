@@ -263,6 +263,7 @@ export interface ChatMessage {
   userAvatar: string;
   text: string;
   timestamp: any;
+  isVerifiedDirector?: boolean;
 }
 
 export interface SentimentPoint {

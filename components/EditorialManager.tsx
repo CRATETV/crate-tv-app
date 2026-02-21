@@ -229,7 +229,15 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                     </section>
 
                     <section className="bg-[#0f0f0f] border border-white/5 p-8 rounded-[2.5rem] space-y-6 shadow-xl">
-                         <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">01. Global Meta</h4>
+                         <div className="flex justify-between items-center">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-red-500">01. Global Meta</h4>
+                            {selectedStory && (
+                                <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
+                                    <span className="text-[8px] font-black text-emerald-500 uppercase">Live URL:</span>
+                                    <span className="text-[9px] font-mono text-emerald-400 select-all">https://cratetv.net/zine/{selectedStory.id}</span>
+                                </div>
+                            )}
+                         </div>
                          <div className="space-y-4">
                             <input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Headline" className="form-input bg-black/40 border-white/10 font-black text-xl uppercase tracking-tighter italic" />
                             <input value={formData.subtitle} onChange={e => setFormData({...formData, subtitle: e.target.value})} placeholder="Subtitle / Strapline" className="form-input bg-black/40 border-white/10 font-bold" />

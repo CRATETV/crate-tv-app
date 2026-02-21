@@ -253,7 +253,13 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            <Header searchQuery={searchQuery} onSearch={onSearch} onMobileSearchClick={handleSearchClick} topOffset={headerTop} />
+            <Header 
+                searchQuery={searchQuery} 
+                onSearch={onSearch} 
+                onMobileSearchClick={handleSearchClick} 
+                topOffset={headerTop} 
+                hideLiveSpotlight={activeBannerType === 'WATCH_PARTY'}
+            />
 
             <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500" style={{ paddingTop: activeBannerType !== 'NONE' ? '3rem' : '0px' }}>
                 {currentLiveHeroConfig ? (

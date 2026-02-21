@@ -109,6 +109,11 @@ const AppRouter: React.FC = () => {
     return <WatchPartyPage movieKey={watchPartyMatch[1]} />;
   }
 
+  // Prevent flashing LandingPage while Firebase restores session
+  if (!authInitialized) {
+    return <LoadingSpinner />;
+  }
+
   const actorProfileMatch = route.match(/^\/actors-directory\/([a-zA-Z0-9_-]+)/);
   if (actorProfileMatch && actorProfileMatch[1]) {
     return <ActorProfilePage slug={actorProfileMatch[1]} />;
