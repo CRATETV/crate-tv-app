@@ -12,31 +12,31 @@ import { useFestival } from '../contexts/FestivalContext';
 const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ story, onClick }) => (
     <div 
         onClick={onClick}
-        className="group cursor-pointer flex flex-col gap-4 transition-all duration-500"
+        className="group cursor-pointer flex flex-col gap-6 transition-all duration-500"
     >
-        <div className="relative overflow-hidden rounded-2xl bg-zinc-900 aspect-[16/9] shadow-lg">
+        <div className="relative overflow-hidden aspect-[4/3] bg-zinc-900">
             <img 
                 src={`/api/proxy-image?url=${encodeURIComponent(story.heroImage)}`} 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
                 alt="" 
                 crossOrigin="anonymous"
             />
-            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors duration-500"></div>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
             <div className="flex items-center gap-2">
-                <span className="text-red-600 font-bold uppercase text-[10px] tracking-wider">
+                <span className="text-red-600 font-black uppercase text-[9px] tracking-[0.2em]">
                     {story.type || 'DISPATCH'}
                 </span>
-                <span className="text-zinc-600 text-[10px]">•</span>
-                <span className="text-zinc-500 font-medium text-[10px] uppercase tracking-wider">{story.author}</span>
             </div>
-            <h3 className="font-bold text-white text-xl md:text-2xl leading-tight group-hover:text-red-500 transition-colors">
+            <h3 className="font-serif text-2xl md:text-3xl text-white leading-tight group-hover:text-red-500 transition-colors">
                 {story.title}
             </h3>
-            <p className="text-zinc-400 text-sm font-medium line-clamp-2 leading-relaxed">
+            <p className="text-zinc-500 text-sm font-medium line-clamp-2 leading-relaxed font-sans">
                 {story.subtitle}
             </p>
+            <div className="pt-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+                <span>By {story.author}</span>
+            </div>
         </div>
     </div>
 );
@@ -110,32 +110,35 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
             <main className="flex-grow pb-32 relative z-10">
                 {!activeStory ? (
                     <div className="space-y-0">
-                        <div className="relative pt-40 pb-16 px-6 md:px-20 text-center">
-                            <div className="max-w-4xl mx-auto space-y-6">
-                                <h1 className="text-5xl md:text-8xl font-black tracking-tight text-white">
-                                    CRATE <span className="text-red-600">ZINE</span>
-                                </h1>
-                                <p className="text-lg md:text-2xl text-zinc-400 font-medium leading-relaxed">
-                                    The latest dispatches from the distribution afterlife. <br className="hidden md:block" />
-                                    Watch parties, film festivals, and independent cinema culture.
+                        <div className="relative pt-48 pb-24 px-6 md:px-20">
+                            <div className="max-w-6xl mx-auto flex flex-col items-center text-center space-y-10">
+                                <div className="space-y-4">
+                                    <span className="text-red-600 font-black uppercase text-xs tracking-[0.4em]">The Editorial Hub</span>
+                                    <h1 className="text-6xl md:text-[10rem] font-serif font-medium tracking-tighter text-white leading-[0.85]">
+                                        Crate <span className="italic">Zine.</span>
+                                    </h1>
+                                </div>
+                                <p className="text-xl md:text-3xl text-zinc-500 font-medium max-w-3xl leading-snug font-serif italic">
+                                    A curated dispatch on independent cinema, <br className="hidden md:block" />
+                                    watch parties, and the distribution afterlife.
                                 </p>
                             </div>
                         </div>
 
-                        <div className="sticky top-[72px] z-40 py-6 bg-black/90 backdrop-blur-md border-y border-zinc-800 flex items-center justify-center gap-4 md:gap-10 overflow-x-auto scrollbar-hide px-6">
+                        <div className="sticky top-[72px] z-40 py-8 bg-black/95 backdrop-blur-xl border-y border-zinc-900 flex items-center justify-center gap-6 md:gap-16 overflow-x-auto scrollbar-hide px-6">
                             {filters.map(f => (
                                 <button 
                                     key={f} 
                                     onClick={() => setActiveFilter(f)}
-                                    className={`whitespace-nowrap font-bold uppercase text-[10px] md:text-xs tracking-widest transition-all px-4 py-2 rounded-full ${activeFilter === f ? 'bg-red-600 text-white' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
+                                    className={`whitespace-nowrap font-black uppercase text-[10px] tracking-[0.3em] transition-all ${activeFilter === f ? 'text-red-600' : 'text-zinc-700 hover:text-white'}`}
                                 >
                                     {f.replace('_', ' ')}
                                 </button>
                             ))}
                         </div>
 
-                        <div className="max-w-[1400px] mx-auto px-6 md:px-20 pt-16 pb-40">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-16">
+                        <div className="max-w-[1600px] mx-auto px-6 md:px-20 pt-24 pb-40">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-16 gap-y-32">
                                 {filteredStories.length > 0 ? (
                                     filteredStories.map((story) => (
                                         <ZineCard 
@@ -146,7 +149,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                     ))
                                 ) : (
                                     <div className="col-span-full py-48 text-center opacity-30">
-                                        <p className="text-zinc-600 uppercase font-bold tracking-widest text-sm">No dispatches found in this sector.</p>
+                                        <p className="text-zinc-600 uppercase font-black tracking-[0.5em] text-xs">No records found.</p>
                                     </div>
                                 )}
                             </div>
@@ -190,52 +193,65 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                         </section>
                     </div>
                 ) : (
-                    <div className="animate-[fadeIn_0.8s_ease-out]">
-                        <div className="relative w-full h-[50vh] md:h-[70vh] mb-12 overflow-hidden bg-zinc-950">
-                            <img src={`/api/proxy-image?url=${encodeURIComponent(activeStory.heroImage)}`} className="w-full h-full object-cover opacity-60" alt="" crossOrigin="anonymous" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
-                            
-                            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center max-w-5xl mx-auto space-y-8">
-                                <button onClick={() => handleNavigate(null)} className="flex items-center gap-2 text-zinc-400 hover:text-white transition-all uppercase font-bold text-[10px] tracking-widest bg-black/60 px-6 py-2 rounded-full border border-zinc-800 backdrop-blur-sm">
-                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                                    Back to Zine
-                                </button>
-                                <div className="space-y-4">
-                                    <span className="text-red-600 font-bold uppercase text-xs tracking-widest">{activeStory.type}</span>
-                                    <h1 className="text-4xl md:text-7xl font-black tracking-tight text-white leading-tight">{activeStory.title}</h1>
-                                    <p className="text-lg md:text-2xl text-zinc-300 font-medium max-w-3xl mx-auto leading-relaxed">{activeStory.subtitle}</p>
+                    <div className="animate-[fadeIn_0.8s_ease-out] bg-[#0a0a0a]">
+                        <div className="max-w-[1400px] mx-auto px-6 pt-40 pb-20">
+                            <button onClick={() => handleNavigate(null)} className="flex items-center gap-3 text-zinc-600 hover:text-white transition-all uppercase font-black text-[10px] tracking-[0.3em] mb-12">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                                Back to Archive
+                            </button>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
+                                <div className="lg:col-span-7 space-y-10">
+                                    <div className="space-y-6">
+                                        <span className="text-red-600 font-black uppercase text-xs tracking-[0.4em]">{activeStory.type}</span>
+                                        <h1 className="text-5xl md:text-8xl font-serif font-medium tracking-tighter text-white leading-[0.9]">{activeStory.title}</h1>
+                                        <p className="text-xl md:text-3xl text-zinc-400 font-serif italic leading-snug">"{activeStory.subtitle}"</p>
+                                    </div>
+                                    <div className="flex items-center gap-6 pt-6 border-t border-zinc-900">
+                                        <div className="space-y-1">
+                                            <p className="text-zinc-600 font-black uppercase text-[9px] tracking-widest">Written By</p>
+                                            <p className="text-white font-bold uppercase text-xs tracking-widest">{activeStory.author}</p>
+                                        </div>
+                                        <div className="w-px h-8 bg-zinc-900"></div>
+                                        <div className="space-y-1">
+                                            <p className="text-zinc-600 font-black uppercase text-[9px] tracking-widest">Published</p>
+                                            <p className="text-white font-bold uppercase text-xs tracking-widest">{activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString() : 'Active Record'}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-4 text-zinc-500 font-bold uppercase text-[10px] tracking-widest">
-                                    <span>By {activeStory.author}</span>
-                                    <span>•</span>
-                                    <span>{activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString() : 'Active Record'}</span>
+                                <div className="lg:col-span-5">
+                                    <div className="aspect-[4/5] bg-zinc-900 overflow-hidden shadow-2xl">
+                                        <img src={`/api/proxy-image?url=${encodeURIComponent(activeStory.heroImage)}`} className="w-full h-full object-cover" alt="" crossOrigin="anonymous" />
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <article ref={articleRef} className="max-w-[800px] mx-auto px-6 pb-60">
-                            <div className="space-y-12">
+                        <article ref={articleRef} className="max-w-[800px] mx-auto px-6 pb-60 pt-20">
+                            <div className="space-y-16">
                                 {activeStory.sections && activeStory.sections.length > 0 ? (
                                     activeStory.sections.map((section, idx) => (
                                         <div key={section.id}>
-                                            {section.type === 'header' && <h3 className="text-2xl md:text-4xl font-bold text-white mb-6 leading-tight">{section.content}</h3>}
+                                            {section.type === 'header' && <h3 className="text-3xl md:text-5xl font-serif font-medium text-white mb-8 leading-tight">{section.content}</h3>}
                                             {section.type === 'quote' && (
-                                                <div className="border-l-4 border-red-600 pl-8 py-4 my-12">
-                                                    <p className="text-xl md:text-3xl font-bold italic text-zinc-100 leading-snug">"{section.content}"</p>
+                                                <div className="py-12 border-y border-zinc-900 my-16">
+                                                    <p className="text-2xl md:text-4xl font-serif italic text-white leading-tight text-center max-w-2xl mx-auto">
+                                                        "{section.content}"
+                                                    </p>
                                                 </div>
                                             )}
                                             {section.type === 'image' && (
-                                                <div className="rounded-2xl overflow-hidden shadow-xl my-12 bg-zinc-900">
-                                                    <img src={`/api/proxy-image?url=${encodeURIComponent(section.content)}`} className="w-full h-auto" alt="" crossOrigin="anonymous" />
+                                                <div className="my-16">
+                                                    <img src={`/api/proxy-image?url=${encodeURIComponent(section.content)}`} className="w-full h-auto shadow-2xl" alt="" crossOrigin="anonymous" />
                                                 </div>
                                             )}
                                             {section.type === 'video' && (
-                                                <div className="rounded-2xl overflow-hidden shadow-xl my-12 bg-zinc-900 aspect-video">
+                                                <div className="my-16 aspect-video bg-zinc-900 shadow-2xl">
                                                     <video src={section.content} controls className="w-full h-full object-cover" playsInline />
                                                 </div>
                                             )}
                                             {section.type === 'text' && (
-                                                <p className="text-lg md:text-xl text-zinc-300 font-medium leading-relaxed mb-8">
+                                                <p className="text-lg md:text-xl text-zinc-400 font-medium leading-relaxed mb-8 font-serif">
                                                     {section.content}
                                                 </p>
                                             )}
@@ -243,7 +259,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                     ))
                                 ) : (
                                     <div className="prose prose-invert max-w-none">
-                                        <p className="text-lg md:text-xl text-zinc-300 font-medium leading-relaxed whitespace-pre-wrap">
+                                        <p className="text-lg md:text-xl text-zinc-400 font-medium leading-relaxed font-serif whitespace-pre-wrap">
                                             {activeStory.content}
                                         </p>
                                     </div>
