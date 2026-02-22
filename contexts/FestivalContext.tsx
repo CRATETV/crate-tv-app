@@ -61,12 +61,35 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         const now = new Date();
         const movieArray = Object.values(movies) as Movie[];
         
+        // 1. Check for explicitly LIVE parties first (highest priority)
         const liveKey = Object.keys(activeParties).find(key => {
             const m = movies[key];
-            return m && m.isWatchPartyEnabled && !m.isUnlisted;
+            // If it's a known movie, ensure it's not unlisted. 
+            // If it's not a known movie (e.g. a block), we allow it if it's live in Firestore.
+            return m ? !m.isUnlisted : true;
         });
-        if (liveKey) return movies[liveKey];
 
+        if (liveKey) {
+            if (movies[liveKey]) return movies[liveKey];
+            
+            // Fallback: Check if it's a festival block
+            const block = festivalData.flatMap(d => d.blocks).find(b => b.id === liveKey);
+            if (block) {
+                // Synthesize a movie-like object for the banner to render
+                return {
+                    key: block.id,
+                    title: block.title,
+                    watchPartyStartTime: block.watchPartyStartTime,
+                    isWatchPartyEnabled: true,
+                    isWatchPartyPaid: (block.price || 0) > 0,
+                    watchPartyPrice: block.price,
+                    poster: '', // Blocks might not have posters, banner handles empty
+                    director: 'Festival Event'
+                } as Movie;
+            }
+        }
+
+        // 2. Fallback to upcoming scheduled parties
         const upcomingParties = movieArray
             .filter(m => m.isWatchPartyEnabled && m.watchPartyStartTime && !m.isUnlisted)
             .filter(m => {
@@ -79,7 +102,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
 
         return upcomingParties[0] || null;
-    }, [activeParties, movies]);
+    }, [activeParties, movies, festivalData]);
 
     const fetchData = async (forceNoCache = false) => {
         try {

@@ -69,7 +69,7 @@ const FloatingReaction = React.memo<{ emoji: string; onComplete: () => void }>((
     );
 });
 
-const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALive?: boolean; user: any; isMobileController?: boolean }>(({ partyKey, directors, isQALive, user, isMobileController }) => {
+const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALive?: boolean; user: any; isMobileController?: boolean; isBackstageVerified?: boolean; onBackstageVerify?: (key: string) => void }>(({ partyKey, directors, isQALive, user, isMobileController, isBackstageVerified, onBackstageVerify }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -97,7 +97,13 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
             await fetch('/api/send-chat-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ movieKey: partyKey, userName: user.name || user.email, userAvatar: user.avatar || 'fox', text: newMessage }),
+                body: JSON.stringify({ 
+                    movieKey: partyKey, 
+                    userName: user.name || user.email, 
+                    userAvatar: user.avatar || 'fox', 
+                    text: newMessage,
+                    isVerifiedDirector: isBackstageVerified
+                }),
             });
             setNewMessage('');
         } catch (error) { console.error("Chat error:", error); } finally { setIsSending(false); }
@@ -115,11 +121,30 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
                 </div>
             )}
             <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide min-h-0">
+                {!isBackstageVerified && (
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4">
+                        <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2">Director Verification Required</p>
+                        <button 
+                            onClick={() => {
+                                const key = window.prompt("Enter Backstage Key:");
+                                if (key && onBackstageVerify) onBackstageVerify(key);
+                            }}
+                            className="text-[10px] font-black text-red-500 hover:text-white transition-colors uppercase tracking-tighter"
+                        >
+                            Authorize Backstage Node →
+                        </button>
+                    </div>
+                )}
                 {messages.map(msg => (
                     <div key={msg.id} className="flex items-start gap-3 animate-[fadeIn_0.2s_ease-out]">
                         <div className="w-8 h-8 rounded-full flex-shrink-0 p-1 border border-white/5 bg-gray-800" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
                         <div className="min-w-0">
-                            <p className="font-black text-[11px] uppercase tracking-tighter text-red-500">{msg.userName}</p>
+                            <div className="flex items-center gap-2">
+                                <p className="font-black text-[11px] uppercase tracking-tighter text-red-500">{msg.userName}</p>
+                                {msg.isVerifiedDirector && (
+                                    <span className="bg-red-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">Director</span>
+                                )}
+                            </div>
                             <p className="text-sm break-words leading-snug text-gray-300">{msg.text}</p>
                         </div>
                     </div>
@@ -128,7 +153,7 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
             </div>
             <form onSubmit={handleSendMessage} className="p-3 bg-black/60 backdrop-blur-xl border-t border-white/5 flex-shrink-0">
                 <div className="flex items-center gap-2 bg-gray-800/80 rounded-full px-4 py-1 border border-white/10">
-                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type a message..." className="bg-transparent border-none text-white text-sm w-full focus:ring-0 py-2.5" disabled={!user || isSending} />
+                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder={isBackstageVerified ? "Speak as Director..." : "Type a message..."} className="bg-transparent border-none text-white text-sm w-full focus:ring-0 py-2.5" disabled={!user || isSending} />
                     <button type="submit" className="text-red-500" disabled={!user || isSending || !newMessage.trim()}><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
                 </div>
             </form>
@@ -138,16 +163,56 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const { user, unlockedWatchPartyKeys, unlockWatchParty, rentals } = useAuth();
-    const { movies: allMovies, isLoading: isFestivalLoading } = useFestival();
+    const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     const [showPaywall, setShowPaywall] = useState(false);
+    const [backstageInput, setBackstageInput] = useState('');
+    const [backstageError, setBackstageError] = useState(false);
+    const [isBackstageVerified, setIsBackstageVerified] = useState(false);
     const [isEnded, setIsEnded] = useState(false);
     const [isControllerMode, setIsControllerMode] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
 
-    const movie = useMemo(() => allMovies[movieKey], [movieKey, allMovies]);
+    const movie = useMemo(() => {
+        if (allMovies[movieKey]) return allMovies[movieKey];
+        
+        // Check if it's a festival block
+        const block = festivalData.flatMap(d => d.blocks).find(b => b.id === movieKey);
+        if (block) {
+            // Synthesize a movie object for the block
+            // If the block has movies, we might want to play the first one as a fallback
+            const firstMovie = block.movieKeys.length > 0 ? allMovies[block.movieKeys[0]] : null;
+            
+            return {
+                key: block.id,
+                title: block.title,
+                watchPartyStartTime: block.watchPartyStartTime,
+                isWatchPartyEnabled: true,
+                isWatchPartyPaid: (block.price || 0) > 0,
+                watchPartyPrice: block.price,
+                director: 'Festival Event',
+                fullMovie: firstMovie?.fullMovie || '',
+                isLiveStream: firstMovie?.isLiveStream || false,
+                liveStreamEmbed: firstMovie?.liveStreamEmbed || ''
+            } as Movie;
+        }
+        return null;
+    }, [movieKey, allMovies, festivalData]);
+
+    const handleBackstageSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (partyState?.backstageKey && backstageInput.toUpperCase() === partyState.backstageKey.toUpperCase()) {
+            unlockWatchParty(movieKey);
+            setIsBackstageVerified(true);
+            setBackstageError(false);
+            setBackstageInput('');
+        } else {
+            setBackstageError(true);
+            setTimeout(() => setBackstageError(false), 2000);
+        }
+    };
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -223,13 +288,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [movieKey]);
 
     const hasAccess = useMemo(() => {
-        if (isControllerMode) return true;
+        if (isControllerMode || isBackstageVerified) return true;
         if (!movie) return false;
         if (unlockedWatchPartyKeys.has(movieKey)) return true;
         if (!movie.isWatchPartyPaid) return true;
         const exp = rentals[movieKey];
         return exp && new Date(exp) > new Date();
-    }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode]);
+    }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified]);
 
     const logSentiment = async (emoji: string) => {
         const db = getDbInstance();
@@ -259,17 +324,38 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     return (
         <div className="flex flex-col h-[100svh] bg-black text-white overflow-hidden">
-            <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full">
+                <div className="flex-grow flex flex-col md:flex-row relative overflow-hidden h-full">
                 <div className="flex-grow flex flex-col relative h-full">
                     <div className="p-3 bg-black/90 flex items-center justify-between border-b border-white/5">
                         <button onClick={() => window.history.back()} className="text-gray-400 hover:text-white transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                         </button>
-                        <div className="text-center">
+                        <div className="text-center flex flex-col items-center">
                             <span className="text-red-500 font-black text-[9px] uppercase tracking-widest animate-pulse">Transmission Active</span>
                             <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{movie.title}</h2>
+                            {isBackstageVerified && (
+                                <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Backstage Verified</span>
+                            )}
                         </div>
-                        <div className="w-10"></div>
+                        <div className="w-10 flex justify-end">
+                            {!isBackstageVerified && (
+                                <button 
+                                    onClick={() => {
+                                        const key = window.prompt("Enter Backstage Key:");
+                                        if (key && partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
+                                            setIsBackstageVerified(true);
+                                            unlockWatchParty(movieKey);
+                                        } else if (key) {
+                                            alert("Invalid Protocol Key.");
+                                        }
+                                    }}
+                                    className="text-gray-600 hover:text-white transition-colors"
+                                    title="Backstage Access"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex-grow bg-[#050505] relative flex items-center justify-center overflow-hidden">
@@ -280,9 +366,27 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         </div>
 
                         {!hasAccess ? (
-                             <div className="text-center p-8 space-y-10 animate-[fadeIn_0.8s_ease-out]">
+                             <div className="text-center p-8 space-y-10 animate-[fadeIn_0.8s_ease-out] max-w-xl mx-auto">
                                 <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">Admission Required.</h2>
-                                <button onClick={() => setShowPaywall(true)} className="bg-white text-black px-16 py-6 rounded-full font-black uppercase tracking-tighter text-xl shadow-2xl hover:scale-105 active:scale-95 transition-all">Unlock Admission // ${movie.watchPartyPrice?.toFixed(2)}</button>
+                                <div className="space-y-6">
+                                    <button onClick={() => setShowPaywall(true)} className="w-full bg-white text-black px-16 py-6 rounded-full font-black uppercase tracking-tighter text-xl shadow-2xl hover:scale-105 active:scale-95 transition-all">Unlock Admission // ${movie.watchPartyPrice?.toFixed(2)}</button>
+                                    
+                                    <div className="pt-12 border-t border-white/10">
+                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em] mb-6">Director & Staff Verification</p>
+                                        <form onSubmit={handleBackstageSubmit} className="flex flex-col gap-4">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Enter Backstage Key" 
+                                                value={backstageInput}
+                                                onChange={(e) => setBackstageInput(e.target.value)}
+                                                className={`bg-white/5 border ${backstageError ? 'border-red-500' : 'border-white/10'} rounded-2xl px-6 py-4 text-center font-mono text-xl tracking-[0.5em] uppercase outline-none focus:border-white/30 transition-all`}
+                                            />
+                                            <button type="submit" className="text-[10px] font-black text-gray-400 hover:text-white uppercase tracking-widest transition-colors">
+                                                {backstageError ? 'Invalid Protocol Key' : 'Authorize Backstage Access'}
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
                              </div>
                         ) : (
                             movie.isLiveStream ? (
@@ -340,12 +444,40 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     </div>
 
                     <div className="md:hidden h-80 flex flex-col overflow-hidden bg-[#0a0a0a]">
-                        <EmbeddedChat partyKey={movieKey} directors={[]} isQALive={partyState?.isQALive} user={user} />
+                        <EmbeddedChat 
+                            partyKey={movieKey} 
+                            directors={[]} 
+                            isQALive={partyState?.isQALive} 
+                            user={user} 
+                            isBackstageVerified={isBackstageVerified} 
+                            onBackstageVerify={(key) => {
+                                if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
+                                    setIsBackstageVerified(true);
+                                    unlockWatchParty(movieKey);
+                                } else {
+                                    alert("Invalid Protocol Key.");
+                                }
+                            }}
+                        />
                     </div>
                 </div>
 
                 <div className="hidden md:flex w-96 flex-shrink-0 h-full border-l border-white/5">
-                    <EmbeddedChat partyKey={movieKey} directors={[]} isQALive={partyState?.isQALive} user={user} />
+                    <EmbeddedChat 
+                        partyKey={movieKey} 
+                        directors={[]} 
+                        isQALive={partyState?.isQALive} 
+                        user={user} 
+                        isBackstageVerified={isBackstageVerified} 
+                        onBackstageVerify={(key) => {
+                            if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
+                                setIsBackstageVerified(true);
+                                unlockWatchParty(movieKey);
+                            } else {
+                                alert("Invalid Protocol Key.");
+                            }
+                        }}
+                    />
                 </div>
             </div>
 
