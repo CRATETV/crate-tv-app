@@ -1,4 +1,3 @@
-
 import { Category, Movie, FestivalDay, FestivalConfig, AboutData, PromoCode } from './types';
 
 // Utility function to robustly check if a movie is past its release time.
@@ -24,7 +23,7 @@ export const categoriesData: Record<string, Category> = {
   "featured": {
     "title": "Spotlight Selection",
     "type": "featured",
-    "movieKeys": ["meridian", "fighter", "fling", "gemini", "autumn", "crossroads"]
+    "movieKeys": []
   },
   "vault": {
     "title": "The Vault",
@@ -54,99 +53,26 @@ export const categoriesData: Record<string, Category> = {
 };
 
 export const moviesData: Record<string, Movie> = {
-  "neighbours": {
-    "key": "neighbours",
-    "title": "Neighbours",
-    "synopsis": "Two neighbors live peacefully until a flower grows on the border of their properties, sparking a violent and absurdist conflict. A landmark of stop-motion pixilation and a powerful anti-war allegory.",
+  "trip_to_moon": {
+    "key": "trip_to_moon",
+    "title": "A Trip to the Moon",
+    "synopsis": "The 1902 sci-fi masterpiece by Georges Méliès. Witness the first iconic image of space travel and the birth of special effects in cinema history.",
     "cast": [
       {
-        "name": "Grant Munro",
+        "name": "Georges Méliès",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Pioneer of the pixilation technique.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-      },
-      {
-        "name": "Jean-Paul Ladouceur",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Frequent collaborator with Norman McLaren.",
+        "bio": "The father of cinematic magic.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
-    "director": "Norman McLaren",
+    "director": "Georges Méliès",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Neighbours.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Neighbours_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Neighbours_Poster.webp",
-    "likes": 1540,
-    "durationInMinutes": 8,
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
+    "likes": 2100,
     "publishedAt": "2025-01-01T00:00:00Z",
     "isUnlisted": false
-  },
-  "crossroads": {
-    "key": "crossroads",
-    "title": "Crossroads",
-    "synopsis": "Tensions boil over during a post-dinner conversation, revealing hidden truths and shifting the dynamics between lifelong friends. A study in dialogue and confined-space tension.",
-    "cast": [
-      {
-        "name": "Michelle Reale-Opalesky",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Specialist in high-tension dramatic performance.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-      }
-    ],
-    "director": "Salome Denoon",
-    "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads+.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads+.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Crossroads+.webp",
-    "likes": 420,
-    "durationInMinutes": 8,
-    "publishedAt": "2025-03-10T12:00:00Z",
-    "isUnlisted": false
-  },
-  "fighter": {
-    "key": "fighter",
-    "title": "Fighter",
-    "synopsis": "Minutes before a career-defining match, a teenage boxer with Down's syndrome must fight his family and a skeptical committee for his right to enter the ring.",
-    "cast": [
-      {
-        "name": "Tommy Jessop",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Tommy is a legendary actor—the first with Down syndrome to play Hamlet on stage.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-      }
-    ],
-    "director": "Bugsy Steel",
-    "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/FighterShortFilm.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fighter+.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fighter+.webp",
-    "likes": 1240,
-    "publishedAt": "2025-01-10T12:00:00Z",
-    "isUnlisted": false
-  },
-  "meridian": {
-    "key": "meridian",
-    "title": "Meridian",
-    "synopsis": "A group of technical specialists investigate a series of mysterious disappearances in a high-contrast cinematic environment. This film serves as a master-class in technical lighting and high-bitrate composition.",
-    "cast": [
-      {
-        "name": "S. Denoon",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Leading figure in experimental technical performance.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-      }
-    ],
-    "director": "Netflix Open Source",
-    "trailer": "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Trailer.mp4",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Full_4K.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Poster.webp",
-    "likes": 850,
-    "durationInMinutes": 12,
-    "publishedAt": "2025-02-15T10:00:00Z",
-    "isUnlisted": false,
-    "zineUrl": "https://cratetv.net/zine/meridian-technical-deep-dive"
   },
   "the_cook": {
     "key": "the_cook",
@@ -169,41 +95,6 @@ export const moviesData: Record<string, Movie> = {
     "publishedAt": "2025-01-05T09:00:00Z",
     "isUnlisted": false
   },
-  "autumn": {
-    "key": "autumn",
-    "title": "Autumn",
-    "synopsis": "A moody, atmospheric exploration of isolation and the changing of seasons. Shot entirely on 16mm, this indie short focuses on the kinetic beauty of decay.",
-    "cast": [],
-    "director": "Independent Visionary",
-    "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn_Short.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn_Art.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn_Art.webp",
-    "likes": 310,
-    "publishedAt": "2025-03-01T15:00:00Z",
-    "isUnlisted": false
-  },
-  "gemini": {
-    "key": "gemini",
-    "title": "Gemini",
-    "synopsis": "Dual natures collide in this sci-fi thriller about identity and the blurred lines between artificial and human intelligence. A tense, dialogue-driven performance piece.",
-    "cast": [
-      {
-        "name": "Marcus Kane",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Specialist in psychological tension.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-      }
-    ],
-    "director": "The Collective",
-    "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini_Short.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini_Poster.webp",
-    "likes": 560,
-    "publishedAt": "2025-04-12T18:00:00Z",
-    "isUnlisted": false
-  },
   "time_service": {
     "key": "time_service",
     "title": "Time Service",
@@ -218,50 +109,26 @@ export const moviesData: Record<string, Movie> = {
     "publishedAt": "2025-02-20T11:00:00Z",
     "isUnlisted": false
   },
-  "trip_to_moon": {
-    "key": "trip_to_moon",
-    "title": "A Trip to the Moon",
-    "synopsis": "The 1902 sci-fi masterpiece by Georges Méliès. Witness the first iconic image of space travel and the birth of special effects in cinema history.",
+  "neighbours": {
+    "key": "neighbours",
+    "title": "Neighbours",
+    "synopsis": "Two neighbors live peacefully until a flower grows on the border of their properties, sparking a violent and absurdist conflict. A landmark of stop-motion pixilation and a powerful anti-war allegory.",
     "cast": [
       {
-        "name": "Georges Méliès",
+        "name": "Grant Munro",
         "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "The father of cinematic magic.",
+        "bio": "Pioneer of the pixilation technique.",
         "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
       }
     ],
-    "director": "Georges Méliès",
+    "director": "Norman McLaren",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
-    "likes": 2100,
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Neighbours.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Neighbours_Poster.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/Neighbours_Poster.webp",
+    "likes": 1540,
+    "durationInMinutes": 8,
     "publishedAt": "2025-01-01T00:00:00Z",
-    "isUnlisted": false,
-    "posterVariants": [
-       "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
-       "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Poster.webp"
-    ]
-  },
-  "fling": {
-    "key": "fling",
-    "title": "Fling",
-    "synopsis": "A high-stakes romantic drama about the consequences of a weekend getaway gone wrong. Tensions rise as secrets are revealed in this intimate character study.",
-    "cast": [
-      {
-        "name": "Marcus Kane",
-        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
-        "bio": "Specialist in psychological tension.",
-        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
-      }
-    ],
-    "director": "Independent Visionary",
-    "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fling.mp4",
-    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fling_Poster.webp",
-    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fling_Poster.webp",
-    "likes": 450,
-    "publishedAt": "2025-04-15T12:00:00Z",
     "isUnlisted": false
   },
   "a_fool_and_his_money": {
