@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -17,6 +18,7 @@ async function startServer() {
   const app = express();
   const port = 3000;
 
+  app.use(cors());
   app.use(express.json());
 
   // Helper to wrap Vercel-style handlers for Express

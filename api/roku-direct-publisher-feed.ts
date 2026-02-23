@@ -3,30 +3,58 @@
 
 import { getApiData } from './_lib/data.js';
 import { Movie, Category } from '../types.js';
+import { getAdminDb } from './_lib/firebaseAdmin.js';
+import { moviesData as fallbackMovies, categoriesData as fallbackCategories } from '../constants.js';
 
-// Helper to check if a movie is released
-const isMovieReleased = (movie: Movie | undefined | null): boolean => {
-    if (!movie || !movie.releaseDateTime) {
-        return true;
-    }
-    return new Date(movie.releaseDateTime) <= new Date();
-};
+function toDate(val: any): Date | null {
+    if (!val) return null;
+    if (val.toDate && typeof val.toDate === 'function') return val.toDate();
+    if (typeof val === 'object' && val._seconds) return new Date(val._seconds * 1000);
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+function isReleased(movie: Movie | undefined | null): boolean {
+    if (!movie || !movie.releaseDateTime) return true;
+    const date = toDate(movie.releaseDateTime);
+    return !date || date <= new Date();
+}
 
 // Main function to generate the Direct Publisher feed
 export async function GET(request: Request) {
   try {
-    const { movies: moviesData, categories: categoriesData } = await getApiData();
+    const apiData = await getApiData();
+    const moviesData: Record<string, Movie> = { ...fallbackMovies, ...(apiData.movies || {}) };
+    const categoriesData: Record<string, Category> = { ...fallbackCategories, ...(apiData.categories || {}) };
+
+    const db = getAdminDb();
+    if (db) {
+        const [moviesSnap, categoriesSnap] = await Promise.all([
+            db.collection('movies').get(),
+            db.collection('categories').get()
+        ]);
+
+        if (!moviesSnap.empty) {
+            moviesSnap.forEach(doc => {
+                moviesData[doc.id] = { key: doc.id, ...doc.data() } as Movie;
+            });
+        }
+
+        if (!categoriesSnap.empty) {
+            categoriesSnap.forEach(doc => {
+                categoriesData[doc.id] = { id: doc.id, ...doc.data() } as any as Category;
+            });
+        }
+    }
     
     // Create a map to associate movie keys with their genres
     const movieGenreMap = new Map<string, string[]>();
-    // FIX: Cast Object.values to Movie[] to allow accessing properties on `movie`.
     (Object.values(moviesData) as Movie[]).forEach((movie: Movie) => {
-        if (movie && movie.key && isMovieReleased(movie) && movie.fullMovie) {
+        if (movie && movie.key && isReleased(movie) && movie.fullMovie) {
             movieGenreMap.set(movie.key, []);
         }
     });
     
-    // FIX: Cast Object.values to Category[] and add type to `category` parameter to resolve unknown properties.
     (Object.values(categoriesData) as Category[]).forEach((category: Category) => {
         if (category && Array.isArray(category.movieKeys)) {
             category.movieKeys.forEach(movieKey => {
@@ -38,25 +66,25 @@ export async function GET(request: Request) {
     });
     
     // Transform the application's movie data into the format Roku Direct Publisher requires
-    // FIX: Cast Object.values to Movie[] to resolve error on `.filter`
     const rokuMovies = (Object.values(moviesData) as Movie[])
-      .filter((movie): movie is Movie => !!movie && isMovieReleased(movie) && !!movie.fullMovie)
+      .filter((movie): movie is Movie => !!movie && isReleased(movie) && !!movie.fullMovie)
       .map((movie: Movie) => {
+        const releaseDate = toDate(movie.releaseDateTime) || new Date();
         return {
           id: movie.key,
           title: movie.title,
-          shortDescription: movie.synopsis.replace(/<br\s*\/?>/gi, ' ').substring(0, 200).trim() + '...',
-          longDescription: movie.synopsis.replace(/<br\s*\/?>/gi, '\n').trim(),
-          thumbnail: movie.poster,
-          releaseDate: movie.releaseDateTime ? new Date(movie.releaseDateTime).toISOString() : new Date().toISOString(),
+          shortDescription: (movie.synopsis || '').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').substring(0, 200).trim() + '...',
+          longDescription: (movie.synopsis || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim(),
+          thumbnail: movie.poster || movie.tvPoster,
+          releaseDate: releaseDate.toISOString(),
           genres: movieGenreMap.get(movie.key) || ['Independent'],
           tags: movieGenreMap.get(movie.key) || ['Independent'],
           credits: [
             { name: movie.director, role: 'director' },
-            ...movie.cast.map(actor => ({ name: actor.name, role: 'actor' }))
+            ...(movie.cast || []).map(actor => ({ name: actor.name, role: 'actor' }))
           ],
           content: {
-            dateAdded: movie.releaseDateTime ? new Date(movie.releaseDateTime).toISOString() : new Date().toISOString(),
+            dateAdded: releaseDate.toISOString(),
             videos: [{
               url: movie.fullMovie,
               quality: 'HD',
