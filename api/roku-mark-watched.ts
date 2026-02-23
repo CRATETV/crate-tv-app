@@ -31,6 +31,23 @@ export async function POST(request: Request) {
         const userRef = db.collection('users').doc(uid);
         await userRef.update({ watchedMovies: FieldValue.arrayUnion(movieKey) });
 
+        // Track global view for Roku
+        const batch = db.batch();
+        const viewDocRef = db.collection('view_counts').doc(movieKey);
+        batch.set(viewDocRef, { 
+            count: FieldValue.increment(1),
+            lastViewed: FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        const eventRef = db.collection('traffic_events').doc();
+        batch.set(eventRef, {
+            movieKey,
+            platform: 'ROKU',
+            timestamp: FieldValue.serverTimestamp(),
+            type: 'VIEW'
+        });
+        await batch.commit();
+
         return new Response(JSON.stringify({ success: true }), { status: 200 });
     } catch (error) {
         console.error("Error marking as watched on Roku:", error);

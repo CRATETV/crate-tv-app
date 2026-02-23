@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     batch.set(eventRef, {
         movieKey,
         country,
+        platform: 'WEB',
         timestamp,
         type: 'VIEW'
     });

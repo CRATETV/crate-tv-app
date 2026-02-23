@@ -24,7 +24,7 @@ export const categoriesData: Record<string, Category> = {
   "featured": {
     "title": "Spotlight Selection",
     "type": "featured",
-    "movieKeys": ["meridian", "fighter", "gemini", "autumn", "crossroads"]
+    "movieKeys": ["meridian", "fighter", "fling", "gemini", "autumn", "crossroads"]
   },
   "vault": {
     "title": "The Vault",
@@ -232,7 +232,7 @@ export const moviesData: Record<string, Movie> = {
     ],
     "director": "Georges Méliès",
     "trailer": "",
-    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/ATripToTheMoon.mp4",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.mp4",
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "likes": 2100,
@@ -242,6 +242,27 @@ export const moviesData: Record<string, Movie> = {
        "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
        "https://cratetelevision.s3.us-east-1.amazonaws.com/Meridian_Poster.webp"
     ]
+  },
+  "fling": {
+    "key": "fling",
+    "title": "Fling",
+    "synopsis": "A high-stakes romantic drama about the consequences of a weekend getaway gone wrong. Tensions rise as secrets are revealed in this intimate character study.",
+    "cast": [
+      {
+        "name": "Marcus Kane",
+        "photo": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png",
+        "bio": "Specialist in psychological tension.",
+        "highResPhoto": "https://cratetelevision.s3.us-east-1.amazonaws.com/photos+/Defaultpic.png"
+      }
+    ],
+    "director": "Independent Visionary",
+    "trailer": "",
+    "fullMovie": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fling.mp4",
+    "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fling_Poster.webp",
+    "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fling_Poster.webp",
+    "likes": 450,
+    "publishedAt": "2025-04-15T12:00:00Z",
+    "isUnlisted": false
   },
   "a_fool_and_his_money": {
     "key": "a_fool_and_his_money",

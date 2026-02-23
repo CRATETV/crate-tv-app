@@ -130,7 +130,7 @@ export async function GET(request: Request) {
     const response: RokuFeed = {
         version: Date.now(),
         timestamp: new Date().toISOString(),
-        heroItems: categories[0]?.children.slice(0, 5) || [],
+        heroItems: (categories[0]?.children || publicSquare[0]?.children || []).slice(0, 5),
         categories,
         publicSquare,
         liveNow: []
@@ -146,9 +146,20 @@ export async function GET(request: Request) {
         },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: "Manifest re-syncing..." }), {
+    console.error("Roku Feed Error:", error);
+    return new Response(JSON.stringify({
+        version: Date.now(),
+        timestamp: new Date().toISOString(),
+        heroItems: [],
+        categories: [],
+        publicSquare: [],
+        liveNow: []
+    }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store, no-cache, must-revalidate'
+        }
     });
   }
 }

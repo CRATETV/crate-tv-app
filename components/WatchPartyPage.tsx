@@ -161,6 +161,38 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
     );
 });
 
+const SuggestionsSection: React.FC<{ currentMovie: Movie; allMovies: Record<string, Movie> }> = ({ currentMovie, allMovies }) => {
+    const suggestions = useMemo(() => {
+        return Object.values(allMovies)
+            .filter(m => m.key !== currentMovie.key && !m.isUnlisted)
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 3);
+    }, [currentMovie, allMovies]);
+
+    if (suggestions.length === 0) return null;
+
+    return (
+        <div className="mt-12 space-y-6 animate-[fadeIn_1s_ease-out]">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500">You Might Also Like</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                {suggestions.map(m => (
+                    <button 
+                        key={m.key} 
+                        onClick={() => window.location.href = `/movie/${m.key}`}
+                        className="group relative aspect-video rounded-2xl overflow-hidden border border-white/10 hover:border-emerald-500 transition-all shadow-2xl"
+                    >
+                        <img src={m.poster} alt={m.title} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-4">
+                            <p className="text-[11px] font-black uppercase tracking-tighter text-white truncate group-hover:text-emerald-400 transition-colors">{m.title}</p>
+                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-1">{m.director}</p>
+                        </div>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const { user, unlockedWatchPartyKeys, unlockWatchParty, rentals } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
@@ -172,8 +204,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isBackstageVerified, setIsBackstageVerified] = useState(false);
     const [isEnded, setIsEnded] = useState(false);
     const [isControllerMode, setIsControllerMode] = useState(false);
+    const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
+
+    const blockMovies = useMemo(() => {
+        const block = festivalData.flatMap(d => d.blocks).find(b => b.id === movieKey);
+        if (!block) return [];
+        return block.movieKeys.map(key => allMovies[key]).filter(Boolean);
+    }, [movieKey, allMovies, festivalData]);
 
     const movie = useMemo(() => {
         if (allMovies[movieKey]) return allMovies[movieKey];
@@ -182,7 +221,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const block = festivalData.flatMap(d => d.blocks).find(b => b.id === movieKey);
         if (block) {
             // Synthesize a movie object for the block
-            // If the block has movies, we might want to play the first one as a fallback
             const firstMovie = block.movieKeys.length > 0 ? allMovies[block.movieKeys[0]] : null;
             
             return {
@@ -200,6 +238,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         }
         return null;
     }, [movieKey, allMovies, festivalData]);
+
+    const currentMovie = useMemo(() => {
+        if (blockMovies.length > 0) {
+            return blockMovies[currentMovieIndex] || blockMovies[0];
+        }
+        return movie;
+    }, [blockMovies, currentMovieIndex, movie]);
 
     const handleBackstageSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -221,57 +266,84 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     useEffect(() => {
         const video = videoRef.current;
-        if (!video || !partyState?.actualStartTime || movie?.isLiveStream || isControllerMode) return;
+        if (!video || !partyState?.actualStartTime || currentMovie?.isLiveStream || isControllerMode) return;
 
         const syncClock = () => {
             const now = Date.now();
             if (now - lastSeekTimeRef.current < 2000) return;
             try {
                 const serverStart = (partyState.actualStartTime as any).toDate().getTime();
-                const targetPosition = Math.max(0, (now - serverStart) / 1000);
-                const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
+                const totalElapsed = Math.max(0, (now - serverStart) / 1000);
                 
-                if (targetPosition >= movieDuration) {
-                    if (!isEnded) {
-                        setIsEnded(true);
-                        video.pause();
-                        video.currentTime = movieDuration;
+                if (blockMovies.length > 0) {
+                    let cumulativeTime = 0;
+                    let found = false;
+                    for (let i = 0; i < blockMovies.length; i++) {
+                        const m = blockMovies[i];
+                        const duration = (m.durationInMinutes || 10) * 60;
+                        if (totalElapsed < cumulativeTime + duration) {
+                            if (currentMovieIndex !== i) {
+                                setCurrentMovieIndex(i);
+                                setIsEnded(false);
+                            }
+                            const movieElapsed = totalElapsed - cumulativeTime;
+                            syncVideo(movieElapsed, duration);
+                            found = true;
+                            break;
+                        }
+                        cumulativeTime += duration;
                     }
-                    return;
-                }
-
-                const drift = targetPosition - video.currentTime;
-                const absDrift = Math.abs(drift);
-
-                // 1. HARD SEEK: If drift is massive (> 5s), jump immediately
-                if (absDrift > 5 && !video.seeking && video.readyState >= 2) {
-                    lastSeekTimeRef.current = now;
-                    video.currentTime = targetPosition;
-                    video.playbackRate = 1.0; // Reset rate on jump
-                } 
-                // 2. SMOOTH SYNC: If drift is moderate (0.5s - 5s), adjust playback rate
-                else if (absDrift > 0.5 && absDrift <= 5 && video.readyState >= 3) {
-                    // If behind, speed up slightly. If ahead, slow down slightly.
-                    video.playbackRate = drift > 0 ? 1.06 : 0.94;
-                } 
-                // 3. IN SYNC: Reset to normal speed
-                else {
-                    video.playbackRate = 1.0;
-                }
-
-                // Handle play/pause state from server
-                if (partyState.isPlaying && video.paused && !video.ended && video.readyState >= 2) {
-                    video.play().catch(() => {});
-                } else if (!partyState.isPlaying && !video.paused) {
-                    video.pause();
+                    if (!found && !isEnded) {
+                        setIsEnded(true);
+                    }
+                } else {
+                    const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
+                    if (totalElapsed >= movieDuration) {
+                        if (!isEnded) {
+                            setIsEnded(true);
+                            video.pause();
+                            video.currentTime = movieDuration;
+                        }
+                    } else {
+                        syncVideo(totalElapsed, movieDuration);
+                    }
                 }
             } catch (e) { console.error("Sync heartbeat failure:", e); }
+        };
+
+        const syncVideo = (targetPosition: number, duration: number) => {
+            if (!video) return;
+            
+            const drift = targetPosition - video.currentTime;
+            const absDrift = Math.abs(drift);
+
+            // 1. HARD SEEK: If drift is massive (> 5s), jump immediately
+            if (absDrift > 5 && !video.seeking && video.readyState >= 2) {
+                lastSeekTimeRef.current = Date.now();
+                video.currentTime = targetPosition;
+                video.playbackRate = 1.0;
+            } 
+            // 2. SMOOTH SYNC: If drift is moderate (0.5s - 5s), adjust playback rate
+            else if (absDrift > 0.5 && absDrift <= 5 && video.readyState >= 3) {
+                video.playbackRate = drift > 0 ? 1.06 : 0.94;
+            } 
+            // 3. IN SYNC: Reset to normal speed
+            else {
+                video.playbackRate = 1.0;
+            }
+
+            // Handle play/pause state from server
+            if (partyState.isPlaying && video.paused && !video.ended && video.readyState >= 2) {
+                video.play().catch(() => {});
+            } else if (!partyState.isPlaying && !video.paused) {
+                video.pause();
+            }
         };
 
         const interval = setInterval(syncClock, 1000);
         syncClock(); 
         return () => clearInterval(interval);
-    }, [partyState, movie, isEnded, isControllerMode]);
+    }, [partyState, movie, blockMovies, currentMovieIndex, isEnded, isControllerMode, currentMovie]);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -332,7 +404,15 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         </button>
                         <div className="text-center flex flex-col items-center">
                             <span className="text-red-500 font-black text-[9px] uppercase tracking-widest animate-pulse">Transmission Active</span>
-                            <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{movie.title}</h2>
+                            <h2 className="text-sm font-bold truncate max-w-[200px] md:max-w-none">{currentMovie?.title || 'Loading...'}</h2>
+                            {blockMovies.length > 1 && currentMovie && (
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest">Part {currentMovieIndex + 1} of {blockMovies.length}</span>
+                                    {currentMovieIndex < blockMovies.length - 1 && (
+                                        <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest animate-pulse">Up Next: {blockMovies[currentMovieIndex + 1].title}</span>
+                                    )}
+                                </div>
+                            )}
                             {isBackstageVerified && (
                                 <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Backstage Verified</span>
                             )}
@@ -397,7 +477,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 <div className="relative w-full h-full">
                                     <video 
                                         ref={videoRef} 
-                                        src={movie.fullMovie} 
+                                        src={currentMovie?.fullMovie} 
                                         className={`w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
                                         autoPlay 
                                         muted={false} 
@@ -405,16 +485,19 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         webkit-playsinline="true"
                                         controls={false}
                                     />
-                                    {isEnded && (
+                                    {isEnded && currentMovie && (
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
-                                            <div className="max-w-2xl space-y-10">
+                                            <div className="max-w-3xl space-y-10">
                                                 <div>
                                                     <p className="text-red-500 font-black uppercase tracking-[0.8em] text-[10px] mb-4">Transmission Complete</p>
                                                     <h3 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none text-white">Thank You.</h3>
                                                     <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mt-6 max-w-lg mx-auto leading-relaxed">
-                                                        "{movie.title}" produced by <span className="text-white">{movie.director}</span>. Thank you for supporting the distribution afterlife of independent cinema.
+                                                        "{currentMovie.title}" produced by <span className="text-white">{currentMovie.director}</span>. Thank you for supporting the distribution afterlife of independent cinema.
                                                     </p>
                                                 </div>
+
+                                                {currentMovie && blockMovies.length === 0 && <SuggestionsSection currentMovie={currentMovie} allMovies={allMovies} />}
+
                                                 <div className="pt-10 flex flex-col sm:flex-row items-center justify-center gap-10">
                                                     <button onClick={() => window.history.back()} className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-500 hover:text-white transition-colors">Return to Library</button>
                                                     <div className="w-px h-6 bg-white/10 hidden sm:block"></div>
@@ -481,7 +564,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 </div>
             </div>
 
-            {showPaywall && (
+            {showPaywall && movie && (
                 <SquarePaymentModal 
                     movie={movie} 
                     paymentType="watchPartyTicket" 

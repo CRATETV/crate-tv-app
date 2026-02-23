@@ -596,4 +596,9 @@ export interface AnalyticsData {
   festivalUsers: string[];
   crateFestRevenue: number;
   viewLocations: Record<string, Record<string, number>>;
+  rokuEngagement?: {
+    totalDevices: number;
+    totalRokuViews: number;
+    viewsByMovie: Record<string, number>;
+  };
 }

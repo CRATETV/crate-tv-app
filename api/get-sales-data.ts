@@ -95,7 +95,7 @@ export async function POST(request: Request) {
         const crateFestConfig = settingsDoc.data()?.crateFestConfig as CrateFestConfig | undefined;
         const crateFestBlockTitles = crateFestConfig?.movieBlocks.map(b => b.title) || [];
 
-        const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot, presenceSnapshot, adminPayoutsSnapshot, billSavingsSnapshot] = await Promise.all([
+        const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot, presenceSnapshot, adminPayoutsSnapshot, billSavingsSnapshot, rokuLinksSnapshot, rokuEventsSnapshot] = await Promise.all([
             accessToken ? fetchAllSquarePayments(accessToken, locationId) : Promise.resolve([]),
             db.collection('movies').get(),
             db.collection('view_counts').get(),
@@ -103,7 +103,9 @@ export async function POST(request: Request) {
             db.collection('payout_history').get(),
             db.collection('presence').where('lastActive', '>=', fiveMinutesAgo).get(),
             db.collection('admin_payouts').orderBy('payoutDate', 'desc').get(),
-            db.collection('bill_savings_transactions').orderBy('transactionDate', 'desc').get()
+            db.collection('bill_savings_transactions').orderBy('transactionDate', 'desc').get(),
+            db.collection('roku_links').get(),
+            db.collection('traffic_events').where('platform', '==', 'ROKU').get()
         ]);
 
         const allMovies: Record<string, Movie> = {};
@@ -111,6 +113,18 @@ export async function POST(request: Request) {
 
         const viewCounts: Record<string, number> = {};
         viewsSnapshot.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count) || 0; });
+        
+        const rokuViewsByMovie: Record<string, number> = {};
+        rokuEventsSnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.movieKey) rokuViewsByMovie[data.movieKey] = (rokuViewsByMovie[data.movieKey] || 0) + 1;
+        });
+
+        const rokuEngagement = {
+            totalDevices: rokuLinksSnapshot.size,
+            totalRokuViews: rokuEventsSnapshot.size,
+            viewsByMovie: rokuViewsByMovie
+        };
         
         let totalDonations = 0;
         let totalSales = 0;
@@ -219,7 +233,8 @@ export async function POST(request: Request) {
             recentSpikes: [],
             billSavingsPotTotal,
             billSavingsTransactions,
-            viewLocations: {}
+            viewLocations: {},
+            rokuEngagement
         };
 
         return new Response(JSON.stringify({ analyticsData, errors }), { status: 200, headers: { 'Content-Type': 'application/json' } });

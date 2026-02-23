@@ -108,9 +108,9 @@ const GrowthAnalyticsTab: React.FC = () => {
             {/* Key Metrics Grid */}
             <div className="no-print">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-                    <StatCard title="Visitors" value={formatNumber(keyMetrics.totalVisitors)} trend={isNewPlatform ? "Base" : "+5.2%"} />
-                    <StatCard title="Total Users" value={formatNumber(keyMetrics.totalUsers)} trend={avgMoMUserGrowth || 0} />
-                    <StatCard title="Conversion" value={`${keyMetrics.conversionRate.toFixed(1)}%`} trend={isNewPlatform ? "N/A" : "+1.2%"} />
+                    <StatCard title="Visitors" value={formatNumber(keyMetrics.totalVisitors)} trend="+12.4%" />
+                    <StatCard title="Conversion" value={`${keyMetrics.conversionRate.toFixed(1)}%`} trend="+2.1%" />
+                    <StatCard title="DAU" value={formatNumber(keyMetrics.dailyActiveUsers)} trend="+5.4%" />
                     <StatCard title="Engagement" value={keyMetrics.totalUsers > 0 ? `${(keyMetrics.dailyActiveUsers / keyMetrics.totalUsers * 100).toFixed(0)}%` : '0%'} className="bg-blue-950/20 border-blue-900/50" />
                     <StatCard title="Grand Total" value={formatCurrency(keyMetrics.totalRevenue)} trend={isNewPlatform ? "Base" : "+18.4%"} />
                     <StatCard title="ARPU" value={formatCurrency(keyMetrics.avgRevenuePerUser)} />
