@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     `;
 
     const response = await generateContentWithRetry({
-        model: 'gemini-3-pro-preview',
+        model: 'gemini-3.1-pro-preview',
         contents: [{ parts: [{ text: prompt }] }],
         config: {
             tools: [{ googleSearch: {} }],

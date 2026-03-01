@@ -12,9 +12,12 @@ export interface User {
   watchedMovies: string[];
   likedMovies: string[];
   hasFestivalAllAccess?: boolean;
+  festivalPassExpiry?: string;
   hasCrateFestPass?: boolean;
+  crateFestPassExpiry?: string;
   hasJuryPass?: boolean;
   unlockedBlockIds: string[];
+  unlockedBlocks?: Record<string, string>;
   purchasedMovieKeys: string[];
   rentals: Record<string, string>;
   unlockedWatchPartyKeys?: string[];

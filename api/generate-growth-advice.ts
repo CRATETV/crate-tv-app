@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     try {
         const prompt = `You are a growth consultant for Crate TV. registered users: ${metrics.totalUsers}. conversion: ${metrics.conversionRate.toFixed(2)}%. Provide 3 user growth, 3 revenue, 3 community strategies, and 3 ad suggestions in JSON.`;
         const response = await generateContentWithRetry({
-            model: 'gemini-3-pro-preview',
+            model: 'gemini-3.1-pro-preview',
             contents: [{ parts: [{ text: prompt }] }],
             config: {
                 responseMimeType: "application/json",

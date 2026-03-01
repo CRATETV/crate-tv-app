@@ -204,31 +204,65 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ]);
     }, [user, likedMovies]);
 
-    const hasFestivalAllAccess = user?.hasFestivalAllAccess || false;
-    const hasCrateFestPass = user?.hasCrateFestPass || false;
+    const hasFestivalAllAccess = useMemo(() => {
+        if (user?.hasFestivalAllAccess) return true; // Legacy support
+        if (user?.festivalPassExpiry && new Date(user.festivalPassExpiry) > new Date()) return true;
+        return false;
+    }, [user]);
+
+    const hasCrateFestPass = useMemo(() => {
+        if (user?.hasCrateFestPass) return true; // Legacy support
+        if (user?.crateFestPassExpiry && new Date(user.crateFestPassExpiry) > new Date()) return true;
+        return false;
+    }, [user]);
     const hasJuryPass = user?.hasJuryPass || false;
-    const unlockedFestivalBlockIds = useMemo(() => new Set(user?.unlockedBlockIds || []), [user]);
+    const unlockedFestivalBlockIds = useMemo(() => {
+        const blocks = user?.unlockedBlocks || {};
+        const validBlocks = new Set<string>();
+        Object.entries(blocks).forEach(([id, exp]) => {
+            if (new Date(exp) > new Date()) validBlocks.add(id);
+        });
+        // Backwards compatibility for old string[] format
+        if (Array.isArray(user?.unlockedBlockIds)) {
+            user.unlockedBlockIds.forEach(id => validBlocks.add(id));
+        }
+        return validBlocks;
+    }, [user]);
     const purchasedMovieKeys = useMemo(() => new Set(user?.purchasedMovieKeys || []), [user]);
     const rentals = user?.rentals || {};
     const unlockedWatchPartyKeys = useMemo(() => new Set(user?.unlockedWatchPartyKeys || []), [user]);
 
     const unlockFestivalBlock = async (blockId: string) => {
         if (!user || unlockedFestivalBlockIds.has(blockId)) return;
-        const newUnlocked = [...(user.unlockedBlockIds || []), blockId];
-        await updateUserProfile(user.uid, { unlockedBlockIds: newUnlocked });
-        setUser(currentUser => currentUser ? ({ ...currentUser, unlockedBlockIds: newUnlocked }) : null);
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 14); // 2 weeks
+        const newUnlockedBlocks = { ...(user.unlockedBlocks || {}), [blockId]: expirationDate.toISOString() };
+        await updateUserProfile(user.uid, { unlockedBlocks: newUnlockedBlocks });
+        setUser(currentUser => currentUser ? ({ ...currentUser, unlockedBlocks: newUnlockedBlocks }) : null);
     };
     
     const grantFestivalAllAccess = async () => {
-        if (!user || user.hasFestivalAllAccess) return;
-        await updateUserProfile(user.uid, { hasFestivalAllAccess: true });
-        setUser(currentUser => currentUser ? ({ ...currentUser, hasFestivalAllAccess: true }) : null);
+        if (!user) return;
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 14); // 2 weeks
+        const update = { 
+            hasFestivalAllAccess: true, 
+            festivalPassExpiry: expirationDate.toISOString() 
+        };
+        await updateUserProfile(user.uid, update);
+        setUser(currentUser => currentUser ? ({ ...currentUser, ...update }) : null);
     };
 
     const grantCrateFestPass = async () => {
-        if (!user || user.hasCrateFestPass) return;
-        await updateUserProfile(user.uid, { hasCrateFestPass: true });
-        setUser(currentUser => currentUser ? ({ ...currentUser, hasCrateFestPass: true }) : null);
+        if (!user) return;
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 14); // 2 weeks
+        const update = { 
+            hasCrateFestPass: true, 
+            crateFestPassExpiry: expirationDate.toISOString() 
+        };
+        await updateUserProfile(user.uid, update);
+        setUser(currentUser => currentUser ? ({ ...currentUser, ...update }) : null);
     };
 
     const grantJuryPass = async () => {
@@ -240,8 +274,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const purchaseMovie = async (movieKey: string) => {
         if (!user) return;
         const expirationDate = new Date();
-        // Updated to 168 hours (1 week) as requested
-        expirationDate.setHours(expirationDate.getHours() + 168);
+        // Updated to 48 hours as requested
+        expirationDate.setHours(expirationDate.getHours() + 48);
         const newRentals = { ...(user.rentals || {}), [movieKey]: expirationDate.toISOString() };
         await updateUserProfile(user.uid, { rentals: newRentals });
         setUser(currentUser => currentUser ? ({ ...currentUser, rentals: newRentals }) : null);

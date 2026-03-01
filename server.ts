@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 // Import API handlers
 import { GET as getRokuFeed } from './api/roku-feed.js';
 import { GET as getRokuDirectFeed } from './api/roku-direct-publisher-feed.js';
+import { GET as getWatchPartyStatus } from './api/get-watch-party-status.js';
 import { POST as getSalesData } from './api/get-sales-data.js';
 import { POST as getGrowthAnalytics } from './api/get-growth-analytics.js';
 import { POST as trackView } from './api/track-view.js';
@@ -46,6 +47,7 @@ async function startServer() {
   // Explicit API Routes
   app.get('/api/roku-feed', wrapHandler(getRokuFeed));
   app.get('/api/roku-direct-publisher-feed', wrapHandler(getRokuDirectFeed));
+  app.get('/api/get-watch-party-status', wrapHandler(getWatchPartyStatus));
   app.post('/api/get-sales-data', wrapHandler(getSalesData));
   app.post('/api/get-growth-analytics', wrapHandler(getGrowthAnalytics));
   app.post('/api/track-view', wrapHandler(trackView));

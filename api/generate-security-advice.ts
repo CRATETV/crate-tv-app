@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const prompt = `Analyze this security report: ${JSON.stringify(report)}. Provide summary and actionable recommendations in JSON.`;
 
     const response = await generateContentWithRetry({
-        model: 'gemini-3-pro-preview',
+        model: 'gemini-3.1-pro-preview',
         contents: prompt,
         config: {
             responseMimeType: "application/json",

@@ -5,7 +5,6 @@ import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
 import PartnershipFinder from './PartnershipFinder';
 import GrantWriter from './GrantWriter';
-import LegalStrategist from './LegalStrategist';
 import RightsAuditor from './RightsAuditor';
 import FundStrategist from './FundStrategist';
 import ArchiveScoutTab from './ArchiveScoutTab';
@@ -66,12 +65,12 @@ const GrantLedger: React.FC = () => {
 };
 
 const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({ analytics, movies, categories, onUpdateCategories }) => {
-    const [activeSection, setActiveSection] = useState<'command' | 'scout' | 'horizon' | 'auditor' | 'strategist' | 'fund' | 'partners' | 'grantwriter' | 'ledger'>('command');
+    const [activeSection, setActiveSection] = useState<'command' | 'scout' | 'horizon' | 'auditor' | 'fund' | 'partners' | 'grantwriter' | 'ledger'>('command');
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         if (params.get('action') === 'negotiate') {
-            setActiveSection('strategist');
+            setActiveSection('command');
         }
     }, [window.location.search]);
 
@@ -93,7 +92,6 @@ const DiscoveryEngine: React.FC<DiscoveryEngineProps> = ({ analytics, movies, ca
                 {activeSection === 'scout' && <ArchiveScoutTab />}
                 {activeSection === 'auditor' && <RightsAuditor />}
                 {activeSection === 'fund' && <FundStrategist />}
-                {activeSection === 'strategist' && <LegalStrategist />}
                 {activeSection === 'partners' && <PartnershipFinder />}
                 {activeSection === 'grantwriter' && <GrantWriter />}
                 {activeSection === 'ledger' && <GrantLedger />}

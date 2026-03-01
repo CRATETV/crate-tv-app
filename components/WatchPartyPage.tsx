@@ -194,7 +194,17 @@ const SuggestionsSection: React.FC<{ currentMovie: Movie; allMovies: Record<stri
 };
 
 export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
-    const { user, unlockedWatchPartyKeys, unlockWatchParty, rentals } = useAuth();
+    const { 
+        user, 
+        unlockedWatchPartyKeys, 
+        unlockWatchParty, 
+        rentals,
+        hasFestivalAllAccess,
+        hasCrateFestPass,
+        hasJuryPass,
+        unlockedFestivalBlockIds,
+        unlockFestivalBlock
+    } = useAuth();
     const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
@@ -228,8 +238,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                 title: block.title,
                 watchPartyStartTime: block.watchPartyStartTime,
                 isWatchPartyEnabled: true,
-                isWatchPartyPaid: (block.price || 0) > 0,
-                watchPartyPrice: block.price,
+                isWatchPartyPaid: true,
+                watchPartyPrice: block.price || 10.00,
                 director: 'Festival Event',
                 fullMovie: firstMovie?.fullMovie || '',
                 isLiveStream: firstMovie?.isLiveStream || false,
@@ -246,10 +256,18 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return movie;
     }, [blockMovies, currentMovieIndex, movie]);
 
+    const isBlock = useMemo(() => {
+        return festivalData.flatMap(d => d.blocks).some(b => b.id === movieKey);
+    }, [movieKey, festivalData]);
+
     const handleBackstageSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (partyState?.backstageKey && backstageInput.toUpperCase() === partyState.backstageKey.toUpperCase()) {
-            unlockWatchParty(movieKey);
+            if (isBlock) {
+                unlockFestivalBlock(movieKey);
+            } else {
+                unlockWatchParty(movieKey);
+            }
             setIsBackstageVerified(true);
             setBackstageError(false);
             setBackstageInput('');
@@ -362,11 +380,25 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const hasAccess = useMemo(() => {
         if (isControllerMode || isBackstageVerified) return true;
         if (!movie) return false;
+        
+        // 1. Direct Watch Party Unlock
         if (unlockedWatchPartyKeys.has(movieKey)) return true;
-        if (!movie.isWatchPartyPaid) return true;
+        
+        // 2. Festival All Access
+        if (hasFestivalAllAccess || hasCrateFestPass || hasJuryPass) return true;
+        
+        // 3. Block Unlock (If this is a block watch party)
+        if (unlockedFestivalBlockIds.has(movieKey)) return true;
+        
+        // 4. Check if the movie itself is unlocked (rentals)
         const exp = rentals[movieKey];
-        return exp && new Date(exp) > new Date();
-    }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified]);
+        if (exp && new Date(exp) > new Date()) return true;
+
+        // 5. Free Watch Party
+        if (!movie.isWatchPartyPaid) return true;
+
+        return false;
+    }, [movie, rentals, movieKey, unlockedWatchPartyKeys, isControllerMode, isBackstageVerified, hasFestivalAllAccess, hasCrateFestPass, hasJuryPass, unlockedFestivalBlockIds]);
 
     const logSentiment = async (emoji: string) => {
         const db = getDbInstance();
@@ -569,7 +601,14 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     movie={movie} 
                     paymentType="watchPartyTicket" 
                     onClose={() => setShowPaywall(false)} 
-                    onPaymentSuccess={() => { unlockWatchParty(movieKey); setShowPaywall(false); }} 
+                    onPaymentSuccess={() => { 
+                        if (isBlock) {
+                            unlockFestivalBlock(movieKey);
+                        } else {
+                            unlockWatchParty(movieKey);
+                        }
+                        setShowPaywall(false); 
+                    }} 
                 />
             )}
         </div>

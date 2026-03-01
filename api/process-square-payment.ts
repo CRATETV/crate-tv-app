@@ -70,12 +70,36 @@ export async function POST(request: Request) {
         // Fetch source of truth from DB to prevent tampering
         if (!db) throw new Error("Database offline.");
         const movieDoc = await db.collection('movies').doc(itemId).get();
-        if (!movieDoc.exists) throw new Error("Item record not found.");
-        const movieData = movieDoc.data();
         
-        const rawPrice = paymentType === 'movie' ? (movieData?.salePrice || 5.00) : (movieData?.watchPartyPrice || 5.00);
-        amountInCents = Math.round(rawPrice * 100);
-        note = `${paymentType === 'movie' ? 'VOD Rental' : 'Watch Party Ticket'}: ${movieData?.title || itemId}`;
+        if (!movieDoc.exists) {
+            // Check if it's a festival block
+            const festSnap = await db.collection('festival').doc('schedule').collection('days').get();
+            let blockData: any = null;
+            festSnap.forEach(doc => {
+                const day = doc.data();
+                const found = day.blocks?.find((b: any) => b.id === itemId);
+                if (found) blockData = found;
+            });
+
+            // Also check CrateFest config
+            if (!blockData) {
+                const settingsDoc = await db.collection('settings').doc('site').get();
+                const crateFestBlocks = settingsDoc.data()?.crateFestConfig?.movieBlocks || [];
+                blockData = crateFestBlocks.find((b: any) => b.id === itemId);
+            }
+            
+            if (blockData) {
+                amountInCents = Math.round((blockData.price || 10.00) * 100);
+                note = `Watch Party Ticket (Block): ${blockData.title || itemId}`;
+            } else {
+                throw new Error("Item record not found.");
+            }
+        } else {
+            const movieData = movieDoc.data();
+            const rawPrice = paymentType === 'movie' ? (movieData?.salePrice || 5.00) : (movieData?.watchPartyPrice || 5.00);
+            amountInCents = Math.round(rawPrice * 100);
+            note = `${paymentType === 'movie' ? 'VOD Rental' : 'Watch Party Ticket'}: ${movieData?.title || itemId}`;
+        }
     }
     else if (paymentType === 'block') {
         amountInCents = 1000; // Fixed $10 for blocks currently
