@@ -215,6 +215,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isEnded, setIsEnded] = useState(false);
     const [isControllerMode, setIsControllerMode] = useState(false);
     const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
+    const [isInitialSyncDone, setIsInitialSyncDone] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(true);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
 
@@ -282,86 +284,94 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         if (params.get('mode') === 'controller') setIsControllerMode(true);
     }, []);
 
-    useEffect(() => {
+    const syncClock = useCallback(() => {
         const video = videoRef.current;
         if (!video || !partyState?.actualStartTime || currentMovie?.isLiveStream || isControllerMode) return;
 
-        const syncClock = () => {
-            const now = Date.now();
-            if (now - lastSeekTimeRef.current < 2000) return;
-            try {
-                const serverStart = (partyState.actualStartTime as any).toDate().getTime();
-                const totalElapsed = Math.max(0, (now - serverStart) / 1000);
-                
-                if (blockMovies.length > 0) {
-                    let cumulativeTime = 0;
-                    let found = false;
-                    for (let i = 0; i < blockMovies.length; i++) {
-                        const m = blockMovies[i];
-                        const duration = (m.durationInMinutes || 10) * 60;
-                        if (totalElapsed < cumulativeTime + duration) {
-                            if (currentMovieIndex !== i) {
-                                setCurrentMovieIndex(i);
-                                setIsEnded(false);
-                            }
-                            const movieElapsed = totalElapsed - cumulativeTime;
-                            syncVideo(movieElapsed, duration);
-                            found = true;
-                            break;
+        const now = Date.now();
+        // Prevent rapid seeking loops
+        if (now - lastSeekTimeRef.current < 1500) return;
+
+        try {
+            const serverStart = (partyState.actualStartTime as any).toDate().getTime();
+            const totalElapsed = Math.max(0, (now - serverStart) / 1000);
+            
+            if (blockMovies.length > 0) {
+                let cumulativeTime = 0;
+                let found = false;
+                for (let i = 0; i < blockMovies.length; i++) {
+                    const m = blockMovies[i];
+                    const duration = (m.durationInMinutes || 10) * 60;
+                    if (totalElapsed < cumulativeTime + duration) {
+                        if (currentMovieIndex !== i) {
+                            setCurrentMovieIndex(i);
+                            setIsEnded(false);
+                            setIsInitialSyncDone(false); // Reset sync for next movie in block
                         }
-                        cumulativeTime += duration;
+                        const movieElapsed = totalElapsed - cumulativeTime;
+                        syncVideo(movieElapsed);
+                        found = true;
+                        break;
                     }
-                    if (!found && !isEnded) {
+                    cumulativeTime += duration;
+                }
+                if (!found && !isEnded) {
+                    setIsEnded(true);
+                }
+            } else {
+                const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
+                if (totalElapsed >= movieDuration) {
+                    if (!isEnded) {
                         setIsEnded(true);
+                        video.pause();
+                        video.currentTime = movieDuration;
                     }
                 } else {
-                    const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
-                    if (totalElapsed >= movieDuration) {
-                        if (!isEnded) {
-                            setIsEnded(true);
-                            video.pause();
-                            video.currentTime = movieDuration;
-                        }
-                    } else {
-                        syncVideo(totalElapsed, movieDuration);
-                    }
+                    syncVideo(totalElapsed);
                 }
-            } catch (e) { console.error("Sync heartbeat failure:", e); }
-        };
-
-        const syncVideo = (targetPosition: number, duration: number) => {
-            if (!video) return;
-            
-            const drift = targetPosition - video.currentTime;
-            const absDrift = Math.abs(drift);
-
-            // 1. HARD SEEK: If drift is massive (> 5s), jump immediately
-            if (absDrift > 5 && !video.seeking && video.readyState >= 2) {
-                lastSeekTimeRef.current = Date.now();
-                video.currentTime = targetPosition;
-                video.playbackRate = 1.0;
-            } 
-            // 2. SMOOTH SYNC: If drift is moderate (0.5s - 5s), adjust playback rate
-            else if (absDrift > 0.5 && absDrift <= 5 && video.readyState >= 3) {
-                video.playbackRate = drift > 0 ? 1.06 : 0.94;
-            } 
-            // 3. IN SYNC: Reset to normal speed
-            else {
-                video.playbackRate = 1.0;
             }
+        } catch (e) { console.error("Sync heartbeat failure:", e); }
+    }, [partyState, movie, blockMovies, currentMovieIndex, isEnded, isControllerMode, currentMovie]);
 
-            // Handle play/pause state from server
-            if (partyState.isPlaying && video.paused && !video.ended && video.readyState >= 2) {
-                video.play().catch(() => {});
-            } else if (!partyState.isPlaying && !video.paused) {
-                video.pause();
-            }
-        };
+    const syncVideo = (targetPosition: number) => {
+        const video = videoRef.current;
+        if (!video) return;
+        
+        const drift = targetPosition - video.currentTime;
+        const absDrift = Math.abs(drift);
 
+        // 1. HARD SEEK: If drift is massive (> 3s) or initial sync
+        if ((absDrift > 3 || !isInitialSyncDone) && !video.seeking) {
+            lastSeekTimeRef.current = Date.now();
+            video.currentTime = targetPosition;
+            video.playbackRate = 1.0;
+            if (!isInitialSyncDone) setIsInitialSyncDone(true);
+        } 
+        // 2. SMOOTH SYNC: If drift is moderate (0.3s - 3s), adjust playback rate
+        else if (absDrift > 0.3 && absDrift <= 3) {
+            video.playbackRate = drift > 0 ? 1.05 : 0.95;
+        } 
+        // 3. IN SYNC: Reset to normal speed
+        else {
+            video.playbackRate = 1.0;
+        }
+
+        // Handle play/pause state from server
+        if (partyState?.isPlaying && video.paused && !video.ended) {
+            video.play().catch(err => {
+                console.warn("Autoplay blocked, waiting for user interaction", err);
+            });
+        } else if (!partyState?.isPlaying && !video.paused) {
+            video.pause();
+        }
+    };
+
+    useEffect(() => {
+        if (isControllerMode || currentMovie?.isLiveStream) return;
         const interval = setInterval(syncClock, 1000);
         syncClock(); 
         return () => clearInterval(interval);
-    }, [partyState, movie, blockMovies, currentMovieIndex, isEnded, isControllerMode, currentMovie]);
+    }, [syncClock, isControllerMode, currentMovie]);
 
     useEffect(() => {
         const db = getDbInstance();
@@ -507,15 +517,47 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 </div>
                             ) : (
                                 <div className="relative w-full h-full">
+                                    {(!isInitialSyncDone || isBuffering) && !isEnded && (
+                                        <div className="absolute inset-0 z-[180] bg-black flex flex-col items-center justify-center space-y-6 animate-[fadeIn_0.3s_ease-out]">
+                                            <div className="relative">
+                                                <div className="w-24 h-24 border-2 border-red-600/20 rounded-full"></div>
+                                                <div className="absolute inset-0 w-24 h-24 border-t-2 border-red-600 rounded-full animate-spin"></div>
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <span className="text-[10px] font-black text-red-500 animate-pulse">SYNC</span>
+                                                </div>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-[10px] font-black uppercase tracking-[0.6em] text-white mb-2">Synchronizing Relay</p>
+                                                <p className="text-[8px] font-bold uppercase tracking-widest text-gray-500">Connecting to live transmission node...</p>
+                                            </div>
+                                            {/* Autoplay fallback button */}
+                                            {isInitialSyncDone && (
+                                                <button 
+                                                    onClick={() => videoRef.current?.play()}
+                                                    className="mt-4 bg-white text-black px-8 py-3 rounded-full font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all"
+                                                >
+                                                    Tap to Join Live
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
                                     <video 
                                         ref={videoRef} 
                                         src={currentMovie?.fullMovie} 
-                                        className={`w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
+                                        className={`w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : (isInitialSyncDone && !isBuffering ? 'opacity-100' : 'opacity-0')}`} 
                                         autoPlay 
                                         muted={false} 
                                         playsInline
                                         webkit-playsinline="true"
                                         controls={false}
+                                        preload="auto"
+                                        onLoadedMetadata={() => {
+                                            setIsBuffering(false);
+                                            syncClock();
+                                        }}
+                                        onWaiting={() => setIsBuffering(true)}
+                                        onPlaying={() => setIsBuffering(false)}
+                                        onCanPlay={() => setIsBuffering(false)}
                                     />
                                     {isEnded && currentMovie && (
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
