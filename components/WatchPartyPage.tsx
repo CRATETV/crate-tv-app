@@ -215,8 +215,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [isEnded, setIsEnded] = useState(false);
     const [isControllerMode, setIsControllerMode] = useState(false);
     const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
-    const [isInitialSyncDone, setIsInitialSyncDone] = useState(false);
-    const [isBuffering, setIsBuffering] = useState(true);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastSeekTimeRef = useRef<number>(0);
 
@@ -333,6 +331,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         } catch (e) { console.error("Sync heartbeat failure:", e); }
     }, [partyState, movie, blockMovies, currentMovieIndex, isEnded, isControllerMode, currentMovie]);
 
+    const [isInitialSyncDone, setIsInitialSyncDone] = useState(false);
+
     const syncVideo = (targetPosition: number) => {
         const video = videoRef.current;
         if (!video) return;
@@ -340,16 +340,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const drift = targetPosition - video.currentTime;
         const absDrift = Math.abs(drift);
 
-        // 1. HARD SEEK: If drift is massive (> 3s) or initial sync
-        if ((absDrift > 3 || !isInitialSyncDone) && !video.seeking) {
+        // 1. HARD SEEK: Only if drift is massive (> 10s) or initial sync
+        if ((absDrift > 10 || !isInitialSyncDone) && !video.seeking) {
             lastSeekTimeRef.current = Date.now();
             video.currentTime = targetPosition;
             video.playbackRate = 1.0;
             if (!isInitialSyncDone) setIsInitialSyncDone(true);
         } 
-        // 2. SMOOTH SYNC: If drift is moderate (0.3s - 3s), adjust playback rate
-        else if (absDrift > 0.3 && absDrift <= 3) {
-            video.playbackRate = drift > 0 ? 1.05 : 0.95;
+        // 2. SMOOTH SYNC: Only if drift is significant (2s - 10s)
+        else if (absDrift > 2 && absDrift <= 10) {
+            video.playbackRate = drift > 0 ? 1.03 : 0.97;
         } 
         // 3. IN SYNC: Reset to normal speed
         else {
@@ -358,9 +358,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
         // Handle play/pause state from server
         if (partyState?.isPlaying && video.paused && !video.ended) {
-            video.play().catch(err => {
-                console.warn("Autoplay blocked, waiting for user interaction", err);
-            });
+            video.play().catch(() => {});
         } else if (!partyState?.isPlaying && !video.paused) {
             video.pause();
         }
@@ -517,34 +515,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 </div>
                             ) : (
                                 <div className="relative w-full h-full">
-                                    {(!isInitialSyncDone || isBuffering) && !isEnded && (
-                                        <div className="absolute inset-0 z-[180] bg-black flex flex-col items-center justify-center space-y-6 animate-[fadeIn_0.3s_ease-out]">
-                                            <div className="relative">
-                                                <div className="w-24 h-24 border-2 border-red-600/20 rounded-full"></div>
-                                                <div className="absolute inset-0 w-24 h-24 border-t-2 border-red-600 rounded-full animate-spin"></div>
-                                                <div className="absolute inset-0 flex items-center justify-center">
-                                                    <span className="text-[10px] font-black text-red-500 animate-pulse">SYNC</span>
-                                                </div>
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="text-[10px] font-black uppercase tracking-[0.6em] text-white mb-2">Synchronizing Relay</p>
-                                                <p className="text-[8px] font-bold uppercase tracking-widest text-gray-500">Connecting to live transmission node...</p>
-                                            </div>
-                                            {/* Autoplay fallback button */}
-                                            {isInitialSyncDone && (
-                                                <button 
-                                                    onClick={() => videoRef.current?.play()}
-                                                    className="mt-4 bg-white text-black px-8 py-3 rounded-full font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all"
-                                                >
-                                                    Tap to Join Live
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
                                     <video 
                                         ref={videoRef} 
                                         src={currentMovie?.fullMovie} 
-                                        className={`w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : (isInitialSyncDone && !isBuffering ? 'opacity-100' : 'opacity-0')}`} 
+                                        className={`w-full h-full object-contain transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-xl' : 'opacity-100'}`} 
                                         autoPlay 
                                         muted={false} 
                                         playsInline
@@ -552,12 +526,11 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                         controls={false}
                                         preload="auto"
                                         onLoadedMetadata={() => {
-                                            setIsBuffering(false);
                                             syncClock();
                                         }}
-                                        onWaiting={() => setIsBuffering(true)}
-                                        onPlaying={() => setIsBuffering(false)}
-                                        onCanPlay={() => setIsBuffering(false)}
+                                        onCanPlay={() => {
+                                            if (!isInitialSyncDone) setIsInitialSyncDone(true);
+                                        }}
                                     />
                                     {isEnded && currentMovie && (
                                         <div className="absolute inset-0 z-[160] flex flex-col items-center justify-center bg-black/60 backdrop-blur-3xl animate-[fadeIn_1.2s_ease-out] text-center p-8">
