@@ -340,16 +340,17 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const drift = targetPosition - video.currentTime;
         const absDrift = Math.abs(drift);
 
-        // 1. HARD SEEK: Only if drift is massive (> 10s) or initial sync
-        if ((absDrift > 10 || !isInitialSyncDone) && !video.seeking) {
+        // 1. HARD SEEK: Only if drift is massive (> 20s) or initial sync
+        if ((absDrift > 20 || !isInitialSyncDone) && !video.seeking) {
             lastSeekTimeRef.current = Date.now();
             video.currentTime = targetPosition;
             video.playbackRate = 1.0;
             if (!isInitialSyncDone) setIsInitialSyncDone(true);
         } 
-        // 2. SMOOTH SYNC: Only if drift is significant (2s - 10s)
-        else if (absDrift > 2 && absDrift <= 10) {
-            video.playbackRate = drift > 0 ? 1.03 : 0.97;
+        // 2. SMOOTH SYNC: Only if drift is significant (5s - 20s)
+        // Use a tiny 1% adjustment which is imperceptible to the viewer
+        else if (absDrift > 5 && absDrift <= 20) {
+            video.playbackRate = drift > 0 ? 1.01 : 0.99;
         } 
         // 3. IN SYNC: Reset to normal speed
         else {
@@ -366,7 +367,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     useEffect(() => {
         if (isControllerMode || currentMovie?.isLiveStream) return;
-        const interval = setInterval(syncClock, 1000);
+        const interval = setInterval(syncClock, 5000); // Check every 5 seconds for a smoother ride
         syncClock(); 
         return () => clearInterval(interval);
     }, [syncClock, isControllerMode, currentMovie]);
