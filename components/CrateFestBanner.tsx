@@ -4,9 +4,10 @@ import { CrateFestConfig } from '../types';
 interface CrateFestBannerProps {
     config: CrateFestConfig;
     hasPass: boolean;
+    onClose?: () => void;
 }
 
-const CrateFestBanner: React.FC<CrateFestBannerProps> = ({ config, hasPass }) => {
+const CrateFestBanner: React.FC<CrateFestBannerProps> = ({ config, hasPass, onClose }) => {
     const handleNavigate = () => {
         window.history.pushState({}, '', '/cratefest');
         window.dispatchEvent(new Event('pushstate'));
@@ -14,15 +15,13 @@ const CrateFestBanner: React.FC<CrateFestBannerProps> = ({ config, hasPass }) =>
 
     return (
         <div 
-            onClick={handleNavigate}
             className="fixed top-0 left-0 right-0 w-full bg-gradient-to-r from-red-600 via-red-800 to-black h-12 flex items-center justify-between px-4 md:px-12 cursor-pointer group hover:opacity-95 transition-all border-b border-white/10 z-[60] overflow-hidden"
         >
-            {/* Subtle background text for "event" feel */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none select-none">
+            <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none select-none" onClick={handleNavigate}>
                 <span className="text-5xl font-black uppercase tracking-[1em] whitespace-nowrap italic">{config.title} // OFFICIAL EVENT</span>
             </div>
 
-            <div className="flex items-center gap-6 relative z-10">
+            <div className="flex items-center gap-6 relative z-10" onClick={handleNavigate}>
                 <div className="flex items-center gap-3">
                     <span className="relative flex h-2.5 w-2.5">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
@@ -37,9 +36,18 @@ const CrateFestBanner: React.FC<CrateFestBannerProps> = ({ config, hasPass }) =>
             </div>
 
             <div className="flex items-center gap-6 relative z-10">
-                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/50 italic">
+                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/50 italic mr-4">
                     {hasPass ? 'Authorized Access Active' : 'Limited Passes Available'}
                 </span>
+                {onClose && (
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onClose(); }} 
+                        className="text-white/40 hover:text-white transition-colors text-xl leading-none"
+                        aria-label="Dismiss banner"
+                    >
+                        &times;
+                    </button>
+                )}
             </div>
         </div>
     );

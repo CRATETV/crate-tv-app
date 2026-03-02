@@ -70,13 +70,14 @@ export async function GET(request: Request) {
 
     if (db) {
         console.log("Fetching data from Firestore...");
-        const [configDoc, assetsSnap, viewsSnap, moviesSnap, categoriesSnap, settingsDoc] = await Promise.all([
+        const [configDoc, assetsSnap, viewsSnap, moviesSnap, categoriesSnap, settingsDoc, partiesSnap] = await Promise.all([
             db.collection('roku').doc('config').get(),
             db.collection('roku_assets').get(),
             db.collection('view_counts').get(),
             db.collection('movies').get(),
             db.collection('categories').get(),
-            db.collection('content').doc('settings').get()
+            db.collection('content').doc('settings').get(),
+            db.collection('watch_parties').get()
         ]);
 
         if (configDoc.exists) config = { ...config, ...configDoc.data() };
@@ -94,6 +95,13 @@ export async function GET(request: Request) {
         assetsSnap.forEach(doc => { assets[doc.id] = doc.data() as RokuAsset; });
         viewsSnap.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count || 0); });
         
+        const activeParties: Record<string, any> = {};
+        partiesSnap.forEach(doc => {
+            const data = doc.data();
+            if (data.status === 'live') activeParties[doc.id] = data;
+        });
+        (config as any).activeParties = activeParties;
+        
         console.log(`Found ${moviesSnap.size} movies and ${categoriesSnap.size} categories in Firestore.`);
 
         // Prefer Firestore data over S3/Fallbacks if available
@@ -110,7 +118,6 @@ export async function GET(request: Request) {
                 categoriesObj[doc.id] = { id: doc.id, ...data } as any as Category;
             });
         }
-        // ... rest of the deviceId logic ...
 
         if (deviceId) {
             const linkDoc = await db.collection('roku_links').doc(deviceId).get();
@@ -183,12 +190,12 @@ export async function GET(request: Request) {
     const categories: any[] = [];
     const publicSquare: any[] = [];
 
-    const isValidForRoku = (m: Movie) => {
+    const isValidForRoku = (m: Movie, isLiveOverride: boolean = false) => {
         if (!m) return false;
         const hasTitle = !!m.title;
         const hasPoster = !!m.poster || !!m.tvPoster || !!m.rokuHeroImage;
         const isNotUnlisted = !m.isUnlisted;
-        const released = isReleased(m);
+        const released = isReleased(m) || isLiveOverride;
         const hasStream = !!m.rokuStreamUrl || !!m.fullMovie || !!m.liveStreamUrl;
         
         const valid = hasTitle && hasPoster && isNotUnlisted && released && hasStream;
@@ -206,7 +213,7 @@ export async function GET(request: Request) {
         const movieKeys = fest.movieBlocks?.flatMap((b: any) => b.movieKeys) || [];
         const children = movieKeys
             .map((k: string) => moviesObj[k])
-            .filter((m: Movie) => m && isValidForRoku(m))
+            .filter((m: Movie) => m && isValidForRoku(m, true))
             .map((m: Movie) => formatMovieForRoku(m, assets[m.key], unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || !m.isForSale, true));
         
         if (children.length > 0) {
@@ -222,7 +229,7 @@ export async function GET(request: Request) {
     // 2. TOP 10 TODAY
     if (config.topTen?.enabled !== false) {
         const topMovies = (Object.values(moviesObj) as Movie[])
-            .filter(isValidForRoku)
+            .filter(m => isValidForRoku(m))
             .sort((a, b) => (viewCounts[b.key] || 0) - (viewCounts[a.key] || 0))
             .slice(0, 10)
             .map(m => formatMovieForRoku(m, assets[m.key], unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || !m.isForSale));
@@ -274,7 +281,7 @@ export async function GET(request: Request) {
     if (categories.length === 0 && publicSquare.length === 0) {
         console.log("No categories populated. Checking for any valid movies to show in fallback 'Library' category...");
         const allValidMovies = (Object.values(moviesObj) as Movie[])
-            .filter(isValidForRoku)
+            .filter(m => isValidForRoku(m))
             .map((m: Movie) => formatMovieForRoku(m, assets[m.key], unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || !m.isForSale));
         
         if (allValidMovies.length > 0) {
@@ -300,11 +307,14 @@ export async function GET(request: Request) {
             .filter(m => {
                 const isWatchParty = m.isWatchPartyEnabled === true;
                 const isCrateFest = (config as any).crateFest?.movieBlocks?.some((b: any) => b.movieKeys?.includes(m.key));
-                return (isWatchParty || isCrateFest) && isReleased(m);
+                const isExplicitlyLive = (config as any).activeParties?.[m.key];
+                const isLive = isWatchParty || isCrateFest || isExplicitlyLive;
+                return isLive && isValidForRoku(m, isLive);
             })
             .map(m => {
                 const isCrateFest = (config as any).crateFest?.movieBlocks?.some((b: any) => b.movieKeys?.includes(m.key));
-                return formatMovieForRoku(m, assets[m.key], unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || !m.isForSale, isCrateFest);
+                const isExplicitlyLive = (config as any).activeParties?.[m.key];
+                return formatMovieForRoku(m, assets[m.key], unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || !m.isForSale, isCrateFest || isExplicitlyLive);
             })
     };
 

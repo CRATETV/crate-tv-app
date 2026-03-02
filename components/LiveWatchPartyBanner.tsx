@@ -11,7 +11,7 @@ interface LiveWatchPartyBannerProps {
 
 const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onClose }) => {
     const { hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys } = useAuth();
-    const { festivalData } = useFestival();
+    const { festivalData, activeParties } = useFestival();
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
@@ -19,11 +19,14 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
         return () => clearInterval(timer);
     }, []);
 
-    const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
-    if (!startTime) return null;
+    const partyState = activeParties[movie.key];
+    const isExplicitlyLive = partyState?.status === 'live';
 
-    const isLive = now >= startTime;
-    const isUpcoming = now < startTime;
+    const startTime = movie.watchPartyStartTime ? new Date(movie.watchPartyStartTime) : null;
+    if (!startTime && !isExplicitlyLive) return null;
+
+    const isLive = isExplicitlyLive || (startTime ? now >= startTime : false);
+    const isUpcoming = !isLive && startTime && now < startTime;
     
     // Authorization check for the banner button
     const alreadyHasAccess = useMemo(() => {
@@ -37,8 +40,8 @@ const LiveWatchPartyBanner: React.FC<LiveWatchPartyBannerProps> = ({ movie, onCl
         return false;
     }, [hasFestivalAllAccess, unlockedFestivalBlockIds, unlockedWatchPartyKeys, movie.key, festivalData]);
 
-    const diff = startTime.getTime() - now.getTime();
-    const isUnderOneHour = diff < 60 * 60 * 1000;
+    const diff = startTime ? startTime.getTime() - now.getTime() : 0;
+    const isUnderOneHour = startTime ? diff < 60 * 60 * 1000 : false;
 
     const handleNavigate = (e: React.MouseEvent) => {
         if (!isLive) return;

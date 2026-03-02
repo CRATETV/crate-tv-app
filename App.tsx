@@ -107,12 +107,20 @@ const App: React.FC = () => {
         const isCrateFestWindow = config?.isActive && config?.startDate && config?.endDate && 
                                 (new Date() >= new Date(config.startDate) && new Date() <= new Date(config.endDate));
 
-        // Priority: 1. Crate Fest (Most important event) 2. Watch Party 3. General Festival
+        const isWatchPartyActuallyLive = livePartyMovie && activeParties[livePartyMovie.key]?.status === 'live';
+
+        // Priority: 
+        // 1. LIVE Watch Party (If not dismissed)
+        // 2. Crate Fest (General event)
+        // 3. Upcoming Watch Party (If not dismissed)
+        // 4. General Festival (If not dismissed)
+        
+        if (isWatchPartyActuallyLive && !isFestivalBannerDismissed) return 'WATCH_PARTY';
         if (isCrateFestWindow) return 'CRATE_FEST';
         if (livePartyMovie && !isFestivalBannerDismissed) return 'WATCH_PARTY';
         if (isFestivalLive && !isFestivalBannerDismissed) return 'GENERAL_FESTIVAL';
         return 'NONE';
-    }, [livePartyMovie, settings.crateFestConfig, isFestivalLive, isFestivalBannerDismissed]);
+    }, [livePartyMovie, settings.crateFestConfig, isFestivalLive, isFestivalBannerDismissed, activeParties]);
 
     const currentLiveHeroConfig = useMemo(() => {
         const crateFestConfig = settings.crateFestConfig;
@@ -227,7 +235,14 @@ const App: React.FC = () => {
     if (isLoading) return <LoadingSpinner />;
     if (settings.maintenanceMode) return <MaintenanceScreen />;
 
-    const headerTop = activeBannerType !== 'NONE' ? '3rem' : '0px';
+    const mainPaddingTop = useMemo(() => {
+        const bannerHeight = activeBannerType !== 'NONE' ? 48 : 0;
+        const isHomePage = window.location.pathname === '/';
+        // If we are on the home page, we want the hero to go under the header (overlay)
+        // If we are on other pages, we need to clear the header (approx 80px).
+        if (!isHomePage) return `${bannerHeight + 80}px`;
+        return `${bannerHeight}px`;
+    }, [activeBannerType]);
 
     return (
         <div className="flex flex-col min-h-screen text-white overflow-x-hidden w-full relative">
@@ -237,7 +252,7 @@ const App: React.FC = () => {
             {activeBannerType === 'WATCH_PARTY' && (
                 <LiveWatchPartyBanner movie={livePartyMovie!} onClose={() => setIsFestivalBannerDismissed(true)} />
             )}
-            {activeBannerType === 'CRATE_FEST' && settings.crateFestConfig && <CrateFestBanner config={settings.crateFestConfig} hasPass={hasCrateFestPass} />}
+            {activeBannerType === 'CRATE_FEST' && settings.crateFestConfig && <CrateFestBanner config={settings.crateFestConfig} hasPass={hasCrateFestPass} onClose={() => setIsFestivalBannerDismissed(true)} />}
             {activeBannerType === 'GENERAL_FESTIVAL' && (
                 <div 
                     onClick={() => { window.history.pushState({}, '', '/festival'); window.dispatchEvent(new Event('pushstate')); }}
@@ -263,11 +278,11 @@ const App: React.FC = () => {
                 searchQuery={searchQuery} 
                 onSearch={onSearch} 
                 onMobileSearchClick={handleSearchClick} 
-                topOffset={headerTop} 
+                topOffset={activeBannerType !== 'NONE' ? '3rem' : '0px'} 
                 hideLiveSpotlight={activeBannerType === 'WATCH_PARTY'}
             />
 
-            <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500" style={{ paddingTop: activeBannerType !== 'NONE' ? '3rem' : '0px' }}>
+            <main className="flex-grow pb-24 md:pb-0 overflow-x-hidden transition-all duration-500" style={{ paddingTop: mainPaddingTop }}>
                 {currentLiveHeroConfig ? (
                     <FestivalHero config={currentLiveHeroConfig} />
                 ) : (

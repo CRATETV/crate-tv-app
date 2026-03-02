@@ -57,11 +57,11 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     const isFestivalLive = useMemo(() => {
         if (!festivalConfig?.startDate || !festivalConfig?.endDate) return false;
-        const now = new Date().getTime();
+        const nowTime = now.getTime();
         const start = new Date(festivalConfig.startDate).getTime();
         const end = new Date(festivalConfig.endDate).getTime();
-        return now >= start && now < end;
-    }, [festivalConfig]);
+        return nowTime >= start && nowTime < end;
+    }, [festivalConfig, now]);
 
     const livePartyMovie = useMemo(() => {
         const movieArray = Object.values(movies) as Movie[];
