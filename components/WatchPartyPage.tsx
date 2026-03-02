@@ -332,6 +332,49 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [partyState, movie, blockMovies, currentMovieIndex, isEnded, isControllerMode, currentMovie]);
 
     const [isInitialSyncDone, setIsInitialSyncDone] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(false);
+    const [bufferProgress, setBufferProgress] = useState(0);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        const handleProgress = () => {
+            if (video.buffered.length > 0) {
+                const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+                const duration = video.duration;
+                if (duration > 0) {
+                    setBufferProgress((bufferedEnd / duration) * 100);
+                }
+
+                // Smart Buffer Guard: If we have less than 3 seconds of buffer, consider it buffering
+                const remainingBuffer = bufferedEnd - video.currentTime;
+                if (remainingBuffer < 3 && !video.paused && !isEnded) {
+                    setIsBuffering(true);
+                } else if (remainingBuffer > 10) {
+                    setIsBuffering(false);
+                }
+            }
+        };
+
+        const handleWaiting = () => setIsBuffering(true);
+        const handlePlaying = () => setIsBuffering(false);
+        const handleCanPlay = () => setIsBuffering(false);
+
+        video.addEventListener('progress', handleProgress);
+        video.addEventListener('waiting', handleWaiting);
+        video.addEventListener('playing', handlePlaying);
+        video.addEventListener('canplay', handleCanPlay);
+        video.addEventListener('timeupdate', handleProgress);
+
+        return () => {
+            video.removeEventListener('progress', handleProgress);
+            video.removeEventListener('waiting', handleWaiting);
+            video.removeEventListener('playing', handlePlaying);
+            video.removeEventListener('canplay', handleCanPlay);
+            video.removeEventListener('timeupdate', handleProgress);
+        };
+    }, [isEnded]);
 
     const syncVideo = (targetPosition: number) => {
         const video = videoRef.current;
@@ -516,6 +559,12 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 </div>
                             ) : (
                                 <div className="relative w-full h-full">
+                                    {isBuffering && !isEnded && (
+                                        <div className="absolute inset-0 z-[180] bg-black/20 backdrop-blur-sm flex flex-col items-center justify-center space-y-4 animate-[fadeIn_0.3s_ease-out] pointer-events-none">
+                                            <div className="w-12 h-12 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin"></div>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white drop-shadow-lg">Optimizing Stream...</p>
+                                        </div>
+                                    )}
                                     <video 
                                         ref={videoRef} 
                                         src={currentMovie?.fullMovie} 

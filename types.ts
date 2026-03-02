@@ -105,6 +105,12 @@ export interface RokuMovie extends Movie {
   rank?: number; 
   isUnlocked?: boolean;
   purchaseUrl?: string;
+  isWatchPartyEnabled?: boolean;
+  bufferingStrategy?: string;
+  bufferSize?: number;
+  minBandwidth?: number;
+  maxBandwidth?: number;
+  preferredCaptions?: string;
 }
 
 export interface RokuFeed {

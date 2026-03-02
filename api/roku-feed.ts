@@ -43,8 +43,15 @@ function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean
         runtime: movie.durationInMinutes ? `${movie.durationInMinutes} min` : '',
         isFree: !movie.isForSale,
         live: movie.liveStreamStatus === 'live' || movie.isWatchPartyEnabled === true,
+        isWatchPartyEnabled: movie.isWatchPartyEnabled === true,
         isUnlocked: isUnlocked,
-        purchaseUrl: `https://cratetv.net/movie/${movie.key}?action=buy`
+        purchaseUrl: `https://cratetv.net/movie/${movie.key}?action=buy`,
+        // YouTube-style smooth playback optimizations
+        bufferingStrategy: "aggressive",
+        bufferSize: 15, // 15 seconds of buffer goal
+        minBandwidth: 2000000, // 2Mbps minimum to ensure high quality buffer
+        maxBandwidth: 15000000, // 15Mbps cap
+        preferredCaptions: "English"
     };
 }
 
@@ -264,7 +271,9 @@ export async function GET(request: Request) {
         heroItems: (categories[0]?.children || publicSquare[0]?.children || []).slice(0, 5),
         categories,
         publicSquare,
-        liveNow: []
+        liveNow: (Object.values(moviesObj) as Movie[])
+            .filter(m => m.isWatchPartyEnabled === true && isReleased(m))
+            .map(m => formatMovieForRoku(m, assets[m.key], unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || !m.isForSale))
     };
 
     return new Response(JSON.stringify(response), {
