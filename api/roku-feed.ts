@@ -22,7 +22,7 @@ function isReleased(movie: Movie | undefined | null): boolean {
     return !date || date <= new Date();
 }
 
-function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean = true): RokuMovie {
+function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean = true, isLiveOverride: boolean = false): RokuMovie {
     const streamUrl = sanitizeUrl(asset?.rokuStreamUrl || movie.rokuStreamUrl || movie.fullMovie || '');
     const isHls = streamUrl.toLowerCase().includes('.m3u8');
     const posterUrl = sanitizeUrl(asset?.tvPoster || movie.tvPoster || movie.poster || '');
@@ -42,16 +42,10 @@ function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean
         year: publishedDate ? publishedDate.getFullYear().toString() : '2025',
         runtime: movie.durationInMinutes ? `${movie.durationInMinutes} min` : '',
         isFree: !movie.isForSale,
-        live: movie.liveStreamStatus === 'live' || movie.isWatchPartyEnabled === true,
+        live: movie.liveStreamStatus === 'live' || movie.isWatchPartyEnabled === true || isLiveOverride,
         isWatchPartyEnabled: movie.isWatchPartyEnabled === true,
         isUnlocked: isUnlocked,
-        purchaseUrl: `https://cratetv.net/movie/${movie.key}?action=buy`,
-        // YouTube-style smooth playback optimizations
-        bufferingStrategy: "aggressive",
-        bufferSize: 15, // 15 seconds of buffer goal
-        minBandwidth: 2000000, // 2Mbps minimum to ensure high quality buffer
-        maxBandwidth: 15000000, // 15Mbps cap
-        preferredCaptions: "English"
+        purchaseUrl: `https://cratetv.net/movie/${movie.key}?action=buy`
     };
 }
 
@@ -76,15 +70,27 @@ export async function GET(request: Request) {
 
     if (db) {
         console.log("Fetching data from Firestore...");
-        const [configDoc, assetsSnap, viewsSnap, moviesSnap, categoriesSnap] = await Promise.all([
+        const [configDoc, assetsSnap, viewsSnap, moviesSnap, categoriesSnap, settingsDoc] = await Promise.all([
             db.collection('roku').doc('config').get(),
             db.collection('roku_assets').get(),
             db.collection('view_counts').get(),
             db.collection('movies').get(),
-            db.collection('categories').get()
+            db.collection('categories').get(),
+            db.collection('content').doc('settings').get()
         ]);
 
         if (configDoc.exists) config = { ...config, ...configDoc.data() };
+        if (settingsDoc.exists) {
+            const settingsData = settingsDoc.data();
+            if (settingsData?.crateFestConfig) {
+                const fest = settingsData.crateFestConfig;
+                const isCrateFestActive = fest.isActive && fest.startDate && fest.endDate && 
+                                        (new Date() >= new Date(fest.startDate) && new Date() <= new Date(fest.endDate));
+                if (isCrateFestActive) {
+                    (config as any).crateFest = fest;
+                }
+            }
+        }
         assetsSnap.forEach(doc => { assets[doc.id] = doc.data() as RokuAsset; });
         viewsSnap.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count || 0); });
         
@@ -194,7 +200,26 @@ export async function GET(request: Request) {
         return valid;
     };
 
-    // 1. TOP 10 TODAY
+    // 1. CRATE FEST (Highest Priority)
+    if ((config as any).crateFest) {
+        const fest = (config as any).crateFest;
+        const movieKeys = fest.movieBlocks?.flatMap((b: any) => b.movieKeys) || [];
+        const children = movieKeys
+            .map((k: string) => moviesObj[k])
+            .filter((m: Movie) => m && isValidForRoku(m))
+            .map((m: Movie) => formatMovieForRoku(m, assets[m.key], unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || !m.isForSale, true));
+        
+        if (children.length > 0) {
+            categories.push({
+                title: fest.title || "Film Festival",
+                type: 'standard',
+                categoryType: 'crateFest',
+                children
+            });
+        }
+    }
+
+    // 2. TOP 10 TODAY
     if (config.topTen?.enabled !== false) {
         const topMovies = (Object.values(moviesObj) as Movie[])
             .filter(isValidForRoku)
@@ -272,8 +297,15 @@ export async function GET(request: Request) {
         categories,
         publicSquare,
         liveNow: (Object.values(moviesObj) as Movie[])
-            .filter(m => m.isWatchPartyEnabled === true && isReleased(m))
-            .map(m => formatMovieForRoku(m, assets[m.key], unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || !m.isForSale))
+            .filter(m => {
+                const isWatchParty = m.isWatchPartyEnabled === true;
+                const isCrateFest = (config as any).crateFest?.movieBlocks?.some((b: any) => b.movieKeys?.includes(m.key));
+                return (isWatchParty || isCrateFest) && isReleased(m);
+            })
+            .map(m => {
+                const isCrateFest = (config as any).crateFest?.movieBlocks?.some((b: any) => b.movieKeys?.includes(m.key));
+                return formatMovieForRoku(m, assets[m.key], unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || !m.isForSale, isCrateFest);
+            })
     };
 
     return new Response(JSON.stringify(response), {

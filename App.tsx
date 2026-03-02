@@ -103,20 +103,26 @@ const App: React.FC = () => {
     }, [movies, categories.vault]);
 
     const activeBannerType = useMemo(() => {
-        if (livePartyMovie && !isFestivalBannerDismissed) return 'WATCH_PARTY';
         const config = settings.crateFestConfig;
         const isCrateFestWindow = config?.isActive && config?.startDate && config?.endDate && 
                                 (new Date() >= new Date(config.startDate) && new Date() <= new Date(config.endDate));
+
+        // Priority: 1. Crate Fest (Most important event) 2. Watch Party 3. General Festival
         if (isCrateFestWindow) return 'CRATE_FEST';
+        if (livePartyMovie && !isFestivalBannerDismissed) return 'WATCH_PARTY';
         if (isFestivalLive && !isFestivalBannerDismissed) return 'GENERAL_FESTIVAL';
         return 'NONE';
     }, [livePartyMovie, settings.crateFestConfig, isFestivalLive, isFestivalBannerDismissed]);
 
     const currentLiveHeroConfig = useMemo(() => {
-        if (activeBannerType === 'CRATE_FEST') return settings.crateFestConfig;
+        const crateFestConfig = settings.crateFestConfig;
+        const isCrateFestActive = crateFestConfig?.isActive && crateFestConfig?.startDate && crateFestConfig?.endDate && 
+                                (new Date() >= new Date(crateFestConfig.startDate) && new Date() <= new Date(crateFestConfig.endDate));
+        
+        if (isCrateFestActive) return crateFestConfig;
         if (isFestivalLive) return festivalConfig;
         return null;
-    }, [activeBannerType, isFestivalLive, settings.crateFestConfig, festivalConfig]);
+    }, [isFestivalLive, settings.crateFestConfig, festivalConfig]);
 
     const crateFestMovies = useMemo(() => {
         const config = settings.crateFestConfig;

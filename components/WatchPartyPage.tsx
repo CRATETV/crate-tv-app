@@ -313,12 +313,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     }
                     cumulativeTime += duration;
                 }
-                if (!found && !isEnded) {
+                if (!found && !isEnded && cumulativeTime > 0) {
                     setIsEnded(true);
                 }
             } else {
-                const movieDuration = movie?.durationInMinutes ? movie.durationInMinutes * 60 : (video.duration > 0 ? video.duration : 3600);
-                if (totalElapsed >= movieDuration) {
+                // Use movie metadata duration first, then video element duration, then Infinity (to wait for metadata)
+                const movieDuration = movie?.durationInMinutes 
+                    ? movie.durationInMinutes * 60 
+                    : (video.duration > 0 ? video.duration : Infinity);
+
+                if (totalElapsed >= movieDuration && movieDuration !== Infinity) {
                     if (!isEnded) {
                         setIsEnded(true);
                         video.pause();
@@ -559,12 +563,6 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                 </div>
                             ) : (
                                 <div className="relative w-full h-full">
-                                    {isBuffering && !isEnded && (
-                                        <div className="absolute inset-0 z-[180] bg-black/20 backdrop-blur-sm flex flex-col items-center justify-center space-y-4 animate-[fadeIn_0.3s_ease-out] pointer-events-none">
-                                            <div className="w-12 h-12 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin"></div>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white drop-shadow-lg">Optimizing Stream...</p>
-                                        </div>
-                                    )}
                                     <video 
                                         ref={videoRef} 
                                         src={currentMovie?.fullMovie} 

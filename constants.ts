@@ -180,6 +180,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn_Art.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Autumn_Art.webp",
     "likes": 310,
+    "durationInMinutes": 8,
     "publishedAt": "2025-03-01T15:00:00Z",
     "isUnlisted": false
   },
@@ -201,6 +202,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini_Poster.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Gemini_Poster.webp",
     "likes": 560,
+    "durationInMinutes": 15,
     "publishedAt": "2025-04-12T18:00:00Z",
     "isUnlisted": false
   },
@@ -215,6 +217,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/TimeService_Poster.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/TimeService_Poster.webp",
     "likes": 280,
+    "durationInMinutes": 10,
     "publishedAt": "2025-02-20T11:00:00Z",
     "isUnlisted": false
   },
@@ -236,6 +239,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/public+domain+movies+/a+trip+to+the+moon+.webp",
     "likes": 2100,
+    "durationInMinutes": 14,
     "publishedAt": "2025-01-01T00:00:00Z",
     "isUnlisted": false,
     "posterVariants": [
@@ -261,6 +265,7 @@ export const moviesData: Record<string, Movie> = {
     "poster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fling_Poster.webp",
     "tvPoster": "https://cratetelevision.s3.us-east-1.amazonaws.com/Fling_Poster.webp",
     "likes": 450,
+    "durationInMinutes": 90,
     "publishedAt": "2025-04-15T12:00:00Z",
     "isUnlisted": false
   },

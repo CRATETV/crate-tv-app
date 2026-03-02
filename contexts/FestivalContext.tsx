@@ -48,6 +48,12 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [viewCounts, setViewCounts] = useState<Record<string, number>>({});
     const [activeParties, setActiveParties] = useState<Record<string, WatchPartyState>>({});
     const [dataSource, setDataSource] = useState<'live' | 'fallback' | null>(null);
+    const [now, setNow] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 60000); // Update every minute
+        return () => clearInterval(timer);
+    }, []);
 
     const isFestivalLive = useMemo(() => {
         if (!festivalConfig?.startDate || !festivalConfig?.endDate) return false;
@@ -58,7 +64,6 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     }, [festivalConfig]);
 
     const livePartyMovie = useMemo(() => {
-        const now = new Date();
         const movieArray = Object.values(movies) as Movie[];
         
         // 1. Check for explicitly LIVE parties first (highest priority)
@@ -95,14 +100,16 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             .filter(m => {
                 const start = new Date(m.watchPartyStartTime!);
                 const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
-                const fourHoursAgo = 4 * 60 * 60 * 1000;
-                return start.getTime() > (now.getTime() - fourHoursAgo) && 
+                
+                // If the movie has already started, ONLY show it if it's in activeParties (handled above)
+                // Otherwise, show it if it's starting in the next 7 days
+                return start.getTime() > now.getTime() && 
                        start.getTime() < (now.getTime() + sevenDaysInMs);
             })
             .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
 
         return upcomingParties[0] || null;
-    }, [activeParties, movies, festivalData]);
+    }, [activeParties, movies, festivalData, now]);
 
     const fetchData = async (forceNoCache = false) => {
         try {
