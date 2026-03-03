@@ -2,8 +2,22 @@
 // It will be accessible at the path /api/get-movie-likes
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 
+const cache = {
+    data: null as any,
+    timestamp: 0
+};
+const CACHE_TTL = 300 * 1000; // 5 minutes
+
 export async function GET(request: Request) {
   try {
+    const nowTime = Date.now();
+    if (cache.data && (nowTime - cache.timestamp < CACHE_TTL)) {
+        return new Response(JSON.stringify(cache.data), { 
+            status: 200,
+            headers: { 'Content-Type': 'application/json', 'X-Cache': 'HIT' }
+        });
+    }
+
     const initError = getInitializationError();
     if (initError) {
         throw new Error(`Firebase Admin connection failed: ${initError}`);
@@ -23,12 +37,14 @@ export async function GET(request: Request) {
         likesData[doc.id] = typeof movieData.likes === 'number' ? movieData.likes : 0;
     });
 
+    cache.data = likesData;
+    cache.timestamp = nowTime;
+
     return new Response(JSON.stringify(likesData), { 
         status: 200,
         headers: { 
             'Content-Type': 'application/json',
-            // Do not cache this response heavily, as it's meant to be live
-            'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120'
+            'X-Cache': 'MISS'
         }
     });
   } catch (error) {

@@ -14,8 +14,22 @@ const slugify = (name: string): string => {
         .replace(/^-+|-+$/g, ''); // remove leading/trailing dashes
 };
 
+const cache = {
+    data: null as any,
+    timestamp: 0
+};
+const CACHE_TTL = 300 * 1000; // 5 minutes
+
 export async function GET(request: Request) {
   try {
+    const nowTime = Date.now();
+    if (cache.data && (nowTime - cache.timestamp < CACHE_TTL)) {
+        return new Response(JSON.stringify(cache.data), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json', 'X-Cache': 'HIT' }
+        });
+    }
+
     const initError = getInitializationError();
     if (initError) throw new Error(`Firebase Admin connection failed: ${initError}`);
     
@@ -109,12 +123,16 @@ export async function GET(request: Request) {
     }
 
     const allProfiles = Object.values(existingProfiles).sort((a, b) => a.name.localeCompare(b.name));
+    const response = { actors: allProfiles };
 
-    return new Response(JSON.stringify({ actors: allProfiles }), {
+    cache.data = response;
+    cache.timestamp = nowTime;
+
+    return new Response(JSON.stringify(response), {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600'
+        'X-Cache': 'MISS'
       },
     });
 

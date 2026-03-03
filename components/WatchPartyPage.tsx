@@ -395,8 +395,8 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             // Reset filter on massive jumps (e.g. first load)
             driftFilterRef.current = rawDrift;
         } else {
-            // Simple low-pass filter: 90% history, 10% new data
-            driftFilterRef.current = (driftFilterRef.current * 0.9) + (rawDrift * 0.1);
+            // Simple low-pass filter: 80% history, 20% new data
+            driftFilterRef.current = (driftFilterRef.current * 0.8) + (rawDrift * 0.2);
         }
 
         const drift = driftFilterRef.current;
@@ -413,20 +413,22 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             return;
         } 
 
-        // 3. RATE LIMITER: Only adjust playback rate every 3 seconds to prevent audio artifacts
-        if (now - lastRateUpdateRef.current < 3000) return;
+        // 3. RATE LIMITER: Only adjust playback rate every 1 second to prevent audio artifacts
+        if (now - lastRateUpdateRef.current < 1000) return;
         lastRateUpdateRef.current = now;
 
         // 4. GRADUATED SYNC: Use extremely small, imperceptible rate changes
-        // Dead zone: 2.0 seconds (ignore small drifts entirely)
+        // Dead zone: 0.3 seconds (ignore tiny drifts)
         let targetRate = 1.0;
-        if (absDrift > 2.0) {
-            if (absDrift > 20) {
-                targetRate = drift > 0 ? 1.015 : 0.985; // 1.5% - noticeable but effective
-            } else if (absDrift > 8) {
-                targetRate = drift > 0 ? 1.005 : 0.995; // 0.5% - barely audible
+        if (absDrift > 0.3) {
+            if (absDrift > 25) {
+                targetRate = drift > 0 ? 1.025 : 0.975; // 2.5% - effective for large drifts
+            } else if (absDrift > 10) {
+                targetRate = drift > 0 ? 1.012 : 0.988; // 1.2% - barely audible pitch shift
+            } else if (absDrift > 3) {
+                targetRate = drift > 0 ? 1.006 : 0.994; // 0.6% - safe for most content
             } else {
-                targetRate = drift > 0 ? 1.002 : 0.998; // 0.2% - completely imperceptible
+                targetRate = drift > 0 ? 1.003 : 0.997; // 0.3% - ultra-fine adjustment
             }
         }
 
@@ -455,7 +457,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     useEffect(() => {
         if (isControllerMode || currentMovie?.isLiveStream) return;
-        const interval = setInterval(syncClock, 1000); // Check every second for precise but filtered adjustments
+        const interval = setInterval(syncClock, 500); // Check every 500ms for ultra-smooth tracking
         syncClock(); 
         return () => clearInterval(interval);
     }, [syncClock, isControllerMode, currentMovie]);

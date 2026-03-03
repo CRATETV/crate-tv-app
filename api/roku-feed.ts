@@ -49,11 +49,29 @@ function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean
     };
 }
 
+const cache = new Map<string, { response: any, timestamp: number }>();
+const CACHE_TTL = 300 * 1000; // 5 minutes
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const deviceId = searchParams.get('deviceId');
-    
+    const deviceIdParam = searchParams.get('deviceId');
+    const cacheKey = deviceIdParam || 'global';
+    const nowTime = Date.now();
+
+    // Check cache
+    const cached = cache.get(cacheKey);
+    if (cached && (nowTime - cached.timestamp < CACHE_TTL)) {
+        console.log(`Serving Roku feed from cache for key: ${cacheKey}`);
+        return new Response(JSON.stringify(cached.response), {
+            status: 200,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Cache': 'HIT'
+            },
+        });
+    }
+
     const apiData = await getApiData({ noCache: true });
     const moviesObj: Record<string, Movie> = { ...fallbackMovies, ...(apiData.movies || {}) };
     const categoriesObj: Record<string, Category> = { ...fallbackCategories, ...(apiData.categories || {}) };
@@ -119,8 +137,8 @@ export async function GET(request: Request) {
             });
         }
 
-        if (deviceId) {
-            const linkDoc = await db.collection('roku_links').doc(deviceId).get();
+        if (deviceIdParam) {
+            const linkDoc = await db.collection('roku_links').doc(deviceIdParam).get();
             if (linkDoc.exists) {
                 const userId = linkDoc.data()?.userId;
                 const userDoc = await db.collection('users').doc(userId).get();
@@ -318,13 +336,14 @@ export async function GET(request: Request) {
             })
     };
 
+    // Store in cache
+    cache.set(cacheKey, { response, timestamp: nowTime });
+
     return new Response(JSON.stringify(response), {
         status: 200,
         headers: {
             'Content-Type': 'application/json',
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
+            'X-Cache': 'MISS'
         },
     });
   } catch (error) {

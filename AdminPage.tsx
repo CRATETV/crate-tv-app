@@ -24,6 +24,7 @@ import AdminPayoutsTab from './components/AdminPayoutsTab';
 import UserIntelligenceTab from './components/UserIntelligenceTab';
 import AnalyticsPage from './components/AnalyticsPage';
 import RokuForge from './components/RokuForge';
+import RokuAnalyticsTab from './components/RokuAnalyticsTab';
 
 const ALL_TABS: Record<string, string> = {
     pulse: '⚡ Daily Pulse',
@@ -44,6 +45,7 @@ const ALL_TABS: Record<string, string> = {
     categories: '📂 Categories',
     laurels: '🏆 Laurel Forge',
     forge: '🔨 Roku Forge',
+    rokuAnalytics: '📈 Roku Intel',
     permissions: '🔑 Permissions',
     security: '🛡️ Security'
 };
@@ -339,6 +341,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'categories' && <CategoryEditor initialCategories={categories} allMovies={Object.values(movies) as Movie[]} onSave={(c) => handleSaveData('categories', c)} isSaving={isSaving} />}
                     {activeTab === 'laurels' && < LaurelManager allMovies={Object.values(movies) as Movie[]} />}
                     {activeTab === 'forge' && <RokuForge />}
+                    {activeTab === 'rokuAnalytics' && <RokuAnalyticsTab />}
                     {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'security' && <SecurityTerminal />}
                 </div>

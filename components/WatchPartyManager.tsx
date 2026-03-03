@@ -1,39 +1,32 @@
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Movie, WatchPartyState, ChatMessage, FilmBlock } from '../types';
+import { Movie, WatchPartyState, ChatMessage } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import { useAuth } from '../contexts/AuthContext';
-import { useFestival } from '../contexts/FestivalContext';
 import { avatars } from './avatars';
 
-const getPartyStatusText = (entity: any, partyState?: WatchPartyState) => {
-    if (partyState?.status === 'live') {
-        return { text: 'LIVE NOW', color: 'bg-red-600 animate-pulse' };
+// --- HELPER FUNCTIONS ---
+
+const getPartyStatusText = (movie: Movie, partyState?: WatchPartyState) => {
+    if (!movie.isWatchPartyEnabled || !movie.watchPartyStartTime) {
+        return { text: 'Disabled', color: 'bg-gray-500' };
     }
     const now = new Date();
-    const startTimeStr = entity.watchPartyStartTime;
-    if (!entity.isWatchPartyEnabled || !startTimeStr) {
-        return { text: 'Disabled', color: 'bg-gray-800 text-gray-500' };
-    }
-    const startTime = new Date(startTimeStr);
+    const startTime = new Date(movie.watchPartyStartTime);
     if (now < startTime) {
-        return { text: 'Upcoming', color: 'bg-indigo-600' };
+        return { text: 'Upcoming', color: 'bg-blue-500' };
     }
-    return { text: 'Session Inactive', color: 'bg-gray-700' };
+    if (partyState?.status === 'live') {
+        return { text: 'Live', color: 'bg-red-500 animate-pulse' };
+    }
+    if (partyState?.status === 'waiting' || !partyState) {
+        return { text: 'Waiting for Host', color: 'bg-yellow-500' };
+    }
+    return { text: 'Ended', color: 'bg-gray-700' };
 };
 
-const formatISOForInput = (isoString?: string): string => {
-    if (!isoString) return '';
-    try {
-        const date = new Date(isoString);
-        if (isNaN(date.getTime())) return '';
-        const tzoffset = date.getTimezoneOffset() * 60000;
-        return new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
-    } catch (e) {
-        return '';
-    }
-};
+
+// --- CHILD COMPONENTS ---
 
 const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: string | null; avatar?: string; } | null }> = ({ movieKey, user }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -44,7 +37,7 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
-        const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages').orderBy('timestamp', 'asc').limitToLast(200);
+        const messagesRef = db.collection('watch_parties').doc(movieKey).collection('messages').orderBy('timestamp', 'asc').limitToLast(100);
         const unsubscribe = messagesRef.onSnapshot(snapshot => {
             const fetchedMessages: ChatMessage[] = [];
             snapshot.forEach(doc => { fetchedMessages.push({ id: doc.id, ...doc.data() } as ChatMessage); });
@@ -76,24 +69,26 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
     };
 
     return (
-        <div className="w-full h-full flex flex-col bg-[#0a0a0a] border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
-            <div className="p-4 text-xs font-black uppercase tracking-widest text-gray-500 border-b border-white/5 flex-shrink-0">Live Feed Monitor</div>
-            <div className="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide">
+        <div className="w-full h-full flex flex-col bg-gray-900 border-l-2 border-gray-700">
+            <div className="p-4 text-lg font-bold border-b border-gray-700 flex-shrink-0">
+                <h2 className="text-base">Live Chat</h2>
+            </div>
+            <div className="flex-grow p-4 overflow-y-auto space-y-4">
                 {messages.map(msg => (
                     <div key={msg.id} className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-800 flex-shrink-0 p-1 border border-white/10" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
-                        <div className="min-w-0">
-                            <p className="font-black text-[10px] text-red-500 uppercase tracking-tighter">{msg.userName}</p>
-                            <p className="text-sm text-gray-200 break-words leading-tight">{msg.text}</p>
+                        <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 p-1" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
+                        <div>
+                            <p className="font-bold text-sm text-white">{msg.userName}</p>
+                            <p className="text-sm text-gray-300 break-words">{msg.text}</p>
                         </div>
                     </div>
                 ))}
                 <div ref={messagesEndRef} />
             </div>
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 flex-shrink-0">
-                <div className="flex items-center gap-2 bg-white/5 rounded-full px-4 border border-white/10">
-                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Send as admin..." className="bg-transparent border-none text-white text-sm w-full focus:ring-0 py-3" disabled={!user || isSending} />
-                    <button type="submit" className="text-red-500" disabled={!user || isSending || !newMessage.trim()}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-700 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Say something..." className="form-input flex-grow" disabled={!user || isSending} />
+                    <button type="submit" className="submit-btn !px-4" disabled={!user || isSending || !newMessage.trim()}>Send</button>
                 </div>
             </form>
         </div>
@@ -101,274 +96,389 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
 };
 
 const WatchPartyControlRoom: React.FC<{
-    entity: any;
-    partyKey: string;
+    movie: Movie;
     partyState: WatchPartyState | undefined;
-    onEndParty: () => void;
-}> = ({ entity, partyKey, partyState, onEndParty }) => {
-    const isLive = partyState?.status === 'live';
+    onStartParty: () => void;
+    onSyncState: (state: Partial<WatchPartyState>) => void;
+}> = ({ movie, partyState, onStartParty, onSyncState }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
     const { user } = useAuth();
+    const lastSyncTime = useRef(0);
 
-    const toggleQA = async () => {
-        const db = getDbInstance();
-        if (db) {
-            await db.collection('watch_parties').doc(partyKey).update({
-                isQALive: !partyState?.isQALive,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            });
+    const handlePlay = () => onSyncState({ isPlaying: true });
+    const handlePause = () => videoRef.current && onSyncState({ isPlaying: false, currentTime: videoRef.current.currentTime });
+    const handleSeeked = () => videoRef.current && onSyncState({ currentTime: videoRef.current.currentTime });
+    
+    // Periodically sync time while playing to keep viewers in check
+    const handleTimeUpdate = () => {
+        const video = videoRef.current;
+        if (video && !video.paused && (Date.now() - lastSyncTime.current > 5000)) {
+            lastSyncTime.current = Date.now();
+            onSyncState({ currentTime: video.currentTime });
+        }
+    };
+    
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !partyState) return;
+        
+        // This logic is for the admin's player to reflect the canonical state.
+        // It's less critical since the admin is the source of truth, but good for consistency.
+        if (partyState.isPlaying && video.paused) {
+            video.play().catch(e => console.warn("Admin autoplay was prevented", e));
+        } else if (!partyState.isPlaying && !video.paused) {
+            video.pause();
+        }
+
+        if (Math.abs(video.currentTime - partyState.currentTime) > 3) {
+            video.currentTime = partyState.currentTime;
+        }
+    }, [partyState]);
+    
+    const status = getPartyStatusText(movie, partyState);
+    const isLive = partyState?.status === 'live';
+    const canStart = movie.isWatchPartyEnabled && (partyState?.status === 'waiting' || partyState?.status === 'ended' || !partyState);
+    
+    const [isStarting, setIsStarting] = useState(false);
+
+    const handleStartWithLoading = async () => {
+        setIsStarting(true);
+        try {
+            await onStartParty();
+        } finally {
+            setIsStarting(false);
         }
     };
 
     return (
-        <div className="bg-white/[0.02] p-8 rounded-[3rem] border border-white/5 shadow-2xl mb-12 animate-[fadeIn_0.5s_ease-out]">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8 border-b border-white/5 pb-8">
-                <div>
-                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">Command: {entity.title}</h2>
-                    <div className="flex items-center gap-4 mt-3">
-                        <span className={`px-3 py-1 text-[9px] font-black text-white rounded-full uppercase tracking-widest ${getPartyStatusText(entity, partyState).color}`}>
-                            {getPartyStatusText(entity, partyState).text}
-                        </span>
-                        {isLive && <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest animate-pulse">Global Sync Active</span>}
+        <div className="mb-8 bg-black/50 p-6 rounded-lg border-2 border-pink-500">
+            <h2 className="text-2xl font-bold text-white mb-4">Current Watch Party Control Room</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-4">
+                    <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                        <video
+                            ref={videoRef}
+                            src={movie.fullMovie}
+                            onPlay={handlePlay}
+                            onPause={handlePause}
+                            onSeeked={handleSeeked}
+                            onTimeUpdate={handleTimeUpdate}
+                            controls
+                            className="w-full h-full"
+                        />
                     </div>
-                </div>
-                <div className="flex gap-4">
-                    {isLive && (
-                        <>
+                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-800/50 p-4 rounded-lg">
+                        <div>
+                            <h3 className="text-xl font-bold">{movie.title}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className={`px-2 py-1 text-xs font-bold text-white rounded-full ${status.text === 'Upcoming' && canStart ? 'bg-yellow-500' : status.color}`}>
+                                    {status.text === 'Upcoming' && canStart ? 'Ready to Start' : status.text}
+                                </span>
+                                <span className="text-sm text-gray-400">
+                                    {movie.watchPartyStartTime && `Scheduled for: ${new Date(movie.watchPartyStartTime).toLocaleString()}`}
+                                </span>
+                            </div>
+                        </div>
+                        {canStart && (
                             <button 
-                                onClick={toggleQA}
-                                className={`px-8 py-4 rounded-2xl uppercase tracking-widest text-xs transition-all font-black ${partyState?.isQALive ? 'bg-indigo-600 text-white shadow-[0_0_30px_rgba(79,70,229,0.4)]' : 'bg-white/5 text-gray-500 border border-white/10 hover:text-white'}`}
+                                onClick={handleStartWithLoading} 
+                                disabled={isStarting}
+                                className="bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white font-bold py-3 px-6 rounded-md w-full sm:w-auto shadow-[0_0_20px_rgba(22,163,74,0.4)] transition-all flex items-center justify-center gap-2"
                             >
-                                {partyState?.isQALive ? 'Director Stage Active' : 'Enable Director Stage'}
+                                {isStarting ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Launching...
+                                    </>
+                                ) : (
+                                    partyState?.status === 'ended' ? 'Restart Party' : 'Start Party For Everyone'
+                                )}
                             </button>
-                            <button onClick={onEndParty} className="bg-red-600 hover:bg-red-700 text-white font-black py-4 px-10 rounded-2xl uppercase tracking-widest text-xs shadow-2xl">
-                                Terminate Session
+                        )}
+                        {isLive && (
+                             <button 
+                                onClick={handleStartWithLoading} 
+                                disabled={isStarting}
+                                className="bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white font-bold py-3 px-6 rounded-md w-full sm:w-auto opacity-50 hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+                            >
+                                {isStarting ? 'Resetting...' : 'Reset Party'}
                             </button>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                <div className="lg:col-span-2">
-                    <div className="aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 relative flex items-center justify-center p-12">
-                         <div className="space-y-8 text-center max-w-md">
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em]">Backstage Entry Protocol</p>
-                                <p className="text-gray-400 text-sm font-medium">Forward this key to the director. They can use it to bypass the paywall and activate verified creator status.</p>
-                            </div>
-                            
-                            <div className="bg-white/5 border border-white/10 p-8 rounded-3xl">
-                                <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-4">Master Session Key</p>
-                                <p className="text-6xl font-black text-white tracking-[0.5em] italic">{partyState?.backstageKey || '------'}</p>
-                            </div>
-
-                            <p className="text-[10px] text-gray-700 font-bold uppercase tracking-widest">Valid for duration of current uplink only.</p>
-                         </div>
+                        )}
                     </div>
                 </div>
-                <div className="lg:col-span-1 h-[50vh] lg:h-auto">
-                    <EmbeddedChat movieKey={partyKey} user={user} />
+                <div className="lg:col-span-1 h-[60vh] md:h-auto min-h-[500px]">
+                     <EmbeddedChat movieKey={movie.key} user={user} />
                 </div>
             </div>
         </div>
     );
 };
 
-const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (movie: Movie) => Promise<void>; }> = ({ allMovies, onSave }) => {
-    const { festivalData, refreshData } = useFestival();
-    const [partyStates, setPartyStates] = useState<Record<string, WatchPartyState>>({});
-    const [filter, setFilter] = useState('');
+// Correctly formats a UTC ISO string for a datetime-local input, accounting for timezone.
+const formatISOForInput = (isoString?: string): string => {
+    if (!isoString) return '';
+    try {
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) return '';
+        
+        // Create a new date that is offset by the timezone, so the final ISO string's YYYY-MM-DDTHH:MM part matches the local time.
+        const tzoffset = date.getTimezoneOffset() * 60000; //offset in milliseconds
+        const localISOTime = new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
+        
+        return localISOTime;
+    } catch (e) {
+        return '';
+    }
+};
 
+
+const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; isSelected: boolean; onSelect: () => void; onChange: (updates: Partial<Movie>) => void; }> = ({ movie, partyState, isSelected, onSelect, onChange }) => {
+    const handleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onChange({ isWatchPartyEnabled: e.target.checked });
+    };
+
+    const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // Convert the local datetime-local string to a UTC ISO string before saving
+        if (e.target.value) {
+            const localDate = new Date(e.target.value);
+            onChange({ watchPartyStartTime: localDate.toISOString() });
+        } else {
+            onChange({ watchPartyStartTime: '' });
+        }
+    };
+
+    const status = getPartyStatusText(movie, partyState);
+
+    return (
+        <tr className="border-b border-gray-700">
+            <td className="p-3 font-medium text-white">{movie.title}</td>
+            <td className="p-3">
+                <span className={`px-2 py-1 text-xs font-bold text-white rounded-full ${status.color}`}>
+                    {status.text}
+                </span>
+            </td>
+            <td className="p-3">
+                <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked={movie.isWatchPartyEnabled || false} onChange={handleToggle} className="sr-only peer" />
+                    <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-pink-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                </label>
+            </td>
+            <td className="p-3">
+                <input
+                    type="datetime-local"
+                    value={formatISOForInput(movie.watchPartyStartTime)}
+                    onChange={handleTimeChange}
+                    className="form-input !py-1 text-sm"
+                    disabled={!movie.isWatchPartyEnabled}
+                />
+            </td>
+            <td className="p-3">
+                <button 
+                    onClick={onSelect}
+                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${isSelected ? 'bg-pink-600 text-white shadow-[0_0_15px_rgba(219,39,119,0.4)]' : 'bg-white/5 text-gray-400 hover:text-white border border-white/10'}`}
+                >
+                    {isSelected ? 'In Control' : 'Control'}
+                </button>
+            </td>
+        </tr>
+    );
+};
+
+
+// --- MAIN COMPONENT ---
+
+const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (movie: Movie) => Promise<void>; }> = ({ allMovies, onSave }) => {
+    const [movieSettings, setMovieSettings] = useState<Record<string, Movie>>(allMovies);
+    const [partyStates, setPartyStates] = useState<Record<string, WatchPartyState>>({});
+    const [selectedMovieKey, setSelectedMovieKey] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+    const [filter, setFilter] = useState('');
+    const [showOnlyEnabled, setShowOnlyEnabled] = useState(false);
+    const { user } = useAuth();
+    
     useEffect(() => {
         const db = getDbInstance();
         if (!db) return;
         const unsub = db.collection('watch_parties').onSnapshot(snapshot => {
             const states: Record<string, WatchPartyState> = {};
-            snapshot.forEach(doc => { states[doc.id] = doc.data() as WatchPartyState; });
+            snapshot.forEach(doc => {
+                states[doc.id] = doc.data() as WatchPartyState;
+            });
             setPartyStates(states);
         });
         return () => unsub();
     }, []);
 
-    const activeParty = useMemo(() => {
-        const liveKey = Object.keys(partyStates).find(key => partyStates[key].status === 'live');
-        if (!liveKey) return null;
-        const movie = allMovies[liveKey];
-        const block = festivalData.flatMap(d => d.blocks).find(b => b.id === liveKey);
-        if (!movie && !block) return null;
-        return { entity: movie || block, partyKey: liveKey, state: partyStates[liveKey] };
-    }, [partyStates, allMovies, festivalData]);
+    const currentPartyMovie = useMemo(() => {
+        if (selectedMovieKey && movieSettings[selectedMovieKey]) return movieSettings[selectedMovieKey];
 
-    const handleEndParty = async () => {
-        if (!activeParty) return;
-        const db = getDbInstance();
-        if (db) {
-            await db.collection('watch_parties').doc(activeParty.partyKey).update({ 
-                status: 'ended', isPlaying: false, lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
+        const now = new Date();
+        const enabledMovies = (Object.values(movieSettings) as Movie[])
+            .filter(m => m.isWatchPartyEnabled && m.watchPartyStartTime)
+            .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
+
+        const liveOrWaiting = enabledMovies.find(m => {
+            const state = partyStates[m.key];
+            const startTime = new Date(m.watchPartyStartTime!);
+            // A party is considered "active" if it's within the 4-hour window from its start time
+            return startTime <= now && (now.getTime() - startTime.getTime() < 4 * 60 * 60 * 1000);
+        });
+
+        if (liveOrWaiting) return liveOrWaiting;
+
+        const nextUpcoming = enabledMovies.find(m => new Date(m.watchPartyStartTime!) > now);
+        return nextUpcoming || null;
+    }, [movieSettings, partyStates]);
+
+    const hasUnsavedChanges = useMemo(() => {
+        return JSON.stringify(allMovies) !== JSON.stringify(movieSettings);
+    }, [allMovies, movieSettings]);
+
+    const handleMovieChange = (movieKey: string, updates: Partial<Movie>) => {
+        setMovieSettings(prev => ({
+            ...prev,
+            [movieKey]: { ...prev[movieKey], ...updates },
+        }));
     };
-
-    const handleUpdate = async (key: string, startTime: string, enabled: boolean, isBlock = false) => {
-        const utcTime = startTime ? new Date(startTime).toISOString() : '';
-        if (isBlock) {
-            const db = getDbInstance();
-            if (db) {
-                const dayRef = festivalData.find(d => d.blocks.some(b => b.id === key));
-                if (dayRef) {
-                    const updatedBlocks = dayRef.blocks.map(b => b.id === key ? { ...b, watchPartyStartTime: utcTime, isWatchPartyEnabled: enabled } : b);
-                    await db.collection('festival').doc('schedule').collection('days').doc(`day_${dayRef.day}`).update({ blocks: updatedBlocks });
-                    await refreshData();
-                }
-            }
-        } else {
-            const movie = allMovies[key];
-            if (movie) await onSave({ ...movie, watchPartyStartTime: utcTime, isWatchPartyEnabled: enabled });
-        }
-    };
-
-    const handleManualStart = async (key: string) => {
-        if (!window.confirm("Initialize manual start protocol?")) return;
-        const password = sessionStorage.getItem('adminPassword');
+    
+    const handleSaveAll = async () => {
+        setIsSaving(true);
+        setSaveStatus('idle');
+        const changedMovies = Object.keys(movieSettings)
+            .filter(key => JSON.stringify(allMovies[key]) !== JSON.stringify(movieSettings[key]))
+            .map(key => movieSettings[key]);
+        
         try {
-            const res = await fetch('/api/start-watch-party', {
+            await Promise.all(changedMovies.map(movie => onSave(movie)));
+            setSaveStatus('success');
+        } catch (error) {
+            console.error("Failed to save watch party settings:", error);
+            setSaveStatus('error');
+        } finally {
+            setIsSaving(false);
+            setTimeout(() => setSaveStatus('idle'), 3000);
+        }
+    };
+
+    const handleSyncState = useCallback(async (newState: Partial<WatchPartyState>) => {
+        if (!user || !currentPartyMovie) return;
+        const db = getDbInstance();
+        if (!db) return;
+
+        const syncRef = db.collection('watch_parties').doc(currentPartyMovie.key);
+        await syncRef.set({
+            ...newState,
+            lastUpdatedBy: user.name || user.email,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+    }, [currentPartyMovie, user]);
+    
+    const handleStartParty = async () => {
+        if (!currentPartyMovie) {
+            alert("No movie selected for control.");
+            return;
+        }
+        const password = sessionStorage.getItem('adminPassword');
+        if (!password) {
+            alert("Admin session expired. Please log in again.");
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/start-watch-party', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ movieKey: key, password }),
+                body: JSON.stringify({ movieKey: currentPartyMovie.key, password }),
             });
-            if (res.ok) alert("Session is LIVE.");
-        } catch (e) { alert("Initialization failure."); }
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to start party.');
+            }
+        } catch (error) {
+            console.error("Start Party Error:", error);
+            alert(`Error: Could not start the party. ${(error as Error).message}`);
+        }
     };
 
-    const filteredBlocks = useMemo(() => {
-        const allBlocks = festivalData.flatMap(d => d.blocks);
-        if (!filter) return allBlocks;
-        return allBlocks.filter(b => b.title.toLowerCase().includes(filter.toLowerCase()));
-    }, [festivalData, filter]);
-
-    const filteredMovies = useMemo(() => {
-        const moviesArr = (Object.values(allMovies) as Movie[]);
-        if (!filter) return moviesArr.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-        return moviesArr
-            .filter(m => (m.title || '').toLowerCase().includes(filter.toLowerCase()))
-            .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-    }, [allMovies, filter]);
+    const filteredMovies = (Object.values(allMovies) as Movie[])
+        .filter(movie => movie.title.toLowerCase().includes(filter.toLowerCase()))
+        .filter(movie => !showOnlyEnabled || movieSettings[movie.key]?.isWatchPartyEnabled)
+        .sort((a, b) => a.title.localeCompare(b.title));
 
     return (
-        <div className="space-y-8 pb-32">
-            {activeParty && (
+        <>
+            {currentPartyMovie && (
                 <WatchPartyControlRoom
-                    entity={activeParty.entity}
-                    partyKey={activeParty.partyKey}
-                    partyState={activeParty.state}
-                    onEndParty={handleEndParty}
+                    movie={currentPartyMovie}
+                    partyState={partyStates[currentPartyMovie.key]}
+                    onStartParty={handleStartParty}
+                    onSyncState={handleSyncState}
                 />
             )}
 
-            <div className="bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] p-8 md:p-12 shadow-2xl space-y-10">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                    <div>
-                        <h3 className="text-2xl font-black uppercase tracking-tighter italic text-white">Watch Schedule</h3>
-                        <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Configure automated start times. Search filters apply to all sectors.</p>
-                    </div>
-                    <div className="relative w-full md:w-80">
-                        <input 
-                            type="text" 
-                            placeholder="Search by Title..." 
-                            value={filter} 
-                            onChange={e => setFilter(e.target.value)} 
-                            className="form-input !py-3 !pl-12 text-xs bg-black/40 border-white/10 w-full" 
+            <div className="bg-gray-950 p-6 rounded-lg text-gray-200">
+                <h2 className="text-xl sm:text-2xl font-bold mb-4 text-pink-400">Schedule a Watch Party</h2>
+                <p className="text-sm text-gray-400 mb-6">Enable a party and set a future start time. Only one party can be active or upcoming at a time. Click "Save All Changes" to publish your schedule.</p>
+                
+                <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                    <input
+                        type="text"
+                        placeholder="Filter movies..."
+                        value={filter}
+                        onChange={e => setFilter(e.target.value)}
+                        className="form-input flex-grow"
+                    />
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                        <input
+                            type="checkbox"
+                            checked={showOnlyEnabled}
+                            onChange={e => setShowOnlyEnabled(e.target.checked)}
+                            className="h-4 w-4 bg-gray-700 border-gray-600 text-pink-500 rounded focus:ring-pink-500"
                         />
-                        <svg className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    </div>
+                        Show only enabled
+                    </label>
                 </div>
-
-                <div className="bg-black border border-white/10 rounded-3xl overflow-hidden">
-                     <table className="w-full text-left text-xs">
-                        <thead className="bg-white/5 text-gray-500 uppercase font-black">
+                
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
                             <tr>
-                                <th className="p-6">Node</th>
-                                <th className="p-6">Status</th>
-                                <th className="p-6">Auto-Start</th>
-                                <th className="p-6">Target Window (Local)</th>
-                                <th className="p-6 text-right">Commit</th>
+                                <th className="p-3">Film Title</th>
+                                <th className="p-3">Status</th>
+                                <th className="p-3">Enabled</th>
+                                <th className="p-3">Start Time</th>
+                                <th className="p-3">Action</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {filteredBlocks.map(block => (
-                                <PartyRow key={block.id} entity={block} partyState={partyStates[block.id]} isBlock={true} onUpdate={handleUpdate} onManualStart={handleManualStart} />
-                            ))}
+                        <tbody>
                             {filteredMovies.map(movie => (
-                                <PartyRow key={movie.key} entity={movie} partyState={partyStates[movie.key]} isBlock={false} onUpdate={handleUpdate} onManualStart={handleManualStart} />
+                                <MovieRow 
+                                    key={movie.key} 
+                                    movie={movieSettings[movie.key]} 
+                                    partyState={partyStates[movie.key]}
+                                    isSelected={currentPartyMovie?.key === movie.key}
+                                    onSelect={() => setSelectedMovieKey(movie.key)}
+                                    onChange={(updates) => handleMovieChange(movie.key, updates)} 
+                                 />
                             ))}
-                            {(filteredBlocks.length === 0 && filteredMovies.length === 0) && (
-                                <tr>
-                                    <td colSpan={5} className="p-20 text-center text-gray-700 font-black uppercase tracking-[0.5em]">No nodes match query: "{filter}"</td>
-                                </tr>
-                            )}
                         </tbody>
-                     </table>
+                    </table>
+                </div>
+
+                <div className="mt-6 pt-6 border-t border-gray-700 flex items-center gap-4">
+                    <button
+                        onClick={handleSaveAll}
+                        disabled={!hasUnsavedChanges || isSaving}
+                        className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white font-bold py-2 px-5 rounded-md transition-colors"
+                    >
+                        {isSaving ? 'Saving...' : 'Save All Changes'}
+                    </button>
+                    {saveStatus === 'success' && <span className="text-green-500 text-sm">Changes saved successfully!</span>}
+                    {saveStatus === 'error' && <span className="text-red-500 text-sm">Failed to save changes.</span>}
                 </div>
             </div>
-        </div>
-    );
-};
-
-const PartyRow: React.FC<{ 
-    entity: any; 
-    partyState?: WatchPartyState; 
-    isBlock: boolean; 
-    onUpdate: (key: string, time: string, enabled: boolean, isBlock: boolean) => Promise<void>;
-    onManualStart: (key: string) => void;
-}> = ({ entity, partyState, isBlock, onUpdate, onManualStart }) => {
-    const [localTime, setLocalTime] = useState(formatISOForInput(entity.watchPartyStartTime));
-    const [localEnabled, setLocalEnabled] = useState(entity.isWatchPartyEnabled || false);
-    const [isSaving, setIsSaving] = useState(false);
-
-    const hasChanged = localTime !== formatISOForInput(entity.watchPartyStartTime) || localEnabled !== (entity.isWatchPartyEnabled || false);
-
-    const handleCommit = async () => {
-        setIsSaving(true);
-        await onUpdate(isBlock ? entity.id : entity.key, localTime, localEnabled, isBlock);
-        setIsSaving(false);
-    };
-
-    return (
-        <tr className="hover:bg-white/[0.01] transition-colors group">
-            <td className="p-6">
-                <p className="font-black text-white uppercase text-sm">{entity.title}</p>
-                <p className="text-[9px] text-gray-600 uppercase mt-1">{isBlock ? 'FESTIVAL BLOCK' : 'CATALOG FILM'}</p>
-            </td>
-            <td className="p-6">
-                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border border-current ${getPartyStatusText(entity, partyState).color.replace('bg-', 'text-')}`}>
-                    {getPartyStatusText(entity, partyState).text}
-                </span>
-            </td>
-            <td className="p-6">
-                <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={localEnabled} onChange={e => setLocalEnabled(e.target.checked)} className="sr-only peer" />
-                    <div className="w-10 h-5 bg-gray-700 rounded-full peer peer-checked:bg-red-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
-                </label>
-            </td>
-            <td className="p-6">
-                <input
-                    type="datetime-local"
-                    value={localTime}
-                    onChange={e => setLocalTime(e.target.value)}
-                    className="bg-white text-black font-black py-2 px-4 rounded-xl text-xs outline-none focus:ring-4 focus:ring-red-600 w-full max-w-[220px]"
-                />
-            </td>
-            <td className="p-6 text-right space-x-4">
-                <button 
-                    onClick={handleCommit}
-                    disabled={!hasChanged || isSaving}
-                    className={`text-[9px] font-black uppercase px-4 py-2 rounded-lg transition-all ${hasChanged ? 'bg-red-600 text-white shadow-xl hover:bg-red-500' : 'bg-white/5 text-gray-700'}`}
-                >
-                    {isSaving ? 'Syncing...' : 'Sync Node'}
-                </button>
-                <button onClick={() => onManualStart(isBlock ? entity.id : entity.key)} className="text-red-500 hover:text-white font-black uppercase text-[8px] tracking-widest border border-red-500/20 px-3 py-1.5 rounded-lg hover:bg-red-600 transition-all">Go Live</button>
-            </td>
-        </tr>
+        </>
     );
 };
 
