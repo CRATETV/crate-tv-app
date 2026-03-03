@@ -380,46 +380,69 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         };
     }, [isEnded]);
 
+    const driftFilterRef = useRef<number>(0);
+    const lastRateUpdateRef = useRef<number>(0);
+
     const syncVideo = (targetPosition: number) => {
         const video = videoRef.current;
-        if (!video) return;
+        if (!video || video.seeking) return;
         
-        const drift = targetPosition - video.currentTime;
-        const absDrift = Math.abs(drift);
-
-        // 1. HARD SEEK: Only if drift is massive (> 45s) or initial sync
-        // We avoid hard seeks as much as possible to prevent "jumping"
-        if ((absDrift > 45 || !isInitialSyncDone) && !video.seeking) {
-            lastSeekTimeRef.current = Date.now();
-            video.currentTime = targetPosition;
-            video.playbackRate = 1.0;
-            if (!isInitialSyncDone) setIsInitialSyncDone(true);
-        } 
-        // 2. ULTRA-SMOOTH SYNC: Adjust playback rate by 0.5% - 2% depending on drift
-        // This is imperceptible to the human ear/eye but keeps everyone in sync
-        else if (absDrift > 0.5) {
-            if (absDrift > 15) {
-                video.playbackRate = drift > 0 ? 1.02 : 0.98;
-            } else if (absDrift > 5) {
-                video.playbackRate = drift > 0 ? 1.01 : 0.99;
-            } else {
-                video.playbackRate = drift > 0 ? 1.005 : 0.995;
-            }
-        } 
-        // 3. IN SYNC: Reset to normal speed
-        else {
-            video.playbackRate = 1.0;
+        const rawDrift = targetPosition - video.currentTime;
+        
+        // 1. JITTER FILTER: Smooth out the drift calculation to ignore micro-fluctuations
+        // This prevents the playback rate from "flickering" due to network or CPU jitter.
+        if (Math.abs(rawDrift) > 60) {
+            // Reset filter on massive jumps (e.g. first load)
+            driftFilterRef.current = rawDrift;
+        } else {
+            // Simple low-pass filter: 90% history, 10% new data
+            driftFilterRef.current = (driftFilterRef.current * 0.9) + (rawDrift * 0.1);
         }
 
-        // 4. BUFFER GUARD: If we are running low on buffer, slow down slightly to avoid a hard stop
+        const drift = driftFilterRef.current;
+        const absDrift = Math.abs(drift);
+        const now = Date.now();
+
+        // 2. HARD SEEK: Only if drift is massive (> 45s) or initial sync
+        if ((absDrift > 45 || !isInitialSyncDone)) {
+            lastSeekTimeRef.current = now;
+            video.currentTime = targetPosition;
+            video.playbackRate = 1.0;
+            driftFilterRef.current = 0; // Reset filter after seek
+            if (!isInitialSyncDone) setIsInitialSyncDone(true);
+            return;
+        } 
+
+        // 3. RATE LIMITER: Only adjust playback rate every 3 seconds to prevent audio artifacts
+        if (now - lastRateUpdateRef.current < 3000) return;
+        lastRateUpdateRef.current = now;
+
+        // 4. GRADUATED SYNC: Use extremely small, imperceptible rate changes
+        // Dead zone: 2.0 seconds (ignore small drifts entirely)
+        let targetRate = 1.0;
+        if (absDrift > 2.0) {
+            if (absDrift > 20) {
+                targetRate = drift > 0 ? 1.015 : 0.985; // 1.5% - noticeable but effective
+            } else if (absDrift > 8) {
+                targetRate = drift > 0 ? 1.005 : 0.995; // 0.5% - barely audible
+            } else {
+                targetRate = drift > 0 ? 1.002 : 0.998; // 0.2% - completely imperceptible
+            }
+        }
+
+        // 5. BUFFER GUARD: If we are running low on buffer, prioritize stability over sync
         if (video.buffered.length > 0) {
             const remainingBuffer = video.buffered.end(video.buffered.length - 1) - video.currentTime;
-            if (remainingBuffer < 5 && video.playbackRate > 1.0) {
-                video.playbackRate = 1.0; // Don't speed up if buffer is low
+            if (remainingBuffer < 4 && targetRate > 1.0) {
+                targetRate = 1.0; // Stop speeding up if buffer is low
             }
-            if (remainingBuffer < 2 && !video.paused) {
-                video.playbackRate = 0.95; // Slow down to let buffer catch up
+            if (remainingBuffer < 1.5 && !video.paused) {
+                targetRate = 0.90; // Aggressively slow down to avoid a hard stall
             }
+        }
+
+        if (video.playbackRate !== targetRate) {
+            video.playbackRate = targetRate;
         }
 
         // Handle play/pause state from server
@@ -432,7 +455,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     useEffect(() => {
         if (isControllerMode || currentMovie?.isLiveStream) return;
-        const interval = setInterval(syncClock, 2000); // Check every 2 seconds for ultra-fine adjustments
+        const interval = setInterval(syncClock, 1000); // Check every second for precise but filtered adjustments
         syncClock(); 
         return () => clearInterval(interval);
     }, [syncClock, isControllerMode, currentMovie]);
