@@ -330,6 +330,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                     <TabButton tabId="overview" label="Overview" />
                     <TabButton tabId="audience" label="Audience" />
                     <TabButton tabId="financials" label="Financials" />
+                    <TabButton tabId="roku" label="Roku" />
                     <TabButton tabId="festival" label="Festival" />
                 </div>
             )}
@@ -486,6 +487,78 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ viewMode }) => {
                                         </React.Fragment>
                                     ))}</tbody>
                                 </table></div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ROKU TAB */}
+                    {(activeTab === 'roku' && !isFestivalView) && (
+                        <div className="space-y-12">
+                            <div>
+                                <h2 className="text-2xl font-bold mb-4 text-white">Roku Channel Engagement</h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                                    <StatCard title="Linked Roku Devices" value={formatNumber(analyticsData.rokuEngagement?.totalDevices || 0)} />
+                                    <StatCard title="Total Roku Views" value={formatNumber(analyticsData.rokuEngagement?.totalRokuViews || 0)} />
+                                    <StatCard title="Roku View Share" value={`${((analyticsData.rokuEngagement?.totalRokuViews || 0) / (Object.values(analyticsData.viewCounts).reduce((s, c) => s + (c || 0), 0) || 1) * 100).toFixed(1)}%`} />
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-xl font-bold mb-4 text-white">Top Films on Roku</h3>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
+                                            <tr>
+                                                <th className="p-3">Film</th>
+                                                <th className="p-3 text-right">Roku Views</th>
+                                                <th className="p-3 text-right">Total Views</th>
+                                                <th className="p-3 text-right">Roku Share</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {Object.entries(analyticsData.rokuEngagement?.viewsByMovie || {})
+                                                .sort(([, a], [, b]) => b - a)
+                                                .slice(0, 10)
+                                                .map(([key, rokuViews]) => {
+                                                    const movie = allMovies[key];
+                                                    const totalViews = analyticsData.viewCounts[key] || 0;
+                                                    if (!movie) return null;
+                                                    return (
+                                                        <tr key={key} className="border-b border-gray-700">
+                                                            <td className="p-3 font-medium text-white">{movie.title}</td>
+                                                            <td className="p-3 text-right">{formatNumber(rokuViews)}</td>
+                                                            <td className="p-3 text-right">{formatNumber(totalViews)}</td>
+                                                            <td className="p-3 text-right">{((rokuViews / (totalViews || 1)) * 100).toFixed(1)}%</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div className="bg-indigo-900/20 border border-indigo-700/50 p-6 rounded-lg">
+                                <h3 className="text-lg font-bold text-white mb-2">Roku Direct Publisher Integration</h3>
+                                <p className="text-sm text-gray-300">
+                                    Your Roku feed is active and being tracked. Every time a user finishes a film on the Roku app, a "VIEW" event is logged. 
+                                    This data is cross-referenced with linked accounts to provide personalized watch history.
+                                </p>
+                                <div className="mt-4 flex gap-4">
+                                    <a 
+                                        href="/api/roku-feed" 
+                                        target="_blank" 
+                                        className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+                                    >
+                                        View JSON Feed
+                                    </a>
+                                    <a 
+                                        href="/api/roku-direct-publisher-feed" 
+                                        target="_blank" 
+                                        className="text-xs bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md transition-colors"
+                                    >
+                                        View Direct Publisher Feed
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     )}

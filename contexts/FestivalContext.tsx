@@ -51,7 +51,7 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
-        const timer = setInterval(() => setNow(new Date()), 60000); // Update every minute
+        const timer = setInterval(() => setNow(new Date()), 1000); // Update every second for smooth transitions
         return () => clearInterval(timer);
     }, []);
 
@@ -67,10 +67,15 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
         const movieArray = Object.values(movies) as Movie[];
         
         // 1. Check for explicitly LIVE parties first (highest priority)
-        const liveKey = Object.keys(activeParties).find(key => {
+        // Sort by actualStartTime to ensure the most recently started party is picked
+        const liveKeys = Object.keys(activeParties).sort((a, b) => {
+            const timeA = activeParties[a].actualStartTime?.seconds || 0;
+            const timeB = activeParties[b].actualStartTime?.seconds || 0;
+            return timeB - timeA;
+        });
+
+        const liveKey = liveKeys.find(key => {
             const m = movies[key];
-            // If it's a known movie, ensure it's not unlisted. 
-            // If it's not a known movie (e.g. a block), we allow it if it's live in Firestore.
             return m ? !m.isUnlisted : true;
         });
 

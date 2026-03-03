@@ -11,14 +11,40 @@ const FestivalHero: React.FC<FestivalHeroProps> = ({ config }) => {
   }
 
   const title = config.title || 'Official Event';
-  const subheader = ('tagline' in config) ? (config as CrateFestConfig).tagline : (config as FestivalConfig).subheader;
-  const description = ('description' in config) ? (config as FestivalConfig).description : (config as CrateFestConfig).tagline;
+  const subheader = (config as any).tagline || (config as any).subheader || 'Live Event';
+  const description = (config as any).description || (config as any).tagline || '';
+  const isWatchParty = (config as any).isWatchParty === true;
+  const movieKey = (config as any).movieKey;
+  const heroImage = (config as any).heroImage;
+
+  const handleJoin = () => {
+    if (isWatchParty && movieKey) {
+        window.history.pushState({}, '', `/watchparty/${movieKey}`);
+        window.dispatchEvent(new Event('pushstate'));
+    } else {
+        window.history.pushState({}, '', '/festival');
+        window.dispatchEvent(new Event('pushstate'));
+    }
+  };
 
   return (
     <div className="relative w-full h-[85vh] sm:h-[75vh] bg-black overflow-hidden flex items-center justify-center">
+      {/* BACKGROUND IMAGE (IF AVAILABLE) */}
+      {heroImage && (
+        <div className="absolute inset-0 z-0">
+            <img 
+                src={`/api/proxy-image?url=${encodeURIComponent(heroImage)}`} 
+                className="w-full h-full object-cover opacity-40 blur-sm" 
+                alt="" 
+                referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black"></div>
+        </div>
+      )}
+
       {/* KINETIC AURORA BACKGROUND */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-[#050505]"></div>
+        <div className="absolute inset-0 bg-[#050505]/60"></div>
         {/* Shifting Mesh Gradients */}
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/20 blur-[120px] rounded-full animate-[pulse_8s_infinite] mix-blend-screen"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-red-600/20 blur-[120px] rounded-full animate-[pulse_10s_infinite_reverse] mix-blend-screen"></div>
@@ -34,7 +60,7 @@ const FestivalHero: React.FC<FestivalHeroProps> = ({ config }) => {
             <div className="inline-flex items-center gap-3 bg-gradient-to-r from-red-600/20 to-purple-600/20 border border-red-500/30 px-6 py-2 rounded-full mb-2 backdrop-blur-md shadow-[0_0_20px_rgba(239,68,68,0.2)]">
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_#ef4444]"></span>
                 <p className="text-red-400 font-black uppercase tracking-[0.5em] text-[10px] drop-shadow-md">
-                    {subheader || 'Live Event'}
+                    {subheader}
                 </p>
             </div>
             
@@ -48,8 +74,19 @@ const FestivalHero: React.FC<FestivalHeroProps> = ({ config }) => {
         </div>
         
         <p className="text-lg md:text-xl lg:text-2xl max-w-3xl mb-14 animate-[slideInUp_0.9s_ease-out] text-gray-300 font-medium leading-tight italic drop-shadow-2xl">
-          {description}
+          {description.replace(/<[^>]+>/g, '')}
         </p>
+
+        <button 
+            onClick={handleJoin}
+            className="group relative px-12 py-5 bg-white text-black font-black uppercase tracking-[0.3em] text-xs italic hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.3)] animate-[slideInUp_1.1s_ease-out]"
+        >
+            <span className="relative z-10">{isWatchParty ? 'Join Screening' : 'Enter Portal'}</span>
+            <div className="absolute inset-0 bg-red-600 scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+            <span className="absolute inset-0 z-20 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                {isWatchParty ? 'Join Screening' : 'Enter Portal'}
+            </span>
+        </button>
       </div>
 
       {/* Cinematic Fog Overlay */}

@@ -31,6 +31,8 @@ export async function POST(request: Request) {
         const userRef = db.collection('users').doc(uid);
         await userRef.update({ watchedMovies: FieldValue.arrayUnion(movieKey) });
 
+        const country = request.headers.get('x-vercel-ip-country') || 'unknown';
+
         // Track global view for Roku
         const batch = db.batch();
         const viewDocRef = db.collection('view_counts').doc(movieKey);
@@ -39,9 +41,16 @@ export async function POST(request: Request) {
             lastViewed: FieldValue.serverTimestamp()
         }, { merge: true });
 
+        // Track location for Roku
+        const locationDocRef = db.collection('view_locations').doc(movieKey);
+        batch.set(locationDocRef, {
+            [country]: FieldValue.increment(1)
+        }, { merge: true });
+
         const eventRef = db.collection('traffic_events').doc();
         batch.set(eventRef, {
             movieKey,
+            country,
             platform: 'ROKU',
             timestamp: FieldValue.serverTimestamp(),
             type: 'VIEW'

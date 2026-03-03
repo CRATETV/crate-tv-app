@@ -52,7 +52,15 @@ const App: React.FC = () => {
     const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-    const [isFestivalBannerDismissed, setIsFestivalBannerDismissed] = useState(false);
+    const [dismissedBannerKeys, setDismissedBannerKeys] = useState<Set<string>>(new Set());
+    
+    const dismissBanner = useCallback((key: string) => {
+        setDismissedBannerKeys(prev => {
+            const next = new Set(prev);
+            next.add(key);
+            return next;
+        });
+    }, []);
     
     useEffect(() => {
         const db = getDbInstance();
@@ -110,27 +118,52 @@ const App: React.FC = () => {
         const isWatchPartyActuallyLive = livePartyMovie && activeParties[livePartyMovie.key]?.status === 'live';
 
         // Priority: 
-        // 1. LIVE Watch Party (If not dismissed)
+        // 1. LIVE Watch Party (Always show if just turned live, even if upcoming was dismissed)
         // 2. Crate Fest (General event)
         // 3. Upcoming Watch Party (If not dismissed)
         // 4. General Festival (If not dismissed)
         
-        if (isWatchPartyActuallyLive && !isFestivalBannerDismissed) return 'WATCH_PARTY';
-        if (isCrateFestWindow) return 'CRATE_FEST';
-        if (livePartyMovie && !isFestivalBannerDismissed) return 'WATCH_PARTY';
-        if (isFestivalLive && !isFestivalBannerDismissed) return 'GENERAL_FESTIVAL';
+        if (isWatchPartyActuallyLive) {
+            const liveKey = `live-${livePartyMovie.key}`;
+            if (!dismissedBannerKeys.has(liveKey)) return 'WATCH_PARTY';
+        }
+
+        if (isCrateFestWindow && !dismissedBannerKeys.has('cratefest')) return 'CRATE_FEST';
+        
+        if (livePartyMovie && !dismissedBannerKeys.has(`upcoming-${livePartyMovie.key}`)) return 'WATCH_PARTY';
+        
+        if (isFestivalLive && !dismissedBannerKeys.has('festival')) return 'GENERAL_FESTIVAL';
+        
         return 'NONE';
-    }, [livePartyMovie, settings.crateFestConfig, isFestivalLive, isFestivalBannerDismissed, activeParties]);
+    }, [livePartyMovie, settings.crateFestConfig, isFestivalLive, dismissedBannerKeys, activeParties]);
 
     const currentLiveHeroConfig = useMemo(() => {
         const crateFestConfig = settings.crateFestConfig;
         const isCrateFestActive = crateFestConfig?.isActive && crateFestConfig?.startDate && crateFestConfig?.endDate && 
                                 (new Date() >= new Date(crateFestConfig.startDate) && new Date() <= new Date(crateFestConfig.endDate));
         
+        // Priority for Hero:
+        // 1. LIVE Watch Party (If not dismissed)
+        // 2. Crate Fest (General event)
+        // 3. General Festival (General event)
+        
+        const isWatchPartyActuallyLive = livePartyMovie && activeParties[livePartyMovie.key]?.status === 'live';
+        if (isWatchPartyActuallyLive && !dismissedBannerKeys.has(`live-${livePartyMovie.key}`)) {
+            // Synthesize a config for FestivalHero to render the live movie
+            return {
+                title: livePartyMovie.title,
+                tagline: 'Live Watch Party Now Active',
+                description: livePartyMovie.synopsis || 'Join the global screening and chat live with the community.',
+                heroImage: livePartyMovie.rokuHeroImage || livePartyMovie.tvPoster || livePartyMovie.poster,
+                isWatchParty: true,
+                movieKey: livePartyMovie.key
+            } as any;
+        }
+
         if (isCrateFestActive) return crateFestConfig;
         if (isFestivalLive) return festivalConfig;
         return null;
-    }, [isFestivalLive, settings.crateFestConfig, festivalConfig]);
+    }, [isFestivalLive, settings.crateFestConfig, festivalConfig, livePartyMovie, activeParties, dismissedBannerKeys]);
 
     const crateFestMovies = useMemo(() => {
         const config = settings.crateFestConfig;
@@ -250,9 +283,21 @@ const App: React.FC = () => {
             <SmartInstallPrompt />
             
             {activeBannerType === 'WATCH_PARTY' && (
-                <LiveWatchPartyBanner movie={livePartyMovie!} onClose={() => setIsFestivalBannerDismissed(true)} />
+                <LiveWatchPartyBanner 
+                    movie={livePartyMovie!} 
+                    onClose={() => {
+                        const isLive = activeParties[livePartyMovie!.key]?.status === 'live';
+                        dismissBanner(isLive ? `live-${livePartyMovie!.key}` : `upcoming-${livePartyMovie!.key}`);
+                    }} 
+                />
             )}
-            {activeBannerType === 'CRATE_FEST' && settings.crateFestConfig && <CrateFestBanner config={settings.crateFestConfig} hasPass={hasCrateFestPass} onClose={() => setIsFestivalBannerDismissed(true)} />}
+            {activeBannerType === 'CRATE_FEST' && settings.crateFestConfig && (
+                <CrateFestBanner 
+                    config={settings.crateFestConfig} 
+                    hasPass={hasCrateFestPass} 
+                    onClose={() => dismissBanner('cratefest')} 
+                />
+            )}
             {activeBannerType === 'GENERAL_FESTIVAL' && (
                 <div 
                     onClick={() => { window.history.pushState({}, '', '/festival'); window.dispatchEvent(new Event('pushstate')); }}
@@ -270,7 +315,7 @@ const App: React.FC = () => {
                         Enter Portal
                     </button>
 
-                    <button onClick={(e) => { e.stopPropagation(); setIsFestivalBannerDismissed(true); }} className="text-white/50 hover:text-white text-xl leading-none">&times;</button>
+                    <button onClick={(e) => { e.stopPropagation(); dismissBanner('festival'); }} className="text-white/50 hover:text-white text-xl leading-none">&times;</button>
                 </div>
             )}
 
