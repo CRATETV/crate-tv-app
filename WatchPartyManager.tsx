@@ -19,7 +19,7 @@ const getPartyStatusText = (movie: Movie, partyState?: WatchPartyState) => {
     if (partyState?.status === 'live') {
         return { text: 'Live', color: 'bg-red-500 animate-pulse' };
     }
-    if (partyState?.status === 'waiting') {
+    if (partyState?.status === 'waiting' || !partyState) {
         return { text: 'Waiting for Host', color: 'bg-yellow-500' };
     }
     return { text: 'Ended', color: 'bg-gray-700' };
@@ -136,7 +136,19 @@ const WatchPartyControlRoom: React.FC<{
     }, [partyState]);
     
     const status = getPartyStatusText(movie, partyState);
-    const canStart = movie.isWatchPartyEnabled && movie.watchPartyStartTime && new Date() >= new Date(movie.watchPartyStartTime) && partyState?.status === 'waiting';
+    const isLive = partyState?.status === 'live';
+    const canStart = movie.isWatchPartyEnabled && (partyState?.status === 'waiting' || partyState?.status === 'ended' || !partyState);
+    
+    const [isStarting, setIsStarting] = useState(false);
+
+    const handleStartWithLoading = async () => {
+        setIsStarting(true);
+        try {
+            await onStartParty();
+        } finally {
+            setIsStarting(false);
+        }
+    };
 
     return (
         <div className="mb-8 bg-black/50 p-6 rounded-lg border-2 border-pink-500">
@@ -155,12 +167,12 @@ const WatchPartyControlRoom: React.FC<{
                             className="w-full h-full"
                         />
                     </div>
-                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-800/50 p-4 rounded-lg">
+                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-800/50 p-4 rounded-lg">
                         <div>
                             <h3 className="text-xl font-bold">{movie.title}</h3>
                             <div className="flex items-center gap-2 mt-1">
-                                <span className={`px-2 py-1 text-xs font-bold text-white rounded-full ${status.color}`}>
-                                    {status.text}
+                                <span className={`px-2 py-1 text-xs font-bold text-white rounded-full ${status.text === 'Upcoming' && canStart ? 'bg-yellow-500' : status.color}`}>
+                                    {status.text === 'Upcoming' && canStart ? 'Ready to Start' : status.text}
                                 </span>
                                 <span className="text-sm text-gray-400">
                                     {movie.watchPartyStartTime && `Scheduled for: ${new Date(movie.watchPartyStartTime).toLocaleString()}`}
@@ -168,8 +180,28 @@ const WatchPartyControlRoom: React.FC<{
                             </div>
                         </div>
                         {canStart && (
-                            <button onClick={onStartParty} className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-md w-full sm:w-auto">
-                                Start Party For Everyone
+                            <button 
+                                onClick={handleStartWithLoading} 
+                                disabled={isStarting}
+                                className="bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white font-bold py-3 px-6 rounded-md w-full sm:w-auto shadow-[0_0_20px_rgba(22,163,74,0.4)] transition-all flex items-center justify-center gap-2"
+                            >
+                                {isStarting ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Launching...
+                                    </>
+                                ) : (
+                                    partyState?.status === 'ended' ? 'Restart Party' : 'Start Party For Everyone'
+                                )}
+                            </button>
+                        )}
+                        {isLive && (
+                             <button 
+                                onClick={handleStartWithLoading} 
+                                disabled={isStarting}
+                                className="bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white font-bold py-3 px-6 rounded-md w-full sm:w-auto opacity-50 hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+                            >
+                                {isStarting ? 'Resetting...' : 'Reset Party'}
                             </button>
                         )}
                     </div>
@@ -200,7 +232,7 @@ const formatISOForInput = (isoString?: string): string => {
 };
 
 
-const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange: (updates: Partial<Movie>) => void; }> = ({ movie, partyState, onChange }) => {
+const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; isSelected: boolean; onSelect: () => void; onChange: (updates: Partial<Movie>) => void; }> = ({ movie, partyState, isSelected, onSelect, onChange }) => {
     const handleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
         onChange({ isWatchPartyEnabled: e.target.checked });
     };
@@ -240,6 +272,14 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
                     disabled={!movie.isWatchPartyEnabled}
                 />
             </td>
+            <td className="p-3">
+                <button 
+                    onClick={onSelect}
+                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${isSelected ? 'bg-pink-600 text-white shadow-[0_0_15px_rgba(219,39,119,0.4)]' : 'bg-white/5 text-gray-400 hover:text-white border border-white/10'}`}
+                >
+                    {isSelected ? 'In Control' : 'Control'}
+                </button>
+            </td>
         </tr>
     );
 };
@@ -250,6 +290,7 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; onChange:
 const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (movie: Movie) => Promise<void>; }> = ({ allMovies, onSave }) => {
     const [movieSettings, setMovieSettings] = useState<Record<string, Movie>>(allMovies);
     const [partyStates, setPartyStates] = useState<Record<string, WatchPartyState>>({});
+    const [selectedMovieKey, setSelectedMovieKey] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [filter, setFilter] = useState('');
@@ -270,6 +311,8 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
     }, []);
 
     const currentPartyMovie = useMemo(() => {
+        if (selectedMovieKey && movieSettings[selectedMovieKey]) return movieSettings[selectedMovieKey];
+
         const now = new Date();
         const enabledMovies = (Object.values(movieSettings) as Movie[])
             .filter(m => m.isWatchPartyEnabled && m.watchPartyStartTime)
@@ -332,18 +375,28 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
     }, [currentPartyMovie, user]);
     
     const handleStartParty = async () => {
-        if (!currentPartyMovie) return;
+        if (!currentPartyMovie) {
+            alert("No movie selected for control.");
+            return;
+        }
         const password = sessionStorage.getItem('adminPassword');
+        if (!password) {
+            alert("Admin session expired. Please log in again.");
+            return;
+        }
+
         try {
             const response = await fetch('/api/start-watch-party', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ movieKey: currentPartyMovie.key, password }),
             });
+            const data = await response.json();
             if (!response.ok) {
-                throw new Error((await response.json()).error || 'Failed to start party.');
+                throw new Error(data.error || 'Failed to start party.');
             }
         } catch (error) {
+            console.error("Start Party Error:", error);
             alert(`Error: Could not start the party. ${(error as Error).message}`);
         }
     };
@@ -395,6 +448,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                                 <th className="p-3">Status</th>
                                 <th className="p-3">Enabled</th>
                                 <th className="p-3">Start Time</th>
+                                <th className="p-3">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -403,6 +457,8 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                                     key={movie.key} 
                                     movie={movieSettings[movie.key]} 
                                     partyState={partyStates[movie.key]}
+                                    isSelected={currentPartyMovie?.key === movie.key}
+                                    onSelect={() => setSelectedMovieKey(movie.key)}
                                     onChange={(updates) => handleMovieChange(movie.key, updates)} 
                                 />
                             ))}
