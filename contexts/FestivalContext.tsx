@@ -83,7 +83,13 @@ export const FestivalProvider: React.FC<{ children: ReactNode }> = ({ children }
             if (movies[liveKey]) return movies[liveKey];
             
             // Fallback: Check if it's a festival block
-            const block = festivalData.flatMap(d => d.blocks).find(b => b.id === liveKey);
+            let block = festivalData.flatMap(d => d.blocks).find(b => b.id === liveKey);
+            
+            // Check Crate Fest blocks if not found
+            if (!block && settings.crateFestConfig?.movieBlocks) {
+                block = settings.crateFestConfig.movieBlocks.find(b => b.id === liveKey);
+            }
+
             if (block) {
                 // Synthesize a movie-like object for the banner to render
                 return {

@@ -140,7 +140,10 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
                         <div className="w-8 h-8 rounded-full flex-shrink-0 p-1 border border-white/5 bg-gray-800" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                                <p className="font-black text-[11px] uppercase tracking-tighter text-red-500">{msg.userName}</p>
+                                <p className={`font-black text-[11px] uppercase tracking-tighter ${msg.isAdmin ? 'text-pink-500' : 'text-red-500'}`}>{msg.userName}</p>
+                                {msg.isAdmin && (
+                                    <span className="bg-pink-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">Admin</span>
+                                )}
                                 {msg.isVerifiedDirector && (
                                     <span className="bg-red-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">Director</span>
                                 )}
@@ -205,7 +208,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         unlockedFestivalBlockIds,
         unlockFestivalBlock
     } = useAuth();
-    const { movies: allMovies, isLoading: isFestivalLoading, festivalData } = useFestival();
+    const { movies: allMovies, isLoading: isFestivalLoading, festivalData, settings } = useFestival();
     const [partyState, setPartyState] = useState<WatchPartyState>();
     const [localReactions, setLocalReactions] = useState<{ id: string; emoji: string }[]>([]);
     const [showPaywall, setShowPaywall] = useState(false);
@@ -219,16 +222,29 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const lastSeekTimeRef = useRef<number>(0);
 
     const blockMovies = useMemo(() => {
-        const block = festivalData.flatMap(d => d.blocks).find(b => b.id === movieKey);
+        // Check standard festival blocks
+        let block = festivalData.flatMap(d => d.blocks).find(b => b.id === movieKey);
+        
+        // Check Crate Fest blocks if not found
+        if (!block && settings.crateFestConfig?.movieBlocks) {
+            block = settings.crateFestConfig.movieBlocks.find(b => b.id === movieKey);
+        }
+
         if (!block) return [];
         return block.movieKeys.map(key => allMovies[key]).filter(Boolean);
-    }, [movieKey, allMovies, festivalData]);
+    }, [movieKey, allMovies, festivalData, settings.crateFestConfig]);
 
     const movie = useMemo(() => {
         if (allMovies[movieKey]) return allMovies[movieKey];
         
         // Check if it's a festival block
-        const block = festivalData.flatMap(d => d.blocks).find(b => b.id === movieKey);
+        let block = festivalData.flatMap(d => d.blocks).find(b => b.id === movieKey);
+        
+        // Check Crate Fest blocks if not found
+        if (!block && settings.crateFestConfig?.movieBlocks) {
+            block = settings.crateFestConfig.movieBlocks.find(b => b.id === movieKey);
+        }
+
         if (block) {
             // Synthesize a movie object for the block
             const firstMovie = block.movieKeys.length > 0 ? allMovies[block.movieKeys[0]] : null;
@@ -247,7 +263,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
             } as Movie;
         }
         return null;
-    }, [movieKey, allMovies, festivalData]);
+    }, [movieKey, allMovies, festivalData, settings.crateFestConfig]);
 
     const currentMovie = useMemo(() => {
         if (blockMovies.length > 0) {
@@ -257,8 +273,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     }, [blockMovies, currentMovieIndex, movie]);
 
     const isBlock = useMemo(() => {
-        return festivalData.flatMap(d => d.blocks).some(b => b.id === movieKey);
-    }, [movieKey, festivalData]);
+        const inFest = festivalData.flatMap(d => d.blocks).some(b => b.id === movieKey);
+        const inCrate = settings.crateFestConfig?.movieBlocks?.some(b => b.id === movieKey);
+        return inFest || !!inCrate;
+    }, [movieKey, festivalData, settings.crateFestConfig]);
 
     const handleBackstageSubmit = (e: React.FormEvent) => {
         e.preventDefault();

@@ -273,6 +273,7 @@ export interface ChatMessage {
   text: string;
   timestamp: any;
   isVerifiedDirector?: boolean;
+  isAdmin?: boolean;
 }
 
 export interface SentimentPoint {

@@ -86,4 +86,17 @@ export const avatars: { [key: string]: string } = {
             <path d="M 50 60 L 45 70 L 55 70 Z" fill="#F59E0B"/>
         </svg>
     `,
+    crate: `
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="crateGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#DB2777;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#9D174D;stop-opacity:1" />
+                </linearGradient>
+            </defs>
+            <rect x="10" y="10" width="80" height="80" rx="10" fill="url(#crateGrad)"/>
+            <path d="M 25 25 L 75 75 M 75 25 L 25 75" stroke="white" stroke-width="8" stroke-linecap="round" opacity="0.3"/>
+            <text x="50" y="65" font-family="Arial" font-size="40" font-weight="900" fill="white" text-anchor="middle">C</text>
+        </svg>
+    `,
 };

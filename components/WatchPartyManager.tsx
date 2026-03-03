@@ -1,18 +1,30 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Movie, WatchPartyState, ChatMessage } from '../types';
+import { Movie, WatchPartyState, ChatMessage, FestivalDay, CrateFestConfig, FilmBlock } from '../types';
 import { getDbInstance } from '../services/firebaseClient';
 import firebase from 'firebase/compat/app';
 import { useAuth } from '../contexts/AuthContext';
 import { avatars } from './avatars';
 
+// --- TYPES ---
+
+interface WatchableItem {
+    id: string;
+    title: string;
+    type: 'movie' | 'block';
+    isWatchPartyEnabled?: boolean;
+    watchPartyStartTime?: string;
+    fullMovie?: string; // Only for movies
+    movieKeys?: string[]; // Only for blocks
+}
+
 // --- HELPER FUNCTIONS ---
 
-const getPartyStatusText = (movie: Movie, partyState?: WatchPartyState) => {
-    if (!movie.isWatchPartyEnabled || !movie.watchPartyStartTime) {
+const getPartyStatusText = (item: WatchableItem, partyState?: WatchPartyState) => {
+    if (!item.isWatchPartyEnabled || !item.watchPartyStartTime) {
         return { text: 'Disabled', color: 'bg-gray-500' };
     }
     const now = new Date();
-    const startTime = new Date(movie.watchPartyStartTime);
+    const startTime = new Date(item.watchPartyStartTime);
     if (now < startTime) {
         return { text: 'Upcoming', color: 'bg-blue-500' };
     }
@@ -58,7 +70,13 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
             await fetch('/api/send-chat-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ movieKey, userName: user.name || user.email, userAvatar: user.avatar || 'fox', text: newMessage }),
+                body: JSON.stringify({ 
+                    movieKey, 
+                    userName: 'CRATETV', 
+                    userAvatar: 'crate', 
+                    text: newMessage,
+                    isAdmin: true
+                }),
             });
             setNewMessage('');
         } catch (error) {
@@ -78,7 +96,11 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
                     <div key={msg.id} className="flex items-start gap-3">
                         <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 p-1" dangerouslySetInnerHTML={{ __html: avatars[msg.userAvatar] || avatars['fox'] }} />
                         <div>
-                            <p className="font-bold text-sm text-white">{msg.userName}</p>
+                            <div className="flex items-center gap-2">
+                                <p className={`font-bold text-sm ${msg.isAdmin ? 'text-pink-500' : 'text-white'}`}>{msg.userName}</p>
+                                {msg.isAdmin && <span className="bg-pink-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">Admin</span>}
+                                {msg.isVerifiedDirector && <span className="bg-red-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest">Director</span>}
+                            </div>
                             <p className="text-sm text-gray-300 break-words">{msg.text}</p>
                         </div>
                     </div>
@@ -96,11 +118,13 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
 };
 
 const WatchPartyControlRoom: React.FC<{
-    movie: Movie;
+    item: WatchableItem;
     partyState: WatchPartyState | undefined;
     onStartParty: () => void;
+    onTerminateParty: () => void;
     onSyncState: (state: Partial<WatchPartyState>) => void;
-}> = ({ movie, partyState, onStartParty, onSyncState }) => {
+    allMovies: Record<string, Movie>;
+}> = ({ item, partyState, onStartParty, onTerminateParty, onSyncState, allMovies }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const { user } = useAuth();
     const lastSyncTime = useRef(0);
@@ -117,13 +141,21 @@ const WatchPartyControlRoom: React.FC<{
             onSyncState({ currentTime: video.currentTime });
         }
     };
+
+    const currentMovie = useMemo(() => {
+        if (item.type === 'movie') return allMovies[item.id];
+        if (item.type === 'block' && item.movieKeys && item.movieKeys.length > 0) {
+            // For blocks, we show the first movie in the control room for simplicity, 
+            // but the actual party will cycle through them based on time.
+            return allMovies[item.movieKeys[0]];
+        }
+        return null;
+    }, [item, allMovies]);
     
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !partyState) return;
         
-        // This logic is for the admin's player to reflect the canonical state.
-        // It's less critical since the admin is the source of truth, but good for consistency.
         if (partyState.isPlaying && video.paused) {
             video.play().catch(e => console.warn("Admin autoplay was prevented", e));
         } else if (!partyState.isPlaying && !video.paused) {
@@ -135,9 +167,9 @@ const WatchPartyControlRoom: React.FC<{
         }
     }, [partyState]);
     
-    const status = getPartyStatusText(movie, partyState);
+    const status = getPartyStatusText(item, partyState);
     const isLive = partyState?.status === 'live';
-    const canStart = movie.isWatchPartyEnabled && (partyState?.status === 'waiting' || partyState?.status === 'ended' || !partyState);
+    const canStart = item.isWatchPartyEnabled && (partyState?.status === 'waiting' || partyState?.status === 'ended' || !partyState);
     
     const [isStarting, setIsStarting] = useState(false);
 
@@ -156,28 +188,47 @@ const WatchPartyControlRoom: React.FC<{
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-4">
                     <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-                        <video
-                            ref={videoRef}
-                            src={movie.fullMovie}
-                            onPlay={handlePlay}
-                            onPause={handlePause}
-                            onSeeked={handleSeeked}
-                            onTimeUpdate={handleTimeUpdate}
-                            controls
-                            className="w-full h-full"
-                        />
+                        {currentMovie ? (
+                            <video
+                                ref={videoRef}
+                                src={currentMovie.fullMovie}
+                                onPlay={handlePlay}
+                                onPause={handlePause}
+                                onSeeked={handleSeeked}
+                                onTimeUpdate={handleTimeUpdate}
+                                controls
+                                className="w-full h-full"
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-500">No content available</div>
+                        )}
                     </div>
                         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-800/50 p-4 rounded-lg">
                         <div>
-                            <h3 className="text-xl font-bold">{movie.title}</h3>
+                            <h3 className="text-xl font-bold">{item.title} {item.type === 'block' && <span className="text-xs bg-pink-600 px-2 py-0.5 rounded ml-2">BLOCK</span>}</h3>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className={`px-2 py-1 text-xs font-bold text-white rounded-full ${status.text === 'Upcoming' && canStart ? 'bg-yellow-500' : status.color}`}>
                                     {status.text === 'Upcoming' && canStart ? 'Ready to Start' : status.text}
                                 </span>
                                 <span className="text-sm text-gray-400">
-                                    {movie.watchPartyStartTime && `Scheduled for: ${new Date(movie.watchPartyStartTime).toLocaleString()}`}
+                                    {item.watchPartyStartTime && `Scheduled for: ${new Date(item.watchPartyStartTime).toLocaleString()}`}
                                 </span>
                             </div>
+                            {partyState?.backstageKey && (
+                                <div className="mt-2 p-2 bg-pink-600/20 border border-pink-500/30 rounded inline-flex items-center gap-2">
+                                    <span className="text-[10px] font-black uppercase text-pink-400">Backstage Key:</span>
+                                    <span className="text-sm font-mono font-bold text-white tracking-widest">{partyState.backstageKey}</span>
+                                    <button 
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(partyState.backstageKey!);
+                                            alert("Key copied to clipboard!");
+                                        }}
+                                        className="text-[10px] text-pink-400 hover:text-white underline"
+                                    >
+                                        Copy
+                                    </button>
+                                </div>
+                            )}
                         </div>
                         {canStart && (
                             <button 
@@ -196,18 +247,26 @@ const WatchPartyControlRoom: React.FC<{
                             </button>
                         )}
                         {isLive && (
-                             <button 
-                                onClick={handleStartWithLoading} 
-                                disabled={isStarting}
-                                className="bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white font-bold py-3 px-6 rounded-md w-full sm:w-auto opacity-50 hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
-                            >
-                                {isStarting ? 'Resetting...' : 'Reset Party'}
-                            </button>
+                            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                                <button 
+                                    onClick={handleStartWithLoading} 
+                                    disabled={isStarting}
+                                    className="bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white font-bold py-3 px-6 rounded-md shadow-[0_0_15px_rgba(220,38,38,0.3)] opacity-50 hover:opacity-100 transition-all flex items-center justify-center gap-2"
+                                >
+                                    {isStarting ? 'Resetting...' : 'Reset Party'}
+                                </button>
+                                <button 
+                                    onClick={onTerminateParty} 
+                                    className="bg-gray-700 hover:bg-black text-white font-bold py-3 px-6 rounded-md border border-white/10 transition-all flex items-center justify-center gap-2"
+                                >
+                                    Terminate Party
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>
                 <div className="lg:col-span-1 h-[60vh] md:h-auto min-h-[500px]">
-                     <EmbeddedChat movieKey={movie.key} user={user} />
+                     <EmbeddedChat movieKey={item.id} user={user} />
                 </div>
             </div>
         </div>
@@ -232,13 +291,18 @@ const formatISOForInput = (isoString?: string): string => {
 };
 
 
-const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; isSelected: boolean; onSelect: () => void; onChange: (updates: Partial<Movie>) => void; }> = ({ movie, partyState, isSelected, onSelect, onChange }) => {
+const MovieRow: React.FC<{ 
+    item: WatchableItem; 
+    partyState?: WatchPartyState; 
+    isSelected: boolean; 
+    onSelect: () => void; 
+    onChange: (updates: Partial<WatchableItem>) => void; 
+}> = ({ item, partyState, isSelected, onSelect, onChange }) => {
     const handleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
         onChange({ isWatchPartyEnabled: e.target.checked });
     };
 
     const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        // Convert the local datetime-local string to a UTC ISO string before saving
         if (e.target.value) {
             const localDate = new Date(e.target.value);
             onChange({ watchPartyStartTime: localDate.toISOString() });
@@ -247,11 +311,18 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; isSelecte
         }
     };
 
-    const status = getPartyStatusText(movie, partyState);
+    const status = getPartyStatusText(item, partyState);
 
     return (
         <tr className="border-b border-gray-700">
-            <td className="p-3 font-medium text-white">{movie.title}</td>
+            <td className="p-3 font-medium text-white">
+                <div className="flex flex-col">
+                    <span>{item.title}</span>
+                    <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">
+                        {item.type === 'movie' ? 'Single Film' : 'Stacked Block'}
+                    </span>
+                </div>
+            </td>
             <td className="p-3">
                 <span className={`px-2 py-1 text-xs font-bold text-white rounded-full ${status.color}`}>
                     {status.text}
@@ -259,17 +330,17 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; isSelecte
             </td>
             <td className="p-3">
                 <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={movie.isWatchPartyEnabled || false} onChange={handleToggle} className="sr-only peer" />
+                    <input type="checkbox" checked={item.isWatchPartyEnabled || false} onChange={handleToggle} className="sr-only peer" />
                     <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-pink-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
                 </label>
             </td>
             <td className="p-3">
                 <input
                     type="datetime-local"
-                    value={formatISOForInput(movie.watchPartyStartTime)}
+                    value={formatISOForInput(item.watchPartyStartTime)}
                     onChange={handleTimeChange}
                     className="form-input !py-1 text-sm"
-                    disabled={!movie.isWatchPartyEnabled}
+                    disabled={!item.isWatchPartyEnabled}
                 />
             </td>
             <td className="p-3">
@@ -287,15 +358,32 @@ const MovieRow: React.FC<{ movie: Movie; partyState?: WatchPartyState; isSelecte
 
 // --- MAIN COMPONENT ---
 
-const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (movie: Movie) => Promise<void>; }> = ({ allMovies, onSave }) => {
-    const [movieSettings, setMovieSettings] = useState<Record<string, Movie>>(allMovies);
+const WatchPartyManager: React.FC<{ 
+    allMovies: Record<string, Movie>; 
+    festivalData: FestivalDay[];
+    crateFestConfig: CrateFestConfig | null;
+    onSaveMovie: (movie: Movie) => Promise<void>; 
+    onSaveFestival: (data: FestivalDay[]) => Promise<void>;
+    onSaveCrateFest: (config: CrateFestConfig) => Promise<void>;
+}> = ({ allMovies, festivalData, crateFestConfig, onSaveMovie, onSaveFestival, onSaveCrateFest }) => {
     const [partyStates, setPartyStates] = useState<Record<string, WatchPartyState>>({});
-    const [selectedMovieKey, setSelectedMovieKey] = useState<string | null>(null);
+    const [selectedItemKey, setSelectedItemKey] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [filter, setFilter] = useState('');
     const [showOnlyEnabled, setShowOnlyEnabled] = useState(false);
     const { user } = useAuth();
+
+    // Local state for items to allow editing before saving
+    const [localMovies, setLocalMovies] = useState<Record<string, Movie>>(allMovies);
+    const [localFestivalData, setLocalFestivalData] = useState<FestivalDay[]>(festivalData);
+    const [localCrateFestConfig, setLocalCrateFestConfig] = useState<CrateFestConfig | null>(crateFestConfig);
+
+    useEffect(() => {
+        setLocalMovies(allMovies);
+        setLocalFestivalData(festivalData);
+        setLocalCrateFestConfig(crateFestConfig);
+    }, [allMovies, festivalData, crateFestConfig]);
     
     useEffect(() => {
         const db = getDbInstance();
@@ -310,47 +398,137 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         return () => unsub();
     }, []);
 
-    const currentPartyMovie = useMemo(() => {
-        if (selectedMovieKey && movieSettings[selectedMovieKey]) return movieSettings[selectedMovieKey];
+    const watchableItems = useMemo(() => {
+        const items: WatchableItem[] = [];
+
+        // Add movies
+        Object.values(localMovies).forEach(m => {
+            items.push({
+                id: m.key,
+                title: m.title,
+                type: 'movie',
+                isWatchPartyEnabled: m.isWatchPartyEnabled,
+                watchPartyStartTime: m.watchPartyStartTime,
+                fullMovie: m.fullMovie
+            });
+        });
+
+        // Add festival blocks
+        localFestivalData.forEach(day => {
+            day.blocks.forEach(block => {
+                items.push({
+                    id: block.id,
+                    title: block.title,
+                    type: 'block',
+                    isWatchPartyEnabled: block.isWatchPartyEnabled,
+                    watchPartyStartTime: block.watchPartyStartTime,
+                    movieKeys: block.movieKeys
+                });
+            });
+        });
+
+        // Add Crate Fest blocks
+        if (localCrateFestConfig?.movieBlocks) {
+            localCrateFestConfig.movieBlocks.forEach(block => {
+                items.push({
+                    id: block.id,
+                    title: block.title,
+                    type: 'block',
+                    isWatchPartyEnabled: block.isWatchPartyEnabled,
+                    watchPartyStartTime: block.watchPartyStartTime,
+                    movieKeys: block.movieKeys
+                });
+            });
+        }
+
+        return items;
+    }, [localMovies, localFestivalData, localCrateFestConfig]);
+
+    const currentSelectedItem = useMemo(() => {
+        if (selectedItemKey) {
+            return watchableItems.find(i => i.id === selectedItemKey) || null;
+        }
 
         const now = new Date();
-        const enabledMovies = (Object.values(movieSettings) as Movie[])
-            .filter(m => m.isWatchPartyEnabled && m.watchPartyStartTime)
+        const enabledItems = watchableItems
+            .filter(i => i.isWatchPartyEnabled && i.watchPartyStartTime)
             .sort((a, b) => new Date(a.watchPartyStartTime!).getTime() - new Date(b.watchPartyStartTime!).getTime());
 
-        const liveOrWaiting = enabledMovies.find(m => {
-            const state = partyStates[m.key];
-            const startTime = new Date(m.watchPartyStartTime!);
-            // A party is considered "active" if it's within the 4-hour window from its start time
+        const liveOrWaiting = enabledItems.find(i => {
+            const state = partyStates[i.id];
+            const startTime = new Date(i.watchPartyStartTime!);
             return startTime <= now && (now.getTime() - startTime.getTime() < 4 * 60 * 60 * 1000);
         });
 
         if (liveOrWaiting) return liveOrWaiting;
 
-        const nextUpcoming = enabledMovies.find(m => new Date(m.watchPartyStartTime!) > now);
+        const nextUpcoming = enabledItems.find(i => new Date(i.watchPartyStartTime!) > now);
         return nextUpcoming || null;
-    }, [movieSettings, partyStates]);
+    }, [watchableItems, partyStates, selectedItemKey]);
 
-    const hasUnsavedChanges = useMemo(() => {
-        return JSON.stringify(allMovies) !== JSON.stringify(movieSettings);
-    }, [allMovies, movieSettings]);
+    const handleItemChange = (itemId: string, updates: Partial<WatchableItem>) => {
+        // Find where this item belongs and update local state
+        const movie = localMovies[itemId];
+        if (movie) {
+            setLocalMovies(prev => ({ ...prev, [itemId]: { ...prev[itemId], ...updates } }));
+            return;
+        }
 
-    const handleMovieChange = (movieKey: string, updates: Partial<Movie>) => {
-        setMovieSettings(prev => ({
-            ...prev,
-            [movieKey]: { ...prev[movieKey], ...updates },
+        // Check festival data
+        let foundFest = false;
+        const newFestData = localFestivalData.map(day => ({
+            ...day,
+            blocks: day.blocks.map(block => {
+                if (block.id === itemId) {
+                    foundFest = true;
+                    return { ...block, ...updates };
+                }
+                return block;
+            })
         }));
+        if (foundFest) {
+            setLocalFestivalData(newFestData);
+            return;
+        }
+
+        // Check crate fest config
+        if (localCrateFestConfig) {
+            let foundCrate = false;
+            const newCrateBlocks = localCrateFestConfig.movieBlocks.map(block => {
+                if (block.id === itemId) {
+                    foundCrate = true;
+                    return { ...block, ...updates };
+                }
+                return block;
+            });
+            if (foundCrate) {
+                setLocalCrateFestConfig({ ...localCrateFestConfig, movieBlocks: newCrateBlocks });
+            }
+        }
     };
     
     const handleSaveAll = async () => {
         setIsSaving(true);
         setSaveStatus('idle');
-        const changedMovies = Object.keys(movieSettings)
-            .filter(key => JSON.stringify(allMovies[key]) !== JSON.stringify(movieSettings[key]))
-            .map(key => movieSettings[key]);
         
         try {
-            await Promise.all(changedMovies.map(movie => onSave(movie)));
+            // Save modified movies
+            const changedMovies = Object.keys(localMovies).filter(key => 
+                JSON.stringify(allMovies[key]) !== JSON.stringify(localMovies[key])
+            ).map(key => localMovies[key]);
+            
+            // Save modified festival data
+            const festChanged = JSON.stringify(festivalData) !== JSON.stringify(localFestivalData);
+            
+            // Save modified crate fest config
+            const crateChanged = JSON.stringify(crateFestConfig) !== JSON.stringify(localCrateFestConfig);
+
+            const promises: Promise<any>[] = [];
+            changedMovies.forEach(m => promises.push(onSaveMovie(m)));
+            if (festChanged) promises.push(onSaveFestival(localFestivalData));
+            if (crateChanged && localCrateFestConfig) promises.push(onSaveCrateFest(localCrateFestConfig));
+
+            await Promise.all(promises);
             setSaveStatus('success');
         } catch (error) {
             console.error("Failed to save watch party settings:", error);
@@ -362,21 +540,22 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
     };
 
     const handleSyncState = useCallback(async (newState: Partial<WatchPartyState>) => {
-        if (!user || !currentPartyMovie) return;
+        if (!user || !currentSelectedItem) return;
         const db = getDbInstance();
         if (!db) return;
 
-        const syncRef = db.collection('watch_parties').doc(currentPartyMovie.key);
+        const syncRef = db.collection('watch_parties').doc(currentSelectedItem.id);
         await syncRef.set({
             ...newState,
+            type: currentSelectedItem.type,
             lastUpdatedBy: user.name || user.email,
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
-    }, [currentPartyMovie, user]);
+    }, [currentSelectedItem, user]);
     
     const handleStartParty = async () => {
-        if (!currentPartyMovie) {
-            alert("No movie selected for control.");
+        if (!currentSelectedItem) {
+            alert("No item selected for control.");
             return;
         }
         const password = sessionStorage.getItem('adminPassword');
@@ -389,7 +568,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
             const response = await fetch('/api/start-watch-party', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ movieKey: currentPartyMovie.key, password }),
+                body: JSON.stringify({ movieKey: currentSelectedItem.id, password }),
             });
             const data = await response.json();
             if (!response.ok) {
@@ -401,30 +580,59 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
         }
     };
 
-    const filteredMovies = (Object.values(allMovies) as Movie[])
-        .filter(movie => movie.title.toLowerCase().includes(filter.toLowerCase()))
-        .filter(movie => !showOnlyEnabled || movieSettings[movie.key]?.isWatchPartyEnabled)
+    const handleTerminateParty = async () => {
+        if (!currentSelectedItem) return;
+        const password = sessionStorage.getItem('adminPassword');
+        if (!password) return;
+
+        if (!window.confirm("Are you sure you want to terminate this watch party? This will end the session for all viewers.")) return;
+
+        try {
+            const response = await fetch('/api/terminate-watch-party', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey: currentSelectedItem.id, password }),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to terminate party.');
+            }
+        } catch (error) {
+            console.error("Terminate Party Error:", error);
+            alert(`Error: Could not terminate the party. ${(error as Error).message}`);
+        }
+    };
+
+    const filteredItems = watchableItems
+        .filter(item => item.title.toLowerCase().includes(filter.toLowerCase()))
+        .filter(item => !showOnlyEnabled || item.isWatchPartyEnabled)
         .sort((a, b) => a.title.localeCompare(b.title));
+
+    const hasUnsavedChanges = JSON.stringify(allMovies) !== JSON.stringify(localMovies) || 
+                             JSON.stringify(festivalData) !== JSON.stringify(localFestivalData) || 
+                             JSON.stringify(crateFestConfig) !== JSON.stringify(localCrateFestConfig);
 
     return (
         <>
-            {currentPartyMovie && (
+            {currentSelectedItem && (
                 <WatchPartyControlRoom
-                    movie={currentPartyMovie}
-                    partyState={partyStates[currentPartyMovie.key]}
+                    item={currentSelectedItem}
+                    partyState={partyStates[currentSelectedItem.id]}
                     onStartParty={handleStartParty}
+                    onTerminateParty={handleTerminateParty}
                     onSyncState={handleSyncState}
+                    allMovies={allMovies}
                 />
             )}
 
             <div className="bg-gray-950 p-6 rounded-lg text-gray-200">
                 <h2 className="text-xl sm:text-2xl font-bold mb-4 text-pink-400">Schedule a Watch Party</h2>
-                <p className="text-sm text-gray-400 mb-6">Enable a party and set a future start time. Only one party can be active or upcoming at a time. Click "Save All Changes" to publish your schedule.</p>
+                <p className="text-sm text-gray-400 mb-6">Enable a party for a Single Film or a Stacked Block. Only one party can be active or upcoming at a time. Click "Save All Changes" to publish your schedule.</p>
                 
                 <div className="flex flex-col sm:flex-row gap-4 mb-4">
                     <input
                         type="text"
-                        placeholder="Filter movies..."
+                        placeholder="Filter movies or blocks..."
                         value={filter}
                         onChange={e => setFilter(e.target.value)}
                         className="form-input flex-grow"
@@ -444,7 +652,7 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                     <table className="w-full text-left">
                         <thead className="text-xs text-gray-400 uppercase bg-gray-700/50">
                             <tr>
-                                <th className="p-3">Film Title</th>
+                                <th className="p-3">Title / Type</th>
                                 <th className="p-3">Status</th>
                                 <th className="p-3">Enabled</th>
                                 <th className="p-3">Start Time</th>
@@ -452,14 +660,14 @@ const WatchPartyManager: React.FC<{ allMovies: Record<string, Movie>; onSave: (m
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredMovies.map(movie => (
+                            {filteredItems.map(item => (
                                 <MovieRow 
-                                    key={movie.key} 
-                                    movie={movieSettings[movie.key]} 
-                                    partyState={partyStates[movie.key]}
-                                    isSelected={currentPartyMovie?.key === movie.key}
-                                    onSelect={() => setSelectedMovieKey(movie.key)}
-                                    onChange={(updates) => handleMovieChange(movie.key, updates)} 
+                                    key={item.id} 
+                                    item={item} 
+                                    partyState={partyStates[item.id]}
+                                    isSelected={currentSelectedItem?.id === item.id}
+                                    onSelect={() => setSelectedItemKey(item.id)}
+                                    onChange={(updates) => handleItemChange(item.id, updates)} 
                                  />
                             ))}
                         </tbody>

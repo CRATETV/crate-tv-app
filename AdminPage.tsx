@@ -301,7 +301,16 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'dispatch' && <CommunicationsTerminal movies={movies} />}
                     {activeTab === 'intel' && <UserIntelligenceTab movies={movies} onPrepareRecommendation={() => {}} />}
                     {activeTab === 'editorial' && <EditorialManager allMovies={movies} />}
-                    {activeTab === 'watchParty' && <WatchPartyManager allMovies={movies} onSave={async (m) => handleSaveData('movies', { [m.key]: m })} />}
+                    {activeTab === 'watchParty' && (
+                        <WatchPartyManager 
+                            allMovies={movies} 
+                            festivalData={festivalData}
+                            crateFestConfig={crateFestConfig}
+                            onSaveMovie={async (m) => handleSaveData('movies', { [m.key]: m })} 
+                            onSaveFestival={async (d) => handleSaveData('festival', { config: festivalConfig, data: d })}
+                            onSaveCrateFest={async (c) => handleSaveData('settings', { crateFestConfig: c })}
+                        />
+                    )}
                     {activeTab === 'discovery' && <DiscoveryEngine analytics={analytics} movies={movies} categories={categories} onUpdateCategories={(c) => handleSaveData('categories', c)} />}
                     {activeTab === 'movies' && <MovieEditor allMovies={movies} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} onSave={(data) => handleSaveData('movies', data)} onDeleteMovie={(key) => handleSaveData('delete_movie', { key })} onSetNowStreaming={(k) => handleSaveData('set_now_streaming', { key: k })} />}
                     {activeTab === 'pipeline' && <MoviePipelineTab pipeline={pipeline} onCreateMovie={() => setActiveTab('movies')} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
