@@ -387,21 +387,39 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         const drift = targetPosition - video.currentTime;
         const absDrift = Math.abs(drift);
 
-        // 1. HARD SEEK: Only if drift is massive (> 20s) or initial sync
-        if ((absDrift > 20 || !isInitialSyncDone) && !video.seeking) {
+        // 1. HARD SEEK: Only if drift is massive (> 45s) or initial sync
+        // We avoid hard seeks as much as possible to prevent "jumping"
+        if ((absDrift > 45 || !isInitialSyncDone) && !video.seeking) {
             lastSeekTimeRef.current = Date.now();
             video.currentTime = targetPosition;
             video.playbackRate = 1.0;
             if (!isInitialSyncDone) setIsInitialSyncDone(true);
         } 
-        // 2. SMOOTH SYNC: Only if drift is significant (5s - 20s)
-        // Use a tiny 1% adjustment which is imperceptible to the viewer
-        else if (absDrift > 5 && absDrift <= 20) {
-            video.playbackRate = drift > 0 ? 1.01 : 0.99;
+        // 2. ULTRA-SMOOTH SYNC: Adjust playback rate by 0.5% - 2% depending on drift
+        // This is imperceptible to the human ear/eye but keeps everyone in sync
+        else if (absDrift > 0.5) {
+            if (absDrift > 15) {
+                video.playbackRate = drift > 0 ? 1.02 : 0.98;
+            } else if (absDrift > 5) {
+                video.playbackRate = drift > 0 ? 1.01 : 0.99;
+            } else {
+                video.playbackRate = drift > 0 ? 1.005 : 0.995;
+            }
         } 
         // 3. IN SYNC: Reset to normal speed
         else {
             video.playbackRate = 1.0;
+        }
+
+        // 4. BUFFER GUARD: If we are running low on buffer, slow down slightly to avoid a hard stop
+        if (video.buffered.length > 0) {
+            const remainingBuffer = video.buffered.end(video.buffered.length - 1) - video.currentTime;
+            if (remainingBuffer < 5 && video.playbackRate > 1.0) {
+                video.playbackRate = 1.0; // Don't speed up if buffer is low
+            }
+            if (remainingBuffer < 2 && !video.paused) {
+                video.playbackRate = 0.95; // Slow down to let buffer catch up
+            }
         }
 
         // Handle play/pause state from server
@@ -414,7 +432,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     useEffect(() => {
         if (isControllerMode || currentMovie?.isLiveStream) return;
-        const interval = setInterval(syncClock, 5000); // Check every 5 seconds for a smoother ride
+        const interval = setInterval(syncClock, 2000); // Check every 2 seconds for ultra-fine adjustments
         syncClock(); 
         return () => clearInterval(interval);
     }, [syncClock, isControllerMode, currentMovie]);

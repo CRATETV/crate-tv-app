@@ -77,16 +77,24 @@ const FestivalHero: React.FC<FestivalHeroProps> = ({ config }) => {
           {description.replace(/<[^>]+>/g, '')}
         </p>
 
-        <button 
-            onClick={handleJoin}
-            className="group relative px-12 py-5 bg-white text-black font-black uppercase tracking-[0.3em] text-xs italic hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.3)] animate-[slideInUp_1.1s_ease-out]"
-        >
-            <span className="relative z-10">{isWatchParty ? 'Join Screening' : 'Enter Portal'}</span>
-            <div className="absolute inset-0 bg-red-600 scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
-            <span className="absolute inset-0 z-20 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                {isWatchParty ? 'Join Screening' : 'Enter Portal'}
-            </span>
-        </button>
+        {isWatchParty ? (
+          <div className="animate-[slideInUp_1.1s_ease-out] flex flex-col items-center space-y-4">
+            <p className="text-emerald-500 font-black uppercase tracking-[0.3em] text-[10px] italic bg-emerald-500/10 px-6 py-3 rounded-full border border-emerald-500/20 backdrop-blur-sm">
+              Click "Join Party" in the banner above to enter
+            </p>
+          </div>
+        ) : (
+          <button 
+              onClick={handleJoin}
+              className="group relative px-12 py-5 bg-white text-black font-black uppercase tracking-[0.3em] text-xs italic hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.3)] animate-[slideInUp_1.1s_ease-out]"
+          >
+              <span className="relative z-10">Enter Portal</span>
+              <div className="absolute inset-0 bg-red-600 scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+              <span className="absolute inset-0 z-20 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  Enter Portal
+              </span>
+          </button>
+        )}
       </div>
 
       {/* Cinematic Fog Overlay */}
