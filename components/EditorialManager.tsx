@@ -19,7 +19,7 @@ const emptyStory: Omit<EditorialStory, 'id' | 'publishedAt'> = {
     type: 'SPOTLIGHT'
 };
 
-const ZineProof: React.FC<{ title: string; subtitle: string; sections: ZineSection[]; heroImage: string }> = ({ title, subtitle, sections, heroImage }) => (
+const ZineProof: React.FC<{ title: string; subtitle: string; author: string; sections: ZineSection[]; heroImage: string }> = ({ title, subtitle, author, sections, heroImage }) => (
     <div className="bg-white rounded-[3.5rem] shadow-inner overflow-hidden flex flex-col h-full border-[16px] border-black">
         <div className="p-5 bg-gray-100 border-b flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -32,7 +32,10 @@ const ZineProof: React.FC<{ title: string; subtitle: string; sections: ZineSecti
             <div className="max-w-2xl mx-auto space-y-16 text-black text-left">
                 <div className="border-b-[6px] border-black pb-12">
                     <h1 className="text-7xl font-black italic tracking-tighter leading-[0.75] mb-8 uppercase">{title || 'THE_HEADLINE'}</h1>
-                    <p className="text-3xl font-bold text-gray-400 leading-none">{subtitle || 'Sub-narrative manifest placeholder...'}</p>
+                    <p className="text-3xl font-bold text-gray-400 leading-none mb-4">{subtitle || 'Sub-narrative manifest placeholder...'}</p>
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-red-600">
+                        <span>By {author || 'Crate Editorial'}</span>
+                    </div>
                 </div>
 
                 {heroImage && (
@@ -241,6 +244,7 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                          <div className="space-y-4">
                             <input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Headline" className="form-input bg-black/40 border-white/10 font-black text-xl uppercase tracking-tighter italic" />
                             <input value={formData.subtitle} onChange={e => setFormData({...formData, subtitle: e.target.value})} placeholder="Subtitle / Strapline" className="form-input bg-black/40 border-white/10 font-bold" />
+                            <input value={formData.author} onChange={e => setFormData({...formData, author: e.target.value})} placeholder="Author Name" className="form-input bg-black/40 border-white/10 text-sm italic" />
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-[9px] font-black text-gray-600 uppercase">Dispatch Type</label>
@@ -292,7 +296,7 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                 </div>
 
                 <div className="lg:col-span-8 flex flex-col">
-                    <ZineProof title={formData.title} subtitle={formData.subtitle} sections={formData.sections || []} heroImage={formData.heroImage} />
+                    <ZineProof title={formData.title} subtitle={formData.subtitle} author={formData.author} sections={formData.sections || []} heroImage={formData.heroImage} />
                 </div>
             </div>
         </div>
