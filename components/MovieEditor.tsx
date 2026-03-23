@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Movie, Actor, MoviePipelineEntry } from '../types';
 import S3Uploader from './S3Uploader';
+import AdminFilmDeepDive from './AdminFilmDeepDive';
 
 interface MovieEditorProps {
     allMovies: Record<string, Movie>;
@@ -110,6 +111,7 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
     
     const [isProbing, setIsProbing] = useState(false);
     const [probeResult, setProbeResult] = useState<any>(null);
+    const [deepDiveMovie, setDeepDiveMovie] = useState<Movie | null>(null);
 
     useEffect(() => {
         if (movieToCreate) {
@@ -281,7 +283,15 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                                             </div>
                                         </td>
                                         <td className="px-8 py-4 text-right">
-                                            <button onClick={() => setSelectedMovieKey(movie.key)} className="text-white bg-white/5 hover:bg-red-600 font-black text-[9px] uppercase px-6 py-3 rounded-xl border border-white/5 transition-all">Edit Manifest</button>
+                                            <div className="flex items-center justify-end gap-3">
+                                                <button 
+                                                    onClick={() => setDeepDiveMovie(movie)}
+                                                    className="text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white font-black text-[9px] uppercase px-6 py-3 rounded-xl border border-red-500/20 transition-all"
+                                                >
+                                                    Deep Dive
+                                                </button>
+                                                <button onClick={() => setSelectedMovieKey(movie.key)} className="text-white bg-white/5 hover:bg-red-600 font-black text-[9px] uppercase px-6 py-3 rounded-xl border border-white/5 transition-all">Edit Manifest</button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -521,6 +531,13 @@ const MovieEditor: React.FC<MovieEditorProps> = ({
                     actor={formData.cast[editingActorIdx]} 
                     onClose={() => setEditingActorIdx(null)}
                     onSave={(updated) => handleUpdateActor(editingActorIdx, updated)}
+                />
+            )}
+
+            {deepDiveMovie && (
+                <AdminFilmDeepDive 
+                    movie={deepDiveMovie} 
+                    onClose={() => setDeepDiveMovie(null)} 
                 />
             )}
         </div>

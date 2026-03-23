@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AuditEntry } from '../types';
-import { getDbInstance } from '../services/firebaseClient';
+import { getDbInstance, initializeFirebaseAuth } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
 
 const AuditTerminal: React.FC = () => {
@@ -9,20 +9,32 @@ const AuditTerminal: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const db = getDbInstance();
-        if (!db) return;
+        let unsubscribe: (() => void) | undefined;
 
-        const unsubscribe = db.collection('audit_logs')
-            .orderBy('timestamp', 'desc')
-            .limit(200)
-            .onSnapshot(snap => {
-                const fetched: AuditEntry[] = [];
-                snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as AuditEntry));
-                setLogs(fetched);
+        const setupListener = async () => {
+            await initializeFirebaseAuth();
+            const db = getDbInstance();
+            if (!db) {
                 setIsLoading(false);
-            });
+                return;
+            }
 
-        return () => unsubscribe();
+            unsubscribe = db.collection('audit_logs')
+                .orderBy('timestamp', 'desc')
+                .limit(200)
+                .onSnapshot(snap => {
+                    const fetched: AuditEntry[] = [];
+                    snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as AuditEntry));
+                    setLogs(fetched);
+                    setIsLoading(false);
+                }, (err) => {
+                    console.error("Audit stream error:", err);
+                    setIsLoading(false);
+                });
+        };
+
+        setupListener();
+        return () => unsubscribe?.();
     }, []);
 
     const getTypeColor = (type: string) => {
@@ -33,6 +45,10 @@ const AuditTerminal: React.FC = () => {
             case 'SECURITY': return 'text-amber-500';
             default: return 'text-gray-400';
         }
+    };
+
+    const handlePrint = () => {
+        window.print();
     };
 
     const handleExportCSV = () => {
@@ -69,6 +85,12 @@ const AuditTerminal: React.FC = () => {
                     <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-2">Immutable modification history for the global infrastructure.</p>
                 </div>
                 <div className="flex items-center gap-4">
+                    <button 
+                        onClick={handlePrint}
+                        className="bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-black py-2.5 px-6 rounded-xl transition-all uppercase text-[10px] tracking-widest border border-white/10"
+                    >
+                        Print Report
+                    </button>
                     <button 
                         onClick={handleExportCSV}
                         className="bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-black py-2.5 px-6 rounded-xl transition-all uppercase text-[10px] tracking-widest border border-white/10"

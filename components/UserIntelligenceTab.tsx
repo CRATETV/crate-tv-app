@@ -137,6 +137,31 @@ const UserIntelligenceTab: React.FC<UserIntelligenceTabProps> = ({ movies, onPre
         }
     };
 
+    const filmmakerDirectory = useMemo(() => {
+        const directory: Record<string, { role: string; films: string[] }> = {};
+        
+        (Object.values(movies) as Movie[]).forEach(m => {
+            const directors = (m.director || '').split(',').map(d => d.trim()).filter(Boolean);
+            const producers = (m.producers || '').split(',').map(p => p.trim()).filter(Boolean);
+            
+            directors.forEach(d => {
+                if (!directory[d]) directory[d] = { role: 'Director', films: [] };
+                if (!directory[d].films.includes(m.title)) directory[d].films.push(m.title);
+            });
+            
+            producers.forEach(p => {
+                if (!directory[p]) {
+                    directory[p] = { role: 'Producer', films: [] };
+                } else if (directory[p].role !== 'Director') {
+                    directory[p].role = 'Director/Producer';
+                }
+                if (!directory[p].films.includes(m.title)) directory[p].films.push(m.title);
+            });
+        });
+        
+        return Object.entries(directory).sort((a, b) => a[0].localeCompare(b[0]));
+    }, [movies]);
+
     if (isLoading) return <LoadingSpinner />;
 
     return (
@@ -290,6 +315,32 @@ const UserIntelligenceTab: React.FC<UserIntelligenceTabProps> = ({ movies, onPre
                         </section>
                     </div>
                 )}
+            </div>
+
+            {/* FILMMAKER ACCESS DIRECTORY */}
+            <div className="w-full lg:w-80 flex flex-col bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                <div className="p-6 border-b border-white/5 bg-white/[0.02] space-y-2">
+                    <h3 className="text-[10px] font-black uppercase text-indigo-500 tracking-widest">Filmmaker Directory</h3>
+                    <p className="text-[8px] text-gray-500 font-bold uppercase leading-tight">Names recognized for dashboard login</p>
+                </div>
+                <div className="flex-grow overflow-y-auto scrollbar-hide p-4 space-y-3">
+                    {filmmakerDirectory.map(([name, data]) => (
+                        <div key={name} className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:border-indigo-500/30 transition-all group">
+                            <div className="flex justify-between items-start mb-2">
+                                <h4 className="text-[11px] font-black text-white uppercase tracking-tight leading-none">{name}</h4>
+                                <span className="text-[7px] font-black text-indigo-500 uppercase bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">{data.role}</span>
+                            </div>
+                            <div className="space-y-1">
+                                {data.films.map(f => (
+                                    <p key={f} className="text-[8px] text-gray-600 font-medium uppercase truncate">• {f}</p>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                    {filmmakerDirectory.length === 0 && (
+                        <p className="text-[10px] text-gray-700 font-bold italic uppercase text-center py-10">No filmmakers found</p>
+                    )}
+                </div>
             </div>
         </div>
     );
