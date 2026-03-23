@@ -124,6 +124,56 @@
       .text-fluid-sub {
         font-size: clamp(1.25rem, 4vw, 2.5rem);
       }
+
+      /* PRINTER MODEL SECTOR */
+      @media print {
+        body {
+          background: white !important;
+          color: black !important;
+          padding: 0 !important;
+        }
+        #root {
+          background: white !important;
+        }
+        .no-print {
+          display: none !important;
+        }
+        .print-only {
+          display: block !important;
+        }
+        .bg-[#050505], .bg-[#0f0f0f], .bg-black/40, .bg-white\/\[0\.02\], .bg-white\/\[0\.03\] {
+          background: white !important;
+          color: black !important;
+        }
+        .border-white\/5, .border-white\/10 {
+          border-color: #eee !important;
+        }
+        .text-white, .text-gray-400, .text-gray-500, .text-gray-600, .text-gray-700 {
+          color: black !important;
+        }
+        .text-red-600, .text-red-500 {
+          color: #ef4444 !important;
+        }
+        /* Ensure charts and tables are visible */
+        canvas, svg {
+          max-width: 100% !important;
+          height: auto !important;
+        }
+        .overflow-x-auto {
+          overflow: visible !important;
+        }
+        /* Specific fixes for Audit Log and Reports */
+        .audit-row {
+          border-bottom: 1px solid #ddd !important;
+          page-break-inside: avoid;
+        }
+        .fixed {
+          position: relative !important;
+        }
+        .backdrop-blur-xl {
+          backdrop-filter: none !important;
+        }
+      }
     </style>
     <script type="importmap">
 {

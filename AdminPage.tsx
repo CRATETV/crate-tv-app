@@ -11,6 +11,7 @@ import StudioMail from './components/StudioMail';
 import CommunicationsTerminal from './components/CommunicationsTerminal';
 import SaveStatusToast from './components/SaveStatusToast';
 import LaurelManager from './components/LaurelManager';
+import AuditTerminal from './components/AuditTerminal';
 import { MoviePipelineTab } from './components/MoviePipelineTab';
 import CrateFestEditor from './components/CrateFestEditor';
 import FestivalEditor from './components/FestivalEditor';
@@ -46,6 +47,7 @@ const ALL_TABS: Record<string, string> = {
     laurels: '🏆 Laurel Forge',
     forge: '🔨 Roku Forge',
     rokuAnalytics: '📈 Roku Intel',
+    audit: '📜 Audit Log',
     permissions: '🔑 Permissions',
     security: '🛡️ Security'
 };
@@ -86,6 +88,24 @@ const AdminPage: React.FC = () => {
             setActiveTab(allowedTabs[0] || 'pulse');
         }
     }, [isAuthenticated, allowedTabs]);
+
+    useEffect(() => {
+        if (isAuthenticated && activeTab) {
+            const name = sessionStorage.getItem('operatorName');
+            const pass = sessionStorage.getItem('adminPassword');
+            fetch('/api/log-audit-event', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    password: pass,
+                    operatorName: name,
+                    action: 'TAB_ACCESS',
+                    type: 'VIEW',
+                    details: `Accessed ${ALL_TABS[activeTab] || activeTab} terminal.`
+                })
+            }).catch(() => {});
+        }
+    }, [activeTab, isAuthenticated]);
 
     const fetchAllData = useCallback(async (adminPassword: string) => {
         setIsLoading(true);
@@ -351,6 +371,7 @@ const AdminPage: React.FC = () => {
                     {activeTab === 'laurels' && < LaurelManager allMovies={Object.values(movies) as Movie[]} />}
                     {activeTab === 'forge' && <RokuForge />}
                     {activeTab === 'rokuAnalytics' && <RokuAnalyticsTab />}
+                    {activeTab === 'audit' && <AuditTerminal />}
                     {activeTab === 'permissions' && <PermissionsManager allTabs={ALL_TABS} initialPermissions={permissions} onRefresh={() => fetchAllData(sessionStorage.getItem('adminPassword')!)} />}
                     {activeTab === 'security' && <SecurityTerminal />}
                 </div>

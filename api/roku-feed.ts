@@ -274,6 +274,11 @@ export async function GET(request: Request) {
                 const isValid = m && isValidForRoku(m) && !(config.content?.hiddenMovies || []).includes(m.key);
                 return isValid;
             })
+            .sort((a: Movie, b: Movie) => {
+                const dateA = toDate(a.publishedAt) || new Date(0);
+                const dateB = toDate(b.publishedAt) || new Date(0);
+                return dateB.getTime() - dateA.getTime();
+            })
             .map((movie: Movie) => formatMovieForRoku(movie, assets[movie.key], unlockedMovies.has('ALL') || unlockedMovies.has(movie.key) || !movie.isForSale));
         
         console.log(`Category [${key}] has ${children.length} valid movies out of ${movieKeys.length} keys.`);

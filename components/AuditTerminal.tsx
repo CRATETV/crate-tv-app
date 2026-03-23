@@ -59,7 +59,7 @@ const AuditTerminal: React.FC = () => {
             log.role,
             log.type,
             log.action,
-            `"${log.details.replace(/"/g, '""')}"`
+            `"${(log.details || '').replace(/"/g, '""')}"`
         ]);
 
         const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");

@@ -66,6 +66,114 @@ const AdminFilmDeepDive: React.FC<AdminFilmDeepDiveProps> = ({ movie, onClose })
         window.print();
     };
 
+    const handleExportJSON = () => {
+        if (!performance) return;
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(performance, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", `${movie.title.replace(/\s+/g, '_')}_Performance_Manifest.json`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+
+        // Log to audit trail
+        const pass = sessionStorage.getItem('adminPassword');
+        const name = sessionStorage.getItem('operatorName');
+        fetch('/api/log-audit-event', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                password: pass,
+                operatorName: name,
+                action: 'DATA_EXPORT',
+                type: 'JSON',
+                details: `Exported JSON manifest for ${movie.title}.`
+            })
+        }).catch(() => {});
+    };
+
+    const handleExportCSV = () => {
+        if (!performance) return;
+        const headers = ["Metric", "Value"];
+        const rows = [
+            ["Title", performance.title],
+            ["Total Views", performance.views],
+            ["Applauds", performance.likes],
+            ["Watchlist Adds", performance.watchlistAdds],
+            ["Roku Views", performance.rokuViews],
+            ["Gross Donations", formatCurrency(performance.grossDonations)],
+            ["Gross Tickets", formatCurrency(performance.grossAdRevenue)],
+            ["Net Donations (70%)", formatCurrency(performance.netDonationEarnings)],
+            ["Net Tickets (70%)", formatCurrency(performance.netAdEarnings)],
+            ["Total Net Earnings", formatCurrency(performance.totalEarnings)]
+        ];
+        
+        const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `${movie.title.replace(/\s+/g, '_')}_Intelligence_Report.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        // Log to audit trail
+        const pass = sessionStorage.getItem('adminPassword');
+        const name = sessionStorage.getItem('operatorName');
+        fetch('/api/log-audit-event', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                password: pass,
+                operatorName: name,
+                action: 'DATA_EXPORT',
+                type: 'CSV',
+                details: `Exported CSV intelligence report for ${movie.title}.`
+            })
+        }).catch(() => {});
+    };
+
+    const handleExportTrafficLogs = () => {
+        const events = (performance as any)?.trafficEvents;
+        if (!events || events.length === 0) {
+            alert("No traffic logs available for this movie.");
+            return;
+        }
+        
+        const headers = ["Event ID", "Timestamp", "Platform", "Action", "Device ID"];
+        const rows = events.map((e: any) => [
+            e.id,
+            e.timestamp,
+            e.platform,
+            e.action,
+            e.deviceId || 'Unknown'
+        ]);
+
+        const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map((r: any) => r.join(",")).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `${movie.title.replace(/\s+/g, '_')}_Traffic_Audit.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        // Log to audit trail
+        const pass = sessionStorage.getItem('adminPassword');
+        const name = sessionStorage.getItem('operatorName');
+        fetch('/api/log-audit-event', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                password: pass,
+                operatorName: name,
+                action: 'DATA_EXPORT',
+                type: 'TRAFFIC_LOGS',
+                details: `Exported raw traffic logs for ${movie.title}.`
+            })
+        }).catch(() => {});
+    };
+
     return (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[300] flex items-center justify-center p-4 md:p-10 animate-[fadeIn_0.3s_ease-out]">
             <div className="bg-[#0a0a0a] border border-white/10 w-full max-w-6xl h-full max-h-[90vh] rounded-[3rem] overflow-hidden flex flex-col shadow-2xl print:bg-white print:text-black print:rounded-none print:border-none print:h-auto print:max-h-none">
@@ -76,8 +184,18 @@ const AdminFilmDeepDive: React.FC<AdminFilmDeepDiveProps> = ({ movie, onClose })
                             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                         </div>
                         <div>
-                            <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">Film Intelligence Deep Dive</h2>
-                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1">Analyzing: {movie.title}</p>
+                            <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic leading-tight">Film Intelligence Deep Dive</h2>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Analyzing: {movie.title}</p>
+                                <span className="w-1 h-1 rounded-full bg-white/10"></span>
+                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Director: <span className="text-white">{movie.director}</span></p>
+                                {movie.producers && (
+                                    <>
+                                        <span className="w-1 h-1 rounded-full bg-white/10"></span>
+                                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Producers: <span className="text-white">{movie.producers}</span></p>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -188,8 +306,18 @@ const AdminFilmDeepDive: React.FC<AdminFilmDeepDiveProps> = ({ movie, onClose })
                                     <div className="bg-red-600/5 border border-red-600/20 p-6 rounded-3xl space-y-4 print:hidden">
                                         <h4 className="text-[10px] font-black text-red-500 uppercase tracking-widest">Admin Actions</h4>
                                         <div className="space-y-2">
-                                            <button className="w-full bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase py-3 rounded-xl transition-all">Export JSON Manifest</button>
-                                            <button className="w-full bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase py-3 rounded-xl transition-all">Audit Traffic Logs</button>
+                                            <button 
+                                                onClick={handleExportJSON}
+                                                className="w-full bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase py-3 rounded-xl transition-all"
+                                            >
+                                                Export JSON Manifest
+                                            </button>
+                                            <button 
+                                                onClick={handleExportTrafficLogs}
+                                                className="w-full bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase py-3 rounded-xl transition-all"
+                                            >
+                                                Audit Traffic Logs
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

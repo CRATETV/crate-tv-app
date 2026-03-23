@@ -59,19 +59,24 @@ export async function POST(request: Request) {
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
         const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
 
-        const [allPayments, movieDoc, viewsDoc, usersSnapshot, rokuEventsSnapshot] = await Promise.all([
+        const [allPayments, movieDoc, viewsDoc, usersSnapshot, trafficEventsSnapshot] = await Promise.all([
             accessToken ? fetchAllRelevantPayments(accessToken, locationId) : Promise.resolve([]),
             db.collection('movies').doc(movieKey).get(),
             db.collection('view_counts').doc(movieKey).get(),
             db.collection('users').get(),
-            db.collection('traffic_events').where('platform', '==', 'ROKU').where('movieKey', '==', movieKey).get()
+            db.collection('traffic_events').where('movieKey', '==', movieKey).get()
         ]);
 
         if (!movieDoc.exists) return new Response(JSON.stringify({ error: 'Movie not found' }), { status: 404 });
         const movie = { key: movieDoc.id, ...movieDoc.data() } as Movie;
 
         const views = Number(viewsDoc.data()?.count) || 0;
-        const rokuViews = rokuEventsSnapshot.size;
+        const trafficEvents = trafficEventsSnapshot.docs.map(d => ({
+            id: d.id,
+            ...d.data(),
+            timestamp: d.data().timestamp?.toDate?.()?.toISOString() || d.data().timestamp
+        }));
+        const rokuViews = trafficEvents.filter((e: any) => e.platform === 'ROKU').length;
 
         let watchlistAdds = 0;
         usersSnapshot.forEach(doc => {
@@ -91,7 +96,7 @@ export async function POST(request: Request) {
         const sentimentSnap = await db.collection('movies').doc(movieKey).collection('sentiment').orderBy('timestamp', 'asc').get();
         const sentimentData: SentimentPoint[] = sentimentSnap.docs.map(d => d.data() as SentimentPoint);
 
-        const performance: FilmmakerFilmPerformance = {
+        const performance: FilmmakerFilmPerformance & { trafficEvents?: any[] } = {
             key: movie.key,
             title: movie.title,
             views,
@@ -103,7 +108,8 @@ export async function POST(request: Request) {
             netDonationEarnings: Math.round(revenue.donations * PARTNER_SHARE),
             netAdEarnings: Math.round(revenue.tickets * PARTNER_SHARE),
             totalEarnings: Math.round((revenue.donations + revenue.tickets) * PARTNER_SHARE),
-            sentimentData
+            sentimentData,
+            trafficEvents
         };
 
         return new Response(JSON.stringify({ performance }), { status: 200, headers: { 'Content-Type': 'application/json' } });
