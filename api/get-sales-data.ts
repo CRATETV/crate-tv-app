@@ -204,6 +204,23 @@ export async function POST(request: Request) {
         const billSavingsTransactions: BillSavingsTransaction[] = billSavingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BillSavingsTransaction));
         const billSavingsPotTotal = billSavingsTransactions.reduce((sum, t) => t.type === 'deposit' ? sum + t.amount : sum - t.amount, 0);
 
+        const movieLikes: Record<string, number> = {};
+        const watchlistCounts: Record<string, number> = {};
+
+        moviesSnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.likes) movieLikes[doc.id] = Number(data.likes) || 0;
+        });
+
+        usersSnapshot.forEach(doc => {
+            const u = doc.data() as User;
+            if (u.watchlist) {
+                u.watchlist.forEach(k => {
+                    watchlistCounts[k] = (watchlistCounts[k] || 0) + 1;
+                });
+            }
+        });
+
         const analyticsData: AnalyticsData = {
             totalRevenue, 
             totalCrateTvRevenue, 
@@ -211,8 +228,8 @@ export async function POST(request: Request) {
             pastAdminPayouts,
             totalUsers: usersSnapshot.size, 
             viewCounts, 
-            movieLikes: {}, 
-            watchlistCounts: {}, 
+            movieLikes, 
+            watchlistCounts, 
             filmmakerPayouts, 
             allUsers: [], actorUsers: [], filmmakerUsers: [],
             totalDonations, 

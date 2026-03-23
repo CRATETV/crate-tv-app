@@ -84,7 +84,7 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
         return (Object.values(movies) as Movie[]).map(m => ({
             key: m.key,
             title: m.title || 'Untitled Node',
-            views: liveViewCounts[m.key] || 0,
+            views: liveViewCounts[m.key] || analytics?.viewCounts?.[m.key] || 0,
             likes: analytics?.movieLikes?.[m.key] || 0,
             watchlist: analytics?.watchlistCounts?.[m.key] || 0,
             rokuViews: analytics?.rokuEngagement?.viewsByMovie?.[m.key] || 0,
@@ -94,8 +94,10 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
     }, [movies, liveViewCounts, analytics]);
 
     const totalViews = useMemo(() => {
-        return (Object.values(liveViewCounts) as number[]).reduce((s, c) => s + (c || 0), 0);
-    }, [liveViewCounts]);
+        // Use live counts if available, otherwise fallback to analytics
+        const counts = Object.keys(liveViewCounts).length > 0 ? liveViewCounts : (analytics?.viewCounts || {});
+        return (Object.values(counts) as number[]).reduce((s, c) => s + (c || 0), 0);
+    }, [liveViewCounts, analytics]);
 
     const totalUsers = analytics?.totalUsers || 0;
     const pendingPipeline = pipeline.filter(p => p.status === 'pending');
