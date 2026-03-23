@@ -34,8 +34,11 @@ const ZineCard: React.FC<{ story: EditorialStory; onClick: () => void }> = ({ st
             <p className="text-zinc-500 text-sm font-medium line-clamp-2 leading-relaxed font-sans">
                 {story.subtitle}
             </p>
-            <div className="pt-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
-                <span>By {story.author}</span>
+            <div className="pt-4 flex items-center gap-3">
+                <div className="w-6 h-px bg-red-600/50"></div>
+                <span className="text-white font-black uppercase text-[10px] tracking-[0.2em] italic">
+                    By {story.author}
+                </span>
             </div>
         </div>
     </div>
@@ -114,7 +117,7 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                             <div className="max-w-6xl mx-auto flex flex-col items-center text-center space-y-10">
                                 <div className="space-y-4">
                                     <span className="text-red-600 font-black uppercase text-xs tracking-[0.4em]">The Editorial Hub</span>
-                                    <h1 className="text-6xl md:text-[10rem] font-serif font-medium tracking-tighter text-white leading-[0.85]">
+                                    <h1 className="text-fluid-zine font-serif font-medium tracking-tighter text-white leading-[0.85]">
                                         Crate <span className="italic">Zine.</span>
                                     </h1>
                                 </div>
@@ -204,18 +207,18 @@ const ZinePage: React.FC<{ storyId?: string }> = ({ storyId }) => {
                                 <div className="lg:col-span-7 space-y-10">
                                     <div className="space-y-6">
                                         <span className="text-red-600 font-black uppercase text-xs tracking-[0.4em]">{activeStory.type}</span>
-                                        <h1 className="text-5xl md:text-8xl font-serif font-medium tracking-tighter text-white leading-[0.9]">{activeStory.title}</h1>
-                                        <p className="text-xl md:text-3xl text-zinc-400 font-serif italic leading-snug">"{activeStory.subtitle}"</p>
+                                        <h1 className="text-fluid-zine font-serif font-medium tracking-tighter text-white leading-[0.9]">{activeStory.title}</h1>
+                                        <p className="text-fluid-sub text-zinc-400 font-serif italic leading-snug">"{activeStory.subtitle}"</p>
                                     </div>
                                     <div className="flex items-center gap-6 pt-6 border-t border-zinc-900">
                                         <div className="space-y-1">
                                             <p className="text-zinc-600 font-black uppercase text-[9px] tracking-widest">Written By</p>
-                                            <p className="text-white font-bold uppercase text-xs tracking-widest">{activeStory.author}</p>
+                                            <p className="text-white font-black uppercase text-sm tracking-[0.2em] italic">{activeStory.author}</p>
                                         </div>
                                         <div className="w-px h-8 bg-zinc-900"></div>
                                         <div className="space-y-1">
                                             <p className="text-zinc-600 font-black uppercase text-[9px] tracking-widest">Published</p>
-                                            <p className="text-white font-bold uppercase text-xs tracking-widest">{activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString() : 'Active Record'}</p>
+                                            <p className="text-white font-black uppercase text-sm tracking-[0.2em]">{activeStory.publishedAt?.seconds ? new Date(activeStory.publishedAt.seconds * 1000).toLocaleDateString() : 'Active Record'}</p>
                                         </div>
                                     </div>
                                 </div>

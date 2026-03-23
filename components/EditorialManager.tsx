@@ -244,7 +244,10 @@ const EditorialManager: React.FC<EditorialManagerProps> = ({ allMovies }) => {
                          <div className="space-y-4">
                             <input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Headline" className="form-input bg-black/40 border-white/10 font-black text-xl uppercase tracking-tighter italic" />
                             <input value={formData.subtitle} onChange={e => setFormData({...formData, subtitle: e.target.value})} placeholder="Subtitle / Strapline" className="form-input bg-black/40 border-white/10 font-bold" />
-                            <input value={formData.author} onChange={e => setFormData({...formData, author: e.target.value})} placeholder="Author Name" className="form-input bg-black/40 border-white/10 text-sm italic" />
+                             <div className="space-y-1">
+                                 <label className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Story Author / Byline</label>
+                                 <input value={formData.author} onChange={e => setFormData({...formData, author: e.target.value})} placeholder="Author Name" className="form-input bg-black/40 border-white/10 text-sm italic font-bold text-white placeholder:text-gray-700" />
+                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-[9px] font-black text-gray-600 uppercase">Dispatch Type</label>

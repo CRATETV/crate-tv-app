@@ -121,7 +121,7 @@ const LandingPage: React.FC = () => {
                     <div className="relative z-20 max-w-5xl px-6 text-center space-y-12 animate-[fadeIn_1s_ease-out]">
                         <div className="space-y-4">
                             <p className="text-red-500 font-black uppercase tracking-[0.6em] text-xs md:text-sm">Official Distribution Afterlife</p>
-                            <h1 className="text-6xl md:text-[10rem] font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-[0_20px_50px_rgba(0,0,0,1)]">
+                            <h1 className="text-fluid-hero font-black uppercase tracking-tighter leading-[0.8] italic drop-shadow-[0_20px_50px_rgba(0,0,0,1)]">
                                 Cinema <br/><span className="text-red-600">Unbound.</span>
                             </h1>
                         </div>
@@ -242,7 +242,7 @@ const LandingPage: React.FC = () => {
                 <section className="relative py-48 px-6 text-center overflow-hidden">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.1)_0%,transparent_70%)]"></div>
                     <div className="relative z-10 max-w-4xl mx-auto space-y-12">
-                        <h2 className="text-6xl md:text-[10rem] font-black uppercase tracking-tighter italic leading-none">The work is waiting.</h2>
+                        <h2 className="text-fluid-hero font-black uppercase tracking-tighter italic leading-none">The work is waiting.</h2>
                         <p className="text-gray-400 text-xl font-medium">Ready to watch? Enter your email to create your free account.</p>
                         <form onSubmit={(e) => { e.preventDefault(); openAuthModal('signup'); }} className="flex flex-col md:flex-row gap-4 max-w-2xl mx-auto">
                             <input
