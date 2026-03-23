@@ -89,6 +89,12 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   }, [movie?.key]);
 
   useEffect(() => {
+    if (playerMode === 'full' && !hasTrackedViewRef.current) {
+        playContent();
+    }
+  }, [playerMode, playContent]);
+
+  useEffect(() => {
     setIsLoading(true);
     const params = new URLSearchParams(window.location.search);
     const env = params.get('env');

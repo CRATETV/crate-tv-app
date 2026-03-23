@@ -85,10 +85,13 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
             key: m.key,
             title: m.title || 'Untitled Node',
             views: liveViewCounts[m.key] || 0,
+            likes: analytics?.movieLikes?.[m.key] || 0,
+            watchlist: analytics?.watchlistCounts?.[m.key] || 0,
+            rokuViews: analytics?.rokuEngagement?.viewsByMovie?.[m.key] || 0,
             hasStream: !!m.fullMovie,
             isUnlisted: m.isUnlisted === true
         })).sort((a, b) => b.views - a.views);
-    }, [movies, liveViewCounts]);
+    }, [movies, liveViewCounts, analytics]);
 
     const totalViews = useMemo(() => {
         return (Object.values(liveViewCounts) as number[]).reduce((s, c) => s + (c || 0), 0);
@@ -123,6 +126,9 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                                     <tr>
                                         <th className="pb-4">Film Node / Title</th>
                                         <th className="pb-4 text-center">Views</th>
+                                        <th className="pb-4 text-center">Likes</th>
+                                        <th className="pb-4 text-center">Watchlist</th>
+                                        <th className="pb-4 text-center">Roku</th>
                                         <th className="pb-4 text-center">Asset</th>
                                         <th className="pb-4 text-right">Status</th>
                                     </tr>
@@ -136,6 +142,15 @@ const DailyPulse: React.FC<DailyPulseProps> = ({ pipeline, analytics, movies, ca
                                             </td>
                                             <td className="py-4 text-center font-bold text-red-500">
                                                 {film.views.toLocaleString()}
+                                            </td>
+                                            <td className="py-4 text-center font-bold text-indigo-400">
+                                                {film.likes.toLocaleString()}
+                                            </td>
+                                            <td className="py-4 text-center font-bold text-amber-500">
+                                                {film.watchlist.toLocaleString()}
+                                            </td>
+                                            <td className="py-4 text-center font-bold text-purple-500">
+                                                {film.rokuViews.toLocaleString()}
                                             </td>
                                             <td className="py-4 text-center">
                                                 <span className={`text-[8px] px-1.5 py-0.5 rounded ${film.hasStream ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>

@@ -68,7 +68,7 @@ const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; movie: Mov
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-4">
                          <div className="bg-black/40 p-4 md:p-6 rounded-2xl border border-white/5 text-center group/stat">
                             <p className="text-[8px] text-gray-500 font-black uppercase mb-1 group-hover/stat:text-white transition-colors">Total Views</p>
                             <p className="text-xl md:text-2xl font-black text-white">{film.views.toLocaleString()}</p>
@@ -76,6 +76,14 @@ const FilmPerformanceCard: React.FC<{ film: FilmmakerFilmPerformance; movie: Mov
                          <div className="bg-black/40 p-4 md:p-6 rounded-2xl border border-white/5 text-center group/stat">
                             <p className="text-[8px] text-gray-500 font-black uppercase mb-1 group-hover/stat:text-white transition-colors">Applaud Count</p>
                             <p className="text-xl md:text-2xl font-black text-white">{film.likes.toLocaleString()}</p>
+                         </div>
+                         <div className="bg-black/40 p-4 md:p-6 rounded-2xl border border-white/5 text-center group/stat">
+                            <p className="text-[8px] text-gray-500 font-black uppercase mb-1 group-hover/stat:text-white transition-colors">Watchlist Adds</p>
+                            <p className="text-xl md:text-2xl font-black text-white">{film.watchlistAdds.toLocaleString()}</p>
+                         </div>
+                         <div className="bg-black/40 p-4 md:p-6 rounded-2xl border border-white/5 text-center group/stat">
+                            <p className="text-[8px] text-purple-500 font-black uppercase mb-1 group-hover/stat:text-purple-400 transition-colors">Roku Views</p>
+                            <p className="text-xl md:text-2xl font-black text-white">{(film.rokuViews || 0).toLocaleString()}</p>
                          </div>
                          <div className="bg-black/40 p-4 md:p-6 rounded-2xl border border-white/5 text-center group/stat">
                             <p className="text-[8px] text-emerald-500 font-black uppercase mb-1 group-hover/stat:text-emerald-400 transition-colors">Direct Tips</p>

@@ -407,6 +407,7 @@ export interface FilmmakerFilmPerformance {
   views: number;
   likes: number;
   watchlistAdds: number;
+  rokuViews?: number;
   grossDonations: number;
   grossAdRevenue: number;
   netDonationEarnings: number;

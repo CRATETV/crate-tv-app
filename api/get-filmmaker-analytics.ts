@@ -53,12 +53,13 @@ export async function POST(request: Request) {
         const accessToken = isProduction ? process.env.SQUARE_ACCESS_TOKEN : process.env.SQUARE_SANDBOX_ACCESS_TOKEN;
         const locationId = isProduction ? process.env.SQUARE_LOCATION_ID : process.env.SQUARE_SANDBOX_LOCATION_ID;
 
-        const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot] = await Promise.all([
+        const [allPayments, moviesSnapshot, viewsSnapshot, usersSnapshot, payoutHistorySnapshot, rokuEventsSnapshot] = await Promise.all([
             accessToken ? fetchAllRelevantPayments(accessToken, locationId) : Promise.resolve([]),
             db.collection('movies').get(),
             db.collection('view_counts').get(),
             db.collection('users').get(),
-            db.collection('payout_requests').where('directorName', '==', directorName.trim()).where('status', '==', 'completed').get()
+            db.collection('payout_requests').where('directorName', '==', directorName.trim()).where('status', '==', 'completed').get(),
+            db.collection('traffic_events').where('platform', '==', 'ROKU').get()
         ]);
 
         const allMovies: Record<string, Movie> = {};
@@ -66,6 +67,12 @@ export async function POST(request: Request) {
 
         const viewCounts: Record<string, number> = {};
         viewsSnapshot.forEach(doc => { viewCounts[doc.id] = Number(doc.data().count) || 0; });
+
+        const rokuViewsByMovie: Record<string, number> = {};
+        rokuEventsSnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.movieKey) rokuViewsByMovie[data.movieKey] = (rokuViewsByMovie[data.movieKey] || 0) + 1;
+        });
 
         const watchlistCounts: Record<string, number> = {};
         usersSnapshot.forEach(doc => {
@@ -101,6 +108,7 @@ export async function POST(request: Request) {
                 views: viewCounts[film.key] || 0,
                 likes: film.likes || 0,
                 watchlistAdds: watchlistCounts[film.key] || 0,
+                rokuViews: rokuViewsByMovie[film.key] || 0,
                 grossDonations: rev.donations,
                 grossAdRevenue: rev.tickets, // Displaying tickets in the "Ad Revenue" slot for filmmaker view
                 netDonationEarnings: Math.round(rev.donations * PARTNER_SHARE),
