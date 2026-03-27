@@ -17,9 +17,10 @@ interface MovieCarouselProps {
   onSupportMovie: (movie: Movie) => void;
   allCategories?: Record<string, Category>;
   isComingSoonCarousel?: boolean;
+  categoryKey?: string;
 }
 
-const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, showRankings = false, watchedMovies, watchlist, likedMovies, onToggleLike, onToggleWatchlist, onSupportMovie, allCategories, isComingSoonCarousel = false }) => {
+const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMovie, showRankings = false, watchedMovies, watchlist, likedMovies, onToggleLike, onToggleWatchlist, onSupportMovie, allCategories, isComingSoonCarousel = false, categoryKey }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { settings } = useFestival();
 
@@ -50,16 +51,50 @@ const MovieCarousel: React.FC<MovieCarouselProps> = ({ title, movies, onSelectMo
   const carouselClasses = `flex overflow-x-auto space-x-4 pb-12 pt-12 scrollbar-hide -mx-4 px-4 sm:-mx-8 sm:px-8 group/carousel-list snap-x snap-proximity overscroll-x-contain ${isHolidayRow ? 'overflow-y-visible' : ''}`;
 
   const renderTitle = () => {
+    const handleSeeAll = () => {
+        const path = categoryKey ? `/library?category=${categoryKey}` : '/library';
+        window.history.pushState({}, '', path);
+        window.dispatchEvent(new Event('pushstate'));
+    };
+
     if (typeof title === 'string' || typeof title === 'number') {
       return (
-        <h2 className="text-lg md:text-2xl font-bold mb-4 text-white px-2 border-l-4 border-red-600 pl-4">
-          {title}
-        </h2>
+        <div className="flex items-center justify-between mb-4 pr-4">
+            <h2 className="text-lg md:text-2xl font-bold text-white px-2 border-l-4 border-red-600 pl-4">
+            {title}
+            </h2>
+            {movies.length > 5 && (
+                <button 
+                    onClick={handleSeeAll}
+                    className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors flex items-center gap-2 group"
+                >
+                    See All
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            )}
+        </div>
       );
     }
     
     if (isValidElement(title) || Array.isArray(title)) {
-        return title;
+        return (
+            <div className="flex items-center justify-between pr-4">
+                {title}
+                {movies.length > 5 && (
+                    <button 
+                        onClick={handleSeeAll}
+                        className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors flex items-center gap-2 group mb-4"
+                    >
+                        See All
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                )}
+            </div>
+        );
     }
 
     return null;

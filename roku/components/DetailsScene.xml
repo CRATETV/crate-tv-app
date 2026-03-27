@@ -23,7 +23,7 @@
                 <!-- PAYWALL SECTOR -->
                 <Group id="paywallGroup" translation="[0, 500]" visible="false">
                     <Label text="VERIFIED PURCHASE REQUIRED" color="#EF4444" font="font:SmallBoldSystemFont" />
-                    <Label text="Scan the code on your phone to unlock this selection." translation="[0, 40]" font="font:SmallestSystemFont" color="#666666" />
+                    <Label id="lockMessage" text="Visit cratetv.net to unlock this film" translation="[0, 40]" font="font:SmallestSystemFont" color="#EF4444" />
                     
                     <Rectangle width="220" height="220" translation="[0, 100]" color="#FFFFFF" radius="10">
                         <Poster id="qrCode" width="200" height="200" translation="[10, 10]" />

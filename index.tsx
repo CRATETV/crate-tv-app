@@ -49,7 +49,7 @@ import PitchDeckPage from './components/PitchDeckPage';
 import ZinePage from './components/ZinePage';
 import JuryRoomPage from './components/JuryRoomPage';
 import InstitutionalGatewayPage from './components/InstitutionalGatewayPage';
-
+import LibraryPage from './components/LibraryPage';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -128,6 +128,8 @@ const AppRouter: React.FC = () => {
   switch (route) {
     case '/':
       return user ? <App /> : <LandingPage />;
+    case '/library':
+      return <LibraryPage />;
     case '/edu':
       return <InstitutionalGatewayPage />;
     case '/zine':

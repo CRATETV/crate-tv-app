@@ -170,6 +170,7 @@ export interface Movie {
   liveStreamUrl?: string;
   liveStreamStatus?: 'offline' | 'live' | 'scheduled';
   zineUrl?: string;
+  genres?: string[];
 }
 
 export interface Actor {

@@ -27,8 +27,13 @@ function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean
     const fullStreamUrl = sanitizeUrl(asset?.rokuStreamUrl || movie.rokuStreamUrl || movie.fullMovie || '');
     const trailerUrl = sanitizeUrl(movie.trailer || '');
     
-    // Only provide the full stream URL if the content is unlocked
+    // PAYWALL: Only provide full stream URL if content is unlocked
     const streamUrl = isUnlocked ? fullStreamUrl : trailerUrl;
+    
+    // Log paywall status for debugging
+    if (movie.isForSale || movie.isWatchPartyPaid) {
+        console.log(`[PAYWALL] Movie "${movie.title}" - isForSale: ${movie.isForSale}, isUnlocked: ${isUnlocked}, streamUrl: ${streamUrl ? 'SET' : 'EMPTY'}`);
+    }
     
     const isHls = streamUrl.toLowerCase().includes('.m3u8');
     const posterUrl = sanitizeUrl(asset?.tvPoster || movie.tvPoster || movie.poster || '');
@@ -41,27 +46,45 @@ function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean
         description = `VISIT CRATETV.NET TO UNLOCK. ${description}`;
     }
 
+    // SECURITY: Build response object explicitly - NEVER include fullMovie or rokuStreamUrl for locked content
     return {
-        ...movie,
         id: movie.key, 
+        key: movie.key,
         title: movie.title || 'Untitled',
         description: description,
+        synopsis: movie.synopsis,
         hdPosterUrl: posterUrl,
         heroImage: heroUrl,
+        poster: movie.poster,
+        tvPoster: movie.tvPoster,
+        // CRITICAL: Only include streamUrl (which is already trailer for locked content)
+        // NEVER include fullMovie or rokuStreamUrl directly - the Roku app checks those first!
         streamUrl: streamUrl,
         streamFormat: isHls ? 'hls' : streamUrl.includes('.mpd') ? 'dash' : 'mp4',
+        // Only include fullMovie if UNLOCKED - this is the key security fix
+        fullMovie: isUnlocked ? movie.fullMovie : undefined,
+        rokuStreamUrl: isUnlocked ? movie.rokuStreamUrl : undefined,
+        trailer: movie.trailer,
         year: publishedDate ? publishedDate.getFullYear().toString() : '2025',
         runtime: movie.durationInMinutes ? `${movie.durationInMinutes} min` : '',
+        durationInMinutes: movie.durationInMinutes,
+        director: movie.director,
+        cast: movie.cast,
+        genres: movie.genres,
+        publishedAt: movie.publishedAt,
         isFree: !movie.isForSale && !movie.isWatchPartyPaid,
+        isForSale: movie.isForSale,
+        isWatchPartyPaid: movie.isWatchPartyPaid,
+        salePrice: movie.salePrice,
         live: movie.liveStreamStatus === 'live' || movie.isWatchPartyEnabled === true || isLiveOverride,
         isWatchPartyEnabled: movie.isWatchPartyEnabled === true,
         isUnlocked: isUnlocked,
         purchaseUrl: `https://cratetv.net/movie/${movie.key}?action=buy`
-    };
+    } as RokuMovie;
 }
 
 const cache = new Map<string, { response: any, timestamp: number }>();
-const CACHE_TTL = 300 * 1000; // 5 minutes
+const CACHE_TTL = 60 * 1000; // 1 minute
 
 export async function GET(request: Request) {
   try {
