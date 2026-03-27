@@ -498,6 +498,7 @@ export interface SecurityEvent {
   type: string;
   timestamp: any;
   ip?: string;
+  ipAddress?: string;
   details?: any;
 }
 
@@ -538,20 +539,27 @@ export interface AuditEntry {
   id: string;
   role: string;
   action: string;
-  type: 'PURGE' | 'MUTATION' | 'LOGIN' | 'SECURITY';
+  type: 'PURGE' | 'MUTATION' | 'LOGIN' | 'SECURITY' | 'VIEW';
   details: string;
   timestamp: any;
   ip?: string;
+  ipAddress?: string;
 }
 
 export interface AuditRecord {
   id: string;
   role: string;
   action: string;
-  type: 'PURGE' | 'MUTATION' | 'LOGIN' | 'SECURITY';
+  type: 'PURGE' | 'MUTATION' | 'LOGIN' | 'SECURITY' | 'VIEW';
   details: string;
   timestamp: any;
   ip?: string;
+  ipAddress?: string;
+}
+
+export interface Recommendation {
+  movieKey: string;
+  reasoning: string;
 }
 
 export interface GrantApplication {

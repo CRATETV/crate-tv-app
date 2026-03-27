@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -11,6 +12,7 @@ import { GET as getWatchPartyStatus } from './api/get-watch-party-status.js';
 import { POST as getSalesData } from './api/get-sales-data.js';
 import { POST as getGrowthAnalytics } from './api/get-growth-analytics.js';
 import { POST as trackView } from './api/track-view.js';
+import { POST as getRecommendations } from './api/get-recommendations.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,6 +20,13 @@ const __dirname = path.dirname(__filename);
 async function startServer() {
   const app = express();
   const port = 3000;
+
+  // Security headers
+  app.use(helmet({
+    contentSecurityPolicy: false, // Disable CSP for now to avoid breaking Vite/External assets
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: false
+  }));
 
   app.use(cors());
   app.use(express.json());
@@ -51,6 +60,7 @@ async function startServer() {
   app.post('/api/get-sales-data', wrapHandler(getSalesData));
   app.post('/api/get-growth-analytics', wrapHandler(getGrowthAnalytics));
   app.post('/api/track-view', wrapHandler(trackView));
+  app.post('/api/get-recommendations', wrapHandler(getRecommendations));
 
   // Health check
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

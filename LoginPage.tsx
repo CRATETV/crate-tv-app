@@ -11,7 +11,8 @@ const LoginPage: React.FC = () => {
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const { signIn, signUp, sendPasswordReset } = useAuth();
+    const [isMagicLinkSent, setIsMagicLinkSent] = useState(false);
+    const { signIn, signUp, sendPasswordReset, signInWithMagicLink, completeMagicLinkSignIn } = useAuth();
     
     // Check for redirect param
     const [redirectPath, setRedirectPath] = useState('/');
@@ -23,6 +24,23 @@ const LoginPage: React.FC = () => {
         if (params.get('view') === 'signup') {
             setIsLoginView(false);
         }
+
+        // Handle Magic Link completion
+        const handleMagicLink = async () => {
+            const emailForSignIn = window.localStorage.getItem('emailForSignIn');
+            if (emailForSignIn) {
+                setIsLoading(true);
+                try {
+                    await completeMagicLinkSignIn(emailForSignIn);
+                    setSuccessMessage("Successfully signed in!");
+                } catch (err: any) {
+                    setError(err.message || "Failed to complete sign in.");
+                } finally {
+                    setIsLoading(false);
+                }
+            }
+        };
+        handleMagicLink();
     }, []);
     
     const handleSubmit = async (e: React.FormEvent) => {
@@ -43,6 +61,25 @@ const LoginPage: React.FC = () => {
             } else {
                 setError(err.message || 'An unknown error occurred.');
             }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleMagicLinkSignIn = async () => {
+        if (!email) {
+            setError("Please enter your email address first.");
+            return;
+        }
+        setError('');
+        setSuccessMessage('');
+        setIsLoading(true);
+        try {
+            await signInWithMagicLink(email);
+            setIsMagicLinkSent(true);
+            setSuccessMessage("Check your email for a sign-in link!");
+        } catch (err: any) {
+            setError(err.message || "Failed to send sign-in link.");
         } finally {
             setIsLoading(false);
         }
@@ -121,6 +158,20 @@ const LoginPage: React.FC = () => {
                         <button type="submit" disabled={isLoading} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-md transition-all shadow-lg active:scale-95 disabled:bg-gray-600">
                             {isLoading ? 'Processing...' : (isLoginView ? 'Sign In' : 'Join for Free')}
                         </button>
+                        
+                        {isLoginView && (
+                            <div className="pt-4 border-t border-white/5 space-y-4">
+                                <p className="text-center text-xs text-gray-500 uppercase tracking-widest">Or sign in without a password</p>
+                                <button 
+                                    type="button"
+                                    onClick={handleMagicLinkSignIn}
+                                    disabled={isLoading}
+                                    className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold py-4 rounded-md transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {isMagicLinkSent ? 'Resend Link' : 'Send Sign-in Link'}
+                                </button>
+                            </div>
+                        )}
                     </form>
                     <div className="mt-6 text-center text-gray-400">
                         {isLoginView ? (

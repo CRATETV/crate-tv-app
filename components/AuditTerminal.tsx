@@ -7,30 +7,41 @@ import LoadingSpinner from './LoadingSpinner';
 const AuditTerminal: React.FC = () => {
     const [logs, setLogs] = useState<AuditEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         let unsubscribe: (() => void) | undefined;
 
         const setupListener = async () => {
-            await initializeFirebaseAuth();
-            const db = getDbInstance();
-            if (!db) {
-                setIsLoading(false);
-                return;
-            }
+            try {
+                setIsLoading(true);
+                setError(null);
+                await initializeFirebaseAuth();
+                const db = getDbInstance();
+                if (!db) {
+                    setError("Firebase Database instance is unavailable. Check your configuration.");
+                    setIsLoading(false);
+                    return;
+                }
 
-            unsubscribe = db.collection('audit_logs')
-                .orderBy('timestamp', 'desc')
-                .limit(200)
-                .onSnapshot(snap => {
-                    const fetched: AuditEntry[] = [];
-                    snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as AuditEntry));
-                    setLogs(fetched);
-                    setIsLoading(false);
-                }, (err) => {
-                    console.error("Audit stream error:", err);
-                    setIsLoading(false);
-                });
+                unsubscribe = db.collection('audit_logs')
+                    .orderBy('timestamp', 'desc')
+                    .limit(200)
+                    .onSnapshot(snap => {
+                        const fetched: AuditEntry[] = [];
+                        snap.forEach(doc => fetched.push({ id: doc.id, ...doc.data() } as AuditEntry));
+                        setLogs(fetched);
+                        setIsLoading(false);
+                    }, (err) => {
+                        console.error("Audit stream error:", err);
+                        setError(`Failed to connect to audit stream: ${err.message}`);
+                        setIsLoading(false);
+                    });
+            } catch (err: any) {
+                console.error("Audit setup error:", err);
+                setError(`Setup failed: ${err.message}`);
+                setIsLoading(false);
+            }
         };
 
         setupListener();
@@ -43,6 +54,7 @@ const AuditTerminal: React.FC = () => {
             case 'MUTATION': return 'text-blue-400';
             case 'LOGIN': return 'text-green-500';
             case 'SECURITY': return 'text-amber-500';
+            case 'VIEW': return 'text-purple-400';
             default: return 'text-gray-400';
         }
     };
@@ -52,14 +64,15 @@ const AuditTerminal: React.FC = () => {
     };
 
     const handleExportCSV = () => {
-        const headers = ["ID", "Timestamp", "Role", "Type", "Action", "Details"];
+        const headers = ["ID", "Timestamp", "Role", "Type", "Action", "Details", "IP"];
         const rows = logs.map(log => [
             log.id,
             log.timestamp?.seconds ? new Date(log.timestamp.seconds * 1000).toISOString() : '---',
             log.role,
             log.type,
             log.action,
-            `"${(log.details || '').replace(/"/g, '""')}"`
+            `"${(log.details || '').replace(/"/g, '""')}"`,
+            log.ipAddress || log.ip || '---'
         ]);
 
         const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");
@@ -72,7 +85,46 @@ const AuditTerminal: React.FC = () => {
         document.body.removeChild(link);
     };
 
+    const handleTestLog = async () => {
+        const pass = sessionStorage.getItem('adminPassword');
+        const name = sessionStorage.getItem('operatorName');
+        try {
+            const response = await fetch('/api/log-audit-event', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    password: pass,
+                    operatorName: name,
+                    action: 'TEST_HEARTBEAT',
+                    type: 'SECURITY',
+                    details: 'Manual audit stream verification triggered by operator.'
+                })
+            });
+            if (!response.ok) throw new Error("Failed to log test event.");
+        } catch (err: any) {
+            alert(`Test log failed: ${err.message}`);
+        }
+    };
+
     if (isLoading) return <LoadingSpinner />;
+
+    if (error) {
+        return (
+            <div className="bg-[#050505] p-12 rounded-[2.5rem] border border-red-500/20 text-center space-y-6">
+                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto border border-red-500/30">
+                    <span className="text-red-500 text-2xl">!</span>
+                </div>
+                <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">Audit Stream Failure</h2>
+                <p className="text-gray-400 max-w-md mx-auto">{error}</p>
+                <button 
+                    onClick={() => window.location.reload()}
+                    className="bg-white/5 hover:bg-white/10 text-white font-black py-3 px-8 rounded-xl transition-all uppercase text-xs tracking-widest border border-white/10"
+                >
+                    Retry Connection
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-[#050505] p-8 md:p-12 rounded-[2.5rem] border border-white/5 space-y-10 animate-[fadeIn_0.5s_ease-out]">
@@ -86,6 +138,18 @@ const AuditTerminal: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-4">
                     <button 
+                        onClick={handleTestLog}
+                        className="bg-red-600/10 hover:bg-red-600/20 text-red-500 font-black py-2.5 px-6 rounded-xl transition-all uppercase text-[10px] tracking-widest border border-red-600/30"
+                    >
+                        Test Audit
+                    </button>
+                    <button 
+                        onClick={() => window.location.reload()}
+                        className="bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-black py-2.5 px-6 rounded-xl transition-all uppercase text-[10px] tracking-widest border border-white/10"
+                    >
+                        Refresh Stream
+                    </button>
+                    <button 
                         onClick={handlePrint}
                         className="bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-black py-2.5 px-6 rounded-xl transition-all uppercase text-[10px] tracking-widest border border-white/10"
                     >
@@ -98,44 +162,55 @@ const AuditTerminal: React.FC = () => {
                         Export Manifest (.csv)
                     </button>
                     <div className="flex items-center gap-3 text-[10px] font-black text-gray-700 uppercase tracking-widest">
-                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                        Immutable Stream Active
+                        <span className={`w-2 h-2 rounded-full ${logs.length > 0 ? 'bg-green-500' : 'bg-amber-500'}`}></span>
+                        {logs.length > 0 ? 'Immutable Stream Active' : 'Waiting for Data...'}
                     </div>
                 </div>
             </div>
 
             <div className="bg-black border border-white/10 rounded-3xl overflow-hidden shadow-[inset_0_0_50px_rgba(0,0,0,1)]">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left font-mono text-[11px] leading-relaxed">
-                        <thead className="bg-white/5 text-gray-500 uppercase">
-                            <tr>
-                                <th className="p-5 border-b border-white/5">Event UUID</th>
-                                <th className="p-5 border-b border-white/5">Node Role</th>
-                                <th className="p-5 border-b border-white/5">Action Payload</th>
-                                <th className="p-5 border-b border-white/5">Status</th>
-                                <th className="p-5 border-b border-white/5 text-right">Timestamp</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {logs.map(log => (
-                                <tr key={log.id} className="hover:bg-white/[0.02] transition-colors group">
-                                    <td className="p-5 text-gray-700 select-all">{log.id.substring(0, 8)}</td>
-                                    <td className="p-5 font-black text-gray-400 uppercase tracking-tighter">{log.role}</td>
-                                    <td className="p-5">
-                                        <p className={`font-black uppercase tracking-tight ${getTypeColor(log.type)}`}>{log.action}</p>
-                                        <p className="text-gray-600 mt-1 font-medium">{log.details}</p>
-                                    </td>
-                                    <td className="p-5">
-                                        <span className="text-green-900 bg-green-900/10 border border-green-900/30 px-2 py-0.5 rounded-[4px] font-black">LOGGED</span>
-                                    </td>
-                                    <td className="p-5 text-right text-gray-600">
-                                        {log.timestamp?.seconds ? new Date(log.timestamp.seconds * 1000).toLocaleString('en-US', { hour12: false }) : '---'}
-                                    </td>
+                {logs.length === 0 ? (
+                    <div className="p-20 text-center space-y-4">
+                        <p className="text-gray-600 font-black uppercase tracking-[0.3em] text-sm">No Audit Records Found</p>
+                        <p className="text-gray-700 text-xs italic">The manifest is currently empty. Perform an administrative action to generate a trace.</p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left font-mono text-[11px] leading-relaxed">
+                            <thead className="bg-white/5 text-gray-500 uppercase">
+                                <tr>
+                                    <th className="p-5 border-b border-white/5">Event UUID</th>
+                                    <th className="p-5 border-b border-white/5">Node Role</th>
+                                    <th className="p-5 border-b border-white/5">Action Payload</th>
+                                    <th className="p-5 border-b border-white/5">Status</th>
+                                    <th className="p-5 border-b border-white/5">Node IP</th>
+                                    <th className="p-5 border-b border-white/5 text-right">Timestamp</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {logs.map(log => (
+                                    <tr key={log.id} className="hover:bg-white/[0.02] transition-colors group">
+                                        <td className="p-5 text-gray-700 select-all">{log.id.substring(0, 8)}</td>
+                                        <td className="p-5 font-black text-gray-400 uppercase tracking-tighter">{log.role}</td>
+                                        <td className="p-5">
+                                            <p className={`font-black uppercase tracking-tight ${getTypeColor(log.type)}`}>{log.action}</p>
+                                            <p className="text-gray-600 mt-1 font-medium">{log.details}</p>
+                                        </td>
+                                        <td className="p-5">
+                                            <span className="text-green-900 bg-green-900/10 border border-green-900/30 px-2 py-0.5 rounded-[4px] font-black">LOGGED</span>
+                                        </td>
+                                        <td className="p-5 text-gray-600 font-mono text-[10px]">
+                                            {log.ipAddress || log.ip || '---'}
+                                        </td>
+                                        <td className="p-5 text-right text-gray-600">
+                                            {log.timestamp?.seconds ? new Date(log.timestamp.seconds * 1000).toLocaleString('en-US', { hour12: false }) : '---'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
             
             <div className="p-8 bg-white/5 rounded-3xl border border-white/5 text-center">

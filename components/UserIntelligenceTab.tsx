@@ -81,6 +81,7 @@ const UserIntelligenceTab: React.FC<UserIntelligenceTabProps> = ({ movies, onPre
     const handleSynthesize = async (user: UserRecord) => {
         setIsSynthesizing(true);
         const password = sessionStorage.getItem('adminPassword');
+        const operatorName = sessionStorage.getItem('operatorName');
         try {
             const watchedTitles = (user.watchedMovies || []).map(k => movies[k]?.title).filter(Boolean);
             const res = await fetch('/api/synthesize-recommendation', {
@@ -94,6 +95,20 @@ const UserIntelligenceTab: React.FC<UserIntelligenceTabProps> = ({ movies, onPre
             if (data.recommendedKey && movies[data.recommendedKey]) {
                 setAttachedMovie(movies[data.recommendedKey]);
             }
+
+            // Log audit event
+            fetch('/api/log-audit-event', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    password,
+                    operatorName,
+                    action: 'AI_SYNTHESIS',
+                    type: 'VIEW',
+                    details: `Synthesized recommendation for ${user.email}. Recommended: ${data.recommendedKey || 'None'}`
+                })
+            }).catch(() => {});
+
         } catch (e) {
             alert("Uplink failed.");
         } finally {
@@ -111,6 +126,7 @@ const UserIntelligenceTab: React.FC<UserIntelligenceTabProps> = ({ movies, onPre
         if (!selectedUser?.email || !msgSubject || !msgBody) return;
         setIsDispatching(true);
         const password = sessionStorage.getItem('adminPassword');
+        const operatorName = sessionStorage.getItem('operatorName');
         try {
             const res = await fetch('/api/send-individual-email', {
                 method: 'POST',
@@ -128,6 +144,20 @@ const UserIntelligenceTab: React.FC<UserIntelligenceTabProps> = ({ movies, onPre
             });
             if (res.ok) {
                 alert("Dispatch complete.");
+                
+                // Log audit event
+                fetch('/api/log-audit-event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        password,
+                        operatorName,
+                        action: 'USER_DISPATCH',
+                        type: 'MUTATION',
+                        details: `Sent personalized dispatch to ${selectedUser.email}. Subject: ${msgSubject}`
+                    })
+                }).catch(() => {});
+
                 setMsgSubject('');
                 setMsgBody('');
                 setAttachedMovie(null);

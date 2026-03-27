@@ -14,6 +14,8 @@ interface AuthContextType {
     authInitialized: boolean;
     claimsLoaded: boolean;
     signIn: (email: string, password: string) => Promise<void>;
+    signInWithMagicLink: (email: string) => Promise<void>;
+    completeMagicLinkSignIn: (email: string) => Promise<void>;
     signUp: (email: string, password: string, name: string) => Promise<void>;
     logout: () => Promise<void>;
     sendPasswordReset: (email: string) => Promise<void>;
@@ -114,6 +116,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const auth = getAuthInstance();
         if (!auth) throw new Error("Authentication service is not available.");
         await auth.signInWithEmailAndPassword(email, password);
+    };
+
+    const signInWithMagicLink = async (email: string) => {
+        const auth = getAuthInstance();
+        if (!auth) throw new Error("Authentication service is not available.");
+        
+        const actionCodeSettings = {
+            url: window.location.href, // Redirect back to the current page
+            handleCodeInApp: true,
+        };
+        
+        await auth.sendSignInLinkToEmail(email, actionCodeSettings);
+        window.localStorage.setItem('emailForSignIn', email);
+    };
+
+    const completeMagicLinkSignIn = async (email: string) => {
+        const auth = getAuthInstance();
+        if (!auth) throw new Error("Authentication service is not available.");
+        
+        if (auth.isSignInWithEmailLink(window.location.href)) {
+            await auth.signInWithEmailLink(email, window.location.href);
+            window.localStorage.removeItem('emailForSignIn');
+        }
     };
 
     const signUp = async (email: string, password: string, name: string) => {
@@ -300,7 +325,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const value = {
-        user, authInitialized, claimsLoaded, signIn, signUp, logout, sendPasswordReset, getUserIdToken, setAvatar, updateName,
+        user, authInitialized, claimsLoaded, signIn, signInWithMagicLink, completeMagicLinkSignIn, signUp, logout, sendPasswordReset, getUserIdToken, setAvatar, updateName,
         watchlist, toggleWatchlist, watchedMovies, markAsWatched, likedMovies, toggleLikeMovie,
         hasFestivalAllAccess, hasCrateFestPass, hasJuryPass, unlockedFestivalBlockIds, purchasedMovieKeys, rentals, unlockedWatchPartyKeys,
         unlockFestivalBlock, grantFestivalAllAccess, grantCrateFestPass, grantJuryPass, purchaseMovie, unlockWatchParty, subscribe

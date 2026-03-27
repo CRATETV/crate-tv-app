@@ -2,14 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { getDbInstance } from '../services/firebaseClient';
 import LoadingSpinner from './LoadingSpinner';
-
-interface SecurityEvent {
-    id: string;
-    type: string;
-    timestamp: any;
-    ip?: string;
-    details?: any;
-}
+import { SecurityEvent } from '../types';
 
 const HealthCheck: React.FC<{ label: string; status: 'online' | 'error' | 'checking' | 'warning' }> = ({ label, status }) => (
     <div className="bg-white/5 p-5 rounded-2xl border border-white/5 flex items-center justify-between group hover:bg-white/10 transition-all">
@@ -94,6 +87,27 @@ const SecurityTerminal: React.FC = () => {
         return 'text-green-500';
     };
 
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [securityAdvice, setSecurityAdvice] = useState<{ summary: string; recommendations: string[] } | null>(null);
+
+    const generatePulse = async () => {
+        setIsAnalyzing(true);
+        const password = sessionStorage.getItem('adminPassword');
+        try {
+            const res = await fetch('/api/generate-security-advice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password, report: events.slice(0, 20) })
+            });
+            const data = await res.json();
+            if (data.advice) setSecurityAdvice(data.advice);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
     return (
         <div className="bg-[#050505] p-8 md:p-12 rounded-[2.5rem] border border-white/5 space-y-10 animate-[fadeIn_0.5s_ease-out]">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-8">
@@ -105,12 +119,38 @@ const SecurityTerminal: React.FC = () => {
                     <p className="text-gray-500 text-xs font-bold uppercase tracking-[0.3em] mt-2">Active infrastructure integrity and session auditing.</p>
                 </div>
                 <div className="flex gap-4">
+                    <button 
+                        onClick={generatePulse}
+                        disabled={isAnalyzing}
+                        className="bg-red-600 hover:bg-red-700 text-white text-[10px] font-black uppercase px-6 py-3 rounded-2xl tracking-widest transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {isAnalyzing ? <LoadingSpinner size="sm" fullScreen={false} /> : <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>}
+                        {isAnalyzing ? 'Analyzing...' : 'Generate Security Pulse'}
+                    </button>
                     <div className="bg-black/60 border border-white/10 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-inner">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
                         <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">Global Encryption: AES-256</p>
                     </div>
                 </div>
             </div>
+
+            {securityAdvice && (
+                <div className="bg-red-600/5 border border-red-600/20 p-8 rounded-[2.5rem] space-y-6 animate-[fadeIn_0.5s_ease-out]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-red-600 shadow-[0_0_10px_#ef4444]"></div>
+                        <h3 className="text-lg font-black uppercase tracking-tighter text-white italic">Intelligence Pulse Summary</h3>
+                    </div>
+                    <p className="text-gray-300 text-sm leading-relaxed font-medium italic">"{securityAdvice.summary}"</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {securityAdvice.recommendations.map((rec, i) => (
+                            <div key={i} className="bg-white/5 p-4 rounded-2xl border border-white/5 flex items-start gap-3">
+                                <span className="text-red-500 font-black text-[10px] mt-0.5">0{i+1}</span>
+                                <p className="text-[11px] text-gray-400 font-bold uppercase tracking-tight">{rec}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <HealthCheck label="S3 CONTENT STORAGE" status={health.s3} />
@@ -152,7 +192,7 @@ const SecurityTerminal: React.FC = () => {
                             </thead>
                             <tbody className="divide-y divide-white/5">
                                 {isLoading ? (
-                                    <tr><td colSpan={4} className="p-20 text-center"><LoadingSpinner /></td></tr>
+                                    <tr><td colSpan={4} className="p-20 text-center"><LoadingSpinner fullScreen={false} /></td></tr>
                                 ) : events.map(ev => (
                                     <tr key={ev.id} className="hover:bg-white/[0.02] transition-colors group">
                                         <td className="p-5 text-gray-700 select-all">{ev.id.substring(0, 12)}</td>
@@ -161,7 +201,7 @@ const SecurityTerminal: React.FC = () => {
                                             {ev.details && <p className="text-[10px] text-gray-600 mt-1 truncate max-w-[300px]">MANIFEST: {JSON.stringify(ev.details)}</p>}
                                         </td>
                                         <td className="p-5 text-center">
-                                            <code className="bg-white/5 px-3 py-1 rounded text-gray-500 group-hover:text-white transition-colors">{ev.ip || 'INTERNAL_NODE'}</code>
+                                            <code className="bg-white/5 px-3 py-1 rounded text-gray-500 group-hover:text-white transition-colors">{ev.ipAddress || ev.ip || 'INTERNAL_NODE'}</code>
                                         </td>
                                         <td className="p-5 text-right text-gray-700 font-bold uppercase tracking-widest">
                                             {ev.timestamp?.seconds ? new Date(ev.timestamp.seconds * 1000).toLocaleTimeString() : '---'}

@@ -155,11 +155,16 @@ export async function POST(request: Request) {
         }
 
         const auditLogRef = db.collection('audit_logs').doc();
+        const ip = request.headers.get('x-forwarded-for') || 
+                   request.headers.get('x-real-ip') || 
+                   '0.0.0.0';
+
         batch.set(auditLogRef, {
             role: `${baseRole.toUpperCase()}: ${operatorName || 'Unknown'}`,
             action: `SYNC_${type.toUpperCase()}`,
             type: 'MUTATION',
             details: auditDetails,
+            ipAddress: ip.split(',')[0].trim(),
             timestamp: FieldValue.serverTimestamp()
         });
 

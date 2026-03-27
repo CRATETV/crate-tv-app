@@ -2,6 +2,7 @@ import { getApiData } from './_lib/data.js';
 import { Movie, Category, RokuConfig, RokuFeed, RokuMovie, RokuAsset } from '../types.js';
 import { getAdminDb, getInitializationError } from './_lib/firebaseAdmin.js';
 import { isMovieReleased, moviesData as fallbackMovies, categoriesData as fallbackCategories } from '../constants.js';
+import { getAiRecommendations } from './_lib/recommendations.js';
 
 function sanitizeUrl(url: string): string {
     if (!url) return '';
@@ -244,7 +245,26 @@ export async function GET(request: Request) {
         }
     }
 
-    // 2. TOP 10 TODAY
+    // 2. PREMIER ACCESS (Paid Content)
+    const premierMovies = (Object.values(moviesObj) as Movie[])
+        .filter(m => isValidForRoku(m) && (m.isForSale || m.isWatchPartyPaid))
+        .sort((a, b) => {
+            const dateA = toDate(a.publishedAt) || new Date(0);
+            const dateB = toDate(b.publishedAt) || new Date(0);
+            return dateB.getTime() - dateA.getTime();
+        })
+        .map(m => formatMovieForRoku(m, assets[m.key], unlockedMovies.has('ALL') || unlockedMovies.has(m.key)));
+
+    if (premierMovies.length > 0) {
+        categories.push({
+            title: "Premier Access",
+            type: 'standard',
+            categoryType: 'premierAccess',
+            children: premierMovies
+        });
+    }
+
+    // 3. TOP 10 TODAY
     if (config.topTen?.enabled !== false) {
         const topMovies = (Object.values(moviesObj) as Movie[])
             .filter(m => isValidForRoku(m))
@@ -259,6 +279,42 @@ export async function GET(request: Request) {
                 categoryType: 'topTen',
                 children: topMovies
             });
+        }
+    }
+
+    // 4. CRATE INTELLIGENCE (AI Recommendations)
+    if (deviceIdParam) {
+        const db = getAdminDb();
+        if (db) {
+            const linkDoc = await db.collection('roku_links').doc(deviceIdParam).get();
+            if (linkDoc.exists) {
+                const userId = linkDoc.data()?.userId;
+                const userDoc = await db.collection('users').doc(userId).get();
+                const userData = userDoc.data();
+                if (userData) {
+                    const recommendations = await getAiRecommendations(
+                        Object.values(moviesObj),
+                        userData.watchlist || [],
+                        userData.likedMovies || []
+                    );
+
+                    if (recommendations.length > 0) {
+                        const recMovies = recommendations
+                            .map(r => moviesObj[r.movieKey])
+                            .filter(m => isValidForRoku(m))
+                            .map(m => formatMovieForRoku(m, assets[m.key], unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || !m.isForSale));
+
+                        if (recMovies.length > 0) {
+                            categories.push({
+                                title: "Crate Intelligence",
+                                type: 'standard',
+                                categoryType: 'crateIntelligence',
+                                children: recMovies
+                            });
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -277,7 +333,14 @@ export async function GET(request: Request) {
             .sort((a: Movie, b: Movie) => {
                 const dateA = toDate(a.publishedAt) || new Date(0);
                 const dateB = toDate(b.publishedAt) || new Date(0);
-                return dateB.getTime() - dateA.getTime();
+                
+                // Primary sort: Published Date (Newest First)
+                if (dateB.getTime() !== dateA.getTime()) {
+                    return dateB.getTime() - dateA.getTime();
+                }
+                
+                // Secondary sort: Position in the category's movieKeys array
+                return movieKeys.indexOf(a.key) - movieKeys.indexOf(b.key);
             })
             .map((movie: Movie) => formatMovieForRoku(movie, assets[movie.key], unlockedMovies.has('ALL') || unlockedMovies.has(movie.key) || !movie.isForSale));
         

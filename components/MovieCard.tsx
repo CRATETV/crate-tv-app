@@ -187,6 +187,9 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelectMovie, isWa
               {isNew && !isActuallyComingSoon && (
                     <span className="text-[8px] font-black bg-red-600 text-white px-2 py-1 rounded tracking-widest shadow-lg uppercase">NEW</span>
               )}
+              {(movie.isForSale || movie.isWatchPartyPaid) && (
+                  <span className="text-[8px] font-black bg-amber-700 text-white px-2 py-1 rounded tracking-widest shadow-lg uppercase">PREMIER</span>
+              )}
           </div>
 
           {/* Award Overlay */}

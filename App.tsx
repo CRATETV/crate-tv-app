@@ -21,6 +21,7 @@ import { getDbInstance } from './services/firebaseClient';
 import LiveWatchPartyBanner from './components/LiveWatchPartyBanner';
 import CrateFestBanner from './components/CrateFestBanner';
 import CrateVaultRow from './components/CrateVaultRow';
+import CrateIntelligence from './components/CrateIntelligence';
 import firebase from 'firebase/compat/app';
 
 const MaintenanceScreen: React.FC = () => (
@@ -183,6 +184,12 @@ const App: React.FC = () => {
             .sort((a: Movie, b: Movie) => (viewCounts?.[b.key] || 0) - (viewCounts?.[a.key] || 0))
             .slice(0, 10);
     }, [movies, viewCounts]);
+
+    const premierMovies = useMemo(() => {
+        return (Object.values(movies) as Movie[])
+            .filter(m => !!m && isMovieReleased(m) && !m.isUnlisted && (m.isForSale || m.isWatchPartyPaid))
+            .sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
+    }, [movies]);
 
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
@@ -356,6 +363,29 @@ const App: React.FC = () => {
                                     onToggleWatchlist={toggleWatchlist} 
                                     onSupportMovie={() => {}} 
                                     showRankings={true}
+                                />
+                            )}
+
+                            <CrateIntelligence allMovies={movies} onSelectMovie={handlePlayMovie} />
+
+                            {premierMovies.length > 0 && (
+                                <MovieCarousel 
+                                    title={
+                                        <div className="flex items-center gap-3 mb-4 px-2 border-l-4 border-red-600 pl-4">
+                                            <h2 className="text-lg md:text-2xl font-bold text-white uppercase italic tracking-tighter">
+                                                Premier Access
+                                            </h2>
+                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Paid Content</span>
+                                        </div>
+                                    } 
+                                    movies={premierMovies} 
+                                    onSelectMovie={handlePlayMovie} 
+                                    watchedMovies={watchedMovies} 
+                                    watchlist={watchlist} 
+                                    likedMovies={likedMovies} 
+                                    onToggleLike={toggleLikeMovie} 
+                                    onToggleWatchlist={toggleWatchlist} 
+                                    onSupportMovie={() => {}} 
                                 />
                             )}
 

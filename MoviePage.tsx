@@ -171,8 +171,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
         {isStaging && <StagingBanner onExit={() => setIsStaging(false)} isOffline={dataSource === 'fallback'} />}
         {playerMode !== 'full' && <Header searchQuery={searchQuery} onSearch={setSearchQuery} isScrolled={true} onMobileSearchClick={() => setIsMobileSearchOpen(true)} />}
 
-        <main className={`flex-grow ${playerMode !== 'full' ? 'pt-16' : ''}`}>
-            <div ref={videoContainerRef} className="relative w-full aspect-video bg-black secure-video-container group overflow-hidden shadow-2xl">
+        <main className={`flex-grow ${playerMode !== 'full' ? 'pt-0' : ''}`}>
+            <div ref={videoContainerRef} className={`relative w-full ${playerMode === 'full' ? 'aspect-video' : 'min-h-[85vh]'} bg-black secure-video-container group overflow-hidden shadow-2xl`}>
                 {playerMode === 'full' && (
                     <video 
                         ref={videoRef} 
@@ -188,12 +188,83 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                 )}
 
                 {playerMode !== 'full' && (
-                    <div className="relative w-full h-full flex items-center justify-center">
-                         <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt="" className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30" crossOrigin="anonymous" />
-                         <img src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} alt={movie.title} className="w-full h-full object-contain relative z-10" crossOrigin="anonymous" />
-                         <button onClick={() => setPlayerMode('full')} className="absolute z-20 bg-white/10 backdrop-blur-md rounded-full p-8 border-2 border-white/20 hover:scale-110 transition-all shadow-2xl group">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white group-hover:text-red-600 transition-colors" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
-                         </button>
+                    <div className="relative w-full h-full min-h-[85vh] flex items-center">
+                         {/* Background Layer */}
+                         <div className="absolute inset-0 z-0">
+                            <img 
+                                src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} 
+                                alt="" 
+                                className="w-full h-full object-cover opacity-40 blur-sm scale-105" 
+                                crossOrigin="anonymous" 
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent"></div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                         </div>
+
+                         {/* Content Layer */}
+                         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-12 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center pt-20">
+                            <div className="lg:col-span-7 space-y-8 animate-[fadeIn_1s_ease-out]">
+                                <div className="space-y-2">
+                                    <p className="text-red-500 font-black uppercase tracking-[0.4em] text-[10px] animate-[slideIn_0.8s_ease-out]">Directed by {movie.director}</p>
+                                    <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-none drop-shadow-2xl">{movie.title}</h1>
+                                </div>
+                                
+                                <div className="max-w-2xl">
+                                    <div className="text-gray-300 text-lg md:text-xl leading-relaxed font-medium line-clamp-4 md:line-clamp-none drop-shadow-lg" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-6">
+                                    <button 
+                                        onClick={() => setPlayerMode('full')} 
+                                        className="group flex items-center gap-4 bg-white text-black px-10 py-5 rounded-full font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
+                                        Watch Now
+                                    </button>
+                                    
+                                    <button 
+                                        onClick={() => setIsSupportModalOpen(true)}
+                                        className="flex items-center gap-3 px-8 py-5 bg-white/10 backdrop-blur-md border border-white/20 text-white font-black rounded-full hover:bg-white/20 transition-all active:scale-95 uppercase text-xs tracking-widest"
+                                    >
+                                        <span className="text-xl">💎</span>
+                                        Support Filmmaker
+                                    </button>
+                                </div>
+
+                                <div className="pt-4">
+                                    <RokuBanner />
+                                </div>
+                            </div>
+
+                            {/* Poster/CTA Card Layer */}
+                            <div className="hidden lg:block lg:col-span-5 animate-[fadeIn_1.2s_ease-out]">
+                                <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] border border-white/10 group">
+                                    <img 
+                                        src={`/api/proxy-image?url=${encodeURIComponent(movie.poster)}`} 
+                                        alt={movie.title} 
+                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                                        crossOrigin="anonymous" 
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
+                                    
+                                    <div className="absolute bottom-8 left-8 right-8 p-8 bg-black/40 backdrop-blur-xl rounded-3xl border border-white/10 space-y-4">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Talent Involved</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {movie.cast.slice(0, 3).map(actor => (
+                                                <span key={actor.name} className="text-xs font-bold text-white/80">{actor.name}</span>
+                                            ))}
+                                            {movie.cast.length > 3 && <span className="text-xs font-bold text-white/40">+{movie.cast.length - 3} More</span>}
+                                        </div>
+                                        <button 
+                                            onClick={() => setPlayerMode('full')}
+                                            className="w-full py-4 bg-white text-black font-black uppercase tracking-widest rounded-xl hover:bg-red-600 hover:text-white transition-colors text-[10px]"
+                                        >
+                                            Unlock Now
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                         </div>
                     </div>
                 )}
 
@@ -243,29 +314,21 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             </div>
 
             {playerMode !== 'full' && (
-                <div className="max-w-6xl mx-auto p-4 md:p-8">
-                    <h1 className="text-3xl md:text-6xl font-black uppercase tracking-tighter">{movie.title}</h1>
-                    <div className="mt-4 flex flex-wrap items-center gap-4">
-                        <button onClick={() => setIsSupportModalOpen(true)} className="flex items-center justify-center px-6 py-3 bg-purple-600 text-white font-black rounded-xl hover:bg-purple-700 transition-all active:scale-95 uppercase text-xs tracking-widest animate-[pulse_3s_infinite]">
-                           Support Filmmaker
-                        </button>
-                        {showSupportSuccess && <div className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg animate-fadeIn">Thank you for your support!</div>}
-                    </div>
-                    <div className="mt-8 text-gray-300 text-lg leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: movie.synopsis }}></div>
-                    <RokuBanner />
-                    
-                    <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-12">
-                        <div className="md:col-span-2 space-y-6">
-                            <h2 className="text-2xl font-black uppercase tracking-tight">The Cast</h2>
-                            <div className="flex flex-wrap gap-3">
-                                {movie.cast.map(actor => (
-                                    <button key={actor.name} onClick={() => setSelectedActor(actor)} className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-white font-bold text-xs hover:bg-red-600 transition-all">{actor.name}</button>
-                                ))}
+                <div className="max-w-7xl mx-auto p-4 md:p-12">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                        <div className="md:col-span-2 space-y-12">
+                            <div className="space-y-6">
+                                <h2 className="text-2xl font-black uppercase tracking-tight border-l-4 border-red-600 pl-4">The Cast</h2>
+                                <div className="flex flex-wrap gap-3">
+                                    {movie.cast.map(actor => (
+                                        <button key={actor.name} onClick={() => setSelectedActor(actor)} className="px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-xs hover:bg-red-600 hover:border-red-500 transition-all transform hover:scale-105">{actor.name}</button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                         <div className="space-y-6">
-                             <h2 className="text-2xl font-black uppercase tracking-tight">Directed By</h2>
-                             <p onClick={() => setSelectedDirector(movie.director)} className="text-xl font-bold text-red-500 cursor-pointer hover:text-red-400 transition-colors">{movie.director}</p>
+                             <h2 className="text-2xl font-black uppercase tracking-tight border-l-4 border-red-600 pl-4">Directed By</h2>
+                             <p onClick={() => setSelectedDirector(movie.director)} className="text-3xl font-black italic tracking-tighter text-red-500 cursor-pointer hover:text-red-400 transition-colors">{movie.director}</p>
                         </div>
                     </div>
 

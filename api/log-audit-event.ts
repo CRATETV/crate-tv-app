@@ -30,12 +30,18 @@ export async function POST(request: Request) {
         const db = getAdminDb();
         if (!db) throw new Error("DB fail");
 
+        const ipHeader = request.headers.get('x-forwarded-for') || 
+                         request.headers.get('x-real-ip') || 
+                         '0.0.0.0';
+        const ip = ipHeader.split(',')[0].trim();
+
         await db.collection('audit_logs').add({
             role: `${baseRole.toUpperCase()}: ${operatorName || 'Unknown'}`,
             action: action || 'ADMIN_ACTION',
             type: type || 'MUTATION',
             details: details || 'No details provided.',
-            timestamp: FieldValue.serverTimestamp()
+            timestamp: FieldValue.serverTimestamp(),
+            ipAddress: ip
         });
 
         return new Response(JSON.stringify({ success: true }), { status: 200 });
