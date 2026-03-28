@@ -41,6 +41,12 @@ export async function POST(request: Request) {
     const codeData = codeDoc.data();
     const { deviceId } = codeData;
 
+    // Fetch user profile info to store with the link
+    const userDoc = await db.collection('users').doc(uid).get();
+    const userData = userDoc.data();
+    const displayName = userData?.displayName || userData?.name || 'Crate TV User';
+    const avatarUrl = userData?.avatarUrl || userData?.photoURL || '';
+
     const batch = db.batch();
 
     // 1. Link hardware ID to user document
@@ -51,6 +57,8 @@ export async function POST(request: Request) {
     const linkRef = db.collection('roku_links').doc(deviceId);
     batch.set(linkRef, { 
         userId: uid,
+        displayName: displayName,
+        avatarUrl: avatarUrl,
         linkedAt: FieldValue.serverTimestamp(),
         status: 'VERIFIED'
     });

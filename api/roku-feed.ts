@@ -23,7 +23,7 @@ function isReleased(movie: Movie | undefined | null): boolean {
     return !date || date <= new Date();
 }
 
-function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean = true, isLiveOverride: boolean = false): RokuMovie {
+function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean = false, isLiveOverride: boolean = false): RokuMovie {
     const fullStreamUrl = sanitizeUrl(asset?.rokuStreamUrl || movie.rokuStreamUrl || movie.fullMovie || '');
     const trailerUrl = sanitizeUrl(movie.trailer || '');
     
@@ -45,6 +45,8 @@ function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean
     if (!isUnlocked && (movie.isForSale || movie.isWatchPartyPaid)) {
         description = `VISIT CRATETV.NET TO UNLOCK. ${description}`;
     }
+
+    const isMovieFree = movie.isForSale !== true && movie.isWatchPartyPaid !== true;
 
     // SECURITY: Build response object explicitly - NEVER include fullMovie or rokuStreamUrl for locked content
     return {
@@ -72,9 +74,9 @@ function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean
         cast: movie.cast,
         genres: movie.genres,
         publishedAt: movie.publishedAt,
-        isFree: !movie.isForSale && !movie.isWatchPartyPaid,
-        isForSale: movie.isForSale,
-        isWatchPartyPaid: movie.isWatchPartyPaid,
+        isFree: isMovieFree,
+        isForSale: movie.isForSale === true,
+        isWatchPartyPaid: movie.isWatchPartyPaid === true,
         salePrice: movie.salePrice,
         live: movie.liveStreamStatus === 'live' || movie.isWatchPartyEnabled === true || isLiveOverride,
         isWatchPartyEnabled: movie.isWatchPartyEnabled === true,

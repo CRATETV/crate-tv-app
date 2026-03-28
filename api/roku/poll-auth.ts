@@ -37,6 +37,8 @@ export async function GET(request: Request) {
         linked: true,
         status: "success",
         userId: data?.userId,
+        displayName: data?.displayName || 'User',
+        avatarUrl: data?.avatarUrl || '',
         token: deviceId // The Hardware ID remains the persistent session token
       }), {
         status: 200,

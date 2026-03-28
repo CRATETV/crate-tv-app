@@ -14,7 +14,8 @@
             
             <Group id="info" translation="[550, 0]">
                 <Label id="titleLabel" width="1000" font="font:LargeBoldSystemFont" color="#FFFFFF" />
-                <Label id="synopsisLabel" width="1000" translation="[0, 100]" wrap="true" maxLines="10" font="font:SmallSystemFont" color="#AAAAAA" />
+                <Label id="genresLabel" width="1000" translation="[0, 60]" font="font:SmallestBoldSystemFont" color="#EF4444" />
+                <Label id="synopsisLabel" width="1000" translation="[0, 120]" wrap="true" maxLines="10" font="font:SmallSystemFont" color="#AAAAAA" />
                 
                 <Rectangle id="playBtn" width="350" height="90" translation="[0, 500]" color="#FFFFFF" visible="false">
                     <Label text="PLAY FILM" width="350" height="90" horizAlign="center" vertAlign="center" color="#000000" font="font:SmallBoldSystemFont" />
@@ -23,14 +24,19 @@
                 <!-- PAYWALL SECTOR -->
                 <Group id="paywallGroup" translation="[0, 500]" visible="false">
                     <Label text="VERIFIED PURCHASE REQUIRED" color="#EF4444" font="font:SmallBoldSystemFont" />
-                    <Label id="lockMessage" text="Visit cratetv.net to unlock this film" translation="[0, 40]" font="font:SmallestSystemFont" color="#EF4444" />
+                    <Label id="lockMessage" text="Unlock this film on cratetv.net" translation="[0, 40]" font="font:MediumBoldSystemFont" color="#FFFFFF" />
                     
                     <Rectangle width="220" height="220" translation="[0, 100]" color="#FFFFFF" radius="10">
                         <Poster id="qrCode" width="200" height="200" translation="[10, 10]" />
                     </Rectangle>
                     
+                    <Label text="Scan to unlock or create an account" translation="[250, 140]" font="font:SmallSystemFont" color="#AAAAAA" />
                     <Label text="100% of revenue goes to the creator." translation="[250, 180]" font="font:SmallestBoldSystemFont" color="#444444" />
                 </Group>
+
+                <Rectangle id="trailerBtn" width="350" height="90" translation="[0, 800]" color="#333333" visible="false">
+                    <Label text="PLAY TRAILER" width="350" height="90" horizAlign="center" vertAlign="center" color="#FFFFFF" font="font:SmallBoldSystemFont" />
+                </Rectangle>
             </Group>
         </Group>
     </children>
