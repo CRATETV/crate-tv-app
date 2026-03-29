@@ -138,12 +138,20 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                     }).catch(() => {});
                 }
             }
+            
+            // Apply playback speed before playing
+            if (settings.playbackSpeed) {
+                videoRef.current.playbackRate = settings.playbackSpeed;
+            }
+            
             await videoRef.current.play();
+            setIsPaused(false);
         } catch (e) {
+            console.error("Playback failed:", e);
             setIsPaused(true);
         }
     }
-  }, [movie, getUserIdToken, markAsWatched]);
+  }, [movie, getUserIdToken, markAsWatched, user?.playbackProgress, isEnded, settings.playbackSpeed]);
 
   const toggleManualPause = (e: React.MouseEvent) => {
       if (isEnded) return;
@@ -273,21 +281,7 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                         </button>
                                     </div>
 
-                                    {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
-                                    
-                                    {/* Play Button Overlay Fallback */}
-                                    {isPaused && !isEnded && (
-                                        <div 
-                                            className="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer group z-[105]"
-                                            onClick={playContent}
-                                        >
-                                            <div className="w-24 h-24 bg-red-600 rounded-full flex items-center justify-center shadow-2xl transform transition-transform group-hover:scale-110">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white ml-2" viewBox="0 0 24 24" fill="currentColor">
-                                                    <path d="M8 5v14l11-7z" />
-                                                </svg>
-                                            </div>
-                                        </div>
-                                    )}
+                                    {isPaused && !isEnded && videoRef.current && videoRef.current.currentTime > 0.5 && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/40 backdrop-blur-sm">
                                             <div className="max-w-2xl w-full space-y-12">
