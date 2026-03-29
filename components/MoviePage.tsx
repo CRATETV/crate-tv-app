@@ -33,7 +33,7 @@ const getEmbedUrl = (url: string): string | null => {
 };
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
-  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie, markAsWatched } = useAuth();
+  const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie, markAsWatched, updatePlaybackProgress } = useAuth();
   const { movies: allMovies, categories: allCategories, isLoading: isDataLoading } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
@@ -46,6 +46,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
 
   const [isPaused, setIsPaused] = useState(false);
   const [isEnded, setIsEnded] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [showSettings, setShowSettings] = useState(false);
   const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
@@ -110,6 +112,13 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
     if (videoRef.current && movie?.key) {
         try {
             markAsWatched(movie.key);
+            
+            // Resume from last position
+            const savedProgress = user?.playbackProgress?.[movie.key];
+            if (savedProgress && savedProgress > 10 && !isEnded) {
+                videoRef.current.currentTime = savedProgress;
+            }
+
             if (!hasTrackedViewRef.current) {
                 hasTrackedViewRef.current = true;
                 const token = await getUserIdToken();
@@ -153,6 +162,24 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
       }
   }, [playerMode, hasAccess, playContent, currentSearch]);
 
+  // Periodic progress saving
+  useEffect(() => {
+    if (playerMode === 'full' && !isPaused && !isEnded && videoRef.current && movie?.key) {
+        const interval = setInterval(() => {
+            if (videoRef.current) {
+                const currentTime = Math.floor(videoRef.current.currentTime);
+                // Don't save if near the end (95%+)
+                if (currentTime > 10 && currentTime < videoRef.current.duration * 0.95) {
+                    updatePlaybackProgress(movie.key, currentTime);
+                } else if (currentTime >= videoRef.current.duration * 0.95) {
+                    updatePlaybackProgress(movie.key, 0); // Reset if finished
+                }
+            }
+        }, 10000); // Save every 10 seconds
+        return () => clearInterval(interval);
+    }
+  }, [playerMode, isPaused, isEnded, movie?.key, updatePlaybackProgress]);
+
   if (isDataLoading) return <LoadingSpinner />;
   if (!movie) return <div className="h-screen flex items-center justify-center font-black uppercase text-gray-800 bg-black">Content Restricted</div>;
 
@@ -172,8 +199,69 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                 <iframe src={embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen" allowFullScreen title={movie.title}></iframe>
                             ) : (
                                 <div className="relative w-full h-full" onClick={toggleManualPause}>
-                                    <video ref={videoRef} src={movie.fullMovie} className={`w-full h-full object-contain block transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'}`} controls={false} playsInline autoPlay onPause={() => !isEnded && setIsPaused(true)} onPlay={() => !isEnded && setIsPaused(false)} onEnded={() => setIsEnded(true)} controlsList="nodownload" />
+                                    <video 
+                                        ref={videoRef} 
+                                        src={movie.fullMovie} 
+                                        className={`w-full h-full object-contain block transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'}`} 
+                                        controls={false} 
+                                        playsInline 
+                                        autoPlay 
+                                        onPause={() => !isEnded && setIsPaused(true)} 
+                                        onPlay={() => !isEnded && setIsPaused(false)} 
+                                        onEnded={() => { setIsEnded(true); updatePlaybackProgress(movie.key, 0); }} 
+                                        controlsList="nodownload" 
+                                        crossOrigin="anonymous"
+                                    >
+                                        {movie.subtitleUrl && (
+                                            <track 
+                                                kind="subtitles" 
+                                                src={movie.subtitleUrl} 
+                                                srcLang="en" 
+                                                label="English" 
+                                                default 
+                                            />
+                                        )}
+                                    </video>
                                     <CastButton videoElement={videoRef.current} />
+                                    
+                                    {/* Playback Settings Gear */}
+                                    <div className="absolute bottom-6 right-6 z-[110] flex flex-col items-end gap-2">
+                                        {showSettings && (
+                                            <div className="bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-300 w-48">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Playback Speed</p>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    {[0.75, 1, 1.25, 1.5, 2].map(speed => (
+                                                        <button 
+                                                            key={speed}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setPlaybackSpeed(speed);
+                                                                if (videoRef.current) videoRef.current.playbackRate = speed;
+                                                                setShowSettings(false);
+                                                            }}
+                                                            className={`text-[10px] font-bold py-2 rounded-lg transition-all ${playbackSpeed === speed ? 'bg-red-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                                                        >
+                                                            {speed}x
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <div className="mt-4 pt-4 border-t border-white/5">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Captions</p>
+                                                    <button className="w-full text-left text-[10px] font-bold py-2 px-3 rounded-lg bg-white/5 text-gray-400">Off (Auto-detecting...)</button>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); }}
+                                            className="p-3 bg-black/40 backdrop-blur-md rounded-full border border-white/10 hover:bg-white/10 transition-all group"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-white/70 group-hover:text-white transition-transform duration-500 ${showSettings ? 'rotate-90' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
                                     {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/40 backdrop-blur-sm">

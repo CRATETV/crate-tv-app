@@ -21,6 +21,7 @@ export interface User {
   purchasedMovieKeys: string[];
   rentals: Record<string, string>;
   unlockedWatchPartyKeys?: string[];
+  playbackProgress?: Record<string, number>; // movieKey -> seconds
   rokuDeviceId?: string;
   ticketStubs?: TicketStub[];
 }
@@ -180,6 +181,7 @@ export interface Movie {
   liveStreamStatus?: 'offline' | 'live' | 'scheduled';
   zineUrl?: string;
   genres?: string[];
+  subtitleUrl?: string;
 }
 
 export interface Actor {

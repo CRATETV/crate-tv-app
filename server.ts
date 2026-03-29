@@ -17,11 +17,13 @@ import { POST as createPoll } from './api/create-poll.js';
 import { POST as votePoll } from './api/vote-poll.js';
 import { POST as endPoll } from './api/end-poll.js';
 import { POST as claimTicketStub } from './api/claim-ticket-stub.js';
-import { POST as generateHighlights } from './api/generate-highlights.js';
+import { GET as generateHighlights } from './api/generate-highlights.js';
 import { POST as toggleQA } from './api/toggle-qa.js';
 import { POST as sendChatMessage } from './api/send-chat-message.js';
 import { POST as clearChat } from './api/clear-chat.js';
 import { POST as toggleLike } from './api/toggle-like.js';
+import { POST as rokuToggleWatchlist } from './api/roku-toggle-watchlist.js';
+import { POST as updatePlaybackProgress } from './api/update-playback-progress.js';
 import { POST as trackSubscription } from './api/track-subscription.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -80,6 +82,8 @@ async function startServer() {
   app.post('/api/send-chat-message', wrapHandler(sendChatMessage));
   app.post('/api/clear-chat', wrapHandler(clearChat));
   app.post('/api/toggle-like', wrapHandler(toggleLike));
+  app.post('/api/roku-toggle-watchlist', wrapHandler(rokuToggleWatchlist));
+  app.post('/api/update-playback-progress', wrapHandler(updatePlaybackProgress));
   app.post('/api/track-subscription', wrapHandler(trackSubscription));
 
   // Health check

@@ -43,7 +43,9 @@ function formatMovieForRoku(movie: Movie, asset?: RokuAsset, isUnlocked: boolean
     
     let description = (movie.synopsis || '').replace(/<[^>]+>/g, '').trim();
     if (!isUnlocked && (movie.isForSale || movie.isWatchPartyPaid)) {
-        description = `VISIT CRATETV.NET TO UNLOCK. ${description}`;
+        const price = movie.salePrice || movie.watchPartyPrice || 0;
+        const priceStr = price > 0 ? ` [$${price.toFixed(2)}]` : '';
+        description = `Visit cratetv.net to unlock this title${priceStr}. ${description}`;
     }
 
     const isMovieFree = movie.isForSale !== true && movie.isWatchPartyPaid !== true;
@@ -329,7 +331,66 @@ export async function GET(request: Request) {
         }
     }
 
-    // 4. CRATE INTELLIGENCE (AI Recommendations)
+    // 4. USER-SPECIFIC ROWS (Continue Watching & My List)
+    if (deviceIdParam) {
+        const db = getAdminDb();
+        if (db) {
+            const linkDoc = await db.collection('roku_links').doc(deviceIdParam).get();
+            if (linkDoc.exists) {
+                const userId = linkDoc.data()?.userId;
+                const userDoc = await db.collection('users').doc(userId).get();
+                const userData = userDoc.data();
+                
+                if (userData) {
+                    // CONTINUE WATCHING
+                    if (userData.playbackProgress) {
+                        const continueWatchingMovies = Object.entries(userData.playbackProgress as Record<string, number>)
+                            .filter(([key, progress]) => progress > 0 && !(userData.watchedMovies || []).includes(key))
+                            .sort((a, b) => b[1] - a[1])
+                            .map(([key]) => moviesObj[key])
+                            .filter((m: Movie) => m && isValidForRoku(m))
+                            .slice(0, 10)
+                            .map((m: Movie) => {
+                                const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
+                                const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
+                                return formatMovieForRoku(m, assets[m.key], isUnlocked);
+                            });
+
+                        if (continueWatchingMovies.length > 0) {
+                            categories.push({
+                                title: "Continue Watching",
+                                type: 'standard',
+                                children: continueWatchingMovies
+                            });
+                        }
+                    }
+
+                    // MY LIST (Watchlist)
+                    if (Array.isArray(userData.watchlist) && userData.watchlist.length > 0) {
+                        const watchlistMovies = userData.watchlist
+                            .map((k: string) => moviesObj[k])
+                            .filter((m: Movie) => m && isValidForRoku(m))
+                            .map((m: Movie) => {
+                                const isMovieFree = !m.isForSale && !m.isWatchPartyPaid;
+                                const isUnlocked = unlockedMovies.has('ALL') || unlockedMovies.has(m.key) || isMovieFree;
+                                return formatMovieForRoku(m, assets[m.key], isUnlocked);
+                            });
+
+                        if (watchlistMovies.length > 0) {
+                            categories.push({
+                                title: "My List",
+                                type: 'standard',
+                                categoryType: 'watchlist',
+                                children: watchlistMovies
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 5. CRATE INTELLIGENCE (AI Recommendations)
     if (deviceIdParam) {
         const db = getAdminDb();
         if (db) {

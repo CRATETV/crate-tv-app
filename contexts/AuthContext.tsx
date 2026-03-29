@@ -28,6 +28,7 @@ interface AuthContextType {
     markAsWatched: (movieKey: string) => Promise<void>;
     likedMovies: string[];
     toggleLikeMovie: (movieKey: string) => Promise<void>;
+    updatePlaybackProgress: (movieKey: string, seconds: number) => Promise<void>;
     // Festival & Purchase related
     hasFestivalAllAccess: boolean;
     hasCrateFestPass: boolean;
@@ -189,6 +190,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const watchlist = user?.watchlist || [];
     const watchedMovies = user?.watchedMovies || [];
     const likedMovies = user?.likedMovies || [];
+    const playbackProgress = user?.playbackProgress || {};
 
     const toggleWatchlist = useCallback(async (movieKey: string) => {
         if (!user) return;
@@ -228,6 +230,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }).catch(err => console.error("Sync failed:", err))
         ]);
     }, [user, likedMovies]);
+
+    const updatePlaybackProgress = useCallback(async (movieKey: string, seconds: number) => {
+        if (!user) return;
+        
+        // Optimistic update
+        setUser(currentUser => {
+            if (!currentUser) return null;
+            return {
+                ...currentUser,
+                playbackProgress: {
+                    ...(currentUser.playbackProgress || {}),
+                    [movieKey]: seconds
+                }
+            };
+        });
+
+        // Background sync
+        fetch('/api/update-playback-progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ movieKey, seconds, userId: user.uid }),
+        }).catch(err => console.error("Progress sync failed:", err));
+    }, [user]);
 
     const hasFestivalAllAccess = useMemo(() => {
         if (user?.hasFestivalAllAccess) return true; // Legacy support
@@ -326,12 +351,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const value = useMemo(() => ({
         user, authInitialized, claimsLoaded, signIn, signInWithMagicLink, completeMagicLinkSignIn, signUp, logout, sendPasswordReset, getUserIdToken, setAvatar, updateName,
-        watchlist, toggleWatchlist, watchedMovies, markAsWatched, likedMovies, toggleLikeMovie,
+        watchlist, toggleWatchlist, watchedMovies, markAsWatched, likedMovies, toggleLikeMovie, updatePlaybackProgress,
         hasFestivalAllAccess, hasCrateFestPass, hasJuryPass, unlockedFestivalBlockIds, purchasedMovieKeys, rentals, unlockedWatchPartyKeys,
         unlockFestivalBlock, grantFestivalAllAccess, grantCrateFestPass, grantJuryPass, purchaseMovie, unlockWatchParty, subscribe
     }), [
         user, authInitialized, claimsLoaded, signIn, signInWithMagicLink, completeMagicLinkSignIn, signUp, logout, sendPasswordReset, getUserIdToken, setAvatar, updateName,
-        watchlist, toggleWatchlist, watchedMovies, markAsWatched, likedMovies, toggleLikeMovie,
+        watchlist, toggleWatchlist, watchedMovies, markAsWatched, likedMovies, toggleLikeMovie, updatePlaybackProgress,
         hasFestivalAllAccess, hasCrateFestPass, hasJuryPass, unlockedFestivalBlockIds, purchasedMovieKeys, rentals, unlockedWatchPartyKeys,
         unlockFestivalBlock, grantFestivalAllAccess, grantCrateFestPass, grantJuryPass, purchaseMovie, unlockWatchParty, subscribe
     ]);

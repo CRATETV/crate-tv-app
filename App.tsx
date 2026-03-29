@@ -237,6 +237,24 @@ const App: React.FC = () => {
     const watchlist = useMemo<Set<string>>(() => new Set(watchlistArray), [watchlistArray]);
     const watchedMovies = useMemo<Set<string>>(() => new Set(watchedMoviesArray), [watchedMoviesArray]);
 
+    const continueWatchingMovies = useMemo(() => {
+        if (!user?.playbackProgress) return [];
+        return Object.entries(user.playbackProgress)
+            .map(([key, progress]) => {
+                const movie = movies[key];
+                if (!movie) return null;
+                // Only show if progress is between 1% and 95%
+                // We don't have duration here easily, but we can assume if it's in progress it's worth showing
+                // unless it's explicitly marked as watched or progress is 0
+                if (progress <= 0 || watchedMovies.has(key)) return null;
+                return { movie, progress };
+            })
+            .filter((item): item is { movie: Movie; progress: number } => !!item)
+            .sort((a, b) => (b.progress) - (a.progress)) // Simple sort by progress for now, ideally by last updated
+            .map(item => item.movie)
+            .slice(0, 10);
+    }, [user?.playbackProgress, movies, watchedMovies]);
+
     const handleSelectMovie = (movie: Movie) => setDetailsMovie(movie);
     
     const handlePlayMovie = (movie: Movie) => {
@@ -347,6 +365,27 @@ const App: React.FC = () => {
                             <MovieCarousel title={searchResults.length > 0 ? `Results for "${searchQuery}"` : `No results for "${searchQuery}"`} movies={searchResults} onSelectMovie={handlePlayMovie} watchedMovies={watchedMovies} watchlist={watchlist} likedMovies={likedMovies} onToggleLike={toggleLikeMovie} onToggleWatchlist={toggleWatchlist} onSupportMovie={() => {}} />
                         ) : (
                           <>
+                            {continueWatchingMovies.length > 0 && (
+                                <MovieCarousel 
+                                    title={
+                                        <div className="flex items-center gap-3 mb-4 px-2 border-l-4 border-red-600 pl-4">
+                                            <h2 className="text-lg md:text-2xl font-bold text-white uppercase italic tracking-tighter">
+                                                Continue Watching
+                                            </h2>
+                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Pick up where you left off</span>
+                                        </div>
+                                    } 
+                                    movies={continueWatchingMovies} 
+                                    onSelectMovie={handlePlayMovie} 
+                                    watchedMovies={watchedMovies} 
+                                    watchlist={watchlist} 
+                                    likedMovies={likedMovies} 
+                                    onToggleLike={toggleLikeMovie} 
+                                    onToggleWatchlist={toggleWatchlist} 
+                                    onSupportMovie={() => {}} 
+                                />
+                            )}
+
                             {topTenMovies.length > 0 && (
                                 <MovieCarousel 
                                     title={
