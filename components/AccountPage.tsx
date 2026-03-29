@@ -134,6 +134,31 @@ const AccountPage: React.FC = () => {
                                             {user.isPremiumSubscriber && <span className="bg-yellow-600/20 border border-yellow-500/30 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-yellow-500 shadow-lg shadow-yellow-900/20">Premium Pass</span>}
                                         </div>
                                     </div>
+
+                                    {user.ticketStubs && user.ticketStubs.length > 0 && (
+                                        <div className="pt-8 border-t border-white/5">
+                                            <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-4 block">Digital Ticket Stubs // NFT Collection</label>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                                {user.ticketStubs.map((stub: any) => (
+                                                    <div key={stub.id} className="group relative aspect-[2/3] bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/5 hover:border-pink-500/50 transition-all shadow-xl hover:scale-105">
+                                                        <img 
+                                                            src={stub.posterUrl} 
+                                                            alt={stub.movieTitle} 
+                                                            className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                                                            referrerPolicy="no-referrer"
+                                                        />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent p-3 flex flex-col justify-end">
+                                                            <p className="text-[8px] font-black uppercase tracking-tighter leading-none truncate">{stub.movieTitle}</p>
+                                                            <p className="text-[6px] font-bold text-gray-500 uppercase tracking-widest mt-1">{new Date(stub.date).toLocaleDateString()}</p>
+                                                        </div>
+                                                        <div className="absolute top-2 right-2 w-4 h-4 bg-pink-500 rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 
                                 <div className="pt-8 border-t border-white/5">

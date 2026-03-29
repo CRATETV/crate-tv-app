@@ -40,10 +40,19 @@ const getPartyStatusText = (item: WatchableItem, partyState?: WatchPartyState) =
 
 // --- CHILD COMPONENTS ---
 
-const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: string | null; avatar?: string; } | null }> = ({ movieKey, user }) => {
+const EmbeddedChat: React.FC<{ 
+    movieKey: string; 
+    user: { name?: string; email: string | null; avatar?: string; } | null;
+    isQALive?: boolean;
+    qaEmbed?: string;
+    isBackstageVerified?: boolean;
+    backstageKey?: string;
+}> = ({ movieKey, user, isQALive, qaEmbed, isBackstageVerified, backstageKey }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [isClearing, setIsClearing] = useState(false);
+    const [isTogglingQA, setIsTogglingQA] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -86,10 +95,120 @@ const EmbeddedChat: React.FC<{ movieKey: string; user: { name?: string; email: s
         }
     };
 
+    const toggleQA = async () => {
+        if (!backstageKey) return;
+        setIsTogglingQA(true);
+        try {
+            const newQAState = !isQALive;
+            let embedUrl = qaEmbed || '';
+            
+            if (newQAState && !embedUrl) {
+                const input = window.prompt("Enter Director's Video Stream URL (YouTube, Vimeo, Restream):");
+                if (!input) {
+                    setIsTogglingQA(false);
+                    return;
+                }
+                embedUrl = input;
+            }
+
+            const res = await fetch('/api/toggle-qa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    movieKey, 
+                    backstageKey, 
+                    isQALive: newQAState,
+                    qaEmbed: embedUrl
+                }),
+            });
+            if (!res.ok) throw new Error("Failed to toggle Q&A.");
+        } catch (error) {
+            console.error("QA Toggle Error:", error);
+            alert("Failed to toggle Q&A mode.");
+        } finally {
+            setIsTogglingQA(false);
+        }
+    };
+
+    const handleClearChat = async () => {
+        if (!confirm("Are you sure you want to clear ALL messages for this watch party? This cannot be undone.")) return;
+        const adminPassword = sessionStorage.getItem('adminPassword');
+        if (!adminPassword) return;
+
+        setIsClearing(true);
+        try {
+            const res = await fetch('/api/clear-chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey, adminPassword }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to clear chat.');
+            }
+        } catch (error) {
+            console.error("Failed to clear chat:", error);
+            alert(`Error: ${(error as Error).message}`);
+        } finally {
+            setIsClearing(false);
+        }
+    };
+
+    const downloadChat = () => {
+        if (messages.length === 0) return;
+        
+        const csvContent = [
+            ['Timestamp', 'User', 'Message'],
+            ...messages.map(msg => [
+                msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleString() : 'N/A',
+                msg.userName,
+                msg.text
+            ])
+        ].map(e => e.join(",")).join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `chat_history_${movieKey}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        link.remove();
+    };
+
     return (
         <div className="w-full h-full flex flex-col bg-gray-900 border-l-2 border-gray-700">
-            <div className="p-4 text-lg font-bold border-b border-gray-700 flex-shrink-0">
+            <div className="p-4 text-lg font-bold border-b border-gray-700 flex-shrink-0 flex items-center justify-between">
                 <h2 className="text-base">Live Chat</h2>
+                <div className="flex items-center gap-2">
+                    {isBackstageVerified && (
+                        <button 
+                            onClick={toggleQA}
+                            disabled={isTogglingQA}
+                            className={`text-[8px] font-black uppercase tracking-widest ${isQALive ? 'text-red-500' : 'text-emerald-500'} hover:text-white transition-colors flex items-center gap-1`}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                            {isQALive ? 'End Video' : 'Join w/ Video'}
+                        </button>
+                    )}
+                    <button 
+                        onClick={downloadChat}
+                        className="text-[8px] font-black uppercase tracking-widest text-emerald-500 hover:text-white transition-colors flex items-center gap-1"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        Download
+                    </button>
+                    <button 
+                        onClick={handleClearChat}
+                        disabled={isClearing}
+                        className="text-[8px] font-black uppercase tracking-widest text-red-500 hover:text-white transition-colors flex items-center gap-1"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        {isClearing ? 'Clearing...' : 'Clear'}
+                    </button>
+                </div>
             </div>
             <div className="flex-grow p-4 overflow-y-auto space-y-4">
                 {messages.map(msg => (
@@ -172,6 +291,7 @@ const WatchPartyControlRoom: React.FC<{
     const canStart = item.isWatchPartyEnabled && (partyState?.status === 'waiting' || partyState?.status === 'ended' || !partyState);
     
     const [isStarting, setIsStarting] = useState(false);
+    const [isTogglingQA, setIsTogglingQA] = useState(false);
 
     const handleStartWithLoading = async () => {
         setIsStarting(true);
@@ -179,6 +299,41 @@ const WatchPartyControlRoom: React.FC<{
             await onStartParty();
         } finally {
             setIsStarting(false);
+        }
+    };
+
+    const toggleQA = async () => {
+        if (!partyState?.backstageKey) return;
+        setIsTogglingQA(true);
+        try {
+            const newQAState = !partyState.isQALive;
+            let embedUrl = partyState.qaEmbed || '';
+            
+            if (newQAState && !embedUrl) {
+                const input = window.prompt("Enter Director's Video Stream URL (YouTube, Vimeo, Restream):");
+                if (!input) {
+                    setIsTogglingQA(false);
+                    return;
+                }
+                embedUrl = input;
+            }
+
+            const res = await fetch('/api/toggle-qa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    movieKey: item.id, 
+                    backstageKey: partyState.backstageKey, 
+                    isQALive: newQAState,
+                    qaEmbed: embedUrl
+                }),
+            });
+            if (!res.ok) throw new Error("Failed to toggle Q&A.");
+        } catch (error) {
+            console.error("QA Toggle Error:", error);
+            alert("Failed to toggle Q&A mode.");
+        } finally {
+            setIsTogglingQA(false);
         }
     };
 
@@ -230,43 +385,62 @@ const WatchPartyControlRoom: React.FC<{
                                 </div>
                             )}
                         </div>
-                        {canStart && (
-                            <button 
-                                onClick={handleStartWithLoading} 
-                                disabled={isStarting}
-                                className="bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white font-bold py-3 px-6 rounded-md w-full sm:w-auto shadow-[0_0_20px_rgba(22,163,74,0.4)] transition-all flex items-center justify-center gap-2"
-                            >
-                                {isStarting ? (
-                                    <>
-                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        Launching...
-                                    </>
-                                ) : (
-                                    partyState?.status === 'ended' ? 'Restart Party' : 'Start Party For Everyone'
-                                )}
-                            </button>
-                        )}
-                        {isLive && (
-                            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <div className="flex flex-wrap gap-2 justify-end">
+                            {isLive && (
+                                <button 
+                                    onClick={toggleQA}
+                                    disabled={isTogglingQA}
+                                    className={`font-bold py-3 px-6 rounded-md transition-all flex items-center justify-center gap-2 ${partyState?.isQALive ? 'bg-emerald-600 hover:bg-emerald-700 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-gray-700 hover:bg-gray-600'}`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                    {partyState?.isQALive ? 'Director Video: ON' : 'Director Video: OFF'}
+                                </button>
+                            )}
+                            {canStart && (
                                 <button 
                                     onClick={handleStartWithLoading} 
                                     disabled={isStarting}
-                                    className="bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white font-bold py-3 px-6 rounded-md shadow-[0_0_15px_rgba(220,38,38,0.3)] opacity-50 hover:opacity-100 transition-all flex items-center justify-center gap-2"
+                                    className="bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white font-bold py-3 px-6 rounded-md w-full sm:w-auto shadow-[0_0_20px_rgba(22,163,74,0.4)] transition-all flex items-center justify-center gap-2"
                                 >
-                                    {isStarting ? 'Resetting...' : 'Reset Party'}
+                                    {isStarting ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            Launching...
+                                        </>
+                                    ) : (
+                                        partyState?.status === 'ended' ? 'Restart Party' : 'Start Party For Everyone'
+                                    )}
                                 </button>
-                                <button 
-                                    onClick={onTerminateParty} 
-                                    className="bg-gray-700 hover:bg-black text-white font-bold py-3 px-6 rounded-md border border-white/10 transition-all flex items-center justify-center gap-2"
-                                >
-                                    Terminate Party
-                                </button>
-                            </div>
-                        )}
+                            )}
+                            {isLive && (
+                                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                                    <button 
+                                        onClick={handleStartWithLoading} 
+                                        disabled={isStarting}
+                                        className="bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white font-bold py-3 px-6 rounded-md shadow-[0_0_15px_rgba(220,38,38,0.3)] opacity-50 hover:opacity-100 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        {isStarting ? 'Resetting...' : 'Reset Party'}
+                                    </button>
+                                    <button 
+                                        onClick={onTerminateParty} 
+                                        className="bg-gray-700 hover:bg-black text-white font-bold py-3 px-6 rounded-md border border-white/10 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        Terminate Party
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
                 <div className="lg:col-span-1 h-[60vh] md:h-auto min-h-[500px]">
-                     <EmbeddedChat movieKey={item.id} user={user} />
+                     <EmbeddedChat 
+                        movieKey={item.id} 
+                        user={user} 
+                        isQALive={partyState?.isQALive} 
+                        qaEmbed={partyState?.qaEmbed} 
+                        isBackstageVerified={true} 
+                        backstageKey={partyState?.backstageKey}
+                    />
                 </div>
             </div>
         </div>

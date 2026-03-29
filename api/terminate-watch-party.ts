@@ -37,6 +37,8 @@ export async function POST(request: Request) {
     await partyRef.update({
       status: 'ended',
       isPlaying: false,
+      actualStartTime: null,
+      currentTime: 0,
       lastUpdated: FieldValue.serverTimestamp(),
       backstageKey: null // Clear the key when party ends
     });

@@ -114,6 +114,29 @@
         animation: twinkle 2s ease-in-out infinite;
       }
 
+      /* WATCH PARTY ANIMATIONS */
+      @keyframes emoji-float {
+        0% { transform: translateY(0) scale(0.5) rotate(0deg); opacity: 0; }
+        10% { opacity: 1; transform: translateY(-20px) scale(1.2) rotate(10deg); }
+        100% { transform: translateY(-400px) scale(0.8) rotate(-20deg); opacity: 0; }
+      }
+      .animate-emoji-float {
+        animation: emoji-float 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+
+      .crate-emoji {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        background: #DB2777;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        box-shadow: 0 10px 20px rgba(219, 39, 119, 0.4);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+      }
+
       /* FLUID TYPOGRAPHY SECTOR */
       .text-fluid-hero {
         font-size: clamp(3.5rem, 18vw, 10rem);

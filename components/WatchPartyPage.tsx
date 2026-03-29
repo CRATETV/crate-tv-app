@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Movie, WatchPartyState, ChatMessage } from '../types';
+import { Movie, WatchPartyState, ChatMessage, User } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useFestival } from '../contexts/FestivalContext';
 import { getDbInstance } from '../services/firebaseClient';
@@ -9,11 +9,63 @@ import LoadingSpinner from './LoadingSpinner';
 import { avatars } from './avatars';
 import SquarePaymentModal from './SquarePaymentModal';
 
+const PollOverlay = ({ poll, onVote, userId }: { poll: any; onVote: (index: number) => void; userId: string }) => {
+    const totalVotes = Object.values(poll.votes as Record<number, number>).reduce((a, b) => a + b, 0);
+    const hasVoted = poll.voters.includes(userId);
+
+    return (
+        <div className="absolute inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-[fadeIn_0.3s_ease-out]">
+            <div className="bg-gray-900 border-2 border-pink-500 rounded-[2rem] p-8 max-w-md w-full shadow-2xl space-y-6">
+                <div className="space-y-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-pink-500">Active Transmission Poll</span>
+                    <h3 className="text-2xl font-black uppercase italic tracking-tighter leading-none">{poll.question}</h3>
+                </div>
+
+                <div className="space-y-3">
+                    {poll.options.map((option: string, index: number) => {
+                        const votes = (poll.votes[index] || 0);
+                        const percentage = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+                        
+                        return (
+                            <button 
+                                key={index}
+                                onClick={() => !hasVoted && onVote(index)}
+                                disabled={hasVoted}
+                                className={`w-full relative overflow-hidden rounded-xl p-4 text-left transition-all ${hasVoted ? 'cursor-default' : 'hover:bg-white/5 active:scale-95'}`}
+                            >
+                                <div 
+                                    className="absolute inset-0 bg-pink-500/20 transition-all duration-1000" 
+                                    style={{ width: `${percentage}%` }}
+                                />
+                                <div className="relative flex items-center justify-between">
+                                    <span className="font-bold uppercase tracking-tight">{option}</span>
+                                    {hasVoted && <span className="font-mono text-pink-400">{percentage}%</span>}
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{totalVotes} Transmissions Received</span>
+                    {hasVoted && <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Vote Recorded</span>}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 interface WatchPartyPageProps {
   movieKey: string;
 }
 
-const REACTION_TYPES = ['🔥', '😲', '❤️', '👏', '😢'] as const;
+const REACTION_TYPES = [
+    { key: 'crate_fire', emoji: '🔥' },
+    { key: 'crate_wow', emoji: '😲' },
+    { key: 'crate_heart', emoji: '❤️' },
+    { key: 'crate_clap', emoji: '👏' },
+    { key: 'crate_sad', emoji: '😢' }
+] as const;
 
 /**
  * LIVE RELAY ENGINE V4.5
@@ -57,22 +109,44 @@ const processLiveEmbed = (input: string, startTimeOffset: number = 0): string =>
     return `<div class="flex items-center justify-center h-full text-gray-500 font-mono text-xs uppercase p-10 text-center">Invalid Relay Node: ${trimmed}</div>`;
 };
 
-const FloatingReaction = React.memo<{ emoji: string; onComplete: () => void }>(({ emoji, onComplete }) => {
+const FloatingReaction = React.memo<{ emojiKey: string; onComplete: () => void }>(({ emojiKey, onComplete }) => {
     const randomLeft = useMemo(() => Math.floor(Math.random() * 80) + 10, []); 
     const randomDuration = useMemo(() => 3.5 + Math.random() * 1.5, []); 
     useEffect(() => {
         const timer = setTimeout(onComplete, randomDuration * 1000);
         return () => clearTimeout(timer);
     }, [randomDuration, onComplete]);
+
+    const reaction = REACTION_TYPES.find(r => r.key === emojiKey);
+
     return (
-        <div className="absolute bottom-24 pointer-events-none z-[120] animate-emoji-float text-6xl drop-shadow-2xl" style={{ left: `${randomLeft}%`, animationDuration: `${randomDuration}s` }}>{emoji}</div>
+        <div 
+            className="absolute bottom-24 pointer-events-none z-[120] animate-emoji-float flex items-center justify-center" 
+            style={{ left: `${randomLeft}%`, animationDuration: `${randomDuration}s` }}
+        >
+            <div 
+                className="crate-emoji"
+                dangerouslySetInnerHTML={{ __html: avatars[emojiKey] || '' }}
+            />
+        </div>
     );
 });
 
-const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALive?: boolean; user: any; isMobileController?: boolean; isBackstageVerified?: boolean; onBackstageVerify?: (key: string) => void }>(({ partyKey, directors, isQALive, user, isMobileController, isBackstageVerified, onBackstageVerify }) => {
+const EmbeddedChat = React.memo<{ 
+    partyKey: string; 
+    directors: string[]; 
+    isQALive?: boolean; 
+    qaEmbed?: string;
+    user: any; 
+    isMobileController?: boolean; 
+    isBackstageVerified?: boolean; 
+    onBackstageVerify?: (key: string) => void;
+    backstageKey?: string;
+}>(({ partyKey, directors, isQALive, qaEmbed, user, isMobileController, isBackstageVerified, onBackstageVerify, backstageKey }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [isTogglingQA, setIsTogglingQA] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -109,11 +183,144 @@ const EmbeddedChat = React.memo<{ partyKey: string; directors: string[]; isQALiv
         } catch (error) { console.error("Chat error:", error); } finally { setIsSending(false); }
     };
 
+    const toggleQA = async () => {
+        if (!backstageKey) return;
+        setIsTogglingQA(true);
+        try {
+            const newQAState = !isQALive;
+            let embedUrl = qaEmbed || '';
+            
+            if (newQAState && !embedUrl) {
+                const input = window.prompt("Enter Director's Video Stream URL (YouTube, Vimeo, Restream):");
+                if (!input) {
+                    setIsTogglingQA(false);
+                    return;
+                }
+                embedUrl = input;
+            }
+
+            const res = await fetch('/api/toggle-qa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    movieKey: partyKey, 
+                    backstageKey, 
+                    isQALive: newQAState,
+                    qaEmbed: embedUrl
+                }),
+            });
+            if (!res.ok) throw new Error("Failed to toggle Q&A.");
+        } catch (error) {
+            console.error("QA Toggle Error:", error);
+            alert("Failed to toggle Q&A mode.");
+        } finally {
+            setIsTogglingQA(false);
+        }
+    };
+
+    const downloadChat = () => {
+        if (messages.length === 0) return;
+        
+        const csvContent = [
+            ['Timestamp', 'User', 'Message'],
+            ...messages.map(msg => [
+                msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleString() : 'N/A',
+                msg.userName,
+                msg.text
+            ])
+        ].map(e => e.join(",")).join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `chat_history_${partyKey}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        link.remove();
+    };
+
+    const handleClearChat = async () => {
+        if (!confirm("Are you sure you want to clear ALL messages for this watch party? This cannot be undone.")) return;
+        const adminPassword = sessionStorage.getItem('adminPassword');
+        if (!adminPassword) {
+            const key = prompt("Please enter the Backstage Key or Admin Password to clear chat:");
+            if (!key) return;
+            // We'll try to use the key as the password
+            try {
+                const res = await fetch('/api/clear-chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ movieKey: partyKey, adminPassword: key }),
+                });
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error || 'Failed to clear chat.');
+                }
+            } catch (error) {
+                console.error("Failed to clear chat:", error);
+                alert(`Error: ${(error as Error).message}`);
+            }
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/clear-chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movieKey: partyKey, adminPassword }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to clear chat.');
+            }
+        } catch (error) {
+            console.error("Failed to clear chat:", error);
+            alert(`Error: ${(error as Error).message}`);
+        }
+    };
+
     return (
         <div 
             className={`w-full h-full flex flex-col ${isMobileController ? 'bg-black' : 'bg-[#0a0a0a] md:bg-gray-900 border-t md:border-t-0 md:border-l border-gray-800'} overflow-hidden min-h-0`}
             onClick={(e) => e.stopPropagation()}
         >
+            <div className="p-4 bg-black/40 border-b border-white/5 flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-2">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Live Chat</p>
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                </div>
+                <div className="flex items-center gap-3">
+                    {isBackstageVerified && (
+                        <>
+                            <button 
+                                onClick={toggleQA}
+                                disabled={isTogglingQA}
+                                className={`text-[8px] font-black uppercase tracking-widest ${isQALive ? 'text-red-500' : 'text-emerald-500'} hover:text-white transition-colors flex items-center gap-1`}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                {isQALive ? 'End Video' : 'Join w/ Video'}
+                            </button>
+                            <button 
+                                onClick={downloadChat}
+                                className="text-[8px] font-black uppercase tracking-widest text-emerald-500 hover:text-white transition-colors flex items-center gap-1"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                Download
+                            </button>
+                            <button 
+                                onClick={handleClearChat}
+                                className="text-[8px] font-black uppercase tracking-widest text-red-500 hover:text-white transition-colors flex items-center gap-1"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                Clear
+                            </button>
+                        </>
+                    )}
+                </div>
+            </div>
             {isMobileController && (
                 <div className="p-4 bg-red-600/10 border-b border-red-500/20 flex items-center justify-between">
                     <p className="text-[10px] font-black uppercase text-red-500">Roku Controller Node</p>
@@ -215,6 +422,9 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
     const [backstageInput, setBackstageInput] = useState('');
     const [backstageError, setBackstageError] = useState(false);
     const [isBackstageVerified, setIsBackstageVerified] = useState(false);
+    const [hasClaimedStub, setHasClaimedStub] = useState(false);
+    const [highlights, setHighlights] = useState<any>(null);
+
     const [isEnded, setIsEnded] = useState(false);
     const [isControllerMode, setIsControllerMode] = useState(false);
     const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
@@ -278,6 +488,64 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
         return inFest || !!inCrate;
     }, [movieKey, festivalData, settings.crateFestConfig]);
 
+    useEffect(() => {
+        if (partyState?.status === 'live' && user && currentMovie && !hasClaimedStub) {
+            claimTicketStub();
+        }
+        if (partyState?.status === 'ended' && !highlights) {
+            fetchHighlights();
+        }
+    }, [partyState?.status, user, currentMovie, hasClaimedStub, highlights]);
+
+    const claimTicketStub = async () => {
+        if (!user || !currentMovie) return;
+        try {
+            const res = await fetch('/api/claim-ticket-stub', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    movieKey: currentMovie.key,
+                    userId: user.uid,
+                    movieTitle: currentMovie.title,
+                    posterUrl: currentMovie.poster
+                }),
+            });
+            if (res.ok) setHasClaimedStub(true);
+        } catch (error) {
+            console.error("Failed to claim stub:", error);
+        }
+    };
+
+    const fetchHighlights = async () => {
+        try {
+            const res = await fetch(`/api/generate-highlights?movieKey=${movieKey}`);
+            if (res.ok) {
+                const data = await res.json();
+                setHighlights(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch highlights:", error);
+        }
+    };
+
+    const handleVote = async (optionIndex: number) => {
+        if (!user || !partyState?.activePoll) return;
+        try {
+            await fetch('/api/vote-poll', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    movieKey,
+                    userId: user.uid,
+                    pollId: partyState.activePoll.id,
+                    optionIndex
+                }),
+            });
+        } catch (error) {
+            console.error("Vote error:", error);
+        }
+    };
+
     const handleBackstageSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (partyState?.backstageKey && backstageInput.toUpperCase() === partyState.backstageKey.toUpperCase()) {
@@ -302,7 +570,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
 
     const syncClock = useCallback(() => {
         const video = videoRef.current;
-        if (!video || !partyState?.actualStartTime || currentMovie?.isLiveStream || isControllerMode) return;
+        if (!video || !partyState?.actualStartTime || currentMovie?.isLiveStream || isControllerMode || partyState.status !== 'live') return;
 
         const now = Date.now();
         // Prevent rapid seeking loops
@@ -535,8 +803,13 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     <EmbeddedChat partyKey={movieKey} directors={[]} isQALive={partyState?.isQALive} user={user} isMobileController={true} />
                 </div>
                 <div className="p-4 bg-white/5 grid grid-cols-5 gap-2 border-t border-white/10">
-                    {REACTION_TYPES.map(emoji => (
-                        <button key={emoji} onClick={() => logSentiment(emoji)} className="text-3xl py-4 hover:scale-125 transition-transform">{emoji}</button>
+                    {REACTION_TYPES.map(reaction => (
+                        <button key={reaction.key} onClick={() => logSentiment(reaction.key)} className="flex items-center justify-center py-4 hover:scale-125 transition-transform">
+                            <div 
+                                className="crate-emoji w-10 h-10"
+                                dangerouslySetInnerHTML={{ __html: avatars[reaction.key] || '' }}
+                            />
+                        </button>
                     ))}
                 </div>
             </div>
@@ -590,7 +863,7 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                     <div className="flex-grow bg-[#050505] relative flex items-center justify-center overflow-hidden">
                         <div className="absolute inset-0 z-[150] pointer-events-none">
                             {localReactions.map(r => (
-                                <FloatingReaction key={r.id} emoji={r.emoji} onComplete={() => setLocalReactions(prev => prev.filter(item => item.id !== r.id))} />
+                                <FloatingReaction key={r.id} emojiKey={r.emoji} onComplete={() => setLocalReactions(prev => prev.filter(item => item.id !== r.id))} />
                             ))}
                         </div>
 
@@ -617,9 +890,67 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                                     </div>
                                 </div>
                              </div>
+                        ) : partyState?.status === 'ended' ? (
+                            <div className="w-full h-full flex items-center justify-center p-6 md:p-12 animate-[fadeIn_0.8s_ease-out]">
+                                <div className="max-w-2xl w-full space-y-12 text-center">
+                                    <div className="space-y-4">
+                                        <h2 className="text-6xl md:text-9xl font-black uppercase italic tracking-tighter leading-none">Transmission Concluded.</h2>
+                                        <p className="text-xl font-bold text-gray-400 uppercase tracking-widest">Thank you for joining Crate TV Live.</p>
+                                    </div>
+
+                                    {highlights && (
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-12 border-t border-white/10">
+                                            <div className="bg-white/5 p-6 rounded-3xl space-y-2">
+                                                <span className="text-[10px] font-black text-pink-500 uppercase tracking-widest">Total Transmissions</span>
+                                                <p className="text-4xl font-black italic">{highlights.totalMessages}</p>
+                                            </div>
+                                            <div className="bg-white/5 p-6 rounded-3xl space-y-2">
+                                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Peak Sentiment</span>
+                                                <p className="text-4xl font-black italic uppercase">{highlights.topReaction}</p>
+                                            </div>
+                                            <div className="bg-white/5 p-6 rounded-3xl space-y-2">
+                                                <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Viewers Joined</span>
+                                                <p className="text-4xl font-black italic">{highlights.uniqueViewers}</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {hasClaimedStub && (
+                                        <div className="bg-emerald-500/10 border border-emerald-500/30 p-8 rounded-[3rem] animate-[bounceIn_0.8s_ease-out]">
+                                            <div className="flex flex-col items-center gap-4">
+                                                <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.4)]">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h3 className="text-2xl font-black uppercase italic tracking-tighter">Ticket Stub Claimed!</h3>
+                                                    <p className="text-sm font-bold text-emerald-400/80 uppercase tracking-widest">Added to your collection.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <button onClick={() => window.history.back()} className="text-[10px] font-black text-gray-500 hover:text-white uppercase tracking-[0.5em] transition-all">Return to Main Terminal</button>
+                                </div>
+                            </div>
+                        ) : partyState?.isQALive && partyState?.qaEmbed ? (
+                            <div className="w-full h-full p-2 md:p-6 lg:p-12 flex items-center justify-center bg-black animate-[fadeIn_0.5s_ease-out] relative">
+                                {partyState.activePoll && partyState.activePoll.isOpen && user && (
+                                    <PollOverlay poll={partyState.activePoll} onVote={handleVote} userId={user.uid} />
+                                )}
+                                <div className="w-full h-full bg-gray-900 rounded-[2rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-emerald-500/30 relative">
+                                    <div className="absolute top-8 left-8 z-[200] flex items-center gap-2 bg-emerald-600 px-3 py-1 rounded-full shadow-lg">
+                                        <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-white">Director Live</span>
+                                    </div>
+                                    <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: processLiveEmbed(partyState.qaEmbed) }} />
+                                </div>
+                            </div>
                         ) : (
                             movie.isLiveStream ? (
-                                <div className="w-full h-full p-2 md:p-6 lg:p-12 flex items-center justify-center bg-black">
+                                <div className="w-full h-full p-2 md:p-6 lg:p-12 flex items-center justify-center bg-black relative">
+                                    {partyState?.activePoll && partyState.activePoll.isOpen && user && (
+                                        <PollOverlay poll={partyState.activePoll} onVote={handleVote} userId={user.uid} />
+                                    )}
                                     <div className="w-full h-full bg-gray-900 rounded-[2rem] md:rounded-[4rem] overflow-hidden shadow-2xl border border-white/5 relative" dangerouslySetInnerHTML={{ __html: processLiveEmbed(movie.liveStreamEmbed!) }} />
                                 </div>
                             ) : (
@@ -671,13 +1002,16 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         className="p-4 bg-black/40 border-y border-white/5 flex justify-center gap-6 md:gap-12 backdrop-blur-xl"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {REACTION_TYPES.map(emoji => (
+                        {REACTION_TYPES.map(reaction => (
                             <button 
-                                key={emoji} 
-                                onClick={(e) => { e.stopPropagation(); logSentiment(emoji); }} 
-                                className="text-4xl md:text-5xl hover:scale-150 active:scale-90 transition-transform drop-shadow-lg"
+                                key={reaction.key} 
+                                onClick={(e) => { e.stopPropagation(); logSentiment(reaction.key); }} 
+                                className="hover:scale-150 active:scale-90 transition-transform drop-shadow-lg"
                             >
-                                {emoji}
+                                <div 
+                                    className="crate-emoji w-12 h-12 md:w-16 md:h-16"
+                                    dangerouslySetInnerHTML={{ __html: avatars[reaction.key] || '' }}
+                                />
                             </button>
                         ))}
                     </div>
@@ -687,8 +1021,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                             partyKey={movieKey} 
                             directors={[]} 
                             isQALive={partyState?.isQALive} 
+                            qaEmbed={partyState?.qaEmbed}
                             user={user} 
                             isBackstageVerified={isBackstageVerified} 
+                            backstageKey={partyState?.backstageKey}
                             onBackstageVerify={(key) => {
                                 if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
                                     setIsBackstageVerified(true);
@@ -706,8 +1042,10 @@ export const WatchPartyPage: React.FC<WatchPartyPageProps> = ({ movieKey }) => {
                         partyKey={movieKey} 
                         directors={[]} 
                         isQALive={partyState?.isQALive} 
+                        qaEmbed={partyState?.qaEmbed}
                         user={user} 
                         isBackstageVerified={isBackstageVerified} 
+                        backstageKey={partyState?.backstageKey}
                         onBackstageVerify={(key) => {
                             if (partyState?.backstageKey && key.toUpperCase() === partyState.backstageKey.toUpperCase()) {
                                 setIsBackstageVerified(true);

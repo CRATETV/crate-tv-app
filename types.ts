@@ -22,6 +22,15 @@ export interface User {
   rentals: Record<string, string>;
   unlockedWatchPartyKeys?: string[];
   rokuDeviceId?: string;
+  ticketStubs?: TicketStub[];
+}
+
+export interface TicketStub {
+  id: string;
+  movieKey: string;
+  movieTitle: string;
+  date: string;
+  posterUrl: string;
 }
 
 export interface UserRecord extends User {
@@ -261,10 +270,21 @@ export interface WatchPartyState {
   lastUpdatedBy?: string;
   backstageKey?: string;
   isQALive?: boolean;
+  qaEmbed?: string;
   activeBlockId?: string;
   activeMovieIndex?: number;
   actualStartTime?: any; 
   type: 'movie' | 'block';
+  activePoll?: Poll;
+}
+
+export interface Poll {
+  id: string;
+  question: string;
+  options: string[];
+  votes: Record<number, number>;
+  voters: string[]; // UIDs
+  isOpen: boolean;
 }
 
 export interface ChatMessage {
