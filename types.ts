@@ -378,6 +378,7 @@ export interface SiteSettings {
   pitchTargetCompany?: string;
   pitchDeckCustomMessage?: string;
   crateFestConfig?: CrateFestConfig;
+  playbackSpeed?: number;
 }
 
 export interface ActorSubmission {

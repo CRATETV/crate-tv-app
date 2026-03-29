@@ -34,7 +34,7 @@ const getEmbedUrl = (url: string): string | null => {
 
 const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   const { user, likedMovies: likedMoviesArray, toggleLikeMovie, getUserIdToken, watchlist, toggleWatchlist, rentals, hasJuryPass, purchaseMovie, markAsWatched, updatePlaybackProgress } = useAuth();
-  const { movies: allMovies, categories: allCategories, isLoading: isDataLoading } = useFestival();
+  const { movies: allMovies, categories: allCategories, isLoading: isDataLoading, settings } = useFestival();
   
   const movie = useMemo(() => allMovies[movieKey], [allMovies, movieKey]);
   
@@ -84,7 +84,8 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
   useEffect(() => {
     if (movie) {
         const params = new URLSearchParams(currentSearch);
-        if (params.get('play') === 'true' && hasAccess && isMovieReleased(movie)) {
+        // FIX: Go to full mode if play=true, even if access is locked (will show locked UI in player area)
+        if (params.get('play') === 'true' && isMovieReleased(movie)) {
             setPlayerMode('full');
             setIsEnded(false);
             if (videoRef.current && videoRef.current.ended) {
@@ -94,7 +95,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
             setPlayerMode('poster');
         }
     }
-  }, [movie, hasAccess, movieKey, currentSearch]);
+  }, [movie, movieKey, currentSearch]);
+
+  // FIX: Apply playback speed setting to the video element
+  useEffect(() => {
+    if (videoRef.current && settings.playbackSpeed) {
+        videoRef.current.playbackRate = settings.playbackSpeed;
+    }
+  }, [settings.playbackSpeed, playerMode]);
 
   const handleGoHome = useCallback(() => {
     if (document.fullscreenElement) document.exitFullscreen();
@@ -203,11 +211,14 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                         ref={videoRef} 
                                         src={movie.fullMovie} 
                                         className={`w-full h-full object-contain block transition-opacity duration-1000 ${isEnded ? 'opacity-30 blur-md' : 'opacity-100'}`} 
-                                        controls={false} 
+                                        controls={true} 
                                         playsInline 
                                         autoPlay 
                                         onPause={() => !isEnded && setIsPaused(true)} 
-                                        onPlay={() => !isEnded && setIsPaused(false)} 
+                                        onPlay={() => {
+                                            setIsEnded(false);
+                                            setIsPaused(false);
+                                        }} 
                                         onEnded={() => { setIsEnded(true); updatePlaybackProgress(movie.key, 0); }} 
                                         controlsList="nodownload" 
                                         crossOrigin="anonymous"
@@ -263,6 +274,20 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                                     </div>
 
                                     {isPaused && !isEnded && <PauseOverlay movie={movie} isLiked={isLiked} isOnWatchlist={watchlist.includes(movieKey)} onMoreDetails={() => setIsDetailsModalOpen(true)} onSelectActor={setSelectedActor} onResume={() => { videoRef.current?.play(); setIsPaused(false); }} onRewind={() => videoRef.current && (videoRef.current.currentTime -= 10)} onForward={() => videoRef.current && (videoRef.current.currentTime += 10)} onToggleLike={handleToggleLike} onToggleWatchlist={() => toggleWatchlist(movieKey)} onSupport={() => setIsSupportModalOpen(true)} onHome={handleGoHome} />}
+                                    
+                                    {/* Play Button Overlay Fallback */}
+                                    {isPaused && !isEnded && (
+                                        <div 
+                                            className="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer group z-[105]"
+                                            onClick={playContent}
+                                        >
+                                            <div className="w-24 h-24 bg-red-600 rounded-full flex items-center justify-center shadow-2xl transform transition-transform group-hover:scale-110">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white ml-2" viewBox="0 0 24 24" fill="currentColor">
+                                                    <path d="M8 5v14l11-7z" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    )}
                                     {isEnded && (
                                         <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.8s_ease-out] bg-black/40 backdrop-blur-sm">
                                             <div className="max-w-2xl w-full space-y-12">
@@ -304,7 +329,16 @@ const MoviePage: React.FC<MoviePageProps> = ({ movieKey }) => {
                         </div>
                     )
                 ) : (
-                    <div className="relative w-full h-full flex items-center justify-center group cursor-pointer" onClick={() => setIsDetailsModalOpen(true)}>
+                    <div 
+                        className="relative w-full h-full flex items-center justify-center group cursor-pointer" 
+                        onClick={() => {
+                            // FIX: Clicking the poster should go straight to the movie
+                            const params = new URLSearchParams(currentSearch);
+                            params.set('play', 'true');
+                            window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
+                            window.dispatchEvent(new Event('pushstate'));
+                        }}
+                    >
                          <img src={movie.poster} alt="" className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30" crossOrigin="anonymous" />
                          <img src={movie.poster} alt={movie.title} className="w-full h-full object-contain relative z-10" crossOrigin="anonymous" />
                          <div className="absolute inset-0 z-20 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-6">
